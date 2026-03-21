@@ -1,0 +1,126 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/auth/firebase_auth_service.dart';
+import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
+import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
+import 'auth_event.dart';
+import 'auth_state.dart';
+
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  final LoginUseCase _loginUseCase;
+  final SocialLoginUseCase _socialLoginUseCase;
+  final LogoutUseCase _logoutUseCase;
+  final FirebaseAuthService _firebaseAuthService;
+
+  AuthBloc({
+    required LoginUseCase loginUseCase,
+    required SocialLoginUseCase socialLoginUseCase,
+    required LogoutUseCase logoutUseCase,
+    required FirebaseAuthService firebaseAuthService,
+  })  : _loginUseCase = loginUseCase,
+        _socialLoginUseCase = socialLoginUseCase,
+        _logoutUseCase = logoutUseCase,
+        _firebaseAuthService = firebaseAuthService,
+        super(const AuthInitial()) {
+    on<AuthCheckStatusRequested>(_onCheckStatus);
+    on<AuthLoginRequested>(_onLoginRequested);
+    on<AuthGoogleLoginRequested>(_onGoogleLoginRequested);
+    on<AuthAppleLoginRequested>(_onAppleLoginRequested);
+    on<AuthLogoutRequested>(_onLogoutRequested);
+  }
+
+  Future<void> _onCheckStatus(
+    AuthCheckStatusRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final firebaseUser = _firebaseAuthService.currentUser;
+    if (firebaseUser == null) {
+      emit(const AuthUnauthenticated());
+    } else {
+      // User is signed in to Firebase but we may not have profile yet
+      // Emit a minimal authenticated state from Firebase data
+      final entity = UserEntity(
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        role: 'CLIENT',
+      );
+      emit(AuthAuthenticated(entity));
+    }
+  }
+
+  Future<void> _onLoginRequested(
+    AuthLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final user = await _loginUseCase(event.email, event.password);
+      emit(AuthAuthenticated(user));
+    } on ApiException catch (e) {
+      if (e.isLocked) {
+        emit(const AuthAccountLocked());
+      } else {
+        emit(AuthError(e.message));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onGoogleLoginRequested(
+    AuthGoogleLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final credential = await _firebaseAuthService.signInWithGoogle();
+      final token = await credential.user?.getIdToken() ?? '';
+      final user = await _socialLoginUseCase(token, 'google');
+      emit(AuthAuthenticated(user));
+    } on ApiException catch (e) {
+      if (e.isLocked) {
+        emit(const AuthAccountLocked());
+      } else {
+        emit(AuthError(e.message));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onAppleLoginRequested(
+    AuthAppleLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final credential = await _firebaseAuthService.signInWithApple();
+      final token = await credential.user?.getIdToken() ?? '';
+      final user = await _socialLoginUseCase(token, 'apple');
+      emit(AuthAuthenticated(user));
+    } on ApiException catch (e) {
+      if (e.isLocked) {
+        emit(const AuthAccountLocked());
+      } else {
+        emit(AuthError(e.message));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onLogoutRequested(
+    AuthLogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      await _logoutUseCase();
+    } catch (_) {
+      // Best effort logout
+    }
+    emit(const AuthUnauthenticated());
+  }
+}

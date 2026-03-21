@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Se necesita acceso a la cámara para subir fotos de progreso</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Se necesita acceso a la galería para seleccionar fotos de progreso</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Se necesita acceso al micrófono para grabar videos de técnica</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

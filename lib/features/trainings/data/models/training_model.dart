@@ -1,0 +1,112 @@
+class ExerciseModel {
+  final String id;
+  final String name;
+  final List<String> muscleGroups;
+  final String? videoUrl;
+  final String? thumbnailUrl;
+  final String? techniqueText;
+  final String? commonErrorsText;
+  final String? explanationText;
+
+  const ExerciseModel({
+    required this.id,
+    required this.name,
+    required this.muscleGroups,
+    this.videoUrl,
+    this.thumbnailUrl,
+    this.techniqueText,
+    this.commonErrorsText,
+    this.explanationText,
+  });
+
+  factory ExerciseModel.fromJson(Map<String, dynamic> json) {
+    return ExerciseModel(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      muscleGroups: (json['muscle_groups'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      videoUrl: json['video_url'] as String?,
+      thumbnailUrl: json['thumbnail_url'] as String?,
+      techniqueText: json['technique_text'] as String?,
+      commonErrorsText: json['common_errors_text'] as String?,
+      explanationText: json['explanation_text'] as String?,
+    );
+  }
+}
+
+class TrainingExerciseModel {
+  final String id;
+  final int order;
+  final int sets;
+  final String repsOrDuration;
+  final int restSeconds;
+  final ExerciseModel exercise;
+
+  const TrainingExerciseModel({
+    required this.id,
+    required this.order,
+    required this.sets,
+    required this.repsOrDuration,
+    required this.restSeconds,
+    required this.exercise,
+  });
+
+  factory TrainingExerciseModel.fromJson(Map<String, dynamic> json) {
+    return TrainingExerciseModel(
+      id: json['id'] as String? ?? '',
+      order: json['order'] as int? ?? 0,
+      sets: json['sets'] as int? ?? 0,
+      repsOrDuration: json['reps_or_duration'] as String? ?? '',
+      restSeconds: json['rest_seconds'] as int? ?? 60,
+      exercise: ExerciseModel.fromJson(
+        (json['exercise'] as Map<String, dynamic>?) ?? {},
+      ),
+    );
+  }
+}
+
+class TrainingModel {
+  final String id;
+  final String name;
+  final String type;
+  final String level;
+  final int? estimatedDurationMin;
+  final int? estimatedCalories;
+  final String? warmupDescription;
+  final String? cooldownDescription;
+  final List<String> tags;
+  final List<TrainingExerciseModel> exercises;
+
+  const TrainingModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.level,
+    this.estimatedDurationMin,
+    this.estimatedCalories,
+    this.warmupDescription,
+    this.cooldownDescription,
+    required this.tags,
+    required this.exercises,
+  });
+
+  factory TrainingModel.fromJson(Map<String, dynamic> json) {
+    return TrainingModel(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      level: json['level'] as String? ?? '',
+      estimatedDurationMin: json['estimated_duration_min'] as int?,
+      estimatedCalories: json['estimated_calories'] as int?,
+      warmupDescription: json['warmup_description'] as String?,
+      cooldownDescription: json['cooldown_description'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      exercises: (json['exercises'] as List<dynamic>?)
+              ?.map((e) => TrainingExerciseModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}

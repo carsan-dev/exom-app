@@ -55,6 +55,15 @@ import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_us
 import 'package:exom_app/features/calendar/domain/usecases/get_week_summary_usecase.dart';
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
 
+// Challenges
+import 'package:exom_app/features/challenges/data/datasources/challenges_remote_datasource.dart';
+import 'package:exom_app/features/challenges/data/repositories/challenges_repository_impl.dart';
+import 'package:exom_app/features/challenges/domain/repositories/challenges_repository.dart';
+import 'package:exom_app/features/challenges/domain/usecases/get_my_challenges_usecase.dart';
+import 'package:exom_app/features/challenges/domain/usecases/update_challenge_progress_usecase.dart';
+import 'package:exom_app/features/challenges/domain/usecases/get_my_achievements_usecase.dart';
+import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
+
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
 
@@ -179,6 +188,27 @@ Future<void> initDependencies() async {
     () => CalendarBloc(
       getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
       getWeekSummaryUseCase: sl<GetWeekSummaryUseCase>(),
+    ),
+  );
+
+  // ── Challenges ───────────────────────────────────────────────────────────
+  sl.registerLazySingleton<ChallengesRemoteDataSource>(
+    () => ChallengesRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<ChallengesRepository>(
+    () => ChallengesRepositoryImpl(sl<ChallengesRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(() => GetMyChallengesUseCase(sl<ChallengesRepository>()));
+  sl.registerLazySingleton(() => UpdateChallengeProgressUseCase(sl<ChallengesRepository>()));
+  sl.registerLazySingleton(() => GetMyAchievementsUseCase(sl<ChallengesRepository>()));
+
+  sl.registerFactory(
+    () => ChallengesBloc(
+      getMyChallengesUseCase: sl<GetMyChallengesUseCase>(),
+      updateChallengeProgressUseCase: sl<UpdateChallengeProgressUseCase>(),
+      getMyAchievementsUseCase: sl<GetMyAchievementsUseCase>(),
     ),
   );
 

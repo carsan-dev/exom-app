@@ -47,6 +47,14 @@ import 'package:exom_app/features/profile/domain/usecases/get_profile_usecase.da
 import 'package:exom_app/features/profile/domain/usecases/upload_avatar_usecase.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
 
+// Calendar
+import 'package:exom_app/features/calendar/data/datasources/calendar_remote_datasource.dart';
+import 'package:exom_app/features/calendar/data/repositories/calendar_repository_impl.dart';
+import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
+import 'package:exom_app/features/calendar/domain/usecases/get_week_summary_usecase.dart';
+import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
+
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
 
@@ -152,6 +160,25 @@ Future<void> initDependencies() async {
       getTodayDietUseCase: sl<GetTodayDietUseCase>(),
       getMealUseCase: sl<GetMealUseCase>(),
       markMealCompletedUseCase: sl<MarkMealCompletedUseCase>(),
+    ),
+  );
+
+  // ── Calendar ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<CalendarRemoteDataSource>(
+    () => CalendarRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<CalendarRepository>(
+    () => CalendarRepositoryImpl(sl<CalendarRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(() => GetMonthCalendarUseCase(sl<CalendarRepository>()));
+  sl.registerLazySingleton(() => GetWeekSummaryUseCase(sl<CalendarRepository>()));
+
+  sl.registerFactory(
+    () => CalendarBloc(
+      getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
+      getWeekSummaryUseCase: sl<GetWeekSummaryUseCase>(),
     ),
   );
 

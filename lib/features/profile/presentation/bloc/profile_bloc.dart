@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
+import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/domain/usecases/get_profile_usecase.dart';
 import 'package:exom_app/features/profile/domain/usecases/upload_avatar_usecase.dart';
@@ -10,12 +12,15 @@ part 'profile_state.dart';
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final GetProfileUseCase _getProfileUseCase;
   final UploadAvatarUseCase _uploadAvatarUseCase;
+  final MetricsRepository _metricsRepository;
 
   ProfileBloc({
     required GetProfileUseCase getProfileUseCase,
     required UploadAvatarUseCase uploadAvatarUseCase,
+    required MetricsRepository metricsRepository,
   })  : _getProfileUseCase = getProfileUseCase,
         _uploadAvatarUseCase = uploadAvatarUseCase,
+        _metricsRepository = metricsRepository,
         super(const ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoadRequested);
     on<ProfileAvatarUploadRequested>(_onAvatarUploadRequested);
@@ -27,8 +32,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     emit(const ProfileLoading());
     try {
-      final profile = await _getProfileUseCase();
-      emit(ProfileLoaded(profile));
+      final results = await Future.wait([
+        _getProfileUseCase(),
+        _metricsRepository.getWeightHistory(),
+      ]);
+      final profile = results[0] as ProfileEntity;
+      final history = results[1] as List<BodyMetricEntity>;
+      emit(ProfileLoaded(profile, weightHistory: history));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }
@@ -44,7 +54,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
     try {
       final updated = await _uploadAvatarUseCase(event.file);
-      emit(ProfileLoaded(updated));
+      final history = current is ProfileLoaded ? current.weightHistory : <BodyMetricEntity>[];
+      emit(ProfileLoaded(updated, weightHistory: history));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }

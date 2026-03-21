@@ -171,6 +171,7 @@ Future<void> initDependencies() async {
     () => ProfileBloc(
       getProfileUseCase: sl<GetProfileUseCase>(),
       uploadAvatarUseCase: sl<UploadAvatarUseCase>(),
+      metricsRepository: sl<MetricsRepository>(),
     ),
   );
 

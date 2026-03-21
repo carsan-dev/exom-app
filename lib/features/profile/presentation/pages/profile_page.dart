@@ -9,16 +9,9 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
-
-// Weight history model (used for the chart)
-class WeightEntry {
-  final DateTime date;
-  final double weightKg;
-
-  const WeightEntry({required this.date, required this.weightKg});
-}
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -61,10 +54,10 @@ class _ProfileView extends StatelessWidget {
             );
           }
           if (state is ProfileLoaded) {
-            return _ProfileContent(profile: state.profile, isUploadingAvatar: false);
+            return _ProfileContent(profile: state.profile, isUploadingAvatar: false, weightHistory: state.weightHistory);
           }
           if (state is ProfileAvatarUploading) {
-            return _ProfileContent(profile: state.profile, isUploadingAvatar: true);
+            return _ProfileContent(profile: state.profile, isUploadingAvatar: true, weightHistory: const []);
           }
           return const SizedBox.shrink();
         },
@@ -76,8 +69,9 @@ class _ProfileView extends StatelessWidget {
 class _ProfileContent extends StatelessWidget {
   final ProfileEntity profile;
   final bool isUploadingAvatar;
+  final List<BodyMetricEntity> weightHistory;
 
-  const _ProfileContent({required this.profile, required this.isUploadingAvatar});
+  const _ProfileContent({required this.profile, required this.isUploadingAvatar, required this.weightHistory});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +88,7 @@ class _ProfileContent extends StatelessWidget {
           _StatsRow(profile: profile),
           if (profile.currentWeightKg != null || profile.currentBmi != null)
             _BodyMetricsCard(profile: profile),
-          _WeightChartCard(profile: profile),
+          _WeightChartCard(weightHistory: weightHistory),
           _MetricsButton(),
         ],
       ),
@@ -455,25 +449,15 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _WeightChartCard extends StatelessWidget {
-  final ProfileEntity profile;
+  final List<BodyMetricEntity> weightHistory;
 
-  const _WeightChartCard({required this.profile});
-
-  // Generates mock weight history based on current weight for display
-  List<WeightEntry> _mockHistory(double? currentWeight) {
-    if (currentWeight == null) return [];
-    final now = DateTime.now();
-    final base = currentWeight;
-    return List.generate(10, (i) {
-      final day = now.subtract(Duration(days: (9 - i) * 3));
-      final delta = (i - 9) * 0.2 + (i % 3 - 1) * 0.15;
-      return WeightEntry(date: day, weightKg: double.parse((base + delta).toStringAsFixed(1)));
-    });
-  }
+  const _WeightChartCard({required this.weightHistory});
 
   @override
   Widget build(BuildContext context) {
-    if (profile.currentWeightKg == null) {
+    final entries = weightHistory.where((e) => e.weightKg != null).toList();
+
+    if (entries.isEmpty) {
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         padding: const EdgeInsets.all(20),
@@ -502,13 +486,12 @@ class _WeightChartCard extends StatelessWidget {
       );
     }
 
-    final history = _mockHistory(profile.currentWeightKg);
-    final weights = history.map((e) => e.weightKg).toList();
+    final weights = entries.map((e) => e.weightKg!).toList();
     final minWeight = weights.reduce((a, b) => a < b ? a : b) - 1;
     final maxWeight = weights.reduce((a, b) => a > b ? a : b) + 1;
 
-    final spots = history.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.weightKg);
+    final spots = entries.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), e.value.weightKg!);
     }).toList();
 
     return Container(
@@ -534,7 +517,7 @@ class _WeightChartCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Últimas 10 mediciones',
+                'Últimas ${entries.length} mediciones',
                 style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
               ),
             ],

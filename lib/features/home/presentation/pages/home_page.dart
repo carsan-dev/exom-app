@@ -6,6 +6,8 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
@@ -143,7 +145,11 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: CircleAvatar(
               radius: 18,
               backgroundColor: AppColors.primary.withOpacity(0.2),
-              child: const Icon(Icons.person, color: AppColors.primary, size: 20),
+              child: const Icon(
+                Icons.person,
+                color: AppColors.primary,
+                size: 20,
+              ),
             ),
           ),
       ],
@@ -168,9 +174,7 @@ class _HomeDrawer extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceVariant,
-              ),
+              decoration: const BoxDecoration(color: AppColors.surfaceVariant),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -191,7 +195,11 @@ class _HomeDrawer extends StatelessWidget {
                               ),
                             ),
                           )
-                        : const Icon(Icons.person, color: AppColors.primary, size: 36),
+                        : const Icon(
+                            Icons.person,
+                            color: AppColors.primary,
+                            size: 36,
+                          ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -205,7 +213,10 @@ class _HomeDrawer extends StatelessWidget {
                   const SizedBox(height: 2),
                   const Text(
                     'Miembro EXOM',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -267,7 +278,7 @@ class _HomeDrawer extends StatelessWidget {
                     color: AppColors.error,
                     onTap: () {
                       Navigator.pop(context);
-                      context.go(AppRoutes.login);
+                      context.read<AuthBloc>().add(const AuthLogoutRequested());
                     },
                   ),
                 ],
@@ -300,7 +311,11 @@ class _DrawerItem extends StatelessWidget {
       leading: Icon(icon, color: itemColor, size: 22),
       title: Text(
         label,
-        style: TextStyle(color: itemColor, fontSize: 15, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          color: itemColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       onTap: onTap,
       horizontalTitleGap: 8,
@@ -384,11 +399,18 @@ class _RestDayBody extends StatelessWidget {
                 const Text(
                   'Hoy es un día para recuperarte. Tu cuerpo necesita descanso para crecer y mejorar.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -396,11 +418,18 @@ class _RestDayBody extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.tips_and_updates_outlined, color: AppColors.secondary, size: 18),
+                      const Icon(
+                        Icons.tips_and_updates_outlined,
+                        color: AppColors.secondary,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Descansa, hidratate y come bien',
-                        style: TextStyle(color: AppColors.secondary, fontSize: 13),
+                        style: TextStyle(
+                          color: AppColors.secondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),

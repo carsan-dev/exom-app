@@ -64,6 +64,16 @@ import 'package:exom_app/features/challenges/domain/usecases/update_challenge_pr
 import 'package:exom_app/features/challenges/domain/usecases/get_my_achievements_usecase.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
 
+// Recap
+import 'package:exom_app/features/recap/data/datasources/recap_remote_datasource.dart';
+import 'package:exom_app/features/recap/data/repositories/recap_repository_impl.dart';
+import 'package:exom_app/features/recap/domain/repositories/recap_repository.dart';
+import 'package:exom_app/features/recap/domain/usecases/create_recap_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/get_my_recaps_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/submit_recap_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/update_recap_usecase.dart';
+import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
+
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
 
@@ -137,10 +147,14 @@ Future<void> initDependencies() async {
     () => TrainingRepositoryImpl(sl<TrainingRemoteDataSource>()),
   );
 
-  sl.registerLazySingleton(() => GetTodayTrainingUseCase(sl<TrainingRepository>()));
+  sl.registerLazySingleton(
+    () => GetTodayTrainingUseCase(sl<TrainingRepository>()),
+  );
   sl.registerLazySingleton(() => GetTrainingsUseCase(sl<TrainingRepository>()));
   sl.registerLazySingleton(() => GetTrainingUseCase(sl<TrainingRepository>()));
-  sl.registerLazySingleton(() => MarkExerciseCompletedUseCase(sl<TrainingRepository>()));
+  sl.registerLazySingleton(
+    () => MarkExerciseCompletedUseCase(sl<TrainingRepository>()),
+  );
 
   sl.registerFactory(
     () => TrainingBloc(
@@ -162,7 +176,9 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(() => GetTodayDietUseCase(sl<DietRepository>()));
   sl.registerLazySingleton(() => GetMealUseCase(sl<DietRepository>()));
-  sl.registerLazySingleton(() => MarkMealCompletedUseCase(sl<DietRepository>()));
+  sl.registerLazySingleton(
+    () => MarkMealCompletedUseCase(sl<DietRepository>()),
+  );
 
   sl.registerFactory(
     () => DietBloc(
@@ -181,8 +197,12 @@ Future<void> initDependencies() async {
     () => CalendarRepositoryImpl(sl<CalendarRemoteDataSource>()),
   );
 
-  sl.registerLazySingleton(() => GetMonthCalendarUseCase(sl<CalendarRepository>()));
-  sl.registerLazySingleton(() => GetWeekSummaryUseCase(sl<CalendarRepository>()));
+  sl.registerLazySingleton(
+    () => GetMonthCalendarUseCase(sl<CalendarRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetWeekSummaryUseCase(sl<CalendarRepository>()),
+  );
 
   sl.registerFactory(
     () => CalendarBloc(
@@ -200,15 +220,44 @@ Future<void> initDependencies() async {
     () => ChallengesRepositoryImpl(sl<ChallengesRemoteDataSource>()),
   );
 
-  sl.registerLazySingleton(() => GetMyChallengesUseCase(sl<ChallengesRepository>()));
-  sl.registerLazySingleton(() => UpdateChallengeProgressUseCase(sl<ChallengesRepository>()));
-  sl.registerLazySingleton(() => GetMyAchievementsUseCase(sl<ChallengesRepository>()));
+  sl.registerLazySingleton(
+    () => GetMyChallengesUseCase(sl<ChallengesRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => UpdateChallengeProgressUseCase(sl<ChallengesRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetMyAchievementsUseCase(sl<ChallengesRepository>()),
+  );
 
   sl.registerFactory(
     () => ChallengesBloc(
       getMyChallengesUseCase: sl<GetMyChallengesUseCase>(),
       updateChallengeProgressUseCase: sl<UpdateChallengeProgressUseCase>(),
       getMyAchievementsUseCase: sl<GetMyAchievementsUseCase>(),
+    ),
+  );
+
+  // ── Recap ─────────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<RecapRemoteDataSource>(
+    () => RecapRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<RecapRepository>(
+    () => RecapRepositoryImpl(sl<RecapRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(() => CreateRecapUseCase(sl<RecapRepository>()));
+  sl.registerLazySingleton(() => GetMyRecapsUseCase(sl<RecapRepository>()));
+  sl.registerLazySingleton(() => UpdateRecapUseCase(sl<RecapRepository>()));
+  sl.registerLazySingleton(() => SubmitRecapUseCase(sl<RecapRepository>()));
+
+  sl.registerFactory(
+    () => RecapBloc(
+      getMyRecapsUseCase: sl<GetMyRecapsUseCase>(),
+      createRecapUseCase: sl<CreateRecapUseCase>(),
+      updateRecapUseCase: sl<UpdateRecapUseCase>(),
+      submitRecapUseCase: sl<SubmitRecapUseCase>(),
     ),
   );
 

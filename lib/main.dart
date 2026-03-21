@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -13,6 +15,8 @@ import 'package:exom_app/injection_container.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
+  await initializeDateFormatting('es_ES');
   await Firebase.initializeApp();
   await LocalStorage.init();
   FlavorConfig.init(Flavor.dev);
@@ -33,6 +37,17 @@ class ExomApp extends StatelessWidget {
         theme: AppTheme.dark,
         routerConfig: AppRouter.router,
         debugShowCheckedModeBanner: false,
+        locale: const Locale('es', 'ES'),
+        supportedLocales: const [
+          Locale('es'),
+          Locale('es', 'ES'),
+          Locale('en'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
       ),
     );
   }

@@ -74,6 +74,14 @@ import 'package:exom_app/features/recap/domain/usecases/submit_recap_usecase.dar
 import 'package:exom_app/features/recap/domain/usecases/update_recap_usecase.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 
+// Feedback
+import 'package:exom_app/features/feedback/data/datasources/feedback_remote_datasource.dart';
+import 'package:exom_app/features/feedback/data/repositories/feedback_repository_impl.dart';
+import 'package:exom_app/features/feedback/domain/repositories/feedback_repository.dart';
+import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
+import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
+import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
+
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
 
@@ -258,6 +266,25 @@ Future<void> initDependencies() async {
       createRecapUseCase: sl<CreateRecapUseCase>(),
       updateRecapUseCase: sl<UpdateRecapUseCase>(),
       submitRecapUseCase: sl<SubmitRecapUseCase>(),
+    ),
+  );
+
+  // ── Feedback ─────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<FeedbackRemoteDataSource>(
+    () => FeedbackRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<FeedbackRepository>(
+    () => FeedbackRepositoryImpl(sl<FeedbackRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(() => GetMyFeedbackUseCase(sl<FeedbackRepository>()));
+  sl.registerLazySingleton(() => CreateFeedbackUseCase(sl<FeedbackRepository>()));
+
+  sl.registerFactory(
+    () => FeedbackBloc(
+      getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
+      createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
     ),
   );
 

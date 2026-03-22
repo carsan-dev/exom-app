@@ -253,7 +253,10 @@ class _HomeDrawer extends StatelessWidget {
                   _DrawerItem(
                     icon: Icons.feedback_outlined,
                     label: 'Feedback',
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.feedback);
+                    },
                   ),
                   _DrawerItem(
                     icon: Icons.settings_outlined,

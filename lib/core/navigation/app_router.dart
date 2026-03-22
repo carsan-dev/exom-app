@@ -32,6 +32,9 @@ import '../../features/challenges/presentation/pages/challenges_page.dart';
 // Recap pages
 import '../../features/recap/presentation/pages/recap_page.dart';
 
+// Feedback pages
+import '../../features/feedback/presentation/pages/feedback_page.dart';
+
 // Settings pages
 import '../../features/settings/presentation/pages/settings_page.dart';
 
@@ -51,6 +54,7 @@ class AppRoutes {
   static const metrics = '/metrics';
   static const challenges = '/challenges';
   static const recap = '/recap';
+  static const feedback = '/feedback';
   static const settings = '/settings';
   static const help = '/help';
 }
@@ -139,6 +143,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.recap,
         builder: (_, __) => const RecapPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.feedback,
+        builder: (_, __) => const FeedbackPage(),
       ),
       GoRoute(
         path: AppRoutes.settings,

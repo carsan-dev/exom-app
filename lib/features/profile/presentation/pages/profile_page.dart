@@ -32,13 +32,7 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Mi Perfil'),
-        backgroundColor: AppColors.background,
-      ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
+    return BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, state) {
           if (state is ProfileLoading || state is ProfileInitial) {
             return const ShimmerList(count: 5, itemHeight: 100);
@@ -65,8 +59,7 @@ class _ProfileView extends StatelessWidget {
           }
           return const SizedBox.shrink();
         },
-      ),
-    );
+      );
   }
 }
 

@@ -25,13 +25,7 @@ class _DietsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Mi Dieta'),
-        backgroundColor: AppColors.background,
-      ),
-      body: BlocBuilder<DietBloc, DietState>(
+    return BlocBuilder<DietBloc, DietState>(
         builder: (context, state) {
           if (state is DietLoading || state is DietInitial) {
             return const ShimmerList(count: 4, itemHeight: 140);
@@ -59,8 +53,7 @@ class _DietsView extends StatelessWidget {
           }
           return const SizedBox.shrink();
         },
-      ),
-    );
+      );
   }
 }
 

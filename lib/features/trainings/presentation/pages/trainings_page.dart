@@ -24,13 +24,7 @@ class _TrainingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Entrenamientos'),
-        backgroundColor: AppColors.background,
-      ),
-      body: BlocBuilder<TrainingBloc, TrainingState>(
+    return BlocBuilder<TrainingBloc, TrainingState>(
         builder: (context, state) {
           if (state is TrainingLoading || state is TrainingInitial) {
             return const ShimmerList(count: 5, itemHeight: 120);
@@ -46,8 +40,7 @@ class _TrainingsView extends StatelessWidget {
           }
           return const SizedBox.shrink();
         },
-      ),
-    );
+      );
   }
 
   Widget _buildContent(BuildContext context, TrainingsLoaded state) {

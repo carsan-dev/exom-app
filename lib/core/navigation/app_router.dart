@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
 
 // Auth pages
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/account_locked_page.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_event.dart';
 
 // Home pages
 import '../../features/home/presentation/pages/home_page.dart';
@@ -98,12 +103,13 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.trainings,
-            pageBuilder: (_, __) => const NoTransitionPage(child: TrainingsPage()),
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: TrainingsPage()),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (_, state) =>
-                    TrainingDetailPage(trainingId: state.pathParameters['id']!),
+                builder: (_, state) => TrainingDetailPage(
+                    trainingId: state.pathParameters['id']!),
               ),
             ],
           ),
@@ -113,11 +119,13 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.calendar,
-            pageBuilder: (_, __) => const NoTransitionPage(child: CalendarPage()),
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: CalendarPage()),
           ),
           GoRoute(
             path: AppRoutes.profile,
-            pageBuilder: (_, __) => const NoTransitionPage(child: ProfilePage()),
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: ProfilePage()),
             routes: [
               GoRoute(
                 path: 'metrics',
@@ -165,25 +173,28 @@ class AppRouter {
   );
 }
 
+// ─── Main Shell ────────────────────────────────────────────────────────────────
+
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
+  // Tab order: Profile, Trainings, Home (center), Diets, Calendar
   static const _tabs = [
-    AppRoutes.home,
+    AppRoutes.profile,
     AppRoutes.trainings,
+    AppRoutes.home,
     AppRoutes.diets,
     AppRoutes.calendar,
-    AppRoutes.profile,
   ];
 
   int _currentIndex(String location) {
-    // Exact match for home, startsWith for the rest
-    if (location == '/') return 0;
-    for (var i = 1; i < _tabs.length; i++) {
-      if (location.startsWith(_tabs[i])) return i;
-    }
-    return 0;
+    if (location == '/') return 2; // Home is center
+    if (location.startsWith('/profile')) return 0;
+    if (location.startsWith('/trainings')) return 1;
+    if (location.startsWith('/diets')) return 3;
+    if (location.startsWith('/calendar')) return 4;
+    return 2;
   }
 
   @override
@@ -192,27 +203,323 @@ class MainShell extends StatelessWidget {
     final selected = _currentIndex(location);
 
     return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFF302A22), width: 0.5)),
+      backgroundColor: AppColors.background,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                // EXOM logo with text
+                SvgPicture.asset(
+                  'assets/images/logo.svg',
+                  height: 28,
+                ),
+                const Spacer(),
+                // Hamburger menu
+                Builder(
+                  builder: (ctx) => IconButton(
+                    onPressed: () => Scaffold.of(ctx).openDrawer(),
+                    icon: const Icon(
+                      Icons.menu,
+                      color: AppColors.textPrimary,
+                      size: 26,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        child: NavigationBar(
-          selectedIndex: selected,
-          onDestinationSelected: (i) => context.go(_tabs[i]),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
-            NavigationDestination(icon: Icon(Icons.fitness_center_outlined), selectedIcon: Icon(Icons.fitness_center), label: 'Entrena'),
-            NavigationDestination(icon: Icon(Icons.restaurant_menu_outlined), selectedIcon: Icon(Icons.restaurant_menu), label: 'Dieta'),
-            NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Calendario'),
-            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+      ),
+      drawer: const _AppDrawer(),
+      body: child,
+      bottomNavigationBar: _ExomBottomNav(
+        selectedIndex: selected,
+        onTap: (i) => context.go(_tabs[i]),
+      ),
+    );
+  }
+}
+
+// ─── App Drawer ────────────────────────────────────────────────────────────────
+
+class _AppDrawer extends StatelessWidget {
+  const _AppDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName ?? 'Usuario';
+
+    return Drawer(
+      backgroundColor: AppColors.surface,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              width: double.infinity,
+              decoration: const BoxDecoration(color: AppColors.surfaceVariant),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SvgPicture.asset('assets/images/logo.svg', height: 24),
+                  const SizedBox(height: 16),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Miembro EXOM',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _DrawerItem(
+                    icon: Icons.person_outline,
+                    label: 'Perfil',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go(AppRoutes.profile);
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.emoji_events_outlined,
+                    label: 'Retos',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.challenges);
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.bar_chart_outlined,
+                    label: 'Recap Semanal',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.recap);
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.feedback_outlined,
+                    label: 'Feedback',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.feedback);
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Ajustes',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.settings);
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.help_outline,
+                    label: 'Ayuda',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.help);
+                    },
+                  ),
+                  const Divider(color: AppColors.divider, height: 24),
+                  _DrawerItem(
+                    icon: Icons.logout,
+                    label: 'Cerrar Sesión',
+                    color: AppColors.error,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<AuthBloc>().add(const AuthLogoutRequested());
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final itemColor = color ?? AppColors.textPrimary;
+    return ListTile(
+      leading: Icon(icon, color: itemColor, size: 22),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: itemColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+      horizontalTitleGap: 8,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+    );
+  }
+}
+
+// ─── Custom Bottom Navigation ──────────────────────────────────────────────────
+
+class _ExomBottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _ExomBottomNav({required this.selectedIndex, required this.onTap});
+
+  static const _icons = [
+    Icons.track_changes,
+    Icons.fitness_center,
+    null, // center = EXOM logo
+    Icons.restaurant,
+    Icons.calendar_month,
+  ];
+
+  static const _circleSize = 64.0;
+  static const _barHeight = 64.0;
+  static const _circleOverlap = 10.0; // just slightly above bar top
+  static const _inactiveColor = Color(0xFFD5CCBF); // warm cream
+
+  @override
+  Widget build(BuildContext context) {
+    final targetX = _slotCenterX(context, selectedIndex);
+
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: _barHeight + _circleOverlap,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: targetX),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          builder: (context, centerX, _) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Flat bar — no notch
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: _barHeight,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(
+                        top: BorderSide(color: AppColors.borderSoft, width: 0.5),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Green circle with glow
+                Positioned(
+                  left: centerX - _circleSize / 2,
+                  bottom: _barHeight - _circleSize + _circleOverlap,
+                  child: Container(
+                    width: _circleSize,
+                    height: _circleSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                          blurRadius: 30,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Center(child: _buildIcon(selectedIndex, true)),
+                  ),
+                ),
+
+                // Icon row (active slot hidden — rendered inside circle)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: _barHeight,
+                  child: Row(
+                    children: List.generate(5, (i) {
+                      return Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => onTap(i),
+                          child: Center(
+                            child: i == selectedIndex
+                                ? const SizedBox.shrink()
+                                : _buildIcon(i, false),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIcon(int index, bool isActive) {
+    final color = isActive ? AppColors.textOnPrimary : _inactiveColor;
+    final size = isActive ? 28.0 : 28.0;
+    if (index == 2) {
+      return SvgPicture.asset(
+        'assets/images/logo_small.svg',
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      );
+    }
+    return Icon(_icons[index], size: size, color: color);
+  }
+
+  double _slotCenterX(BuildContext context, int index) {
+    final w = MediaQuery.of(context).size.width;
+    final slot = w / 5;
+    return slot * index + slot / 2;
+  }
+}
+
+// ─── GoRouter Refresh Stream ───────────────────────────────────────────────────
 
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {

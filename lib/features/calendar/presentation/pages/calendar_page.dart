@@ -35,10 +35,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: BlocBuilder<CalendarBloc, CalendarState>(
+    return BlocBuilder<CalendarBloc, CalendarState>(
           builder: (context, state) {
             if (state is CalendarLoading || state is CalendarInitial) {
               return const ShimmerList(count: 3, itemHeight: 200);
@@ -74,9 +71,7 @@ class _CalendarViewState extends State<_CalendarView> {
             }
             return const SizedBox.shrink();
           },
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {

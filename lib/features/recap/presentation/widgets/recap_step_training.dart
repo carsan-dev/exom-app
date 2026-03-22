@@ -15,9 +15,9 @@ class RecapStepTraining extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trainingEffort =
-        (formData['training_effort'] as num?)?.toDouble() ?? 3;
+        (formData['training_effort'] as num?)?.toInt() ?? 2;
     final trainingSessions =
-        (formData['training_sessions'] as num?)?.toDouble() ?? 3;
+        (formData['training_sessions'] as num?)?.toInt() ?? 2;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -29,28 +29,20 @@ class RecapStepTraining extends StatelessWidget {
             icon: Icons.fitness_center,
             child: Column(
               children: [
-                RecapSliderField(
+                RecapEmojiRatingField(
                   label: 'Esfuerzo general',
-                  helperText: 'Del 0 al 5, valora cuánto te exigió el plan.',
-                  value: trainingEffort,
-                  min: 0,
-                  max: 5,
-                  divisions: 5,
-                  valueLabelBuilder: _effortLabel,
+                  helperText: '¿Cómo te has sentido con la carga de entrenos?',
+                  value: trainingEffort.round().clamp(0, 4),
                   onChanged: (value) =>
-                      onChanged('training_effort', value.round()),
+                      onChanged('training_effort', value),
                 ),
                 const SizedBox(height: 20),
-                RecapSliderField(
+                RecapEmojiRatingField(
                   label: 'Sesiones completadas',
-                  helperText: 'Indica cuántas sesiones útiles completaste.',
-                  value: trainingSessions,
-                  min: 0,
-                  max: 5,
-                  divisions: 5,
-                  valueLabelBuilder: (value) => '${value.round()} sesiones',
+                  helperText: '¿Cómo valoras el número de sesiones?',
+                  value: trainingSessions.round().clamp(0, 4),
                   onChanged: (value) =>
-                      onChanged('training_sessions', value.round()),
+                      onChanged('training_sessions', value),
                 ),
               ],
             ),
@@ -91,22 +83,4 @@ class RecapStepTraining extends StatelessWidget {
     );
   }
 
-  String _effortLabel(double value) {
-    switch (value.round()) {
-      case 0:
-        return 'Muy suave';
-      case 1:
-        return 'Bajo';
-      case 2:
-        return 'Ligero';
-      case 3:
-        return 'Medio';
-      case 4:
-        return 'Alto';
-      case 5:
-        return 'Muy alto';
-      default:
-        return value.round().toString();
-    }
-  }
 }

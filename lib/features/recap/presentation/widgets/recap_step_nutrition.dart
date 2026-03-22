@@ -15,7 +15,7 @@ class RecapStepNutrition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foodQuality = (formData['food_quality'] as num?)?.toDouble() ?? 3;
+    final foodQuality = (formData['food_quality'] as num?)?.toInt() ?? 2;
     final hydrationEnabled = formData['hydration_enabled'] as bool? ?? false;
 
     return SingleChildScrollView(
@@ -37,16 +37,12 @@ class RecapStepNutrition extends StatelessWidget {
                   onSelected: (value) => onChanged('nutrition_quality', value),
                 ),
                 const SizedBox(height: 20),
-                RecapSliderField(
+                RecapEmojiRatingField(
                   label: 'Calidad de comidas',
-                  helperText: 'Del 0 al 5, puntúa adherencia y sensación.',
-                  value: foodQuality,
-                  min: 0,
-                  max: 5,
-                  divisions: 5,
-                  valueLabelBuilder: _qualityLabel,
+                  helperText: '¿Cómo valoras tu alimentación esta semana?',
+                  value: foodQuality.clamp(0, 4),
                   onChanged: (value) =>
-                      onChanged('food_quality', value.round()),
+                      onChanged('food_quality', value),
                 ),
               ],
             ),
@@ -111,22 +107,4 @@ class RecapStepNutrition extends StatelessWidget {
     );
   }
 
-  String _qualityLabel(double value) {
-    switch (value.round()) {
-      case 0:
-        return 'Muy baja';
-      case 1:
-        return 'Baja';
-      case 2:
-        return 'Irregular';
-      case 3:
-        return 'Correcta';
-      case 4:
-        return 'Buena';
-      case 5:
-        return 'Excelente';
-      default:
-        return value.round().toString();
-    }
-  }
 }

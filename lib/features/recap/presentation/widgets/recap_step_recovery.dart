@@ -50,23 +50,28 @@ class RecapStepRecovery extends StatelessWidget {
           ),
           RecapSectionCard(
             title: 'Molestias o cargas',
-            subtitle: 'Marca las zonas que has sentido más cargadas.',
+            subtitle: 'Toca las zonas que has sentido más cargadas.',
             icon: Icons.accessibility_new,
-            child: RecapMultiSelectField(
-              label: 'Zonas con dolor o tensión',
-              helperText: 'Puedes seleccionar varias.',
-              values: musclePainZones,
-              options: const [
-                'CUELLO',
-                'HOMBROS',
-                'ESPALDA',
-                'LUMBAR',
-                'GLUTEOS',
-                'CUADRICEPS',
-                'ISQUIOS',
-                'GEMELOS',
+            child: Column(
+              children: [
+                RecapBodyMapField(
+                  label: 'Zonas con dolor o tensión',
+                  helperText: 'Pulsa sobre las zonas del cuerpo afectadas.',
+                  values: musclePainZones,
+                  onChanged: (value) => onChanged('muscle_pain_zones', value),
+                ),
+                if (musclePainZones.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  RecapChoiceChipsField(
+                    label: 'Intensidad del dolor',
+                    helperText: 'Nivel general de las molestias percibidas.',
+                    value: formData['pain_intensity'] as String?,
+                    options: const ['LEVE', 'MODERADO', 'ALTO', 'MUY_ALTO'],
+                    onSelected: (value) =>
+                        onChanged('pain_intensity', value),
+                  ),
+                ],
               ],
-              onChanged: (value) => onChanged('muscle_pain_zones', value),
             ),
           ),
           RecapSectionCard(

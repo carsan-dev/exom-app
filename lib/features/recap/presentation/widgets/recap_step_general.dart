@@ -16,11 +16,11 @@ class RecapStepGeneral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stressEnabled = formData['stress_enabled'] as bool? ?? false;
-    final stressLevel = (formData['stress_level'] as num?)?.toDouble() ?? 2;
+    final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 2;
     final appRating =
-        (formData['improvement_app_rating'] as num?)?.toDouble() ?? 4;
+        (formData['improvement_app_rating'] as num?)?.toInt() ?? 4;
     final serviceRating =
-        (formData['improvement_service_rating'] as num?)?.toDouble() ?? 4;
+        (formData['improvement_service_rating'] as num?)?.toInt() ?? 4;
     final improvementAreas =
         (formData['improvement_areas'] as List<dynamic>?)
             ?.map((item) => item.toString())
@@ -76,16 +76,12 @@ class RecapStepGeneral extends StatelessWidget {
                 ),
                 if (stressEnabled) ...[
                   const SizedBox(height: 8),
-                  RecapSliderField(
+                  RecapEmojiRatingField(
                     label: 'Estrés percibido',
-                    helperText: '0 es muy bajo y 5 muy alto.',
-                    value: stressLevel,
-                    min: 0,
-                    max: 5,
-                    divisions: 5,
-                    valueLabelBuilder: _stressLabel,
+                    helperText: '¿Cuánto estrés has sentido esta semana?',
+                    value: stressLevel.clamp(0, 4),
                     onChanged: (value) =>
-                        onChanged('stress_level', value.round()),
+                        onChanged('stress_level', value),
                   ),
                 ],
               ],
@@ -97,28 +93,20 @@ class RecapStepGeneral extends StatelessWidget {
             icon: Icons.rate_review_outlined,
             child: Column(
               children: [
-                RecapSliderField(
-                  label: 'Valoración de la app',
-                  helperText: '1 es baja y 5 excelente.',
-                  value: appRating,
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  valueLabelBuilder: (value) => '${value.round()}/5',
+                RecapStarRatingField(
+                  label: 'Valora la app',
+                  helperText: 'Tu experiencia general con la aplicación.',
+                  value: appRating.round().clamp(1, 5),
                   onChanged: (value) =>
-                      onChanged('improvement_app_rating', value.round()),
+                      onChanged('improvement_app_rating', value),
                 ),
                 const SizedBox(height: 20),
-                RecapSliderField(
-                  label: 'Valoración del servicio',
+                RecapStarRatingField(
+                  label: 'Valora el servicio',
                   helperText: 'Cómo percibes el soporte recibido esta semana.',
-                  value: serviceRating,
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  valueLabelBuilder: (value) => '${value.round()}/5',
+                  value: serviceRating.round().clamp(1, 5),
                   onChanged: (value) =>
-                      onChanged('improvement_service_rating', value.round()),
+                      onChanged('improvement_service_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapMultiSelectField(
@@ -169,22 +157,4 @@ class RecapStepGeneral extends StatelessWidget {
     );
   }
 
-  String _stressLabel(double value) {
-    switch (value.round()) {
-      case 0:
-        return 'Muy bajo';
-      case 1:
-        return 'Bajo';
-      case 2:
-        return 'Controlado';
-      case 3:
-        return 'Medio';
-      case 4:
-        return 'Alto';
-      case 5:
-        return 'Muy alto';
-      default:
-        return value.round().toString();
-    }
-  }
 }

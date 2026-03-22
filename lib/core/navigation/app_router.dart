@@ -46,9 +46,17 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 // Help pages
 import '../../features/help/presentation/pages/help_page.dart';
 
+// Onboarding pages
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+
+// Storage
+import '../../core/storage/local_storage.dart';
+import '../../injection_container.dart';
+
 class AppRoutes {
   static const login = '/login';
   static const accountLocked = '/account-locked';
+  static const onboarding = '/onboarding';
   static const home = '/';
   static const trainings = '/trainings';
   static const trainingDetail = '/trainings/:id';
@@ -69,14 +77,19 @@ class AppRouter {
     initialLocation: AppRoutes.home,
     redirect: (context, state) {
       final user = FirebaseAuth.instance.currentUser;
+      final loc = state.matchedLocation;
       final isAuthRoute =
-          state.matchedLocation == AppRoutes.login ||
-          state.matchedLocation == AppRoutes.accountLocked;
+          loc == AppRoutes.login || loc == AppRoutes.accountLocked;
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
-      if (user != null && state.matchedLocation == AppRoutes.login) {
-        return AppRoutes.home;
+      if (user != null && loc == AppRoutes.login) return AppRoutes.home;
+
+      // Show onboarding to newly authenticated users who haven't seen it
+      if (user != null && !isAuthRoute && loc != AppRoutes.onboarding) {
+        final done = sl<LocalStorage>().isOnboardingComplete;
+        if (!done) return AppRoutes.onboarding;
       }
+
       return null;
     },
     refreshListenable: GoRouterRefreshStream(
@@ -91,6 +104,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.accountLocked,
         builder: (_, __) => const AccountLockedPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (_, __) => const OnboardingPage(),
       ),
 
       // Main shell with bottom nav

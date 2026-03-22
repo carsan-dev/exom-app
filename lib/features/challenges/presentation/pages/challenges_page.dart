@@ -70,12 +70,7 @@ class _ChallengesContent extends StatelessWidget {
         state.achievements.isNotEmpty;
 
     if (!hasContent) {
-      return const Center(
-        child: Text(
-          'Aún no tienes retos asignados',
-          style: TextStyle(color: AppColors.textDisabled, fontSize: 14),
-        ),
-      );
+      return const _EmptyState();
     }
 
     return RefreshIndicator(
@@ -122,6 +117,124 @@ class _ChallengesContent extends StatelessWidget {
           fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          // Header
+          const Center(
+            child: Column(
+              children: [
+                Icon(Icons.emoji_events_outlined, color: AppColors.textDisabled, size: 56),
+                SizedBox(height: 12),
+                Text(
+                  'Sin retos activos',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Tu entrenador te asignará retos próximamente.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Placeholder retos
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Retos',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          ...List.generate(2, (i) => _PlaceholderCard(
+            icon: Icons.flag_outlined,
+            label: 'Reto pendiente',
+          )),
+          const SizedBox(height: 20),
+          // Placeholder logros
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Logros',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          SizedBox(
+            height: 100,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 4,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, _) => Container(
+                width: 90,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.borderMedium, width: 1.5),
+                  color: AppColors.surfaceVariant,
+                ),
+                child: const Center(
+                  child: Icon(Icons.lock_outline, color: AppColors.textDisabled, size: 28),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlaceholderCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _PlaceholderCard({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderMedium, width: 1.5),
+        color: AppColors.surfaceVariant,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textDisabled, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(height: 12, width: 120, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(6))),
+                const SizedBox(height: 6),
+                Container(height: 8, width: 80, decoration: BoxDecoration(color: AppColors.borderSoft, borderRadius: BorderRadius.circular(6))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

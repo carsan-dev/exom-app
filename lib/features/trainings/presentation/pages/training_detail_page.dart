@@ -58,10 +58,23 @@ class _TrainingDetailView extends StatelessWidget {
   }
 }
 
-class _DetailScaffold extends StatelessWidget {
+class _DetailScaffold extends StatefulWidget {
   final TrainingDetailLoaded state;
 
   const _DetailScaffold({required this.state});
+
+  @override
+  State<_DetailScaffold> createState() => _DetailScaffoldState();
+}
+
+class _DetailScaffoldState extends State<_DetailScaffold> {
+  final _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   Color _typeColor(String type) {
     switch (type.toUpperCase()) {
@@ -80,11 +93,12 @@ class _DetailScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final training = state.training;
+    final training = widget.state.training;
     final color = _typeColor(training.type);
-    final completed = state.completedExerciseIds.length;
+    final completed = widget.state.completedExerciseIds.length;
     final total = training.exercises.length;
     final progress = total > 0 ? completed / total : 0.0;
+    final allDone = total > 0 && completed == total;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -95,7 +109,7 @@ class _DetailScaffold extends StatelessWidget {
       body: Stack(
         children: [
           ListView(
-            padding: const EdgeInsets.only(bottom: 100),
+            padding: const EdgeInsets.only(bottom: 160),
             children: [
               // Header card
               Container(
@@ -170,7 +184,7 @@ class _DetailScaffold extends StatelessWidget {
 
               ...training.exercises.map((ex) => _ExerciseCard(
                     trainingExercise: ex,
-                    isCompleted: state.completedExerciseIds.contains(ex.id),
+                    isCompleted: widget.state.completedExerciseIds.contains(ex.id),
                     onToggle: (val) {
                       context.read<TrainingBloc>().add(
                         MarkExerciseCompleted(
@@ -187,16 +201,37 @@ class _DetailScaffold extends StatelessWidget {
                 _SectionTitle(title: 'Enfriamiento', icon: Icons.ac_unit_outlined, color: AppColors.secondary),
                 _DescriptionCard(text: training.cooldownDescription!),
               ],
+
+              // Quick notes
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Añadir nota rápida (Opcional)',
+                    hintStyle: const TextStyle(color: AppColors.textDisabled),
+                    prefixIcon: const Icon(Icons.edit_note, color: AppColors.textDisabled),
+                    filled: true,
+                    fillColor: AppColors.surfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
 
-          // Progress bar at bottom
+          // Bottom bar: progress + Completar button
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 border: const Border(top: BorderSide(color: AppColors.divider)),
@@ -232,9 +267,26 @@ class _DetailScaffold extends StatelessWidget {
                       value: progress,
                       backgroundColor: AppColors.surfaceVariant,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        completed == total && total > 0 ? AppColors.success : color,
+                        allDone ? AppColors.success : color,
                       ),
                       minHeight: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: allDone ? AppColors.success : AppColors.primary,
+                      ),
+                      icon: Icon(
+                        allDone ? Icons.check_circle_outline : Icons.done_outline,
+                        size: 18,
+                      ),
+                      label: Text(
+                        allDone ? '¡Entrenamiento completado!' : 'Completar',
+                      ),
                     ),
                   ),
                 ],

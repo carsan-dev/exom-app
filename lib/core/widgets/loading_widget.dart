@@ -101,6 +101,240 @@ class EmptyWidget extends StatelessWidget {
   }
 }
 
+// ─── Specialized Error Widgets ─────────────────────────────────────────────────
+
+class ServerErrorWidget extends StatelessWidget {
+  final String? errorCode;
+  final VoidCallback? onRetry;
+  final VoidCallback? onContactSupport;
+
+  const ServerErrorWidget({
+    super.key,
+    this.errorCode,
+    this.onRetry,
+    this.onContactSupport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_outlined,
+                color: AppColors.error,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Algo salió mal',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorCode != null
+                  ? 'Error $errorCode. El servidor no pudo procesar tu solicitud.'
+                  : 'El servidor no pudo procesar tu solicitud.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            if (onRetry != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Reintentar'),
+                ),
+              ),
+            if (onContactSupport != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onContactSupport,
+                  icon: const Icon(Icons.feedback_outlined, size: 18),
+                  label: const Text('Contactar soporte'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NoConnectionWidget extends StatelessWidget {
+  final VoidCallback? onRetry;
+  final VoidCallback? onViewOffline;
+
+  const NoConnectionWidget({super.key, this.onRetry, this.onViewOffline});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.wifi_off_outlined,
+                color: AppColors.warning,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Sin conexión a internet',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Comprueba tu conexión e inténtalo de nuevo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            if (onRetry != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Reintentar'),
+                ),
+              ),
+            if (onViewOffline != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onViewOffline,
+                  icon: const Icon(Icons.offline_pin_outlined, size: 18),
+                  label: const Text('Ver datos en caché'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NotFoundWidget extends StatelessWidget {
+  final VoidCallback? onGoToCalendar;
+  final VoidCallback? onGoHome;
+
+  const NotFoundWidget({super.key, this.onGoToCalendar, this.onGoHome});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.search_off_outlined,
+                color: AppColors.textMuted,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Contenido no disponible',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            if (onGoToCalendar != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onGoToCalendar,
+                  icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                  label: const Text('Ir al calendario'),
+                ),
+              ),
+            if (onGoHome != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onGoHome,
+                  icon: const Icon(Icons.home_outlined, size: 18),
+                  label: const Text('Inicio'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Shimmer Cards ──────────────────────────────────────────────────────────────
+
 class ShimmerCard extends StatelessWidget {
   final double height;
   final double? width;

@@ -3,57 +3,76 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // ── Brand ──────────────────────────────────────────────────────────────────
-  static const primary = Color(0xFFB5C934);
-  static const primaryHover = Color(0xFF9AAE2A);
-  static const primaryDark = Color(0xFF7E9220);
-  static const primarySoft = Color(0x33B5C934);
-  static const secondary = Color(0xFFD4A844);
-  static const accent = Color(0xFFD4604A);
+  // ── Marca ─────────────────────────────────────────────────────────────────
+  static const primary = Color(0xFFC5E384);
+  static const primaryHover = Color(0xFFD2EB99);
+  static const primaryPressed = Color(0xFFA9C85D);
+  static const primarySoft = Color(0xFFEAF4CC);
+  static const primaryDark = Color(0xFFA9C85D); // alias de pressed
 
-  // ── Backgrounds ────────────────────────────────────────────────────────────
-  static const background = Color(0xFF1A1610);
-  static const backgroundSecondary = Color(0xFF242018);
-  static const backgroundTertiary = Color(0xFF302A20);
+  // ── Fondos ────────────────────────────────────────────────────────────────
+  static const background = Color(0xFF200F07);
+  static const backgroundSecondary = Color(0xFF261209);
+  static const backgroundTertiary = Color(0xFF2E170B);
 
-  // ── Surfaces ───────────────────────────────────────────────────────────────
-  static const surface = Color(0xFF1E1A14);
-  static const surfaceElevated = Color(0xFF262220);
-  static const surfaceVariant = Color(0xFF282420);
-  static const card = Color(0xFF1E1A14);
+  // ── Navegación ────────────────────────────────────────────────────────────
+  static const header = Color(0xFF26140B);
+  static const bottomNav = Color(0xFF241209);
+  static const tabActive = Color(0x29C5E384); // #C5E384 16%
 
-  // Glass surfaces (for glassmorphism)
-  static const surfaceGlass = Color(0xCC1E1A14);
-  static const surfaceGlassLight = Color(0x99282420);
+  // ── Superficies ───────────────────────────────────────────────────────────
+  static const surface = Color(0xFF241209);
+  static const surfaceElevated = Color(0xFF33190C);
+  static const surfaceVariant = Color(0xFF33190C);
+  static const card = Color(0xFF2B150A);
 
-  // ── Borders ────────────────────────────────────────────────────────────────
-  static const borderSoft = Color(0xFF282420);
-  static const borderMedium = Color(0xFF342E24);
-  static const borderStrong = Color(0xFF403830);
-  static const focusRing = Color(0xFFB5C934);
-  static const divider = Color(0xFF302A22);
+  // Glass surfaces
+  static const surfaceGlass = Color(0x332B150A);    // #2B150A 20%
+  static const surfaceGlassLight = Color(0x33C5E384); // #C5E384 20%
 
-  // ── Text ───────────────────────────────────────────────────────────────────
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFFADA498);
-  static const textMuted = Color(0xFF807868);
-  static const textDisabled = Color(0xFF5A5244);
-  static const textOnPrimary = Color(0xFF1A1610);
+  // ── Bordes (derivados de #C5E384) ─────────────────────────────────────────
+  static const borderSoft = Color(0x1AC5E384);   // 10%
+  static const borderMedium = Color(0x29C5E384);  // 16%
+  static const borderStrong = Color(0x3DC5E384);  // 24%
+  static const focusRing = Color(0x52C5E384);     // 32%
+  static const divider = Color(0x1AC5E384);       // 10%
 
-  // ── Icons ──────────────────────────────────────────────────────────────────
-  static const iconDefault = Color(0xFF807868);
+  // ── Texto ─────────────────────────────────────────────────────────────────
+  static const textPrimary = Color(0xFFF7F9EF);
+  static const textSecondary = Color(0xFFE1E8C9);
+  static const textMuted = Color(0xFFB8BEA6);
+  static const textDisabled = Color(0xFF8F947F);
+  static const textOnPrimary = Color(0xFF231208);
 
-  // ── States ─────────────────────────────────────────────────────────────────
-  static const success = Color(0xFF7CB342);
-  static const warning = Color(0xFFD4B840);
-  static const error = Color(0xFFCC5A4A);
-  static const info = Color(0xFF5A86B8);
+  // ── Iconos ────────────────────────────────────────────────────────────────
+  static const iconDefault = Color(0xFFE1E8C9);
 
-  // ── Feature-specific ───────────────────────────────────────────────────────
-  static const dietCard = Color(0xFF3A5028);
-  static const trainingCard = Color(0xFF4A3828);
+  // ── Estados ───────────────────────────────────────────────────────────────
+  static const success = Color(0xFF8CCB68);
+  static const warning = Color(0xFFE5BE58);
+  static const error = Color(0xFFD76C5E);
+  static const info = Color(0xFF7FB5D8);
+
+  // ── Botones ───────────────────────────────────────────────────────────────
+  static const buttonDisabled = Color(0xFF6D7558);
+  static const buttonDanger = Color(0xFFD76C5E);
+  static const buttonDangerHover = Color(0xFFE17B6E);
+  static const buttonDangerPressed = Color(0xFFC95C4E);
+  static const buttonDangerDisabled = Color(0xFF6A4742);
+
+  // ── Feature-specific ──────────────────────────────────────────────────────
+  static const dietCardStart = Color(0xFF1B4822);
+  static const dietCardEnd = Color(0xFF2A6A35);
+  static const trainingCardStart = Color(0xFF552015);
+  static const trainingCardEnd = Color(0xFF7A2E1E);
   static const calorieAccent = Color(0xFFE8943A);
   static const sleepAccent = Color(0xFF9B7FCC);
+
+  // ── Alias legacy ──────────────────────────────────────────────────────────
+  static const secondary = primary;
+  static const accent = error;
+  static const dietCard = dietCardStart;
+  static const trainingCard = trainingCardStart;
 }
 
 class AppTheme {
@@ -136,7 +155,7 @@ class AppTheme {
         ),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.header,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,
@@ -204,15 +223,15 @@ class AppTheme {
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.bottomNav,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textDisabled,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primarySoft,
+        backgroundColor: AppColors.bottomNav,
+        indicatorColor: AppColors.tabActive,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: AppColors.primary);

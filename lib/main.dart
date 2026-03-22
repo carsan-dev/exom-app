@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,10 +21,18 @@ Future<void> main() async {
   await initializeDateFormatting('es_ES');
   await Firebase.initializeApp();
   await LocalStorage.init();
-  FlavorConfig.init(Flavor.dev);
+  await FlavorConfig.init(Flavor.dev);
   await initDependencies();
-  await sl<FcmService>().init();
   runApp(const ExomApp());
+  unawaited(_initializeFcm());
+}
+
+Future<void> _initializeFcm() async {
+  try {
+    await sl<FcmService>().init();
+  } catch (error) {
+    debugPrint('[FCM] Initialization failed: $error');
+  }
 }
 
 class ExomApp extends StatelessWidget {

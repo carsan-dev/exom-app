@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
+
+const _devApiBaseUrlOverride = String.fromEnvironment('EXOM_API_BASE_URL');
+
 enum Flavor { dev, staging, prod }
 
 class FlavorConfig {
@@ -13,27 +17,52 @@ class FlavorConfig {
   static FlavorConfig get instance {
     _instance ??= FlavorConfig._(
       flavor: Flavor.dev,
-      apiBaseUrl: _devBaseUrl,
+      apiBaseUrl: _fallbackDevBaseUrl,
     );
     return _instance!;
   }
 
-  // Android emulator uses 10.0.2.2 to reach host machine localhost
-  static String get _devBaseUrl {
+  static String get _fallbackDevBaseUrl {
+    if (_devApiBaseUrlOverride.isNotEmpty) {
+      return _devApiBaseUrlOverride;
+    }
+
     if (Platform.isAndroid) {
       return 'http://10.0.2.2:3000/api/v1';
     }
+
     return 'http://localhost:3000/api/v1';
   }
 
-  static void init(Flavor flavor) {
+  static Future<String> _resolveDevBaseUrl() async {
+    if (_devApiBaseUrlOverride.isNotEmpty) {
+      return _devApiBaseUrlOverride;
+    }
+
+    if (!Platform.isAndroid) {
+      return 'http://localhost:3000/api/v1';
+    }
+
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    if (androidInfo.isPhysicalDevice) {
+      return 'http://127.0.0.1:3000/api/v1';
+    }
+
+    return 'http://10.0.2.2:3000/api/v1';
+  }
+
+  static Future<String> _resolveApiBaseUrl(Flavor flavor) async {
+    return switch (flavor) {
+      Flavor.dev => _resolveDevBaseUrl(),
+      Flavor.staging => Future.value('https://api-staging.exom.app/api/v1'),
+      Flavor.prod => Future.value('https://api.exom.app/api/v1'),
+    };
+  }
+
+  static Future<void> init(Flavor flavor) async {
     _instance = FlavorConfig._(
       flavor: flavor,
-      apiBaseUrl: switch (flavor) {
-        Flavor.dev => _devBaseUrl,
-        Flavor.staging => 'https://api-staging.exom.app/api/v1',
-        Flavor.prod => 'https://api.exom.app/api/v1',
-      },
+      apiBaseUrl: await _resolveApiBaseUrl(flavor),
     );
   }
 

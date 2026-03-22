@@ -59,6 +59,7 @@ dependencies:
   intl: ^0.20.2
   table_calendar: ^3.2.0
   flutter_svg: ^2.0.17
+  device_info_plus: ^12.3.0
 
 dev_dependencies:
   flutter_test:

@@ -42,15 +42,15 @@ class _MetricsViewState extends State<_MetricsView> {
   };
 
   final Map<String, String> _measureKeys = {
-    'Cuello': 'neckCm',
-    'Hombros': 'shouldersCm',
-    'Pecho': 'chestCm',
-    'Brazo': 'armCm',
-    'Antebrazo': 'forearmCm',
-    'Cintura': 'waistCm',
-    'Caderas': 'hipsCm',
-    'Muslo': 'thighCm',
-    'Pantorrilla': 'calfCm',
+    'Cuello': 'neck_cm',
+    'Hombros': 'shoulders_cm',
+    'Pecho': 'chest_cm',
+    'Brazo': 'arm_cm',
+    'Antebrazo': 'forearm_cm',
+    'Cintura': 'waist_cm',
+    'Caderas': 'hips_cm',
+    'Muslo': 'thigh_cm',
+    'Pantorrilla': 'calf_cm',
   };
 
   @override
@@ -68,8 +68,8 @@ class _MetricsViewState extends State<_MetricsView> {
         : _weight;
 
     final data = <String, dynamic>{
-      'weightKg': finalWeight,
-      'sleepHours': _sleepHours,
+      'weight_kg': finalWeight,
+      'sleep_hours': _sleepHours,
     };
 
     for (final entry in _measureControllers.entries) {
@@ -248,7 +248,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 2.8,
+                            childAspectRatio: 2.0,
                           ),
                           itemCount: _measureControllers.length,
                           itemBuilder: (context, index) {

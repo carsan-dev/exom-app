@@ -303,7 +303,12 @@ class _ActionButtons extends StatelessWidget {
             child: _ActionChip(
               icon: Icons.monitor_weight_outlined,
               label: 'Actualizar peso',
-              onTap: () => context.push('/profile/metrics'),
+              onTap: () async {
+                  await context.push('/profile/metrics');
+                  if (context.mounted) {
+                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                  }
+                },
             ),
           ),
           const SizedBox(width: 8),
@@ -311,7 +316,12 @@ class _ActionButtons extends StatelessWidget {
             child: _ActionChip(
               icon: Icons.straighten_outlined,
               label: 'Actualizar medidas',
-              onTap: () => context.push('/profile/metrics'),
+              onTap: () async {
+                  await context.push('/profile/metrics');
+                  if (context.mounted) {
+                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                  }
+                },
             ),
           ),
           const SizedBox(width: 8),
@@ -398,7 +408,12 @@ class _WeightChartCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (entries.isEmpty)
-            _EmptyChart(onRegister: () => context.push('/profile/metrics'))
+            _EmptyChart(onRegister: () async {
+              await context.push('/profile/metrics');
+              if (context.mounted) {
+                context.read<ProfileBloc>().add(const ProfileLoadRequested());
+              }
+            })
           else
             _FilledChart(entries: entries),
         ],
@@ -898,7 +913,12 @@ class _BodyDataSection extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => context.push('/profile/metrics'),
+              onPressed: () async {
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textSecondary,
                 side: const BorderSide(color: AppColors.borderMedium),

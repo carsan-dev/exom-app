@@ -118,7 +118,7 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         Padding(
           padding: const EdgeInsets.only(right: 16),
           child: GestureDetector(
-            onTap: () => context.go('/calendar'),
+            onTap: () => context.go(AppRoutes.profile),
             child: CircleAvatar(
               radius: 18,
               backgroundColor: AppColors.primary.withValues(alpha: 0.2),

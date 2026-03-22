@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 class WeekDaySelector extends StatelessWidget {
@@ -9,8 +10,7 @@ class WeekDaySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    // Monday = 1 in Dart's weekday
-    final todayIndex = now.weekday - 1;
+    final todayIndex = now.weekday - 1; // Monday = 0
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -20,10 +20,15 @@ class WeekDaySelector extends StatelessWidget {
           final isToday = i == todayIndex;
           final isPast = i < todayIndex;
 
-          return _DayCircle(
-            label: _labels[i],
-            isToday: isToday,
-            isPast: isPast,
+          return GestureDetector(
+            onTap: isToday
+                ? null
+                : () => context.go('/calendar'),
+            child: _DayCircle(
+              label: _labels[i],
+              isToday: isToday,
+              isPast: isPast,
+            ),
           );
         }),
       ),

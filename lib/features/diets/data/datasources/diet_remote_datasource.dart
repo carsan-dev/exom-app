@@ -6,6 +6,7 @@ abstract class DietRemoteDataSource {
   Future<DietModel?> getTodayDiet();
   Future<MealModel> getMeal(String mealId);
   Future<void> markMealCompleted(String mealId, String date);
+  Future<Set<String>> getCompletedMealIds();
 }
 
 class DietRemoteDataSourceImpl implements DietRemoteDataSource {
@@ -53,5 +54,27 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
       '/progress/meals/complete',
       data: {'meal_id': mealId, 'date': date},
     );
+  }
+
+  @override
+  Future<Set<String>> getCompletedMealIds() async {
+    try {
+      final today = DateTime.now();
+      final dateStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final response = await _apiClient.dio.get<dynamic>(
+        '/progress',
+        queryParameters: {'date': dateStr},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+        final list = inner['meals_completed'] as List? ?? [];
+        return list.map((e) => e as String).toSet();
+      }
+      return {};
+    } catch (_) {
+      return {};
+    }
   }
 }

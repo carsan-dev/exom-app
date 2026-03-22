@@ -47,11 +47,11 @@ class _HomeView extends StatelessWidget {
     }
 
     if (state is HomeRestDay) {
-      return _RestDayBody(summary: state.summary);
+      return _RestDayBody(summary: state.summary, selectedDate: state.selectedDate);
     }
 
     if (state is HomeLoaded) {
-      return _LoadedBody(summary: state.summary);
+      return _LoadedBody(summary: state.summary, selectedDate: state.selectedDate);
     }
 
     return const SizedBox.shrink();
@@ -59,14 +59,34 @@ class _HomeView extends StatelessWidget {
 }
 
 class _DateHeader extends StatelessWidget {
-  const _DateHeader();
+  final DateTime selectedDate;
+
+  const _DateHeader({required this.selectedDate});
+
+  String _relativeLabel(DateTime date) {
+    final today = DateTime.now();
+    final todayNorm = DateTime(today.year, today.month, today.day);
+    final dateNorm = DateTime(date.year, date.month, date.day);
+    final diff = dateNorm.difference(todayNorm).inDays;
+
+    switch (diff) {
+      case 0:  return 'Hoy';
+      case 1:  return 'Mañana';
+      case 2:  return 'Pasado mañana';
+      case -1: return 'Ayer';
+      case -2: return 'Antes de ayer';
+      default:
+        if (diff > 0) return 'En $diff días';
+        return 'Hace ${diff.abs()} días';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dayName = DateFormat('EEEE', 'es').format(now);
-    final dayMonth = DateFormat('d \'de\' MMMM', 'es').format(now);
+    final dayName = DateFormat('EEEE', 'es').format(selectedDate);
+    final dayMonth = DateFormat('d \'de\' MMMM', 'es').format(selectedDate);
     final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
+    final label = _relativeLabel(selectedDate);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -76,9 +96,9 @@ class _DateHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Hoy',
-                  style: TextStyle(
+                Text(
+                  label,
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -117,8 +137,9 @@ class _DateHeader extends StatelessWidget {
 
 class _LoadedBody extends StatelessWidget {
   final HomeSummaryEntity summary;
+  final DateTime selectedDate;
 
-  const _LoadedBody({required this.summary});
+  const _LoadedBody({required this.summary, required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +152,7 @@ class _LoadedBody extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.only(top: 0, bottom: 32),
         children: [
-          const _DateHeader(),
+          _DateHeader(selectedDate: selectedDate),
           const SizedBox(height: 12),
           const WeekDaySelector(),
           const SizedBox(height: 20),
@@ -146,8 +167,9 @@ class _LoadedBody extends StatelessWidget {
 
 class _RestDayBody extends StatelessWidget {
   final HomeSummaryEntity summary;
+  final DateTime selectedDate;
 
-  const _RestDayBody({required this.summary});
+  const _RestDayBody({required this.summary, required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +182,7 @@ class _RestDayBody extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.only(top: 0, bottom: 32),
         children: [
-          const _DateHeader(),
+          _DateHeader(selectedDate: selectedDate),
           const SizedBox(height: 12),
           const WeekDaySelector(),
           const SizedBox(height: 20),

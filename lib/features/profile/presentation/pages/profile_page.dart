@@ -20,9 +20,28 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
-      child: const _ProfileView(),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Perfil',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      body: BlocProvider(
+        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+        child: const _ProfileView(),
+      ),
     );
   }
 }
@@ -48,6 +67,7 @@ class _ProfileView extends StatelessWidget {
               profile: state.profile,
               isUploadingAvatar: false,
               weightHistory: state.weightHistory,
+              latestMetric: state.latestMetric,
             );
           }
           if (state is ProfileAvatarUploading) {
@@ -55,6 +75,7 @@ class _ProfileView extends StatelessWidget {
               profile: state.profile,
               isUploadingAvatar: true,
               weightHistory: const [],
+              latestMetric: null,
             );
           }
           return const SizedBox.shrink();
@@ -67,11 +88,13 @@ class _ProfileContent extends StatelessWidget {
   final ProfileEntity profile;
   final bool isUploadingAvatar;
   final List<BodyMetricEntity> weightHistory;
+  final BodyMetricEntity? latestMetric;
 
   const _ProfileContent({
     required this.profile,
     required this.isUploadingAvatar,
     required this.weightHistory,
+    required this.latestMetric,
   });
 
   @override
@@ -89,7 +112,7 @@ class _ProfileContent extends StatelessWidget {
           _ActionButtons(profile: profile),
           _WeightChartCard(weightHistory: weightHistory),
           _IndicatorCards(weightHistory: weightHistory),
-          _BodyDataSection(profile: profile, weightHistory: weightHistory),
+          _BodyDataSection(profile: profile, weightHistory: weightHistory, latestMetric: latestMetric),
         ],
       ),
     );
@@ -838,20 +861,24 @@ class _EmptyIndicatorCard extends StatelessWidget {
 class _BodyDataSection extends StatelessWidget {
   final ProfileEntity profile;
   final List<BodyMetricEntity> weightHistory;
+  final BodyMetricEntity? latestMetric;
 
-  const _BodyDataSection({required this.profile, required this.weightHistory});
+  const _BodyDataSection({
+    required this.profile,
+    required this.weightHistory,
+    required this.latestMetric,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final latestMetric = weightHistory.isNotEmpty ? weightHistory.last : null;
     final latestWeight = weightHistory.where((e) => e.weightKg != null).isNotEmpty
         ? weightHistory.where((e) => e.weightKg != null).last
         : null;
     final hasMeasurements = latestMetric != null &&
-        (latestMetric.neckCm != null ||
-            latestMetric.chestCm != null ||
-            latestMetric.waistCm != null ||
-            latestMetric.hipsCm != null);
+        (latestMetric!.neckCm != null ||
+            latestMetric!.chestCm != null ||
+            latestMetric!.waistCm != null ||
+            latestMetric!.hipsCm != null);
 
     final dateFormat = DateFormat('dd/MM/yyyy');
 
@@ -879,7 +906,7 @@ class _BodyDataSection extends StatelessWidget {
               ),
               if (latestMetric != null)
                 Text(
-                  'Última actualización ${dateFormat.format(latestMetric.date)}',
+                  'Última actualización ${dateFormat.format(latestMetric!.date)}',
                   style: const TextStyle(color: AppColors.textDisabled, fontSize: 10),
                 ),
             ],
@@ -899,7 +926,7 @@ class _BodyDataSection extends StatelessWidget {
             icon: Icons.straighten_outlined,
             label: 'Medidas',
             detail: hasMeasurements
-                ? 'Última actualización ${dateFormat.format(latestMetric.date)}'
+                ? 'Última actualización ${dateFormat.format(latestMetric!.date)}'
                 : 'Sin datos',
           ),
           const SizedBox(height: 16),

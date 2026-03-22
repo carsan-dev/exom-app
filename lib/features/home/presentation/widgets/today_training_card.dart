@@ -155,7 +155,9 @@ class TodayTrainingCard extends StatelessWidget {
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                     Text(
-                      summary.trainingCompleted ? '100%' : '0%',
+                      summary.totalExercises > 0
+                          ? '${summary.exercisesCompleted}/${summary.totalExercises} ejercicios'
+                          : summary.trainingCompleted ? '100%' : '0%',
                       style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -164,7 +166,9 @@ class TodayTrainingCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: summary.trainingCompleted ? 1.0 : 0.0,
+                    value: summary.totalExercises > 0
+                        ? summary.exercisesCompleted / summary.totalExercises
+                        : (summary.trainingCompleted ? 1.0 : 0.0),
                     backgroundColor: AppColors.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                     minHeight: 6,

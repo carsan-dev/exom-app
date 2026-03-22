@@ -8,17 +8,21 @@ class HomeRepositoryImpl implements HomeRepository {
   const HomeRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<HomeSummaryEntity> getHomeSummary() async {
-    final model = await _remoteDataSource.getHomeSummary();
+  Future<HomeSummaryEntity> getHomeSummary({DateTime? date}) async {
+    final model = await _remoteDataSource.getHomeSummary(date: date);
     return HomeSummaryEntity(
       trainingId: model.trainingId,
       trainingName: model.trainingName,
       trainingType: model.trainingType,
       trainingDurationMin: model.trainingDurationMin,
       trainingCompleted: model.trainingCompleted,
+      exercisesCompleted: model.exercisesCompleted,
+      totalExercises: model.totalExercises,
       dietId: model.dietId,
       dietName: model.dietName,
       totalCalories: model.totalCalories,
+      mealsCompleted: model.mealsCompleted,
+      totalMeals: model.totalMeals,
       isRestDay: model.isRestDay,
       streakDays: model.streakDays,
       clientName: model.clientName,

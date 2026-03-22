@@ -35,10 +35,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final results = await Future.wait([
         _getProfileUseCase(),
         _metricsRepository.getWeightHistory(),
+        _metricsRepository.getLatestMetric(),
       ]);
       final profile = results[0] as ProfileEntity;
       final history = results[1] as List<BodyMetricEntity>;
-      emit(ProfileLoaded(profile, weightHistory: history));
+      final latest = results[2] as BodyMetricEntity?;
+      emit(ProfileLoaded(profile, weightHistory: history, latestMetric: latest));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }

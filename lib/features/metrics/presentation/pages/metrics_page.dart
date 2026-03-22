@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 
 class MetricsPage extends StatelessWidget {
@@ -10,7 +11,7 @@ class MetricsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<MetricsBloc>(),
+      create: (_) => sl<MetricsBloc>()..add(const MetricsLoadRequested()),
       child: const _MetricsView(),
     );
   }
@@ -82,10 +83,37 @@ class _MetricsViewState extends State<_MetricsView> {
     context.read<MetricsBloc>().add(MetricsSaveRequested(data));
   }
 
+  void _populateFromMetric(BodyMetricEntity metric) {
+    setState(() {
+      if (metric.weightKg != null) _weight = metric.weightKg!.clamp(40.0, 160.0);
+      if (metric.sleepHours != null) _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
+    });
+    final map = {
+      'Cuello': metric.neckCm,
+      'Hombros': metric.shouldersCm,
+      'Pecho': metric.chestCm,
+      'Brazo': metric.armCm,
+      'Antebrazo': metric.forearmCm,
+      'Cintura': metric.waistCm,
+      'Caderas': metric.hipsCm,
+      'Muslo': metric.thighCm,
+      'Pantorrilla': metric.calfCm,
+    };
+    for (final entry in map.entries) {
+      if (entry.value != null) {
+        _measureControllers[entry.key]?.text =
+            entry.value!.toStringAsFixed(1);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
+        if (state is MetricsLoaded && state.current != null) {
+          _populateFromMetric(state.current!);
+        }
         if (state is MetricsSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

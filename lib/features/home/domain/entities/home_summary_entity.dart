@@ -4,9 +4,13 @@ class HomeSummaryEntity {
   final String? trainingType;
   final int? trainingDurationMin;
   final bool trainingCompleted;
+  final int exercisesCompleted;
+  final int totalExercises;
   final String? dietId;
   final String? dietName;
   final int? totalCalories;
+  final int mealsCompleted;
+  final int totalMeals;
   final bool isRestDay;
   final int streakDays;
   final String? clientName;
@@ -21,9 +25,13 @@ class HomeSummaryEntity {
     this.trainingType,
     this.trainingDurationMin,
     this.trainingCompleted = false,
+    this.exercisesCompleted = 0,
+    this.totalExercises = 0,
     this.dietId,
     this.dietName,
     this.totalCalories,
+    this.mealsCompleted = 0,
+    this.totalMeals = 0,
     this.isRestDay = false,
     this.streakDays = 0,
     this.clientName,

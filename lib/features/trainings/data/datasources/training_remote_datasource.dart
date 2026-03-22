@@ -7,6 +7,7 @@ abstract class TrainingRemoteDataSource {
   Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20});
   Future<TrainingModel> getTraining(String id);
   Future<void> markExerciseCompleted(String exerciseId, String date);
+  Future<Set<String>> getCompletedExerciseIds();
 }
 
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
@@ -72,5 +73,29 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       '/progress/exercises/complete',
       data: {'exercise_id': exerciseId, 'date': date},
     );
+  }
+
+  @override
+  Future<Set<String>> getCompletedExerciseIds() async {
+    try {
+      final today = DateTime.now();
+      final dateStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final response = await _apiClient.dio.get<dynamic>(
+        '/progress',
+        queryParameters: {'date': dateStr},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+        final list = inner['exercises_completed'] as List? ?? [];
+        return list
+            .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
+            .toSet();
+      }
+      return {};
+    } catch (_) {
+      return {};
+    }
   }
 }

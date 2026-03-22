@@ -15,7 +15,8 @@ class ProfileLoading extends ProfileState {
 class ProfileLoaded extends ProfileState {
   final ProfileEntity profile;
   final List<BodyMetricEntity> weightHistory;
-  const ProfileLoaded(this.profile, {this.weightHistory = const []});
+  final BodyMetricEntity? latestMetric;
+  const ProfileLoaded(this.profile, {this.weightHistory = const [], this.latestMetric});
 }
 
 class ProfileAvatarUploading extends ProfileState {

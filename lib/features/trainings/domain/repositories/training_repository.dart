@@ -5,4 +5,5 @@ abstract class TrainingRepository {
   Future<List<TrainingEntity>> getTrainings({int page = 1, int limit = 20});
   Future<TrainingEntity> getTraining(String id);
   Future<void> markExerciseCompleted(String exerciseId, String date);
+  Future<Set<String>> getCompletedExerciseIds();
 }

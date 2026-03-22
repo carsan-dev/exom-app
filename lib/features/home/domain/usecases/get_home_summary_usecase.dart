@@ -6,5 +6,6 @@ class GetHomeSummaryUseCase {
 
   const GetHomeSummaryUseCase(this._repository);
 
-  Future<HomeSummaryEntity> call() => _repository.getHomeSummary();
+  Future<HomeSummaryEntity> call({DateTime? date}) =>
+      _repository.getHomeSummary(date: date);
 }

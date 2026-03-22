@@ -26,6 +26,11 @@ class DietRepositoryImpl implements DietRepository {
     return _remoteDataSource.markMealCompleted(mealId, date);
   }
 
+  @override
+  Future<Set<String>> getCompletedMealIds() {
+    return _remoteDataSource.getCompletedMealIds();
+  }
+
   DietEntity _mapToEntity(DietModel model) {
     return DietEntity(
       id: model.id,

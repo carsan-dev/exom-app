@@ -8,6 +8,15 @@ class MetricsInitial extends MetricsState {
   const MetricsInitial();
 }
 
+class MetricsLoading extends MetricsState {
+  const MetricsLoading();
+}
+
+class MetricsLoaded extends MetricsState {
+  final BodyMetricEntity? current;
+  const MetricsLoaded(this.current);
+}
+
 class MetricsSaving extends MetricsState {
   const MetricsSaving();
 }

@@ -28,6 +28,7 @@ import 'package:exom_app/features/trainings/domain/usecases/get_today_training_u
 import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 
 // Diets
@@ -37,6 +38,7 @@ import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart
 import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 
 // Profile
@@ -163,6 +165,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => MarkExerciseCompletedUseCase(sl<TrainingRepository>()),
   );
+  sl.registerLazySingleton(
+    () => GetCompletedExercisesUseCase(sl<TrainingRepository>()),
+  );
 
   sl.registerFactory(
     () => TrainingBloc(
@@ -170,6 +175,7 @@ Future<void> initDependencies() async {
       getTrainingsUseCase: sl<GetTrainingsUseCase>(),
       getTrainingUseCase: sl<GetTrainingUseCase>(),
       markExerciseCompletedUseCase: sl<MarkExerciseCompletedUseCase>(),
+      getCompletedExercisesUseCase: sl<GetCompletedExercisesUseCase>(),
     ),
   );
 
@@ -187,12 +193,16 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => MarkMealCompletedUseCase(sl<DietRepository>()),
   );
+  sl.registerLazySingleton(
+    () => GetCompletedMealsUseCase(sl<DietRepository>()),
+  );
 
   sl.registerFactory(
     () => DietBloc(
       getTodayDietUseCase: sl<GetTodayDietUseCase>(),
       getMealUseCase: sl<GetMealUseCase>(),
       markMealCompletedUseCase: sl<MarkMealCompletedUseCase>(),
+      getCompletedMealsUseCase: sl<GetCompletedMealsUseCase>(),
     ),
   );
 
@@ -320,6 +330,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => SaveMetricUseCase(sl<MetricsRepository>()));
 
   sl.registerFactory(
-    () => MetricsBloc(saveMetricUseCase: sl<SaveMetricUseCase>()),
+    () => MetricsBloc(
+      saveMetricUseCase: sl<SaveMetricUseCase>(),
+      metricsRepository: sl<MetricsRepository>(),
+    ),
   );
 }

@@ -72,17 +72,42 @@ class TodayDietCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Meal type icons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              _MealTypeIcon(icon: Icons.wb_sunny_outlined, label: 'Desayuno'),
-              _MealTypeIcon(icon: Icons.restaurant_outlined, label: 'Almuerzo'),
-              _MealTypeIcon(icon: Icons.local_cafe_outlined, label: 'Snack'),
-              _MealTypeIcon(icon: Icons.nights_stay_outlined, label: 'Cena'),
-            ],
-          ),
-          const SizedBox(height: 16),
+          if (summary.totalMeals > 0) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${summary.mealsCompleted}/${summary.totalMeals} comidas',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                ),
+                Text(
+                  summary.totalMeals > 0
+                      ? '${((summary.mealsCompleted / summary.totalMeals) * 100).toInt()}%'
+                      : '0%',
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: summary.totalMeals > 0
+                    ? summary.mealsCompleted / summary.totalMeals
+                    : 0.0,
+                backgroundColor: AppColors.surfaceVariant,
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ] else ...[
+            const SizedBox(height: 8),
+          ],
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(

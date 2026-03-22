@@ -3,6 +3,7 @@ import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
 
 part 'diet_event.dart';
 part 'diet_state.dart';
@@ -11,14 +12,17 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   final GetTodayDietUseCase _getTodayDietUseCase;
   final GetMealUseCase _getMealUseCase;
   final MarkMealCompletedUseCase _markMealCompletedUseCase;
+  final GetCompletedMealsUseCase _getCompletedMealsUseCase;
 
   DietBloc({
     required GetTodayDietUseCase getTodayDietUseCase,
     required GetMealUseCase getMealUseCase,
     required MarkMealCompletedUseCase markMealCompletedUseCase,
+    required GetCompletedMealsUseCase getCompletedMealsUseCase,
   })  : _getTodayDietUseCase = getTodayDietUseCase,
         _getMealUseCase = getMealUseCase,
         _markMealCompletedUseCase = markMealCompletedUseCase,
+        _getCompletedMealsUseCase = getCompletedMealsUseCase,
         super(const DietInitial()) {
     on<DietLoadRequested>(_onDietLoad);
     on<MealDetailLoadRequested>(_onMealDetailLoad);
@@ -31,11 +35,15 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   ) async {
     emit(const DietLoading());
     try {
-      final diet = await _getTodayDietUseCase();
+      final results = await Future.wait([
+        _getTodayDietUseCase(),
+        _getCompletedMealsUseCase(),
+      ]);
+      final diet = results[0] as DietEntity?;
       if (diet == null) {
         emit(const DietNoContent());
       } else {
-        emit(DietLoaded(diet));
+        emit(DietLoaded(diet, completedMealIds: results[1] as Set<String>));
       }
     } catch (e) {
       emit(DietError(e.toString()));

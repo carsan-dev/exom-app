@@ -4,9 +4,13 @@ class HomeSummaryModel {
   final int? trainingDurationMin;
   final bool trainingCompleted;
   final String? trainingId;
+  final int exercisesCompleted;
+  final int totalExercises;
   final String? dietName;
   final String? dietId;
   final int? totalCalories;
+  final int mealsCompleted;
+  final int totalMeals;
   final bool isRestDay;
   final int streakDays;
   final String? clientName;
@@ -21,9 +25,13 @@ class HomeSummaryModel {
     this.trainingDurationMin,
     this.trainingCompleted = false,
     this.trainingId,
+    this.exercisesCompleted = 0,
+    this.totalExercises = 0,
     this.dietName,
     this.dietId,
     this.totalCalories,
+    this.mealsCompleted = 0,
+    this.totalMeals = 0,
     this.isRestDay = false,
     this.streakDays = 0,
     this.clientName,
@@ -39,6 +47,7 @@ class HomeSummaryModel {
     required Map<String, dynamic>? streak,
     required Map<String, dynamic>? profile,
     required Map<String, dynamic>? latestMetric,
+    required Map<String, dynamic>? progress,
   }) {
     final firstName = profile?['first_name'] as String?;
     final lastName = profile?['last_name'] as String?;
@@ -51,15 +60,36 @@ class HomeSummaryModel {
       weightDate = DateTime.tryParse(latestMetric!['date'] as String);
     }
 
+    // Exercise progress
+    final trainingExercises = training?['training_exercises'] as List? ?? [];
+    final totalExercises = trainingExercises.length;
+    final completedExIds = (progress?['exercises_completed'] as List? ?? [])
+        .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
+        .toSet();
+    final exercisesCompleted = completedExIds.length;
+    final trainingCompleted = totalExercises > 0 && exercisesCompleted >= totalExercises;
+
+    // Meal progress
+    final dietMeals = diet?['meals'] as List? ?? [];
+    final totalMeals = dietMeals.length;
+    final completedMealIds = (progress?['meals_completed'] as List? ?? [])
+        .map((e) => e as String)
+        .toSet();
+    final mealsCompleted = completedMealIds.length;
+
     return HomeSummaryModel(
       trainingId: training?['id'] as String?,
       trainingName: training?['name'] as String?,
       trainingType: training?['type'] as String?,
       trainingDurationMin: training?['estimated_duration_min'] as int?,
-      trainingCompleted: training?['completed'] as bool? ?? false,
+      trainingCompleted: trainingCompleted,
+      exercisesCompleted: exercisesCompleted,
+      totalExercises: totalExercises,
       dietId: diet?['id'] as String?,
       dietName: diet?['name'] as String?,
       totalCalories: diet?['total_calories'] as int?,
+      mealsCompleted: mealsCompleted,
+      totalMeals: totalMeals,
       isRestDay: training == null,
       streakDays: streak?['current_days'] as int? ?? 0,
       clientName: fullName.isNotEmpty ? fullName : null,

@@ -184,7 +184,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
               ...training.exercises.map((ex) => _ExerciseCard(
                     trainingExercise: ex,
-                    isCompleted: widget.state.completedExerciseIds.contains(ex.id),
+                    isCompleted: widget.state.completedExerciseIds.contains(ex.exercise.id),
                     onToggle: (val) {
                       context.read<TrainingBloc>().add(
                         MarkExerciseCompleted(

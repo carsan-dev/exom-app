@@ -4,6 +4,7 @@ import 'package:exom_app/features/trainings/domain/usecases/get_today_training_u
 import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
 
 part 'training_event.dart';
 part 'training_state.dart';
@@ -13,16 +14,19 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
   final GetTrainingsUseCase _getTrainingsUseCase;
   final GetTrainingUseCase _getTrainingUseCase;
   final MarkExerciseCompletedUseCase _markExerciseCompletedUseCase;
+  final GetCompletedExercisesUseCase _getCompletedExercisesUseCase;
 
   TrainingBloc({
     required GetTodayTrainingUseCase getTodayTrainingUseCase,
     required GetTrainingsUseCase getTrainingsUseCase,
     required GetTrainingUseCase getTrainingUseCase,
     required MarkExerciseCompletedUseCase markExerciseCompletedUseCase,
+    required GetCompletedExercisesUseCase getCompletedExercisesUseCase,
   })  : _getTodayTrainingUseCase = getTodayTrainingUseCase,
         _getTrainingsUseCase = getTrainingsUseCase,
         _getTrainingUseCase = getTrainingUseCase,
         _markExerciseCompletedUseCase = markExerciseCompletedUseCase,
+        _getCompletedExercisesUseCase = getCompletedExercisesUseCase,
         super(const TrainingInitial()) {
     on<TodayTrainingLoadRequested>(_onTodayTrainingLoad);
     on<TrainingsLoadRequested>(_onTrainingsLoad);
@@ -72,8 +76,14 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
   ) async {
     emit(const TrainingLoading());
     try {
-      final training = await _getTrainingUseCase(event.id);
-      emit(TrainingDetailLoaded(training));
+      final results = await Future.wait([
+        _getTrainingUseCase(event.id),
+        _getCompletedExercisesUseCase(),
+      ]);
+      emit(TrainingDetailLoaded(
+        results[0] as TrainingEntity,
+        completedExerciseIds: results[1] as Set<String>,
+      ));
     } catch (e) {
       emit(TrainingError(e.toString()));
     }
@@ -85,12 +95,12 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
   ) async {
     final current = state;
     if (current is TrainingDetailLoaded) {
-      // Optimistic update
+      // Optimistic update (store exercise_id to match server format)
       final updated = Set<String>.from(current.completedExerciseIds);
       if (event.completed) {
-        updated.add(event.trainingExerciseId);
+        updated.add(event.exerciseId);
       } else {
-        updated.remove(event.trainingExerciseId);
+        updated.remove(event.exerciseId);
       }
       emit(current.copyWith(completedExerciseIds: updated));
 

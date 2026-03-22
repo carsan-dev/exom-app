@@ -14,12 +14,14 @@ class HomeLoading extends HomeState {
 
 class HomeLoaded extends HomeState {
   final HomeSummaryEntity summary;
-  const HomeLoaded(this.summary);
+  final DateTime selectedDate;
+  const HomeLoaded(this.summary, {required this.selectedDate});
 }
 
 class HomeRestDay extends HomeState {
   final HomeSummaryEntity summary;
-  const HomeRestDay(this.summary);
+  final DateTime selectedDate;
+  const HomeRestDay(this.summary, {required this.selectedDate});
 }
 
 class HomeError extends HomeState {

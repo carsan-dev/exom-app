@@ -32,6 +32,11 @@ class TrainingRepositoryImpl implements TrainingRepository {
     return _remoteDataSource.markExerciseCompleted(exerciseId, date);
   }
 
+  @override
+  Future<Set<String>> getCompletedExerciseIds() {
+    return _remoteDataSource.getCompletedExerciseIds();
+  }
+
   TrainingEntity _mapToEntity(TrainingModel model) {
     return TrainingEntity(
       id: model.id,

@@ -3,7 +3,7 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/home/data/models/home_summary_model.dart';
 
 abstract class HomeRemoteDataSource {
-  Future<HomeSummaryModel> getHomeSummary();
+  Future<HomeSummaryModel> getHomeSummary({DateTime? date});
 }
 
 class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
@@ -12,13 +12,14 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   const HomeRemoteDataSourceImpl(this._apiClient);
 
   @override
-  Future<HomeSummaryModel> getHomeSummary() async {
+  Future<HomeSummaryModel> getHomeSummary({DateTime? date}) async {
     final results = await Future.wait([
-      _getTrainingToday(),
-      _getDietToday(),
+      _getTrainingToday(date: date),
+      _getDietToday(date: date),
       _getStreak(),
       _getProfile(),
       _getLatestMetric(),
+      _getDayProgress(date: date),
     ]);
 
     return HomeSummaryModel.fromParts(
@@ -27,12 +28,19 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       streak: results[2] as Map<String, dynamic>?,
       profile: results[3] as Map<String, dynamic>?,
       latestMetric: results[4] as Map<String, dynamic>?,
+      progress: results[5] as Map<String, dynamic>?,
     );
   }
 
-  Future<Map<String, dynamic>?> _getTrainingToday() async {
+  Future<Map<String, dynamic>?> _getTrainingToday({DateTime? date}) async {
     try {
-      final response = await _apiClient.dio.get<dynamic>('/trainings/today');
+      final queryParams = date != null
+          ? {'date': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'}
+          : null;
+      final response = await _apiClient.dio.get<dynamic>(
+        '/trainings/today',
+        queryParameters: queryParams,
+      );
       if (response.statusCode == 204 || response.data == null) return null;
       final data = response.data;
       if (data is Map<String, dynamic>) {
@@ -49,9 +57,15 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     }
   }
 
-  Future<Map<String, dynamic>?> _getDietToday() async {
+  Future<Map<String, dynamic>?> _getDietToday({DateTime? date}) async {
     try {
-      final response = await _apiClient.dio.get<dynamic>('/diets/today');
+      final queryParams = date != null
+          ? {'date': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'}
+          : null;
+      final response = await _apiClient.dio.get<dynamic>(
+        '/diets/today',
+        queryParameters: queryParams,
+      );
       if (response.statusCode == 204 || response.data == null) return null;
       final data = response.data;
       if (data is Map<String, dynamic>) {
@@ -103,6 +117,26 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _getDayProgress({DateTime? date}) async {
+    try {
+      final target = date ?? DateTime.now();
+      final dateStr =
+          '${target.year}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}';
+      final response = await _apiClient.dio.get<dynamic>(
+        '/progress',
+        queryParameters: {'date': dateStr},
+      );
+      if (response.data == null) return null;
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return (data['data'] as Map<String, dynamic>?) ?? data;
       }
       return null;
     } catch (_) {

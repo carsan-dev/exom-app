@@ -140,15 +140,21 @@ class AppRouter {
                 const NoTransitionPage(child: CalendarPage()),
           ),
           GoRoute(
-            path: AppRoutes.profile,
+            path: AppRoutes.challenges,
             pageBuilder: (_, __) =>
-                const NoTransitionPage(child: ProfilePage()),
-            routes: [
-              GoRoute(
-                path: 'metrics',
-                builder: (_, __) => const MetricsPage(),
-              ),
-            ],
+                const NoTransitionPage(child: ChallengesPage()),
+          ),
+        ],
+      ),
+
+      // Profile (no shell nav bar — accessible from drawer)
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (_, __) => const ProfilePage(),
+        routes: [
+          GoRoute(
+            path: 'metrics',
+            builder: (_, __) => const MetricsPage(),
           ),
         ],
       ),
@@ -161,10 +167,6 @@ class AppRouter {
       ),
 
       // Modal routes (no shell)
-      GoRoute(
-        path: AppRoutes.challenges,
-        builder: (_, __) => const ChallengesPage(),
-      ),
       GoRoute(
         path: AppRoutes.recap,
         builder: (_, __) => const RecapPage(),
@@ -196,9 +198,9 @@ class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
-  // Tab order: Profile, Trainings, Home (center), Diets, Calendar
+  // Tab order: Challenges, Trainings, Home (center), Diets, Calendar
   static const _tabs = [
-    AppRoutes.profile,
+    AppRoutes.challenges,
     AppRoutes.trainings,
     AppRoutes.home,
     AppRoutes.diets,
@@ -207,7 +209,7 @@ class MainShell extends StatelessWidget {
 
   int _currentIndex(String location) {
     if (location == '/') return 2; // Home is center
-    if (location.startsWith('/profile')) return 0;
+    if (location.startsWith('/challenges')) return 0;
     if (location.startsWith('/trainings')) return 1;
     if (location.startsWith('/diets')) return 3;
     if (location.startsWith('/calendar')) return 4;
@@ -314,7 +316,7 @@ class _AppDrawer extends StatelessWidget {
                     label: 'Perfil',
                     onTap: () {
                       Navigator.pop(context);
-                      context.go(AppRoutes.profile);
+                      context.push(AppRoutes.profile);
                     },
                   ),
                   _DrawerItem(
@@ -322,7 +324,7 @@ class _AppDrawer extends StatelessWidget {
                     label: 'Retos',
                     onTap: () {
                       Navigator.pop(context);
-                      context.push(AppRoutes.challenges);
+                      context.go(AppRoutes.challenges);
                     },
                   ),
                   _DrawerItem(
@@ -419,7 +421,7 @@ class _ExomBottomNav extends StatelessWidget {
   const _ExomBottomNav({required this.selectedIndex, required this.onTap});
 
   static const _icons = [
-    Icons.track_changes,
+    Icons.emoji_events_outlined,
     Icons.fitness_center,
     null, // center = EXOM logo
     Icons.restaurant,

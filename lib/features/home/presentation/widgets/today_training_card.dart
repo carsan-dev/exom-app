@@ -15,7 +15,7 @@ class TodayTrainingCard extends StatelessWidget {
       case 'CARDIO':
         return AppColors.secondary;
       case 'HIIT':
-        return const Color(0xFFFF6B6B);
+        return AppColors.accent;
       case 'FLEXIBILIDAD':
         return AppColors.warning;
       default:
@@ -187,7 +187,7 @@ class TodayTrainingCard extends StatelessWidget {
                 label: const Text('Ver entrenamiento'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textOnPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

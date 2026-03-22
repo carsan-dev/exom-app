@@ -3,25 +3,57 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const primary = Color(0xFF6C63FF);
-  static const primaryDark = Color(0xFF4A3FE3);
-  static const secondary = Color(0xFF00D4AA);
-  static const accent = Color(0xFFFF6B6B);
+  // ── Brand ──────────────────────────────────────────────────────────────────
+  static const primary = Color(0xFFB5C934);
+  static const primaryHover = Color(0xFF9AAE2A);
+  static const primaryDark = Color(0xFF7E9220);
+  static const primarySoft = Color(0x33B5C934);
+  static const secondary = Color(0xFFD4A844);
+  static const accent = Color(0xFFD4604A);
 
-  static const background = Color(0xFF0F0F1A);
-  static const surface = Color(0xFF1A1A2E);
-  static const surfaceVariant = Color(0xFF252540);
-  static const card = Color(0xFF1E1E35);
+  // ── Backgrounds ────────────────────────────────────────────────────────────
+  static const background = Color(0xFF1A1610);
+  static const backgroundSecondary = Color(0xFF242018);
+  static const backgroundTertiary = Color(0xFF302A20);
 
+  // ── Surfaces ───────────────────────────────────────────────────────────────
+  static const surface = Color(0xFF1E1A14);
+  static const surfaceElevated = Color(0xFF262220);
+  static const surfaceVariant = Color(0xFF282420);
+  static const card = Color(0xFF1E1A14);
+
+  // Glass surfaces (for glassmorphism)
+  static const surfaceGlass = Color(0xCC1E1A14);
+  static const surfaceGlassLight = Color(0x99282420);
+
+  // ── Borders ────────────────────────────────────────────────────────────────
+  static const borderSoft = Color(0xFF282420);
+  static const borderMedium = Color(0xFF342E24);
+  static const borderStrong = Color(0xFF403830);
+  static const focusRing = Color(0xFFB5C934);
+  static const divider = Color(0xFF302A22);
+
+  // ── Text ───────────────────────────────────────────────────────────────────
   static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFFB0B0C8);
-  static const textDisabled = Color(0xFF606080);
+  static const textSecondary = Color(0xFFADA498);
+  static const textMuted = Color(0xFF807868);
+  static const textDisabled = Color(0xFF5A5244);
+  static const textOnPrimary = Color(0xFF1A1610);
 
-  static const success = Color(0xFF4CAF50);
-  static const warning = Color(0xFFFFB74D);
-  static const error = Color(0xFFEF5350);
+  // ── Icons ──────────────────────────────────────────────────────────────────
+  static const iconDefault = Color(0xFF807868);
 
-  static const divider = Color(0xFF2A2A45);
+  // ── States ─────────────────────────────────────────────────────────────────
+  static const success = Color(0xFF7CB342);
+  static const warning = Color(0xFFD4B840);
+  static const error = Color(0xFFCC5A4A);
+  static const info = Color(0xFF5A86B8);
+
+  // ── Feature-specific ───────────────────────────────────────────────────────
+  static const dietCard = Color(0xFF3A5028);
+  static const trainingCard = Color(0xFF4A3828);
+  static const calorieAccent = Color(0xFFE8943A);
+  static const sleepAccent = Color(0xFF9B7FCC);
 }
 
 class AppTheme {
@@ -36,7 +68,7 @@ class AppTheme {
         secondary: AppColors.secondary,
         surface: AppColors.surface,
         error: AppColors.error,
-        onPrimary: Colors.white,
+        onPrimary: AppColors.textOnPrimary,
         onSecondary: Colors.white,
         onSurface: AppColors.textPrimary,
       ),
@@ -117,7 +149,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.textOnPrimary,
           minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -150,11 +182,11 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.divider, width: 1),
+          borderSide: const BorderSide(color: AppColors.borderSoft, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: const BorderSide(color: AppColors.focusRing, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -168,7 +200,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.divider, width: 1),
+          side: const BorderSide(color: AppColors.borderSoft, width: 1),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
@@ -180,7 +212,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primary.withOpacity(0.2),
+        indicatorColor: AppColors.primarySoft,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: AppColors.primary);
@@ -194,6 +226,39 @@ class AppTheme {
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 1,
+      ),
+    );
+  }
+}
+
+/// Helper to create a glassmorphism-style decoration.
+class GlassDecoration {
+  GlassDecoration._();
+
+  /// Standard glass card decoration.
+  static BoxDecoration card({
+    double borderRadius = 16,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: AppColors.surfaceGlass,
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: borderColor ?? AppColors.borderSoft,
+      ),
+    );
+  }
+
+  /// Light glass decoration (more transparent).
+  static BoxDecoration light({
+    double borderRadius = 16,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: AppColors.surfaceGlassLight,
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: borderColor ?? AppColors.borderSoft,
       ),
     );
   }

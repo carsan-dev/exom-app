@@ -122,7 +122,7 @@ class _TodayTrainingBanner extends StatelessWidget {
       case 'CARDIO':
         return AppColors.secondary;
       case 'HIIT':
-        return const Color(0xFFFF6B6B);
+        return AppColors.accent;
       case 'FLEXIBILIDAD':
         return AppColors.warning;
       default:
@@ -281,7 +281,7 @@ class _TrainingListItem extends StatelessWidget {
       case 'CARDIO':
         return AppColors.secondary;
       case 'HIIT':
-        return const Color(0xFFFF6B6B);
+        return AppColors.accent;
       case 'FLEXIBILIDAD':
         return AppColors.warning;
       default:

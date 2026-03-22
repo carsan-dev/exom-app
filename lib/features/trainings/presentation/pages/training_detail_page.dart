@@ -70,7 +70,7 @@ class _DetailScaffold extends StatelessWidget {
       case 'CARDIO':
         return AppColors.secondary;
       case 'HIIT':
-        return const Color(0xFFFF6B6B);
+        return AppColors.accent;
       case 'FLEXIBILIDAD':
         return AppColors.warning;
       default:
@@ -129,7 +129,7 @@ class _DetailScaffold extends StatelessWidget {
                           _Badge(
                             label: '${training.estimatedCalories} kcal',
                             icon: Icons.local_fire_department_outlined,
-                            color: const Color(0xFFFF6B35),
+                            color: AppColors.calorieAccent,
                           ),
                       ],
                     ),

@@ -28,12 +28,12 @@ class StreakCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFFF6B35).withOpacity(0.15),
+            AppColors.calorieAccent.withValues(alpha: 0.15),
             AppColors.card,
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFF6B35).withOpacity(0.3)),
+        border: Border.all(color: AppColors.calorieAccent.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -42,7 +42,7 @@ class StreakCard extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: const Color(0xFFFF6B35).withOpacity(0.2),
+              color: AppColors.calorieAccent.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -60,7 +60,7 @@ class StreakCard extends StatelessWidget {
                     Text(
                       '$days',
                       style: const TextStyle(
-                        color: Color(0xFFFF6B35),
+                        color: AppColors.calorieAccent,
                         fontSize: 36,
                         fontWeight: FontWeight.w800,
                         height: 1,

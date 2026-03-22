@@ -296,7 +296,7 @@ class _MacroSection extends StatelessWidget {
                   label: 'Calorías',
                   value: '${meal.calories}',
                   unit: 'kcal',
-                  color: const Color(0xFFFF6B35),
+                  color: AppColors.calorieAccent,
                 ),
               if (meal.proteinG != null)
                 _MacroRing(

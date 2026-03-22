@@ -256,7 +256,7 @@ class _StatsRow extends StatelessWidget {
             value: '${profile.streakDays}',
             label: 'Racha',
             icon: '🔥',
-            color: const Color(0xFFFF6B35),
+            color: AppColors.calorieAccent,
           ),
           Container(width: 1, height: 40, color: AppColors.divider),
           _StatItem(

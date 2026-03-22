@@ -187,7 +187,7 @@ class _DietHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               if (diet.totalCalories != null)
-                _MacroStat(label: 'Calorías', value: '${diet.totalCalories}', unit: 'kcal', color: const Color(0xFFFF6B35)),
+                _MacroStat(label: 'Calorías', value: '${diet.totalCalories}', unit: 'kcal', color: AppColors.calorieAccent),
               if (diet.totalProteinG != null)
                 _MacroStat(label: 'Proteína', value: diet.totalProteinG!.toStringAsFixed(0), unit: 'g', color: AppColors.primary),
               if (diet.totalCarbsG != null)
@@ -290,7 +290,7 @@ class _MealCard extends StatelessWidget {
       case 'SNACK':
         return AppColors.primary;
       case 'DINNER':
-        return const Color(0xFF9B59B6);
+        return AppColors.sleepAccent;
       default:
         return AppColors.textDisabled;
     }

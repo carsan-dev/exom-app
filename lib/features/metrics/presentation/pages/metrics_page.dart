@@ -196,7 +196,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     _SectionCard(
                       title: 'Horas de sueño',
                       icon: Icons.bedtime_outlined,
-                      color: const Color(0xFF9B59B6),
+                      color: AppColors.sleepAccent,
                       child: Column(
                         children: [
                           const SizedBox(height: 8),
@@ -207,7 +207,7 @@ class _MetricsViewState extends State<_MetricsView> {
                               Text(
                                 '${_sleepHours.toStringAsFixed(1)}h',
                                 style: const TextStyle(
-                                  color: Color(0xFF9B59B6),
+                                  color: AppColors.sleepAccent,
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -220,7 +220,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             min: 4.0,
                             max: 12.0,
                             divisions: 16,
-                            activeColor: const Color(0xFF9B59B6),
+                            activeColor: AppColors.sleepAccent,
                             inactiveColor: AppColors.surfaceVariant,
                             onChanged: (val) => setState(() => _sleepHours = val),
                           ),

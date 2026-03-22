@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
@@ -29,6 +30,10 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _useManualWeight = false;
   final _weightController = TextEditingController();
   double _sleepHours = 8.0;
+
+  bool _bodyMapMode = false;
+  bool _bodyFront = true;
+  String? _selectedMeasure;
 
   final Map<String, TextEditingController> _measureControllers = {
     'Cuello': TextEditingController(),
@@ -61,6 +66,244 @@ class _MetricsViewState extends State<_MetricsView> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  // Front view zones (left column, right column)
+  static const _frontLeftZones = ['Cuello', 'Pecho', 'Cintura'];
+  static const _frontRightZones = ['Brazo', 'Antebrazo'];
+  // Back view zones
+  static const _backLeftZones = ['Hombros', 'Caderas'];
+  static const _backRightZones = ['Muslo', 'Pantorrilla'];
+
+  // Hotspot positions (relative to body silhouette)
+  static const _frontHotspots = <String, Offset>{
+    'Cuello': Offset(0.50, 0.10),
+    'Pecho': Offset(0.50, 0.25),
+    'Brazo': Offset(0.82, 0.30),
+    'Antebrazo': Offset(0.85, 0.40),
+    'Cintura': Offset(0.50, 0.40),
+  };
+  static const _backHotspots = <String, Offset>{
+    'Hombros': Offset(0.50, 0.17),
+    'Caderas': Offset(0.50, 0.45),
+    'Muslo': Offset(0.62, 0.62),
+    'Pantorrilla': Offset(0.62, 0.80),
+  };
+
+  // Flex values for label positioning on columns
+  static const _frontLeftFlex = [2, 5, 9];
+  static const _frontRightFlex = [6, 9];
+  static const _backLeftFlex = [3, 9];
+  static const _backRightFlex = [6, 9];
+
+  Widget _buildBodyMapMeasurements() {
+    final zones = _bodyFront ? _frontHotspots : _backHotspots;
+    final leftZones = _bodyFront ? _frontLeftZones : _backLeftZones;
+    final rightZones = _bodyFront ? _frontRightZones : _backRightZones;
+    final leftFlex = _bodyFront ? _frontLeftFlex : _backLeftFlex;
+    final rightFlex = _bodyFront ? _frontRightFlex : _backRightFlex;
+
+    return Column(
+      children: [
+        // Toggle tabs
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _viewTab('Frontal', Icons.person_outline, _bodyFront, () {
+              setState(() {
+                _bodyFront = true;
+                _selectedMeasure = null;
+              });
+            }),
+            const SizedBox(width: 8),
+            _viewTab('Posterior', Icons.person_outline, !_bodyFront, () {
+              setState(() {
+                _bodyFront = false;
+                _selectedMeasure = null;
+              });
+            }),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Body map with labels
+        SizedBox(
+          height: 440,
+          child: Row(
+            children: [
+              // Left labels
+              Expanded(
+                flex: 2,
+                child: _buildZoneColumn(leftZones, leftFlex, CrossAxisAlignment.end),
+              ),
+
+              // Body silhouette with hotspots
+              SizedBox(
+                width: 130,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bodyW = constraints.maxWidth;
+                    const bodyH = 440.0;
+                    return SizedBox(
+                      height: bodyH,
+                      child: Stack(
+                        children: [
+                          CustomPaint(
+                            size: Size(bodyW, bodyH),
+                            painter: BodySilhouettePainter(isBack: !_bodyFront),
+                          ),
+                          ...zones.entries.map((e) {
+                            final dx = e.value.dx * bodyW;
+                            final dy = e.value.dy * bodyH;
+                            return Positioned(
+                              left: dx - 8,
+                              top: dy - 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedMeasure = e.key),
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _selectedMeasure == e.key
+                                        ? AppColors.secondary
+                                        : AppColors.secondary.withValues(alpha: 0.3),
+                                    border: Border.all(
+                                      color: AppColors.secondary,
+                                      width: _selectedMeasure == e.key ? 2 : 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Right labels
+              Expanded(
+                flex: 2,
+                child: _buildZoneColumn(rightZones, rightFlex, CrossAxisAlignment.start),
+              ),
+            ],
+          ),
+        ),
+
+        // Input for selected zone
+        if (_selectedMeasure != null) ...[
+          const SizedBox(height: 16),
+          _MeasureInput(
+            label: _selectedMeasure!,
+            controller: _measureControllers[_selectedMeasure]!,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildZoneColumn(
+    List<String> zones,
+    List<int> flex,
+    CrossAxisAlignment align,
+  ) {
+    final children = <Widget>[];
+    for (var i = 0; i < zones.length; i++) {
+      if (i == 0 && flex[i] > 1) {
+        children.add(Spacer(flex: flex[i]));
+      } else if (i > 0) {
+        children.add(Spacer(flex: flex[i] - flex[i - 1]));
+      }
+      children.add(_zoneLabel(zones[i]));
+    }
+    children.add(Spacer(flex: 10 - flex.last));
+
+    return Column(
+      crossAxisAlignment: align,
+      children: children,
+    );
+  }
+
+  Widget _zoneLabel(String zone) {
+    final val = _measureControllers[zone]?.text ?? '';
+    final isSelected = _selectedMeasure == zone;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedMeasure = zone),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.secondary.withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected
+              ? Border.all(color: AppColors.secondary.withValues(alpha: 0.4))
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              zone,
+              style: TextStyle(
+                color: isSelected ? AppColors.secondary : AppColors.textSecondary,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            if (val.isNotEmpty)
+              Text(
+                '$val cm',
+                style: TextStyle(
+                  color: isSelected ? AppColors.secondary : AppColors.textDisabled,
+                  fontSize: 10,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _viewTab(String label, IconData icon, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.secondary.withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active
+                ? AppColors.secondary
+                : AppColors.divider,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14,
+                color: active ? AppColors.secondary : AppColors.textDisabled),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? AppColors.secondary : AppColors.textDisabled,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _save() {
@@ -267,27 +510,54 @@ class _MetricsViewState extends State<_MetricsView> {
                       title: 'Medidas corporales',
                       icon: Icons.straighten,
                       color: AppColors.secondary,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 2.0,
-                          ),
-                          itemCount: _measureControllers.length,
-                          itemBuilder: (context, index) {
-                            final key = _measureControllers.keys.elementAt(index);
-                            return _MeasureInput(
-                              label: key,
-                              controller: _measureControllers[key]!,
-                            );
-                          },
+                      trailing: GestureDetector(
+                        onTap: () => setState(() {
+                          _bodyMapMode = !_bodyMapMode;
+                          _selectedMeasure = null;
+                        }),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _bodyMapMode ? Icons.grid_view : Icons.accessibility_new,
+                              color: AppColors.secondary,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _bodyMapMode ? 'Lista' : 'Cuerpo',
+                              style: const TextStyle(
+                                color: AppColors.secondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      child: _bodyMapMode
+                          ? _buildBodyMapMeasurements()
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 2.0,
+                                ),
+                                itemCount: _measureControllers.length,
+                                itemBuilder: (context, index) {
+                                  final key = _measureControllers.keys.elementAt(index);
+                                  return _MeasureInput(
+                                    label: key,
+                                    controller: _measureControllers[key]!,
+                                  );
+                                },
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -332,12 +602,14 @@ class _SectionCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Widget child;
+  final Widget? trailing;
 
   const _SectionCard({
     required this.title,
     required this.icon,
     required this.color,
     required this.child,
+    this.trailing,
   });
 
   @override
@@ -365,6 +637,10 @@ class _SectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (trailing != null) ...[
+                const Spacer(),
+                trailing!,
+              ],
             ],
           ),
           const SizedBox(height: 4),

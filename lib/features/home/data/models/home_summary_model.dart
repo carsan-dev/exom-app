@@ -11,6 +11,9 @@ class HomeSummaryModel {
   final int streakDays;
   final String? clientName;
   final String? avatarUrl;
+  final double? lastWeightKg;
+  final DateTime? lastWeightDate;
+  final double? lastSleepHours;
 
   const HomeSummaryModel({
     this.trainingName,
@@ -25,13 +28,29 @@ class HomeSummaryModel {
     this.streakDays = 0,
     this.clientName,
     this.avatarUrl,
+    this.lastWeightKg,
+    this.lastWeightDate,
+    this.lastSleepHours,
   });
 
   factory HomeSummaryModel.fromParts({
     required Map<String, dynamic>? training,
     required Map<String, dynamic>? diet,
     required Map<String, dynamic>? streak,
+    required Map<String, dynamic>? profile,
+    required Map<String, dynamic>? latestMetric,
   }) {
+    final firstName = profile?['first_name'] as String?;
+    final lastName = profile?['last_name'] as String?;
+    final fullName = [firstName, lastName]
+        .where((s) => s != null && s.isNotEmpty)
+        .join(' ');
+
+    DateTime? weightDate;
+    if (latestMetric?['date'] != null) {
+      weightDate = DateTime.tryParse(latestMetric!['date'] as String);
+    }
+
     return HomeSummaryModel(
       trainingId: training?['id'] as String?,
       trainingName: training?['name'] as String?,
@@ -43,8 +62,11 @@ class HomeSummaryModel {
       totalCalories: diet?['total_calories'] as int?,
       isRestDay: training == null,
       streakDays: streak?['current_days'] as int? ?? 0,
-      clientName: null,
-      avatarUrl: null,
+      clientName: fullName.isNotEmpty ? fullName : null,
+      avatarUrl: profile?['avatar_url'] as String?,
+      lastWeightKg: (profile?['current_weight'] as num?)?.toDouble(),
+      lastWeightDate: weightDate,
+      lastSleepHours: (latestMetric?['sleep_hours'] as num?)?.toDouble(),
     );
   }
 }

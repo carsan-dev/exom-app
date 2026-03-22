@@ -23,6 +23,9 @@ class HomeRepositoryImpl implements HomeRepository {
       streakDays: model.streakDays,
       clientName: model.clientName,
       avatarUrl: model.avatarUrl,
+      lastWeightKg: model.lastWeightKg,
+      lastWeightDate: model.lastWeightDate,
+      lastSleepHours: model.lastSleepHours,
     );
   }
 }

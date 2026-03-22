@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -12,7 +13,8 @@ import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart'
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
-import 'package:exom_app/features/home/presentation/widgets/streak_card.dart';
+import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
+import 'package:exom_app/features/home/presentation/widgets/stats_row.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -104,55 +106,102 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      title: Text(
+        _greeting() + (firstName.isNotEmpty ? ', $firstName' : ''),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: GestureDetector(
+            onTap: () => context.go('/calendar'),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+              child: avatarUrl != null
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: avatarUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => const Icon(
+                          Icons.person,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DateHeader extends StatelessWidget {
+  const _DateHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dayName = DateFormat('EEEE', 'es').format(now);
+    final dayMonth = DateFormat('d \'de\' MMMM', 'es').format(now);
+    final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
         children: [
-          Text(
-            _greeting() + (firstName.isNotEmpty ? ', $firstName' : ''),
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Hoy',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  '$capitalDay $dayMonth',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => context.go('/calendar'),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.calendar_today_outlined,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
             ),
           ),
         ],
       ),
-      actions: [
-        if (avatarUrl != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary.withOpacity(0.2),
-              child: ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: avatarUrl!,
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const Icon(
-                    Icons.person,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary.withOpacity(0.2),
-              child: const Icon(
-                Icons.person,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -170,7 +219,6 @@ class _HomeDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // Profile header
             Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
@@ -180,7 +228,7 @@ class _HomeDrawer extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 36,
-                    backgroundColor: AppColors.primary.withOpacity(0.2),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                     child: avatarUrl != null
                         ? ClipOval(
                             child: CachedNetworkImage(
@@ -188,7 +236,7 @@ class _HomeDrawer extends StatelessWidget {
                               width: 72,
                               height: 72,
                               fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Icon(
+                              errorWidget: (_, _, _) => const Icon(
                                 Icons.person,
                                 color: AppColors.primary,
                                 size: 36,
@@ -341,11 +389,15 @@ class _LoadedBody extends StatelessWidget {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 32),
+        padding: const EdgeInsets.only(top: 0, bottom: 32),
         children: [
+          const _DateHeader(),
+          const SizedBox(height: 12),
+          const WeekDaySelector(),
+          const SizedBox(height: 20),
           TodayTrainingCard(summary: summary),
           TodayDietCard(summary: summary),
-          StreakCard(summary: summary),
+          StatsRow(summary: summary),
         ],
       ),
     );
@@ -366,10 +418,15 @@ class _RestDayBody extends StatelessWidget {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.only(top: 0, bottom: 32),
         children: [
+          const _DateHeader(),
+          const SizedBox(height: 12),
+          const WeekDaySelector(),
+          const SizedBox(height: 20),
           // Rest day card
           Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: AppColors.card,
@@ -382,11 +439,15 @@ class _RestDayBody extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.1),
+                    color: AppColors.surfaceVariant,
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Text('😴', style: TextStyle(fontSize: 40)),
+                    child: Icon(
+                      Icons.fitness_center,
+                      color: AppColors.textDisabled,
+                      size: 36,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -394,13 +455,13 @@ class _RestDayBody extends StatelessWidget {
                   'Día de descanso',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Hoy es un día para recuperarte. Tu cuerpo necesita descanso para crecer y mejorar.',
+                  'No tienes entrenamiento asignado para hoy.\nAprovecha para recuperarte.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -408,40 +469,27 @@ class _RestDayBody extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                const SizedBox(height: 20),
+                OutlinedButton(
+                  onPressed: () => context.go('/calendar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.tips_and_updates_outlined,
-                        color: AppColors.secondary,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Descansa, hidratate y come bien',
-                        style: TextStyle(
-                          color: AppColors.secondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: const Text('Ver calendario'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          StreakCard(summary: summary),
+          StatsRow(summary: summary),
         ],
       ),
     );

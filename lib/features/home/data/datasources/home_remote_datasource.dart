@@ -17,12 +17,16 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       _getTrainingToday(),
       _getDietToday(),
       _getStreak(),
+      _getProfile(),
+      _getLatestMetric(),
     ]);
 
     return HomeSummaryModel.fromParts(
       training: results[0] as Map<String, dynamic>?,
       diet: results[1] as Map<String, dynamic>?,
       streak: results[2] as Map<String, dynamic>?,
+      profile: results[3] as Map<String, dynamic>?,
+      latestMetric: results[4] as Map<String, dynamic>?,
     );
   }
 
@@ -67,6 +71,34 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<Map<String, dynamic>?> _getStreak() async {
     try {
       final response = await _apiClient.dio.get<dynamic>('/streaks/me');
+      if (response.data == null) return null;
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _getProfile() async {
+    try {
+      final response = await _apiClient.dio.get<dynamic>('/profile/me');
+      if (response.data == null) return null;
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _getLatestMetric() async {
+    try {
+      final response = await _apiClient.dio.get<dynamic>('/metrics/latest');
       if (response.data == null) return null;
       final data = response.data;
       if (data is Map<String, dynamic>) {

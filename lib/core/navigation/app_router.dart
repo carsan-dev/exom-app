@@ -222,10 +222,25 @@ class MainShell extends StatelessWidget {
                 // EXOM logo with text
                 SvgPicture.asset('assets/images/logo.svg', height: 28),
                 const Spacer(),
+                IconButton(
+                  onPressed: () => context.push(AppRoutes.profile),
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: AppColors.textPrimary,
+                      size: 18,
+                    ),
+                  ),
+                ),
                 // Hamburger menu
                 Builder(
                   builder: (ctx) => IconButton(
-                    onPressed: () => Scaffold.of(ctx).openDrawer(),
+                    onPressed: () => Scaffold.of(ctx).openEndDrawer(),
                     icon: const Icon(
                       Icons.menu,
                       color: AppColors.textPrimary,
@@ -238,7 +253,7 @@ class MainShell extends StatelessWidget {
           ),
         ),
       ),
-      drawer: const _AppDrawer(),
+      endDrawer: const _AppDrawer(),
       body: child,
       bottomNavigationBar: _ExomBottomNav(
         selectedIndex: selected,

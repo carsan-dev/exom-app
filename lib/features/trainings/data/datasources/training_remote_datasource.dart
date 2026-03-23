@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/training_model.dart';
 
@@ -17,10 +18,15 @@ abstract class TrainingRemoteDataSource {
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
+  final OfflineSyncService _offlineSyncService;
 
   static const _emptyMarker = '__empty__';
 
-  const TrainingRemoteDataSourceImpl(this._apiClient, this._localStorage);
+  const TrainingRemoteDataSourceImpl(
+    this._apiClient,
+    this._localStorage,
+    this._offlineSyncService,
+  );
 
   String _todayDate() {
     final today = DateTime.now();
@@ -178,32 +184,64 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
 
   @override
   Future<void> markExerciseCompleted(String exerciseId, String date) async {
-    final response = await _apiClient.dio.post<dynamic>(
-      '/progress/exercises/complete',
-      data: {'exercise_id': exerciseId, 'date': date},
-    );
-    await _cacheProgressResponse(response, date);
+    try {
+      final response = await _apiClient.dio.post<dynamic>(
+        '/progress/exercises/complete',
+        data: {'exercise_id': exerciseId, 'date': date},
+      );
+      await _cacheProgressResponse(response, date);
+    } on DioException catch (error) {
+      if (!isOfflineError(error)) {
+        rethrow;
+      }
+
+      await _offlineSyncService.queueExerciseCompletion(
+        exerciseId,
+        date,
+        completed: true,
+      );
+    }
   }
 
   @override
   Future<void> unmarkExerciseCompleted(String exerciseId, String date) async {
-    final response = await _apiClient.dio.delete<dynamic>(
-      '/progress/exercises/$exerciseId',
-      queryParameters: {'date': date},
-    );
-    await _cacheProgressResponse(response, date);
+    try {
+      final response = await _apiClient.dio.delete<dynamic>(
+        '/progress/exercises/$exerciseId',
+        queryParameters: {'date': date},
+      );
+      await _cacheProgressResponse(response, date);
+    } on DioException catch (error) {
+      if (!isOfflineError(error)) {
+        rethrow;
+      }
+
+      await _offlineSyncService.queueExerciseCompletion(
+        exerciseId,
+        date,
+        completed: false,
+      );
+    }
   }
 
   @override
   Future<void> completeTraining(String date, {String? notes}) async {
-    final response = await _apiClient.dio.post<dynamic>(
-      '/progress/trainings/complete',
-      data: {
-        'date': date,
-        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-      },
-    );
-    await _cacheProgressResponse(response, date);
+    try {
+      final response = await _apiClient.dio.post<dynamic>(
+        '/progress/trainings/complete',
+        data: {
+          'date': date,
+          if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        },
+      );
+      await _cacheProgressResponse(response, date);
+    } on DioException catch (error) {
+      if (!isOfflineError(error)) {
+        rethrow;
+      }
+
+      await _offlineSyncService.queueTrainingCompletion(date, notes: notes);
+    }
   }
 
   @override

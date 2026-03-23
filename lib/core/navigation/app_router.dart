@@ -73,7 +73,11 @@ class AppRoutes {
 }
 
 class AppRouter {
+  static final rootNavigatorKey = GlobalKey<NavigatorState>();
+  static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
   static final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.home,
     redirect: (context, state) {
       final user = FirebaseAuth.instance.currentUser;
@@ -97,10 +101,7 @@ class AppRouter {
     ),
     routes: [
       // Auth
-      GoRoute(
-        path: AppRoutes.login,
-        builder: (_, __) => const LoginPage(),
-      ),
+      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginPage()),
       GoRoute(
         path: AppRoutes.accountLocked,
         builder: (_, __) => const AccountLockedPage(),
@@ -125,8 +126,8 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (_, state) => TrainingDetailPage(
-                    trainingId: state.pathParameters['id']!),
+                builder: (_, state) =>
+                    TrainingDetailPage(trainingId: state.pathParameters['id']!),
               ),
             ],
           ),
@@ -152,10 +153,7 @@ class AppRouter {
         path: AppRoutes.profile,
         builder: (_, __) => const ProfilePage(),
         routes: [
-          GoRoute(
-            path: 'metrics',
-            builder: (_, __) => const MetricsPage(),
-          ),
+          GoRoute(path: 'metrics', builder: (_, __) => const MetricsPage()),
         ],
       ),
 
@@ -167,10 +165,7 @@ class AppRouter {
       ),
 
       // Modal routes (no shell)
-      GoRoute(
-        path: AppRoutes.recap,
-        builder: (_, __) => const RecapPage(),
-      ),
+      GoRoute(path: AppRoutes.recap, builder: (_, __) => const RecapPage()),
       GoRoute(
         path: AppRoutes.feedback,
         builder: (_, __) => const FeedbackPage(),
@@ -179,16 +174,10 @@ class AppRouter {
         path: AppRoutes.settings,
         builder: (_, __) => const SettingsPage(),
       ),
-      GoRoute(
-        path: AppRoutes.help,
-        builder: (_, __) => const HelpPage(),
-      ),
+      GoRoute(path: AppRoutes.help, builder: (_, __) => const HelpPage()),
     ],
-    errorBuilder: (_, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.error}'),
-      ),
-    ),
+    errorBuilder: (_, state) =>
+        Scaffold(body: Center(child: Text('Page not found: ${state.error}'))),
   );
 }
 
@@ -231,10 +220,7 @@ class MainShell extends StatelessWidget {
             child: Row(
               children: [
                 // EXOM logo with text
-                SvgPicture.asset(
-                  'assets/images/logo.svg',
-                  height: 28,
-                ),
+                SvgPicture.asset('assets/images/logo.svg', height: 28),
                 const Spacer(),
                 // Hamburger menu
                 Builder(
@@ -459,7 +445,10 @@ class _ExomBottomNav extends StatelessWidget {
                     decoration: const BoxDecoration(
                       color: AppColors.surface,
                       border: Border(
-                        top: BorderSide(color: AppColors.borderSoft, width: 0.5),
+                        top: BorderSide(
+                          color: AppColors.borderSoft,
+                          width: 0.5,
+                        ),
                       ),
                     ),
                   ),

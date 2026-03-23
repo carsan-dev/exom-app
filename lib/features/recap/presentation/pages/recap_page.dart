@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -111,6 +112,11 @@ class _RecapViewState extends State<_RecapView> {
                       const RecapFormCancelled(),
                     ),
                     icon: const Icon(Icons.close),
+                  )
+                : context.canPop()
+                ? IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back),
                   )
                 : null,
             actions: isFormActive

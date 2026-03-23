@@ -4,6 +4,7 @@ class LocalStorage {
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
   static const _settingsBox = 'settings_box';
+  static const _pendingSyncKey = 'offline_sync_actions';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -57,6 +58,23 @@ class LocalStorage {
   Future<void> removeCachedData(String key) => _cache.delete(key);
 
   Future<void> clearCache() => _cache.clear();
+
+  List<Map<String, dynamic>> getPendingSyncActions() {
+    final actions = getCachedList(_pendingSyncKey);
+    if (actions == null) {
+      return <Map<String, dynamic>>[];
+    }
+
+    return actions
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: true);
+  }
+
+  Future<void> savePendingSyncActions(List<Map<String, dynamic>> actions) =>
+      _cache.put(_pendingSyncKey, actions);
+
+  Future<void> clearPendingSyncActions() => _cache.delete(_pendingSyncKey);
 
   // Settings
   Future<void> saveSetting(String key, dynamic value) =>

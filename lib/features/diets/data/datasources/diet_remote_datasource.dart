@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 
@@ -15,10 +16,15 @@ abstract class DietRemoteDataSource {
 class DietRemoteDataSourceImpl implements DietRemoteDataSource {
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
+  final OfflineSyncService _offlineSyncService;
 
   static const _emptyMarker = '__empty__';
 
-  const DietRemoteDataSourceImpl(this._apiClient, this._localStorage);
+  const DietRemoteDataSourceImpl(
+    this._apiClient,
+    this._localStorage,
+    this._offlineSyncService,
+  );
 
   String _todayDate() {
     final today = DateTime.now();
@@ -125,20 +131,44 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
 
   @override
   Future<void> markMealCompleted(String mealId, String date) async {
-    final response = await _apiClient.dio.post<dynamic>(
-      '/progress/meals/complete',
-      data: {'meal_id': mealId, 'date': date},
-    );
-    await _cacheProgressResponse(response, date);
+    try {
+      final response = await _apiClient.dio.post<dynamic>(
+        '/progress/meals/complete',
+        data: {'meal_id': mealId, 'date': date},
+      );
+      await _cacheProgressResponse(response, date);
+    } on DioException catch (error) {
+      if (!isOfflineError(error)) {
+        rethrow;
+      }
+
+      await _offlineSyncService.queueMealCompletion(
+        mealId,
+        date,
+        completed: true,
+      );
+    }
   }
 
   @override
   Future<void> unmarkMealCompleted(String mealId, String date) async {
-    final response = await _apiClient.dio.delete<dynamic>(
-      '/progress/meals/$mealId',
-      queryParameters: {'date': date},
-    );
-    await _cacheProgressResponse(response, date);
+    try {
+      final response = await _apiClient.dio.delete<dynamic>(
+        '/progress/meals/$mealId',
+        queryParameters: {'date': date},
+      );
+      await _cacheProgressResponse(response, date);
+    } on DioException catch (error) {
+      if (!isOfflineError(error)) {
+        rethrow;
+      }
+
+      await _offlineSyncService.queueMealCompletion(
+        mealId,
+        date,
+        completed: false,
+      );
+    }
   }
 
   @override

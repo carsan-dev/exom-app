@@ -3,6 +3,8 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/services/local_notification_service.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -111,7 +113,19 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<FirebaseAuthService>(() => FirebaseAuthService());
 
   sl.registerLazySingleton<FcmService>(
-    () => FcmService(sl<ApiClient>(), sl<LocalStorage>()),
+    () => FcmService(
+      sl<ApiClient>(),
+      sl<LocalStorage>(),
+      sl<LocalNotificationService>(),
+    ),
+  );
+
+  sl.registerLazySingleton<LocalNotificationService>(
+    () => LocalNotificationService(),
+  );
+
+  sl.registerLazySingleton<OfflineSyncService>(
+    () => OfflineSyncService(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -156,7 +170,11 @@ Future<void> initDependencies() async {
 
   // ── Trainings ─────────────────────────────────────────────────────────────
   sl.registerLazySingleton<TrainingRemoteDataSource>(
-    () => TrainingRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
+    () => TrainingRemoteDataSourceImpl(
+      sl<ApiClient>(),
+      sl<LocalStorage>(),
+      sl<OfflineSyncService>(),
+    ),
   );
 
   sl.registerLazySingleton<TrainingRepository>(
@@ -195,7 +213,11 @@ Future<void> initDependencies() async {
 
   // ── Diets ─────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<DietRemoteDataSource>(
-    () => DietRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
+    () => DietRemoteDataSourceImpl(
+      sl<ApiClient>(),
+      sl<LocalStorage>(),
+      sl<OfflineSyncService>(),
+    ),
   );
 
   sl.registerLazySingleton<DietRepository>(

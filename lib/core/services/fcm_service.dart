@@ -4,13 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 
 class FcmService {
   final ApiClient _apiClient;
+  final LocalStorage _localStorage;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   StreamSubscription<User?>? _authSubscription;
 
-  FcmService(this._apiClient);
+  FcmService(this._apiClient, this._localStorage);
 
   Future<void> init() async {
     // Request permission
@@ -27,6 +29,10 @@ class FcmService {
 
     // Get token and send to backend
     final token = await _messaging.getToken();
+    if (token != null) {
+      await _localStorage.saveFcmToken(token);
+    }
+
     if (token != null && FirebaseAuth.instance.currentUser != null) {
       await _sendTokenToServer(token);
     }
@@ -38,14 +44,18 @@ class FcmService {
         return;
       }
 
-      final refreshedToken = await _messaging.getToken();
-      if (refreshedToken != null) {
-        await _sendTokenToServer(refreshedToken);
+      final pendingToken =
+          _localStorage.fcmToken ?? await _messaging.getToken();
+      if (pendingToken != null) {
+        await _sendTokenToServer(pendingToken);
       }
     });
 
     // Refresh token listener
-    _messaging.onTokenRefresh.listen(_sendTokenToServer);
+    _messaging.onTokenRefresh.listen((token) async {
+      await _localStorage.saveFcmToken(token);
+      await _sendTokenToServer(token);
+    });
 
     // Foreground message handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -58,6 +68,7 @@ class FcmService {
   Future<void> _sendTokenToServer(String token) async {
     if (FirebaseAuth.instance.currentUser == null) {
       debugPrint('[FCM] Token pending until user signs in');
+      await _localStorage.saveFcmToken(token);
       return;
     }
 
@@ -66,8 +77,10 @@ class FcmService {
         '/admin/fcm-token',
         data: {'fcm_token': token},
       );
+      await _localStorage.saveFcmToken(token);
       debugPrint('[FCM] Token sent to server');
     } catch (e) {
+      await _localStorage.saveFcmToken(token);
       debugPrint('[FCM] Failed to send token: $e');
     }
   }

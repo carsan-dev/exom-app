@@ -1,6 +1,9 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/api/network_utils.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/profile/data/models/profile_model.dart';
 
 abstract class ProfileRemoteDataSource {
@@ -11,31 +14,59 @@ abstract class ProfileRemoteDataSource {
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   final ApiClient _apiClient;
+  final LocalStorage _localStorage;
 
-  const ProfileRemoteDataSourceImpl(this._apiClient);
+  const ProfileRemoteDataSourceImpl(this._apiClient, this._localStorage);
 
   @override
   Future<ProfileModel> getProfile() async {
-    return await _apiClient.get<ProfileModel>(
-      '/profile/me',
-      fromJson: ProfileModel.fromJson,
-    );
+    const cacheKey = 'profile_me';
+
+    try {
+      final response = await _apiClient.dio.get<dynamic>('/profile/me');
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = data['data'];
+        if (inner is Map<String, dynamic>) {
+          await _localStorage.cacheData(cacheKey, inner);
+          await _localStorage.cacheData('home_profile', inner);
+          return ProfileModel.fromJson(inner);
+        }
+      }
+      throw Exception('Invalid profile response');
+    } catch (error) {
+      if (isOfflineError(error)) {
+        final cached = _localStorage.getCachedMap(cacheKey);
+        if (cached != null) {
+          return ProfileModel.fromJson(cached);
+        }
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<ProfileModel> updateProfile(Map<String, dynamic> data) async {
-    return await _apiClient.put<ProfileModel>(
+    final response = await _apiClient.dio.put<dynamic>(
       '/profile/me',
       data: data,
-      fromJson: ProfileModel.fromJson,
     );
+    final payload = response.data;
+    if (payload is Map<String, dynamic>) {
+      final inner = payload['data'];
+      if (inner is Map<String, dynamic>) {
+        await _localStorage.cacheData('profile_me', inner);
+        await _localStorage.cacheData('home_profile', inner);
+        return ProfileModel.fromJson(inner);
+      }
+    }
+    throw Exception('Invalid profile response');
   }
 
   @override
   Future<ProfileModel> uploadAvatar(File file) async {
     final fileKey = 'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    // 1. Get presigned URL from backend
     final presigned = await _apiClient.post<Map<String, dynamic>>(
       '/uploads/presigned',
       data: {'file_key': fileKey, 'content_type': 'image/jpeg'},
@@ -44,7 +75,6 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     final uploadUrl = presigned['upload_url'] as String;
     final fileUrl = presigned['file_url'] as String;
 
-    // 2. Upload directly to R2 (no auth header)
     final bytes = await file.readAsBytes();
     await Dio().put(
       uploadUrl,
@@ -58,7 +88,6 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       ),
     );
 
-    // 3. Update profile with new avatar URL
     return updateProfile({'avatar_url': fileUrl});
   }
 }

@@ -109,7 +109,9 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<FirebaseAuthService>(() => FirebaseAuthService());
 
-  sl.registerLazySingleton<FcmService>(() => FcmService(sl<ApiClient>()));
+  sl.registerLazySingleton<FcmService>(
+    () => FcmService(sl<ApiClient>(), sl<LocalStorage>()),
+  );
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRemoteDataSource>(
@@ -138,7 +140,7 @@ Future<void> initDependencies() async {
 
   // ── Home ──────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<HomeRemoteDataSource>(
-    () => HomeRemoteDataSourceImpl(sl<ApiClient>()),
+    () => HomeRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<HomeRepository>(
@@ -153,7 +155,7 @@ Future<void> initDependencies() async {
 
   // ── Trainings ─────────────────────────────────────────────────────────────
   sl.registerLazySingleton<TrainingRemoteDataSource>(
-    () => TrainingRemoteDataSourceImpl(sl<ApiClient>()),
+    () => TrainingRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<TrainingRepository>(
@@ -192,7 +194,7 @@ Future<void> initDependencies() async {
 
   // ── Diets ─────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<DietRemoteDataSource>(
-    () => DietRemoteDataSourceImpl(sl<ApiClient>()),
+    () => DietRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<DietRepository>(
@@ -223,7 +225,7 @@ Future<void> initDependencies() async {
 
   // ── Calendar ─────────────────────────────────────────────────────────────
   sl.registerLazySingleton<CalendarRemoteDataSource>(
-    () => CalendarRemoteDataSourceImpl(sl<ApiClient>()),
+    () => CalendarRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<CalendarRepository>(
@@ -319,7 +321,7 @@ Future<void> initDependencies() async {
 
   // ── Profile ───────────────────────────────────────────────────────────────
   sl.registerLazySingleton<ProfileRemoteDataSource>(
-    () => ProfileRemoteDataSourceImpl(sl<ApiClient>()),
+    () => ProfileRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<ProfileRepository>(
@@ -339,7 +341,7 @@ Future<void> initDependencies() async {
 
   // ── Metrics ───────────────────────────────────────────────────────────────
   sl.registerLazySingleton<MetricsRemoteDataSource>(
-    () => MetricsRemoteDataSourceImpl(sl<ApiClient>()),
+    () => MetricsRemoteDataSourceImpl(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
   sl.registerLazySingleton<MetricsRepository>(

@@ -782,7 +782,29 @@ class _IndicatorCards extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                     ),
                   )
-                : const _EmptyIndicatorCard(title: 'Masa muscular'),
+                : _EmptyIndicatorCard(
+                    title: 'Masa muscular',
+                    message:
+                        'Registra una medición directa o usa la estimación SEEN desde métricas para ver la evolución.',
+                    actionLabel: 'Registrar o calcular',
+                    onAction: () async {
+                      await context.push('/profile/metrics');
+                      if (context.mounted) {
+                        context.read<ProfileBloc>().add(
+                          const ProfileLoadRequested(),
+                        );
+                      }
+                    },
+                    headerAction: IconButton(
+                      onPressed: () => _editMuscleGoal(context),
+                      icon: const Icon(
+                        Icons.tune,
+                        color: AppColors.textDisabled,
+                        size: 16,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -839,26 +861,35 @@ class _CircularIndicatorCard extends StatelessWidget {
         children: [
           // Header
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const Spacer(),
               if (headerAction != null) ...[headerAction!],
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -881,12 +912,19 @@ class _CircularIndicatorCard extends StatelessWidget {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      value,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          value,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
                     if (progress != null)
@@ -961,8 +999,18 @@ class _CircularProgressPainter extends CustomPainter {
 
 class _EmptyIndicatorCard extends StatelessWidget {
   final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final Widget? headerAction;
 
-  const _EmptyIndicatorCard({required this.title});
+  const _EmptyIndicatorCard({
+    required this.title,
+    this.message = 'Sin datos',
+    this.actionLabel,
+    this.onAction,
+    this.headerAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -975,20 +1023,49 @@ class _EmptyIndicatorCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (headerAction != null) ...[headerAction!],
+            ],
+          ),
+          const SizedBox(height: 18),
           Text(
-            title,
+            message,
+            textAlign: TextAlign.center,
             style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+              color: AppColors.textDisabled,
+              fontSize: 12,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Sin datos',
-            style: TextStyle(color: AppColors.textDisabled, fontSize: 13),
-          ),
-          const SizedBox(height: 24),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.borderMedium),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(actionLabel!),
+              ),
+            ),
+          ] else
+            const SizedBox(height: 24),
         ],
       ),
     );

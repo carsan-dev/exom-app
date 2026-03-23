@@ -10,7 +10,7 @@ class HelpPage extends StatelessWidget {
     _Faq(
       question: '¿Como registro mi peso, masa muscular y medidas?',
       answer:
-          'Ve a tu perfil y entra en "Mis métricas". Desde ahi puedes guardar peso, masa muscular, horas de sueño y medidas corporales. El perfil mostrara tu evolucion y el ultimo dato disponible.',
+          'Ve a tu perfil y entra en "Mis métricas". Desde ahi puedes guardar peso, masa muscular, horas de sueño y medidas corporales. Si no tienes una medicion directa de masa muscular, puedes usar la calculadora SEEN con edad, altura, sexo y pantorrilla para obtener una estimacion.',
     ),
     _Faq(
       question: '¿Como marco un entrenamiento como completado?',

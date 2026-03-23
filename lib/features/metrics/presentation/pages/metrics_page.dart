@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
+import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 
 class MetricsPage extends StatelessWidget {
@@ -31,6 +33,10 @@ class _MetricsViewState extends State<_MetricsView> {
   final _weightController = TextEditingController();
   final _muscleMassController = TextEditingController();
   double _sleepHours = 8.0;
+  bool _weightTouched = false;
+  bool _muscleMassTouched = false;
+  bool _sleepTouched = false;
+  final Set<String> _touchedMeasures = <String>{};
 
   bool _bodyMapMode = false;
   bool _bodyFront = true;
@@ -213,6 +219,7 @@ class _MetricsViewState extends State<_MetricsView> {
           _MeasureInput(
             label: _selectedMeasure!,
             controller: _measureControllers[_selectedMeasure]!,
+            onChanged: (_) => _touchedMeasures.add(_selectedMeasure!),
           ),
         ],
       ],
@@ -327,28 +334,285 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   void _save() {
-    final double finalWeight = _useManualWeight
-        ? double.tryParse(_weightController.text) ?? _weight
-        : _weight;
+    final data = <String, dynamic>{};
 
-    final data = <String, dynamic>{
-      'weight_kg': finalWeight,
-      'sleep_hours': _sleepHours,
-    };
-
-    final muscleMass = double.tryParse(_muscleMassController.text);
-    if (muscleMass != null) {
-      data['muscle_mass_kg'] = muscleMass;
-    }
-
-    for (final entry in _measureControllers.entries) {
-      final val = double.tryParse(entry.value.text);
-      if (val != null) {
-        data[_measureKeys[entry.key]!] = val;
+    if (_weightTouched) {
+      if (_useManualWeight) {
+        final manualWeight = _parseDouble(_weightController.text);
+        if (manualWeight == null) {
+          _showValidationMessage('Introduce un peso valido antes de guardar.');
+          return;
+        }
+        data['weight_kg'] = manualWeight;
+      } else {
+        data['weight_kg'] = _weight;
       }
     }
 
+    if (_sleepTouched) {
+      data['sleep_hours'] = _sleepHours;
+    }
+
+    if (_muscleMassTouched) {
+      final rawMuscleMass = _muscleMassController.text.trim();
+      if (rawMuscleMass.isNotEmpty) {
+        final muscleMass = _parseDouble(rawMuscleMass);
+        if (muscleMass == null) {
+          _showValidationMessage(
+            'Introduce una masa muscular valida antes de guardar.',
+          );
+          return;
+        }
+        data['muscle_mass_kg'] = muscleMass;
+      }
+    }
+
+    for (final entry in _measureControllers.entries) {
+      if (!_touchedMeasures.contains(entry.key)) {
+        continue;
+      }
+
+      final rawValue = entry.value.text.trim();
+      if (rawValue.isEmpty) {
+        continue;
+      }
+
+      final parsedValue = _parseDouble(rawValue);
+      if (parsedValue == null) {
+        _showValidationMessage(
+          'Revisa la medida de ${entry.key.toLowerCase()} antes de guardar.',
+        );
+        return;
+      }
+
+      data[_measureKeys[entry.key]!] = parsedValue;
+    }
+
+    if (data.isEmpty) {
+      _showValidationMessage('No has modificado ninguna metrica para guardar.');
+      return;
+    }
+
     context.read<MetricsBloc>().add(MetricsSaveRequested(data));
+  }
+
+  void _showValidationMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  double? _parseDouble(String text) {
+    return double.tryParse(text.trim().replaceAll(',', '.'));
+  }
+
+  Map<String, dynamic>? _getCachedProfile() {
+    return sl<LocalStorage>().getCachedMap('profile_me');
+  }
+
+  Future<void> _openSeenEstimateCalculator(BuildContext context) async {
+    final profile = _getCachedProfile();
+    final birthDate = profile?['birth_date'] is String
+        ? DateTime.tryParse(profile!['birth_date'] as String)
+        : null;
+
+    final ageController = TextEditingController(
+      text: birthDate != null ? calculateAgeYears(birthDate).toString() : '',
+    );
+    final heightController = TextEditingController(
+      text: profile?['height']?.toString() ?? '',
+    );
+    final calfController = TextEditingController(
+      text: _measureControllers['Pantorrilla']?.text ?? '',
+    );
+    var selectedSex = parseSeenBiologicalSex(profile?['sex'] as String?);
+    String? errorText;
+
+    final estimate = await showDialog<SeenMuscleMassEstimate>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.card,
+              title: const Text(
+                'Estimación rápida SEEN',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: ageController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Edad',
+                        suffixText: 'años',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: heightController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Altura',
+                        suffixText: 'cm',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: calfController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Pantorrilla',
+                        suffixText: 'cm',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<SeenBiologicalSex>(
+                      initialValue: selectedSex,
+                      dropdownColor: AppColors.surfaceVariant,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(labelText: 'Sexo'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: SeenBiologicalSex.male,
+                          child: Text('Hombre'),
+                        ),
+                        DropdownMenuItem(
+                          value: SeenBiologicalSex.female,
+                          child: Text('Mujer'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedSex = value;
+                          errorText = null;
+                        });
+                      },
+                    ),
+                    if (errorText != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        errorText!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final age = int.tryParse(ageController.text.trim());
+                    final heightCm = _parseDouble(heightController.text);
+                    final calfCm = _parseDouble(calfController.text);
+
+                    if (age == null || age <= 0) {
+                      setDialogState(() {
+                        errorText = 'Introduce una edad válida.';
+                      });
+                      return;
+                    }
+
+                    if (heightCm == null || heightCm <= 0) {
+                      setDialogState(() {
+                        errorText = 'Introduce una altura válida.';
+                      });
+                      return;
+                    }
+
+                    if (calfCm == null || calfCm <= 0) {
+                      setDialogState(() {
+                        errorText =
+                            'Introduce una circunferencia de pantorrilla válida.';
+                      });
+                      return;
+                    }
+
+                    if (selectedSex == null) {
+                      setDialogState(() {
+                        errorText =
+                            'Selecciona un sexo para aplicar la fórmula SEEN.';
+                      });
+                      return;
+                    }
+
+                    final result = estimateSeenMuscleMass(
+                      calfCm: calfCm,
+                      ageYears: age,
+                      heightMeters: heightCm / 100,
+                      sex: selectedSex!,
+                    );
+
+                    if (result == null) {
+                      setDialogState(() {
+                        errorText =
+                            'No se ha podido calcular una estimación válida con esos datos.';
+                      });
+                      return;
+                    }
+
+                    _measureControllers['Pantorrilla']?.text = calfCm
+                        .toStringAsFixed(1);
+                    _muscleMassTouched = true;
+                    _touchedMeasures.add('Pantorrilla');
+                    Navigator.of(dialogContext).pop(result);
+                  },
+                  child: const Text('Calcular y usar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    ageController.dispose();
+    heightController.dispose();
+    calfController.dispose();
+
+    if (estimate == null || !context.mounted) {
+      return;
+    }
+
+    setState(() {
+      _muscleMassController.text = estimate.estimatedAsmKg.toStringAsFixed(1);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Estimación SEEN aplicada: ${estimate.estimatedAsmKg.toStringAsFixed(1)} kg (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _populateFromMetric(BodyMetricEntity metric) {
@@ -359,9 +623,16 @@ class _MetricsViewState extends State<_MetricsView> {
       if (metric.sleepHours != null) {
         _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
       }
+      _weightTouched = false;
+      _muscleMassTouched = false;
+      _sleepTouched = false;
+      _touchedMeasures.clear();
     });
+    _weightController.text = metric.weightKg?.toStringAsFixed(1) ?? '';
     if (metric.muscleMassKg != null) {
       _muscleMassController.text = metric.muscleMassKg!.toStringAsFixed(1);
+    } else {
+      _muscleMassController.clear();
     }
     final map = {
       'Cuello': metric.neckCm,
@@ -377,6 +648,8 @@ class _MetricsViewState extends State<_MetricsView> {
     for (final entry in map.entries) {
       if (entry.value != null) {
         _measureControllers[entry.key]?.text = entry.value!.toStringAsFixed(1);
+      } else {
+        _measureControllers[entry.key]?.clear();
       }
     }
   }
@@ -456,9 +729,18 @@ class _MetricsViewState extends State<_MetricsView> {
                                 value: _useManualWeight,
                                 onChanged: (val) =>
                                     setState(() => _useManualWeight = val),
-                                activeColor: AppColors.primary,
+                                activeThumbColor: AppColors.primary,
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'El peso solo se guarda si lo modificas en esta actualizacion.',
+                            style: TextStyle(
+                              color: AppColors.textDisabled,
+                              fontSize: 11,
+                              height: 1.4,
+                            ),
                           ),
                           if (_useManualWeight)
                             TextFormField(
@@ -477,6 +759,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   color: AppColors.textSecondary,
                                 ),
                               ),
+                              onChanged: (_) => _weightTouched = true,
                             )
                           else ...[
                             const SizedBox(height: 8),
@@ -514,7 +797,10 @@ class _MetricsViewState extends State<_MetricsView> {
                               divisions: 240,
                               activeColor: AppColors.primary,
                               inactiveColor: AppColors.surfaceVariant,
-                              onChanged: (val) => setState(() => _weight = val),
+                              onChanged: (val) => setState(() {
+                                _weight = val;
+                                _weightTouched = true;
+                              }),
                             ),
                           ],
                         ],
@@ -552,6 +838,49 @@ class _MetricsViewState extends State<_MetricsView> {
                               suffixStyle: TextStyle(
                                 color: AppColors.textSecondary,
                               ),
+                            ),
+                            onChanged: (_) => _muscleMassTouched = true,
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.borderSoft),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Calculadora SEEN',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla.',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _openSeenEstimateCalculator(context),
+                                    icon: const Icon(Icons.calculate_outlined),
+                                    label: const Text('Calcular estimación'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -600,8 +929,10 @@ class _MetricsViewState extends State<_MetricsView> {
                             divisions: 16,
                             activeColor: AppColors.sleepAccent,
                             inactiveColor: AppColors.surfaceVariant,
-                            onChanged: (val) =>
-                                setState(() => _sleepHours = val),
+                            onChanged: (val) => setState(() {
+                              _sleepHours = val;
+                              _sleepTouched = true;
+                            }),
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -664,6 +995,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   return _MeasureInput(
                                     label: key,
                                     controller: _measureControllers[key]!,
+                                    onChanged: (_) => _touchedMeasures.add(key),
                                   );
                                 },
                               ),
@@ -763,8 +1095,13 @@ class _SectionCard extends StatelessWidget {
 class _MeasureInput extends StatelessWidget {
   final String label;
   final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
 
-  const _MeasureInput({required this.label, required this.controller});
+  const _MeasureInput({
+    required this.label,
+    required this.controller,
+    this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -784,6 +1121,7 @@ class _MeasureInput extends StatelessWidget {
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          onChanged: onChanged,
           decoration: const InputDecoration(
             hintText: '0',
             suffixText: 'cm',

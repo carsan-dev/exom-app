@@ -62,8 +62,6 @@ class _MealScaffold extends StatefulWidget {
 }
 
 class _MealScaffoldState extends State<_MealScaffold> {
-  bool _markedCompleted = false;
-
   String _mealTypeLabel(String type) {
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
@@ -90,6 +88,10 @@ class _MealScaffoldState extends State<_MealScaffold> {
   @override
   Widget build(BuildContext context) {
     final meal = widget.meal;
+    final dietState = context.watch<DietBloc>().state;
+    final isCompleted = dietState is MealDetailLoaded
+        ? dietState.isCompleted
+        : false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -113,7 +115,10 @@ class _MealScaffoldState extends State<_MealScaffold> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.secondary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
@@ -179,32 +184,26 @@ class _MealScaffoldState extends State<_MealScaffold> {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  setState(() => _markedCompleted = !_markedCompleted);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _markedCompleted
-                            ? '¡${meal.name} marcado como completado!'
-                            : '${meal.name} desmarcado',
-                      ),
-                      backgroundColor: _markedCompleted ? AppColors.success : AppColors.surfaceVariant,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                  context.read<DietBloc>().add(
+                    MarkMealCompleted(mealId: meal.id, completed: !isCompleted),
                   );
                 },
                 icon: Icon(
-                  _markedCompleted ? Icons.check_circle : Icons.check_circle_outline,
+                  isCompleted ? Icons.check_circle : Icons.check_circle_outline,
                   size: 20,
                 ),
                 label: Text(
-                  _markedCompleted ? 'Completado' : 'Marcar como completada',
+                  isCompleted ? 'Completada' : 'Marcar como completada',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _markedCompleted ? AppColors.success : AppColors.primary,
+                  backgroundColor: isCompleted
+                      ? AppColors.success
+                      : AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -261,7 +260,8 @@ class _MacroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasData = meal.calories != null ||
+    final hasData =
+        meal.calories != null ||
         meal.proteinG != null ||
         meal.carbsG != null ||
         meal.fatG != null;
@@ -376,7 +376,11 @@ class _MacroRing extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -395,17 +399,28 @@ class _NutritionalBadges extends StatelessWidget {
       child: Wrap(
         spacing: 8,
         runSpacing: 6,
-        children: badges.map((b) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            b,
-            style: const TextStyle(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.w500),
-          ),
-        )).toList(),
+        children: badges
+            .map(
+              (b) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  b,
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -447,7 +462,10 @@ class _IngredientsSection extends StatelessWidget {
               return Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -480,7 +498,11 @@ class _IngredientsSection extends StatelessWidget {
                     ),
                   ),
                   if (!isLast)
-                    const Divider(height: 1, color: AppColors.divider, indent: 36),
+                    const Divider(
+                      height: 1,
+                      color: AppColors.divider,
+                      indent: 36,
+                    ),
                 ],
               );
             }).toList(),

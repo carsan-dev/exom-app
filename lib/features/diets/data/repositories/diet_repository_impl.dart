@@ -27,6 +27,11 @@ class DietRepositoryImpl implements DietRepository {
   }
 
   @override
+  Future<void> unmarkMealCompleted(String mealId, String date) {
+    return _remoteDataSource.unmarkMealCompleted(mealId, date);
+  }
+
+  @override
   Future<Set<String>> getCompletedMealIds() {
     return _remoteDataSource.getCompletedMealIds();
   }
@@ -55,11 +60,13 @@ class DietRepositoryImpl implements DietRepository {
       fatG: model.fatG,
       nutritionalBadges: model.nutritionalBadges,
       ingredients: model.ingredients
-          .map((i) => MealIngredientEntity(
-                name: i.name,
-                quantity: i.quantity,
-                unit: i.unit,
-              ))
+          .map(
+            (i) => MealIngredientEntity(
+              name: i.name,
+              quantity: i.quantity,
+              unit: i.unit,
+            ),
+          )
           .toList(),
     );
   }

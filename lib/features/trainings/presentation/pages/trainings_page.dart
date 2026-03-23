@@ -25,22 +25,24 @@ class _TrainingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TrainingBloc, TrainingState>(
-        builder: (context, state) {
-          if (state is TrainingLoading || state is TrainingInitial) {
-            return const ShimmerList(count: 5, itemHeight: 120);
-          }
-          if (state is TrainingError) {
-            return ErrorWidget2(
-              message: state.message,
-              onRetry: () => context.read<TrainingBloc>().add(const TrainingsLoadRequested()),
-            );
-          }
-          if (state is TrainingsLoaded) {
-            return _buildContent(context, state);
-          }
-          return const SizedBox.shrink();
-        },
-      );
+      builder: (context, state) {
+        if (state is TrainingLoading || state is TrainingInitial) {
+          return const ShimmerList(count: 5, itemHeight: 120);
+        }
+        if (state is TrainingError) {
+          return ErrorWidget2(
+            message: state.message,
+            onRetry: () => context.read<TrainingBloc>().add(
+              const TrainingsLoadRequested(),
+            ),
+          );
+        }
+        if (state is TrainingsLoaded) {
+          return _buildContent(context, state);
+        }
+        return const SizedBox.shrink();
+      },
+    );
   }
 
   Widget _buildContent(BuildContext context, TrainingsLoaded state) {
@@ -72,9 +74,7 @@ class _TrainingsView extends StatelessWidget {
               icon: Icons.fitness_center_outlined,
             )
           else
-            ...state.trainings.map(
-              (t) => _TrainingListItem(training: t),
-            ),
+            ...state.trainings.map((t) => _TrainingListItem(training: t)),
         ],
       ),
     );
@@ -128,7 +128,12 @@ class _TodayTrainingBanner extends StatelessWidget {
     final color = _typeColor(training.type);
 
     return GestureDetector(
-      onTap: () => context.push('/trainings/${training.id}'),
+      onTap: () async {
+        await context.push('/trainings/${training.id}');
+        if (context.mounted) {
+          context.read<TrainingBloc>().add(const TrainingsLoadRequested());
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(20),
@@ -159,20 +164,30 @@ class _TodayTrainingBanner extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           training.type,
-                          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         training.level,
-                        style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                        style: const TextStyle(
+                          color: AppColors.textDisabled,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -188,18 +203,32 @@ class _TodayTrainingBanner extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.timer_outlined, color: AppColors.textSecondary, size: 14),
+                      const Icon(
+                        Icons.timer_outlined,
+                        color: AppColors.textSecondary,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${training.estimatedDurationMin ?? '--'} min',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(Icons.list_outlined, color: AppColors.textSecondary, size: 14),
+                      const Icon(
+                        Icons.list_outlined,
+                        color: AppColors.textSecondary,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${training.exercises.length} ejercicios',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -251,7 +280,10 @@ class _NoTrainingToday extends StatelessWidget {
                 SizedBox(height: 2),
                 Text(
                   'Disfruta tu día de descanso',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -286,7 +318,12 @@ class _TrainingListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _typeColor(training.type);
     return GestureDetector(
-      onTap: () => context.push('/trainings/${training.id}'),
+      onTap: () async {
+        await context.push('/trainings/${training.id}');
+        if (context.mounted) {
+          context.read<TrainingBloc>().add(const TrainingsLoadRequested());
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(16),
@@ -329,36 +366,61 @@ class _TrainingListItem extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           training.type,
-                          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.timer_outlined, color: AppColors.textDisabled, size: 12),
+                      const Icon(
+                        Icons.timer_outlined,
+                        color: AppColors.textDisabled,
+                        size: 12,
+                      ),
                       const SizedBox(width: 2),
                       Text(
                         '${training.estimatedDurationMin ?? '--'} min',
-                        style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                        style: const TextStyle(
+                          color: AppColors.textDisabled,
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.list_outlined, color: AppColors.textDisabled, size: 12),
+                      const Icon(
+                        Icons.list_outlined,
+                        color: AppColors.textDisabled,
+                        size: 12,
+                      ),
                       const SizedBox(width: 2),
                       Text(
                         '${training.exercises.length} ej.',
-                        style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                        style: const TextStyle(
+                          color: AppColors.textDisabled,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textDisabled, size: 20),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textDisabled,
+              size: 20,
+            ),
           ],
         ),
       ),

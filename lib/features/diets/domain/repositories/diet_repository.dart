@@ -4,5 +4,6 @@ abstract class DietRepository {
   Future<DietEntity?> getTodayDiet();
   Future<MealEntity> getMeal(String mealId);
   Future<void> markMealCompleted(String mealId, String date);
+  Future<void> unmarkMealCompleted(String mealId, String date);
   Future<Set<String>> getCompletedMealIds();
 }

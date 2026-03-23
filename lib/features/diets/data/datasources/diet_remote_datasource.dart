@@ -6,6 +6,7 @@ abstract class DietRemoteDataSource {
   Future<DietModel?> getTodayDiet();
   Future<MealModel> getMeal(String mealId);
   Future<void> markMealCompleted(String mealId, String date);
+  Future<void> unmarkMealCompleted(String mealId, String date);
   Future<Set<String>> getCompletedMealIds();
 }
 
@@ -53,6 +54,14 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
     await _apiClient.dio.post<dynamic>(
       '/progress/meals/complete',
       data: {'meal_id': mealId, 'date': date},
+    );
+  }
+
+  @override
+  Future<void> unmarkMealCompleted(String mealId, String date) async {
+    await _apiClient.dio.delete<dynamic>(
+      '/progress/meals/$mealId',
+      queryParameters: {'date': date},
     );
   }
 

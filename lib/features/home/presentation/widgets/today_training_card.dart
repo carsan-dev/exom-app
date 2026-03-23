@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
+import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class TodayTrainingCard extends StatelessWidget {
   final HomeSummaryEntity summary;
@@ -59,12 +61,11 @@ class TodayTrainingCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  color.withOpacity(0.15),
-                  AppColors.card,
-                ],
+                colors: [color.withOpacity(0.15), AppColors.card],
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: Row(
               children: [
@@ -102,7 +103,10 @@ class TodayTrainingCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -152,13 +156,22 @@ class TodayTrainingCard extends StatelessWidget {
                   children: [
                     const Text(
                       'Progreso',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
                       summary.totalExercises > 0
                           ? '${summary.exercisesCompleted}/${summary.totalExercises} ejercicios'
-                          : summary.trainingCompleted ? '100%' : '0%',
-                      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                          : summary.trainingCompleted
+                          ? '100%'
+                          : '0%',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -185,7 +198,14 @@ class TodayTrainingCard extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: summary.trainingId != null
-                    ? () => context.push('/trainings/${summary.trainingId}')
+                    ? () async {
+                        await context.push('/trainings/${summary.trainingId}');
+                        if (context.mounted) {
+                          context.read<HomeBloc>().add(
+                            const HomeLoadRequested(),
+                          );
+                        }
+                      }
                     : null,
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: const Text('Ver entrenamiento'),
@@ -211,7 +231,11 @@ class _StatChip extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatChip({required this.icon, required this.label, required this.color});
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +246,11 @@ class _StatChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

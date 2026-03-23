@@ -4,6 +4,7 @@ import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.d
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/unmark_meal_completed_usecase.dart';
 
 part 'diet_event.dart';
 part 'diet_state.dart';
@@ -12,21 +13,29 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   final GetTodayDietUseCase _getTodayDietUseCase;
   final GetMealUseCase _getMealUseCase;
   final MarkMealCompletedUseCase _markMealCompletedUseCase;
+  final UnmarkMealCompletedUseCase _unmarkMealCompletedUseCase;
   final GetCompletedMealsUseCase _getCompletedMealsUseCase;
 
   DietBloc({
     required GetTodayDietUseCase getTodayDietUseCase,
     required GetMealUseCase getMealUseCase,
     required MarkMealCompletedUseCase markMealCompletedUseCase,
+    required UnmarkMealCompletedUseCase unmarkMealCompletedUseCase,
     required GetCompletedMealsUseCase getCompletedMealsUseCase,
-  })  : _getTodayDietUseCase = getTodayDietUseCase,
-        _getMealUseCase = getMealUseCase,
-        _markMealCompletedUseCase = markMealCompletedUseCase,
-        _getCompletedMealsUseCase = getCompletedMealsUseCase,
-        super(const DietInitial()) {
+  }) : _getTodayDietUseCase = getTodayDietUseCase,
+       _getMealUseCase = getMealUseCase,
+       _markMealCompletedUseCase = markMealCompletedUseCase,
+       _unmarkMealCompletedUseCase = unmarkMealCompletedUseCase,
+       _getCompletedMealsUseCase = getCompletedMealsUseCase,
+       super(const DietInitial()) {
     on<DietLoadRequested>(_onDietLoad);
     on<MealDetailLoadRequested>(_onMealDetailLoad);
     on<MarkMealCompleted>(_onMarkMealCompleted);
+  }
+
+  String _todayDate() {
+    final today = DateTime.now();
+    return '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _onDietLoad(
@@ -56,8 +65,18 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   ) async {
     emit(const DietLoading());
     try {
-      final meal = await _getMealUseCase(event.mealId);
-      emit(MealDetailLoaded(meal));
+      final results = await Future.wait([
+        _getMealUseCase(event.mealId),
+        _getCompletedMealsUseCase(),
+      ]);
+      final meal = results[0] as MealEntity;
+      final completedMealIds = results[1] as Set<String>;
+      emit(
+        MealDetailLoaded(
+          meal,
+          isCompleted: completedMealIds.contains(event.mealId),
+        ),
+      );
     } catch (e) {
       emit(DietError(e.toString()));
     }
@@ -68,8 +87,10 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     Emitter<DietState> emit,
   ) async {
     final current = state;
+    final date = _todayDate();
+
     if (current is DietLoaded) {
-      // Optimistic update
+      final previous = Set<String>.from(current.completedMealIds);
       final updated = Set<String>.from(current.completedMealIds);
       if (event.completed) {
         updated.add(event.mealId);
@@ -78,16 +99,30 @@ class DietBloc extends Bloc<DietEvent, DietState> {
       }
       emit(current.copyWith(completedMealIds: updated));
 
-      // Sync with backend (fire-and-forget, best effort)
-      if (event.completed) {
-        try {
-          final today = DateTime.now();
-          final date =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      try {
+        if (event.completed) {
           await _markMealCompletedUseCase(event.mealId, date);
-        } catch (_) {
-          // Don't revert UI on failure — progress is informational
+        } else {
+          await _unmarkMealCompletedUseCase(event.mealId, date);
         }
+      } catch (_) {
+        emit(current.copyWith(completedMealIds: previous));
+      }
+      return;
+    }
+
+    if (current is MealDetailLoaded) {
+      final previous = current.isCompleted;
+      emit(current.copyWith(isCompleted: event.completed));
+
+      try {
+        if (event.completed) {
+          await _markMealCompletedUseCase(event.mealId, date);
+        } else {
+          await _unmarkMealCompletedUseCase(event.mealId, date);
+        }
+      } catch (_) {
+        emit(current.copyWith(isCompleted: previous));
       }
     }
   }

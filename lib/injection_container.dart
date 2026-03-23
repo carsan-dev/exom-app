@@ -27,8 +27,10 @@ import 'package:exom_app/features/trainings/domain/repositories/training_reposit
 import 'package:exom_app/features/trainings/domain/usecases/get_today_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 
 // Diets
@@ -39,6 +41,7 @@ import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.d
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/unmark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 
 // Profile
@@ -166,6 +169,12 @@ Future<void> initDependencies() async {
     () => MarkExerciseCompletedUseCase(sl<TrainingRepository>()),
   );
   sl.registerLazySingleton(
+    () => UnmarkExerciseCompletedUseCase(sl<TrainingRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => CompleteTrainingUseCase(sl<TrainingRepository>()),
+  );
+  sl.registerLazySingleton(
     () => GetCompletedExercisesUseCase(sl<TrainingRepository>()),
   );
 
@@ -175,6 +184,8 @@ Future<void> initDependencies() async {
       getTrainingsUseCase: sl<GetTrainingsUseCase>(),
       getTrainingUseCase: sl<GetTrainingUseCase>(),
       markExerciseCompletedUseCase: sl<MarkExerciseCompletedUseCase>(),
+      unmarkExerciseCompletedUseCase: sl<UnmarkExerciseCompletedUseCase>(),
+      completeTrainingUseCase: sl<CompleteTrainingUseCase>(),
       getCompletedExercisesUseCase: sl<GetCompletedExercisesUseCase>(),
     ),
   );
@@ -194,6 +205,9 @@ Future<void> initDependencies() async {
     () => MarkMealCompletedUseCase(sl<DietRepository>()),
   );
   sl.registerLazySingleton(
+    () => UnmarkMealCompletedUseCase(sl<DietRepository>()),
+  );
+  sl.registerLazySingleton(
     () => GetCompletedMealsUseCase(sl<DietRepository>()),
   );
 
@@ -202,6 +216,7 @@ Future<void> initDependencies() async {
       getTodayDietUseCase: sl<GetTodayDietUseCase>(),
       getMealUseCase: sl<GetMealUseCase>(),
       markMealCompletedUseCase: sl<MarkMealCompletedUseCase>(),
+      unmarkMealCompletedUseCase: sl<UnmarkMealCompletedUseCase>(),
       getCompletedMealsUseCase: sl<GetCompletedMealsUseCase>(),
     ),
   );
@@ -288,8 +303,12 @@ Future<void> initDependencies() async {
     () => FeedbackRepositoryImpl(sl<FeedbackRemoteDataSource>()),
   );
 
-  sl.registerLazySingleton(() => GetMyFeedbackUseCase(sl<FeedbackRepository>()));
-  sl.registerLazySingleton(() => CreateFeedbackUseCase(sl<FeedbackRepository>()));
+  sl.registerLazySingleton(
+    () => GetMyFeedbackUseCase(sl<FeedbackRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => CreateFeedbackUseCase(sl<FeedbackRepository>()),
+  );
 
   sl.registerFactory(
     () => FeedbackBloc(

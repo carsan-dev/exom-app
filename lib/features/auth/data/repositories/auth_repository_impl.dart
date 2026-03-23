@@ -12,24 +12,27 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required AuthRemoteDataSource remoteDataSource,
     required FirebaseAuthService firebaseAuthService,
-  })  : _remoteDataSource = remoteDataSource,
-        _firebaseAuthService = firebaseAuthService;
+  }) : _remoteDataSource = remoteDataSource,
+       _firebaseAuthService = firebaseAuthService;
 
   @override
   Future<UserEntity> login(String email, String password) async {
-    // Sign into Firebase first — the _AuthInterceptor will attach the
-    // Firebase ID token to the subsequent backend request automatically.
-    await _firebaseAuthService.signInWithEmail(email, password);
     final response = await _remoteDataSource.login(email, password);
+    await _firebaseAuthService.signInWithCustomToken(response.accessToken);
     _currentUser = response.user.toEntity();
     return _currentUser!;
   }
 
   @override
   Future<UserEntity> socialLogin(String token, String provider) async {
-    final response = await _remoteDataSource.socialLogin(token, provider);
-    _currentUser = response.user.toEntity();
-    return _currentUser!;
+    try {
+      final response = await _remoteDataSource.socialLogin(token, provider);
+      _currentUser = response.user.toEntity();
+      return _currentUser!;
+    } catch (error) {
+      await _firebaseAuthService.signOut();
+      rethrow;
+    }
   }
 
   @override

@@ -7,6 +7,8 @@ abstract class TrainingRemoteDataSource {
   Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20});
   Future<TrainingModel> getTraining(String id);
   Future<void> markExerciseCompleted(String exerciseId, String date);
+  Future<void> unmarkExerciseCompleted(String exerciseId, String date);
+  Future<void> completeTraining(String date, {String? notes});
   Future<Set<String>> getCompletedExerciseIds();
 }
 
@@ -37,7 +39,10 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20}) async {
+  Future<List<TrainingModel>> getTrainings({
+    int page = 1,
+    int limit = 20,
+  }) async {
     final response = await _apiClient.dio.get<dynamic>(
       '/trainings',
       queryParameters: {'page': page, 'limit': limit},
@@ -72,6 +77,25 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     await _apiClient.dio.post<dynamic>(
       '/progress/exercises/complete',
       data: {'exercise_id': exerciseId, 'date': date},
+    );
+  }
+
+  @override
+  Future<void> unmarkExerciseCompleted(String exerciseId, String date) async {
+    await _apiClient.dio.delete<dynamic>(
+      '/progress/exercises/$exerciseId',
+      queryParameters: {'date': date},
+    );
+  }
+
+  @override
+  Future<void> completeTraining(String date, {String? notes}) async {
+    await _apiClient.dio.post<dynamic>(
+      '/progress/trainings/complete',
+      data: {
+        'date': date,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
     );
   }
 

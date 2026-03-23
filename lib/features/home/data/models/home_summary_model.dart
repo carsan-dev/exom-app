@@ -51,9 +51,10 @@ class HomeSummaryModel {
   }) {
     final firstName = profile?['first_name'] as String?;
     final lastName = profile?['last_name'] as String?;
-    final fullName = [firstName, lastName]
-        .where((s) => s != null && s.isNotEmpty)
-        .join(' ');
+    final fullName = [
+      firstName,
+      lastName,
+    ].where((s) => s != null && s.isNotEmpty).join(' ');
 
     DateTime? weightDate;
     if (latestMetric?['date'] != null) {
@@ -67,7 +68,9 @@ class HomeSummaryModel {
         .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
         .toSet();
     final exercisesCompleted = completedExIds.length;
-    final trainingCompleted = totalExercises > 0 && exercisesCompleted >= totalExercises;
+    final trainingCompleted =
+        (progress?['training_completed'] as bool?) ??
+        (totalExercises > 0 && exercisesCompleted >= totalExercises);
 
     // Meal progress
     final dietMeals = diet?['meals'] as List? ?? [];

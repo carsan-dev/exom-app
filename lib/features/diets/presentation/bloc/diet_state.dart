@@ -32,7 +32,16 @@ class DietNoContent extends DietState {
 
 class MealDetailLoaded extends DietState {
   final MealEntity meal;
-  const MealDetailLoaded(this.meal);
+  final bool isCompleted;
+
+  const MealDetailLoaded(this.meal, {this.isCompleted = false});
+
+  MealDetailLoaded copyWith({MealEntity? meal, bool? isCompleted}) {
+    return MealDetailLoaded(
+      meal ?? this.meal,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
 }
 
 class DietError extends DietState {

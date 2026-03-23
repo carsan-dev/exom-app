@@ -34,11 +34,11 @@ class _LoginPageState extends State<LoginPage> {
   void _onLoginPressed() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthLoginRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+        AuthLoginRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
     }
   }
 
@@ -128,10 +128,7 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 6),
         const Text(
           'Tu entrenador personal, siempre contigo',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           textAlign: TextAlign.center,
         ),
       ],
@@ -169,10 +166,15 @@ class _LoginPageState extends State<LoginPage> {
       style: const TextStyle(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: 'Contraseña',
-        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+        prefixIcon: const Icon(
+          Icons.lock_outline,
+          color: AppColors.textSecondary,
+        ),
         suffixIcon: IconButton(
           icon: Icon(
-            _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            _obscurePassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             color: AppColors.textSecondary,
           ),
           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -182,8 +184,8 @@ class _LoginPageState extends State<LoginPage> {
         if (value == null || value.isEmpty) {
           return 'Introduce tu contraseña';
         }
-        if (value.length < 6) {
-          return 'La contraseña debe tener al menos 6 caracteres';
+        if (value.length < 8) {
+          return 'La contraseña debe tener al menos 8 caracteres';
         }
         return null;
       },
@@ -197,10 +199,7 @@ class _LoginPageState extends State<LoginPage> {
         onPressed: () => _onForgotPassword(context),
         child: const Text(
           '¿Olvidaste tu contraseña?',
-          style: TextStyle(
-            color: AppColors.primary,
-            fontSize: 13,
-          ),
+          style: TextStyle(color: AppColors.primary, fontSize: 13),
         ),
       ),
     );
@@ -219,14 +218,18 @@ class _LoginPageState extends State<LoginPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email de recuperación enviado. Revisa tu bandeja de entrada.'),
+            content: Text(
+              'Email de recuperación enviado. Revisa tu bandeja de entrada.',
+            ),
           ),
         );
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo enviar el email. Verifica la dirección.')),
+          const SnackBar(
+            content: Text('No se pudo enviar el email. Verifica la dirección.'),
+          ),
         );
       }
     }
@@ -280,18 +283,30 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             if (isAndroid)
               SocialLoginButton(
-                icon: const Icon(Icons.g_mobiledata, size: 26, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.g_mobiledata,
+                  size: 26,
+                  color: AppColors.textPrimary,
+                ),
                 label: 'Continuar con Google',
                 isLoading: isLoading,
-                onPressed: () => context.read<AuthBloc>().add(const AuthGoogleLoginRequested()),
+                onPressed: () => context.read<AuthBloc>().add(
+                  const AuthGoogleLoginRequested(),
+                ),
               ),
             if (isIOS) ...[
               if (isAndroid) const SizedBox(height: 12),
               SocialLoginButton(
-                icon: const Icon(Icons.apple, size: 24, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.apple,
+                  size: 24,
+                  color: AppColors.textPrimary,
+                ),
                 label: 'Continuar con Apple',
                 isLoading: isLoading,
-                onPressed: () => context.read<AuthBloc>().add(const AuthAppleLoginRequested()),
+                onPressed: () => context.read<AuthBloc>().add(
+                  const AuthAppleLoginRequested(),
+                ),
               ),
             ],
           ],

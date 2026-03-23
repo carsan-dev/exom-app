@@ -27,3 +27,9 @@ class MarkExerciseCompleted extends TrainingEvent {
     required this.completed,
   });
 }
+
+class CompleteTrainingRequested extends TrainingEvent {
+  final String? notes;
+
+  const CompleteTrainingRequested({this.notes});
+}

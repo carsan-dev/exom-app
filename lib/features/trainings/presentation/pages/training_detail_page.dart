@@ -15,8 +15,8 @@ class TrainingDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<TrainingBloc>()
-        ..add(TrainingDetailLoadRequested(trainingId)),
+      create: (_) =>
+          sl<TrainingBloc>()..add(TrainingDetailLoadRequested(trainingId)),
       child: const _TrainingDetailView(),
     );
   }
@@ -43,10 +43,7 @@ class _TrainingDetailView extends StatelessWidget {
               backgroundColor: AppColors.background,
               title: const Text('Error'),
             ),
-            body: ErrorWidget2(
-              message: state.message,
-              onRetry: null,
-            ),
+            body: ErrorWidget2(message: state.message, onRetry: null),
           );
         }
         if (state is TrainingDetailLoaded) {
@@ -132,7 +129,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       runSpacing: 6,
                       children: [
                         _Badge(label: training.type, color: color),
-                        _Badge(label: training.level, color: AppColors.textSecondary),
+                        _Badge(
+                          label: training.level,
+                          color: AppColors.textSecondary,
+                        ),
                         if (training.estimatedDurationMin != null)
                           _Badge(
                             label: '${training.estimatedDurationMin} min',
@@ -151,17 +151,27 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 6,
-                        children: training.tags.map((t) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '#$t',
-                            style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
-                          ),
-                        )).toList(),
+                        children: training.tags
+                            .map(
+                              (t) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '#$t',
+                                  style: const TextStyle(
+                                    color: AppColors.textDisabled,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ],
                   ],
@@ -170,7 +180,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
               // Warmup
               if (training.warmupDescription != null) ...[
-                _SectionTitle(title: 'Calentamiento', icon: Icons.whatshot_outlined, color: AppColors.warning),
+                _SectionTitle(
+                  title: 'Calentamiento',
+                  icon: Icons.whatshot_outlined,
+                  color: AppColors.warning,
+                ),
                 _DescriptionCard(text: training.warmupDescription!),
               ],
 
@@ -182,23 +196,31 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 trailing: '$total ejercicios',
               ),
 
-              ...training.exercises.map((ex) => _ExerciseCard(
-                    trainingExercise: ex,
-                    isCompleted: widget.state.completedExerciseIds.contains(ex.exercise.id),
-                    onToggle: (val) {
-                      context.read<TrainingBloc>().add(
-                        MarkExerciseCompleted(
-                          trainingExerciseId: ex.id,
-                          exerciseId: ex.exercise.id,
-                          completed: val,
-                        ),
-                      );
-                    },
-                  )),
+              ...training.exercises.map(
+                (ex) => _ExerciseCard(
+                  trainingExercise: ex,
+                  isCompleted: widget.state.completedExerciseIds.contains(
+                    ex.exercise.id,
+                  ),
+                  onToggle: (val) {
+                    context.read<TrainingBloc>().add(
+                      MarkExerciseCompleted(
+                        trainingExerciseId: ex.id,
+                        exerciseId: ex.exercise.id,
+                        completed: val,
+                      ),
+                    );
+                  },
+                ),
+              ),
 
               // Cooldown
               if (training.cooldownDescription != null) ...[
-                _SectionTitle(title: 'Enfriamiento', icon: Icons.ac_unit_outlined, color: AppColors.secondary),
+                _SectionTitle(
+                  title: 'Enfriamiento',
+                  icon: Icons.ac_unit_outlined,
+                  color: AppColors.secondary,
+                ),
                 _DescriptionCard(text: training.cooldownDescription!),
               ],
 
@@ -208,11 +230,17 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 child: TextField(
                   controller: _notesController,
                   maxLines: 3,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Añadir nota rápida (Opcional)',
                     hintStyle: const TextStyle(color: AppColors.textDisabled),
-                    prefixIcon: const Icon(Icons.edit_note, color: AppColors.textDisabled),
+                    prefixIcon: const Icon(
+                      Icons.edit_note,
+                      color: AppColors.textDisabled,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceVariant,
                     border: OutlineInputBorder(
@@ -276,12 +304,29 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        if (allDone) {
+                          Navigator.of(context).pop(true);
+                          return;
+                        }
+
+                        context.read<TrainingBloc>().add(
+                          CompleteTrainingRequested(
+                            notes: _notesController.text.trim().isEmpty
+                                ? null
+                                : _notesController.text.trim(),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: allDone ? AppColors.success : AppColors.primary,
+                        backgroundColor: allDone
+                            ? AppColors.success
+                            : AppColors.primary,
                       ),
                       icon: Icon(
-                        allDone ? Icons.check_circle_outline : Icons.done_outline,
+                        allDone
+                            ? Icons.check_circle_outline
+                            : Icons.done_outline,
                         size: 18,
                       ),
                       label: Text(
@@ -321,7 +366,14 @@ class _Badge extends StatelessWidget {
             Icon(icon, color: color, size: 13),
             const SizedBox(width: 4),
           ],
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -359,7 +411,13 @@ class _SectionTitle extends StatelessWidget {
           ),
           if (trailing != null) ...[
             const Spacer(),
-            Text(trailing!, style: const TextStyle(color: AppColors.textDisabled, fontSize: 12)),
+            Text(
+              trailing!,
+              style: const TextStyle(
+                color: AppColors.textDisabled,
+                fontSize: 12,
+              ),
+            ),
           ],
         ],
       ),
@@ -384,7 +442,11 @@ class _DescriptionCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          height: 1.5,
+        ),
       ),
     );
   }
@@ -412,10 +474,14 @@ class _ExerciseCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isCompleted ? AppColors.success.withOpacity(0.08) : AppColors.card,
+          color: isCompleted
+              ? AppColors.success.withOpacity(0.08)
+              : AppColors.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isCompleted ? AppColors.success.withOpacity(0.4) : AppColors.divider,
+            color: isCompleted
+                ? AppColors.success.withOpacity(0.4)
+                : AppColors.divider,
           ),
         ),
         child: Row(
@@ -444,17 +510,24 @@ class _ExerciseCard extends StatelessWidget {
                     children: [
                       Text(
                         '${trainingExercise.order}.',
-                        style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppColors.textDisabled,
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           ex.name,
                           style: TextStyle(
-                            color: isCompleted ? AppColors.success : AppColors.textPrimary,
+                            color: isCompleted
+                                ? AppColors.success
+                                : AppColors.textPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                             decorationColor: AppColors.success,
                           ),
                         ),
@@ -465,7 +538,10 @@ class _ExerciseCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       ex.muscleGroups.join(', '),
-                      style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                      style: const TextStyle(
+                        color: AppColors.textDisabled,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 6),
@@ -473,7 +549,8 @@ class _ExerciseCard extends StatelessWidget {
                     children: [
                       _MiniStat(
                         icon: Icons.repeat,
-                        label: '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
+                        label:
+                            '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
                       ),
                       const SizedBox(width: 12),
                       _MiniStat(
@@ -488,7 +565,11 @@ class _ExerciseCard extends StatelessWidget {
             const SizedBox(width: 8),
             Column(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.textDisabled, size: 16),
+                const Icon(
+                  Icons.info_outline,
+                  color: AppColors.textDisabled,
+                  size: 16,
+                ),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () => onToggle(!isCompleted),
@@ -497,10 +578,14 @@ class _ExerciseCard extends StatelessWidget {
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: isCompleted ? AppColors.success : Colors.transparent,
+                      color: isCompleted
+                          ? AppColors.success
+                          : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isCompleted ? AppColors.success : AppColors.textDisabled,
+                        color: isCompleted
+                            ? AppColors.success
+                            : AppColors.textDisabled,
                         width: 2,
                       ),
                     ),
@@ -548,7 +633,11 @@ class _ExercisePlaceholder extends StatelessWidget {
       width: 60,
       height: 60,
       color: AppColors.surfaceVariant,
-      child: const Icon(Icons.fitness_center, color: AppColors.textDisabled, size: 24),
+      child: const Icon(
+        Icons.fitness_center,
+        color: AppColors.textDisabled,
+        size: 24,
+      ),
     );
   }
 }
@@ -566,7 +655,10 @@ class _MiniStat extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.textDisabled, size: 12),
         const SizedBox(width: 3),
-        Text(label, style: const TextStyle(color: AppColors.textDisabled, fontSize: 11)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+        ),
       ],
     );
   }
@@ -628,7 +720,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   ),
                 )
               else
-                const Icon(Icons.fitness_center, color: AppColors.textDisabled, size: 48),
+                const Icon(
+                  Icons.fitness_center,
+                  color: AppColors.textDisabled,
+                  size: 48,
+                ),
               Container(
                 width: 60,
                 height: 60,
@@ -636,7 +732,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   color: AppColors.primary.withOpacity(0.85),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ],
           ),
@@ -655,7 +755,10 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (exercise.muscleGroups.isNotEmpty)
           Text(
             exercise.muscleGroups.join(' · '),
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
           ),
 
         const SizedBox(height: 16),
@@ -709,7 +812,11 @@ class _SheetStat extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _SheetStat({required this.label, required this.value, required this.icon});
+  const _SheetStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -734,7 +841,10 @@ class _SheetStat extends StatelessWidget {
             ),
             Text(
               label,
-              style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+              style: const TextStyle(
+                color: AppColors.textDisabled,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
@@ -748,7 +858,11 @@ class _DetailSection extends StatelessWidget {
   final String text;
   final Color? titleColor;
 
-  const _DetailSection({required this.title, required this.text, this.titleColor});
+  const _DetailSection({
+    required this.title,
+    required this.text,
+    this.titleColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -766,7 +880,11 @@ class _DetailSection extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           text,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.6),
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            height: 1.6,
+          ),
         ),
       ],
     );

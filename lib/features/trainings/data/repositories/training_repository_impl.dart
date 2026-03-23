@@ -16,8 +16,14 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<List<TrainingEntity>> getTrainings({int page = 1, int limit = 20}) async {
-    final models = await _remoteDataSource.getTrainings(page: page, limit: limit);
+  Future<List<TrainingEntity>> getTrainings({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final models = await _remoteDataSource.getTrainings(
+      page: page,
+      limit: limit,
+    );
     return models.map(_mapToEntity).toList();
   }
 
@@ -30,6 +36,16 @@ class TrainingRepositoryImpl implements TrainingRepository {
   @override
   Future<void> markExerciseCompleted(String exerciseId, String date) {
     return _remoteDataSource.markExerciseCompleted(exerciseId, date);
+  }
+
+  @override
+  Future<void> unmarkExerciseCompleted(String exerciseId, String date) {
+    return _remoteDataSource.unmarkExerciseCompleted(exerciseId, date);
+  }
+
+  @override
+  Future<void> completeTraining(String date, {String? notes}) {
+    return _remoteDataSource.completeTraining(date, notes: notes);
   }
 
   @override

@@ -14,6 +14,10 @@ class FirebaseAuthService {
     return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
+  Future<UserCredential> signInWithCustomToken(String token) {
+    return _auth.signInWithCustomToken(token);
+  }
+
   Future<void> _ensureGoogleSignInInitialized() async {
     if (_googleSignInInitialized) return;
 

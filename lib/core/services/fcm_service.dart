@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -5,6 +8,7 @@ import 'package:exom_app/core/api/api_client.dart';
 class FcmService {
   final ApiClient _apiClient;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  StreamSubscription<User?>? _authSubscription;
 
   FcmService(this._apiClient);
 
@@ -23,9 +27,22 @@ class FcmService {
 
     // Get token and send to backend
     final token = await _messaging.getToken();
-    if (token != null) {
+    if (token != null && FirebaseAuth.instance.currentUser != null) {
       await _sendTokenToServer(token);
     }
+
+    _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((
+      user,
+    ) async {
+      if (user == null) {
+        return;
+      }
+
+      final refreshedToken = await _messaging.getToken();
+      if (refreshedToken != null) {
+        await _sendTokenToServer(refreshedToken);
+      }
+    });
 
     // Refresh token listener
     _messaging.onTokenRefresh.listen(_sendTokenToServer);
@@ -39,6 +56,11 @@ class FcmService {
   }
 
   Future<void> _sendTokenToServer(String token) async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      debugPrint('[FCM] Token pending until user signs in');
+      return;
+    }
+
     try {
       await _apiClient.patch<Map<String, dynamic>>(
         '/admin/fcm-token',

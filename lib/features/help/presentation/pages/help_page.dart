@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 class HelpPage extends StatelessWidget {
@@ -6,44 +8,34 @@ class HelpPage extends StatelessWidget {
 
   static const _faqs = [
     _Faq(
-      question: '¿Cómo registro mi peso y medidas?',
+      question: '¿Como registro mi peso, masa muscular y medidas?',
       answer:
-          'Ve a tu perfil y pulsa el botón "Registrar métricas". Podrás introducir tu peso, horas de sueño y medidas corporales. Los datos aparecerán en la gráfica de tu perfil.',
+          'Ve a tu perfil y entra en "Mis métricas". Desde ahi puedes guardar peso, masa muscular, horas de sueño y medidas corporales. El perfil mostrara tu evolucion y el ultimo dato disponible.',
     ),
     _Faq(
-      question: '¿Cómo marco un ejercicio como completado?',
+      question: '¿Como marco un entrenamiento como completado?',
       answer:
-          'Entra en el entrenamiento del día desde la pantalla de inicio o la pestaña "Entrena". Pulsa el check junto a cada ejercicio para marcarlo como completado.',
+          'Entra en el entrenamiento del dia desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesion completa desde el resumen final.',
     ),
     _Faq(
-      question: '¿Para qué sirve el Recap Semanal?',
+      question: '¿Como marco una comida como completada?',
       answer:
-          'El Recap es un formulario semanal para que puedas comunicar a tu entrenador cómo te ha ido la semana: nivel de esfuerzo, calidad de la nutrición, recuperación y estado de ánimo.',
+          'Abre la dieta del dia, entra en la comida correspondiente y pulsa el boton de completado. El Home y el Calendario reflejaran el avance real del dia.',
     ),
     _Faq(
-      question: '¿Cómo funciona el Calendario?',
+      question: '¿Puedo usar la app sin conexion?',
       answer:
-          'El Calendario muestra el estado diario de tus entrenamientos y dieta. Los puntos de colores indican si tienes actividad asignada (amarillo) o si ya la has completado (verde).',
+          'Si. La app conserva en cache el ultimo Home, Perfil, Calendario, Dieta, Entreno y Metricas cargados. Sin conexion puedes consultar esos datos, aunque no se enviaran cambios al servidor.',
     ),
     _Faq(
-      question: '¿Qué es el Feedback de ejercicios?',
+      question: '¿Para que sirve el ReCap semanal?',
       answer:
-          'Puedes enviar vídeos o imágenes de tu técnica para que tu entrenador los revise y te dé respuesta directamente desde la app.',
+          'El ReCap te permite resumir tu semana para que tu entrenador entienda como has rendido, comido, descansado y que sensaciones has tenido.',
     ),
     _Faq(
-      question: '¿Cómo desbloqueo logros?',
+      question: '¿Como contacto con mi entrenador o reporto un problema?',
       answer:
-          'Los logros se otorgan automáticamente cuando alcanzas ciertos hitos de entrenamiento. Tu entrenador también puede concederte logros manualmente.',
-    ),
-    _Faq(
-      question: '¿Puedo usar la app sin conexión?',
-      answer:
-          'La app necesita conexión para cargar datos del servidor. Sin conexión se mostrarán los últimos datos cargados, pero no podrás actualizar tu progreso.',
-    ),
-    _Faq(
-      question: '¿Cómo contacto con mi entrenador?',
-      answer:
-          'Usa la sección "Feedback" para enviar vídeos o imágenes con notas. Tu entrenador recibirá la notificación y podrá responderte desde el panel de administración.',
+          'Usa la seccion Feedback para enviar dudas, incidencias o material tecnico. Es el canal principal dentro de la app para que tu entrenador o el equipo de soporte puedan darte seguimiento.',
     ),
   ];
 
@@ -56,21 +48,167 @@ class HelpPage extends StatelessWidget {
         backgroundColor: AppColors.background,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16, top: 8),
-            child: Text(
-              'Preguntas frecuentes',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.borderSoft),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Centro de ayuda',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Todo lo importante para usar EXOM en tu dia a dia: metricas, entrenamientos, dieta, modo offline y vias de contacto.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
-          ..._faqs.map((f) => _FaqTile(faq: f)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.feedback_outlined,
+                  title: 'Feedback',
+                  subtitle: 'Enviar duda o incidencia',
+                  onTap: () => context.push(AppRoutes.feedback),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.settings_outlined,
+                  title: 'Ajustes',
+                  subtitle: 'Notificaciones y caché',
+                  onTap: () => context.push(AppRoutes.settings),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Preguntas frecuentes',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._faqs.map((faq) => _FaqTile(faq: faq)),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.borderSoft),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Creditos',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Producto EXOM. App movil en Flutter, backend en NestJS, autenticacion con Firebase y datos en Supabase.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.borderSoft),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.textDisabled,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -101,13 +239,15 @@ class _FaqTileState extends State<_FaqTile> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: _expanded ? AppColors.primary.withValues(alpha: 0.4) : AppColors.divider,
+          color: _expanded
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : AppColors.divider,
         ),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: () => setState(() => _expanded = !_expanded),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -120,7 +260,9 @@ class _FaqTileState extends State<_FaqTile> {
                     child: Text(
                       widget.faq.question,
                       style: TextStyle(
-                        color: _expanded ? AppColors.primary : AppColors.textPrimary,
+                        color: _expanded
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),

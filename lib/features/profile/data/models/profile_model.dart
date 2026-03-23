@@ -13,6 +13,7 @@ class ProfileModel {
   final int totalTrainings;
   final int streakDays;
   final double? currentWeightKg;
+  final double? muscleMassGoalKg;
   final double? currentBmi;
 
   const ProfileModel({
@@ -30,6 +31,7 @@ class ProfileModel {
     this.totalTrainings = 0,
     this.streakDays = 0,
     this.currentWeightKg,
+    this.muscleMassGoalKg,
     this.currentBmi,
   });
 
@@ -52,9 +54,11 @@ class ProfileModel {
       totalTrainings: json['totalTrainings'] as int? ?? 0,
       streakDays: json['streakDays'] as int? ?? 0,
       currentWeightKg: (json['current_weight'] as num?)?.toDouble(),
+      muscleMassGoalKg: (json['muscle_mass_goal'] as num?)?.toDouble(),
       currentBmi: (json['currentBmi'] as num?)?.toDouble(),
     );
   }
 
-  String get fullName => [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ');
+  String get fullName =>
+      [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ');
 }

@@ -8,6 +8,8 @@ class HomeSummaryEntity {
   final int totalExercises;
   final String? dietId;
   final String? dietName;
+  final String? nextMealId;
+  final String? nextMealName;
   final int? totalCalories;
   final int mealsCompleted;
   final int totalMeals;
@@ -29,6 +31,8 @@ class HomeSummaryEntity {
     this.totalExercises = 0,
     this.dietId,
     this.dietName,
+    this.nextMealId,
+    this.nextMealName,
     this.totalCalories,
     this.mealsCompleted = 0,
     this.totalMeals = 0,

@@ -49,6 +49,7 @@ import 'package:exom_app/features/profile/data/datasources/profile_remote_dataso
 import 'package:exom_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/get_profile_usecase.dart';
+import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:exom_app/features/profile/domain/usecases/upload_avatar_usecase.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
 
@@ -329,11 +330,13 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton(() => GetProfileUseCase(sl<ProfileRepository>()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl<ProfileRepository>()));
   sl.registerLazySingleton(() => UploadAvatarUseCase(sl<ProfileRepository>()));
 
   sl.registerFactory(
     () => ProfileBloc(
       getProfileUseCase: sl<GetProfileUseCase>(),
+      updateProfileUseCase: sl<UpdateProfileUseCase>(),
       uploadAvatarUseCase: sl<UploadAvatarUseCase>(),
       metricsRepository: sl<MetricsRepository>(),
     ),

@@ -8,6 +8,8 @@ class HomeSummaryModel {
   final int totalExercises;
   final String? dietName;
   final String? dietId;
+  final String? nextMealId;
+  final String? nextMealName;
   final int? totalCalories;
   final int mealsCompleted;
   final int totalMeals;
@@ -29,6 +31,8 @@ class HomeSummaryModel {
     this.totalExercises = 0,
     this.dietName,
     this.dietId,
+    this.nextMealId,
+    this.nextMealName,
     this.totalCalories,
     this.mealsCompleted = 0,
     this.totalMeals = 0,
@@ -62,7 +66,10 @@ class HomeSummaryModel {
     }
 
     // Exercise progress
-    final trainingExercises = training?['training_exercises'] as List? ?? [];
+    final trainingExercises =
+        (training?['exercises'] as List?) ??
+        (training?['training_exercises'] as List?) ??
+        [];
     final totalExercises = trainingExercises.length;
     final completedExIds = (progress?['exercises_completed'] as List? ?? [])
         .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
@@ -79,6 +86,14 @@ class HomeSummaryModel {
         .map((e) => e as String)
         .toSet();
     final mealsCompleted = completedMealIds.length;
+    final normalizedMeals = dietMeals
+        .whereType<Map<String, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList(growable: false);
+    final nextMeal = normalizedMeals.cast<Map<String, dynamic>?>().firstWhere(
+      (meal) => !completedMealIds.contains(meal?['id'] as String?),
+      orElse: () => normalizedMeals.isNotEmpty ? normalizedMeals.first : null,
+    );
 
     return HomeSummaryModel(
       trainingId: training?['id'] as String?,
@@ -90,6 +105,8 @@ class HomeSummaryModel {
       totalExercises: totalExercises,
       dietId: diet?['id'] as String?,
       dietName: diet?['name'] as String?,
+      nextMealId: nextMeal?['id'] as String?,
+      nextMealName: nextMeal?['name'] as String?,
       totalCalories: diet?['total_calories'] as int?,
       mealsCompleted: mealsCompleted,
       totalMeals: totalMeals,

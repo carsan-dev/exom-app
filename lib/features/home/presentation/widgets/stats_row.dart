@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -25,6 +26,7 @@ class StatsRow extends StatelessWidget {
                   ? DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!)
                   : null,
               color: AppColors.textSecondary,
+              onTap: () => context.push('/profile/metrics'),
             ),
           ),
           const SizedBox(width: 10),
@@ -36,6 +38,7 @@ class StatsRow extends StatelessWidget {
               subtitle: summary.streakDays > 0 ? '¡Sigue así!' : null,
               color: AppColors.primary,
               highlighted: true,
+              onTap: () => context.push('/challenges'),
             ),
           ),
           const SizedBox(width: 10),
@@ -48,6 +51,7 @@ class StatsRow extends StatelessWidget {
               label: 'Sueño',
               subtitle: _sleepQuality(summary.lastSleepHours),
               color: AppColors.sleepAccent,
+              onTap: () => context.push('/profile/metrics'),
             ),
           ),
         ],
@@ -70,6 +74,7 @@ class _StatCard extends StatelessWidget {
   final String? subtitle;
   final Color color;
   final bool highlighted;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.value,
@@ -78,65 +83,71 @@ class _StatCard extends StatelessWidget {
     this.subtitle,
     required this.color,
     this.highlighted = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: highlighted
-            ? color.withValues(alpha: 0.12)
-            : AppColors.card,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: highlighted
-              ? color.withValues(alpha: 0.3)
-              : AppColors.borderSoft,
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: highlighted ? color : AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              height: 1,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: highlighted ? color.withValues(alpha: 0.12) : AppColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: highlighted
+                  ? color.withValues(alpha: 0.3)
+                  : AppColors.borderSoft,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            unit,
-            style: TextStyle(
-              color: highlighted ? color : AppColors.textSecondary,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: highlighted ? color : AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              subtitle!,
-              style: TextStyle(
-                color: highlighted
-                    ? color.withValues(alpha: 0.7)
-                    : AppColors.textDisabled,
-                fontSize: 10,
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: highlighted ? color : AppColors.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
+              const SizedBox(height: 2),
+              Text(
+                unit,
+                style: TextStyle(
+                  color: highlighted ? color : AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: highlighted ? color : AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: TextStyle(
+                    color: highlighted
+                        ? color.withValues(alpha: 0.7)
+                        : AppColors.textDisabled,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

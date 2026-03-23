@@ -11,10 +11,33 @@ class FcmService {
   final LocalStorage _localStorage;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<String>? _tokenRefreshSubscription;
+  bool _initialized = false;
 
   FcmService(this._apiClient, this._localStorage);
 
   Future<void> init() async {
+    final notificationsEnabled =
+        _localStorage.getSetting<bool>(
+          'push_notifications_enabled',
+          defaultValue: true,
+        ) ??
+        true;
+
+    if (!notificationsEnabled) {
+      debugPrint('[FCM] Notifications disabled in local settings');
+      return;
+    }
+
+    if (_initialized) {
+      final token = _localStorage.fcmToken ?? await _messaging.getToken();
+      if (token != null) {
+        await _sendTokenToServer(token);
+      }
+      debugPrint('[FCM] Already initialized');
+      return;
+    }
+
     // Request permission
     final settings = await _messaging.requestPermission(
       alert: true,
@@ -52,10 +75,14 @@ class FcmService {
     });
 
     // Refresh token listener
-    _messaging.onTokenRefresh.listen((token) async {
+    _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen((
+      token,
+    ) async {
       await _localStorage.saveFcmToken(token);
       await _sendTokenToServer(token);
     });
+
+    _initialized = true;
 
     // Foreground message handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -66,6 +93,18 @@ class FcmService {
   }
 
   Future<void> _sendTokenToServer(String token) async {
+    final notificationsEnabled =
+        _localStorage.getSetting<bool>(
+          'push_notifications_enabled',
+          defaultValue: true,
+        ) ??
+        true;
+
+    if (!notificationsEnabled) {
+      debugPrint('[FCM] Token not sent because notifications are disabled');
+      return;
+    }
+
     if (FirebaseAuth.instance.currentUser == null) {
       debugPrint('[FCM] Token pending until user signs in');
       await _localStorage.saveFcmToken(token);

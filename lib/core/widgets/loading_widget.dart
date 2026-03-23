@@ -32,11 +32,17 @@ class ErrorWidget2 extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 16,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton(onPressed: onRetry, child: const Text('Reintentar')),
+              ElevatedButton(
+                onPressed: onRetry,
+                child: const Text('Reintentar'),
+              ),
             ],
           ],
         ),
@@ -87,13 +93,13 @@ class EmptyWidget extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
             ],
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 24), action!],
           ],
         ),
       ),
@@ -248,7 +254,7 @@ class NoConnectionWidget extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onViewOffline,
                   icon: const Icon(Icons.offline_pin_outlined, size: 18),
-                  label: const Text('Ver datos en caché'),
+                  label: const Text('Ver offline'),
                 ),
               ),
             ],

@@ -20,6 +20,8 @@ class HomeRepositoryImpl implements HomeRepository {
       totalExercises: model.totalExercises,
       dietId: model.dietId,
       dietName: model.dietName,
+      nextMealId: model.nextMealId,
+      nextMealName: model.nextMealName,
       totalCalories: model.totalCalories,
       mealsCompleted: model.mealsCompleted,
       totalMeals: model.totalMeals,

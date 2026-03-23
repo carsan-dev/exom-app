@@ -29,6 +29,7 @@ class _MetricsViewState extends State<_MetricsView> {
   double _weight = 75.0;
   bool _useManualWeight = false;
   final _weightController = TextEditingController();
+  final _muscleMassController = TextEditingController();
   double _sleepHours = 8.0;
 
   bool _bodyMapMode = false;
@@ -62,6 +63,7 @@ class _MetricsViewState extends State<_MetricsView> {
   @override
   void dispose() {
     _weightController.dispose();
+    _muscleMassController.dispose();
     for (final c in _measureControllers.values) {
       c.dispose();
     }
@@ -135,7 +137,11 @@ class _MetricsViewState extends State<_MetricsView> {
               // Left labels
               Expanded(
                 flex: 2,
-                child: _buildZoneColumn(leftZones, leftFlex, CrossAxisAlignment.end),
+                child: _buildZoneColumn(
+                  leftZones,
+                  leftFlex,
+                  CrossAxisAlignment.end,
+                ),
               ),
 
               // Body silhouette with hotspots
@@ -160,7 +166,8 @@ class _MetricsViewState extends State<_MetricsView> {
                               left: dx - 8,
                               top: dy - 8,
                               child: GestureDetector(
-                                onTap: () => setState(() => _selectedMeasure = e.key),
+                                onTap: () =>
+                                    setState(() => _selectedMeasure = e.key),
                                 child: Container(
                                   width: 16,
                                   height: 16,
@@ -168,7 +175,9 @@ class _MetricsViewState extends State<_MetricsView> {
                                     shape: BoxShape.circle,
                                     color: _selectedMeasure == e.key
                                         ? AppColors.secondary
-                                        : AppColors.secondary.withValues(alpha: 0.3),
+                                        : AppColors.secondary.withValues(
+                                            alpha: 0.3,
+                                          ),
                                     border: Border.all(
                                       color: AppColors.secondary,
                                       width: _selectedMeasure == e.key ? 2 : 1,
@@ -188,7 +197,11 @@ class _MetricsViewState extends State<_MetricsView> {
               // Right labels
               Expanded(
                 flex: 2,
-                child: _buildZoneColumn(rightZones, rightFlex, CrossAxisAlignment.start),
+                child: _buildZoneColumn(
+                  rightZones,
+                  rightFlex,
+                  CrossAxisAlignment.start,
+                ),
               ),
             ],
           ),
@@ -222,10 +235,7 @@ class _MetricsViewState extends State<_MetricsView> {
     }
     children.add(Spacer(flex: 10 - flex.last));
 
-    return Column(
-      crossAxisAlignment: align,
-      children: children,
-    );
+    return Column(crossAxisAlignment: align, children: children);
   }
 
   Widget _zoneLabel(String zone) {
@@ -251,7 +261,9 @@ class _MetricsViewState extends State<_MetricsView> {
             Text(
               zone,
               style: TextStyle(
-                color: isSelected ? AppColors.secondary : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.secondary
+                    : AppColors.textSecondary,
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -260,7 +272,9 @@ class _MetricsViewState extends State<_MetricsView> {
               Text(
                 '$val cm',
                 style: TextStyle(
-                  color: isSelected ? AppColors.secondary : AppColors.textDisabled,
+                  color: isSelected
+                      ? AppColors.secondary
+                      : AppColors.textDisabled,
                   fontSize: 10,
                 ),
               ),
@@ -270,7 +284,12 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  Widget _viewTab(String label, IconData icon, bool active, VoidCallback onTap) {
+  Widget _viewTab(
+    String label,
+    IconData icon,
+    bool active,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -281,16 +300,17 @@ class _MetricsViewState extends State<_MetricsView> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active
-                ? AppColors.secondary
-                : AppColors.divider,
+            color: active ? AppColors.secondary : AppColors.divider,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14,
-                color: active ? AppColors.secondary : AppColors.textDisabled),
+            Icon(
+              icon,
+              size: 14,
+              color: active ? AppColors.secondary : AppColors.textDisabled,
+            ),
             const SizedBox(width: 4),
             Text(
               label,
@@ -316,6 +336,11 @@ class _MetricsViewState extends State<_MetricsView> {
       'sleep_hours': _sleepHours,
     };
 
+    final muscleMass = double.tryParse(_muscleMassController.text);
+    if (muscleMass != null) {
+      data['muscle_mass_kg'] = muscleMass;
+    }
+
     for (final entry in _measureControllers.entries) {
       final val = double.tryParse(entry.value.text);
       if (val != null) {
@@ -328,9 +353,16 @@ class _MetricsViewState extends State<_MetricsView> {
 
   void _populateFromMetric(BodyMetricEntity metric) {
     setState(() {
-      if (metric.weightKg != null) _weight = metric.weightKg!.clamp(40.0, 160.0);
-      if (metric.sleepHours != null) _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
+      if (metric.weightKg != null) {
+        _weight = metric.weightKg!.clamp(40.0, 160.0);
+      }
+      if (metric.sleepHours != null) {
+        _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
+      }
     });
+    if (metric.muscleMassKg != null) {
+      _muscleMassController.text = metric.muscleMassKg!.toStringAsFixed(1);
+    }
     final map = {
       'Cuello': metric.neckCm,
       'Hombros': metric.shouldersCm,
@@ -344,8 +376,7 @@ class _MetricsViewState extends State<_MetricsView> {
     };
     for (final entry in map.entries) {
       if (entry.value != null) {
-        _measureControllers[entry.key]?.text =
-            entry.value!.toStringAsFixed(1);
+        _measureControllers[entry.key]?.text = entry.value!.toStringAsFixed(1);
       }
     }
   }
@@ -369,7 +400,9 @@ class _MetricsViewState extends State<_MetricsView> {
               ),
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
           Navigator.of(context).pop();
@@ -380,7 +413,9 @@ class _MetricsViewState extends State<_MetricsView> {
               content: Text(state.message),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -412,11 +447,15 @@ class _MetricsViewState extends State<_MetricsView> {
                             children: [
                               const Text(
                                 'Entrada manual',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
                               ),
                               Switch(
                                 value: _useManualWeight,
-                                onChanged: (val) => setState(() => _useManualWeight = val),
+                                onChanged: (val) =>
+                                    setState(() => _useManualWeight = val),
                                 activeColor: AppColors.primary,
                               ),
                             ],
@@ -424,12 +463,19 @@ class _MetricsViewState extends State<_MetricsView> {
                           if (_useManualWeight)
                             TextFormField(
                               controller: _weightController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              style: const TextStyle(color: AppColors.textPrimary),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                              ),
                               decoration: const InputDecoration(
                                 hintText: 'Ej: 75.5',
                                 suffixText: 'kg',
-                                suffixStyle: TextStyle(color: AppColors.textSecondary),
+                                suffixStyle: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             )
                           else ...[
@@ -437,7 +483,13 @@ class _MetricsViewState extends State<_MetricsView> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('60 kg', style: TextStyle(color: AppColors.textDisabled, fontSize: 11)),
+                                const Text(
+                                  '60 kg',
+                                  style: TextStyle(
+                                    color: AppColors.textDisabled,
+                                    fontSize: 11,
+                                  ),
+                                ),
                                 Text(
                                   '${_weight.toStringAsFixed(1)} kg',
                                   style: const TextStyle(
@@ -446,7 +498,13 @@ class _MetricsViewState extends State<_MetricsView> {
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const Text('150 kg', style: TextStyle(color: AppColors.textDisabled, fontSize: 11)),
+                                const Text(
+                                  '150 kg',
+                                  style: TextStyle(
+                                    color: AppColors.textDisabled,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ],
                             ),
                             Slider(
@@ -463,6 +521,43 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
                     ),
 
+                    _SectionCard(
+                      title: 'Masa muscular',
+                      icon: Icons.fitness_center,
+                      color: AppColors.calorieAccent,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _muscleMassController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Ej: 32.5',
+                              suffixText: 'kg',
+                              suffixStyle: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     // Sleep section
                     _SectionCard(
                       title: 'Horas de sueño',
@@ -474,7 +569,13 @@ class _MetricsViewState extends State<_MetricsView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('4h', style: TextStyle(color: AppColors.textDisabled, fontSize: 11)),
+                              const Text(
+                                '4h',
+                                style: TextStyle(
+                                  color: AppColors.textDisabled,
+                                  fontSize: 11,
+                                ),
+                              ),
                               Text(
                                 '${_sleepHours.toStringAsFixed(1)}h',
                                 style: const TextStyle(
@@ -483,7 +584,13 @@ class _MetricsViewState extends State<_MetricsView> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const Text('12h', style: TextStyle(color: AppColors.textDisabled, fontSize: 11)),
+                              const Text(
+                                '12h',
+                                style: TextStyle(
+                                  color: AppColors.textDisabled,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                           Slider(
@@ -493,13 +600,12 @@ class _MetricsViewState extends State<_MetricsView> {
                             divisions: 16,
                             activeColor: AppColors.sleepAccent,
                             inactiveColor: AppColors.surfaceVariant,
-                            onChanged: (val) => setState(() => _sleepHours = val),
+                            onChanged: (val) =>
+                                setState(() => _sleepHours = val),
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _SleepEmoji(_sleepHours),
-                            ],
+                            children: [_SleepEmoji(_sleepHours)],
                           ),
                         ],
                       ),
@@ -519,7 +625,9 @@ class _MetricsViewState extends State<_MetricsView> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _bodyMapMode ? Icons.grid_view : Icons.accessibility_new,
+                              _bodyMapMode
+                                  ? Icons.grid_view
+                                  : Icons.accessibility_new,
                               color: AppColors.secondary,
                               size: 16,
                             ),
@@ -542,15 +650,17 @@ class _MetricsViewState extends State<_MetricsView> {
                               child: GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 2.0,
-                                ),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 2.0,
+                                    ),
                                 itemCount: _measureControllers.length,
                                 itemBuilder: (context, index) {
-                                  final key = _measureControllers.keys.elementAt(index);
+                                  final key = _measureControllers.keys
+                                      .elementAt(index);
                                   return _MeasureInput(
                                     label: key,
                                     controller: _measureControllers[key]!,
@@ -571,7 +681,9 @@ class _MetricsViewState extends State<_MetricsView> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      border: const Border(top: BorderSide(color: AppColors.divider)),
+                      border: const Border(
+                        top: BorderSide(color: AppColors.divider),
+                      ),
                     ),
                     child: ElevatedButton(
                       onPressed: isSaving ? null : _save,
@@ -637,10 +749,7 @@ class _SectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (trailing != null) ...[
-                const Spacer(),
-                trailing!,
-              ],
+              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
           const SizedBox(height: 4),
@@ -664,7 +773,11 @@ class _MeasureInput extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 4),
         TextFormField(
@@ -711,7 +824,10 @@ class _SleepEmoji extends StatelessWidget {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 20)),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
       ],
     );
   }

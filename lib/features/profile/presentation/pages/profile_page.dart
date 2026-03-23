@@ -52,35 +52,36 @@ class _ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileBloc, ProfileState>(
-        builder: (context, state) {
-          if (state is ProfileLoading || state is ProfileInitial) {
-            return const ShimmerList(count: 5, itemHeight: 100);
-          }
-          if (state is ProfileError) {
-            return ErrorWidget2(
-              message: state.message,
-              onRetry: () => context.read<ProfileBloc>().add(const ProfileLoadRequested()),
-            );
-          }
-          if (state is ProfileLoaded) {
-            return _ProfileContent(
-              profile: state.profile,
-              isUploadingAvatar: false,
-              weightHistory: state.weightHistory,
-              latestMetric: state.latestMetric,
-            );
-          }
-          if (state is ProfileAvatarUploading) {
-            return _ProfileContent(
-              profile: state.profile,
-              isUploadingAvatar: true,
-              weightHistory: const [],
-              latestMetric: null,
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      );
+      builder: (context, state) {
+        if (state is ProfileLoading || state is ProfileInitial) {
+          return const ShimmerList(count: 5, itemHeight: 100);
+        }
+        if (state is ProfileError) {
+          return ErrorWidget2(
+            message: state.message,
+            onRetry: () =>
+                context.read<ProfileBloc>().add(const ProfileLoadRequested()),
+          );
+        }
+        if (state is ProfileLoaded) {
+          return _ProfileContent(
+            profile: state.profile,
+            isUploadingAvatar: false,
+            weightHistory: state.weightHistory,
+            latestMetric: state.latestMetric,
+          );
+        }
+        if (state is ProfileAvatarUploading) {
+          return _ProfileContent(
+            profile: state.profile,
+            isUploadingAvatar: true,
+            weightHistory: const [],
+            latestMetric: null,
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
   }
 }
 
@@ -108,11 +109,18 @@ class _ProfileContent extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
-          _ProfileHeader(profile: profile, isUploadingAvatar: isUploadingAvatar),
+          _ProfileHeader(
+            profile: profile,
+            isUploadingAvatar: isUploadingAvatar,
+          ),
           _ActionButtons(profile: profile),
           _WeightChartCard(weightHistory: weightHistory),
-          _IndicatorCards(weightHistory: weightHistory),
-          _BodyDataSection(profile: profile, weightHistory: weightHistory, latestMetric: latestMetric),
+          _IndicatorCards(profile: profile, latestMetric: latestMetric),
+          _BodyDataSection(
+            profile: profile,
+            weightHistory: weightHistory,
+            latestMetric: latestMetric,
+          ),
         ],
       ),
     );
@@ -125,7 +133,10 @@ class _ProfileHeader extends StatelessWidget {
   final ProfileEntity profile;
   final bool isUploadingAvatar;
 
-  const _ProfileHeader({required this.profile, required this.isUploadingAvatar});
+  const _ProfileHeader({
+    required this.profile,
+    required this.isUploadingAvatar,
+  });
 
   Future<void> _pickAndUpload(BuildContext context) async {
     final picker = ImagePicker();
@@ -136,7 +147,9 @@ class _ProfileHeader extends StatelessWidget {
     );
     if (picked == null) return;
     if (!context.mounted) return;
-    context.read<ProfileBloc>().add(ProfileAvatarUploadRequested(File(picked.path)));
+    context.read<ProfileBloc>().add(
+      ProfileAvatarUploadRequested(File(picked.path)),
+    );
   }
 
   String _levelLabel(String? level) {
@@ -186,7 +199,9 @@ class _ProfileHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  profile.fullName.isNotEmpty ? profile.fullName.toUpperCase() : 'USUARIO EXOM',
+                  profile.fullName.isNotEmpty
+                      ? profile.fullName.toUpperCase()
+                      : 'USUARIO EXOM',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -211,19 +226,33 @@ class _ProfileHeader extends StatelessWidget {
                 Row(
                   children: [
                     if (profile.currentWeightKg != null) ...[
-                      const Icon(Icons.monitor_weight_outlined, color: AppColors.textSecondary, size: 14),
+                      const Icon(
+                        Icons.monitor_weight_outlined,
+                        color: AppColors.textSecondary,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${profile.currentWeightKg!.toStringAsFixed(0)} kg',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(width: 12),
                     ],
-                    const Icon(Icons.local_fire_department_outlined, color: AppColors.calorieAccent, size: 14),
+                    const Icon(
+                      Icons.local_fire_department_outlined,
+                      color: AppColors.calorieAccent,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Racha ${profile.streakDays} días',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -241,22 +270,29 @@ class _ProfileHeader extends StatelessWidget {
                   radius: 40,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                   child: isUploadingAvatar
-                      ? const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)
+                      ? const CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
+                        )
                       : profile.avatarUrl != null
-                          ? ClipOval(
-                              child: CachedNetworkImage(
-                                imageUrl: profile.avatarUrl!,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, _, _) => const Icon(
-                                  Icons.person,
-                                  color: AppColors.primary,
-                                  size: 40,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.person, color: AppColors.primary, size: 40),
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: profile.avatarUrl!,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, _, _) => const Icon(
+                              Icons.person,
+                              color: AppColors.primary,
+                              size: 40,
+                            ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.person,
+                          color: AppColors.primary,
+                          size: 40,
+                        ),
                 ),
                 if (!isUploadingAvatar)
                   Container(
@@ -265,7 +301,11 @@ class _ProfileHeader extends StatelessWidget {
                       color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.camera_alt, color: AppColors.textOnPrimary, size: 12),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: AppColors.textOnPrimary,
+                      size: 12,
+                    ),
                   ),
               ],
             ),
@@ -320,11 +360,11 @@ class _ActionButtons extends StatelessWidget {
               icon: Icons.monitor_weight_outlined,
               label: 'Actualizar peso',
               onTap: () async {
-                  await context.push('/profile/metrics');
-                  if (context.mounted) {
-                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                  }
-                },
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
             ),
           ),
           const SizedBox(width: 8),
@@ -333,11 +373,11 @@ class _ActionButtons extends StatelessWidget {
               icon: Icons.straighten_outlined,
               label: 'Actualizar medidas',
               onTap: () async {
-                  await context.push('/profile/metrics');
-                  if (context.mounted) {
-                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                  }
-                },
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
             ),
           ),
           const SizedBox(width: 8),
@@ -359,7 +399,11 @@ class _ActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionChip({required this.icon, required this.label, required this.onTap});
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -401,7 +445,14 @@ class _WeightChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = weightHistory.where((e) => e.weightKg != null).toList();
+    final latestByDay = <String, BodyMetricEntity>{};
+    for (final entry in weightHistory.where((item) => item.weightKg != null)) {
+      final dayKey = DateFormat('yyyy-MM-dd').format(entry.date);
+      latestByDay[dayKey] = entry;
+    }
+
+    final entries = latestByDay.values.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -424,12 +475,14 @@ class _WeightChartCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (entries.isEmpty)
-            _EmptyChart(onRegister: () async {
-              await context.push('/profile/metrics');
-              if (context.mounted) {
-                context.read<ProfileBloc>().add(const ProfileLoadRequested());
-              }
-            })
+            _EmptyChart(
+              onRegister: () async {
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
+            )
           else
             _FilledChart(entries: entries),
         ],
@@ -474,7 +527,9 @@ class _EmptyChart extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: const Text('Registrar métricas'),
         ),
@@ -531,27 +586,36 @@ class _FilledChart extends StatelessWidget {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                getDrawingHorizontalLine: (_) => const FlLine(
-                  color: AppColors.divider,
-                  strokeWidth: 1,
-                ),
+                getDrawingHorizontalLine: (_) =>
+                    const FlLine(color: AppColors.divider, strokeWidth: 1),
               ),
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 24,
-                    interval: entries.length > 6 ? (entries.length / 5).ceilToDouble() : 1,
+                    interval: entries.length > 6
+                        ? (entries.length / 5).ceilToDouble()
+                        : 1,
                     getTitlesWidget: (value, _) {
                       final idx = value.toInt();
-                      if (idx < 0 || idx >= entries.length) return const SizedBox.shrink();
+                      if (idx < 0 || idx >= entries.length) {
+                        return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           dateFormat.format(entries[idx].date),
-                          style: const TextStyle(color: AppColors.textDisabled, fontSize: 9),
+                          style: const TextStyle(
+                            color: AppColors.textDisabled,
+                            fontSize: 9,
+                          ),
                         ),
                       );
                     },
@@ -563,7 +627,10 @@ class _FilledChart extends StatelessWidget {
                     reservedSize: 40,
                     getTitlesWidget: (value, _) => Text(
                       '${value.toStringAsFixed(0)} kg',
-                      style: const TextStyle(color: AppColors.textDisabled, fontSize: 9),
+                      style: const TextStyle(
+                        color: AppColors.textDisabled,
+                        fontSize: 9,
+                      ),
                     ),
                   ),
                 ),
@@ -611,64 +678,124 @@ class _FilledChart extends StatelessWidget {
 // ── Indicator Cards (Masa Muscular + Sueño) ─────────────────────────────────
 
 class _IndicatorCards extends StatelessWidget {
-  final List<BodyMetricEntity> weightHistory;
+  final ProfileEntity profile;
+  final BodyMetricEntity? latestMetric;
 
-  const _IndicatorCards({required this.weightHistory});
+  const _IndicatorCards({required this.profile, required this.latestMetric});
+
+  Future<void> _editMuscleGoal(BuildContext context) async {
+    final controller = TextEditingController(
+      text: profile.muscleMassGoalKg?.toStringAsFixed(1) ?? '',
+    );
+
+    final newGoal = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          title: const Text(
+            'Objetivo de masa muscular',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          content: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(
+              hintText: 'Ej: 34.0',
+              suffixText: 'kg',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = double.tryParse(
+                  controller.text.replaceAll(',', '.'),
+                );
+                if (parsed != null && parsed > 0) {
+                  Navigator.of(dialogContext).pop(parsed);
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newGoal != null && context.mounted) {
+      context.read<ProfileBloc>().add(ProfileMuscleGoalUpdated(newGoal));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Compute sleep stats from metrics
-    final sleepEntries = weightHistory.where((e) => e.sleepHours != null).toList();
+    final latestMuscleMass = latestMetric?.muscleMassKg;
+    final muscleGoal = profile.muscleMassGoalKg;
+    final muscleProgress =
+        latestMuscleMass != null && muscleGoal != null && muscleGoal > 0
+        ? (latestMuscleMass / muscleGoal).clamp(0.0, 1.0)
+        : null;
+
+    final sleepEntries = latestMetric?.sleepHours != null
+        ? [latestMetric!]
+        : <BodyMetricEntity>[];
     final avgSleep = sleepEntries.isNotEmpty
-        ? sleepEntries.map((e) => e.sleepHours!).reduce((a, b) => a + b) / sleepEntries.length
+        ? sleepEntries.map((e) => e.sleepHours!).reduce((a, b) => a + b) /
+              sleepEntries.length
         : null;
     final sleepGoal = 8.0;
-    final sleepPercent = avgSleep != null ? (avgSleep / sleepGoal).clamp(0.0, 1.0) : null;
-    final daysInGoal = sleepEntries.where((e) => e.sleepHours! >= 7.0).length;
-
-    // Weight change this month
-    final now = DateTime.now();
-    final thisMonthEntries = weightHistory
-        .where((e) => e.weightKg != null && e.date.month == now.month && e.date.year == now.year)
-        .toList();
-    double? weightChange;
-    if (thisMonthEntries.length >= 2) {
-      weightChange = thisMonthEntries.last.weightKg! - thisMonthEntries.first.weightKg!;
-    }
-    final latestWeight = weightHistory.where((e) => e.weightKg != null).isNotEmpty
-        ? weightHistory.where((e) => e.weightKg != null).last
+    final sleepPercent = avgSleep != null
+        ? (avgSleep / sleepGoal).clamp(0.0, 1.0)
         : null;
+    final daysInGoal = sleepEntries.where((e) => e.sleepHours! >= 7.0).length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
-          // Masa muscular / Peso card
           Expanded(
-            child: latestWeight != null
+            child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
-                    title: 'Peso',
-                    value: '${latestWeight.weightKg!.toStringAsFixed(1)} kg',
-                    subtitle: weightChange != null
-                        ? '${weightChange >= 0 ? '+' : ''}${weightChange.toStringAsFixed(1)} kg este mes'
-                        : null,
-                    bottomLabel: 'Última medición ${DateFormat('dd MMM', 'es').format(latestWeight.date)}',
-                    progress: null,
-                    color: AppColors.primary,
+                    title: 'Masa muscular',
+                    value: '${latestMuscleMass.toStringAsFixed(1)} kg',
+                    subtitle: muscleGoal != null
+                        ? 'Objetivo ${muscleGoal.toStringAsFixed(1)} kg'
+                        : 'Define tu objetivo',
+                    bottomLabel: latestMetric != null
+                        ? 'Última medición ${DateFormat('dd MMM', 'es').format(latestMetric!.date)}'
+                        : 'Actualiza tus métricas',
+                    progress: muscleProgress,
+                    color: AppColors.calorieAccent,
+                    progressCaption: 'actual',
+                    headerAction: IconButton(
+                      onPressed: () => _editMuscleGoal(context),
+                      icon: const Icon(
+                        Icons.tune,
+                        color: AppColors.textDisabled,
+                        size: 16,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
                   )
-                : const _EmptyIndicatorCard(title: 'Peso'),
+                : const _EmptyIndicatorCard(title: 'Masa muscular'),
           ),
           const SizedBox(width: 12),
-          // Sueño card
           Expanded(
             child: avgSleep != null
                 ? _CircularIndicatorCard(
                     title: 'Sueño',
                     value: '${avgSleep.toStringAsFixed(1)} h',
                     subtitle: '${(sleepPercent! * 100).toInt()}% del objetivo',
-                    bottomLabel: '$daysInGoal/${sleepEntries.length} días dentro del objetivo',
+                    bottomLabel:
+                        '$daysInGoal/${sleepEntries.length} días dentro del objetivo',
                     progress: sleepPercent,
                     color: AppColors.sleepAccent,
+                    progressCaption: 'hoy',
                   )
                 : const _EmptyIndicatorCard(title: 'Sueño'),
           ),
@@ -685,6 +812,8 @@ class _CircularIndicatorCard extends StatelessWidget {
   final String bottomLabel;
   final double? progress;
   final Color color;
+  final Widget? headerAction;
+  final String progressCaption;
 
   const _CircularIndicatorCard({
     required this.title,
@@ -693,6 +822,8 @@ class _CircularIndicatorCard extends StatelessWidget {
     required this.bottomLabel,
     this.progress,
     required this.color,
+    this.headerAction,
+    this.progressCaption = 'media',
   });
 
   @override
@@ -718,10 +849,15 @@ class _CircularIndicatorCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (headerAction != null) ...[headerAction!],
               if (subtitle != null)
                 Text(
                   subtitle!,
-                  style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
             ],
           ),
@@ -755,8 +891,11 @@ class _CircularIndicatorCard extends StatelessWidget {
                     ),
                     if (progress != null)
                       Text(
-                        'media',
-                        style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10),
+                        progressCaption,
+                        style: TextStyle(
+                          color: color.withValues(alpha: 0.6),
+                          fontSize: 10,
+                        ),
                       ),
                   ],
                 ),
@@ -871,10 +1010,12 @@ class _BodyDataSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final latestWeight = weightHistory.where((e) => e.weightKg != null).isNotEmpty
+    final latestWeight =
+        weightHistory.where((e) => e.weightKg != null).isNotEmpty
         ? weightHistory.where((e) => e.weightKg != null).last
         : null;
-    final hasMeasurements = latestMetric != null &&
+    final hasMeasurements =
+        latestMetric != null &&
         (latestMetric!.neckCm != null ||
             latestMetric!.chestCm != null ||
             latestMetric!.waistCm != null ||
@@ -907,7 +1048,10 @@ class _BodyDataSection extends StatelessWidget {
               if (latestMetric != null)
                 Text(
                   'Última actualización ${dateFormat.format(latestMetric!.date)}',
-                  style: const TextStyle(color: AppColors.textDisabled, fontSize: 10),
+                  style: const TextStyle(
+                    color: AppColors.textDisabled,
+                    fontSize: 10,
+                  ),
                 ),
             ],
           ),
@@ -915,10 +1059,21 @@ class _BodyDataSection extends StatelessWidget {
           // Weight row
           _DataRow(
             icon: Icons.monitor_weight_outlined,
-            label: 'Peso: ${latestWeight != null ? '${latestWeight.weightKg!.toStringAsFixed(1)} kg' : '--'}',
+            label:
+                'Peso: ${latestWeight != null ? '${latestWeight.weightKg!.toStringAsFixed(1)} kg' : '--'}',
             detail: latestWeight != null
                 ? 'Última actualización ${dateFormat.format(latestWeight.date)}'
                 : null,
+          ),
+          const SizedBox(height: 10),
+          _DataRow(
+            icon: Icons.fitness_center,
+            label: latestMetric?.muscleMassKg != null
+                ? 'Masa muscular: ${latestMetric!.muscleMassKg!.toStringAsFixed(1)} kg'
+                : 'Masa muscular: --',
+            detail: profile.muscleMassGoalKg != null
+                ? 'Objetivo ${profile.muscleMassGoalKg!.toStringAsFixed(1)} kg'
+                : 'Objetivo no configurado',
           ),
           const SizedBox(height: 10),
           // Measurements row
@@ -943,7 +1098,9 @@ class _BodyDataSection extends StatelessWidget {
                 foregroundColor: AppColors.textSecondary,
                 side: const BorderSide(color: AppColors.borderMedium),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text('Actualizar métricas'),
             ),
@@ -982,7 +1139,10 @@ class _DataRow extends StatelessWidget {
               if (detail != null)
                 Text(
                   detail!,
-                  style: const TextStyle(color: AppColors.textDisabled, fontSize: 10),
+                  style: const TextStyle(
+                    color: AppColors.textDisabled,
+                    fontSize: 10,
+                  ),
                 ),
             ],
           ),

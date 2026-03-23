@@ -32,6 +32,7 @@ class MetricsRepositoryImpl implements MetricsRepository {
       id: model.id,
       date: model.date,
       weightKg: model.weightKg,
+      muscleMassKg: model.muscleMassKg,
       sleepHours: model.sleepHours,
       neckCm: model.neckCm,
       shouldersCm: model.shouldersCm,

@@ -12,3 +12,9 @@ class ProfileAvatarUploadRequested extends ProfileEvent {
   final File file;
   const ProfileAvatarUploadRequested(this.file);
 }
+
+class ProfileMuscleGoalUpdated extends ProfileEvent {
+  final double goalKg;
+
+  const ProfileMuscleGoalUpdated(this.goalKg);
+}

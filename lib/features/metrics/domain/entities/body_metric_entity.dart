@@ -2,6 +2,7 @@ class BodyMetricEntity {
   final String id;
   final DateTime date;
   final double? weightKg;
+  final double? muscleMassKg;
   final double? sleepHours;
   final double? neckCm;
   final double? shouldersCm;
@@ -17,6 +18,7 @@ class BodyMetricEntity {
     required this.id,
     required this.date,
     this.weightKg,
+    this.muscleMassKg,
     this.sleepHours,
     this.neckCm,
     this.shouldersCm,

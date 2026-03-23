@@ -4,6 +4,7 @@ import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dar
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/domain/usecases/get_profile_usecase.dart';
+import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:exom_app/features/profile/domain/usecases/upload_avatar_usecase.dart';
 
 part 'profile_event.dart';
@@ -11,19 +12,23 @@ part 'profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final GetProfileUseCase _getProfileUseCase;
+  final UpdateProfileUseCase _updateProfileUseCase;
   final UploadAvatarUseCase _uploadAvatarUseCase;
   final MetricsRepository _metricsRepository;
 
   ProfileBloc({
     required GetProfileUseCase getProfileUseCase,
+    required UpdateProfileUseCase updateProfileUseCase,
     required UploadAvatarUseCase uploadAvatarUseCase,
     required MetricsRepository metricsRepository,
-  })  : _getProfileUseCase = getProfileUseCase,
-        _uploadAvatarUseCase = uploadAvatarUseCase,
-        _metricsRepository = metricsRepository,
-        super(const ProfileInitial()) {
+  }) : _getProfileUseCase = getProfileUseCase,
+       _updateProfileUseCase = updateProfileUseCase,
+       _uploadAvatarUseCase = uploadAvatarUseCase,
+       _metricsRepository = metricsRepository,
+       super(const ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoadRequested);
     on<ProfileAvatarUploadRequested>(_onAvatarUploadRequested);
+    on<ProfileMuscleGoalUpdated>(_onMuscleGoalUpdated);
   }
 
   Future<void> _onLoadRequested(
@@ -40,7 +45,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final profile = results[0] as ProfileEntity;
       final history = results[1] as List<BodyMetricEntity>;
       final latest = results[2] as BodyMetricEntity?;
-      emit(ProfileLoaded(profile, weightHistory: history, latestMetric: latest));
+      emit(
+        ProfileLoaded(profile, weightHistory: history, latestMetric: latest),
+      );
     } catch (e) {
       emit(ProfileError(e.toString()));
     }
@@ -56,8 +63,37 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
     try {
       final updated = await _uploadAvatarUseCase(event.file);
-      final history = current is ProfileLoaded ? current.weightHistory : <BodyMetricEntity>[];
+      final history = current is ProfileLoaded
+          ? current.weightHistory
+          : <BodyMetricEntity>[];
       emit(ProfileLoaded(updated, weightHistory: history));
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+    }
+  }
+
+  Future<void> _onMuscleGoalUpdated(
+    ProfileMuscleGoalUpdated event,
+    Emitter<ProfileState> emit,
+  ) async {
+    final current = state;
+    if (current is! ProfileLoaded) {
+      return;
+    }
+
+    emit(const ProfileLoading());
+
+    try {
+      final updatedProfile = await _updateProfileUseCase({
+        'muscle_mass_goal': event.goalKg,
+      });
+      emit(
+        ProfileLoaded(
+          updatedProfile,
+          weightHistory: current.weightHistory,
+          latestMetric: current.latestMetric,
+        ),
+      );
     } catch (e) {
       emit(ProfileError(e.toString()));
     }

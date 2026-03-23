@@ -13,6 +13,7 @@ class ProfileEntity {
   final int totalTrainings;
   final int streakDays;
   final double? currentWeightKg;
+  final double? muscleMassGoalKg;
   final double? currentBmi;
 
   const ProfileEntity({
@@ -30,6 +31,7 @@ class ProfileEntity {
     this.totalTrainings = 0,
     this.streakDays = 0,
     this.currentWeightKg,
+    this.muscleMassGoalKg,
     this.currentBmi,
   });
 

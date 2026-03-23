@@ -43,6 +43,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       totalTrainings: model.totalTrainings,
       streakDays: model.streakDays,
       currentWeightKg: model.currentWeightKg,
+      muscleMassGoalKg: model.muscleMassGoalKg,
       currentBmi: model.currentBmi,
     );
   }

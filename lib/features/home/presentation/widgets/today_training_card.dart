@@ -208,7 +208,13 @@ class TodayTrainingCard extends StatelessWidget {
                       }
                     : null,
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text('Ver entrenamiento'),
+                label: Text(
+                  summary.trainingCompleted
+                      ? 'Ver entrenamiento'
+                      : summary.exercisesCompleted > 0
+                      ? 'Continuar'
+                      : 'Comenzar',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color,
                   foregroundColor: AppColors.textOnPrimary,

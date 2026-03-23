@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
+import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class TodayDietCard extends StatelessWidget {
   final HomeSummaryEntity summary;
@@ -10,6 +12,8 @@ class TodayDietCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasNextMeal = summary.nextMealId != null;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
@@ -29,7 +33,11 @@ class TodayDietCard extends StatelessWidget {
                   color: AppColors.secondary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.restaurant_menu, color: AppColors.secondary, size: 22),
+                child: const Icon(
+                  Icons.restaurant_menu,
+                  color: AppColors.secondary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -38,7 +46,10 @@ class TodayDietCard extends StatelessWidget {
                   children: [
                     const Text(
                       'Dieta de hoy',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
                       summary.dietName ?? 'Plan nutricional',
@@ -65,7 +76,10 @@ class TodayDietCard extends StatelessWidget {
                     ),
                     const Text(
                       'kcal',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -78,7 +92,10 @@ class TodayDietCard extends StatelessWidget {
               children: [
                 Text(
                   '${summary.mealsCompleted}/${summary.totalMeals} comidas',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   summary.totalMeals > 0
@@ -100,7 +117,9 @@ class TodayDietCard extends StatelessWidget {
                     ? summary.mealsCompleted / summary.totalMeals
                     : 0.0,
                 backgroundColor: AppColors.surfaceVariant,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.secondary,
+                ),
                 minHeight: 6,
               ),
             ),
@@ -108,12 +127,34 @@ class TodayDietCard extends StatelessWidget {
           ] else ...[
             const SizedBox(height: 8),
           ],
+          if (summary.nextMealName != null) ...[
+            Text(
+              'Siguiente: ${summary.nextMealName}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => context.go('/diets'),
+              onPressed: () async {
+                if (hasNextMeal) {
+                  await context.push('/meals/${summary.nextMealId}');
+                } else {
+                  await context.push('/diets');
+                }
+                if (context.mounted) {
+                  context.read<HomeBloc>().add(const HomeLoadRequested());
+                }
+              },
               icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Ver dieta completa'),
+              label: Text(
+                hasNextMeal ? 'Siguiente comida' : 'Ver dieta completa',
+              ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.secondary,
                 side: const BorderSide(color: AppColors.secondary),
@@ -126,34 +167,6 @@ class TodayDietCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MealTypeIcon extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _MealTypeIcon({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.textSecondary, size: 20),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
-        ),
-      ],
     );
   }
 }

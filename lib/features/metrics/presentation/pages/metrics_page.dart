@@ -35,8 +35,10 @@ class _MetricsViewState extends State<_MetricsView> {
   double _weight = 75.0;
   bool _useManualWeight = false;
   final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
   final _muscleMassController = TextEditingController();
   double _sleepHours = 8.0;
+  bool _heightTouched = false;
   bool _weightTouched = false;
   bool _muscleMassTouched = false;
   bool _sleepTouched = false;
@@ -71,8 +73,15 @@ class _MetricsViewState extends State<_MetricsView> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _populateHeightFromCachedProfile();
+  }
+
+  @override
   void dispose() {
     _weightController.dispose();
+    _heightController.dispose();
     _muscleMassController.dispose();
     for (final c in _measureControllers.values) {
       c.dispose();
@@ -112,9 +121,27 @@ class _MetricsViewState extends State<_MetricsView> {
     return unitSystem == UnitSystem.imperial ? 'Ej: 166.4' : 'Ej: 75.5';
   }
 
+  String _heightHint(UnitSystem unitSystem) {
+    return unitSystem == UnitSystem.imperial ? 'Ej: 70.9' : 'Ej: 180';
+  }
+
+  void _populateHeightFromCachedProfile() {
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
+    final profile = _getCachedProfile();
+    final rawHeight = profile?['height'];
+    final heightCm = rawHeight is num
+        ? rawHeight.toDouble()
+        : double.tryParse(rawHeight?.toString() ?? '');
+
+    if (heightCm != null && _heightController.text.isEmpty) {
+      _heightController.text = formatLengthValue(heightCm, unitSystem);
+    }
+  }
+
   Widget _buildBodyMapMeasurements() {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final zones = _bodyFront ? _frontHotspots : _backHotspots;
     final leftZones = _bodyFront ? _frontLeftZones : _backLeftZones;
     final rightZones = _bodyFront ? _frontRightZones : _backRightZones;
@@ -157,6 +184,7 @@ class _MetricsViewState extends State<_MetricsView> {
                   leftZones,
                   leftFlex,
                   CrossAxisAlignment.end,
+                  unitSystem,
                 ),
               ),
 
@@ -226,6 +254,7 @@ class _MetricsViewState extends State<_MetricsView> {
                   rightZones,
                   rightFlex,
                   CrossAxisAlignment.start,
+                  unitSystem,
                 ),
               ),
             ],
@@ -249,6 +278,7 @@ class _MetricsViewState extends State<_MetricsView> {
     List<String> zones,
     List<int> flex,
     CrossAxisAlignment align,
+    UnitSystem unitSystem,
   ) {
     final children = <Widget>[];
     for (var i = 0; i < zones.length; i++) {
@@ -257,19 +287,16 @@ class _MetricsViewState extends State<_MetricsView> {
       } else if (i > 0) {
         children.add(Spacer(flex: flex[i] - flex[i - 1]));
       }
-      children.add(_zoneLabel(zones[i]));
+      children.add(_zoneLabel(zones[i], unitSystem));
     }
     children.add(Spacer(flex: 10 - flex.last));
 
     return Column(crossAxisAlignment: align, children: children);
   }
 
-  Widget _zoneLabel(String zone) {
+  Widget _zoneLabel(String zone, UnitSystem unitSystem) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
-      (cubit) => cubit.state.unitSystem,
-    );
     final val = _measureControllers[zone]?.text ?? '';
     final isSelected = _selectedMeasure == zone;
 
@@ -354,9 +381,34 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
+  BodyMetricEntity? _currentMetricSnapshot() {
+    final state = context.read<MetricsBloc>().state;
+    if (state is MetricsLoaded) {
+      return state.current;
+    }
+    return null;
+  }
+
   void _save() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
+    final currentMetric = _currentMetricSnapshot();
     final data = <String, dynamic>{};
+    final profileData = <String, dynamic>{};
+
+    double? nextHeightCm = currentMetric?.heightCm;
+    if (_heightTouched) {
+      final rawHeight = _parseDouble(_heightController.text);
+      if (rawHeight == null) {
+        _showValidationMessage('Introduce una altura válida antes de guardar.');
+        return;
+      }
+
+      nextHeightCm = UnitConverters.lengthFromDisplay(rawHeight, unitSystem);
+    }
+    if (nextHeightCm != null) {
+      data['height_cm'] = nextHeightCm;
+      profileData['height'] = nextHeightCm;
+    }
 
     if (_weightTouched) {
       if (_useManualWeight) {
@@ -372,10 +424,14 @@ class _MetricsViewState extends State<_MetricsView> {
       } else {
         data['weight_kg'] = _weight;
       }
+    } else if (currentMetric?.weightKg != null) {
+      data['weight_kg'] = currentMetric!.weightKg;
     }
 
     if (_sleepTouched) {
       data['sleep_hours'] = _sleepHours;
+    } else if (currentMetric?.sleepHours != null) {
+      data['sleep_hours'] = currentMetric!.sleepHours;
     }
 
     if (_muscleMassTouched) {
@@ -393,10 +449,28 @@ class _MetricsViewState extends State<_MetricsView> {
           unitSystem,
         );
       }
+    } else if (currentMetric?.muscleMassKg != null) {
+      data['muscle_mass_kg'] = currentMetric!.muscleMassKg;
     }
+
+    final existingMeasures = <String, double?>{
+      'Cuello': currentMetric?.neckCm,
+      'Hombros': currentMetric?.shouldersCm,
+      'Pecho': currentMetric?.chestCm,
+      'Brazo': currentMetric?.armCm,
+      'Antebrazo': currentMetric?.forearmCm,
+      'Cintura': currentMetric?.waistCm,
+      'Caderas': currentMetric?.hipsCm,
+      'Muslo': currentMetric?.thighCm,
+      'Pantorrilla': currentMetric?.calfCm,
+    };
 
     for (final entry in _measureControllers.entries) {
       if (!_touchedMeasures.contains(entry.key)) {
+        final existingValue = existingMeasures[entry.key];
+        if (existingValue != null) {
+          data[_measureKeys[entry.key]!] = existingValue;
+        }
         continue;
       }
 
@@ -424,7 +498,12 @@ class _MetricsViewState extends State<_MetricsView> {
       return;
     }
 
-    context.read<MetricsBloc>().add(MetricsSaveRequested(data));
+    context.read<MetricsBloc>().add(
+      MetricsSaveRequested(
+        data,
+        profileData: profileData.isEmpty ? null : profileData,
+      ),
+    );
   }
 
   void _showValidationMessage(String message) {
@@ -456,7 +535,9 @@ class _MetricsViewState extends State<_MetricsView> {
       text: birthDate != null ? calculateAgeYears(birthDate).toString() : '',
     );
     final heightController = TextEditingController(
-      text: initialHeightCm != null
+      text: _heightController.text.isNotEmpty
+          ? _heightController.text
+          : initialHeightCm != null
           ? formatLengthValue(initialHeightCm, unitSystem)
           : '',
     );
@@ -625,6 +706,11 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     _measureControllers['Pantorrilla']?.text =
                         formatLengthValue(calfCm, unitSystem);
+                    _heightController.text = formatLengthValue(
+                      heightCm,
+                      unitSystem,
+                    );
+                    _heightTouched = true;
                     _muscleMassTouched = true;
                     _touchedMeasures.add('Pantorrilla');
                     Navigator.of(dialogContext).pop(result);
@@ -665,6 +751,12 @@ class _MetricsViewState extends State<_MetricsView> {
 
   void _populateFromMetric(BodyMetricEntity metric) {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
+    final profile = _getCachedProfile();
+    final rawProfileHeight = profile?['height'];
+    final profileHeightCm = rawProfileHeight is num
+        ? rawProfileHeight.toDouble()
+        : double.tryParse(rawProfileHeight?.toString() ?? '');
+
     setState(() {
       if (metric.weightKg != null) {
         _weight = metric.weightKg!.clamp(40.0, 160.0);
@@ -672,11 +764,17 @@ class _MetricsViewState extends State<_MetricsView> {
       if (metric.sleepHours != null) {
         _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
       }
+      _heightTouched = false;
       _weightTouched = false;
       _muscleMassTouched = false;
       _sleepTouched = false;
       _touchedMeasures.clear();
     });
+    _heightController.text = metric.heightCm != null
+        ? formatLengthValue(metric.heightCm, unitSystem)
+        : profileHeightCm != null
+        ? formatLengthValue(profileHeightCm, unitSystem)
+        : '';
     _weightController.text = metric.weightKg != null
         ? formatWeightValue(metric.weightKg, unitSystem)
         : '';
@@ -770,6 +868,42 @@ class _MetricsViewState extends State<_MetricsView> {
                 ListView(
                   padding: const EdgeInsets.only(bottom: 100),
                   children: [
+                    _SectionCard(
+                      title: 'Altura',
+                      icon: Icons.height,
+                      color: semantic.info,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            'La altura se guarda en tu histórico de métricas y también actualiza tu perfil para mantener coherencia con el cálculo SEEN.',
+                            style: TextStyle(
+                              color: palette.textSecondary,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _heightController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: TextStyle(color: palette.textPrimary),
+                            decoration: InputDecoration(
+                              hintText: _heightHint(unitSystem),
+                              suffixText: lengthUnitSymbol(unitSystem),
+                              suffixStyle: TextStyle(
+                                color: palette.textSecondary,
+                              ),
+                            ),
+                            onChanged: (_) => _heightTouched = true,
+                          ),
+                        ],
+                      ),
+                    ),
+
                     // Weight section
                     _SectionCard(
                       title: 'Peso',

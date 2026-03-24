@@ -10,5 +10,7 @@ class MetricsLoadRequested extends MetricsEvent {
 
 class MetricsSaveRequested extends MetricsEvent {
   final Map<String, dynamic> data;
-  const MetricsSaveRequested(this.data);
+  final Map<String, dynamic>? profileData;
+
+  const MetricsSaveRequested(this.data, {this.profileData});
 }

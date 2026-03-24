@@ -238,40 +238,32 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 // Stats row
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
                   children: [
-                    if (profile.currentWeightKg != null) ...[
-                      Icon(
-                        Icons.monitor_weight_outlined,
-                        color: palette.textSecondary,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        formatWeight(
+                    if (profile.currentWeightKg != null)
+                      _InlineStat(
+                        icon: Icons.monitor_weight_outlined,
+                        text: formatWeight(
                           profile.currentWeightKg,
                           unitSystem,
                           decimals: 0,
                         ),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 13,
+                      ),
+                    if (profile.heightCm != null)
+                      _InlineStat(
+                        icon: Icons.height,
+                        text: formatLength(
+                          profile.heightCm,
+                          unitSystem,
+                          decimals: 0,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                    ],
-                    const Icon(
-                      Icons.local_fire_department_outlined,
-                      color: AppColors.calorieAccent,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Racha ${profile.streakDays} días',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 13,
-                      ),
+                    _InlineStat(
+                      icon: Icons.local_fire_department_outlined,
+                      text: 'Racha ${profile.streakDays} días',
+                      iconColor: AppColors.calorieAccent,
                     ),
                   ],
                 ),
@@ -360,6 +352,35 @@ class _Tag extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+}
+
+class _InlineStat extends StatelessWidget {
+  const _InlineStat({required this.icon, required this.text, this.iconColor});
+
+  final IconData icon;
+  final String text;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor ?? palette.textSecondary, size: 14),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1160,6 +1181,7 @@ class _BodyDataSection extends StatelessWidget {
             latestMetric!.chestCm != null ||
             latestMetric!.waistCm != null ||
             latestMetric!.hipsCm != null);
+    final currentHeightCm = latestMetric?.heightCm ?? profile.heightCm;
 
     final dateFormat = DateFormat('dd/MM/yyyy');
 
@@ -1215,6 +1237,16 @@ class _BodyDataSection extends StatelessWidget {
             detail: profile.muscleMassGoalKg != null
                 ? 'Objetivo ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
                 : 'Objetivo no configurado',
+          ),
+          const SizedBox(height: 10),
+          _DataRow(
+            icon: Icons.height,
+            label: currentHeightCm != null
+                ? 'Altura: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
+                : 'Altura: --',
+            detail: currentHeightCm != null
+                ? 'Sincronizada con perfil y métricas'
+                : 'Añádela en métricas para mejorar el seguimiento',
           ),
           const SizedBox(height: 10),
           // Measurements row

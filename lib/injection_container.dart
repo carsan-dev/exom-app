@@ -383,6 +383,7 @@ Future<void> initDependencies() async {
     () => MetricsBloc(
       saveMetricUseCase: sl<SaveMetricUseCase>(),
       metricsRepository: sl<MetricsRepository>(),
+      updateProfileUseCase: sl<UpdateProfileUseCase>(),
     ),
   );
 }

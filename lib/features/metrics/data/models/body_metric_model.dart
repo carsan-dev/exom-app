@@ -2,6 +2,7 @@ class BodyMetricModel {
   final String id;
   final DateTime date;
   final double? weightKg;
+  final double? heightCm;
   final double? muscleMassKg;
   final double? sleepHours;
   final double? neckCm;
@@ -18,6 +19,7 @@ class BodyMetricModel {
     required this.id,
     required this.date,
     this.weightKg,
+    this.heightCm,
     this.muscleMassKg,
     this.sleepHours,
     this.neckCm,
@@ -36,6 +38,7 @@ class BodyMetricModel {
       id: json['id'] as String? ?? '',
       date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
       weightKg: (json['weight_kg'] as num?)?.toDouble(),
+      heightCm: (json['height_cm'] as num?)?.toDouble(),
       muscleMassKg: (json['muscle_mass_kg'] as num?)?.toDouble(),
       sleepHours: (json['sleep_hours'] as num?)?.toDouble(),
       neckCm: (json['neck_cm'] as num?)?.toDouble(),

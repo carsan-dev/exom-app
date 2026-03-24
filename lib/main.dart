@@ -9,6 +9,8 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -26,6 +28,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es');
   await initializeDateFormatting('es_ES');
+  await initializeDateFormatting('en');
+  await initializeDateFormatting('en_US');
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await LocalStorage.init();
@@ -57,26 +61,42 @@ class ExomApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<AuthBloc>()..add(const AuthCheckStatusRequested()),
-      child: MaterialApp.router(
-        title: 'EXOM',
-        theme: AppTheme.dark,
-        routerConfig: AppRouter.router,
-        scaffoldMessengerKey: AppRouter.scaffoldMessengerKey,
-        debugShowCheckedModeBanner: false,
-        locale: const Locale('es', 'ES'),
-        supportedLocales: const [
-          Locale('es'),
-          Locale('es', 'ES'),
-          Locale('en'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<AppPreferencesCubit>()),
+        BlocProvider(
+          create: (_) => sl<AuthBloc>()..add(const AuthCheckStatusRequested()),
+        ),
+      ],
+      child: const _ExomAppView(),
+    );
+  }
+}
+
+class _ExomAppView extends StatelessWidget {
+  const _ExomAppView();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AppPreferencesCubit, AppPreferencesState>(
+      builder: (context, state) {
+        return MaterialApp.router(
+          title: 'EXOM',
+          theme: AppTheme.dark,
+          darkTheme: AppTheme.dark,
+          themeMode: state.themeMode,
+          routerConfig: AppRouter.router,
+          scaffoldMessengerKey: AppRouter.scaffoldMessengerKey,
+          debugShowCheckedModeBanner: false,
+          locale: state.locale,
+          supportedLocales: AppPreferencesDefaults.supportedLocales,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        );
+      },
     );
   }
 }

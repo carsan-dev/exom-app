@@ -1,10 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
 
 class LocalStorage {
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
   static const _settingsBox = 'settings_box';
   static const _pendingSyncKey = 'offline_sync_actions';
+  static const _themeModeKey = 'theme_mode';
+  static const _localeKey = 'locale';
+  static const _unitSystemKey = 'unit_system';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -82,6 +87,24 @@ class LocalStorage {
 
   T? getSetting<T>(String key, {T? defaultValue}) =>
       (_settings.get(key) as T?) ?? defaultValue;
+
+  Future<void> saveThemeModePreference(ThemeMode themeMode) =>
+      saveSetting(_themeModeKey, themeModeToStorageValue(themeMode));
+
+  ThemeMode getThemeModePreference() =>
+      themeModeFromStorageValue(getSetting<String>(_themeModeKey));
+
+  Future<void> saveLocalePreference(Locale locale) =>
+      saveSetting(_localeKey, localeToStorageValue(locale));
+
+  Locale getLocalePreference() =>
+      localeFromStorageValue(getSetting<String>(_localeKey));
+
+  Future<void> saveUnitSystemPreference(UnitSystem unitSystem) =>
+      saveSetting(_unitSystemKey, unitSystemToStorageValue(unitSystem));
+
+  UnitSystem getUnitSystemPreference() =>
+      unitSystemFromStorageValue(getSetting<String>(_unitSystemKey));
 
   // User preferences
   String? get fcmToken => _auth.get('fcm_token');

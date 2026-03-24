@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -105,6 +106,9 @@ final sl = GetIt.instance;
 Future<void> initDependencies() async {
   // ── Core ──────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<LocalStorage>(() => LocalStorage());
+  sl.registerLazySingleton<AppPreferencesCubit>(
+    () => AppPreferencesCubit(sl<LocalStorage>()),
+  );
 
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(baseUrl: FlavorConfig.instance.apiBaseUrl),

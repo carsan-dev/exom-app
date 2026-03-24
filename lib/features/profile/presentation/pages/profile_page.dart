@@ -7,6 +7,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/formatters/unit_converters.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -189,6 +193,9 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -241,7 +248,11 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${profile.currentWeightKg!.toStringAsFixed(0)} kg',
+                        formatWeight(
+                          profile.currentWeightKg,
+                          unitSystem,
+                          decimals: 0,
+                        ),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: palette.textSecondary,
                           fontSize: 13,
@@ -569,6 +580,9 @@ class _FilledChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     final weights = entries.map((e) => e.weightKg!).toList();
     final minW = weights.reduce(math.min) - 1;
     final maxW = weights.reduce(math.max) + 1;
@@ -592,8 +606,8 @@ class _FilledChart extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${dateFormat.format(entries.last.date)}  ${entries.last.weightKg!.toStringAsFixed(1)} kg',
-                style: const TextStyle(
+                '${dateFormat.format(entries.last.date)}  ${formatWeight(entries.last.weightKg, unitSystem)}',
+                style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -649,7 +663,7 @@ class _FilledChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 40,
                     getTitlesWidget: (value, _) => Text(
-                      '${value.toStringAsFixed(0)} kg',
+                      formatWeight(value, unitSystem, decimals: 0, empty: '--'),
                       style: TextStyle(
                         color: palette.textDisabled,
                         fontSize: 9,
@@ -707,8 +721,11 @@ class _IndicatorCards extends StatelessWidget {
   const _IndicatorCards({required this.profile, required this.latestMetric});
 
   Future<void> _editMuscleGoal(BuildContext context) async {
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final controller = TextEditingController(
-      text: profile.muscleMassGoalKg?.toStringAsFixed(1) ?? '',
+      text: profile.muscleMassGoalKg != null
+          ? formatWeightValue(profile.muscleMassGoalKg, unitSystem)
+          : '',
     );
 
     final newGoal = await showDialog<double>(
@@ -725,9 +742,11 @@ class _IndicatorCards extends StatelessWidget {
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: TextStyle(color: palette.textPrimary),
-            decoration: const InputDecoration(
-              hintText: 'Ej: 34.0',
-              suffixText: 'kg',
+            decoration: InputDecoration(
+              hintText: unitSystem == UnitSystem.imperial
+                  ? 'Ej: 75.0'
+                  : 'Ej: 34.0',
+              suffixText: weightUnitSymbol(unitSystem),
             ),
           ),
           actions: [
@@ -741,7 +760,9 @@ class _IndicatorCards extends StatelessWidget {
                   controller.text.replaceAll(',', '.'),
                 );
                 if (parsed != null && parsed > 0) {
-                  Navigator.of(dialogContext).pop(parsed);
+                  Navigator.of(
+                    dialogContext,
+                  ).pop(UnitConverters.weightFromDisplay(parsed, unitSystem));
                 }
               },
               child: const Text('Guardar'),
@@ -759,6 +780,9 @@ class _IndicatorCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     final latestMuscleMass = latestMetric?.muscleMassKg;
     final muscleGoal = profile.muscleMassGoalKg;
     final muscleProgress =
@@ -787,9 +811,9 @@ class _IndicatorCards extends StatelessWidget {
             child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
                     title: 'Masa muscular',
-                    value: '${latestMuscleMass.toStringAsFixed(1)} kg',
+                    value: formatWeight(latestMuscleMass, unitSystem),
                     subtitle: muscleGoal != null
-                        ? 'Objetivo ${muscleGoal.toStringAsFixed(1)} kg'
+                        ? 'Objetivo ${formatWeight(muscleGoal, unitSystem)}'
                         : 'Define tu objetivo',
                     bottomLabel: latestMetric != null
                         ? 'Última medición ${DateFormat('dd MMM', 'es').format(latestMetric!.date)}'
@@ -1123,6 +1147,9 @@ class _BodyDataSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     final latestWeight =
         weightHistory.where((e) => e.weightKg != null).isNotEmpty
         ? weightHistory.where((e) => e.weightKg != null).last
@@ -1172,8 +1199,9 @@ class _BodyDataSection extends StatelessWidget {
           // Weight row
           _DataRow(
             icon: Icons.monitor_weight_outlined,
-            label:
-                'Peso: ${latestWeight != null ? '${latestWeight.weightKg!.toStringAsFixed(1)} kg' : '--'}',
+            label: latestWeight != null
+                ? 'Peso: ${formatWeight(latestWeight.weightKg, unitSystem)}'
+                : 'Peso: --',
             detail: latestWeight != null
                 ? 'Última actualización ${dateFormat.format(latestWeight.date)}'
                 : null,
@@ -1182,10 +1210,10 @@ class _BodyDataSection extends StatelessWidget {
           _DataRow(
             icon: Icons.fitness_center,
             label: latestMetric?.muscleMassKg != null
-                ? 'Masa muscular: ${latestMetric!.muscleMassKg!.toStringAsFixed(1)} kg'
+                ? 'Masa muscular: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
                 : 'Masa muscular: --',
             detail: profile.muscleMassGoalKg != null
-                ? 'Objetivo ${profile.muscleMassGoalKg!.toStringAsFixed(1)} kg'
+                ? 'Objetivo ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
                 : 'Objetivo no configurado',
           ),
           const SizedBox(height: 10),

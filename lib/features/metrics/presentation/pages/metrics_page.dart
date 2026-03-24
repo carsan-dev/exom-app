@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/formatters/unit_converters.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
@@ -103,6 +107,10 @@ class _MetricsViewState extends State<_MetricsView> {
   static const _frontRightFlex = [6, 9];
   static const _backLeftFlex = [3, 9];
   static const _backRightFlex = [6, 9];
+
+  String _weightHint(UnitSystem unitSystem) {
+    return unitSystem == UnitSystem.imperial ? 'Ej: 166.4' : 'Ej: 75.5';
+  }
 
   Widget _buildBodyMapMeasurements() {
     final palette = context.exomPalette;
@@ -259,6 +267,9 @@ class _MetricsViewState extends State<_MetricsView> {
   Widget _zoneLabel(String zone) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     final val = _measureControllers[zone]?.text ?? '';
     final isSelected = _selectedMeasure == zone;
 
@@ -288,7 +299,7 @@ class _MetricsViewState extends State<_MetricsView> {
             ),
             if (val.isNotEmpty)
               Text(
-                '$val cm',
+                '$val ${lengthUnitSymbol(unitSystem)}',
                 style: TextStyle(
                   color: isSelected ? semantic.info : palette.textDisabled,
                   fontSize: 10,
@@ -344,6 +355,7 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   void _save() {
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final data = <String, dynamic>{};
 
     if (_weightTouched) {
@@ -353,7 +365,10 @@ class _MetricsViewState extends State<_MetricsView> {
           _showValidationMessage('Introduce un peso valido antes de guardar.');
           return;
         }
-        data['weight_kg'] = manualWeight;
+        data['weight_kg'] = UnitConverters.weightFromDisplay(
+          manualWeight,
+          unitSystem,
+        );
       } else {
         data['weight_kg'] = _weight;
       }
@@ -373,7 +388,10 @@ class _MetricsViewState extends State<_MetricsView> {
           );
           return;
         }
-        data['muscle_mass_kg'] = muscleMass;
+        data['muscle_mass_kg'] = UnitConverters.weightFromDisplay(
+          muscleMass,
+          unitSystem,
+        );
       }
     }
 
@@ -395,7 +413,10 @@ class _MetricsViewState extends State<_MetricsView> {
         return;
       }
 
-      data[_measureKeys[entry.key]!] = parsedValue;
+      data[_measureKeys[entry.key]!] = UnitConverters.lengthFromDisplay(
+        parsedValue,
+        unitSystem,
+      );
     }
 
     if (data.isEmpty) {
@@ -421,7 +442,12 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   Future<void> _openSeenEstimateCalculator(BuildContext context) async {
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final profile = _getCachedProfile();
+    final rawHeight = profile?['height'];
+    final initialHeightCm = rawHeight is num
+        ? rawHeight.toDouble()
+        : double.tryParse(rawHeight?.toString() ?? '');
     final birthDate = profile?['birth_date'] is String
         ? DateTime.tryParse(profile!['birth_date'] as String)
         : null;
@@ -430,7 +456,9 @@ class _MetricsViewState extends State<_MetricsView> {
       text: birthDate != null ? calculateAgeYears(birthDate).toString() : '',
     );
     final heightController = TextEditingController(
-      text: profile?['height']?.toString() ?? '',
+      text: initialHeightCm != null
+          ? formatLengthValue(initialHeightCm, unitSystem)
+          : '',
     );
     final calfController = TextEditingController(
       text: _measureControllers['Pantorrilla']?.text ?? '',
@@ -480,9 +508,9 @@ class _MetricsViewState extends State<_MetricsView> {
                         decimal: true,
                       ),
                       style: TextStyle(color: palette.textPrimary),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Altura',
-                        suffixText: 'cm',
+                        suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -492,9 +520,9 @@ class _MetricsViewState extends State<_MetricsView> {
                         decimal: true,
                       ),
                       style: TextStyle(color: palette.textPrimary),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Pantorrilla',
-                        suffixText: 'cm',
+                        suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -538,8 +566,8 @@ class _MetricsViewState extends State<_MetricsView> {
                 ElevatedButton(
                   onPressed: () {
                     final age = int.tryParse(ageController.text.trim());
-                    final heightCm = _parseDouble(heightController.text);
-                    final calfCm = _parseDouble(calfController.text);
+                    final heightValue = _parseDouble(heightController.text);
+                    final calfValue = _parseDouble(calfController.text);
 
                     if (age == null || age <= 0) {
                       setDialogState(() {
@@ -548,20 +576,29 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    if (heightCm == null || heightCm <= 0) {
+                    if (heightValue == null || heightValue <= 0) {
                       setDialogState(() {
                         errorText = 'Introduce una altura válida.';
                       });
                       return;
                     }
 
-                    if (calfCm == null || calfCm <= 0) {
+                    if (calfValue == null || calfValue <= 0) {
                       setDialogState(() {
                         errorText =
                             'Introduce una circunferencia de pantorrilla válida.';
                       });
                       return;
                     }
+
+                    final heightCm = UnitConverters.lengthFromDisplay(
+                      heightValue,
+                      unitSystem,
+                    );
+                    final calfCm = UnitConverters.lengthFromDisplay(
+                      calfValue,
+                      unitSystem,
+                    );
 
                     if (selectedSex == null) {
                       setDialogState(() {
@@ -586,8 +623,8 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    _measureControllers['Pantorrilla']?.text = calfCm
-                        .toStringAsFixed(1);
+                    _measureControllers['Pantorrilla']?.text =
+                        formatLengthValue(calfCm, unitSystem);
                     _muscleMassTouched = true;
                     _touchedMeasures.add('Pantorrilla');
                     Navigator.of(dialogContext).pop(result);
@@ -610,13 +647,16 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     setState(() {
-      _muscleMassController.text = estimate.estimatedAsmKg.toStringAsFixed(1);
+      _muscleMassController.text = formatWeightValue(
+        estimate.estimatedAsmKg,
+        unitSystem,
+      );
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Estimación SEEN aplicada: ${estimate.estimatedAsmKg.toStringAsFixed(1)} kg (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
+          'Estimación SEEN aplicada: ${formatWeight(estimate.estimatedAsmKg, unitSystem)} (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -624,6 +664,7 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   void _populateFromMetric(BodyMetricEntity metric) {
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     setState(() {
       if (metric.weightKg != null) {
         _weight = metric.weightKg!.clamp(40.0, 160.0);
@@ -636,9 +677,14 @@ class _MetricsViewState extends State<_MetricsView> {
       _sleepTouched = false;
       _touchedMeasures.clear();
     });
-    _weightController.text = metric.weightKg?.toStringAsFixed(1) ?? '';
+    _weightController.text = metric.weightKg != null
+        ? formatWeightValue(metric.weightKg, unitSystem)
+        : '';
     if (metric.muscleMassKg != null) {
-      _muscleMassController.text = metric.muscleMassKg!.toStringAsFixed(1);
+      _muscleMassController.text = formatWeightValue(
+        metric.muscleMassKg,
+        unitSystem,
+      );
     } else {
       _muscleMassController.clear();
     }
@@ -655,7 +701,10 @@ class _MetricsViewState extends State<_MetricsView> {
     };
     for (final entry in map.entries) {
       if (entry.value != null) {
-        _measureControllers[entry.key]?.text = entry.value!.toStringAsFixed(1);
+        _measureControllers[entry.key]?.text = formatLengthValue(
+          entry.value,
+          unitSystem,
+        );
       } else {
         _measureControllers[entry.key]?.clear();
       }
@@ -666,6 +715,9 @@ class _MetricsViewState extends State<_MetricsView> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
         if (state is MetricsLoaded && state.current != null) {
@@ -762,8 +814,8 @@ class _MetricsViewState extends State<_MetricsView> {
                                   ),
                               style: TextStyle(color: palette.textPrimary),
                               decoration: InputDecoration(
-                                hintText: 'Ej: 75.5',
-                                suffixText: 'kg',
+                                hintText: _weightHint(unitSystem),
+                                suffixText: weightUnitSymbol(unitSystem),
                                 suffixStyle: TextStyle(
                                   color: palette.textSecondary,
                                 ),
@@ -776,14 +828,14 @@ class _MetricsViewState extends State<_MetricsView> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '60 kg',
+                                  formatWeight(40, unitSystem, decimals: 0),
                                   style: TextStyle(
                                     color: palette.textDisabled,
                                     fontSize: 11,
                                   ),
                                 ),
                                 Text(
-                                  '${_weight.toStringAsFixed(1)} kg',
+                                  formatWeight(_weight, unitSystem),
                                   style: TextStyle(
                                     color: palette.primary,
                                     fontSize: 28,
@@ -791,7 +843,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   ),
                                 ),
                                 Text(
-                                  '150 kg',
+                                  formatWeight(160, unitSystem, decimals: 0),
                                   style: TextStyle(
                                     color: palette.textDisabled,
                                     fontSize: 11,
@@ -840,8 +892,10 @@ class _MetricsViewState extends State<_MetricsView> {
                             ),
                             style: TextStyle(color: palette.textPrimary),
                             decoration: InputDecoration(
-                              hintText: 'Ej: 32.5',
-                              suffixText: 'kg',
+                              hintText: unitSystem == UnitSystem.imperial
+                                  ? 'Ej: 71.7'
+                                  : 'Ej: 32.5',
+                              suffixText: weightUnitSymbol(unitSystem),
                               suffixStyle: TextStyle(
                                 color: palette.textSecondary,
                               ),
@@ -1112,6 +1166,9 @@ class _MeasureInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1130,8 +1187,8 @@ class _MeasureInput extends StatelessWidget {
           style: TextStyle(color: palette.textPrimary, fontSize: 14),
           onChanged: onChanged,
           decoration: InputDecoration(
-            hintText: '0',
-            suffixText: 'cm',
+            hintText: unitSystem == UnitSystem.imperial ? '0.0' : '0',
+            suffixText: lengthUnitSymbol(unitSystem),
             suffixStyle: TextStyle(color: palette.textDisabled, fontSize: 12),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -95,6 +96,20 @@ class _SettingsPageState extends State<SettingsPage> {
     ).showSnackBar(SnackBar(content: Text('Tema $themeLabel aplicado')));
   }
 
+  Future<void> _setUnitSystem(UnitSystem unitSystem) async {
+    await context.read<AppPreferencesCubit>().setUnitSystem(unitSystem);
+    if (!mounted) return;
+
+    final unitLabel = switch (unitSystem) {
+      UnitSystem.metric => 'Métrico',
+      UnitSystem.imperial => 'Imperial',
+    };
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Unidades $unitLabel aplicadas')));
+  }
+
   void _showCredits() {
     showModalBottomSheet<void>(
       context: context,
@@ -164,6 +179,27 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Mis métricas',
                     subtitle: 'Peso, masa muscular, sueño y medidas corporales',
                     onTap: () => context.push('/profile/metrics'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SettingsGroup(
+                title: 'Unidades',
+                children: [
+                  _ThemeModeTile(
+                    icon: Icons.straighten,
+                    title: 'Métrico',
+                    subtitle: 'Usa kilos y centímetros en toda la app',
+                    selected: preferences.unitSystem == UnitSystem.metric,
+                    onTap: () => _setUnitSystem(UnitSystem.metric),
+                  ),
+                  _ThemeModeTile(
+                    icon: Icons.square_foot,
+                    title: 'Imperial',
+                    subtitle:
+                        'Usa libras e pulgadas, guardando en métrico internamente',
+                    selected: preferences.unitSystem == UnitSystem.imperial,
+                    onTap: () => _setUnitSystem(UnitSystem.imperial),
                   ),
                 ],
               ),

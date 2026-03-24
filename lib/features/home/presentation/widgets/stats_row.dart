@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 
@@ -11,6 +15,9 @@ class StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     return Padding(
@@ -20,9 +27,9 @@ class StatsRow extends StatelessWidget {
           Expanded(
             child: _StatCard(
               value: summary.lastWeightKg != null
-                  ? summary.lastWeightKg!.toStringAsFixed(1)
+                  ? formatWeightValue(summary.lastWeightKg, unitSystem)
                   : '--',
-              unit: 'kilos',
+              unit: weightUnitSymbol(unitSystem),
               label: 'Peso',
               subtitle: summary.lastWeightDate != null
                   ? DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!)

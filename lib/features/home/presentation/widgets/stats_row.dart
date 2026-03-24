@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
@@ -30,7 +31,7 @@ class StatsRow extends StatelessWidget {
                   ? formatWeightValue(summary.lastWeightKg, unitSystem)
                   : '--',
               unit: weightUnitSymbol(unitSystem),
-              label: 'Peso',
+              label: context.copy('Peso', 'Weight'),
               subtitle: summary.lastWeightDate != null
                   ? DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!)
                   : null,
@@ -42,9 +43,11 @@ class StatsRow extends StatelessWidget {
           Expanded(
             child: _StatCard(
               value: '${summary.streakDays}',
-              unit: 'días',
-              label: 'Racha',
-              subtitle: summary.streakDays > 0 ? '¡Sigue así!' : null,
+              unit: context.copy('días', 'days'),
+              label: context.copy('Racha', 'Streak'),
+              subtitle: summary.streakDays > 0
+                  ? context.copy('¡Sigue así!', 'Keep it up!')
+                  : null,
               color: palette.primary,
               highlighted: true,
               onTap: () => context.push('/challenges'),
@@ -56,9 +59,9 @@ class StatsRow extends StatelessWidget {
               value: summary.lastSleepHours != null
                   ? summary.lastSleepHours!.toStringAsFixed(1)
                   : '--',
-              unit: 'horas',
-              label: 'Sueño',
-              subtitle: _sleepQuality(summary.lastSleepHours),
+              unit: context.copy('horas', 'hours'),
+              label: context.copy('Sueño', 'Sleep'),
+              subtitle: _sleepQuality(context, summary.lastSleepHours),
               color: semantic.sleep,
               onTap: () => context.push('/profile/metrics'),
             ),
@@ -68,11 +71,11 @@ class StatsRow extends StatelessWidget {
     );
   }
 
-  String? _sleepQuality(double? hours) {
+  String? _sleepQuality(BuildContext context, double? hours) {
     if (hours == null) return null;
-    if (hours >= 8) return 'Calidad Buena';
-    if (hours >= 6) return 'Calidad Media';
-    return 'Poco sueño';
+    if (hours >= 8) return context.copy('Calidad buena', 'Good quality');
+    if (hours >= 6) return context.copy('Calidad media', 'Fair quality');
+    return context.copy('Poco sueño', 'Low sleep');
   }
 }
 

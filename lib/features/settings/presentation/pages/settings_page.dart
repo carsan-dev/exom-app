@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/config/external_links.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
@@ -84,40 +85,72 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _setThemeMode(ThemeMode themeMode) async {
+    final isEnglish = context.isEnglish;
+    final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setThemeMode(themeMode);
-    if (!mounted) return;
 
     final themeLabel = switch (themeMode) {
-      ThemeMode.system => 'Sistema',
-      ThemeMode.light => 'Claro',
-      ThemeMode.dark => 'Oscuro',
+      ThemeMode.system => isEnglish ? 'System' : 'Sistema',
+      ThemeMode.light => isEnglish ? 'Light' : 'Claro',
+      ThemeMode.dark => isEnglish ? 'Dark' : 'Oscuro',
     };
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Tema $themeLabel aplicado')));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          isEnglish ? '$themeLabel theme applied' : 'Tema $themeLabel aplicado',
+        ),
+      ),
+    );
   }
 
   Future<void> _setUnitSystem(UnitSystem unitSystem) async {
+    final isEnglish = context.isEnglish;
+    final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setUnitSystem(unitSystem);
-    if (!mounted) return;
 
     final unitLabel = switch (unitSystem) {
-      UnitSystem.metric => 'Métrico',
+      UnitSystem.metric => isEnglish ? 'Metric' : 'Métrico',
       UnitSystem.imperial => 'Imperial',
     };
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Unidades $unitLabel aplicadas')));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          isEnglish
+              ? '$unitLabel units applied'
+              : 'Unidades $unitLabel aplicadas',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setLocale(Locale locale) async {
+    final previousLanguageWasEnglish = context.isEnglish;
+    final messenger = ScaffoldMessenger.of(context);
+    await context.read<AppPreferencesCubit>().setLocale(locale);
+
+    final languageLabel = switch (locale.languageCode) {
+      'en' => 'English',
+      _ => 'Español',
+    };
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          previousLanguageWasEnglish
+              ? '$languageLabel language applied'
+              : 'Idioma $languageLabel aplicado',
+        ),
+      ),
+    );
   }
 
   Future<void> _openExternalLink(Uri uri, String errorMessage) async {
+    final messenger = ScaffoldMessenger.of(context);
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    if (!launched && context.mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -133,13 +166,14 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<AppPreferencesCubit, AppPreferencesState>(
       builder: (context, preferences) {
+        final tr = context;
         final theme = Theme.of(context);
         final palette = context.exomPalette;
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            title: const Text('Ajustes'),
+            title: Text(tr.copy('Ajustes', 'Settings')),
             backgroundColor: theme.scaffoldBackgroundColor,
             surfaceTintColor: Colors.transparent,
           ),
@@ -147,29 +181,35 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               _SettingsGroup(
-                title: 'Apariencia',
+                title: tr.copy('Apariencia', 'Appearance'),
                 children: [
                   _ThemeModeTile(
                     icon: Icons.phone_android_outlined,
-                    title: 'Sistema',
-                    subtitle:
-                        'Sigue automáticamente el modo configurado en tu dispositivo',
+                    title: tr.copy('Sistema', 'System'),
+                    subtitle: tr.copy(
+                      'Sigue automáticamente el modo configurado en tu dispositivo',
+                      'Follow the mode configured on your device',
+                    ),
                     selected: preferences.themeMode == ThemeMode.system,
                     onTap: () => _setThemeMode(ThemeMode.system),
                   ),
                   _ThemeModeTile(
                     icon: Icons.light_mode_outlined,
-                    title: 'Claro',
-                    subtitle:
-                        'Activa una versión luminosa y cálida alineada con la paleta del producto',
+                    title: tr.copy('Claro', 'Light'),
+                    subtitle: tr.copy(
+                      'Activa una versión luminosa y cálida alineada con la paleta del producto',
+                      'Use the warm light palette aligned with the product look',
+                    ),
                     selected: preferences.themeMode == ThemeMode.light,
                     onTap: () => _setThemeMode(ThemeMode.light),
                   ),
                   _ThemeModeTile(
                     icon: Icons.dark_mode_outlined,
-                    title: 'Oscuro',
-                    subtitle:
-                        'Mantiene la experiencia nocturna actual para reducir brillo y fatiga visual',
+                    title: tr.copy('Oscuro', 'Dark'),
+                    subtitle: tr.copy(
+                      'Mantiene la experiencia nocturna actual para reducir brillo y fatiga visual',
+                      'Keep the current night experience to reduce glare and fatigue',
+                    ),
                     selected: preferences.themeMode == ThemeMode.dark,
                     onTap: () => _setThemeMode(ThemeMode.dark),
                   ),
@@ -177,38 +217,49 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Cuenta',
+                title: tr.copy('Cuenta', 'Account'),
                 children: [
                   _SettingsTile(
                     icon: Icons.person_outline,
-                    title: 'Editar perfil',
-                    subtitle: 'Foto, objetivo y datos visibles en tu ficha',
+                    title: tr.copy('Editar perfil', 'Edit profile'),
+                    subtitle: tr.copy(
+                      'Foto, objetivo y datos visibles en tu ficha',
+                      'Photo, goal and visible personal details',
+                    ),
                     onTap: () => context.push(AppRoutes.profile),
                   ),
                   _SettingsTile(
                     icon: Icons.straighten_outlined,
-                    title: 'Mis métricas',
-                    subtitle: 'Peso, masa muscular, sueño y medidas corporales',
+                    title: tr.copy('Mis métricas', 'My metrics'),
+                    subtitle: tr.copy(
+                      'Peso, masa muscular, sueño y medidas corporales',
+                      'Weight, muscle mass, sleep and body measurements',
+                    ),
                     onTap: () => context.push('/profile/metrics'),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Unidades',
+                title: tr.copy('Unidades', 'Units'),
                 children: [
                   _ThemeModeTile(
                     icon: Icons.straighten,
-                    title: 'Métrico',
-                    subtitle: 'Usa kilos y centímetros en toda la app',
+                    title: tr.copy('Métrico', 'Metric'),
+                    subtitle: tr.copy(
+                      'Usa kilos y centímetros en toda la app',
+                      'Use kilograms and centimeters across the app',
+                    ),
                     selected: preferences.unitSystem == UnitSystem.metric,
                     onTap: () => _setUnitSystem(UnitSystem.metric),
                   ),
                   _ThemeModeTile(
                     icon: Icons.square_foot,
                     title: 'Imperial',
-                    subtitle:
-                        'Usa libras e pulgadas, guardando en métrico internamente',
+                    subtitle: tr.copy(
+                      'Usa libras e pulgadas, guardando en métrico internamente',
+                      'Use pounds and inches while keeping metric storage internally',
+                    ),
                     selected: preferences.unitSystem == UnitSystem.imperial,
                     onTap: () => _setUnitSystem(UnitSystem.imperial),
                   ),
@@ -216,48 +267,92 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Privacidad',
+                title: tr.copy('Idioma', 'Language'),
+                children: [
+                  _ThemeModeTile(
+                    icon: Icons.language,
+                    title: 'Español',
+                    subtitle: tr.copy(
+                      'Interfaz principal en español.',
+                      'Main interface in Spanish.',
+                    ),
+                    selected: preferences.locale.languageCode == 'es',
+                    onTap: () => _setLocale(const Locale('es', 'ES')),
+                  ),
+                  _ThemeModeTile(
+                    icon: Icons.translate,
+                    title: 'English',
+                    subtitle: tr.copy(
+                      'Interfaz principal en inglés.',
+                      'Main interface in English.',
+                    ),
+                    selected: preferences.locale.languageCode == 'en',
+                    onTap: () => _setLocale(const Locale('en')),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SettingsGroup(
+                title: tr.copy('Privacidad', 'Privacy'),
                 children: [
                   _SettingsTile(
                     icon: Icons.privacy_tip_outlined,
-                    title: 'Política de privacidad',
-                    subtitle:
-                        'Abre la política externa para revisar tratamiento de datos y privacidad.',
+                    title: tr.copy('Política de privacidad', 'Privacy policy'),
+                    subtitle: tr.copy(
+                      'Abre la política externa para revisar tratamiento de datos y privacidad.',
+                      'Open the external privacy policy to review data handling',
+                    ),
                     onTap: () => _openExternalLink(
                       ExternalLinks.privacyPolicy,
-                      'No se pudo abrir la política de privacidad.',
+                      tr.copy(
+                        'No se pudo abrir la política de privacidad.',
+                        'Could not open the privacy policy.',
+                      ),
                     ),
                   ),
                   _SettingsTile(
                     icon: Icons.support_agent_outlined,
-                    title: 'Soporte y contacto',
-                    subtitle:
-                        'Abre la página de soporte o escribe a soporte@exom.app.',
+                    title: tr.copy('Soporte y contacto', 'Support and contact'),
+                    subtitle: tr.copy(
+                      'Abre la página de soporte o escribe a soporte@exom.app.',
+                      'Open the support page or email soporte@exom.app',
+                    ),
                     onTap: () => _openExternalLink(
                       ExternalLinks.supportPage,
-                      'No se pudo abrir la página de soporte.',
+                      tr.copy(
+                        'No se pudo abrir la página de soporte.',
+                        'Could not open the support page.',
+                      ),
                     ),
                   ),
                   _SettingsTile(
                     icon: Icons.alternate_email,
-                    title: 'Escribir a soporte',
-                    subtitle: 'Prepara un email externo para soporte técnico.',
+                    title: tr.copy('Escribir a soporte', 'Email support'),
+                    subtitle: tr.copy(
+                      'Prepara un email externo para soporte técnico.',
+                      'Prepare an external email for technical support.',
+                    ),
                     onTap: () => _openExternalLink(
                       ExternalLinks.supportEmail,
-                      'No se pudo abrir la aplicación de correo.',
+                      tr.copy(
+                        'No se pudo abrir la aplicación de correo.',
+                        'Could not open the mail app.',
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Notificaciones',
+                title: tr.copy('Notificaciones', 'Notifications'),
                 children: [
                   _SettingsTile(
                     icon: Icons.notifications_active_outlined,
-                    title: 'Notificaciones push',
-                    subtitle:
-                        'Avisos de entrenador, seguimiento y recordatorios',
+                    title: tr.copy('Notificaciones push', 'Push notifications'),
+                    subtitle: tr.copy(
+                      'Avisos de entrenador, seguimiento y recordatorios',
+                      'Coach alerts, follow-up and reminders',
+                    ),
                     trailing: Switch(
                       value: _notificationsEnabled,
                       onChanged: _busy ? null : _toggleNotifications,
@@ -270,44 +365,57 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Datos y soporte',
+                title: tr.copy('Datos y soporte', 'Data and support'),
                 children: [
                   _SettingsTile(
                     icon: Icons.cloud_off_outlined,
-                    title: 'Modo offline',
-                    subtitle:
-                        'La app conserva el ultimo Home, Perfil, Calendario, Dieta y Entreno cargados',
+                    title: tr.copy('Modo offline', 'Offline mode'),
+                    subtitle: tr.copy(
+                      'La app conserva el ultimo Home, Perfil, Calendario, Dieta y Entreno cargados',
+                      'The app keeps the latest Home, Profile, Calendar, Diet and Training data loaded',
+                    ),
                     onTap: null,
                   ),
                   _SettingsTile(
                     icon: Icons.cleaning_services_outlined,
-                    title: 'Borrar caché local',
-                    subtitle:
-                        'Elimina datos offline guardados en este dispositivo',
+                    title: tr.copy('Borrar caché local', 'Clear local cache'),
+                    subtitle: tr.copy(
+                      'Elimina datos offline guardados en este dispositivo',
+                      'Remove offline data stored on this device',
+                    ),
                     onTap: _clearOfflineCache,
                   ),
                   _SettingsTile(
                     icon: Icons.feedback_outlined,
-                    title: 'Enviar feedback',
-                    subtitle: 'Comparte dudas, incidencias o feedback técnico',
+                    title: tr.copy('Enviar feedback', 'Send feedback'),
+                    subtitle: tr.copy(
+                      'Comparte dudas, incidencias o feedback técnico',
+                      'Share doubts, issues or technical feedback',
+                    ),
                     onTap: () => context.push(AppRoutes.feedback),
                   ),
                   _SettingsTile(
                     icon: Icons.help_outline,
-                    title: 'Ayuda y FAQ',
-                    subtitle: 'Preguntas frecuentes, uso offline y soporte',
+                    title: tr.copy('Ayuda y FAQ', 'Help and FAQ'),
+                    subtitle: tr.copy(
+                      'Preguntas frecuentes, uso offline y soporte',
+                      'Frequently asked questions, offline usage and support',
+                    ),
                     onTap: () => context.push(AppRoutes.help),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _SettingsGroup(
-                title: 'Aplicación',
+                title: tr.copy('Aplicación', 'Application'),
                 children: [
                   _SettingsTile(
                     icon: Icons.info_outline,
-                    title: 'Versión',
-                    subtitle: 'Build actual del cliente móvil',
+                    title: tr.copy('Versión', 'Version'),
+                    subtitle: tr.copy(
+                      'Build actual del cliente móvil',
+                      'Current mobile client build',
+                    ),
                     trailing: Text(
                       '1.0.0',
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -319,8 +427,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   _SettingsTile(
                     icon: Icons.auto_awesome_outlined,
-                    title: 'Créditos',
-                    subtitle: 'Tecnología y stack del producto',
+                    title: tr.copy('Créditos', 'Credits'),
+                    subtitle: tr.copy(
+                      'Tecnología y stack del producto',
+                      'Product technology and stack',
+                    ),
                     onTap: _showCredits,
                   ),
                 ],
@@ -331,7 +442,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   context.read<AuthBloc>().add(const AuthLogoutRequested());
                 },
                 icon: const Icon(Icons.logout, size: 18),
-                label: const Text('Cerrar sesión'),
+                label: Text(tr.copy('Cerrar sesión', 'Log out')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: palette.error,
                   side: BorderSide(color: palette.error),

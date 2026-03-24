@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -34,11 +35,14 @@ class _CalendarView extends StatefulWidget {
 class _CalendarViewState extends State<_CalendarView> {
   bool _showTrainings = true;
 
+  String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     return BlocBuilder<CalendarBloc, CalendarState>(
       builder: (context, state) {
+        final tr = context;
         if (state is CalendarLoading || state is CalendarInitial) {
           return const ShimmerList(count: 3, itemHeight: 200);
         }
@@ -54,7 +58,10 @@ class _CalendarViewState extends State<_CalendarView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Error al cargar el calendario',
+                  tr.copy(
+                    'Error al cargar el calendario',
+                    'Could not load the calendar',
+                  ),
                   style: TextStyle(color: palette.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -69,7 +76,7 @@ class _CalendarViewState extends State<_CalendarView> {
                     );
                   },
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Reintentar'),
+                  label: Text(tr.copy('Reintentar', 'Retry')),
                 ),
               ],
             ),
@@ -107,14 +114,14 @@ class _CalendarViewState extends State<_CalendarView> {
           child: Row(
             children: [
               _ToggleChip(
-                label: 'Entrenos',
+                label: context.copy('Entrenos', 'Training'),
                 icon: Icons.fitness_center,
                 isSelected: _showTrainings,
                 onTap: () => setState(() => _showTrainings = true),
               ),
               const SizedBox(width: 10),
               _ToggleChip(
-                label: 'Dietas',
+                label: context.copy('Dietas', 'Diets'),
                 icon: Icons.restaurant_menu,
                 isSelected: !_showTrainings,
                 onTap: () => setState(() => _showTrainings = false),
@@ -180,6 +187,7 @@ class _CalendarViewState extends State<_CalendarView> {
     Map<DateTime, CalendarDayEntity> dayMap,
   ) {
     final palette = context.exomPalette;
+    final locale = Localizations.localeOf(context).toString();
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -194,7 +202,7 @@ class _CalendarViewState extends State<_CalendarView> {
         focusedDay: DateTime(state.year, state.month),
         selectedDayPredicate: (day) => isSameDay(day, state.selectedDate),
         startingDayOfWeek: StartingDayOfWeek.monday,
-        locale: 'es_ES',
+        locale: locale,
         headerVisible: false,
         daysOfWeekHeight: 32,
         rowHeight: 48,
@@ -302,12 +310,18 @@ class _CalendarViewState extends State<_CalendarView> {
     if (_showTrainings) {
       completed = summary.trainingsCompleted;
       total = summary.trainingsAssigned;
-      label = 'entrenos completados esta semana';
+      label = context.copy(
+        'entrenos completados esta semana',
+        'training sessions completed this week',
+      );
       color = palette.primary;
     } else {
       completed = summary.mealsCompleted;
       total = summary.totalMeals;
-      label = 'comidas completadas esta semana';
+      label = context.copy(
+        'comidas completadas esta semana',
+        'meals completed this week',
+      );
       color = semantic.calorie;
     }
 
@@ -354,9 +368,12 @@ class _CalendarViewState extends State<_CalendarView> {
     );
     final day = dayMap[key];
     final isToday = isSameDay(state.selectedDate, DateTime.now());
+    final locale = Localizations.localeOf(context).toString();
     final dateLabel = isToday
-        ? 'Hoy'
-        : DateFormat('d \'de\' MMMM', 'es').format(state.selectedDate);
+        ? context.copy('Hoy', 'Today')
+        : context.isEnglish
+        ? DateFormat('MMMM d', locale).format(state.selectedDate)
+        : DateFormat('d \'de\' MMMM', locale).format(state.selectedDate);
 
     if (day == null) {
       return _emptyDayCard(context, dateLabel);
@@ -406,7 +423,10 @@ class _CalendarViewState extends State<_CalendarView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sin actividad asignada',
+                  context.copy(
+                    'Sin actividad asignada',
+                    'No activity assigned',
+                  ),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -455,7 +475,7 @@ class _CalendarViewState extends State<_CalendarView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Día de descanso',
+                  context.copy('Día de descanso', 'Rest day'),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -488,7 +508,9 @@ class _CalendarViewState extends State<_CalendarView> {
     final statusColor = day.trainingCompleted
         ? semantic.success
         : palette.primary;
-    final statusLabel = day.trainingCompleted ? 'Completado' : 'Pendiente';
+    final statusLabel = day.trainingCompleted
+        ? context.copy('Completado', 'Completed')
+        : context.copy('Pendiente', 'Pending');
     final statusIcon = day.trainingCompleted
         ? Icons.check_circle
         : Icons.schedule;
@@ -521,7 +543,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Entrenamiento • $dateLabel',
+                      '${context.copy('Entrenamiento', 'Training')} • $dateLabel',
                       style: TextStyle(
                         color: palette.textPrimary,
                         fontSize: 14,
@@ -552,9 +574,10 @@ class _CalendarViewState extends State<_CalendarView> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => context.go('/trainings'),
+              onPressed: () =>
+                  context.go('/trainings?date=${_apiDate(day.date)}'),
               icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Ver detalle'),
+              label: Text(context.copy('Ver detalle', 'Open detail')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: palette.primary,
                 side: BorderSide(color: palette.primary),
@@ -581,7 +604,9 @@ class _CalendarViewState extends State<_CalendarView> {
     final semantic = context.exomSemantic;
 
     final statusColor = day.dietCompleted ? semantic.success : semantic.calorie;
-    final statusLabel = day.dietCompleted ? 'Completada' : 'Pendiente';
+    final statusLabel = day.dietCompleted
+        ? context.copy('Completada', 'Completed')
+        : context.copy('Pendiente', 'Pending');
     final statusIcon = day.dietCompleted ? Icons.check_circle : Icons.schedule;
 
     return Container(
@@ -616,7 +641,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Plan Nutritivo • $dateLabel',
+                      '${context.copy('Plan Nutritivo', 'Diet plan')} • $dateLabel',
                       style: TextStyle(
                         color: palette.textPrimary,
                         fontSize: 14,
@@ -647,9 +672,9 @@ class _CalendarViewState extends State<_CalendarView> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => context.go('/diets'),
+              onPressed: () => context.go('/diets?date=${_apiDate(day.date)}'),
               icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Ver Plan'),
+              label: Text(context.copy('Ver plan', 'Open plan')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: semantic.calorie,
                 side: BorderSide(color: semantic.calorie),
@@ -686,9 +711,12 @@ class _MonthHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final monthName = DateFormat('MMMM', 'es').format(DateTime(year, month));
+    final locale = Localizations.localeOf(context).toString();
+    final monthName = DateFormat('MMMM', locale).format(DateTime(year, month));
     final capitalMonth = monthName[0].toUpperCase() + monthName.substring(1);
-    final title = '$capitalMonth de $year';
+    final title = context.isEnglish
+        ? '$capitalMonth $year'
+        : '$capitalMonth de $year';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),

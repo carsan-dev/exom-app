@@ -15,8 +15,8 @@ class MetricsRepositoryImpl implements MetricsRepository {
   }
 
   @override
-  Future<BodyMetricEntity?> getLatestMetric() async {
-    final model = await _remoteDataSource.getLatestMetric();
+  Future<BodyMetricEntity?> getLatestMetric({String? date}) async {
+    final model = await _remoteDataSource.getLatestMetric(date: date);
     if (model == null) return null;
     return _mapToEntity(model);
   }

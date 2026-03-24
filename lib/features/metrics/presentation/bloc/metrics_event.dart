@@ -5,7 +5,9 @@ abstract class MetricsEvent {
 }
 
 class MetricsLoadRequested extends MetricsEvent {
-  const MetricsLoadRequested();
+  final String? date;
+
+  const MetricsLoadRequested({this.date});
 }
 
 class MetricsSaveRequested extends MetricsEvent {

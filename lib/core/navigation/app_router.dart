@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 // Auth pages
@@ -121,19 +122,26 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.trainings,
-            pageBuilder: (_, __) =>
-                const NoTransitionPage(child: TrainingsPage()),
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: TrainingsPage(
+                selectedDate: state.uri.queryParameters['date'],
+              ),
+            ),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (_, state) =>
-                    TrainingDetailPage(trainingId: state.pathParameters['id']!),
+                builder: (_, state) => TrainingDetailPage(
+                  trainingId: state.pathParameters['id']!,
+                  selectedDate: state.uri.queryParameters['date'],
+                ),
               ),
             ],
           ),
           GoRoute(
             path: AppRoutes.diets,
-            pageBuilder: (_, __) => const NoTransitionPage(child: DietsPage()),
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: DietsPage(selectedDate: state.uri.queryParameters['date']),
+            ),
           ),
           GoRoute(
             path: AppRoutes.calendar,
@@ -160,8 +168,10 @@ class AppRouter {
       // Meal detail (no shell nav bar)
       GoRoute(
         path: '/meals/:id',
-        builder: (_, state) =>
-            MealDetailPage(mealId: state.pathParameters['id']!),
+        builder: (_, state) => MealDetailPage(
+          mealId: state.pathParameters['id']!,
+          selectedDate: state.uri.queryParameters['date'],
+        ),
       ),
 
       // Modal routes (no shell)
@@ -176,8 +186,16 @@ class AppRouter {
       ),
       GoRoute(path: AppRoutes.help, builder: (_, __) => const HelpPage()),
     ],
-    errorBuilder: (_, state) =>
-        Scaffold(body: Center(child: Text('Page not found: ${state.error}'))),
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text(
+          context.copy(
+            'Página no encontrada: ${state.error}',
+            'Page not found: ${state.error}',
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -278,7 +296,8 @@ class _AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName ?? 'Usuario';
+    final tr = context;
+    final name = user?.displayName ?? tr.copy('Usuario', 'User');
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
@@ -312,7 +331,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Miembro EXOM',
+                    tr.copy('Miembro EXOM', 'EXOM Member'),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textSecondary,
                       fontSize: 13,
@@ -328,7 +347,7 @@ class _AppDrawer extends StatelessWidget {
                 children: [
                   _DrawerItem(
                     icon: Icons.person_outline,
-                    label: 'Perfil',
+                    label: tr.copy('Perfil', 'Profile'),
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.profile);
@@ -336,7 +355,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.emoji_events_outlined,
-                    label: 'Retos',
+                    label: tr.copy('Retos', 'Challenges'),
                     onTap: () {
                       Navigator.pop(context);
                       context.go(AppRoutes.challenges);
@@ -344,7 +363,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.bar_chart_outlined,
-                    label: 'Recap Semanal',
+                    label: tr.copy('Recap Semanal', 'Weekly Recap'),
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.recap);
@@ -360,7 +379,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.settings_outlined,
-                    label: 'Ajustes',
+                    label: tr.copy('Ajustes', 'Settings'),
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.settings);
@@ -368,7 +387,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.help_outline,
-                    label: 'Ayuda',
+                    label: tr.copy('Ayuda', 'Help'),
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.help);
@@ -377,7 +396,7 @@ class _AppDrawer extends StatelessWidget {
                   Divider(color: palette.divider, height: 24),
                   _DrawerItem(
                     icon: Icons.logout,
-                    label: 'Cerrar Sesión',
+                    label: tr.copy('Cerrar Sesión', 'Log Out'),
                     color: AppColors.error,
                     onTap: () {
                       Navigator.pop(context);

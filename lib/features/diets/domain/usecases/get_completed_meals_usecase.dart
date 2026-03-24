@@ -5,5 +5,6 @@ class GetCompletedMealsUseCase {
 
   const GetCompletedMealsUseCase(this._repository);
 
-  Future<Set<String>> call() => _repository.getCompletedMealIds();
+  Future<Set<String>> call([String? date]) =>
+      _repository.getCompletedMealIds(date: date);
 }

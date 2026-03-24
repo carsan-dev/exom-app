@@ -6,5 +6,6 @@ class GetTodayDietUseCase {
 
   const GetTodayDietUseCase(this._repository);
 
-  Future<DietEntity?> call() => _repository.getTodayDiet();
+  Future<DietEntity?> call([String? date]) =>
+      _repository.getTodayDiet(date: date);
 }

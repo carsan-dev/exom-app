@@ -5,16 +5,22 @@ abstract class TrainingEvent {
 }
 
 class TrainingsLoadRequested extends TrainingEvent {
-  const TrainingsLoadRequested();
+  final String? date;
+
+  const TrainingsLoadRequested({this.date});
 }
 
 class TodayTrainingLoadRequested extends TrainingEvent {
-  const TodayTrainingLoadRequested();
+  final String? date;
+
+  const TodayTrainingLoadRequested({this.date});
 }
 
 class TrainingDetailLoadRequested extends TrainingEvent {
   final String id;
-  const TrainingDetailLoadRequested(this.id);
+  final String? date;
+
+  const TrainingDetailLoadRequested(this.id, {this.date});
 }
 
 class MarkExerciseCompleted extends TrainingEvent {

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
@@ -9,19 +10,36 @@ import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/injection_container.dart';
 
 class DietsPage extends StatelessWidget {
-  const DietsPage({super.key});
+  const DietsPage({super.key, this.selectedDate});
+
+  final String? selectedDate;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<DietBloc>()..add(const DietLoadRequested()),
-      child: const _DietsView(),
+      create: (_) => sl<DietBloc>()..add(DietLoadRequested(date: selectedDate)),
+      child: _DietsView(selectedDate: selectedDate),
     );
   }
 }
 
 class _DietsView extends StatelessWidget {
-  const _DietsView();
+  const _DietsView({this.selectedDate});
+
+  final String? selectedDate;
+
+  String _dateLabel() {
+    if (selectedDate == null) return 'hoy';
+    final parsed = DateTime.tryParse(selectedDate!);
+    if (parsed == null) return 'la fecha seleccionada';
+    final now = DateTime.now();
+    final isToday =
+        parsed.year == now.year &&
+        parsed.month == now.month &&
+        parsed.day == now.day;
+    if (isToday) return 'hoy';
+    return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,25 +51,42 @@ class _DietsView extends StatelessWidget {
         if (state is DietError) {
           return ErrorWidget2(
             message: state.message,
-            onRetry: () =>
-                context.read<DietBloc>().add(const DietLoadRequested()),
+            onRetry: () => context.read<DietBloc>().add(
+              DietLoadRequested(date: selectedDate),
+            ),
           );
         }
         if (state is DietNoContent) {
           return EmptyWidget(
-            message: 'No tienes dieta asignada hoy',
-            subtitle:
-                'Contacta a tu entrenador para que te asigne un plan nutricional',
+            message: selectedDate == null
+                ? context.copy(
+                    'No tienes dieta asignada hoy',
+                    'You have no diet assigned today',
+                  )
+                : context.copy(
+                    'No tienes dieta asignada para esa fecha',
+                    'You have no diet assigned for that date',
+                  ),
+            subtitle: context.copy(
+              'Contacta a tu entrenador para que te asigne un plan nutricional',
+              'Ask your coach to assign you a nutrition plan',
+            ),
             icon: Icons.restaurant_menu_outlined,
             action: ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.message_outlined, size: 16),
-              label: const Text('Contactar entrenador'),
+              label: Text(
+                context.copy('Contactar entrenador', 'Contact coach'),
+              ),
             ),
           );
         }
         if (state is DietLoaded) {
-          return _DietContent(state: state);
+          return _DietContent(
+            state: state,
+            selectedDate: selectedDate,
+            dateLabel: _dateLabel(),
+          );
         }
         return const SizedBox.shrink();
       },
@@ -60,9 +95,15 @@ class _DietsView extends StatelessWidget {
 }
 
 class _DietContent extends StatelessWidget {
-  const _DietContent({required this.state});
+  const _DietContent({
+    required this.state,
+    required this.selectedDate,
+    required this.dateLabel,
+  });
 
   final DietLoaded state;
+  final String? selectedDate;
+  final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -75,17 +116,22 @@ class _DietContent extends StatelessWidget {
       color: palette.primary,
       backgroundColor: palette.surface,
       onRefresh: () async {
-        context.read<DietBloc>().add(const DietLoadRequested());
+        context.read<DietBloc>().add(DietLoadRequested(date: selectedDate));
       },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          _DietHeader(diet: diet, completedCount: completedCount),
+          _DietHeader(
+            diet: diet,
+            completedCount: completedCount,
+            dateLabel: dateLabel,
+          ),
           const _MealsSectionTitle(),
           ..._sortedMeals(meals).map(
             (meal) => _MealCard(
               meal: meal,
               isCompleted: state.completedMealIds.contains(meal.id),
+              selectedDate: selectedDate,
               onToggle: (val) {
                 context.read<DietBloc>().add(
                   MarkMealCompleted(mealId: meal.id, completed: val),
@@ -121,7 +167,7 @@ class _MealsSectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
-        'Comidas del día',
+        context.copy('Comidas del día', 'Meals of the day'),
         style: theme.textTheme.labelLarge?.copyWith(
           color: palette.textSecondary,
           fontSize: 13,
@@ -134,10 +180,15 @@ class _MealsSectionTitle extends StatelessWidget {
 }
 
 class _DietHeader extends StatelessWidget {
-  const _DietHeader({required this.diet, required this.completedCount});
+  const _DietHeader({
+    required this.diet,
+    required this.completedCount,
+    required this.dateLabel,
+  });
 
   final DietEntity diet;
   final int completedCount;
+  final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +242,16 @@ class _DietHeader extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            dateLabel == 'hoy'
+                ? context.copy('Plan de hoy', 'Today\'s plan')
+                : '${context.copy('Plan de', 'Plan for')} $dateLabel',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -284,11 +345,13 @@ class _MealCard extends StatelessWidget {
   const _MealCard({
     required this.meal,
     required this.isCompleted,
+    required this.selectedDate,
     required this.onToggle,
   });
 
   final MealEntity meal;
   final bool isCompleted;
+  final String? selectedDate;
   final ValueChanged<bool> onToggle;
 
   IconData _mealIcon(String type) {
@@ -348,9 +411,10 @@ class _MealCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        await context.push('/meals/${meal.id}');
+        final dateQuery = selectedDate != null ? '?date=$selectedDate' : '';
+        await context.push('/meals/${meal.id}$dateQuery');
         if (context.mounted) {
-          context.read<DietBloc>().add(const DietLoadRequested());
+          context.read<DietBloc>().add(DietLoadRequested(date: selectedDate));
         }
       },
       child: AnimatedContainer(

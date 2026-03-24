@@ -9,8 +9,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
   const TrainingRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<TrainingEntity?> getTodayTraining() async {
-    final model = await _remoteDataSource.getTodayTraining();
+  Future<TrainingEntity?> getTodayTraining({String? date}) async {
+    final model = await _remoteDataSource.getTodayTraining(date: date);
     if (model == null) return null;
     return _mapToEntity(model);
   }
@@ -49,8 +49,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<Set<String>> getCompletedExerciseIds() {
-    return _remoteDataSource.getCompletedExerciseIds();
+  Future<Set<String>> getCompletedExerciseIds({String? date}) {
+    return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 
   TrainingEntity _mapToEntity(TrainingModel model) {

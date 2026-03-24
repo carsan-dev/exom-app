@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
@@ -48,14 +49,15 @@ class TodayDietCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Dieta de hoy',
+                      context.copy('Dieta de hoy', 'Today\'s diet'),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: palette.textSecondary,
                         fontSize: 12,
                       ),
                     ),
                     Text(
-                      summary.dietName ?? 'Plan nutricional',
+                      summary.dietName ??
+                          context.copy('Plan nutricional', 'Nutrition plan'),
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: palette.textPrimary,
                         fontSize: 16,
@@ -94,7 +96,7 @@ class TodayDietCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${summary.mealsCompleted}/${summary.totalMeals} comidas',
+                  '${summary.mealsCompleted}/${summary.totalMeals} ${context.copy('comidas', 'meals')}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 12,
@@ -130,7 +132,7 @@ class TodayDietCard extends StatelessWidget {
           ],
           if (summary.nextMealName != null) ...[
             Text(
-              'Siguiente: ${summary.nextMealName}',
+              '${context.copy('Siguiente', 'Next')}: ${summary.nextMealName}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: palette.textSecondary,
                 fontSize: 12,
@@ -154,7 +156,9 @@ class TodayDietCard extends StatelessWidget {
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: Text(
-                hasNextMeal ? 'Siguiente comida' : 'Ver dieta completa',
+                hasNextMeal
+                    ? context.copy('Siguiente comida', 'Next meal')
+                    : context.copy('Ver dieta completa', 'Open full diet'),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: semantic.calorie,

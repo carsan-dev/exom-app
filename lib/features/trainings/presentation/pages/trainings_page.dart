@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -8,19 +9,37 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/injection_container.dart';
 
 class TrainingsPage extends StatelessWidget {
-  const TrainingsPage({super.key});
+  const TrainingsPage({super.key, this.selectedDate});
+
+  final String? selectedDate;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<TrainingBloc>()..add(const TrainingsLoadRequested()),
-      child: const _TrainingsView(),
+      create: (_) =>
+          sl<TrainingBloc>()..add(TrainingsLoadRequested(date: selectedDate)),
+      child: _TrainingsView(selectedDate: selectedDate),
     );
   }
 }
 
 class _TrainingsView extends StatelessWidget {
-  const _TrainingsView();
+  const _TrainingsView({this.selectedDate});
+
+  final String? selectedDate;
+
+  String _dateLabel() {
+    if (selectedDate == null) return 'hoy';
+    final parsed = DateTime.tryParse(selectedDate!);
+    if (parsed == null) return 'la fecha seleccionada';
+    final now = DateTime.now();
+    final isToday =
+        parsed.year == now.year &&
+        parsed.month == now.month &&
+        parsed.day == now.day;
+    if (isToday) return 'hoy';
+    return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,43 +52,68 @@ class _TrainingsView extends StatelessWidget {
           return ErrorWidget2(
             message: state.message,
             onRetry: () => context.read<TrainingBloc>().add(
-              const TrainingsLoadRequested(),
+              TrainingsLoadRequested(date: selectedDate),
             ),
           );
         }
         if (state is TrainingsLoaded) {
-          return _buildContent(context, state);
+          return _buildContent(context, state, _dateLabel());
         }
         return const SizedBox.shrink();
       },
     );
   }
 
-  Widget _buildContent(BuildContext context, TrainingsLoaded state) {
+  Widget _buildContent(
+    BuildContext context,
+    TrainingsLoaded state,
+    String dateLabel,
+  ) {
     final palette = context.exomPalette;
 
     return RefreshIndicator(
       color: palette.primary,
       backgroundColor: palette.surface,
       onRefresh: () async {
-        context.read<TrainingBloc>().add(const TrainingsLoadRequested());
+        context.read<TrainingBloc>().add(
+          TrainingsLoadRequested(date: selectedDate),
+        );
       },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
           if (state.todayTraining != null) ...[
-            const _SectionHeader(title: 'Entrenamiento de hoy'),
-            _TodayTrainingBanner(training: state.todayTraining!),
+            _SectionHeader(
+              title: selectedDate == null
+                  ? context.copy('Entrenamiento de hoy', 'Today\'s training')
+                  : '${context.copy('Entrenamiento', 'Training')} $dateLabel',
+            ),
+            _TodayTrainingBanner(
+              training: state.todayTraining!,
+              selectedDate: selectedDate,
+            ),
             const SizedBox(height: 8),
           ] else ...[
-            const _SectionHeader(title: 'Hoy'),
-            const _NoTrainingToday(),
+            _SectionHeader(
+              title: selectedDate == null
+                  ? context.copy('Hoy', 'Today')
+                  : dateLabel,
+            ),
+            _NoTrainingToday(selectedDate: selectedDate),
           ],
-          const _SectionHeader(title: 'Todos los entrenamientos'),
+          _SectionHeader(
+            title: context.copy('Todos los entrenamientos', 'All trainings'),
+          ),
           if (state.trainings.isEmpty)
-            const EmptyWidget(
-              message: 'No hay entrenamientos disponibles',
-              subtitle: 'Contacta a tu entrenador para que te asigne un plan',
+            EmptyWidget(
+              message: context.copy(
+                'No hay entrenamientos disponibles',
+                'No trainings available',
+              ),
+              subtitle: context.copy(
+                'Contacta a tu entrenador para que te asigne un plan',
+                'Ask your coach to assign you a plan',
+              ),
               icon: Icons.fitness_center_outlined,
             )
           else
@@ -106,9 +150,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TodayTrainingBanner extends StatelessWidget {
-  const _TodayTrainingBanner({required this.training});
+  const _TodayTrainingBanner({required this.training, this.selectedDate});
 
   final TrainingEntity training;
+  final String? selectedDate;
 
   Color _typeColor(BuildContext context, String type) {
     final palette = context.exomPalette;
@@ -136,9 +181,12 @@ class _TodayTrainingBanner extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        await context.push('/trainings/${training.id}');
+        final dateQuery = selectedDate != null ? '?date=$selectedDate' : '';
+        await context.push('/trainings/${training.id}$dateQuery');
         if (context.mounted) {
-          context.read<TrainingBloc>().add(const TrainingsLoadRequested());
+          context.read<TrainingBloc>().add(
+            TrainingsLoadRequested(date: selectedDate),
+          );
         }
       },
       child: Container(
@@ -251,7 +299,9 @@ class _TodayTrainingBanner extends StatelessWidget {
 }
 
 class _NoTrainingToday extends StatelessWidget {
-  const _NoTrainingToday();
+  const _NoTrainingToday({this.selectedDate});
+
+  final String? selectedDate;
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +332,15 @@ class _NoTrainingToday extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'No hay entrenamiento asignado hoy',
+                  selectedDate == null
+                      ? context.copy(
+                          'No hay entrenamiento asignado hoy',
+                          'No training assigned today',
+                        )
+                      : context.copy(
+                          'No hay entrenamiento asignado para esa fecha',
+                          'No training assigned for that date',
+                        ),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -291,7 +349,10 @@ class _NoTrainingToday extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Disfruta tu día de descanso',
+                  context.copy(
+                    'Disfruta tu día de descanso',
+                    'Enjoy your rest day',
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 12,

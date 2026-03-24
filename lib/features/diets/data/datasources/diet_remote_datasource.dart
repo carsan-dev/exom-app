@@ -6,11 +6,11 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 
 abstract class DietRemoteDataSource {
-  Future<DietModel?> getTodayDiet();
+  Future<DietModel?> getTodayDiet({String? date});
   Future<MealModel> getMeal(String mealId);
   Future<void> markMealCompleted(String mealId, String date);
   Future<void> unmarkMealCompleted(String mealId, String date);
-  Future<Set<String>> getCompletedMealIds();
+  Future<Set<String>> getCompletedMealIds({String? date});
 }
 
 class DietRemoteDataSourceImpl implements DietRemoteDataSource {
@@ -30,6 +30,8 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
     final today = DateTime.now();
     return '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
   }
+
+  String _resolvedDate(String? date) => date ?? _todayDate();
 
   Future<void> _cacheNullableMap(
     String key,
@@ -68,11 +70,15 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
   }
 
   @override
-  Future<DietModel?> getTodayDiet() async {
-    final cacheKey = 'diet_today_${_todayDate()}';
+  Future<DietModel?> getTodayDiet({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final cacheKey = 'diet_today_$targetDate';
 
     try {
-      final response = await _apiClient.dio.get<dynamic>('/diets/today');
+      final response = await _apiClient.dio.get<dynamic>(
+        '/diets/today',
+        queryParameters: date != null ? {'date': date} : null,
+      );
       if (response.statusCode == 204 || response.data == null) {
         await _cacheNullableMap(cacheKey, null);
         return null;
@@ -172,14 +178,14 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
   }
 
   @override
-  Future<Set<String>> getCompletedMealIds() async {
-    final date = _todayDate();
-    final cacheKey = 'completed_meals_$date';
+  Future<Set<String>> getCompletedMealIds({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final cacheKey = 'completed_meals_$targetDate';
 
     try {
       final response = await _apiClient.dio.get<dynamic>(
         '/progress',
-        queryParameters: {'date': date},
+        queryParameters: {'date': targetDate},
       );
       final data = response.data;
       if (data is Map<String, dynamic>) {
@@ -189,8 +195,8 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
             .map((entry) => entry.toString())
             .toList(growable: false);
         await _localStorage.cacheData(cacheKey, completedIds);
-        await _localStorage.cacheData('day_progress_$date', inner);
-        await _localStorage.cacheData('home_progress_$date', inner);
+        await _localStorage.cacheData('day_progress_$targetDate', inner);
+        await _localStorage.cacheData('home_progress_$targetDate', inner);
         return completedIds.toSet();
       }
       return {};

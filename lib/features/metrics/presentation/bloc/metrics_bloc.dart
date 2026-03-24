@@ -31,7 +31,7 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
   ) async {
     emit(const MetricsLoading());
     try {
-      final metric = await _metricsRepository.getLatestMetric();
+      final metric = await _metricsRepository.getLatestMetric(date: event.date);
       emit(MetricsLoaded(metric));
     } catch (_) {
       emit(const MetricsLoaded(null));

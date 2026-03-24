@@ -5,7 +5,7 @@ import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 
 abstract class MetricsRemoteDataSource {
   Future<BodyMetricModel> saveMetric(Map<String, dynamic> data);
-  Future<BodyMetricModel?> getLatestMetric();
+  Future<BodyMetricModel?> getLatestMetric({String? date});
   Future<List<BodyMetricModel>> getWeightHistory();
 }
 
@@ -42,14 +42,18 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
   }
 
   @override
-  Future<BodyMetricModel?> getLatestMetric() async {
+  Future<BodyMetricModel?> getLatestMetric({String? date}) async {
+    final cacheKey = date == null ? 'metrics_latest' : 'metrics_latest_$date';
     try {
-      final response = await _apiClient.dio.get<dynamic>('/metrics/latest');
+      final response = await _apiClient.dio.get<dynamic>(
+        '/metrics/latest',
+        queryParameters: date != null ? {'date': date} : null,
+      );
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = data['data'];
         if (inner is Map<String, dynamic>) {
-          await _localStorage.cacheData('metrics_latest', inner);
+          await _localStorage.cacheData(cacheKey, inner);
           await _localStorage.cacheData('home_latest_metric', inner);
           return BodyMetricModel.fromJson(inner);
         }
@@ -57,7 +61,7 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
       return null;
     } catch (error) {
       if (isOfflineError(error)) {
-        final cached = _localStorage.getCachedMap('metrics_latest');
+        final cached = _localStorage.getCachedMap(cacheKey);
         if (cached != null) {
           return BodyMetricModel.fromJson(cached);
         }

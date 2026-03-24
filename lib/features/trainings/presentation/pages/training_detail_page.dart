@@ -9,14 +9,20 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 
 class TrainingDetailPage extends StatelessWidget {
   final String trainingId;
+  final String? selectedDate;
 
-  const TrainingDetailPage({super.key, required this.trainingId});
+  const TrainingDetailPage({
+    super.key,
+    required this.trainingId,
+    this.selectedDate,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
-          sl<TrainingBloc>()..add(TrainingDetailLoadRequested(trainingId)),
+          sl<TrainingBloc>()
+            ..add(TrainingDetailLoadRequested(trainingId, date: selectedDate)),
       child: const _TrainingDetailView(),
     );
   }

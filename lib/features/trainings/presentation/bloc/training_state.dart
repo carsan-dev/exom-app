@@ -15,23 +15,42 @@ class TrainingLoading extends TrainingState {
 class TrainingsLoaded extends TrainingState {
   final List<TrainingEntity> trainings;
   final TrainingEntity? todayTraining;
-  const TrainingsLoaded({required this.trainings, this.todayTraining});
+  final String selectedDate;
+
+  const TrainingsLoaded({
+    required this.trainings,
+    this.todayTraining,
+    required this.selectedDate,
+  });
 }
 
 class TodayTrainingLoaded extends TrainingState {
   final TrainingEntity? training;
-  const TodayTrainingLoaded(this.training);
+  final String selectedDate;
+
+  const TodayTrainingLoaded(this.training, {required this.selectedDate});
 }
 
 class TrainingDetailLoaded extends TrainingState {
   final TrainingEntity training;
   final Set<String> completedExerciseIds;
-  const TrainingDetailLoaded(this.training, {this.completedExerciseIds = const {}});
+  final String selectedDate;
 
-  TrainingDetailLoaded copyWith({TrainingEntity? training, Set<String>? completedExerciseIds}) {
+  const TrainingDetailLoaded(
+    this.training, {
+    this.completedExerciseIds = const {},
+    required this.selectedDate,
+  });
+
+  TrainingDetailLoaded copyWith({
+    TrainingEntity? training,
+    Set<String>? completedExerciseIds,
+    String? selectedDate,
+  }) {
     return TrainingDetailLoaded(
       training ?? this.training,
       completedExerciseIds: completedExerciseIds ?? this.completedExerciseIds,
+      selectedDate: selectedDate ?? this.selectedDate,
     );
   }
 }
@@ -42,5 +61,7 @@ class TrainingError extends TrainingState {
 }
 
 class TrainingNoContent extends TrainingState {
-  const TrainingNoContent();
+  final String selectedDate;
+
+  const TrainingNoContent({required this.selectedDate});
 }

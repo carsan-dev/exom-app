@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -18,7 +19,7 @@ class MetricsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<MetricsBloc>()..add(const MetricsLoadRequested()),
+      create: (_) => sl<MetricsBloc>(),
       child: const _MetricsView(),
     );
   }
@@ -34,9 +35,11 @@ class _MetricsView extends StatefulWidget {
 class _MetricsViewState extends State<_MetricsView> {
   double _weight = 75.0;
   bool _useManualWeight = false;
+  final _sleepController = TextEditingController();
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
   final _muscleMassController = TextEditingController();
+  DateTime _selectedMetricDate = DateUtils.dateOnly(DateTime.now());
   double _sleepHours = 8.0;
   bool _heightTouched = false;
   bool _weightTouched = false;
@@ -76,10 +79,16 @@ class _MetricsViewState extends State<_MetricsView> {
   void initState() {
     super.initState();
     _populateHeightFromCachedProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadMetricForSelectedDate();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _sleepController.dispose();
     _weightController.dispose();
     _heightController.dispose();
     _muscleMassController.dispose();
@@ -125,6 +134,50 @@ class _MetricsViewState extends State<_MetricsView> {
     return unitSystem == UnitSystem.imperial ? 'Ej: 70.9' : 'Ej: 180';
   }
 
+  String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+
+  String _selectedDateLabel() {
+    final today = DateUtils.dateOnly(DateTime.now());
+    if (_selectedMetricDate == today) {
+      return 'Hoy';
+    }
+    return DateFormat('d \'de\' MMMM', 'es').format(_selectedMetricDate);
+  }
+
+  Future<void> _pickMetricDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedMetricDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
+      locale: const Locale('es'),
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedMetricDate = DateUtils.dateOnly(picked);
+      _selectedMeasure = null;
+    });
+    _loadMetricForSelectedDate();
+  }
+
+  void _loadMetricForSelectedDate() {
+    context.read<MetricsBloc>().add(
+      MetricsLoadRequested(date: _apiDate(_selectedMetricDate)),
+    );
+  }
+
+  void _setSleepValue(double value) {
+    setState(() {
+      _sleepHours = value;
+      _sleepController.text = value.toStringAsFixed(1);
+      _sleepTouched = true;
+    });
+  }
+
   void _populateHeightFromCachedProfile() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final profile = _getCachedProfile();
@@ -135,6 +188,25 @@ class _MetricsViewState extends State<_MetricsView> {
 
     if (heightCm != null && _heightController.text.isEmpty) {
       _heightController.text = formatLengthValue(heightCm, unitSystem);
+    }
+  }
+
+  void _populateEmptyMetricState() {
+    _populateHeightFromCachedProfile();
+    setState(() {
+      _weight = 75.0;
+      _sleepHours = 8.0;
+      _heightTouched = false;
+      _weightTouched = false;
+      _muscleMassTouched = false;
+      _sleepTouched = false;
+      _touchedMeasures.clear();
+    });
+    _weightController.clear();
+    _muscleMassController.clear();
+    _sleepController.clear();
+    for (final controller in _measureControllers.values) {
+      controller.clear();
     }
   }
 
@@ -395,6 +467,8 @@ class _MetricsViewState extends State<_MetricsView> {
     final data = <String, dynamic>{};
     final profileData = <String, dynamic>{};
 
+    data['date'] = _apiDate(_selectedMetricDate);
+
     double? nextHeightCm = currentMetric?.heightCm;
     if (_heightTouched) {
       final rawHeight = _parseDouble(_heightController.text);
@@ -429,7 +503,14 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     if (_sleepTouched) {
-      data['sleep_hours'] = _sleepHours;
+      final sleepHours = _parseDouble(_sleepController.text);
+      if (sleepHours == null) {
+        _showValidationMessage(
+          'Introduce las horas de sueño en formato numérico antes de guardar.',
+        );
+        return;
+      }
+      data['sleep_hours'] = sleepHours;
     } else if (currentMetric?.sleepHours != null) {
       data['sleep_hours'] = currentMetric!.sleepHours;
     }
@@ -778,6 +859,9 @@ class _MetricsViewState extends State<_MetricsView> {
     _weightController.text = metric.weightKg != null
         ? formatWeightValue(metric.weightKg, unitSystem)
         : '';
+    _sleepController.text = metric.sleepHours != null
+        ? metric.sleepHours!.toStringAsFixed(1)
+        : '';
     if (metric.muscleMassKg != null) {
       _muscleMassController.text = formatWeightValue(
         metric.muscleMassKg,
@@ -818,8 +902,12 @@ class _MetricsViewState extends State<_MetricsView> {
     );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
-        if (state is MetricsLoaded && state.current != null) {
-          _populateFromMetric(state.current!);
+        if (state is MetricsLoaded) {
+          if (state.current != null) {
+            _populateFromMetric(state.current!);
+          } else {
+            _populateEmptyMetricState();
+          }
         }
         if (state is MetricsSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -868,6 +956,32 @@ class _MetricsViewState extends State<_MetricsView> {
                 ListView(
                   padding: const EdgeInsets.only(bottom: 100),
                   children: [
+                    _SectionCard(
+                      title: 'Fecha del registro',
+                      icon: Icons.calendar_today_outlined,
+                      color: palette.primary,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            'El registro se guardará para la fecha seleccionada. Así puedes apuntar métricas y sueño de días anteriores.',
+                            style: TextStyle(
+                              color: palette.textSecondary,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _pickMetricDate,
+                            icon: const Icon(Icons.event_outlined, size: 16),
+                            label: Text(_selectedDateLabel()),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     _SectionCard(
                       title: 'Altura',
                       icon: Icons.height,
@@ -1088,50 +1202,58 @@ class _MetricsViewState extends State<_MetricsView> {
                       icon: Icons.bedtime_outlined,
                       color: semantic.sleep,
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '4h',
-                                style: TextStyle(
-                                  color: palette.textDisabled,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              Text(
-                                '${_sleepHours.toStringAsFixed(1)}h',
-                                style: TextStyle(
-                                  color: semantic.sleep,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                '12h',
-                                style: TextStyle(
-                                  color: palette.textDisabled,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Indica cuántas horas dormiste en la noche correspondiente a esta fecha.',
+                            style: TextStyle(
+                              color: palette.textSecondary,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
                           ),
-                          Slider(
-                            value: _sleepHours,
-                            min: 4.0,
-                            max: 12.0,
-                            divisions: 16,
-                            activeColor: semantic.sleep,
-                            inactiveColor: palette.surfaceVariant,
-                            onChanged: (val) => setState(() {
-                              _sleepHours = val;
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _sleepController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: TextStyle(color: palette.textPrimary),
+                            decoration: InputDecoration(
+                              hintText: 'Ej: 7.5',
+                              suffixText: 'h',
+                              suffixStyle: TextStyle(
+                                color: palette.textSecondary,
+                              ),
+                            ),
+                            onChanged: (value) {
                               _sleepTouched = true;
-                            }),
+                              final parsed = _parseDouble(value);
+                              if (parsed != null) {
+                                _sleepHours = parsed.clamp(0.0, 24.0);
+                              }
+                            },
                           ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [_SleepEmoji(_sleepHours)],
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [6.0, 7.0, 8.0, 9.0]
+                                .map((value) {
+                                  return ActionChip(
+                                    label: Text(
+                                      '${value.toStringAsFixed(0)} h',
+                                    ),
+                                    onPressed: () => _setSleepValue(value),
+                                  );
+                                })
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.center,
+                            child: _SleepEmoji(_sleepHours),
                           ),
                         ],
                       ),

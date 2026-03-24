@@ -6,5 +6,6 @@ class GetTodayTrainingUseCase {
 
   const GetTodayTrainingUseCase(this._repository);
 
-  Future<TrainingEntity?> call() => _repository.getTodayTraining();
+  Future<TrainingEntity?> call([String? date]) =>
+      _repository.getTodayTraining(date: date);
 }

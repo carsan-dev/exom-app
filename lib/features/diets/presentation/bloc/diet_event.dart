@@ -5,12 +5,16 @@ abstract class DietEvent {
 }
 
 class DietLoadRequested extends DietEvent {
-  const DietLoadRequested();
+  final String? date;
+
+  const DietLoadRequested({this.date});
 }
 
 class MealDetailLoadRequested extends DietEvent {
   final String mealId;
-  const MealDetailLoadRequested(this.mealId);
+  final String? date;
+
+  const MealDetailLoadRequested(this.mealId, {this.date});
 }
 
 class MarkMealCompleted extends DietEvent {

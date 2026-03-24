@@ -10,13 +10,16 @@ import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 
 class MealDetailPage extends StatelessWidget {
   final String mealId;
+  final String? selectedDate;
 
-  const MealDetailPage({super.key, required this.mealId});
+  const MealDetailPage({super.key, required this.mealId, this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<DietBloc>()..add(MealDetailLoadRequested(mealId)),
+      create: (_) =>
+          sl<DietBloc>()
+            ..add(MealDetailLoadRequested(mealId, date: selectedDate)),
       child: const _MealDetailView(),
     );
   }

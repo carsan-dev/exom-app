@@ -6,13 +6,13 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/training_model.dart';
 
 abstract class TrainingRemoteDataSource {
-  Future<TrainingModel?> getTodayTraining();
+  Future<TrainingModel?> getTodayTraining({String? date});
   Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20});
   Future<TrainingModel> getTraining(String id);
   Future<void> markExerciseCompleted(String exerciseId, String date);
   Future<void> unmarkExerciseCompleted(String exerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
-  Future<Set<String>> getCompletedExerciseIds();
+  Future<Set<String>> getCompletedExerciseIds({String? date});
 }
 
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
@@ -32,6 +32,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     final today = DateTime.now();
     return '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
   }
+
+  String _resolvedDate(String? date) => date ?? _todayDate();
 
   Future<void> _cacheNullableMap(
     String key,
@@ -85,11 +87,15 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<TrainingModel?> getTodayTraining() async {
-    final cacheKey = 'training_today_${_todayDate()}';
+  Future<TrainingModel?> getTodayTraining({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final cacheKey = 'training_today_$targetDate';
 
     try {
-      final response = await _apiClient.dio.get<dynamic>('/trainings/today');
+      final response = await _apiClient.dio.get<dynamic>(
+        '/trainings/today',
+        queryParameters: date != null ? {'date': date} : null,
+      );
       if (response.statusCode == 204 || response.data == null) {
         await _cacheNullableMap(cacheKey, null);
         return null;
@@ -245,14 +251,14 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<Set<String>> getCompletedExerciseIds() async {
-    final date = _todayDate();
-    final cacheKey = 'completed_exercises_$date';
+  Future<Set<String>> getCompletedExerciseIds({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final cacheKey = 'completed_exercises_$targetDate';
 
     try {
       final response = await _apiClient.dio.get<dynamic>(
         '/progress',
-        queryParameters: {'date': date},
+        queryParameters: {'date': targetDate},
       );
       final data = response.data;
       if (data is Map<String, dynamic>) {
@@ -265,8 +271,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
             )
             .toList(growable: false);
         await _localStorage.cacheData(cacheKey, completedIds);
-        await _localStorage.cacheData('day_progress_$date', inner);
-        await _localStorage.cacheData('home_progress_$date', inner);
+        await _localStorage.cacheData('day_progress_$targetDate', inner);
+        await _localStorage.cacheData('home_progress_$targetDate', inner);
         return completedIds.toSet();
       }
       return {};

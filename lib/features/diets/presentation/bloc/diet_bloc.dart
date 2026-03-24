@@ -38,21 +38,30 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     return '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
   }
 
+  String _resolvedDate(String? date) => date ?? _todayDate();
+
   Future<void> _onDietLoad(
     DietLoadRequested event,
     Emitter<DietState> emit,
   ) async {
     emit(const DietLoading());
     try {
+      final targetDate = _resolvedDate(event.date);
       final results = await Future.wait([
-        _getTodayDietUseCase(),
-        _getCompletedMealsUseCase(),
+        _getTodayDietUseCase(targetDate),
+        _getCompletedMealsUseCase(targetDate),
       ]);
       final diet = results[0] as DietEntity?;
       if (diet == null) {
-        emit(const DietNoContent());
+        emit(DietNoContent(selectedDate: targetDate));
       } else {
-        emit(DietLoaded(diet, completedMealIds: results[1] as Set<String>));
+        emit(
+          DietLoaded(
+            diet,
+            completedMealIds: results[1] as Set<String>,
+            selectedDate: targetDate,
+          ),
+        );
       }
     } catch (e) {
       emit(DietError(e.toString()));
@@ -65,9 +74,10 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   ) async {
     emit(const DietLoading());
     try {
+      final targetDate = _resolvedDate(event.date);
       final results = await Future.wait([
         _getMealUseCase(event.mealId),
-        _getCompletedMealsUseCase(),
+        _getCompletedMealsUseCase(targetDate),
       ]);
       final meal = results[0] as MealEntity;
       final completedMealIds = results[1] as Set<String>;
@@ -75,6 +85,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
         MealDetailLoaded(
           meal,
           isCompleted: completedMealIds.contains(event.mealId),
+          selectedDate: targetDate,
         ),
       );
     } catch (e) {
@@ -87,9 +98,9 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     Emitter<DietState> emit,
   ) async {
     final current = state;
-    final date = _todayDate();
 
     if (current is DietLoaded) {
+      final date = current.selectedDate;
       final previous = Set<String>.from(current.completedMealIds);
       final updated = Set<String>.from(current.completedMealIds);
       if (event.completed) {
@@ -112,6 +123,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     }
 
     if (current is MealDetailLoaded) {
+      final date = current.selectedDate;
       final previous = current.isCompleted;
       emit(current.copyWith(isCompleted: event.completed));
 

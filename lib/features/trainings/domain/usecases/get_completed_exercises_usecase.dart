@@ -5,5 +5,6 @@ class GetCompletedExercisesUseCase {
 
   const GetCompletedExercisesUseCase(this._repository);
 
-  Future<Set<String>> call() => _repository.getCompletedExerciseIds();
+  Future<Set<String>> call([String? date]) =>
+      _repository.getCompletedExerciseIds(date: date);
 }

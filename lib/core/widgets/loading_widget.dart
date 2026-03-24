@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+
 import '../theme/app_theme.dart';
 
 class LoadingWidget extends StatelessWidget {
@@ -7,20 +8,23 @@ class LoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.primary),
+    return Center(
+      child: CircularProgressIndicator(color: context.exomPalette.primary),
     );
   }
 }
 
 class ErrorWidget2 extends StatelessWidget {
+  const ErrorWidget2({super.key, required this.message, this.onRetry});
+
   final String message;
   final VoidCallback? onRetry;
 
-  const ErrorWidget2({super.key, required this.message, this.onRetry});
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -32,8 +36,8 @@ class ErrorWidget2 extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 16,
               ),
             ),
@@ -52,11 +56,6 @@ class ErrorWidget2 extends StatelessWidget {
 }
 
 class EmptyWidget extends StatelessWidget {
-  final String message;
-  final String? subtitle;
-  final IconData? icon;
-  final Widget? action;
-
   const EmptyWidget({
     super.key,
     required this.message,
@@ -65,8 +64,16 @@ class EmptyWidget extends StatelessWidget {
     this.action,
   });
 
+  final String message;
+  final String? subtitle;
+  final IconData? icon;
+  final Widget? action;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -75,15 +82,15 @@ class EmptyWidget extends StatelessWidget {
           children: [
             Icon(
               icon ?? Icons.inbox_outlined,
-              color: AppColors.textDisabled,
+              color: palette.textDisabled,
               size: 72,
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: palette.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -93,8 +100,8 @@ class EmptyWidget extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
                   fontSize: 14,
                 ),
               ),
@@ -107,13 +114,7 @@ class EmptyWidget extends StatelessWidget {
   }
 }
 
-// ─── Specialized Error Widgets ─────────────────────────────────────────────────
-
 class ServerErrorWidget extends StatelessWidget {
-  final String? errorCode;
-  final VoidCallback? onRetry;
-  final VoidCallback? onContactSupport;
-
   const ServerErrorWidget({
     super.key,
     this.errorCode,
@@ -121,8 +122,15 @@ class ServerErrorWidget extends StatelessWidget {
     this.onContactSupport,
   });
 
+  final String? errorCode;
+  final VoidCallback? onRetry;
+  final VoidCallback? onContactSupport;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -143,10 +151,10 @@ class ServerErrorWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Algo salió mal',
-              style: TextStyle(
-                color: AppColors.textPrimary,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: palette.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -157,8 +165,8 @@ class ServerErrorWidget extends StatelessWidget {
                   ? 'Error $errorCode. El servidor no pudo procesar tu solicitud.'
                   : 'El servidor no pudo procesar tu solicitud.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -192,13 +200,16 @@ class ServerErrorWidget extends StatelessWidget {
 }
 
 class NoConnectionWidget extends StatelessWidget {
+  const NoConnectionWidget({super.key, this.onRetry, this.onViewOffline});
+
   final VoidCallback? onRetry;
   final VoidCallback? onViewOffline;
 
-  const NoConnectionWidget({super.key, this.onRetry, this.onViewOffline});
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -219,20 +230,20 @@ class NoConnectionWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Sin conexión a internet',
-              style: TextStyle(
-                color: AppColors.textPrimary,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: palette.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Comprueba tu conexión e inténtalo de nuevo.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -266,13 +277,16 @@ class NoConnectionWidget extends StatelessWidget {
 }
 
 class NotFoundWidget extends StatelessWidget {
+  const NotFoundWidget({super.key, this.onGoToCalendar, this.onGoHome});
+
   final VoidCallback? onGoToCalendar;
   final VoidCallback? onGoHome;
 
-  const NotFoundWidget({super.key, this.onGoToCalendar, this.onGoHome});
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -283,30 +297,30 @@ class NotFoundWidget extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.textDisabled.withValues(alpha: 0.15),
+                color: palette.textDisabled.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search_off_outlined,
-                color: AppColors.textMuted,
+                color: palette.textMuted,
                 size: 36,
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Contenido no disponible',
-              style: TextStyle(
-                color: AppColors.textPrimary,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: palette.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -339,13 +353,7 @@ class NotFoundWidget extends StatelessWidget {
   }
 }
 
-// ─── Shimmer Cards ──────────────────────────────────────────────────────────────
-
 class ShimmerCard extends StatelessWidget {
-  final double height;
-  final double? width;
-  final BorderRadius? borderRadius;
-
   const ShimmerCard({
     super.key,
     this.height = 80,
@@ -353,16 +361,22 @@ class ShimmerCard extends StatelessWidget {
     this.borderRadius,
   });
 
+  final double height;
+  final double? width;
+  final BorderRadius? borderRadius;
+
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     return Shimmer.fromColors(
-      baseColor: AppColors.surfaceVariant,
-      highlightColor: AppColors.surface,
+      baseColor: palette.surfaceVariant,
+      highlightColor: palette.surface,
       child: Container(
         height: height,
         width: width ?? double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: palette.surfaceVariant,
           borderRadius: borderRadius ?? BorderRadius.circular(16),
         ),
       ),
@@ -371,10 +385,10 @@ class ShimmerCard extends StatelessWidget {
 }
 
 class ShimmerList extends StatelessWidget {
+  const ShimmerList({super.key, this.count = 5, this.itemHeight = 80});
+
   final int count;
   final double itemHeight;
-
-  const ShimmerList({super.key, this.count = 5, this.itemHeight = 80});
 
   @override
   Widget build(BuildContext context) {

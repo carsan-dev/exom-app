@@ -41,11 +41,15 @@ class HelpPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Ayuda'),
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        surfaceTintColor: Colors.transparent,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -53,26 +57,26 @@ class HelpPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.borderSoft),
+              border: Border.all(color: palette.borderSoft),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Centro de ayuda',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Todo lo importante para usar EXOM en tu dia a dia: metricas, entrenamientos, dieta, modo offline y vias de contacto.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -103,10 +107,10 @@ class HelpPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Preguntas frecuentes',
-            style: TextStyle(
-              color: AppColors.textPrimary,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: palette.textPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
@@ -117,26 +121,26 @@ class HelpPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.borderSoft),
+              border: Border.all(color: palette.borderSoft),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Creditos',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Producto EXOM. App movil en Flutter, backend en NestJS, autenticacion con Firebase y datos en Supabase.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 13,
                     height: 1.5,
                   ),
@@ -151,11 +155,6 @@ class HelpPage extends StatelessWidget {
 }
 
 class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
   const _QuickActionCard({
     required this.icon,
     required this.title,
@@ -163,8 +162,16 @@ class _QuickActionCard extends StatelessWidget {
     required this.onTap,
   });
 
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -173,9 +180,9 @@ class _QuickActionCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.borderSoft),
+            border: Border.all(color: palette.borderSoft),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,16 +191,16 @@ class _QuickActionCard extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: palette.primary, size: 20),
               ),
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -201,8 +208,8 @@ class _QuickActionCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: AppColors.textDisabled,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textDisabled,
                   fontSize: 12,
                 ),
               ),
@@ -215,16 +222,16 @@ class _QuickActionCard extends StatelessWidget {
 }
 
 class _Faq {
+  const _Faq({required this.question, required this.answer});
+
   final String question;
   final String answer;
-
-  const _Faq({required this.question, required this.answer});
 }
 
 class _FaqTile extends StatefulWidget {
-  final _Faq faq;
-
   const _FaqTile({required this.faq});
+
+  final _Faq faq;
 
   @override
   State<_FaqTile> createState() => _FaqTileState();
@@ -235,15 +242,18 @@ class _FaqTileState extends State<_FaqTile> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: _expanded
-              ? AppColors.primary.withValues(alpha: 0.4)
-              : AppColors.divider,
+              ? palette.primary.withValues(alpha: 0.4)
+              : palette.divider,
         ),
       ),
       child: InkWell(
@@ -259,10 +269,10 @@ class _FaqTileState extends State<_FaqTile> {
                   Expanded(
                     child: Text(
                       widget.faq.question,
-                      style: TextStyle(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: _expanded
-                            ? AppColors.primary
-                            : AppColors.textPrimary,
+                            ? palette.primary
+                            : palette.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -270,7 +280,7 @@ class _FaqTileState extends State<_FaqTile> {
                   ),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.textDisabled,
+                    color: palette.textDisabled,
                     size: 20,
                   ),
                 ],
@@ -279,8 +289,8 @@ class _FaqTileState extends State<_FaqTile> {
                 const SizedBox(height: 10),
                 Text(
                   widget.faq.answer,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 13,
                     height: 1.5,
                   ),

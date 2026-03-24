@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
+import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
 
 class ChallengesPage extends StatelessWidget {
@@ -12,19 +12,24 @@ class ChallengesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return BlocProvider(
-      create: (_) => GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
+      create: (_) =>
+          GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Retos y Logros'),
-          backgroundColor: AppColors.background,
+          backgroundColor: theme.scaffoldBackgroundColor,
+          surfaceTintColor: Colors.transparent,
         ),
         body: BlocBuilder<ChallengesBloc, ChallengesState>(
           builder: (context, state) {
             if (state is ChallengesLoading) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+              return Center(
+                child: CircularProgressIndicator(color: palette.primary),
               );
             }
             if (state is ChallengesError) {
@@ -32,14 +37,18 @@ class ChallengesPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       'Error al cargar los retos',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: palette.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () {
-                        context.read<ChallengesBloc>().add(const ChallengesLoadRequested());
+                        context.read<ChallengesBloc>().add(
+                          const ChallengesLoadRequested(),
+                        );
                       },
                       child: const Text('Reintentar'),
                     ),
@@ -59,13 +68,14 @@ class ChallengesPage extends StatelessWidget {
 }
 
 class _ChallengesContent extends StatelessWidget {
-  final ChallengesLoaded state;
-
   const _ChallengesContent({required this.state});
+
+  final ChallengesLoaded state;
 
   @override
   Widget build(BuildContext context) {
-    final hasContent = state.mainGoals.isNotEmpty ||
+    final hasContent =
+        state.mainGoals.isNotEmpty ||
         state.weeklyChallenges.isNotEmpty ||
         state.achievements.isNotEmpty;
 
@@ -74,7 +84,8 @@ class _ChallengesContent extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: context.exomPalette.primary,
+      backgroundColor: context.exomPalette.surface,
       onRefresh: () async {
         context.read<ChallengesBloc>().add(const ChallengesLoadRequested());
       },
@@ -82,15 +93,15 @@ class _ChallengesContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           if (state.mainGoals.isNotEmpty) ...[
-            _sectionTitle('Objetivo principal'),
+            _SectionTitle(title: 'Objetivo principal'),
             ...state.mainGoals.map((c) => _MainGoalCard(challenge: c)),
           ],
           if (state.weeklyChallenges.isNotEmpty) ...[
-            _sectionTitle('Retos semanales'),
+            _SectionTitle(title: 'Retos semanales'),
             ...state.weeklyChallenges.map((c) => _ChallengeCard(challenge: c)),
           ],
           if (state.achievements.isNotEmpty) ...[
-            _sectionTitle('Logros desbloqueados'),
+            _SectionTitle(title: 'Logros desbloqueados'),
             SizedBox(
               height: 120,
               child: ListView.separated(
@@ -98,7 +109,8 @@ class _ChallengesContent extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: state.achievements.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (_, i) => _AchievementCard(achievement: state.achievements[i]),
+                itemBuilder: (_, i) =>
+                    _AchievementCard(achievement: state.achievements[i]),
               ),
             ),
           ],
@@ -106,14 +118,24 @@ class _ChallengesContent extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _sectionTitle(String title) {
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
+        style: theme.textTheme.titleLarge?.copyWith(
+          color: palette.textPrimary,
           fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
@@ -127,57 +149,71 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          // Header
-          const Center(
+          Center(
             child: Column(
               children: [
-                Icon(Icons.emoji_events_outlined, color: AppColors.textDisabled, size: 56),
-                SizedBox(height: 12),
+                Icon(
+                  Icons.emoji_events_outlined,
+                  color: palette.textDisabled,
+                  size: 56,
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Sin retos activos',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
                   'Tu entrenador te asignará retos próximamente.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 32),
-          // Placeholder retos
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Retos',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+          Text(
+            'Retos',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          ...List.generate(2, (i) => _PlaceholderCard(
-            icon: Icons.flag_outlined,
-            label: 'Reto pendiente',
-          )),
+          const SizedBox(height: 8),
+          ...List.generate(
+            2,
+            (i) => const _PlaceholderCard(
+              icon: Icons.flag_outlined,
+              label: 'Reto pendiente',
+            ),
+          ),
           const SizedBox(height: 20),
-          // Placeholder logros
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Logros',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+          Text(
+            'Logros',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 8),
           SizedBox(
             height: 100,
             child: ListView.separated(
@@ -189,10 +225,12 @@ class _EmptyState extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.borderMedium, width: 1.5),
-                  color: AppColors.surfaceVariant,
+                  color: palette.surfaceVariant,
                 ),
-                child: const Center(
-                  child: Icon(Icons.lock_outline, color: AppColors.textDisabled, size: 28),
+                child: Icon(
+                  Icons.lock_outline,
+                  color: palette.textDisabled,
+                  size: 28,
                 ),
               ),
             ),
@@ -205,32 +243,48 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({required this.icon, required this.label});
+
   final IconData icon;
   final String label;
 
-  const _PlaceholderCard({required this.icon, required this.label});
-
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderMedium, width: 1.5),
-        color: AppColors.surfaceVariant,
+        color: palette.surfaceVariant,
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.textDisabled, size: 22),
+          Icon(icon, color: palette.textDisabled, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(height: 12, width: 120, decoration: BoxDecoration(color: AppColors.borderMedium, borderRadius: BorderRadius.circular(6))),
+                Container(
+                  height: 12,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderMedium,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Container(height: 8, width: 80, decoration: BoxDecoration(color: AppColors.borderSoft, borderRadius: BorderRadius.circular(6))),
+                Container(
+                  height: 8,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: palette.borderSoft,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
               ],
             ),
           ),
@@ -241,19 +295,22 @@ class _PlaceholderCard extends StatelessWidget {
 }
 
 class _MainGoalCard extends StatelessWidget {
-  final ChallengeEntity challenge;
-
   const _MainGoalCard({required this.challenge});
+
+  final ChallengeEntity challenge;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        border: Border.all(color: palette.primary.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,8 +322,8 @@ class _MainGoalCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   challenge.title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -277,7 +334,10 @@ class _MainGoalCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             challenge.description,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 16),
           Stack(
@@ -289,16 +349,16 @@ class _MainGoalCard extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: challenge.progress,
                   strokeWidth: 8,
-                  backgroundColor: AppColors.divider,
+                  backgroundColor: palette.divider,
                   valueColor: AlwaysStoppedAnimation(
-                    challenge.isCompleted ? AppColors.success : AppColors.primary,
+                    challenge.isCompleted ? AppColors.success : palette.primary,
                   ),
                 ),
               ),
               Text(
                 '${(challenge.progress * 100).toInt()}%',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
@@ -309,7 +369,10 @@ class _MainGoalCard extends StatelessWidget {
           Center(
             child: Text(
               '${challenge.currentValue.toStringAsFixed(0)} / ${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ),
           if (challenge.deadline != null) ...[
@@ -317,7 +380,10 @@ class _MainGoalCard extends StatelessWidget {
             Center(
               child: Text(
                 'Fecha límite: ${DateFormat('dd MMM yyyy', 'es').format(challenge.deadline!)}',
-                style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textDisabled,
+                  fontSize: 11,
+                ),
               ),
             ),
           ],
@@ -328,19 +394,22 @@ class _MainGoalCard extends StatelessWidget {
 }
 
 class _ChallengeCard extends StatelessWidget {
-  final ChallengeEntity challenge;
-
   const _ChallengeCard({required this.challenge});
+
+  final ChallengeEntity challenge;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,15 +418,17 @@ class _ChallengeCard extends StatelessWidget {
             children: [
               Icon(
                 challenge.isCompleted ? Icons.check_circle : Icons.emoji_events,
-                color: challenge.isCompleted ? AppColors.success : AppColors.warning,
+                color: challenge.isCompleted
+                    ? AppColors.success
+                    : AppColors.warning,
                 size: 18,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   challenge.title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -365,7 +436,10 @@ class _ChallengeCard extends StatelessWidget {
               ),
               Text(
                 '${challenge.currentValue.toStringAsFixed(0)}/${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -374,9 +448,9 @@ class _ChallengeCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: challenge.progress,
-              backgroundColor: AppColors.divider,
+              backgroundColor: palette.divider,
               valueColor: AlwaysStoppedAnimation(
-                challenge.isCompleted ? AppColors.success : AppColors.primary,
+                challenge.isCompleted ? AppColors.success : palette.primary,
               ),
               minHeight: 6,
             ),
@@ -385,7 +459,10 @@ class _ChallengeCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Hasta ${DateFormat('dd MMM', 'es').format(challenge.deadline!)}',
-              style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textDisabled,
+                fontSize: 11,
+              ),
             ),
           ],
         ],
@@ -395,32 +472,39 @@ class _ChallengeCard extends StatelessWidget {
 }
 
 class _AchievementCard extends StatelessWidget {
-  final AchievementEntity achievement;
-
   const _AchievementCard({required this.achievement});
+
+  final AchievementEntity achievement;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       width: 100,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.workspace_premium, color: AppColors.warning, size: 32),
+          const Icon(
+            Icons.workspace_premium,
+            color: AppColors.warning,
+            size: 32,
+          ),
           const SizedBox(height: 8),
           Text(
             achievement.name,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),

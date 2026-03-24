@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
-import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
-import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
-import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
 import 'package:exom_app/features/home/presentation/widgets/stats_row.dart';
+import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
+import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
+import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
+import 'package:exom_app/injection_container.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -47,11 +47,17 @@ class _HomeView extends StatelessWidget {
     }
 
     if (state is HomeRestDay) {
-      return _RestDayBody(summary: state.summary, selectedDate: state.selectedDate);
+      return _RestDayBody(
+        summary: state.summary,
+        selectedDate: state.selectedDate,
+      );
     }
 
     if (state is HomeLoaded) {
-      return _LoadedBody(summary: state.summary, selectedDate: state.selectedDate);
+      return _LoadedBody(
+        summary: state.summary,
+        selectedDate: state.selectedDate,
+      );
     }
 
     return const SizedBox.shrink();
@@ -59,9 +65,9 @@ class _HomeView extends StatelessWidget {
 }
 
 class _DateHeader extends StatelessWidget {
-  final DateTime selectedDate;
-
   const _DateHeader({required this.selectedDate});
+
+  final DateTime selectedDate;
 
   String _relativeLabel(DateTime date) {
     final today = DateTime.now();
@@ -70,11 +76,16 @@ class _DateHeader extends StatelessWidget {
     final diff = dateNorm.difference(todayNorm).inDays;
 
     switch (diff) {
-      case 0:  return 'Hoy';
-      case 1:  return 'Mañana';
-      case 2:  return 'Pasado mañana';
-      case -1: return 'Ayer';
-      case -2: return 'Antes de ayer';
+      case 0:
+        return 'Hoy';
+      case 1:
+        return 'Mañana';
+      case 2:
+        return 'Pasado mañana';
+      case -1:
+        return 'Ayer';
+      case -2:
+        return 'Antes de ayer';
       default:
         if (diff > 0) return 'En $diff días';
         return 'Hace ${diff.abs()} días';
@@ -83,6 +94,8 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final dayName = DateFormat('EEEE', 'es').format(selectedDate);
     final dayMonth = DateFormat('d \'de\' MMMM', 'es').format(selectedDate);
     final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
@@ -98,16 +111,16 @@ class _DateHeader extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.displayMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
                   '$capitalDay $dayMonth',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -119,12 +132,12 @@ class _DateHeader extends StatelessWidget {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.calendar_today_outlined,
-                color: AppColors.textSecondary,
+                color: palette.textSecondary,
                 size: 18,
               ),
             ),
@@ -136,21 +149,23 @@ class _DateHeader extends StatelessWidget {
 }
 
 class _LoadedBody extends StatelessWidget {
+  const _LoadedBody({required this.summary, required this.selectedDate});
+
   final HomeSummaryEntity summary;
   final DateTime selectedDate;
 
-  const _LoadedBody({required this.summary, required this.selectedDate});
-
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.card,
+      color: palette.primary,
+      backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.only(top: 0, bottom: 32),
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
           _DateHeader(selectedDate: selectedDate),
           const SizedBox(height: 12),
@@ -166,34 +181,36 @@ class _LoadedBody extends StatelessWidget {
 }
 
 class _RestDayBody extends StatelessWidget {
+  const _RestDayBody({required this.summary, required this.selectedDate});
+
   final HomeSummaryEntity summary;
   final DateTime selectedDate;
 
-  const _RestDayBody({required this.summary, required this.selectedDate});
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.card,
+      color: palette.primary,
+      backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.only(top: 0, bottom: 32),
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
           _DateHeader(selectedDate: selectedDate),
           const SizedBox(height: 12),
           const WeekDaySelector(),
           const SizedBox(height: 20),
-          // Rest day card
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: palette.divider),
             ),
             child: Column(
               children: [
@@ -201,32 +218,32 @@ class _RestDayBody extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
+                    color: palette.surfaceVariant,
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       Icons.fitness_center,
-                      color: AppColors.textDisabled,
+                      color: palette.textDisabled,
                       size: 36,
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Día de descanso',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'No tienes entrenamiento asignado para hoy.\nAprovecha para recuperarte.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -235,8 +252,8 @@ class _RestDayBody extends StatelessWidget {
                 OutlinedButton(
                   onPressed: () => context.go('/calendar'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
+                    foregroundColor: palette.primary,
+                    side: BorderSide(color: palette.primary),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,

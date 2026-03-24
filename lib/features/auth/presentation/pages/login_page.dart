@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -44,6 +46,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -54,14 +59,13 @@ class _LoginPageState extends State<LoginPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
+              backgroundColor: palette.error,
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -71,19 +75,19 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 40),
-                  _buildBranding(),
+                  _buildBranding(context),
                   const SizedBox(height: 48),
-                  _buildEmailField(),
+                  _buildEmailField(context),
                   const SizedBox(height: 16),
-                  _buildPasswordField(),
+                  _buildPasswordField(context),
                   const SizedBox(height: 8),
-                  _buildForgotPassword(),
+                  _buildForgotPassword(context),
                   const SizedBox(height: 24),
                   _buildLoginButton(),
                   const SizedBox(height: 24),
-                  _buildDivider(),
+                  _buildDivider(context),
                   const SizedBox(height: 24),
-                  _buildSocialButtons(),
+                  _buildSocialButtons(context),
                 ],
               ),
             ),
@@ -93,21 +97,24 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildBranding() {
+  Widget _buildBranding(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       children: [
         Container(
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: palette.primary,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Center(
+          child: Center(
             child: Text(
               'EX',
-              style: TextStyle(
-                color: Colors.white,
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: palette.onPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -1,
@@ -116,34 +123,39 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'EXOM',
-          style: TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.displayLarge?.copyWith(
+            color: palette.textPrimary,
             fontSize: 32,
             fontWeight: FontWeight.w800,
             letterSpacing: 2,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Tu entrenador personal, siempre contigo',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: palette.textSecondary,
+            fontSize: 14,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildEmailField() {
+  Widget _buildEmailField(BuildContext context) {
+    final palette = context.exomPalette;
+
     return TextFormField(
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
       textInputAction: TextInputAction.next,
-      style: const TextStyle(color: AppColors.textPrimary),
-      decoration: const InputDecoration(
+      style: TextStyle(color: palette.textPrimary),
+      decoration: InputDecoration(
         labelText: 'Correo electrónico',
-        prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
+        prefixIcon: Icon(Icons.email_outlined, color: palette.textSecondary),
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
@@ -157,25 +169,24 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField(BuildContext context) {
+    final palette = context.exomPalette;
+
     return TextFormField(
       controller: _passwordController,
       obscureText: _obscurePassword,
       textInputAction: TextInputAction.done,
       onFieldSubmitted: (_) => _onLoginPressed(),
-      style: const TextStyle(color: AppColors.textPrimary),
+      style: TextStyle(color: palette.textPrimary),
       decoration: InputDecoration(
         labelText: 'Contraseña',
-        prefixIcon: const Icon(
-          Icons.lock_outline,
-          color: AppColors.textSecondary,
-        ),
+        prefixIcon: Icon(Icons.lock_outline, color: palette.textSecondary),
         suffixIcon: IconButton(
           icon: Icon(
             _obscurePassword
                 ? Icons.visibility_outlined
                 : Icons.visibility_off_outlined,
-            color: AppColors.textSecondary,
+            color: palette.textSecondary,
           ),
           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
@@ -192,15 +203,12 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildForgotPassword() {
+  Widget _buildForgotPassword(BuildContext context) {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
         onPressed: () => _onForgotPassword(context),
-        child: const Text(
-          '¿Olvidaste tu contraseña?',
-          style: TextStyle(color: AppColors.primary, fontSize: 13),
-        ),
+        child: const Text('¿Olvidaste tu contraseña?'),
       ),
     );
   }
@@ -213,6 +221,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
+
     try {
       await sl<FirebaseAuthService>().sendPasswordResetEmail(email);
       if (context.mounted) {
@@ -256,25 +265,32 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Row(
-      children: const [
-        Expanded(child: Divider(color: AppColors.divider)),
+      children: [
+        Expanded(child: Divider(color: palette.divider)),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'o continúa con',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 13,
+            ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.divider)),
+        Expanded(child: Divider(color: palette.divider)),
       ],
     );
   }
 
-  Widget _buildSocialButtons() {
+  Widget _buildSocialButtons(BuildContext context) {
     final isAndroid = Platform.isAndroid;
     final isIOS = Platform.isIOS;
+    final palette = context.exomPalette;
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
@@ -283,10 +299,10 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             if (isAndroid)
               SocialLoginButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.g_mobiledata,
                   size: 26,
-                  color: AppColors.textPrimary,
+                  color: palette.textPrimary,
                 ),
                 label: 'Continuar con Google',
                 isLoading: isLoading,
@@ -297,11 +313,7 @@ class _LoginPageState extends State<LoginPage> {
             if (isIOS) ...[
               if (isAndroid) const SizedBox(height: 12),
               SocialLoginButton(
-                icon: const Icon(
-                  Icons.apple,
-                  size: 24,
-                  color: AppColors.textPrimary,
-                ),
+                icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
                 label: 'Continuar con Apple',
                 isLoading: isLoading,
                 onPressed: () => context.read<AuthBloc>().add(

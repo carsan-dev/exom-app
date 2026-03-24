@@ -105,6 +105,8 @@ class _MetricsViewState extends State<_MetricsView> {
   static const _backRightFlex = [6, 9];
 
   Widget _buildBodyMapMeasurements() {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final zones = _bodyFront ? _frontHotspots : _backHotspots;
     final leftZones = _bodyFront ? _frontLeftZones : _backLeftZones;
     final rightZones = _bodyFront ? _frontRightZones : _backRightZones;
@@ -163,7 +165,18 @@ class _MetricsViewState extends State<_MetricsView> {
                         children: [
                           CustomPaint(
                             size: Size(bodyW, bodyH),
-                            painter: BodySilhouettePainter(isBack: !_bodyFront),
+                            painter: BodySilhouettePainter(
+                              isBack: !_bodyFront,
+                              fillColor: palette.textSecondary.withValues(
+                                alpha: 0.08,
+                              ),
+                              strokeColor: palette.textSecondary.withValues(
+                                alpha: 0.22,
+                              ),
+                              detailColor: palette.textSecondary.withValues(
+                                alpha: 0.16,
+                              ),
+                            ),
                           ),
                           ...zones.entries.map((e) {
                             final dx = e.value.dx * bodyW;
@@ -180,12 +193,10 @@ class _MetricsViewState extends State<_MetricsView> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: _selectedMeasure == e.key
-                                        ? AppColors.secondary
-                                        : AppColors.secondary.withValues(
-                                            alpha: 0.3,
-                                          ),
+                                        ? semantic.info
+                                        : semantic.info.withValues(alpha: 0.3),
                                     border: Border.all(
-                                      color: AppColors.secondary,
+                                      color: semantic.info,
                                       width: _selectedMeasure == e.key ? 2 : 1,
                                     ),
                                   ),
@@ -246,6 +257,8 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   Widget _zoneLabel(String zone) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final val = _measureControllers[zone]?.text ?? '';
     final isSelected = _selectedMeasure == zone;
 
@@ -255,11 +268,11 @@ class _MetricsViewState extends State<_MetricsView> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.secondary.withValues(alpha: 0.15)
+              ? semantic.info.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: isSelected
-              ? Border.all(color: AppColors.secondary.withValues(alpha: 0.4))
+              ? Border.all(color: semantic.info.withValues(alpha: 0.4))
               : null,
         ),
         child: Column(
@@ -268,9 +281,7 @@ class _MetricsViewState extends State<_MetricsView> {
             Text(
               zone,
               style: TextStyle(
-                color: isSelected
-                    ? AppColors.secondary
-                    : AppColors.textSecondary,
+                color: isSelected ? semantic.info : palette.textSecondary,
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -279,9 +290,7 @@ class _MetricsViewState extends State<_MetricsView> {
               Text(
                 '$val cm',
                 style: TextStyle(
-                  color: isSelected
-                      ? AppColors.secondary
-                      : AppColors.textDisabled,
+                  color: isSelected ? semantic.info : palette.textDisabled,
                   fontSize: 10,
                 ),
               ),
@@ -297,18 +306,19 @@ class _MetricsViewState extends State<_MetricsView> {
     bool active,
     VoidCallback onTap,
   ) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active
-              ? AppColors.secondary.withValues(alpha: 0.15)
+              ? semantic.info.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active ? AppColors.secondary : AppColors.divider,
-          ),
+          border: Border.all(color: active ? semantic.info : palette.divider),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -316,7 +326,7 @@ class _MetricsViewState extends State<_MetricsView> {
             Icon(
               icon,
               size: 14,
-              color: active ? AppColors.secondary : AppColors.textDisabled,
+              color: active ? semantic.info : palette.textDisabled,
             ),
             const SizedBox(width: 4),
             Text(
@@ -324,7 +334,7 @@ class _MetricsViewState extends State<_MetricsView> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active ? AppColors.secondary : AppColors.textDisabled,
+                color: active ? semantic.info : palette.textDisabled,
               ),
             ),
           ],
@@ -431,23 +441,24 @@ class _MetricsViewState extends State<_MetricsView> {
     final estimate = await showDialog<SeenMuscleMassEstimate>(
       context: context,
       builder: (dialogContext) {
+        final palette = dialogContext.exomPalette;
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) {
             return AlertDialog(
-              backgroundColor: AppColors.card,
-              title: const Text(
+              backgroundColor: palette.surface,
+              title: Text(
                 'Estimación rápida SEEN',
-                style: TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: palette.textPrimary),
               ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: palette.textSecondary,
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -456,7 +467,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     TextField(
                       controller: ageController,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(color: palette.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Edad',
                         suffixText: 'años',
@@ -468,7 +479,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(color: palette.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Altura',
                         suffixText: 'cm',
@@ -480,7 +491,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(color: palette.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Pantorrilla',
                         suffixText: 'cm',
@@ -489,8 +500,8 @@ class _MetricsViewState extends State<_MetricsView> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<SeenBiologicalSex>(
                       initialValue: selectedSex,
-                      dropdownColor: AppColors.surfaceVariant,
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      dropdownColor: palette.surfaceVariant,
+                      style: TextStyle(color: palette.textPrimary),
                       decoration: const InputDecoration(labelText: 'Sexo'),
                       items: const [
                         DropdownMenuItem(
@@ -513,10 +524,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       const SizedBox(height: 12),
                       Text(
                         errorText!,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: palette.error, fontSize: 12),
                       ),
                     ],
                   ],
@@ -656,6 +664,8 @@ class _MetricsViewState extends State<_MetricsView> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
         if (state is MetricsLoaded && state.current != null) {
@@ -671,7 +681,7 @@ class _MetricsViewState extends State<_MetricsView> {
                   Text('Métricas guardadas correctamente'),
                 ],
               ),
-              backgroundColor: AppColors.success,
+              backgroundColor: semantic.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -684,7 +694,7 @@ class _MetricsViewState extends State<_MetricsView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: AppColors.error,
+              backgroundColor: palette.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -694,10 +704,11 @@ class _MetricsViewState extends State<_MetricsView> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Actualizar Métricas'),
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          surfaceTintColor: Colors.transparent,
         ),
         body: BlocBuilder<MetricsBloc, MetricsState>(
           builder: (context, state) {
@@ -711,17 +722,17 @@ class _MetricsViewState extends State<_MetricsView> {
                     _SectionCard(
                       title: 'Peso',
                       icon: Icons.monitor_weight_outlined,
-                      color: AppColors.primary,
+                      color: palette.primary,
                       child: Column(
                         children: [
                           // Toggle manual/slider
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Entrada manual',
                                 style: TextStyle(
-                                  color: AppColors.textSecondary,
+                                  color: palette.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -729,15 +740,15 @@ class _MetricsViewState extends State<_MetricsView> {
                                 value: _useManualWeight,
                                 onChanged: (val) =>
                                     setState(() => _useManualWeight = val),
-                                activeThumbColor: AppColors.primary,
+                                activeThumbColor: palette.primary,
                               ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          const Text(
+                          Text(
                             'El peso solo se guarda si lo modificas en esta actualizacion.',
                             style: TextStyle(
-                              color: AppColors.textDisabled,
+                              color: palette.textDisabled,
                               fontSize: 11,
                               height: 1.4,
                             ),
@@ -749,14 +760,12 @@ class _MetricsViewState extends State<_MetricsView> {
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
                                   ),
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                              ),
-                              decoration: const InputDecoration(
+                              style: TextStyle(color: palette.textPrimary),
+                              decoration: InputDecoration(
                                 hintText: 'Ej: 75.5',
                                 suffixText: 'kg',
                                 suffixStyle: TextStyle(
-                                  color: AppColors.textSecondary,
+                                  color: palette.textSecondary,
                                 ),
                               ),
                               onChanged: (_) => _weightTouched = true,
@@ -766,25 +775,25 @@ class _MetricsViewState extends State<_MetricsView> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   '60 kg',
                                   style: TextStyle(
-                                    color: AppColors.textDisabled,
+                                    color: palette.textDisabled,
                                     fontSize: 11,
                                   ),
                                 ),
                                 Text(
                                   '${_weight.toStringAsFixed(1)} kg',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
+                                  style: TextStyle(
+                                    color: palette.primary,
                                     fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const Text(
+                                Text(
                                   '150 kg',
                                   style: TextStyle(
-                                    color: AppColors.textDisabled,
+                                    color: palette.textDisabled,
                                     fontSize: 11,
                                   ),
                                 ),
@@ -795,8 +804,8 @@ class _MetricsViewState extends State<_MetricsView> {
                               min: 40.0,
                               max: 160.0,
                               divisions: 240,
-                              activeColor: AppColors.primary,
-                              inactiveColor: AppColors.surfaceVariant,
+                              activeColor: palette.primary,
+                              inactiveColor: palette.surfaceVariant,
                               onChanged: (val) => setState(() {
                                 _weight = val;
                                 _weightTouched = true;
@@ -810,15 +819,15 @@ class _MetricsViewState extends State<_MetricsView> {
                     _SectionCard(
                       title: 'Masa muscular',
                       icon: Icons.fitness_center,
-                      color: AppColors.calorieAccent,
+                      color: semantic.calorie,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.',
                             style: TextStyle(
-                              color: AppColors.textSecondary,
+                              color: palette.textSecondary,
                               fontSize: 12,
                               height: 1.5,
                             ),
@@ -829,14 +838,12 @@ class _MetricsViewState extends State<_MetricsView> {
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: const InputDecoration(
+                            style: TextStyle(color: palette.textPrimary),
+                            decoration: InputDecoration(
                               hintText: 'Ej: 32.5',
                               suffixText: 'kg',
                               suffixStyle: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: palette.textSecondary,
                               ),
                             ),
                             onChanged: (_) => _muscleMassTouched = true,
@@ -846,26 +853,26 @@ class _MetricsViewState extends State<_MetricsView> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
+                              color: palette.surfaceVariant,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.borderSoft),
+                              border: Border.all(color: palette.borderSoft),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Calculadora SEEN',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: palette.textPrimary,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
+                                Text(
                                   'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla.',
                                   style: TextStyle(
-                                    color: AppColors.textSecondary,
+                                    color: palette.textSecondary,
                                     fontSize: 12,
                                     height: 1.4,
                                   ),
@@ -891,32 +898,32 @@ class _MetricsViewState extends State<_MetricsView> {
                     _SectionCard(
                       title: 'Horas de sueño',
                       icon: Icons.bedtime_outlined,
-                      color: AppColors.sleepAccent,
+                      color: semantic.sleep,
                       child: Column(
                         children: [
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 '4h',
                                 style: TextStyle(
-                                  color: AppColors.textDisabled,
+                                  color: palette.textDisabled,
                                   fontSize: 11,
                                 ),
                               ),
                               Text(
                                 '${_sleepHours.toStringAsFixed(1)}h',
-                                style: const TextStyle(
-                                  color: AppColors.sleepAccent,
+                                style: TextStyle(
+                                  color: semantic.sleep,
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const Text(
+                              Text(
                                 '12h',
                                 style: TextStyle(
-                                  color: AppColors.textDisabled,
+                                  color: palette.textDisabled,
                                   fontSize: 11,
                                 ),
                               ),
@@ -927,8 +934,8 @@ class _MetricsViewState extends State<_MetricsView> {
                             min: 4.0,
                             max: 12.0,
                             divisions: 16,
-                            activeColor: AppColors.sleepAccent,
-                            inactiveColor: AppColors.surfaceVariant,
+                            activeColor: semantic.sleep,
+                            inactiveColor: palette.surfaceVariant,
                             onChanged: (val) => setState(() {
                               _sleepHours = val;
                               _sleepTouched = true;
@@ -946,7 +953,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     _SectionCard(
                       title: 'Medidas corporales',
                       icon: Icons.straighten,
-                      color: AppColors.secondary,
+                      color: semantic.info,
                       trailing: GestureDetector(
                         onTap: () => setState(() {
                           _bodyMapMode = !_bodyMapMode;
@@ -959,14 +966,14 @@ class _MetricsViewState extends State<_MetricsView> {
                               _bodyMapMode
                                   ? Icons.grid_view
                                   : Icons.accessibility_new,
-                              color: AppColors.secondary,
+                              color: semantic.info,
                               size: 16,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               _bodyMapMode ? 'Lista' : 'Cuerpo',
-                              style: const TextStyle(
-                                color: AppColors.secondary,
+                              style: TextStyle(
+                                color: semantic.info,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1012,10 +1019,8 @@ class _MetricsViewState extends State<_MetricsView> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      border: const Border(
-                        top: BorderSide(color: AppColors.divider),
-                      ),
+                      color: palette.surface,
+                      border: Border(top: BorderSide(color: palette.divider)),
                     ),
                     child: ElevatedButton(
                       onPressed: isSaving ? null : _save,
@@ -1058,13 +1063,14 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1105,13 +1111,14 @@ class _MeasureInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: palette.textSecondary,
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
@@ -1120,13 +1127,16 @@ class _MeasureInput extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          style: TextStyle(color: palette.textPrimary, fontSize: 14),
           onChanged: onChanged,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: '0',
             suffixText: 'cm',
-            suffixStyle: TextStyle(color: AppColors.textDisabled, fontSize: 12),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            suffixStyle: TextStyle(color: palette.textDisabled, fontSize: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
           ),
         ),
       ],
@@ -1141,6 +1151,7 @@ class _SleepEmoji extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final String emoji;
     final String label;
     if (hours < 6) {
@@ -1164,7 +1175,7 @@ class _SleepEmoji extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(color: palette.textSecondary, fontSize: 12),
         ),
       ],
     );

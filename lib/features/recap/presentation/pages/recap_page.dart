@@ -54,6 +54,8 @@ class _RecapViewState extends State<_RecapView> {
   Widget build(BuildContext context) {
     return BlocConsumer<RecapBloc, RecapState>(
       listener: (context, state) {
+        final palette = context.exomPalette;
+        final semantic = context.exomSemantic;
         if (state is RecapFormActive) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!_pageController.hasClients) return;
@@ -69,7 +71,7 @@ class _RecapViewState extends State<_RecapView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Recap enviado correctamente'),
-              backgroundColor: AppColors.success,
+              backgroundColor: semantic.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -82,7 +84,7 @@ class _RecapViewState extends State<_RecapView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: AppColors.error,
+              backgroundColor: palette.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -94,9 +96,11 @@ class _RecapViewState extends State<_RecapView> {
       builder: (context, state) {
         final formState = state is RecapFormActive ? state : null;
         final isFormActive = formState != null;
+        final theme = Theme.of(context);
+        final palette = context.exomPalette;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
             title: Text(
               isFormActive
@@ -105,7 +109,8 @@ class _RecapViewState extends State<_RecapView> {
                         : 'Editar recap'
                   : 'Recap semanal',
             ),
-            backgroundColor: AppColors.background,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            surfaceTintColor: Colors.transparent,
             leading: isFormActive
                 ? IconButton(
                     onPressed: () => context.read<RecapBloc>().add(
@@ -135,8 +140,8 @@ class _RecapViewState extends State<_RecapView> {
                   onPressed: () => context.read<RecapBloc>().add(
                     const RecapCreateRequested(),
                   ),
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: palette.primary,
+                  foregroundColor: palette.onPrimary,
                   icon: const Icon(Icons.add),
                   label: const Text('Nuevo recap'),
                 )
@@ -152,9 +157,9 @@ class _RecapViewState extends State<_RecapView> {
 
   Widget _buildBody(BuildContext context, RecapState state) {
     if (state is RecapLoading || state is RecapInitial) {
-      return const Center(
+      return Center(
         key: ValueKey('recap-loading'),
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: CircularProgressIndicator(color: context.exomPalette.primary),
       );
     }
 
@@ -207,6 +212,7 @@ class _RecapViewState extends State<_RecapView> {
     }
 
     if (state is RecapError) {
+      final palette = context.exomPalette;
       return Center(
         key: const ValueKey('recap-error'),
         child: Padding(
@@ -214,7 +220,7 @@ class _RecapViewState extends State<_RecapView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: AppColors.error, size: 42),
+              Icon(Icons.error_outline, color: palette.error, size: 42),
               const SizedBox(height: 16),
               Text(
                 'No se pudo cargar el recap',
@@ -224,7 +230,7 @@ class _RecapViewState extends State<_RecapView> {
               Text(
                 state.message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: palette.textSecondary),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -285,7 +291,7 @@ class _RecapViewState extends State<_RecapView> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.exomPalette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -302,8 +308,8 @@ class _RecapViewState extends State<_RecapView> {
                       Expanded(
                         child: Text(
                           _formatWeekRange(_buildInitialData(recap)),
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
+                          style: TextStyle(
+                            color: context.exomPalette.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
@@ -456,6 +462,8 @@ class _RecapListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     if (recaps.isEmpty) {
       return Center(
         child: Padding(
@@ -467,30 +475,33 @@ class _RecapListView extends StatelessWidget {
                 width: 82,
                 height: 82,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.edit_calendar_outlined,
-                  color: AppColors.primary,
+                  color: palette.primary,
                   size: 40,
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Todavía no has enviado ningún recap',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Usa este espacio para resumir tu semana y dar contexto útil a tu coach.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                  height: 1.45,
+                ),
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -505,7 +516,8 @@ class _RecapListView extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: palette.primary,
+      backgroundColor: palette.surface,
       onRefresh: onRefresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
@@ -514,17 +526,17 @@ class _RecapListView extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: palette.divider),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Tu histórico semanal',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: palette.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -533,7 +545,7 @@ class _RecapListView extends StatelessWidget {
                 Text(
                   'Mantén trazabilidad de tus semanas, revisa recaps anteriores y continúa borradores pendientes.',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: palette.textSecondary,
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -567,6 +579,8 @@ class _RecapHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final actionLabel = recap.isReviewed
         ? 'Ver resumen'
         : recap.isSubmitted
@@ -577,9 +591,9 @@ class _RecapHistoryCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -592,8 +606,8 @@ class _RecapHistoryCard extends StatelessWidget {
                   children: [
                     Text(
                       weekLabel,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -601,8 +615,8 @@ class _RecapHistoryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Creado ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
-                      style: const TextStyle(
-                        color: AppColors.textDisabled,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textDisabled,
                         fontSize: 12,
                       ),
                     ),
@@ -677,6 +691,8 @@ class _RecapFormView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final isLastStep = state.step == stepTitles.length - 1;
 
     return Column(
@@ -686,25 +702,28 @@ class _RecapFormView extends StatelessWidget {
           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.divider),
+            border: Border.all(color: palette.divider),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 formatWeekRange(state.formData),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Completa los cuatro bloques y envía tu resumen semanal.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 18),
               Row(
@@ -758,9 +777,9 @@ class _RecapFormView extends StatelessWidget {
           top: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: const BoxDecoration(
-              color: AppColors.background,
-              border: Border(top: BorderSide(color: AppColors.divider)),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              border: Border(top: BorderSide(color: palette.divider)),
             ),
             child: Column(
               children: [
@@ -826,20 +845,19 @@ class _StepBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final color = isCompleted || isActive
-        ? AppColors.primary
-        : AppColors.textDisabled;
+        ? palette.primary
+        : palette.textDisabled;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isActive
-            ? AppColors.primary.withValues(alpha: 0.16)
-            : AppColors.surfaceVariant,
+            ? palette.primary.withValues(alpha: 0.16)
+            : palette.surfaceVariant,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isActive ? AppColors.primary : AppColors.divider,
-        ),
+        border: Border.all(color: isActive ? palette.primary : palette.divider),
       ),
       child: Row(
         children: [
@@ -864,9 +882,7 @@ class _StepBadge extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: isActive
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
+                color: isActive ? palette.textPrimary : palette.textSecondary,
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
               ),
@@ -885,10 +901,12 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final color = switch (status) {
-      'REVIEWED' => AppColors.success,
-      'SUBMITTED' => AppColors.primary,
-      _ => AppColors.warning,
+      'REVIEWED' => semantic.success,
+      'SUBMITTED' => palette.primary,
+      _ => semantic.warning,
     };
 
     return Container(
@@ -917,21 +935,22 @@ class _InfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
+          Icon(icon, size: 14, color: palette.textSecondary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: palette.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -950,21 +969,23 @@ class _SummarySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -985,6 +1006,7 @@ class _SummaryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -992,8 +1014,8 @@ class _SummaryItem extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textDisabled,
+            style: TextStyle(
+              color: palette.textDisabled,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -1001,8 +1023,8 @@ class _SummaryItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: palette.textPrimary,
               fontSize: 14,
               height: 1.4,
             ),

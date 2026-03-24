@@ -6,21 +6,24 @@ import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart'
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class TodayDietCard extends StatelessWidget {
-  final HomeSummaryEntity summary;
-
   const TodayDietCard({super.key, required this.summary});
+
+  final HomeSummaryEntity summary;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final hasNextMeal = summary.nextMealId != null;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,12 +33,12 @@ class TodayDietCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.15),
+                  color: semantic.calorie.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.restaurant_menu,
-                  color: AppColors.secondary,
+                  color: semantic.calorie,
                   size: 22,
                 ),
               ),
@@ -44,17 +47,17 @@ class TodayDietCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Dieta de hoy',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
                         fontSize: 12,
                       ),
                     ),
                     Text(
                       summary.dietName ?? 'Plan nutricional',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -68,16 +71,16 @@ class TodayDietCard extends StatelessWidget {
                   children: [
                     Text(
                       '${summary.totalCalories}',
-                      style: const TextStyle(
-                        color: AppColors.secondary,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: semantic.calorie,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'kcal',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -92,8 +95,8 @@ class TodayDietCard extends StatelessWidget {
               children: [
                 Text(
                   '${summary.mealsCompleted}/${summary.totalMeals} comidas',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -101,8 +104,8 @@ class TodayDietCard extends StatelessWidget {
                   summary.totalMeals > 0
                       ? '${((summary.mealsCompleted / summary.totalMeals) * 100).toInt()}%'
                       : '0%',
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: semantic.calorie,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -115,11 +118,9 @@ class TodayDietCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: summary.totalMeals > 0
                     ? summary.mealsCompleted / summary.totalMeals
-                    : 0.0,
-                backgroundColor: AppColors.surfaceVariant,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.secondary,
-                ),
+                    : 0,
+                backgroundColor: palette.surfaceVariant,
+                valueColor: AlwaysStoppedAnimation<Color>(semantic.calorie),
                 minHeight: 6,
               ),
             ),
@@ -130,8 +131,8 @@ class TodayDietCard extends StatelessWidget {
           if (summary.nextMealName != null) ...[
             Text(
               'Siguiente: ${summary.nextMealName}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -156,8 +157,8 @@ class TodayDietCard extends StatelessWidget {
                 hasNextMeal ? 'Siguiente comida' : 'Ver dieta completa',
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.secondary,
-                side: const BorderSide(color: AppColors.secondary),
+                foregroundColor: semantic.calorie,
+                side: BorderSide(color: semantic.calorie),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

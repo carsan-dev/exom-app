@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 
-import 'package:exom_app/core/theme/app_theme.dart';
-
 class BodySilhouettePainter extends CustomPainter {
   final bool isBack;
+  final Color fillColor;
+  final Color strokeColor;
+  final Color detailColor;
 
-  const BodySilhouettePainter({this.isBack = false});
+  const BodySilhouettePainter({
+    this.isBack = false,
+    this.fillColor = const Color(0x1A95A66A),
+    this.strokeColor = const Color(0x4795A66A),
+    this.detailColor = const Color(0x2E95A66A),
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final fill = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.10)
+      ..color = fillColor
       ..style = PaintingStyle.fill;
 
     final stroke = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.28)
+      ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..strokeJoin = StrokeJoin.round;
@@ -102,7 +108,7 @@ class BodySilhouettePainter extends CustomPainter {
     // ── Back view detail: spine + shoulder blade lines ──
     if (isBack) {
       final detail = Paint()
-        ..color = AppColors.primary.withValues(alpha: 0.18)
+        ..color = detailColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0
         ..strokeCap = StrokeCap.round;
@@ -122,5 +128,8 @@ class BodySilhouettePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant BodySilhouettePainter oldDelegate) =>
-      oldDelegate.isBack != isBack;
+      oldDelegate.isBack != isBack ||
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.strokeColor != strokeColor ||
+      oldDelegate.detailColor != detailColor;
 }

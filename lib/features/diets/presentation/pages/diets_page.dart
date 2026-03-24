@@ -1,12 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
+import 'package:exom_app/injection_container.dart';
 
 class DietsPage extends StatelessWidget {
   const DietsPage({super.key});
@@ -60,43 +60,28 @@ class _DietsView extends StatelessWidget {
 }
 
 class _DietContent extends StatelessWidget {
-  final DietLoaded state;
-
   const _DietContent({required this.state});
+
+  final DietLoaded state;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final diet = state.diet;
     final meals = diet.meals;
     final completedCount = state.completedMealIds.length;
 
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.card,
+      color: palette.primary,
+      backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<DietBloc>().add(const DietLoadRequested());
       },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          // Diet header summary
           _DietHeader(diet: diet, completedCount: completedCount),
-
-          // Meals section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text(
-              'Comidas del día',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-
-          // Ensure ordered display: BREAKFAST, LUNCH, SNACK, DINNER
+          const _MealsSectionTitle(),
           ..._sortedMeals(meals).map(
             (meal) => _MealCard(
               meal: meal,
@@ -125,25 +110,52 @@ class _DietContent extends StatelessWidget {
   }
 }
 
-class _DietHeader extends StatelessWidget {
-  final DietEntity diet;
-  final int completedCount;
-
-  const _DietHeader({required this.diet, required this.completedCount});
+class _MealsSectionTitle extends StatelessWidget {
+  const _MealsSectionTitle();
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Text(
+        'Comidas del día',
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: palette.textSecondary,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _DietHeader extends StatelessWidget {
+  const _DietHeader({required this.diet, required this.completedCount});
+
+  final DietEntity diet;
+  final int completedCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.secondary.withOpacity(0.15), AppColors.card],
+          colors: [semantic.calorie.withValues(alpha: 0.12), palette.surface],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+        border: Border.all(color: semantic.calorie.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,8 +165,8 @@ class _DietHeader extends StatelessWidget {
               Expanded(
                 child: Text(
                   diet.name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -166,13 +178,13 @@ class _DietHeader extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.15),
+                  color: semantic.calorie.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$completedCount/${diet.meals.length} completadas',
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: semantic.calorie,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -189,28 +201,28 @@ class _DietHeader extends StatelessWidget {
                   label: 'Calorías',
                   value: '${diet.totalCalories}',
                   unit: 'kcal',
-                  color: AppColors.calorieAccent,
+                  color: semantic.calorie,
                 ),
               if (diet.totalProteinG != null)
                 _MacroStat(
                   label: 'Proteína',
                   value: diet.totalProteinG!.toStringAsFixed(0),
                   unit: 'g',
-                  color: AppColors.primary,
+                  color: palette.primary,
                 ),
               if (diet.totalCarbsG != null)
                 _MacroStat(
                   label: 'Carbos',
                   value: diet.totalCarbsG!.toStringAsFixed(0),
                   unit: 'g',
-                  color: AppColors.secondary,
+                  color: semantic.info,
                 ),
               if (diet.totalFatG != null)
                 _MacroStat(
                   label: 'Grasas',
                   value: diet.totalFatG!.toStringAsFixed(0),
                   unit: 'g',
-                  color: AppColors.warning,
+                  color: semantic.warning,
                 ),
             ],
           ),
@@ -221,11 +233,6 @@ class _DietHeader extends StatelessWidget {
 }
 
 class _MacroStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final String unit;
-  final Color color;
-
   const _MacroStat({
     required this.label,
     required this.value,
@@ -233,8 +240,16 @@ class _MacroStat extends StatelessWidget {
     required this.color,
   });
 
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       children: [
         Text(
@@ -247,12 +262,15 @@ class _MacroStat extends StatelessWidget {
         ),
         Text(
           unit,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 11,
+          ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textSecondary,
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
@@ -263,15 +281,15 @@ class _MacroStat extends StatelessWidget {
 }
 
 class _MealCard extends StatelessWidget {
-  final MealEntity meal;
-  final bool isCompleted;
-  final ValueChanged<bool> onToggle;
-
   const _MealCard({
     required this.meal,
     required this.isCompleted,
     required this.onToggle,
   });
+
+  final MealEntity meal;
+  final bool isCompleted;
+  final ValueChanged<bool> onToggle;
 
   IconData _mealIcon(String type) {
     switch (type.toUpperCase()) {
@@ -303,24 +321,30 @@ class _MealCard extends StatelessWidget {
     }
   }
 
-  Color _mealColor(String type) {
+  Color _mealColor(BuildContext context, String type) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
-        return AppColors.warning;
+        return semantic.warning;
       case 'LUNCH':
-        return AppColors.secondary;
+        return semantic.info;
       case 'SNACK':
-        return AppColors.primary;
+        return palette.primary;
       case 'DINNER':
-        return AppColors.sleepAccent;
+        return semantic.sleep;
       default:
-        return AppColors.textDisabled;
+        return palette.textDisabled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _mealColor(meal.type);
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final color = _mealColor(context, meal.type);
 
     return GestureDetector(
       onTap: () async {
@@ -335,18 +359,17 @@ class _MealCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isCompleted
-              ? AppColors.success.withOpacity(0.06)
-              : AppColors.card,
+              ? semantic.success.withValues(alpha: 0.06)
+              : palette.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isCompleted
-                ? AppColors.success.withOpacity(0.35)
-                : AppColors.divider,
+                ? semantic.success.withValues(alpha: 0.32)
+                : palette.divider,
           ),
         ),
         child: Row(
           children: [
-            // Image or icon
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: meal.imageUrl != null
@@ -371,57 +394,53 @@ class _MealCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _mealLabel(meal.type),
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _mealLabel(meal.type),
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     meal.name,
-                    style: TextStyle(
+                    style: theme.textTheme.titleMedium?.copyWith(
                       color: isCompleted
-                          ? AppColors.textSecondary
-                          : AppColors.textPrimary,
+                          ? palette.textSecondary
+                          : palette.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       decoration: isCompleted
                           ? TextDecoration.lineThrough
                           : null,
-                      decorationColor: AppColors.textSecondary,
+                      decorationColor: palette.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       if (meal.calories != null) ...[
-                        const Icon(
+                        Icon(
                           Icons.local_fire_department_outlined,
-                          color: AppColors.textDisabled,
+                          color: palette.textDisabled,
                           size: 12,
                         ),
                         const SizedBox(width: 2),
                         Text(
                           '${meal.calories} kcal',
-                          style: const TextStyle(
-                            color: AppColors.textDisabled,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textDisabled,
                             fontSize: 11,
                           ),
                         ),
@@ -430,8 +449,8 @@ class _MealCard extends StatelessWidget {
                       if (meal.proteinG != null)
                         Text(
                           'P: ${meal.proteinG!.toStringAsFixed(0)}g',
-                          style: const TextStyle(
-                            color: AppColors.textDisabled,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textDisabled,
                             fontSize: 11,
                           ),
                         ),
@@ -439,41 +458,37 @@ class _MealCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           'C: ${meal.carbsG!.toStringAsFixed(0)}g',
-                          style: const TextStyle(
-                            color: AppColors.textDisabled,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textDisabled,
                             fontSize: 11,
                           ),
                         ),
                       ],
                     ],
                   ),
-                  // Nutritional badges
                   if (meal.nutritionalBadges.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Wrap(
                       spacing: 4,
-                      children: meal.nutritionalBadges
-                          .take(3)
-                          .map(
-                            (b) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceVariant,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                b,
-                                style: const TextStyle(
-                                  color: AppColors.textDisabled,
-                                  fontSize: 9,
-                                ),
-                              ),
+                      children: meal.nutritionalBadges.take(3).map((b) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.surfaceVariant,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            b,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 9,
                             ),
-                          )
-                          .toList(),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ],
@@ -482,9 +497,9 @@ class _MealCard extends StatelessWidget {
             const SizedBox(width: 8),
             Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.chevron_right,
-                  color: AppColors.textDisabled,
+                  color: palette.textDisabled,
                   size: 18,
                 ),
                 const SizedBox(height: 8),
@@ -496,13 +511,13 @@ class _MealCard extends StatelessWidget {
                     height: 28,
                     decoration: BoxDecoration(
                       color: isCompleted
-                          ? AppColors.success
+                          ? semantic.success
                           : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: isCompleted
-                            ? AppColors.success
-                            : AppColors.textDisabled,
+                            ? semantic.success
+                            : palette.textDisabled,
                         width: 2,
                       ),
                     ),
@@ -521,17 +536,17 @@ class _MealCard extends StatelessWidget {
 }
 
 class _MealIconFallback extends StatelessWidget {
+  const _MealIconFallback({required this.icon, required this.color});
+
   final IconData icon;
   final Color color;
-
-  const _MealIconFallback({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 70,
       height: 70,
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       child: Icon(icon, color: color, size: 30),
     );
   }

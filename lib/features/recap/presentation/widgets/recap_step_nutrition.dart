@@ -17,6 +17,7 @@ class RecapStepNutrition extends StatelessWidget {
   Widget build(BuildContext context) {
     final foodQuality = (formData['food_quality'] as num?)?.toInt() ?? 2;
     final hydrationEnabled = formData['hydration_enabled'] as bool? ?? false;
+    final palette = context.exomPalette;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -41,8 +42,7 @@ class RecapStepNutrition extends StatelessWidget {
                   label: 'Calidad de comidas',
                   helperText: '¿Cómo valoras tu alimentación esta semana?',
                   value: foodQuality.clamp(0, 4),
-                  onChanged: (value) =>
-                      onChanged('food_quality', value),
+                  onChanged: (value) => onChanged('food_quality', value),
                 ),
               ],
             ),
@@ -62,18 +62,18 @@ class RecapStepNutrition extends StatelessWidget {
                       onChanged('hydration_level', null);
                     }
                   },
-                  activeThumbColor: AppColors.primary,
+                  activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(
+                  title: Text(
                     'Quiero valorar mi hidratación',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Actívalo si quieres reportar cómo fue durante la semana.',
-                    style: TextStyle(color: AppColors.textDisabled),
+                    style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (hydrationEnabled) ...[
@@ -106,5 +106,4 @@ class RecapStepNutrition extends StatelessWidget {
       ),
     );
   }
-
 }

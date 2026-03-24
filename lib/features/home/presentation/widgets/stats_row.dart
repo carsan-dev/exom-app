@@ -5,12 +5,14 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 
 class StatsRow extends StatelessWidget {
-  final HomeSummaryEntity summary;
-
   const StatsRow({super.key, required this.summary});
+
+  final HomeSummaryEntity summary;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -36,7 +38,7 @@ class StatsRow extends StatelessWidget {
               unit: 'días',
               label: 'Racha',
               subtitle: summary.streakDays > 0 ? '¡Sigue así!' : null,
-              color: AppColors.primary,
+              color: palette.primary,
               highlighted: true,
               onTap: () => context.push('/challenges'),
             ),
@@ -50,7 +52,7 @@ class StatsRow extends StatelessWidget {
               unit: 'horas',
               label: 'Sueño',
               subtitle: _sleepQuality(summary.lastSleepHours),
-              color: AppColors.sleepAccent,
+              color: semantic.sleep,
               onTap: () => context.push('/profile/metrics'),
             ),
           ),
@@ -68,14 +70,6 @@ class StatsRow extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final String value;
-  final String unit;
-  final String label;
-  final String? subtitle;
-  final Color color;
-  final bool highlighted;
-  final VoidCallback? onTap;
-
   const _StatCard({
     required this.value,
     required this.unit,
@@ -86,8 +80,19 @@ class _StatCard extends StatelessWidget {
     this.onTap,
   });
 
+  final String value;
+  final String unit;
+  final String label;
+  final String? subtitle;
+  final Color color;
+  final bool highlighted;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -96,20 +101,22 @@ class _StatCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
-            color: highlighted ? color.withValues(alpha: 0.12) : AppColors.card,
+            color: highlighted
+                ? color.withValues(alpha: 0.12)
+                : palette.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: highlighted
                   ? color.withValues(alpha: 0.3)
-                  : AppColors.borderSoft,
+                  : palette.borderSoft,
             ),
           ),
           child: Column(
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  color: highlighted ? color : AppColors.textPrimary,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: highlighted ? color : palette.textPrimary,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   height: 1,
@@ -118,16 +125,16 @@ class _StatCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 unit,
-                style: TextStyle(
-                  color: highlighted ? color : AppColors.textSecondary,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: highlighted ? color : palette.textSecondary,
                   fontSize: 11,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 label,
-                style: TextStyle(
-                  color: highlighted ? color : AppColors.textSecondary,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: highlighted ? color : palette.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -136,10 +143,10 @@ class _StatCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle!,
-                  style: TextStyle(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: highlighted
                         ? color.withValues(alpha: 0.7)
-                        : AppColors.textDisabled,
+                        : palette.textDisabled,
                     fontSize: 10,
                   ),
                   textAlign: TextAlign.center,

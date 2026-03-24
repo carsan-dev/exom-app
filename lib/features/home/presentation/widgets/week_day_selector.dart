@@ -11,9 +11,7 @@ class WeekDaySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final todayIndex = now.weekday - 1; // Monday = 0
-
-    // Compute start of current week (Monday)
+    final todayIndex = now.weekday - 1;
     final weekStart = now.subtract(Duration(days: todayIndex));
 
     return BlocBuilder<HomeBloc, HomeState>(
@@ -30,16 +28,15 @@ class WeekDaySelector extends StatelessWidget {
               final dayDate = weekStart.add(Duration(days: i));
               final isToday = i == todayIndex;
               final isPast = i < todayIndex;
-              final isSelected = selectedDate != null &&
+              final isSelected =
+                  selectedDate != null &&
                   dayDate.year == selectedDate.year &&
                   dayDate.month == selectedDate.month &&
                   dayDate.day == selectedDate.day;
 
               return GestureDetector(
                 onTap: () {
-                  context
-                      .read<HomeBloc>()
-                      .add(HomeDateSelected(dayDate));
+                  context.read<HomeBloc>().add(HomeDateSelected(dayDate));
                 },
                 child: _DayCircle(
                   label: _labels[i],
@@ -57,11 +54,6 @@ class WeekDaySelector extends StatelessWidget {
 }
 
 class _DayCircle extends StatelessWidget {
-  final String label;
-  final bool isToday;
-  final bool isPast;
-  final bool isSelected;
-
   const _DayCircle({
     required this.label,
     required this.isToday,
@@ -69,26 +61,33 @@ class _DayCircle extends StatelessWidget {
     required this.isSelected,
   });
 
+  final String label;
+  final bool isToday;
+  final bool isPast;
+  final bool isSelected;
+
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     Color bgColor;
     Color textColor;
     Border? border;
 
     if (isToday) {
-      bgColor = AppColors.primary;
-      textColor = AppColors.textOnPrimary;
+      bgColor = palette.primary;
+      textColor = palette.onPrimary;
     } else if (isSelected) {
       bgColor = Colors.transparent;
-      textColor = AppColors.primary;
-      border = Border.all(color: AppColors.primary, width: 2);
+      textColor = palette.primary;
+      border = Border.all(color: palette.primary, width: 2);
     } else if (isPast) {
-      bgColor = AppColors.surfaceVariant;
-      textColor = AppColors.textPrimary;
+      bgColor = palette.surfaceVariant;
+      textColor = palette.textPrimary;
     } else {
       bgColor = Colors.transparent;
-      textColor = AppColors.textDisabled;
-      border = Border.all(color: AppColors.borderSoft);
+      textColor = palette.textDisabled;
+      border = Border.all(color: palette.borderSoft);
     }
 
     return Container(
@@ -105,7 +104,9 @@ class _DayCircle extends StatelessWidget {
           style: TextStyle(
             color: textColor,
             fontSize: 13,
-            fontWeight: (isToday || isSelected) ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: (isToday || isSelected)
+                ? FontWeight.w700
+                : FontWeight.w500,
           ),
         ),
       ),

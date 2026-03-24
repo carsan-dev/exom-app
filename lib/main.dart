@@ -82,7 +82,7 @@ class _ExomAppView extends StatelessWidget {
       builder: (context, state) {
         return MaterialApp.router(
           title: 'EXOM',
-          theme: AppTheme.dark,
+          theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: state.themeMode,
           routerConfig: AppRouter.router,

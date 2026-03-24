@@ -6,22 +6,25 @@ import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart'
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class TodayTrainingCard extends StatelessWidget {
-  final HomeSummaryEntity summary;
-
   const TodayTrainingCard({super.key, required this.summary});
 
-  Color _typeColor(String? type) {
+  final HomeSummaryEntity summary;
+
+  Color _typeColor(BuildContext context, String? type) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     switch (type?.toUpperCase()) {
       case 'FUERZA':
-        return AppColors.primary;
+        return palette.primary;
       case 'CARDIO':
-        return AppColors.secondary;
+        return semantic.info;
       case 'HIIT':
-        return AppColors.accent;
+        return semantic.accent;
       case 'FLEXIBILIDAD':
-        return AppColors.warning;
+        return semantic.warning;
       default:
-        return AppColors.textDisabled;
+        return palette.textDisabled;
     }
   }
 
@@ -42,26 +45,28 @@ class TodayTrainingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(summary.trainingType);
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final color = _typeColor(context, summary.trainingType);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [color.withOpacity(0.15), AppColors.card],
+                colors: [color.withValues(alpha: 0.16), palette.surface],
               ),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
@@ -72,7 +77,7 @@ class TodayTrainingCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.fitness_center, color: color, size: 24),
@@ -84,8 +89,8 @@ class TodayTrainingCard extends StatelessWidget {
                     children: [
                       Text(
                         'Entrenamiento de hoy',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -93,8 +98,8 @@ class TodayTrainingCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         summary.trainingName ?? 'Sin nombre',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: palette.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -108,12 +113,12 @@ class TodayTrainingCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     _typeLabel(summary.trainingType),
-                    style: TextStyle(
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: color,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -123,8 +128,6 @@ class TodayTrainingCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // Stats row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
@@ -132,20 +135,18 @@ class TodayTrainingCard extends StatelessWidget {
                 _StatChip(
                   icon: Icons.timer_outlined,
                   label: '${summary.trainingDurationMin ?? '--'} min',
-                  color: AppColors.secondary,
+                  color: semantic.info,
                 ),
                 const SizedBox(width: 12),
                 if (summary.trainingCompleted)
                   _StatChip(
                     icon: Icons.check_circle_outline,
                     label: 'Completado',
-                    color: AppColors.success,
+                    color: semantic.success,
                   ),
               ],
             ),
           ),
-
-          // Progress bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
@@ -154,10 +155,10 @@ class TodayTrainingCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Progreso',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -167,7 +168,7 @@ class TodayTrainingCard extends StatelessWidget {
                           : summary.trainingCompleted
                           ? '100%'
                           : '0%',
-                      style: TextStyle(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: color,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -181,8 +182,8 @@ class TodayTrainingCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: summary.totalExercises > 0
                         ? summary.exercisesCompleted / summary.totalExercises
-                        : (summary.trainingCompleted ? 1.0 : 0.0),
-                    backgroundColor: AppColors.surfaceVariant,
+                        : (summary.trainingCompleted ? 1 : 0),
+                    backgroundColor: palette.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                     minHeight: 6,
                   ),
@@ -190,8 +191,6 @@ class TodayTrainingCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // Button
           Padding(
             padding: const EdgeInsets.all(20),
             child: SizedBox(
@@ -217,7 +216,7 @@ class TodayTrainingCard extends StatelessWidget {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color,
-                  foregroundColor: AppColors.textOnPrimary,
+                  foregroundColor: palette.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -233,15 +232,15 @@ class TodayTrainingCard extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
   const _StatChip({
     required this.icon,
     required this.label,
     required this.color,
   });
+
+  final IconData icon;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

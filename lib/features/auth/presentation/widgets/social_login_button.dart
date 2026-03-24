@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 class SocialLoginButton extends StatelessWidget {
-  final Widget icon;
-  final String label;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-
   const SocialLoginButton({
     super.key,
     required this.icon,
@@ -15,16 +10,24 @@ class SocialLoginButton extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final Widget icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return OutlinedButton(
       onPressed: isLoading ? null : onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textPrimary,
-        side: const BorderSide(color: AppColors.divider, width: 1.5),
+        foregroundColor: palette.textPrimary,
+        side: BorderSide(color: palette.divider, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         minimumSize: const Size.fromHeight(52),
-        backgroundColor: AppColors.surfaceVariant,
+        backgroundColor: palette.surfaceVariant,
       ),
       child: isLoading
           ? const SizedBox(
@@ -39,10 +42,10 @@ class SocialLoginButton extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: palette.textPrimary,
                   ),
                 ),
               ],

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
 
 class OnboardingPage extends StatelessWidget {
@@ -12,7 +12,8 @@ class OnboardingPage extends StatelessWidget {
     _OnboardingStep(
       icon: Icons.person_outline,
       title: 'Completa tu perfil',
-      subtitle: 'Añade tus datos para que el entrenador pueda personalizarte el plan.',
+      subtitle:
+          'Añade tus datos para que el entrenador pueda personalizarte el plan.',
     ),
     _OnboardingStep(
       icon: Icons.sports_gymnastics,
@@ -26,10 +27,19 @@ class OnboardingPage extends StatelessWidget {
     ),
   ];
 
+  String _logoAsset(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? 'assets/images/logo_dark.svg'
+        : 'assets/images/logo.svg';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -37,35 +47,31 @@ class OnboardingPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 32),
-              // Logo
-              SvgPicture.asset('assets/images/logo.svg', height: 32),
+              SvgPicture.asset(_logoAsset(context), height: 32),
               const SizedBox(height: 40),
-              // Greeting
-              const Text(
+              Text(
                 '¡Bienvenido\na EXOM!',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.displayLarge?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
                   height: 1.15,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Sigue estos pasos para comenzar tu experiencia.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: palette.textSecondary,
                   fontSize: 16,
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: 48),
-              // Steps
               ...List.generate(_steps.length, (i) {
                 return _StepTile(index: i + 1, step: _steps[i]);
               }),
               const Spacer(),
-              // CTA
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -84,9 +90,9 @@ class OnboardingPage extends StatelessWidget {
                     await sl<LocalStorage>().setOnboardingComplete();
                     if (context.mounted) context.go('/');
                   },
-                  child: const Text(
+                  child: Text(
                     'Hacerlo más tarde',
-                    style: TextStyle(color: AppColors.textMuted),
+                    style: TextStyle(color: palette.textMuted),
                   ),
                 ),
               ),
@@ -100,42 +106,45 @@ class OnboardingPage extends StatelessWidget {
 }
 
 class _OnboardingStep {
-  final IconData icon;
-  final String title;
-  final String subtitle;
   const _OnboardingStep({
     required this.icon,
     required this.title,
     required this.subtitle,
   });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
 }
 
 class _StepTile extends StatelessWidget {
+  const _StepTile({required this.index, required this.step});
+
   final int index;
   final _OnboardingStep step;
 
-  const _StepTile({required this.index, required this.step});
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Number badge
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            decoration: BoxDecoration(
+              color: palette.primary,
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 '$index',
-                style: const TextStyle(
-                  color: AppColors.textOnPrimary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.onPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -150,8 +159,8 @@ class _StepTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   step.title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -159,8 +168,8 @@ class _StepTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   step.subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 13,
                     height: 1.4,
                   ),

@@ -26,6 +26,7 @@ class RecapStepGeneral extends StatelessWidget {
             ?.map((item) => item.toString())
             .toList() ??
         const <String>[];
+    final palette = context.exomPalette;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -60,18 +61,18 @@ class RecapStepGeneral extends StatelessWidget {
                       onChanged('stress_level', null);
                     }
                   },
-                  activeThumbColor: AppColors.primary,
+                  activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(
+                  title: Text(
                     'Valorar nivel de estrés',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Actívalo si quieres reportar la presión o carga de la semana.',
-                    style: TextStyle(color: AppColors.textDisabled),
+                    style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (stressEnabled) ...[
@@ -80,8 +81,7 @@ class RecapStepGeneral extends StatelessWidget {
                     label: 'Estrés percibido',
                     helperText: '¿Cuánto estrés has sentido esta semana?',
                     value: stressLevel.clamp(0, 4),
-                    onChanged: (value) =>
-                        onChanged('stress_level', value),
+                    onChanged: (value) => onChanged('stress_level', value),
                   ),
                 ],
               ],
@@ -156,5 +156,4 @@ class RecapStepGeneral extends StatelessWidget {
       ),
     );
   }
-
 }

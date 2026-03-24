@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
@@ -17,7 +18,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
+        theme: AppTheme.light,
         home: Scaffold(body: TodayTrainingCard(summary: summary)),
       ),
     );
@@ -37,7 +39,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
+        theme: AppTheme.light,
         home: Scaffold(body: TodayDietCard(summary: summary)),
       ),
     );

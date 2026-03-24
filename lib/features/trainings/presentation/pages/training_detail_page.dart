@@ -31,16 +31,20 @@ class _TrainingDetailView extends StatelessWidget {
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
           return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppBar(backgroundColor: AppColors.background),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: AppBar(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+            ),
             body: const ShimmerList(count: 6, itemHeight: 100),
           );
         }
         if (state is TrainingError) {
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: AppBar(
-              backgroundColor: AppColors.background,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
               title: const Text('Error'),
             ),
             body: ErrorWidget2(message: state.message, onRetry: null),
@@ -73,34 +77,40 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     super.dispose();
   }
 
-  Color _typeColor(String type) {
+  Color _typeColor(BuildContext context, String type) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     switch (type.toUpperCase()) {
       case 'FUERZA':
-        return AppColors.primary;
+        return palette.primary;
       case 'CARDIO':
-        return AppColors.secondary;
+        return semantic.info;
       case 'HIIT':
-        return AppColors.accent;
+        return semantic.accent;
       case 'FLEXIBILIDAD':
-        return AppColors.warning;
+        return semantic.warning;
       default:
-        return AppColors.textDisabled;
+        return palette.textDisabled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final training = widget.state.training;
-    final color = _typeColor(training.type);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final color = _typeColor(context, training.type);
     final completed = widget.state.completedExerciseIds.length;
     final total = training.exercises.length;
     final progress = total > 0 ? completed / total : 0.0;
     final allDone = total > 0 && completed == total;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        surfaceTintColor: Colors.transparent,
         title: Text(training.name),
       ),
       body: Stack(
@@ -114,7 +124,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color.withOpacity(0.2), AppColors.card],
+                    colors: [color.withOpacity(0.2), palette.surface],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -131,19 +141,19 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         _Badge(label: training.type, color: color),
                         _Badge(
                           label: training.level,
-                          color: AppColors.textSecondary,
+                          color: palette.textSecondary,
                         ),
                         if (training.estimatedDurationMin != null)
                           _Badge(
                             label: '${training.estimatedDurationMin} min',
                             icon: Icons.timer_outlined,
-                            color: AppColors.secondary,
+                            color: semantic.info,
                           ),
                         if (training.estimatedCalories != null)
                           _Badge(
                             label: '${training.estimatedCalories} kcal',
                             icon: Icons.local_fire_department_outlined,
-                            color: AppColors.calorieAccent,
+                            color: semantic.calorie,
                           ),
                       ],
                     ),
@@ -159,13 +169,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceVariant,
+                                  color: palette.surfaceVariant,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   '#$t',
-                                  style: const TextStyle(
-                                    color: AppColors.textDisabled,
+                                  style: TextStyle(
+                                    color: palette.textDisabled,
                                     fontSize: 11,
                                   ),
                                 ),
@@ -183,7 +193,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 _SectionTitle(
                   title: 'Calentamiento',
                   icon: Icons.whatshot_outlined,
-                  color: AppColors.warning,
+                  color: semantic.warning,
                 ),
                 _DescriptionCard(text: training.warmupDescription!),
               ],
@@ -219,7 +229,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 _SectionTitle(
                   title: 'Enfriamiento',
                   icon: Icons.ac_unit_outlined,
-                  color: AppColors.secondary,
+                  color: semantic.info,
                 ),
                 _DescriptionCard(text: training.cooldownDescription!),
               ],
@@ -230,19 +240,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 child: TextField(
                   controller: _notesController,
                   maxLines: 3,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: palette.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Añadir nota rápida (Opcional)',
-                    hintStyle: const TextStyle(color: AppColors.textDisabled),
-                    prefixIcon: const Icon(
+                    hintStyle: TextStyle(color: palette.textDisabled),
+                    prefixIcon: Icon(
                       Icons.edit_note,
-                      color: AppColors.textDisabled,
+                      color: palette.textDisabled,
                     ),
                     filled: true,
-                    fillColor: AppColors.surfaceVariant,
+                    fillColor: palette.surfaceVariant,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -261,8 +268,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                border: const Border(top: BorderSide(color: AppColors.divider)),
+                color: palette.surface,
+                border: Border(top: BorderSide(color: palette.divider)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -272,8 +279,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     children: [
                       Text(
                         '$completed/$total ejercicios completados',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: palette.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -293,9 +300,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: AppColors.surfaceVariant,
+                      backgroundColor: palette.surfaceVariant,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        allDone ? AppColors.success : color,
+                        allDone ? semantic.success : color,
                       ),
                       minHeight: 8,
                     ),
@@ -320,8 +327,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: allDone
-                            ? AppColors.success
-                            : AppColors.primary,
+                            ? semantic.success
+                            : palette.primary,
+                        foregroundColor: palette.onPrimary,
                       ),
                       icon: Icon(
                         allDone
@@ -395,6 +403,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Row(
@@ -413,10 +422,7 @@ class _SectionTitle extends StatelessWidget {
             const Spacer(),
             Text(
               trailing!,
-              style: const TextStyle(
-                color: AppColors.textDisabled,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: palette.textDisabled, fontSize: 12),
             ),
           ],
         ],
@@ -432,18 +438,21 @@ class _DescriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: palette.textSecondary,
           fontSize: 14,
           height: 1.5,
         ),
@@ -466,6 +475,8 @@ class _ExerciseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ex = trainingExercise.exercise;
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
 
     return GestureDetector(
       onTap: () => _showExerciseDetail(context),
@@ -475,13 +486,13 @@ class _ExerciseCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isCompleted
-              ? AppColors.success.withOpacity(0.08)
-              : AppColors.card,
+              ? semantic.success.withValues(alpha: 0.08)
+              : palette.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
-                ? AppColors.success.withOpacity(0.4)
-                : AppColors.divider,
+                ? semantic.success.withValues(alpha: 0.35)
+                : palette.divider,
           ),
         ),
         child: Row(
@@ -510,8 +521,8 @@ class _ExerciseCard extends StatelessWidget {
                     children: [
                       Text(
                         '${trainingExercise.order}.',
-                        style: const TextStyle(
-                          color: AppColors.textDisabled,
+                        style: TextStyle(
+                          color: palette.textDisabled,
                           fontSize: 12,
                         ),
                       ),
@@ -521,14 +532,14 @@ class _ExerciseCard extends StatelessWidget {
                           ex.name,
                           style: TextStyle(
                             color: isCompleted
-                                ? AppColors.success
-                                : AppColors.textPrimary,
+                                ? semantic.success
+                                : palette.textPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             decoration: isCompleted
                                 ? TextDecoration.lineThrough
                                 : null,
-                            decorationColor: AppColors.success,
+                            decorationColor: semantic.success,
                           ),
                         ),
                       ),
@@ -538,8 +549,8 @@ class _ExerciseCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       ex.muscleGroups.join(', '),
-                      style: const TextStyle(
-                        color: AppColors.textDisabled,
+                      style: TextStyle(
+                        color: palette.textDisabled,
                         fontSize: 11,
                       ),
                     ),
@@ -565,11 +576,7 @@ class _ExerciseCard extends StatelessWidget {
             const SizedBox(width: 8),
             Column(
               children: [
-                const Icon(
-                  Icons.info_outline,
-                  color: AppColors.textDisabled,
-                  size: 16,
-                ),
+                Icon(Icons.info_outline, color: palette.textDisabled, size: 16),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () => onToggle(!isCompleted),
@@ -579,13 +586,13 @@ class _ExerciseCard extends StatelessWidget {
                     height: 26,
                     decoration: BoxDecoration(
                       color: isCompleted
-                          ? AppColors.success
+                          ? semantic.success
                           : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: isCompleted
-                            ? AppColors.success
-                            : AppColors.textDisabled,
+                            ? semantic.success
+                            : palette.textDisabled,
                         width: 2,
                       ),
                     ),
@@ -606,7 +613,7 @@ class _ExerciseCard extends StatelessWidget {
     final ex = trainingExercise.exercise;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.exomPalette.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -629,15 +636,12 @@ class _ExerciseCard extends StatelessWidget {
 class _ExercisePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Container(
       width: 60,
       height: 60,
-      color: AppColors.surfaceVariant,
-      child: const Icon(
-        Icons.fitness_center,
-        color: AppColors.textDisabled,
-        size: 24,
-      ),
+      color: palette.surfaceVariant,
+      child: Icon(Icons.fitness_center, color: palette.textDisabled, size: 24),
     );
   }
 }
@@ -650,14 +654,15 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppColors.textDisabled, size: 12),
+        Icon(icon, color: palette.textDisabled, size: 12),
         const SizedBox(width: 3),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 11),
+          style: TextStyle(color: palette.textDisabled, fontSize: 11),
         ),
       ],
     );
@@ -677,6 +682,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(24),
@@ -687,7 +694,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.divider,
+              color: palette.divider,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -698,7 +705,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
+            color: palette.surfaceVariant,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Stack(
@@ -712,24 +719,24 @@ class _ExerciseDetailSheet extends StatelessWidget {
                     width: double.infinity,
                     height: 200,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => const Icon(
+                    errorWidget: (_, __, ___) => Icon(
                       Icons.fitness_center,
-                      color: AppColors.textDisabled,
+                      color: palette.textDisabled,
                       size: 48,
                     ),
                   ),
                 )
               else
-                const Icon(
+                Icon(
                   Icons.fitness_center,
-                  color: AppColors.textDisabled,
+                  color: palette.textDisabled,
                   size: 48,
                 ),
               Container(
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.85),
+                  color: palette.primary.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -745,8 +752,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
 
         Text(
           exercise.name,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: palette.textPrimary,
             fontSize: 22,
             fontWeight: FontWeight.w700,
           ),
@@ -755,10 +762,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (exercise.muscleGroups.isNotEmpty)
           Text(
             exercise.muscleGroups.join(' · '),
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: palette.textSecondary, fontSize: 13),
           ),
 
         const SizedBox(height: 16),
@@ -798,7 +802,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
           _DetailSection(
             title: 'Errores comunes',
             text: exercise.commonErrorsText!,
-            titleColor: AppColors.warning,
+            titleColor: semantic.warning,
           ),
         ],
         const SizedBox(height: 32),
@@ -820,31 +824,29 @@ class _SheetStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: palette.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            Icon(icon, color: AppColors.primary, size: 18),
+            Icon(icon, color: palette.primary, size: 18),
             const SizedBox(height: 4),
             Text(
               value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: palette.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textDisabled,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: palette.textDisabled, fontSize: 11),
             ),
           ],
         ),
@@ -866,13 +868,14 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: TextStyle(
-            color: titleColor ?? AppColors.primary,
+            color: titleColor ?? palette.primary,
             fontSize: 15,
             fontWeight: FontWeight.w700,
           ),
@@ -880,8 +883,8 @@ class _DetailSection extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           text,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: palette.textSecondary,
             fontSize: 14,
             height: 1.6,
           ),

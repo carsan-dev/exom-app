@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/injection_container.dart';
 
 class TrainingsPage extends StatelessWidget {
   const TrainingsPage({super.key});
@@ -46,27 +46,26 @@ class _TrainingsView extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, TrainingsLoaded state) {
+    final palette = context.exomPalette;
+
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.card,
+      color: palette.primary,
+      backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<TrainingBloc>().add(const TrainingsLoadRequested());
       },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          // Today's training section
           if (state.todayTraining != null) ...[
-            _SectionHeader(title: 'Entrenamiento de hoy'),
+            const _SectionHeader(title: 'Entrenamiento de hoy'),
             _TodayTrainingBanner(training: state.todayTraining!),
             const SizedBox(height: 8),
           ] else ...[
-            _SectionHeader(title: 'Hoy'),
-            _NoTrainingToday(),
+            const _SectionHeader(title: 'Hoy'),
+            const _NoTrainingToday(),
           ],
-
-          // All trainings
-          _SectionHeader(title: 'Todos los entrenamientos'),
+          const _SectionHeader(title: 'Todos los entrenamientos'),
           if (state.trainings.isEmpty)
             const EmptyWidget(
               message: 'No hay entrenamientos disponibles',
@@ -82,18 +81,21 @@ class _TrainingsView extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  final String title;
-
   const _SectionHeader({required this.title});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: palette.textSecondary,
           fontSize: 13,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
@@ -104,28 +106,33 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TodayTrainingBanner extends StatelessWidget {
-  final TrainingEntity training;
-
   const _TodayTrainingBanner({required this.training});
 
-  Color _typeColor(String type) {
+  final TrainingEntity training;
+
+  Color _typeColor(BuildContext context, String type) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     switch (type.toUpperCase()) {
       case 'FUERZA':
-        return AppColors.primary;
+        return palette.primary;
       case 'CARDIO':
-        return AppColors.secondary;
+        return semantic.info;
       case 'HIIT':
-        return AppColors.accent;
+        return semantic.accent;
       case 'FLEXIBILIDAD':
-        return AppColors.warning;
+        return semantic.warning;
       default:
-        return AppColors.textDisabled;
+        return palette.textDisabled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(training.type);
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final color = _typeColor(context, training.type);
 
     return GestureDetector(
       onTap: () async {
@@ -141,17 +148,17 @@ class _TodayTrainingBanner extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.25), AppColors.card],
+            colors: [color.withValues(alpha: 0.25), palette.surface],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.4)),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.play_arrow_rounded, color: color, size: 28),
@@ -169,7 +176,7 @@ class _TodayTrainingBanner extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.2),
+                          color: color.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -184,8 +191,8 @@ class _TodayTrainingBanner extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         training.level,
-                        style: const TextStyle(
-                          color: AppColors.textDisabled,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textDisabled,
                           fontSize: 11,
                         ),
                       ),
@@ -194,8 +201,8 @@ class _TodayTrainingBanner extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     training.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: palette.textPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
@@ -203,30 +210,30 @@ class _TodayTrainingBanner extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.timer_outlined,
-                        color: AppColors.textSecondary,
+                        color: palette.textSecondary,
                         size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${training.estimatedDurationMin ?? '--'} min',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(
+                      Icon(
                         Icons.list_outlined,
-                        color: AppColors.textSecondary,
+                        color: palette.textSecondary,
                         size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${training.exercises.length} ejercicios',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -235,7 +242,7 @@ class _TodayTrainingBanner extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right, color: palette.textSecondary),
           ],
         ),
       ),
@@ -244,44 +251,49 @@ class _TodayTrainingBanner extends StatelessWidget {
 }
 
 class _NoTrainingToday extends StatelessWidget {
+  const _NoTrainingToday();
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text('😴', style: TextStyle(fontSize: 24)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'No hay entrenamiento asignado hoy',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'Disfruta tu día de descanso',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -295,28 +307,34 @@ class _NoTrainingToday extends StatelessWidget {
 }
 
 class _TrainingListItem extends StatelessWidget {
-  final TrainingEntity training;
-
   const _TrainingListItem({required this.training});
 
-  Color _typeColor(String type) {
+  final TrainingEntity training;
+
+  Color _typeColor(BuildContext context, String type) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     switch (type.toUpperCase()) {
       case 'FUERZA':
-        return AppColors.primary;
+        return palette.primary;
       case 'CARDIO':
-        return AppColors.secondary;
+        return semantic.info;
       case 'HIIT':
-        return AppColors.accent;
+        return semantic.accent;
       case 'FLEXIBILIDAD':
-        return AppColors.warning;
+        return semantic.warning;
       default:
-        return AppColors.textDisabled;
+        return palette.textDisabled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _typeColor(training.type);
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final color = _typeColor(context, training.type);
+
     return GestureDetector(
       onTap: () async {
         await context.push('/trainings/${training.id}');
@@ -328,9 +346,9 @@ class _TrainingListItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: palette.divider),
         ),
         child: Row(
           children: [
@@ -338,7 +356,7 @@ class _TrainingListItem extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.fitness_center, color: color, size: 22),
@@ -348,19 +366,13 @@ class _TrainingListItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          training.name,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    training.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: palette.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -371,7 +383,7 @@ class _TrainingListItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
+                          color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -384,30 +396,30 @@ class _TrainingListItem extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(
+                      Icon(
                         Icons.timer_outlined,
-                        color: AppColors.textDisabled,
+                        color: palette.textDisabled,
                         size: 12,
                       ),
                       const SizedBox(width: 2),
                       Text(
                         '${training.estimatedDurationMin ?? '--'} min',
-                        style: const TextStyle(
-                          color: AppColors.textDisabled,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textDisabled,
                           fontSize: 11,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(
+                      Icon(
                         Icons.list_outlined,
-                        color: AppColors.textDisabled,
+                        color: palette.textDisabled,
                         size: 12,
                       ),
                       const SizedBox(width: 2),
                       Text(
                         '${training.exercises.length} ej.',
-                        style: const TextStyle(
-                          color: AppColors.textDisabled,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textDisabled,
                           fontSize: 11,
                         ),
                       ),
@@ -416,11 +428,7 @@ class _TrainingListItem extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.textDisabled,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right, color: palette.textDisabled, size: 20),
           ],
         ),
       ),

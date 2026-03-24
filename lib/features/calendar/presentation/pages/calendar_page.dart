@@ -16,8 +16,9 @@ class CalendarPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     return BlocProvider(
-      create: (_) => GetIt.I<CalendarBloc>()
-        ..add(CalendarMonthLoadRequested(year: now.year, month: now.month)),
+      create: (_) =>
+          GetIt.I<CalendarBloc>()
+            ..add(CalendarMonthLoadRequested(year: now.year, month: now.month)),
       child: const _CalendarView(),
     );
   }
@@ -35,43 +36,51 @@ class _CalendarViewState extends State<_CalendarView> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return BlocBuilder<CalendarBloc, CalendarState>(
-          builder: (context, state) {
-            if (state is CalendarLoading || state is CalendarInitial) {
-              return const ShimmerList(count: 3, itemHeight: 200);
-            }
-            if (state is CalendarError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, color: AppColors.textDisabled, size: 48),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Error al cargar el calendario',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton.icon(
-                      onPressed: () {
-                        final now = DateTime.now();
-                        context.read<CalendarBloc>().add(
-                          CalendarMonthLoadRequested(year: now.year, month: now.month),
-                        );
-                      },
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Reintentar'),
-                    ),
-                  ],
+      builder: (context, state) {
+        if (state is CalendarLoading || state is CalendarInitial) {
+          return const ShimmerList(count: 3, itemHeight: 200);
+        }
+        if (state is CalendarError) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: palette.textDisabled,
+                  size: 48,
                 ),
-              );
-            }
-            if (state is CalendarLoaded) {
-              return _buildContent(context, state);
-            }
-            return const SizedBox.shrink();
-          },
-        );
+                const SizedBox(height: 12),
+                Text(
+                  'Error al cargar el calendario',
+                  style: TextStyle(color: palette.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () {
+                    final now = DateTime.now();
+                    context.read<CalendarBloc>().add(
+                      CalendarMonthLoadRequested(
+                        year: now.year,
+                        month: now.month,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          );
+        }
+        if (state is CalendarLoaded) {
+          return _buildContent(context, state);
+        }
+        return const SizedBox.shrink();
+      },
+    );
   }
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
@@ -120,7 +129,7 @@ class _CalendarViewState extends State<_CalendarView> {
             padding: const EdgeInsets.only(bottom: 32),
             children: [
               _buildCalendar(context, state, dayMap),
-              _buildWeekProgress(state),
+              _buildWeekProgress(context, state),
               _buildSelectedDayCard(context, state, dayMap),
             ],
           ),
@@ -144,7 +153,10 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Future<void> _showMonthYearPicker(BuildContext context, CalendarLoaded state) async {
+  Future<void> _showMonthYearPicker(
+    BuildContext context,
+    CalendarLoaded state,
+  ) async {
     final bloc = context.read<CalendarBloc>();
     int selectedYear = state.year;
     int selectedMonth = state.month;
@@ -167,12 +179,14 @@ class _CalendarViewState extends State<_CalendarView> {
     CalendarLoaded state,
     Map<DateTime, CalendarDayEntity> dayMap,
   ) {
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: TableCalendar<CalendarDayEntity>(
         firstDay: DateTime(2024),
@@ -184,37 +198,37 @@ class _CalendarViewState extends State<_CalendarView> {
         headerVisible: false,
         daysOfWeekHeight: 32,
         rowHeight: 48,
-        daysOfWeekStyle: const DaysOfWeekStyle(
+        daysOfWeekStyle: DaysOfWeekStyle(
           weekdayStyle: TextStyle(
-            color: AppColors.textDisabled,
+            color: palette.textDisabled,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
           weekendStyle: TextStyle(
-            color: AppColors.textDisabled,
+            color: palette.textDisabled,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
-          defaultTextStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-          weekendTextStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          defaultTextStyle: TextStyle(color: palette.textPrimary, fontSize: 14),
+          weekendTextStyle: TextStyle(color: palette.textPrimary, fontSize: 14),
           todayDecoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: palette.primary.withValues(alpha: 0.18),
             shape: BoxShape.circle,
           ),
-          todayTextStyle: const TextStyle(
-            color: AppColors.primary,
+          todayTextStyle: TextStyle(
+            color: palette.primary,
             fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
-          selectedDecoration: const BoxDecoration(
-            color: AppColors.primary,
+          selectedDecoration: BoxDecoration(
+            color: palette.primary,
             shape: BoxShape.circle,
           ),
-          selectedTextStyle: const TextStyle(
-            color: AppColors.textOnPrimary,
+          selectedTextStyle: TextStyle(
+            color: palette.onPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
@@ -245,18 +259,20 @@ class _CalendarViewState extends State<_CalendarView> {
   }
 
   Widget? _buildMarker(CalendarDayEntity day) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     if (_showTrainings) {
       if (!day.hasTraining && !day.isRestDay) return null;
       if (day.isRestDay) {
-        return _markerDot(AppColors.textDisabled);
+        return _markerDot(palette.textDisabled);
       }
       return _markerDot(
-        day.trainingCompleted ? AppColors.success : AppColors.primary,
+        day.trainingCompleted ? semantic.success : palette.primary,
       );
     } else {
       if (!day.hasDiet) return null;
       return _markerDot(
-        day.dietCompleted ? AppColors.success : AppColors.secondary,
+        day.dietCompleted ? semantic.success : semantic.calorie,
       );
     }
   }
@@ -272,7 +288,9 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget _buildWeekProgress(CalendarLoaded state) {
+  Widget _buildWeekProgress(BuildContext context, CalendarLoaded state) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final summary = state.weekSummary;
     if (summary == null) return const SizedBox.shrink();
 
@@ -285,12 +303,12 @@ class _CalendarViewState extends State<_CalendarView> {
       completed = summary.trainingsCompleted;
       total = summary.trainingsAssigned;
       label = 'entrenos completados esta semana';
-      color = AppColors.primary;
+      color = palette.primary;
     } else {
       completed = summary.mealsCompleted;
       total = summary.totalMeals;
       label = 'comidas completadas esta semana';
-      color = AppColors.secondary;
+      color = semantic.calorie;
     }
 
     return Padding(
@@ -315,10 +333,7 @@ class _CalendarViewState extends State<_CalendarView> {
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: palette.textSecondary, fontSize: 13),
           ),
         ],
       ),
@@ -344,11 +359,11 @@ class _CalendarViewState extends State<_CalendarView> {
         : DateFormat('d \'de\' MMMM', 'es').format(state.selectedDate);
 
     if (day == null) {
-      return _emptyDayCard(dateLabel);
+      return _emptyDayCard(context, dateLabel);
     }
 
     if (day.isRestDay) {
-      return _restDayCard(dateLabel);
+      return _restDayCard(context, dateLabel);
     }
 
     if (_showTrainings) {
@@ -358,14 +373,17 @@ class _CalendarViewState extends State<_CalendarView> {
     }
   }
 
-  Widget _emptyDayCard(String dateLabel) {
+  Widget _emptyDayCard(BuildContext context, String dateLabel) {
+    final palette = context.exomPalette;
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Row(
         children: [
@@ -373,20 +391,24 @@ class _CalendarViewState extends State<_CalendarView> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.event_busy, color: AppColors.textDisabled, size: 20),
+            child: Icon(
+              Icons.event_busy,
+              color: palette.textDisabled,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Sin actividad asignada',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -394,7 +416,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 const SizedBox(height: 2),
                 Text(
                   dateLabel,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -404,14 +426,17 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget _restDayCard(String dateLabel) {
+  Widget _restDayCard(BuildContext context, String dateLabel) {
+    final palette = context.exomPalette;
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Row(
         children: [
@@ -419,20 +444,20 @@ class _CalendarViewState extends State<_CalendarView> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.hotel, color: AppColors.textDisabled, size: 20),
+            child: Icon(Icons.hotel, color: palette.textDisabled, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Día de descanso',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -440,7 +465,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 const SizedBox(height: 2),
                 Text(
                   dateLabel,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -450,20 +475,31 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget _trainingDayCard(BuildContext context, CalendarDayEntity day, String dateLabel) {
-    if (!day.hasTraining) return _emptyDayCard(dateLabel);
+  Widget _trainingDayCard(
+    BuildContext context,
+    CalendarDayEntity day,
+    String dateLabel,
+  ) {
+    if (!day.hasTraining) return _emptyDayCard(context, dateLabel);
 
-    final statusColor = day.trainingCompleted ? AppColors.success : AppColors.primary;
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
+    final statusColor = day.trainingCompleted
+        ? semantic.success
+        : palette.primary;
     final statusLabel = day.trainingCompleted ? 'Completado' : 'Pendiente';
-    final statusIcon = day.trainingCompleted ? Icons.check_circle : Icons.schedule;
+    final statusIcon = day.trainingCompleted
+        ? Icons.check_circle
+        : Icons.schedule;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +510,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.trainingCard,
+                  color: palette.primarySoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.fitness_center, color: statusColor, size: 20),
@@ -486,8 +522,8 @@ class _CalendarViewState extends State<_CalendarView> {
                   children: [
                     Text(
                       'Entrenamiento • $dateLabel',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: palette.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -499,7 +535,11 @@ class _CalendarViewState extends State<_CalendarView> {
                         const SizedBox(width: 4),
                         Text(
                           statusLabel,
-                          style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -516,8 +556,8 @@ class _CalendarViewState extends State<_CalendarView> {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver detalle'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
+                foregroundColor: palette.primary,
+                side: BorderSide(color: palette.primary),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -530,10 +570,17 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget _dietDayCard(BuildContext context, CalendarDayEntity day, String dateLabel) {
-    if (!day.hasDiet) return _emptyDayCard(dateLabel);
+  Widget _dietDayCard(
+    BuildContext context,
+    CalendarDayEntity day,
+    String dateLabel,
+  ) {
+    if (!day.hasDiet) return _emptyDayCard(context, dateLabel);
 
-    final statusColor = day.dietCompleted ? AppColors.success : AppColors.secondary;
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
+    final statusColor = day.dietCompleted ? semantic.success : semantic.calorie;
     final statusLabel = day.dietCompleted ? 'Completada' : 'Pendiente';
     final statusIcon = day.dietCompleted ? Icons.check_circle : Icons.schedule;
 
@@ -541,9 +588,9 @@ class _CalendarViewState extends State<_CalendarView> {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,10 +601,14 @@ class _CalendarViewState extends State<_CalendarView> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.dietCard,
+                  color: semantic.calorie.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.restaurant_menu, color: statusColor, size: 20),
+                child: Icon(
+                  Icons.restaurant_menu,
+                  color: statusColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -566,8 +617,8 @@ class _CalendarViewState extends State<_CalendarView> {
                   children: [
                     Text(
                       'Plan Nutritivo • $dateLabel',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: palette.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -579,7 +630,11 @@ class _CalendarViewState extends State<_CalendarView> {
                         const SizedBox(width: 4),
                         Text(
                           statusLabel,
-                          style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -596,8 +651,8 @@ class _CalendarViewState extends State<_CalendarView> {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver Plan'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.secondary,
-                side: const BorderSide(color: AppColors.secondary),
+                foregroundColor: semantic.calorie,
+                side: BorderSide(color: semantic.calorie),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -630,6 +685,7 @@ class _MonthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final monthName = DateFormat('MMMM', 'es').format(DateTime(year, month));
     final capitalMonth = monthName[0].toUpperCase() + monthName.substring(1);
     final title = '$capitalMonth de $year';
@@ -640,7 +696,7 @@ class _MonthHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onPrevious,
-            icon: const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+            icon: Icon(Icons.chevron_left, color: palette.textSecondary),
           ),
           Expanded(
             child: GestureDetector(
@@ -650,21 +706,25 @@ class _MonthHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: palette.textPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 20),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: palette.textSecondary,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
           ),
           IconButton(
             onPressed: onNext,
-            icon: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            icon: Icon(Icons.chevron_right, color: palette.textSecondary),
           ),
         ],
       ),
@@ -689,16 +749,17 @@ class _ToggleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
+          color: isSelected ? palette.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderMedium,
+            color: isSelected ? palette.primary : palette.borderSoft,
           ),
         ),
         child: Row(
@@ -707,13 +768,13 @@ class _ToggleChip extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? AppColors.textOnPrimary : AppColors.textSecondary,
+              color: isSelected ? palette.onPrimary : palette.textSecondary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? AppColors.textOnPrimary : AppColors.textSecondary,
+                color: isSelected ? palette.onPrimary : palette.textSecondary,
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -745,8 +806,18 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
   late int _month;
 
   static const _monthLabels = [
-    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
   ];
 
   @override
@@ -758,8 +829,9 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Dialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: palette.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -772,19 +844,19 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
               children: [
                 IconButton(
                   onPressed: () => setState(() => _year--),
-                  icon: const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+                  icon: Icon(Icons.chevron_left, color: palette.textSecondary),
                 ),
                 Text(
                   '$_year',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: palette.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 IconButton(
                   onPressed: () => setState(() => _year++),
-                  icon: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                  icon: Icon(Icons.chevron_right, color: palette.textSecondary),
                 ),
               ],
             ),
@@ -808,16 +880,22 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
                   onTap: () => setState(() => _month = m),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : AppColors.surfaceVariant,
+                      color: isSelected
+                          ? palette.primary
+                          : palette.surfaceVariant,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       _monthLabels[index],
                       style: TextStyle(
-                        color: isSelected ? AppColors.textOnPrimary : AppColors.textSecondary,
+                        color: isSelected
+                            ? palette.onPrimary
+                            : palette.textSecondary,
                         fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                   ),

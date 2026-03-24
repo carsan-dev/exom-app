@@ -30,13 +30,16 @@ class RecapSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,10 +50,10 @@ class RecapSectionCard extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
+                  color: palette.primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: palette.primary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -59,8 +62,8 @@ class RecapSectionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -68,8 +71,8 @@ class RecapSectionCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -110,13 +113,16 @@ class RecapSliderField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -124,7 +130,10 @@ class RecapSliderField extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 14),
         Row(
@@ -135,8 +144,8 @@ class RecapSliderField extends StatelessWidget {
                 min: min,
                 max: max,
                 divisions: divisions,
-                activeColor: AppColors.primary,
-                inactiveColor: AppColors.surfaceVariant,
+                activeColor: palette.primary,
+                inactiveColor: palette.surfaceVariant,
                 label: valueLabelBuilder(value),
                 onChanged: onChanged,
               ),
@@ -145,13 +154,13 @@ class RecapSliderField extends StatelessWidget {
               margin: const EdgeInsets.only(left: 12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 valueLabelBuilder(value),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -182,13 +191,16 @@ class RecapChoiceChipsField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -196,7 +208,10 @@ class RecapChoiceChipsField extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -207,17 +222,15 @@ class RecapChoiceChipsField extends StatelessWidget {
             return ChoiceChip(
               selected: isSelected,
               onSelected: (_) => onSelected(option),
-              backgroundColor: AppColors.surfaceVariant,
-              selectedColor: AppColors.primary.withValues(alpha: 0.18),
+              backgroundColor: palette.surfaceVariant,
+              selectedColor: palette.primary.withValues(alpha: 0.18),
               side: BorderSide(
-                color: isSelected ? AppColors.primary : AppColors.divider,
+                color: isSelected ? palette.primary : palette.divider,
               ),
               label: Text(
                 formatRecapOption(option),
                 style: TextStyle(
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
+                  color: isSelected ? palette.primary : palette.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -247,13 +260,17 @@ class RecapMultiSelectField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -261,7 +278,10 @@ class RecapMultiSelectField extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -280,17 +300,15 @@ class RecapMultiSelectField extends StatelessWidget {
                 }
                 onChanged(nextValues);
               },
-              backgroundColor: AppColors.surfaceVariant,
-              selectedColor: AppColors.secondary.withValues(alpha: 0.18),
+              backgroundColor: palette.surfaceVariant,
+              selectedColor: semantic.info.withValues(alpha: 0.16),
               side: BorderSide(
-                color: isSelected ? AppColors.secondary : AppColors.divider,
+                color: isSelected ? semantic.info : palette.divider,
               ),
               label: Text(
                 formatRecapOption(option),
                 style: TextStyle(
-                  color: isSelected
-                      ? AppColors.secondary
-                      : AppColors.textSecondary,
+                  color: isSelected ? semantic.info : palette.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -322,13 +340,16 @@ class RecapEmojiRatingField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -336,7 +357,10 @@ class RecapEmojiRatingField extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 16),
         Row(
@@ -351,11 +375,11 @@ class RecapEmojiRatingField extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.18)
-                      : AppColors.surfaceVariant,
+                      ? palette.primary.withValues(alpha: 0.18)
+                      : palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.divider,
+                    color: isSelected ? palette.primary : palette.divider,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -370,11 +394,12 @@ class RecapEmojiRatingField extends StatelessWidget {
                       _labels[index],
                       style: TextStyle(
                         color: isSelected
-                            ? AppColors.primary
-                            : AppColors.textDisabled,
+                            ? palette.primary
+                            : palette.textDisabled,
                         fontSize: 9,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -405,13 +430,17 @@ class RecapStarRatingField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -419,7 +448,10 @@ class RecapStarRatingField extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 14),
         Row(
@@ -433,7 +465,7 @@ class RecapStarRatingField extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(
                   isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: isFilled ? AppColors.secondary : AppColors.textDisabled,
+                  color: isFilled ? semantic.warning : palette.textDisabled,
                   size: 40,
                 ),
               ),
@@ -513,6 +545,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
   }
 
   Widget _zoneButton(String id) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final isSelected = widget.values.contains(id);
     return GestureDetector(
       onTap: () => _toggleZone(id),
@@ -521,18 +555,18 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.accent.withValues(alpha: 0.85)
-              : AppColors.surfaceVariant,
+              ? semantic.accent.withValues(alpha: 0.9)
+              : palette.surfaceVariant,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.divider,
+            color: isSelected ? semantic.accent : palette.divider,
             width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Text(
           _zoneLabels[id] ?? id,
           style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.textSecondary,
+            color: isSelected ? Colors.white : palette.textSecondary,
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
@@ -543,6 +577,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
 
   Widget _bodyHotspot(String zoneId, double relX, double relY) {
     final isSelected = widget.values.contains(zoneId);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     const s = 26.0;
     return Positioned(
       left: relX * 90 - s / 2,
@@ -555,8 +591,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isSelected
-                ? AppColors.accent.withValues(alpha: 0.4)
-                : AppColors.primary.withValues(alpha: 0.06),
+                ? semantic.accent.withValues(alpha: 0.3)
+                : palette.primary.withValues(alpha: 0.08),
           ),
           child: Center(
             child: Container(
@@ -565,8 +601,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isSelected
-                    ? AppColors.accent
-                    : AppColors.primary.withValues(alpha: 0.25),
+                    ? semantic.accent
+                    : palette.primary.withValues(alpha: 0.32),
               ),
             ),
           ),
@@ -595,6 +631,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
   }
 
   Widget _viewTab(String label, bool isActive) {
+    final palette = context.exomPalette;
     return GestureDetector(
       onTap: () => setState(() => _isFront = label == 'Frontal'),
       child: AnimatedContainer(
@@ -602,11 +639,11 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary.withValues(alpha: 0.18)
+              ? palette.primary.withValues(alpha: 0.18)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? AppColors.primary : Colors.transparent,
+            color: isActive ? palette.primary : Colors.transparent,
           ),
         ),
         child: Row(
@@ -615,17 +652,17 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
             Icon(
               isActive
                   ? (label == 'Frontal'
-                      ? Icons.accessibility_new
-                      : Icons.accessibility)
+                        ? Icons.accessibility_new
+                        : Icons.accessibility)
                   : Icons.circle,
               size: isActive ? 16 : 6,
-              color: isActive ? AppColors.primary : AppColors.textDisabled,
+              color: isActive ? palette.primary : palette.textDisabled,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isActive ? AppColors.primary : AppColors.textSecondary,
+                color: isActive ? palette.primary : palette.textSecondary,
                 fontSize: 13,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -638,6 +675,9 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final leftZones = _isFront ? _frontLeft : _backLeft;
     final rightZones = _isFront ? _frontRight : _backRight;
     final leftFlex = _isFront ? _frontLeftFlex : _backLeftFlex;
@@ -649,8 +689,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -658,7 +698,10 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
         const SizedBox(height: 4),
         Text(
           widget.helperText,
-          style: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textDisabled,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 12),
         // ── Toggle Frontal / Posterior ──
@@ -666,7 +709,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
           child: Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -693,7 +736,18 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
                   children: [
                     CustomPaint(
                       size: const Size(90, 380),
-                      painter: BodySilhouettePainter(isBack: !_isFront),
+                      painter: BodySilhouettePainter(
+                        isBack: !_isFront,
+                        fillColor: palette.textSecondary.withValues(
+                          alpha: 0.08,
+                        ),
+                        strokeColor: palette.textSecondary.withValues(
+                          alpha: 0.22,
+                        ),
+                        detailColor: palette.textSecondary.withValues(
+                          alpha: 0.16,
+                        ),
+                      ),
                     ),
                     ...hotspots.entries.map(
                       (e) => _bodyHotspot(e.key, e.value[0], e.value[1]),
@@ -702,8 +756,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
                 ),
               ),
               const SizedBox(width: 6),
-              _buildZoneColumn(
-                  rightZones, rightFlex, CrossAxisAlignment.start),
+              _buildZoneColumn(rightZones, rightFlex, CrossAxisAlignment.start),
             ],
           ),
         ),
@@ -718,9 +771,12 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
                   _zoneLabels[zone] ?? zone,
                   style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
-                backgroundColor: AppColors.accent,
-                deleteIcon:
-                    const Icon(Icons.close, size: 16, color: Colors.white),
+                backgroundColor: semantic.accent,
+                deleteIcon: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 onDeleted: () => _toggleZone(zone),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 visualDensity: VisualDensity.compact,
@@ -781,13 +837,16 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -797,10 +856,10 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
           controller: _controller,
           maxLines: 4,
           minLines: 4,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: palette.textPrimary),
           decoration: InputDecoration(
             hintText: widget.hintText,
-            hintStyle: const TextStyle(color: AppColors.textDisabled),
+            hintStyle: TextStyle(color: palette.textDisabled),
           ),
           onChanged: widget.onChanged,
         ),

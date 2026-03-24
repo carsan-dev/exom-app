@@ -187,6 +187,12 @@ class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
+  String _brandLogo(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? 'assets/images/logo_dark.svg'
+        : 'assets/images/logo.svg';
+  }
+
   // Tab order: Challenges, Trainings, Home (center), Diets, Calendar
   static const _tabs = [
     AppRoutes.challenges,
@@ -209,9 +215,10 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final selected = _currentIndex(location);
+    final palette = context.exomPalette;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: SafeArea(
@@ -220,19 +227,19 @@ class MainShell extends StatelessWidget {
             child: Row(
               children: [
                 // EXOM logo with text
-                SvgPicture.asset('assets/images/logo.svg', height: 28),
+                SvgPicture.asset(_brandLogo(context), height: 28),
                 const Spacer(),
                 IconButton(
                   onPressed: () => context.push(AppRoutes.profile),
                   icon: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: palette.surfaceVariant,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_outline,
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                       size: 18,
                     ),
                   ),
@@ -241,9 +248,9 @@ class MainShell extends StatelessWidget {
                 Builder(
                   builder: (ctx) => IconButton(
                     onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.menu,
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                       size: 26,
                     ),
                   ),
@@ -272,9 +279,11 @@ class _AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final name = user?.displayName ?? 'Usuario';
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
 
     return Drawer(
-      backgroundColor: AppColors.surface,
+      backgroundColor: palette.surface,
       child: SafeArea(
         child: Column(
           children: [
@@ -282,25 +291,30 @@ class _AppDrawer extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.surfaceVariant),
+              decoration: BoxDecoration(color: palette.surfaceVariant),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SvgPicture.asset('assets/images/logo.svg', height: 24),
+                  SvgPicture.asset(
+                    Theme.of(context).brightness == Brightness.light
+                        ? 'assets/images/logo_dark.svg'
+                        : 'assets/images/logo.svg',
+                    height: 24,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: palette.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
+                  Text(
                     'Miembro EXOM',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: palette.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -360,7 +374,7 @@ class _AppDrawer extends StatelessWidget {
                       context.push(AppRoutes.help);
                     },
                   ),
-                  const Divider(color: AppColors.divider, height: 24),
+                  Divider(color: palette.divider, height: 24),
                   _DrawerItem(
                     icon: Icons.logout,
                     label: 'Cerrar Sesión',
@@ -395,7 +409,7 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final itemColor = color ?? AppColors.textPrimary;
+    final itemColor = color ?? context.exomPalette.textPrimary;
     return ListTile(
       leading: Icon(icon, color: itemColor, size: 22),
       title: Text(
@@ -432,11 +446,11 @@ class _ExomBottomNav extends StatelessWidget {
   static const _circleSize = 64.0;
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0; // just slightly above bar top
-  static const _inactiveColor = Color(0xFFD5CCBF); // warm cream
-
   @override
   Widget build(BuildContext context) {
     final targetX = _slotCenterX(context, selectedIndex);
+    final palette = context.exomPalette;
+    final inactiveColor = palette.textDisabled;
 
     return SafeArea(
       top: false,
@@ -457,13 +471,10 @@ class _ExomBottomNav extends StatelessWidget {
                   bottom: 0,
                   height: _barHeight,
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
+                    decoration: BoxDecoration(
+                      color: palette.surface,
                       border: Border(
-                        top: BorderSide(
-                          color: AppColors.borderSoft,
-                          width: 0.5,
-                        ),
+                        top: BorderSide(color: palette.borderSoft, width: 0.5),
                       ),
                     ),
                   ),
@@ -477,17 +488,24 @@ class _ExomBottomNav extends StatelessWidget {
                     width: _circleSize,
                     height: _circleSize,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: palette.primary,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.35),
+                          color: palette.primary.withValues(alpha: 0.35),
                           blurRadius: 30,
                           spreadRadius: 6,
                         ),
                       ],
                     ),
-                    child: Center(child: _buildIcon(selectedIndex, true)),
+                    child: Center(
+                      child: _buildIcon(
+                        selectedIndex,
+                        true,
+                        activeColor: palette.onPrimary,
+                        inactiveColor: inactiveColor,
+                      ),
+                    ),
                   ),
                 ),
 
@@ -506,7 +524,12 @@ class _ExomBottomNav extends StatelessWidget {
                           child: Center(
                             child: i == selectedIndex
                                 ? const SizedBox.shrink()
-                                : _buildIcon(i, false),
+                                : _buildIcon(
+                                    i,
+                                    false,
+                                    activeColor: palette.onPrimary,
+                                    inactiveColor: inactiveColor,
+                                  ),
                           ),
                         ),
                       );
@@ -521,8 +544,13 @@ class _ExomBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildIcon(int index, bool isActive) {
-    final color = isActive ? AppColors.textOnPrimary : _inactiveColor;
+  Widget _buildIcon(
+    int index,
+    bool isActive, {
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final color = isActive ? activeColor : inactiveColor;
     final size = isActive ? 28.0 : 28.0;
     if (index == 2) {
       return SvgPicture.asset(

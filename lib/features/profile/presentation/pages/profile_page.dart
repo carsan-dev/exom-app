@@ -20,19 +20,22 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: palette.textPrimary),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'Perfil',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: palette.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -100,9 +103,11 @@ class _ProfileContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     return RefreshIndicator(
       color: AppColors.primary,
-      backgroundColor: AppColors.card,
+      backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<ProfileBloc>().add(const ProfileLoadRequested());
       },
@@ -182,13 +187,16 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,8 +210,8 @@ class _ProfileHeader extends StatelessWidget {
                   profile.fullName.isNotEmpty
                       ? profile.fullName.toUpperCase()
                       : 'USUARIO EXOM',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
@@ -226,16 +234,16 @@ class _ProfileHeader extends StatelessWidget {
                 Row(
                   children: [
                     if (profile.currentWeightKg != null) ...[
-                      const Icon(
+                      Icon(
                         Icons.monitor_weight_outlined,
-                        color: AppColors.textSecondary,
+                        color: palette.textSecondary,
                         size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${profile.currentWeightKg!.toStringAsFixed(0)} kg',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textSecondary,
                           fontSize: 13,
                         ),
                       ),
@@ -249,8 +257,8 @@ class _ProfileHeader extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'Racha ${profile.streakDays} días',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
                         fontSize: 13,
                       ),
                     ),
@@ -323,17 +331,20 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: palette.borderSoft),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: palette.textSecondary,
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
@@ -407,14 +418,17 @@ class _ActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderSoft),
+          border: Border.all(color: palette.borderSoft),
         ),
         child: Column(
           children: [
@@ -423,8 +437,8 @@ class _ActionChip extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
@@ -445,6 +459,8 @@ class _WeightChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final latestByDay = <String, BodyMetricEntity>{};
     for (final entry in weightHistory.where((item) => item.weightKg != null)) {
       final dayKey = DateFormat('yyyy-MM-dd').format(entry.date);
@@ -458,17 +474,17 @@ class _WeightChartCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Progreso del peso',
-            style: TextStyle(
-              color: AppColors.textPrimary,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -498,6 +514,9 @@ class _EmptyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -507,19 +526,22 @@ class _EmptyChart extends StatelessWidget {
           size: 48,
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Sin datos todavía',
-          style: TextStyle(
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: palette.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Registra tu peso y medidas para empezar\na ver tu evolución.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textSecondary,
+            fontSize: 13,
+          ),
         ),
         const SizedBox(height: 16),
         OutlinedButton(
@@ -546,6 +568,7 @@ class _FilledChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final weights = entries.map((e) => e.weightKg!).toList();
     final minW = weights.reduce(math.min) - 1;
     final maxW = weights.reduce(math.max) + 1;
@@ -565,7 +588,7 @@ class _FilledChart extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -587,7 +610,7 @@ class _FilledChart extends StatelessWidget {
                 show: true,
                 drawVerticalLine: false,
                 getDrawingHorizontalLine: (_) =>
-                    const FlLine(color: AppColors.divider, strokeWidth: 1),
+                    FlLine(color: palette.divider, strokeWidth: 1),
               ),
               titlesData: FlTitlesData(
                 topTitles: const AxisTitles(
@@ -612,8 +635,8 @@ class _FilledChart extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           dateFormat.format(entries[idx].date),
-                          style: const TextStyle(
-                            color: AppColors.textDisabled,
+                          style: TextStyle(
+                            color: palette.textDisabled,
                             fontSize: 9,
                           ),
                         ),
@@ -627,8 +650,8 @@ class _FilledChart extends StatelessWidget {
                     reservedSize: 40,
                     getTitlesWidget: (value, _) => Text(
                       '${value.toStringAsFixed(0)} kg',
-                      style: const TextStyle(
-                        color: AppColors.textDisabled,
+                      style: TextStyle(
+                        color: palette.textDisabled,
                         fontSize: 9,
                       ),
                     ),
@@ -651,7 +674,7 @@ class _FilledChart extends StatelessWidget {
                       radius: 3,
                       color: AppColors.primary,
                       strokeWidth: 2,
-                      strokeColor: AppColors.card,
+                      strokeColor: palette.surface,
                     ),
                   ),
                   belowBarData: BarAreaData(
@@ -691,16 +714,17 @@ class _IndicatorCards extends StatelessWidget {
     final newGoal = await showDialog<double>(
       context: context,
       builder: (dialogContext) {
+        final palette = dialogContext.exomPalette;
         return AlertDialog(
-          backgroundColor: AppColors.card,
-          title: const Text(
+          backgroundColor: palette.surface,
+          title: Text(
             'Objetivo de masa muscular',
-            style: TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: palette.textPrimary),
           ),
           content: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: palette.textPrimary),
             decoration: const InputDecoration(
               hintText: 'Ej: 34.0',
               suffixText: 'kg',
@@ -734,6 +758,7 @@ class _IndicatorCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     final latestMuscleMass = latestMetric?.muscleMassKg;
     final muscleGoal = profile.muscleMassGoalKg;
     final muscleProgress =
@@ -774,9 +799,9 @@ class _IndicatorCards extends StatelessWidget {
                     progressCaption: 'actual',
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.tune,
-                        color: AppColors.textDisabled,
+                        color: palette.textDisabled,
                         size: 16,
                       ),
                       visualDensity: VisualDensity.compact,
@@ -797,9 +822,9 @@ class _IndicatorCards extends StatelessWidget {
                     },
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.tune,
-                        color: AppColors.textDisabled,
+                        color: palette.textDisabled,
                         size: 16,
                       ),
                       visualDensity: VisualDensity.compact,
@@ -850,12 +875,15 @@ class _CircularIndicatorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         children: [
@@ -871,8 +899,8 @@ class _CircularIndicatorCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -906,7 +934,7 @@ class _CircularIndicatorCard extends StatelessWidget {
                     painter: _CircularProgressPainter(
                       progress: progress!,
                       color: color,
-                      trackColor: AppColors.surfaceVariant,
+                      trackColor: palette.surfaceVariant,
                     ),
                   ),
                 Column(
@@ -944,7 +972,10 @@ class _CircularIndicatorCard extends StatelessWidget {
           Text(
             bottomLabel,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textDisabled, fontSize: 10),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textDisabled,
+              fontSize: 10,
+            ),
           ),
         ],
       ),
@@ -1014,12 +1045,15 @@ class _EmptyIndicatorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderSoft),
+        border: Border.all(color: palette.borderSoft),
       ),
       child: Column(
         children: [
@@ -1027,8 +1061,8 @@ class _EmptyIndicatorCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1041,8 +1075,8 @@ class _EmptyIndicatorCard extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textDisabled,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textDisabled,
               fontSize: 12,
               height: 1.4,
             ),
@@ -1087,6 +1121,8 @@ class _BodyDataSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final latestWeight =
         weightHistory.where((e) => e.weightKg != null).isNotEmpty
         ? weightHistory.where((e) => e.weightKg != null).last
@@ -1104,9 +1140,9 @@ class _BodyDataSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: palette.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1114,10 +1150,10 @@ class _BodyDataSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Datos corporales',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1125,8 +1161,8 @@ class _BodyDataSection extends StatelessWidget {
               if (latestMetric != null)
                 Text(
                   'Última actualización ${dateFormat.format(latestMetric!.date)}',
-                  style: const TextStyle(
-                    color: AppColors.textDisabled,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textDisabled,
                     fontSize: 10,
                   ),
                 ),
@@ -1172,7 +1208,7 @@ class _BodyDataSection extends StatelessWidget {
                 }
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
+                foregroundColor: palette.textSecondary,
                 side: const BorderSide(color: AppColors.borderMedium),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -1197,9 +1233,12 @@ class _DataRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
     return Row(
       children: [
-        Icon(icon, color: AppColors.textSecondary, size: 16),
+        Icon(icon, color: palette.textSecondary, size: 16),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -1207,8 +1246,8 @@ class _DataRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1216,8 +1255,8 @@ class _DataRow extends StatelessWidget {
               if (detail != null)
                 Text(
                   detail!,
-                  style: const TextStyle(
-                    color: AppColors.textDisabled,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textDisabled,
                     fontSize: 10,
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -20,6 +21,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
+        locale: const Locale('es'),
+        supportedLocales: const [Locale('es'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: Scaffold(body: TodayTrainingCard(summary: summary)),
       ),
     );
@@ -41,6 +49,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
+        locale: const Locale('es'),
+        supportedLocales: const [Locale('es'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: Scaffold(body: TodayDietCard(summary: summary)),
       ),
     );

@@ -2,6 +2,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
@@ -110,6 +112,15 @@ class _SettingsPageState extends State<SettingsPage> {
     ).showSnackBar(SnackBar(content: Text('Unidades $unitLabel aplicadas')));
   }
 
+  Future<void> _openExternalLink(Uri uri, String errorMessage) async {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
   void _showCredits() {
     showModalBottomSheet<void>(
       context: context,
@@ -200,6 +211,41 @@ class _SettingsPageState extends State<SettingsPage> {
                         'Usa libras e pulgadas, guardando en métrico internamente',
                     selected: preferences.unitSystem == UnitSystem.imperial,
                     onTap: () => _setUnitSystem(UnitSystem.imperial),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SettingsGroup(
+                title: 'Privacidad',
+                children: [
+                  _SettingsTile(
+                    icon: Icons.privacy_tip_outlined,
+                    title: 'Política de privacidad',
+                    subtitle:
+                        'Abre la política externa para revisar tratamiento de datos y privacidad.',
+                    onTap: () => _openExternalLink(
+                      ExternalLinks.privacyPolicy,
+                      'No se pudo abrir la política de privacidad.',
+                    ),
+                  ),
+                  _SettingsTile(
+                    icon: Icons.support_agent_outlined,
+                    title: 'Soporte y contacto',
+                    subtitle:
+                        'Abre la página de soporte o escribe a soporte@exom.app.',
+                    onTap: () => _openExternalLink(
+                      ExternalLinks.supportPage,
+                      'No se pudo abrir la página de soporte.',
+                    ),
+                  ),
+                  _SettingsTile(
+                    icon: Icons.alternate_email,
+                    title: 'Escribir a soporte',
+                    subtitle: 'Prepara un email externo para soporte técnico.',
+                    onTap: () => _openExternalLink(
+                      ExternalLinks.supportEmail,
+                      'No se pudo abrir la aplicación de correo.',
+                    ),
                   ),
                 ],
               ),
@@ -302,6 +348,19 @@ class _SettingsPageState extends State<SettingsPage> {
 class _CreditsSheet extends StatelessWidget {
   const _CreditsSheet();
 
+  Future<void> _openExternalLink(
+    BuildContext context,
+    Uri uri,
+    String errorMessage,
+  ) async {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -323,10 +382,46 @@ class _CreditsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'EXOM combina app móvil en Flutter, backend en NestJS y servicios de Firebase, Supabase y Cloudflare para acompañar el seguimiento diario de entrenamiento y nutrición.',
+              'EXOM es un producto de valor añadido para clientes, desarrollado por Carlos Sánchez Román con app móvil en Flutter y backend en NestJS.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
                 height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: palette.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.code, color: palette.primary, size: 20),
+              ),
+              title: Text(
+                'Carlos Sánchez Román',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: Text(
+                'github.com/carsan-dev',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textDisabled,
+                ),
+              ),
+              trailing: Icon(
+                Icons.open_in_new,
+                color: palette.textDisabled,
+                size: 18,
+              ),
+              onTap: () => _openExternalLink(
+                context,
+                ExternalLinks.developerGithub,
+                'No se pudo abrir el perfil de GitHub.',
               ),
             ),
           ],

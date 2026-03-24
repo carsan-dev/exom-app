@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
@@ -8,36 +10,49 @@ class HelpPage extends StatelessWidget {
 
   static const _faqs = [
     _Faq(
-      question: '¿Como registro mi peso, masa muscular y medidas?',
+      question: '¿Cómo registro mi peso, masa muscular y medidas?',
       answer:
-          'Ve a tu perfil y entra en "Mis métricas". Desde ahi puedes guardar peso, masa muscular, horas de sueño y medidas corporales. Si no tienes una medicion directa de masa muscular, puedes usar la calculadora SEEN con edad, altura, sexo y pantorrilla para obtener una estimacion.',
+          'Ve a tu perfil y entra en "Mis métricas". Desde ahí puedes guardar peso, masa muscular, horas de sueño y medidas corporales. Si no tienes una medición directa de masa muscular, puedes usar la calculadora SEEN con edad, altura, sexo y pantorrilla para obtener una estimación.',
     ),
     _Faq(
-      question: '¿Como marco un entrenamiento como completado?',
+      question: '¿Cómo marco un entrenamiento como completado?',
       answer:
-          'Entra en el entrenamiento del dia desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesion completa desde el resumen final.',
+          'Entra en el entrenamiento del día desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.',
     ),
     _Faq(
-      question: '¿Como marco una comida como completada?',
+      question: '¿Cómo marco una comida como completada?',
       answer:
-          'Abre la dieta del dia, entra en la comida correspondiente y pulsa el boton de completado. El Home y el Calendario reflejaran el avance real del dia.',
+          'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. El Home y el Calendario reflejará el avance real del día.',
     ),
     _Faq(
-      question: '¿Puedo usar la app sin conexion?',
+      question: '¿Puedo usar la app sin conexión?',
       answer:
-          'Si. La app conserva en cache el ultimo Home, Perfil, Calendario, Dieta, Entreno y Metricas cargados. Sin conexion puedes consultar esos datos, aunque no se enviaran cambios al servidor.',
+          'Sí. La app conserva en caché el último Home, Perfil, Calendario, Dieta, Entreno y Métricas cargados. Sin conexión puedes consultar esos datos, aunque no se enviarán cambios al servidor.',
     ),
     _Faq(
-      question: '¿Para que sirve el ReCap semanal?',
+      question: '¿Para qué sirve el ReCap semanal?',
       answer:
-          'El ReCap te permite resumir tu semana para que tu entrenador entienda como has rendido, comido, descansado y que sensaciones has tenido.',
+          'El ReCap te permite resumir tu semana para que tu entrenador entienda cómo has rendido, comido, descansado y qué sensaciones has tenido.',
     ),
     _Faq(
-      question: '¿Como contacto con mi entrenador o reporto un problema?',
+      question: '¿Cómo contacto con mi entrenador o reporto un problema?',
       answer:
-          'Usa la seccion Feedback para enviar dudas, incidencias o material tecnico. Es el canal principal dentro de la app para que tu entrenador o el equipo de soporte puedan darte seguimiento.',
+          'Usa la sección Feedback para enviar dudas, incidencias o material técnico. Es el canal principal dentro de la app para que tu entrenador o el equipo de soporte puedan darte seguimiento.',
     ),
   ];
+
+  Future<void> _openExternalLink(
+    BuildContext context,
+    Uri uri,
+    String errorMessage,
+  ) async {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +89,7 @@ class HelpPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Todo lo importante para usar EXOM en tu dia a dia: metricas, entrenamientos, dieta, modo offline y vias de contacto.',
+                  'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo offline y vías de contacto.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 14,
@@ -107,6 +122,62 @@ class HelpPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.borderSoft),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Soporte y enlaces',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: palette.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _HelpLinkTile(
+                  icon: Icons.support_agent_outlined,
+                  title: 'Centro de soporte',
+                  subtitle:
+                      'Abre la página externa de soporte y contacto de EXOM.',
+                  onTap: () => _openExternalLink(
+                    context,
+                    ExternalLinks.supportPage,
+                    'No se pudo abrir la página de soporte.',
+                  ),
+                ),
+                _HelpLinkTile(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Política de privacidad',
+                  subtitle:
+                      'Consulta cómo se gestionan tus datos y privacidad.',
+                  onTap: () => _openExternalLink(
+                    context,
+                    ExternalLinks.privacyPolicy,
+                    'No se pudo abrir la política de privacidad.',
+                  ),
+                ),
+                _HelpLinkTile(
+                  icon: Icons.alternate_email,
+                  title: 'Escribir a soporte',
+                  subtitle:
+                      'Abre tu cliente de correo con un email a soporte@exom.app.',
+                  onTap: () => _openExternalLink(
+                    context,
+                    ExternalLinks.supportEmail,
+                    'No se pudo abrir la aplicación de correo.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           Text(
             'Preguntas frecuentes',
             style: theme.textTheme.titleLarge?.copyWith(
@@ -129,7 +200,7 @@ class HelpPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Creditos',
+                  'Créditos',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 15,
@@ -138,11 +209,22 @@ class HelpPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Producto EXOM. App movil en Flutter, backend en NestJS, autenticacion con Firebase y datos en Supabase.',
+                  'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con app móvil en Flutter y backend en NestJS.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 13,
                     height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _HelpLinkTile(
+                  icon: Icons.code,
+                  title: 'Desarrollador',
+                  subtitle: 'Carlos Sánchez Román · github.com/carsan-dev',
+                  onTap: () => _openExternalLink(
+                    context,
+                    ExternalLinks.developerGithub,
+                    'No se pudo abrir el perfil de GitHub.',
                   ),
                 ),
               ],
@@ -217,6 +299,56 @@ class _QuickActionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HelpLinkTile extends StatelessWidget {
+  const _HelpLinkTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: palette.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: palette.primary, size: 20),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: palette.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: palette.textDisabled,
+          fontSize: 12,
+        ),
+      ),
+      trailing: Icon(Icons.open_in_new, color: palette.textDisabled, size: 18),
+      onTap: onTap,
     );
   }
 }

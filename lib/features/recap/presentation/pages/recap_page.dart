@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
@@ -33,16 +34,8 @@ class _RecapView extends StatefulWidget {
 }
 
 class _RecapViewState extends State<_RecapView> {
-  static const _stepTitles = [
-    'Entreno',
-    'Nutrición',
-    'Recuperación',
-    'General',
-  ];
-
   final PageController _pageController = PageController();
   final DateFormat _apiDateFormat = DateFormat('yyyy-MM-dd');
-  final DateFormat _displayDateFormat = DateFormat('dd MMM', 'es');
 
   @override
   void dispose() {
@@ -70,7 +63,12 @@ class _RecapViewState extends State<_RecapView> {
         if (state is RecapSubmitted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Recap enviado correctamente'),
+              content: Text(
+                context.copy(
+                  'Recap enviado correctamente',
+                  'Recap sent successfully',
+                ),
+              ),
               backgroundColor: semantic.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -105,9 +103,9 @@ class _RecapViewState extends State<_RecapView> {
             title: Text(
               isFormActive
                   ? formState.recapId == null
-                        ? 'Nuevo recap'
-                        : 'Editar recap'
-                  : 'Recap semanal',
+                        ? context.copy('Nuevo recap', 'New recap')
+                        : context.copy('Editar recap', 'Edit recap')
+                  : context.copy('Recap semanal', 'Weekly recap'),
             ),
             backgroundColor: theme.scaffoldBackgroundColor,
             surfaceTintColor: Colors.transparent,
@@ -143,7 +141,7 @@ class _RecapViewState extends State<_RecapView> {
                   backgroundColor: palette.primary,
                   foregroundColor: palette.onPrimary,
                   icon: const Icon(Icons.add),
-                  label: const Text('Nuevo recap'),
+                  label: Text(context.copy('Nuevo recap', 'New recap')),
                 )
               : null,
           body: AnimatedSwitcher(
@@ -156,6 +154,13 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   Widget _buildBody(BuildContext context, RecapState state) {
+    final stepTitles = [
+      context.copy('Entreno', 'Training'),
+      context.copy('Nutrición', 'Nutrition'),
+      context.copy('Recuperación', 'Recovery'),
+      context.copy('General', 'General'),
+    ];
+
     if (state is RecapLoading || state is RecapInitial) {
       return Center(
         key: ValueKey('recap-loading'),
@@ -167,7 +172,7 @@ class _RecapViewState extends State<_RecapView> {
       return _RecapFormView(
         key: const ValueKey('recap-form'),
         pageController: _pageController,
-        stepTitles: _stepTitles,
+        stepTitles: stepTitles,
         state: state,
         onFieldChanged: (field, value) => context.read<RecapBloc>().add(
           RecapFieldUpdated(field: field, value: value),
@@ -223,7 +228,10 @@ class _RecapViewState extends State<_RecapView> {
               Icon(Icons.error_outline, color: palette.error, size: 42),
               const SizedBox(height: 16),
               Text(
-                'No se pudo cargar el recap',
+                context.copy(
+                  'No se pudo cargar el recap',
+                  'Could not load recap',
+                ),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -236,7 +244,7 @@ class _RecapViewState extends State<_RecapView> {
               ElevatedButton(
                 onPressed: () =>
                     context.read<RecapBloc>().add(const RecapLoadRequested()),
-                child: const Text('Reintentar'),
+                child: Text(context.copy('Reintentar', 'Retry')),
               ),
             ],
           ),
@@ -278,13 +286,16 @@ class _RecapViewState extends State<_RecapView> {
   String _formatWeekRange(Map<String, dynamic> formData) {
     final start = formData['week_start_date'] as String?;
     final end = formData['week_end_date'] as String?;
-    if (start == null || end == null) return 'Semana sin fechas';
+    if (start == null || end == null)
+      return context.copy('Semana sin fechas', 'Week without dates');
 
     final startDate = DateTime.tryParse(start);
     final endDate = DateTime.tryParse(end);
-    if (startDate == null || endDate == null) return 'Semana sin fechas';
+    if (startDate == null || endDate == null)
+      return context.copy('Semana sin fechas', 'Week without dates');
 
-    return '${_displayDateFormat.format(startDate)} - ${_displayDateFormat.format(endDate)}';
+    final format = DateFormat('dd MMM', context.isEnglish ? 'en' : 'es');
+    return '${format.format(startDate)} - ${format.format(endDate)}';
   }
 
   void _showRecapSummary(BuildContext context, RecapEntity recap) {
@@ -320,116 +331,131 @@ class _RecapViewState extends State<_RecapView> {
                   ),
                   const SizedBox(height: 20),
                   _SummarySection(
-                    title: 'Entreno',
+                    title: context.copy('Entreno', 'Training'),
                     children: [
                       _SummaryItem(
-                        'Esfuerzo',
+                        context.copy('Esfuerzo', 'Effort'),
                         recap.trainingEffort?.toString() ?? '—',
                       ),
                       _SummaryItem(
-                        'Sesiones',
+                        context.copy('Sesiones', 'Sessions'),
                         recap.trainingSessions?.toString() ?? '—',
                       ),
                       _SummaryItem(
-                        'Progreso',
+                        context.copy('Progreso', 'Progress'),
                         recap.trainingProgress != null
                             ? formatRecapOption(recap.trainingProgress!)
                             : '—',
                       ),
-                      _SummaryItem('Notas', recap.trainingNotes ?? '—'),
+                      _SummaryItem(
+                        context.copy('Notas', 'Notes'),
+                        recap.trainingNotes ?? '—',
+                      ),
                     ],
                   ),
                   _SummarySection(
-                    title: 'Nutrición',
+                    title: context.copy('Nutrición', 'Nutrition'),
                     children: [
                       _SummaryItem(
-                        'Calidad',
+                        context.copy('Calidad', 'Quality'),
                         recap.nutritionQuality != null
                             ? formatRecapOption(recap.nutritionQuality!)
                             : '—',
                       ),
                       _SummaryItem(
-                        'Hidratación',
+                        context.copy('Hidratación', 'Hydration'),
                         recap.hydrationEnabled
                             ? formatRecapOption(
                                 recap.hydrationLevel ?? 'ACTIVA',
                               )
-                            : 'No valorada',
+                            : context.copy('No valorada', 'Not rated'),
                       ),
                       _SummaryItem(
-                        'Comidas',
+                        context.copy('Comidas', 'Meals'),
                         recap.foodQuality?.toString() ?? '—',
                       ),
-                      _SummaryItem('Notas', recap.nutritionNotes ?? '—'),
+                      _SummaryItem(
+                        context.copy('Notas', 'Notes'),
+                        recap.nutritionNotes ?? '—',
+                      ),
                     ],
                   ),
                   _SummarySection(
-                    title: 'Recuperación',
+                    title: context.copy('Recuperación', 'Recovery'),
                     children: [
                       _SummaryItem(
-                        'Sueño',
+                        context.copy('Sueño', 'Sleep'),
                         recap.sleepHoursRange != null
                             ? formatRecapOption(recap.sleepHoursRange!)
                             : '—',
                       ),
                       _SummaryItem(
-                        'Fatiga',
+                        context.copy('Fatiga', 'Fatigue'),
                         recap.fatigueLevel != null
                             ? formatRecapOption(recap.fatigueLevel!)
                             : '—',
                       ),
                       _SummaryItem(
-                        'Molestias',
+                        context.copy('Molestias', 'Discomfort'),
                         recap.musclePainZones.isEmpty
-                            ? 'Sin zonas marcadas'
+                            ? context.copy(
+                                'Sin zonas marcadas',
+                                'No zones selected',
+                              )
                             : recap.musclePainZones
                                   .map(formatRecapOption)
                                   .join(', '),
                       ),
-                      _SummaryItem('Notas', recap.recoveryNotes ?? '—'),
+                      _SummaryItem(
+                        context.copy('Notas', 'Notes'),
+                        recap.recoveryNotes ?? '—',
+                      ),
                     ],
                   ),
                   _SummarySection(
-                    title: 'General',
+                    title: context.copy('General', 'General'),
                     children: [
                       _SummaryItem(
-                        'Ánimo',
+                        context.copy('Ánimo', 'Mood'),
                         recap.mood != null
                             ? formatRecapOption(recap.mood!)
                             : '—',
                       ),
                       _SummaryItem(
-                        'Estrés',
+                        context.copy('Estrés', 'Stress'),
                         recap.stressEnabled
                             ? '${recap.stressLevel ?? 0}/5'
-                            : 'No valorado',
+                            : context.copy('No valorado', 'Not rated'),
                       ),
                       _SummaryItem(
-                        'Valoración app',
+                        context.copy('Valoración app', 'App rating'),
                         recap.improvementAppRating != null
                             ? '${recap.improvementAppRating}/5'
                             : '—',
                       ),
                       _SummaryItem(
-                        'Valoración servicio',
+                        context.copy('Valoración servicio', 'Service rating'),
                         recap.improvementServiceRating != null
                             ? '${recap.improvementServiceRating}/5'
                             : '—',
                       ),
                       _SummaryItem(
-                        'Áreas a mejorar',
+                        context.copy('Áreas a mejorar', 'Areas to improve'),
                         recap.improvementAreas.isEmpty
-                            ? 'Sin áreas seleccionadas'
+                            ? context.copy(
+                                'Sin áreas seleccionadas',
+                                'No areas selected',
+                              )
                             : recap.improvementAreas
                                   .map(formatRecapOption)
                                   .join(', '),
                       ),
                       _SummaryItem(
-                        'Notas generales',
+                        context.copy('Notas generales', 'General notes'),
                         recap.generalNotes ?? '—',
                       ),
                       _SummaryItem(
-                        'Feedback',
+                        context.copy('Feedback', 'Feedback'),
                         recap.improvementFeedbackText ?? '—',
                       ),
                     ],
@@ -486,7 +512,10 @@ class _RecapListView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Todavía no has enviado ningún recap',
+                context.copy(
+                  'Todavía no has enviado ningún recap',
+                  'You have not sent any recap yet',
+                ),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: palette.textPrimary,
@@ -496,7 +525,10 @@ class _RecapListView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Usa este espacio para resumir tu semana y dar contexto útil a tu coach.',
+                context.copy(
+                  'Usa este espacio para resumir tu semana y dar contexto útil a tu coach.',
+                  'Use this space to summarize your week and give useful context to your coach.',
+                ),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: palette.textSecondary,
@@ -507,7 +539,12 @@ class _RecapListView extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onCreate,
                 icon: const Icon(Icons.add),
-                label: const Text('Crear mi primer recap'),
+                label: Text(
+                  context.copy(
+                    'Crear mi primer recap',
+                    'Create my first recap',
+                  ),
+                ),
               ),
             ],
           ),
@@ -534,7 +571,7 @@ class _RecapListView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tu histórico semanal',
+                  context.copy('Tu histórico semanal', 'Your weekly history'),
                   style: TextStyle(
                     color: palette.textPrimary,
                     fontSize: 16,
@@ -543,7 +580,10 @@ class _RecapListView extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Mantén trazabilidad de tus semanas, revisa recaps anteriores y continúa borradores pendientes.',
+                  context.copy(
+                    'Mantén trazabilidad de tus semanas, revisa recaps anteriores y continúa borradores pendientes.',
+                    'Track your weeks, review previous recaps, and continue pending drafts.',
+                  ),
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: 13,
@@ -582,10 +622,10 @@ class _RecapHistoryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final actionLabel = recap.isReviewed
-        ? 'Ver resumen'
+        ? context.copy('Ver resumen', 'View summary')
         : recap.isSubmitted
-        ? 'Actualizar'
-        : 'Continuar';
+        ? context.copy('Actualizar', 'Update')
+        : context.copy('Continuar', 'Continue');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -614,7 +654,7 @@ class _RecapHistoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Creado ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
+                      '${context.copy('Creado', 'Created')} ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: palette.textDisabled,
                         fontSize: 12,
@@ -635,19 +675,22 @@ class _RecapHistoryCard extends StatelessWidget {
                 icon: Icons.fitness_center,
                 label: recap.trainingProgress != null
                     ? formatRecapOption(recap.trainingProgress!)
-                    : 'Entreno sin valorar',
+                    : context.copy('Entreno sin valorar', 'Training not rated'),
               ),
               _InfoPill(
                 icon: Icons.restaurant,
                 label: recap.nutritionQuality != null
                     ? formatRecapOption(recap.nutritionQuality!)
-                    : 'Nutrición sin valorar',
+                    : context.copy(
+                        'Nutrición sin valorar',
+                        'Nutrition not rated',
+                      ),
               ),
               _InfoPill(
                 icon: Icons.mood,
                 label: recap.mood != null
                     ? formatRecapOption(recap.mood!)
-                    : 'Ánimo sin valorar',
+                    : context.copy('Ánimo sin valorar', 'Mood not rated'),
               ),
             ],
           ),
@@ -719,7 +762,10 @@ class _RecapFormView extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Completa los cuatro bloques y envía tu resumen semanal.',
+                context.copy(
+                  'Completa los cuatro bloques y envía tu resumen semanal.',
+                  'Complete the four sections and send your weekly summary.',
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: palette.textSecondary,
                   fontSize: 13,
@@ -788,19 +834,19 @@ class _RecapFormView extends StatelessWidget {
                     if (state.step == 0)
                       TextButton(
                         onPressed: onCancel,
-                        child: const Text('Cancelar'),
+                        child: Text(context.copy('Cancelar', 'Cancel')),
                       )
                     else
                       TextButton.icon(
                         onPressed: () => onStepChanged(state.step - 1),
                         icon: const Icon(Icons.arrow_back),
-                        label: const Text('Anterior'),
+                        label: Text(context.copy('Anterior', 'Previous')),
                       ),
                     const Spacer(),
                     OutlinedButton.icon(
                       onPressed: onSaveDraft,
                       icon: const Icon(Icons.save_outlined),
-                      label: const Text('Guardar'),
+                      label: Text(context.copy('Guardar', 'Save')),
                     ),
                   ],
                 ),
@@ -816,8 +862,11 @@ class _RecapFormView extends StatelessWidget {
                     ),
                     label: Text(
                       isLastStep
-                          ? 'Enviar recap'
-                          : 'Continuar al siguiente paso',
+                          ? context.copy('Enviar recap', 'Send recap')
+                          : context.copy(
+                              'Continuar al siguiente paso',
+                              'Continue to next step',
+                            ),
                     ),
                   ),
                 ),
@@ -916,7 +965,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        formatRecapOption(status),
+        recapCopy(context, status),
         style: TextStyle(
           color: color,
           fontSize: 11,

@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -37,7 +38,7 @@ class ProfilePage extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Perfil',
+          context.copy('Perfil', 'Profile'),
           style: TextStyle(
             color: palette.textPrimary,
             fontSize: 18,
@@ -161,29 +162,29 @@ class _ProfileHeader extends StatelessWidget {
     );
   }
 
-  String _levelLabel(String? level) {
+  String _levelLabel(BuildContext context, String? level) {
     switch (level?.toUpperCase()) {
       case 'BEGINNER':
-        return 'Principiante';
+        return context.copy('Principiante', 'Beginner');
       case 'INTERMEDIATE':
-        return 'Intermedio';
+        return context.copy('Intermedio', 'Intermediate');
       case 'ADVANCED':
-        return 'Avanzado';
+        return context.copy('Avanzado', 'Advanced');
       default:
         return level ?? '';
     }
   }
 
-  String _goalLabel(String? goal) {
+  String _goalLabel(BuildContext context, String? goal) {
     switch (goal?.toUpperCase()) {
       case 'LOSE_WEIGHT':
-        return 'Perder peso';
+        return context.copy('Perder peso', 'Lose weight');
       case 'GAIN_MUSCLE':
-        return 'Ganar músculo';
+        return context.copy('Ganar músculo', 'Gain muscle');
       case 'MAINTAIN':
-        return 'Mantener';
+        return context.copy('Mantener', 'Maintain');
       case 'IMPROVE_FITNESS':
-        return 'Mejorar fitness';
+        return context.copy('Mejorar fitness', 'Improve fitness');
       default:
         return goal ?? '';
     }
@@ -230,10 +231,10 @@ class _ProfileHeader extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (_levelLabel(profile.level).isNotEmpty)
-                      _Tag(label: _levelLabel(profile.level)),
-                    if (_goalLabel(profile.goal).isNotEmpty)
-                      _Tag(label: _goalLabel(profile.goal)),
+                    if (_levelLabel(context, profile.level).isNotEmpty)
+                      _Tag(label: _levelLabel(context, profile.level)),
+                    if (_goalLabel(context, profile.goal).isNotEmpty)
+                      _Tag(label: _goalLabel(context, profile.goal)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -262,7 +263,8 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                     _InlineStat(
                       icon: Icons.local_fire_department_outlined,
-                      text: 'Racha ${profile.streakDays} días',
+                      text:
+                          '${context.copy('Racha', 'Streak')} ${profile.streakDays} ${context.copy('días', 'days')}',
                       iconColor: AppColors.calorieAccent,
                     ),
                   ],
@@ -401,7 +403,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.monitor_weight_outlined,
-              label: 'Actualizar peso',
+              label: context.copy('Actualizar peso', 'Update weight'),
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -414,7 +416,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.straighten_outlined,
-              label: 'Actualizar medidas',
+              label: context.copy('Actualizar medidas', 'Update measurements'),
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -427,7 +429,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.bar_chart_outlined,
-              label: 'ReCap semanal',
+              label: context.copy('ReCap semanal', 'Weekly recap'),
               onTap: () => context.push(AppRoutes.recap),
             ),
           ),
@@ -514,7 +516,7 @@ class _WeightChartCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Progreso del peso',
+            context.copy('Progreso del peso', 'Weight progress'),
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 15,
@@ -559,7 +561,7 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Sin datos todavía',
+          context.copy('Sin datos todavía', 'No data yet'),
           style: theme.textTheme.titleMedium?.copyWith(
             color: palette.textPrimary,
             fontSize: 16,
@@ -568,7 +570,10 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Registra tu peso y medidas para empezar\na ver tu evolución.',
+          context.copy(
+            'Registra tu peso y medidas para empezar\na ver tu evolución.',
+            'Log your weight and measurements to start\nseeing your progress.',
+          ),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: palette.textSecondary,
@@ -585,7 +590,7 @@ class _EmptyChart extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: const Text('Registrar métricas'),
+          child: Text(context.copy('Registrar métricas', 'Log metrics')),
         ),
         const SizedBox(height: 8),
       ],
@@ -612,7 +617,7 @@ class _FilledChart extends StatelessWidget {
       return FlSpot(e.key.toDouble(), e.value.weightKg!);
     }).toList();
 
-    final dateFormat = DateFormat('d MMM', 'es');
+    final dateFormat = DateFormat('d MMM', context.isEnglish ? 'en' : 'es');
 
     return Column(
       children: [
@@ -756,7 +761,7 @@ class _IndicatorCards extends StatelessWidget {
         return AlertDialog(
           backgroundColor: palette.surface,
           title: Text(
-            'Objetivo de masa muscular',
+            context.copy('Objetivo de masa muscular', 'Muscle mass goal'),
             style: TextStyle(color: palette.textPrimary),
           ),
           content: TextField(
@@ -765,15 +770,15 @@ class _IndicatorCards extends StatelessWidget {
             style: TextStyle(color: palette.textPrimary),
             decoration: InputDecoration(
               hintText: unitSystem == UnitSystem.imperial
-                  ? 'Ej: 75.0'
-                  : 'Ej: 34.0',
+                  ? context.copy('Ej: 75.0', 'Eg: 75.0')
+                  : context.copy('Ej: 34.0', 'Eg: 34.0'),
               suffixText: weightUnitSymbol(unitSystem),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
+              child: Text(context.copy('Cancelar', 'Cancel')),
             ),
             ElevatedButton(
               onPressed: () {
@@ -786,7 +791,7 @@ class _IndicatorCards extends StatelessWidget {
                   ).pop(UnitConverters.weightFromDisplay(parsed, unitSystem));
                 }
               },
-              child: const Text('Guardar'),
+              child: Text(context.copy('Guardar', 'Save')),
             ),
           ],
         );
@@ -831,17 +836,20 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
-                    title: 'Masa muscular',
+                    title: context.copy('Masa muscular', 'Muscle mass'),
                     value: formatWeight(latestMuscleMass, unitSystem),
                     subtitle: muscleGoal != null
-                        ? 'Objetivo ${formatWeight(muscleGoal, unitSystem)}'
-                        : 'Define tu objetivo',
+                        ? '${context.copy('Objetivo', 'Goal')} ${formatWeight(muscleGoal, unitSystem)}'
+                        : context.copy('Define tu objetivo', 'Set your goal'),
                     bottomLabel: latestMetric != null
-                        ? 'Última medición ${DateFormat('dd MMM', 'es').format(latestMetric!.date)}'
-                        : 'Actualiza tus métricas',
+                        ? '${context.copy('Última medición', 'Latest measurement')} ${DateFormat('dd MMM', context.isEnglish ? 'en' : 'es').format(latestMetric!.date)}'
+                        : context.copy(
+                            'Actualiza tus métricas',
+                            'Update your metrics',
+                          ),
                     progress: muscleProgress,
                     color: AppColors.calorieAccent,
-                    progressCaption: 'actual',
+                    progressCaption: context.copy('actual', 'current'),
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
                       icon: Icon(
@@ -853,10 +861,15 @@ class _IndicatorCards extends StatelessWidget {
                     ),
                   )
                 : _EmptyIndicatorCard(
-                    title: 'Masa muscular',
-                    message:
-                        'Registra una medición directa o usa la estimación SEEN desde métricas para ver la evolución.',
-                    actionLabel: 'Registrar o calcular',
+                    title: context.copy('Masa muscular', 'Muscle mass'),
+                    message: context.copy(
+                      'Registra una medición directa o usa la estimación SEEN desde métricas para ver la evolución.',
+                      'Log a direct measurement or use the SEEN estimate from metrics to see your progress.',
+                    ),
+                    actionLabel: context.copy(
+                      'Registrar o calcular',
+                      'Log or calculate',
+                    ),
                     onAction: () async {
                       await context.push('/profile/metrics');
                       if (context.mounted) {
@@ -880,16 +893,17 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: avgSleep != null
                 ? _CircularIndicatorCard(
-                    title: 'Sueño',
+                    title: context.copy('Sueño', 'Sleep'),
                     value: '${avgSleep.toStringAsFixed(1)} h',
-                    subtitle: '${(sleepPercent! * 100).toInt()}% del objetivo',
+                    subtitle:
+                        '${(sleepPercent! * 100).toInt()}% ${context.copy('del objetivo', 'of goal')}',
                     bottomLabel:
-                        '$daysInGoal/${sleepEntries.length} días dentro del objetivo',
+                        '$daysInGoal/${sleepEntries.length} ${context.copy('días dentro del objetivo', 'days within goal')}',
                     progress: sleepPercent,
                     color: AppColors.sleepAccent,
-                    progressCaption: 'hoy',
+                    progressCaption: context.copy('hoy', 'today'),
                   )
-                : const _EmptyIndicatorCard(title: 'Sueño'),
+                : _EmptyIndicatorCard(title: context.copy('Sueño', 'Sleep')),
           ),
         ],
       ),
@@ -1200,7 +1214,7 @@ class _BodyDataSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Datos corporales',
+                context.copy('Datos corporales', 'Body data'),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: palette.textPrimary,
                   fontSize: 15,
@@ -1209,7 +1223,7 @@ class _BodyDataSection extends StatelessWidget {
               ),
               if (latestMetric != null)
                 Text(
-                  'Última actualización ${dateFormat.format(latestMetric!.date)}',
+                  '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestMetric!.date)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textDisabled,
                     fontSize: 10,
@@ -1222,40 +1236,46 @@ class _BodyDataSection extends StatelessWidget {
           _DataRow(
             icon: Icons.monitor_weight_outlined,
             label: latestWeight != null
-                ? 'Peso: ${formatWeight(latestWeight.weightKg, unitSystem)}'
-                : 'Peso: --',
+                ? '${context.copy('Peso', 'Weight')}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
+                : '${context.copy('Peso', 'Weight')}: --',
             detail: latestWeight != null
-                ? 'Última actualización ${dateFormat.format(latestWeight.date)}'
+                ? '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestWeight.date)}'
                 : null,
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.fitness_center,
             label: latestMetric?.muscleMassKg != null
-                ? 'Masa muscular: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
-                : 'Masa muscular: --',
+                ? '${context.copy('Masa muscular', 'Muscle mass')}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
+                : '${context.copy('Masa muscular', 'Muscle mass')}: --',
             detail: profile.muscleMassGoalKg != null
-                ? 'Objetivo ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
-                : 'Objetivo no configurado',
+                ? '${context.copy('Objetivo', 'Goal')} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
+                : context.copy('Objetivo no configurado', 'Goal not set'),
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.height,
             label: currentHeightCm != null
-                ? 'Altura: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
-                : 'Altura: --',
+                ? '${context.copy('Altura', 'Height')}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
+                : '${context.copy('Altura', 'Height')}: --',
             detail: currentHeightCm != null
-                ? 'Sincronizada con perfil y métricas'
-                : 'Añádela en métricas para mejorar el seguimiento',
+                ? context.copy(
+                    'Sincronizada con perfil y métricas',
+                    'Synced with profile and metrics',
+                  )
+                : context.copy(
+                    'Añádela en métricas para mejorar el seguimiento',
+                    'Add it in metrics to improve tracking',
+                  ),
           ),
           const SizedBox(height: 10),
           // Measurements row
           _DataRow(
             icon: Icons.straighten_outlined,
-            label: 'Medidas',
+            label: context.copy('Medidas', 'Measurements'),
             detail: hasMeasurements
-                ? 'Última actualización ${dateFormat.format(latestMetric!.date)}'
-                : 'Sin datos',
+                ? '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestMetric!.date)}'
+                : context.copy('Sin datos', 'No data'),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1275,7 +1295,9 @@ class _BodyDataSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Actualizar métricas'),
+              child: Text(
+                context.copy('Actualizar métricas', 'Update metrics'),
+              ),
             ),
           ),
         ],

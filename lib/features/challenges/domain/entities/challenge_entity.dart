@@ -29,6 +29,7 @@ class ChallengeEntity {
     this.deadline,
   });
 
-  double get progress => targetValue > 0 ? (currentValue / targetValue).clamp(0, 1) : 0;
+  double get progress =>
+      targetValue > 0 ? (currentValue / targetValue).clamp(0, 1) : 0;
   bool get isMainGoal => type == 'MAIN_GOAL';
 }

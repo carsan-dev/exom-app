@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class WeekDaySelector extends StatelessWidget {
   const WeekDaySelector({super.key});
-
-  static const _labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class WeekDaySelector extends StatelessWidget {
                   context.read<HomeBloc>().add(HomeDateSelected(dayDate));
                 },
                 child: _DayCircle(
-                  label: _labels[i],
+                  label: _labelForDay(context, dayDate),
                   isToday: isToday,
                   isPast: isPast,
                   isSelected: isSelected,
@@ -50,6 +50,25 @@ class WeekDaySelector extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _labelForDay(BuildContext context, DateTime dayDate) {
+    if (context.isEnglish) {
+      return DateFormat(
+        'E',
+        'en',
+      ).format(dayDate).substring(0, 1).toUpperCase();
+    }
+
+    return switch (dayDate.weekday) {
+      DateTime.monday => 'L',
+      DateTime.tuesday => 'M',
+      DateTime.wednesday => 'X',
+      DateTime.thursday => 'J',
+      DateTime.friday => 'V',
+      DateTime.saturday => 'S',
+      _ => 'D',
+    };
   }
 }
 

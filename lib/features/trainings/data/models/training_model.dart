@@ -23,7 +23,8 @@ class ExerciseModel {
     return ExerciseModel(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      muscleGroups: (json['muscle_groups'] as List<dynamic>?)
+      muscleGroups:
+          (json['muscle_groups'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -102,9 +103,15 @@ class TrainingModel {
       estimatedCalories: json['estimated_calories'] as int?,
       warmupDescription: json['warmup_description'] as String?,
       cooldownDescription: json['cooldown_description'] as String?,
-      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      exercises: (json['exercises'] as List<dynamic>?)
-              ?.map((e) => TrainingExerciseModel.fromJson(e as Map<String, dynamic>))
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          [],
+      exercises:
+          (json['exercises'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    TrainingExerciseModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );

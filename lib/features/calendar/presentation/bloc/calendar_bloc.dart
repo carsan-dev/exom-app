@@ -15,9 +15,9 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
   CalendarBloc({
     required GetMonthCalendarUseCase getMonthCalendarUseCase,
     required GetWeekSummaryUseCase getWeekSummaryUseCase,
-  })  : _getMonthCalendarUseCase = getMonthCalendarUseCase,
-        _getWeekSummaryUseCase = getWeekSummaryUseCase,
-        super(const CalendarInitial()) {
+  }) : _getMonthCalendarUseCase = getMonthCalendarUseCase,
+       _getWeekSummaryUseCase = getWeekSummaryUseCase,
+       super(const CalendarInitial()) {
     on<CalendarMonthLoadRequested>(_onMonthLoadRequested);
     on<CalendarDaySelected>(_onDaySelected);
   }
@@ -30,7 +30,8 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
     try {
       final days = await _getMonthCalendarUseCase(event.year, event.month);
 
-      final selectedDate = event.selectedDate ?? DateTime(event.year, event.month);
+      final selectedDate =
+          event.selectedDate ?? DateTime(event.year, event.month);
       final weekStart = _getWeekStart(selectedDate);
       final weekStartStr = DateFormat('yyyy-MM-dd').format(weekStart);
 
@@ -41,13 +42,15 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
         // Week summary is optional — don't fail the whole load
       }
 
-      emit(CalendarLoaded(
-        days: days,
-        weekSummary: weekSummary,
-        selectedDate: selectedDate,
-        year: event.year,
-        month: event.month,
-      ));
+      emit(
+        CalendarLoaded(
+          days: days,
+          weekSummary: weekSummary,
+          selectedDate: selectedDate,
+          year: event.year,
+          month: event.month,
+        ),
+      );
     } catch (e) {
       emit(CalendarError(e.toString()));
     }
@@ -68,13 +71,15 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
       weekSummary = await _getWeekSummaryUseCase(weekStartStr);
     } catch (_) {}
 
-    emit(CalendarLoaded(
-      days: current.days,
-      weekSummary: weekSummary,
-      selectedDate: event.date,
-      year: current.year,
-      month: current.month,
-    ));
+    emit(
+      CalendarLoaded(
+        days: current.days,
+        weekSummary: weekSummary,
+        selectedDate: event.date,
+        year: current.year,
+        month: current.month,
+      ),
+    );
   }
 
   DateTime _getWeekStart(DateTime date) {

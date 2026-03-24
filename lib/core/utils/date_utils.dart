@@ -46,9 +46,7 @@ class AppDateUtils {
 
   static String relativeDay(DateTime date) {
     final t = today();
-    final diff = DateTime(date.year, date.month, date.day)
-        .difference(t)
-        .inDays;
+    final diff = DateTime(date.year, date.month, date.day).difference(t).inDays;
     return switch (diff) {
       0 => 'Hoy',
       1 => 'Mañana',

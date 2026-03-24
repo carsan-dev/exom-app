@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -127,21 +128,24 @@ class _MetricsViewState extends State<_MetricsView> {
   static const _backRightFlex = [6, 9];
 
   String _weightHint(UnitSystem unitSystem) {
-    return unitSystem == UnitSystem.imperial ? 'Ej: 166.4' : 'Ej: 75.5';
+    return unitSystem == UnitSystem.imperial ? 'Eg: 166.4' : 'Eg: 75.5';
   }
 
   String _heightHint(UnitSystem unitSystem) {
-    return unitSystem == UnitSystem.imperial ? 'Ej: 70.9' : 'Ej: 180';
+    return unitSystem == UnitSystem.imperial ? 'Eg: 70.9' : 'Eg: 180';
   }
 
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
-  String _selectedDateLabel() {
+  String _selectedDateLabel(BuildContext context) {
     final today = DateUtils.dateOnly(DateTime.now());
     if (_selectedMetricDate == today) {
-      return 'Hoy';
+      return context.copy('Hoy', 'Today');
     }
-    return DateFormat('d \'de\' MMMM', 'es').format(_selectedMetricDate);
+    final locale = context.isEnglish ? 'en' : 'es';
+    return context.isEnglish
+        ? DateFormat('MMMM d', locale).format(_selectedMetricDate)
+        : DateFormat("d 'de' MMMM", locale).format(_selectedMetricDate);
   }
 
   Future<void> _pickMetricDate() async {
@@ -150,7 +154,7 @@ class _MetricsViewState extends State<_MetricsView> {
       initialDate: _selectedMetricDate,
       firstDate: DateTime(2024),
       lastDate: DateTime.now(),
-      locale: const Locale('es'),
+      locale: Localizations.localeOf(context),
     );
 
     if (picked == null || !mounted) {
@@ -473,7 +477,12 @@ class _MetricsViewState extends State<_MetricsView> {
     if (_heightTouched) {
       final rawHeight = _parseDouble(_heightController.text);
       if (rawHeight == null) {
-        _showValidationMessage('Introduce una altura válida antes de guardar.');
+        _showValidationMessage(
+          context.copy(
+            'Introduce una altura válida antes de guardar.',
+            'Enter a valid height before saving.',
+          ),
+        );
         return;
       }
 
@@ -488,7 +497,12 @@ class _MetricsViewState extends State<_MetricsView> {
       if (_useManualWeight) {
         final manualWeight = _parseDouble(_weightController.text);
         if (manualWeight == null) {
-          _showValidationMessage('Introduce un peso valido antes de guardar.');
+          _showValidationMessage(
+            context.copy(
+              'Introduce un peso válido antes de guardar.',
+              'Enter a valid weight before saving.',
+            ),
+          );
           return;
         }
         data['weight_kg'] = UnitConverters.weightFromDisplay(
@@ -506,7 +520,10 @@ class _MetricsViewState extends State<_MetricsView> {
       final sleepHours = _parseDouble(_sleepController.text);
       if (sleepHours == null) {
         _showValidationMessage(
-          'Introduce las horas de sueño en formato numérico antes de guardar.',
+          context.copy(
+            'Introduce las horas de sueño en formato numérico antes de guardar.',
+            'Enter sleep hours in numeric format before saving.',
+          ),
         );
         return;
       }
@@ -521,7 +538,10 @@ class _MetricsViewState extends State<_MetricsView> {
         final muscleMass = _parseDouble(rawMuscleMass);
         if (muscleMass == null) {
           _showValidationMessage(
-            'Introduce una masa muscular valida antes de guardar.',
+            context.copy(
+              'Introduce una masa muscular válida antes de guardar.',
+              'Enter a valid muscle mass before saving.',
+            ),
           );
           return;
         }
@@ -563,7 +583,10 @@ class _MetricsViewState extends State<_MetricsView> {
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
         _showValidationMessage(
-          'Revisa la medida de ${entry.key.toLowerCase()} antes de guardar.',
+          context.copy(
+            'Revisa la medida de ${entry.key.toLowerCase()} antes de guardar.',
+            'Review the ${entry.key.toLowerCase()} measurement before saving.',
+          ),
         );
         return;
       }
@@ -575,7 +598,12 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     if (data.isEmpty) {
-      _showValidationMessage('No has modificado ninguna metrica para guardar.');
+      _showValidationMessage(
+        context.copy(
+          'No has modificado ninguna métrica para guardar.',
+          'You have not changed any metrics to save.',
+        ),
+      );
       return;
     }
 
@@ -637,7 +665,7 @@ class _MetricsViewState extends State<_MetricsView> {
             return AlertDialog(
               backgroundColor: palette.surface,
               title: Text(
-                'Estimación rápida SEEN',
+                context.copy('Estimación rápida SEEN', 'Quick SEEN estimate'),
                 style: TextStyle(color: palette.textPrimary),
               ),
               content: SingleChildScrollView(
@@ -646,7 +674,10 @@ class _MetricsViewState extends State<_MetricsView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.',
+                      context.copy(
+                        'Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.',
+                        'Use the SEEN formula to estimate skeletal muscle mass from age, height, sex, and calf circumference.',
+                      ),
                       style: TextStyle(
                         color: palette.textSecondary,
                         fontSize: 12,
@@ -658,9 +689,9 @@ class _MetricsViewState extends State<_MetricsView> {
                       controller: ageController,
                       keyboardType: TextInputType.number,
                       style: TextStyle(color: palette.textPrimary),
-                      decoration: const InputDecoration(
-                        labelText: 'Edad',
-                        suffixText: 'años',
+                      decoration: InputDecoration(
+                        labelText: context.copy('Edad', 'Age'),
+                        suffixText: context.copy('años', 'years'),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -671,7 +702,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: 'Altura',
+                        labelText: context.copy('Altura', 'Height'),
                         suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
@@ -683,7 +714,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: 'Pantorrilla',
+                        labelText: context.copy('Pantorrilla', 'Calf'),
                         suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
@@ -692,15 +723,17 @@ class _MetricsViewState extends State<_MetricsView> {
                       initialValue: selectedSex,
                       dropdownColor: palette.surfaceVariant,
                       style: TextStyle(color: palette.textPrimary),
-                      decoration: const InputDecoration(labelText: 'Sexo'),
-                      items: const [
+                      decoration: InputDecoration(
+                        labelText: context.copy('Sexo', 'Sex'),
+                      ),
+                      items: [
                         DropdownMenuItem(
                           value: SeenBiologicalSex.male,
-                          child: Text('Hombre'),
+                          child: Text(context.copy('Hombre', 'Male')),
                         ),
                         DropdownMenuItem(
                           value: SeenBiologicalSex.female,
-                          child: Text('Mujer'),
+                          child: Text(context.copy('Mujer', 'Female')),
                         ),
                       ],
                       onChanged: (value) {
@@ -723,7 +756,7 @@ class _MetricsViewState extends State<_MetricsView> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancelar'),
+                  child: Text(context.copy('Cancelar', 'Cancel')),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -733,22 +766,30 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (age == null || age <= 0) {
                       setDialogState(() {
-                        errorText = 'Introduce una edad válida.';
+                        errorText = context.copy(
+                          'Introduce una edad válida.',
+                          'Enter a valid age.',
+                        );
                       });
                       return;
                     }
 
                     if (heightValue == null || heightValue <= 0) {
                       setDialogState(() {
-                        errorText = 'Introduce una altura válida.';
+                        errorText = context.copy(
+                          'Introduce una altura válida.',
+                          'Enter a valid height.',
+                        );
                       });
                       return;
                     }
 
                     if (calfValue == null || calfValue <= 0) {
                       setDialogState(() {
-                        errorText =
-                            'Introduce una circunferencia de pantorrilla válida.';
+                        errorText = context.copy(
+                          'Introduce una circunferencia de pantorrilla válida.',
+                          'Enter a valid calf circumference.',
+                        );
                       });
                       return;
                     }
@@ -764,8 +805,10 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (selectedSex == null) {
                       setDialogState(() {
-                        errorText =
-                            'Selecciona un sexo para aplicar la fórmula SEEN.';
+                        errorText = context.copy(
+                          'Selecciona un sexo para aplicar la fórmula SEEN.',
+                          'Select a sex to apply the SEEN formula.',
+                        );
                       });
                       return;
                     }
@@ -779,8 +822,10 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (result == null) {
                       setDialogState(() {
-                        errorText =
-                            'No se ha podido calcular una estimación válida con esos datos.';
+                        errorText = context.copy(
+                          'No se ha podido calcular una estimación válida con esos datos.',
+                          'Could not calculate a valid estimate with those values.',
+                        );
                       });
                       return;
                     }
@@ -796,7 +841,9 @@ class _MetricsViewState extends State<_MetricsView> {
                     _touchedMeasures.add('Pantorrilla');
                     Navigator.of(dialogContext).pop(result);
                   },
-                  child: const Text('Calcular y usar'),
+                  child: Text(
+                    context.copy('Calcular y usar', 'Calculate and use'),
+                  ),
                 ),
               ],
             );
@@ -823,7 +870,10 @@ class _MetricsViewState extends State<_MetricsView> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Estimación SEEN aplicada: ${formatWeight(estimate.estimatedAsmKg, unitSystem)} (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
+          context.copy(
+            'Estimación SEEN aplicada: ${formatWeight(estimate.estimatedAsmKg, unitSystem)} (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
+            'SEEN estimate applied: ${formatWeight(estimate.estimatedAsmKg, unitSystem)} (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)',
+          ),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -912,11 +962,16 @@ class _MetricsViewState extends State<_MetricsView> {
         if (state is MetricsSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 20),
                   SizedBox(width: 8),
-                  Text('Métricas guardadas correctamente'),
+                  Text(
+                    context.copy(
+                      'Métricas guardadas correctamente',
+                      'Metrics saved successfully',
+                    ),
+                  ),
                 ],
               ),
               backgroundColor: semantic.success,
@@ -944,7 +999,7 @@ class _MetricsViewState extends State<_MetricsView> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Actualizar Métricas'),
+          title: Text(context.copy('Actualizar métricas', 'Update metrics')),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
         ),
@@ -957,7 +1012,7 @@ class _MetricsViewState extends State<_MetricsView> {
                   padding: const EdgeInsets.only(bottom: 100),
                   children: [
                     _SectionCard(
-                      title: 'Fecha del registro',
+                      title: context.copy('Fecha del registro', 'Record date'),
                       icon: Icons.calendar_today_outlined,
                       color: palette.primary,
                       child: Column(
@@ -965,7 +1020,10 @@ class _MetricsViewState extends State<_MetricsView> {
                         children: [
                           const SizedBox(height: 8),
                           Text(
-                            'El registro se guardará para la fecha seleccionada. Así puedes apuntar métricas y sueño de días anteriores.',
+                            context.copy(
+                              'El registro se guardará para la fecha seleccionada. Así puedes apuntar métricas y sueño de días anteriores.',
+                              'The record will be saved for the selected date, so you can log metrics and sleep from previous days.',
+                            ),
                             style: TextStyle(
                               color: palette.textSecondary,
                               fontSize: 12,
@@ -976,14 +1034,14 @@ class _MetricsViewState extends State<_MetricsView> {
                           OutlinedButton.icon(
                             onPressed: _pickMetricDate,
                             icon: const Icon(Icons.event_outlined, size: 16),
-                            label: Text(_selectedDateLabel()),
+                            label: Text(_selectedDateLabel(context)),
                           ),
                         ],
                       ),
                     ),
 
                     _SectionCard(
-                      title: 'Altura',
+                      title: context.copy('Altura', 'Height'),
                       icon: Icons.height,
                       color: semantic.info,
                       child: Column(
@@ -991,7 +1049,10 @@ class _MetricsViewState extends State<_MetricsView> {
                         children: [
                           const SizedBox(height: 8),
                           Text(
-                            'La altura se guarda en tu histórico de métricas y también actualiza tu perfil para mantener coherencia con el cálculo SEEN.',
+                            context.copy(
+                              'La altura se guarda en tu histórico de métricas y también actualiza tu perfil para mantener coherencia con el cálculo SEEN.',
+                              'Height is saved in your metrics history and also updates your profile to keep the SEEN calculation consistent.',
+                            ),
                             style: TextStyle(
                               color: palette.textSecondary,
                               fontSize: 12,
@@ -1020,7 +1081,7 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     // Weight section
                     _SectionCard(
-                      title: 'Peso',
+                      title: context.copy('Peso', 'Weight'),
                       icon: Icons.monitor_weight_outlined,
                       color: palette.primary,
                       child: Column(
@@ -1030,7 +1091,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Entrada manual',
+                                context.copy('Entrada manual', 'Manual entry'),
                                 style: TextStyle(
                                   color: palette.textSecondary,
                                   fontSize: 13,
@@ -1046,7 +1107,10 @@ class _MetricsViewState extends State<_MetricsView> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'El peso solo se guarda si lo modificas en esta actualizacion.',
+                            context.copy(
+                              'El peso solo se guarda si lo modificas en esta actualización.',
+                              'Weight is saved only if you change it in this update.',
+                            ),
                             style: TextStyle(
                               color: palette.textDisabled,
                               fontSize: 11,
@@ -1117,7 +1181,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     ),
 
                     _SectionCard(
-                      title: 'Masa muscular',
+                      title: context.copy('Masa muscular', 'Muscle mass'),
                       icon: Icons.fitness_center,
                       color: semantic.calorie,
                       child: Column(
@@ -1125,7 +1189,10 @@ class _MetricsViewState extends State<_MetricsView> {
                         children: [
                           const SizedBox(height: 8),
                           Text(
-                            'Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.',
+                            context.copy(
+                              'Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.',
+                              'Log your current estimate to compare your progress with your profile goal.',
+                            ),
                             style: TextStyle(
                               color: palette.textSecondary,
                               fontSize: 12,
@@ -1141,8 +1208,8 @@ class _MetricsViewState extends State<_MetricsView> {
                             style: TextStyle(color: palette.textPrimary),
                             decoration: InputDecoration(
                               hintText: unitSystem == UnitSystem.imperial
-                                  ? 'Ej: 71.7'
-                                  : 'Ej: 32.5',
+                                  ? 'Eg: 71.7'
+                                  : 'Eg: 32.5',
                               suffixText: weightUnitSymbol(unitSystem),
                               suffixStyle: TextStyle(
                                 color: palette.textSecondary,
@@ -1163,7 +1230,10 @@ class _MetricsViewState extends State<_MetricsView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Calculadora SEEN',
+                                  context.copy(
+                                    'Calculadora SEEN',
+                                    'SEEN calculator',
+                                  ),
                                   style: TextStyle(
                                     color: palette.textPrimary,
                                     fontSize: 13,
@@ -1172,7 +1242,10 @@ class _MetricsViewState extends State<_MetricsView> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla.',
+                                  context.copy(
+                                    'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla.',
+                                    'If you do not have a direct measurement, you can use an estimate based on age, height, sex, and calf circumference.',
+                                  ),
                                   style: TextStyle(
                                     color: palette.textSecondary,
                                     fontSize: 12,
@@ -1186,7 +1259,12 @@ class _MetricsViewState extends State<_MetricsView> {
                                     onPressed: () =>
                                         _openSeenEstimateCalculator(context),
                                     icon: const Icon(Icons.calculate_outlined),
-                                    label: const Text('Calcular estimación'),
+                                    label: Text(
+                                      context.copy(
+                                        'Calcular estimación',
+                                        'Calculate estimate',
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1198,7 +1276,7 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     // Sleep section
                     _SectionCard(
-                      title: 'Horas de sueño',
+                      title: context.copy('Horas de sueño', 'Sleep hours'),
                       icon: Icons.bedtime_outlined,
                       color: semantic.sleep,
                       child: Column(
@@ -1206,7 +1284,10 @@ class _MetricsViewState extends State<_MetricsView> {
                         children: [
                           const SizedBox(height: 8),
                           Text(
-                            'Indica cuántas horas dormiste en la noche correspondiente a esta fecha.',
+                            context.copy(
+                              'Indica cuántas horas dormiste en la noche correspondiente a esta fecha.',
+                              'Enter how many hours you slept on the night corresponding to this date.',
+                            ),
                             style: TextStyle(
                               color: palette.textSecondary,
                               fontSize: 12,
@@ -1221,7 +1302,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             ),
                             style: TextStyle(color: palette.textPrimary),
                             decoration: InputDecoration(
-                              hintText: 'Ej: 7.5',
+                              hintText: 'Eg: 7.5',
                               suffixText: 'h',
                               suffixStyle: TextStyle(
                                 color: palette.textSecondary,
@@ -1261,7 +1342,10 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     // Body measurements
                     _SectionCard(
-                      title: 'Medidas corporales',
+                      title: context.copy(
+                        'Medidas corporales',
+                        'Body measurements',
+                      ),
                       icon: Icons.straighten,
                       color: semantic.info,
                       trailing: GestureDetector(
@@ -1281,7 +1365,9 @@ class _MetricsViewState extends State<_MetricsView> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              _bodyMapMode ? 'Lista' : 'Cuerpo',
+                              _bodyMapMode
+                                  ? context.copy('Lista', 'List')
+                                  : context.copy('Cuerpo', 'Body'),
                               style: TextStyle(
                                 color: semantic.info,
                                 fontSize: 12,
@@ -1343,7 +1429,9 @@ class _MetricsViewState extends State<_MetricsView> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text('Guardar métricas'),
+                          : Text(
+                              context.copy('Guardar métricas', 'Save metrics'),
+                            ),
                     ),
                   ),
                 ),

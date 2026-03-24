@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 
@@ -12,6 +13,65 @@ String formatRecapOption(String value) {
             '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}',
       )
       .join(' ');
+}
+
+String recapCopy(BuildContext context, String value) {
+  const translations = <String, List<String>>{
+    'ENTRENO': ['Entreno', 'Training'],
+    'NUTRICION': ['Nutricion', 'Nutrition'],
+    'RECUPERACION': ['Recuperacion', 'Recovery'],
+    'GENERAL': ['General', 'General'],
+    'REVIEWED': ['Revisado', 'Reviewed'],
+    'SUBMITTED': ['Enviado', 'Submitted'],
+    'DRAFT': ['Borrador', 'Draft'],
+    'MAL': ['Mal', 'Bad'],
+    'REGULAR': ['Regular', 'Fair'],
+    'NORMAL': ['Normal', 'Normal'],
+    'BIEN': ['Bien', 'Good'],
+    'MUY_BIEN': ['Muy bien', 'Very good'],
+    'MUY_MAL': ['Muy mal', 'Very bad'],
+    'ENTRENAMIENTO': ['Entrenamiento', 'Training'],
+    'ADHERENCIA': ['Adherencia', 'Consistency'],
+    'APP': ['App', 'App'],
+    'NADA': ['Nada', 'None'],
+    'POCO': ['Poco', 'Low'],
+    'ESTABLE': ['Estable', 'Steady'],
+    'MEJORANDO': ['Mejorando', 'Improving'],
+    'EXCELENTE': ['Excelente', 'Excellent'],
+    'BAJA': ['Baja', 'Low'],
+    'MODERADA': ['Moderada', 'Moderate'],
+    'ALTA': ['Alta', 'High'],
+    'MUY_ALTA': ['Muy alta', 'Very high'],
+    'MALA': ['Mala', 'Poor'],
+    'BUENA': ['Buena', 'Good'],
+    'MUY_BUENA': ['Muy buena', 'Very good'],
+    'MENOS_5': ['Menos de 5 h', 'Under 5 h'],
+    'ENTRE_5_6': ['Entre 5 y 6 h', 'Between 5 and 6 h'],
+    'ENTRE_6_7': ['Entre 6 y 7 h', 'Between 6 and 7 h'],
+    'MAS_8': ['Mas de 8 h', 'Over 8 h'],
+    'CANSADO': ['Cansado', 'Tired'],
+    'FUERTE': ['Fuerte', 'Strong'],
+    'LEVE': ['Leve', 'Mild'],
+    'MODERADO': ['Moderado', 'Moderate'],
+    'ALTO': ['Alto', 'High'],
+    'CUELLO': ['Cuello', 'Neck'],
+    'HOMBROS': ['Hombros', 'Shoulders'],
+    'ESPALDA': ['Espalda', 'Back'],
+    'LUMBAR': ['Lumbar', 'Lower back'],
+    'GLUTEOS': ['Gluteos', 'Glutes'],
+    'CUADRICEPS': ['Cuadriceps', 'Quads'],
+    'ISQUIOS': ['Isquios', 'Hamstrings'],
+    'GEMELOS': ['Gemelos', 'Calves'],
+    'FRONTAL': ['Frontal', 'Front'],
+    'POSTERIOR': ['Posterior', 'Back'],
+  };
+
+  final translation = translations[value];
+  if (translation != null) {
+    return context.copy(translation[0], translation[1]);
+  }
+
+  return formatRecapOption(value);
 }
 
 class RecapSectionCard extends StatelessWidget {
@@ -228,7 +288,7 @@ class RecapChoiceChipsField extends StatelessWidget {
                 color: isSelected ? palette.primary : palette.divider,
               ),
               label: Text(
-                formatRecapOption(option),
+                recapCopy(context, option),
                 style: TextStyle(
                   color: isSelected ? palette.primary : palette.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -306,7 +366,7 @@ class RecapMultiSelectField extends StatelessWidget {
                 color: isSelected ? semantic.info : palette.divider,
               ),
               label: Text(
-                formatRecapOption(option),
+                recapCopy(context, option),
                 style: TextStyle(
                   color: isSelected ? semantic.info : palette.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -336,7 +396,7 @@ class RecapEmojiRatingField extends StatelessWidget {
   });
 
   static const _emojis = ['😫', '😞', '😐', '🙂', '😁'];
-  static const _labels = ['Muy mal', 'Mal', 'Normal', 'Bien', 'Muy bien'];
+  static const _labels = ['MUY_MAL', 'MAL', 'NORMAL', 'BIEN', 'MUY_BIEN'];
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +451,7 @@ class RecapEmojiRatingField extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _labels[index],
+                      recapCopy(context, _labels[index]),
                       style: TextStyle(
                         color: isSelected
                             ? palette.primary
@@ -500,14 +560,14 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
   bool _isFront = true;
 
   static const _zoneLabels = <String, String>{
-    'CUELLO': 'Cuello',
-    'HOMBROS': 'Hombros',
-    'ESPALDA': 'Espalda',
-    'LUMBAR': 'Lumbar',
-    'GLUTEOS': 'Glúteos',
-    'CUADRICEPS': 'Cuádriceps',
-    'ISQUIOS': 'Isquios',
-    'GEMELOS': 'Gemelos',
+    'CUELLO': 'CUELLO',
+    'HOMBROS': 'HOMBROS',
+    'ESPALDA': 'ESPALDA',
+    'LUMBAR': 'LUMBAR',
+    'GLUTEOS': 'GLUTEOS',
+    'CUADRICEPS': 'CUADRICEPS',
+    'ISQUIOS': 'ISQUIOS',
+    'GEMELOS': 'GEMELOS',
   };
 
   // ── Front view ──
@@ -564,7 +624,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
           ),
         ),
         child: Text(
-          _zoneLabels[id] ?? id,
+          recapCopy(context, _zoneLabels[id] ?? id),
           style: TextStyle(
             color: isSelected ? Colors.white : palette.textSecondary,
             fontSize: 12,
@@ -633,7 +693,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
   Widget _viewTab(String label, bool isActive) {
     final palette = context.exomPalette;
     return GestureDetector(
-      onTap: () => setState(() => _isFront = label == 'Frontal'),
+      onTap: () => setState(() => _isFront = label == 'FRONTAL'),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -651,7 +711,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
           children: [
             Icon(
               isActive
-                  ? (label == 'Frontal'
+                  ? (label == 'FRONTAL'
                         ? Icons.accessibility_new
                         : Icons.accessibility)
                   : Icons.circle,
@@ -715,8 +775,8 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _viewTab('Frontal', _isFront),
-                _viewTab('Posterior', !_isFront),
+                _viewTab('FRONTAL', _isFront),
+                _viewTab('POSTERIOR', !_isFront),
               ],
             ),
           ),
@@ -768,7 +828,7 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
             children: widget.values.map((zone) {
               return Chip(
                 label: Text(
-                  _zoneLabels[zone] ?? zone,
+                  recapCopy(context, _zoneLabels[zone] ?? zone),
                   style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
                 backgroundColor: semantic.accent,

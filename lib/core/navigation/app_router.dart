@@ -371,7 +371,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.feedback_outlined,
-                    label: 'Feedback',
+                    label: tr.copy('Feedback', 'Feedback'),
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.feedback);

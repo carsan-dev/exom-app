@@ -13,9 +13,9 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
   FeedbackBloc({
     required GetMyFeedbackUseCase getMyFeedbackUseCase,
     required CreateFeedbackUseCase createFeedbackUseCase,
-  })  : _getMyFeedbackUseCase = getMyFeedbackUseCase,
-        _createFeedbackUseCase = createFeedbackUseCase,
-        super(const FeedbackInitial()) {
+  }) : _getMyFeedbackUseCase = getMyFeedbackUseCase,
+       _createFeedbackUseCase = createFeedbackUseCase,
+       super(const FeedbackInitial()) {
     on<FeedbackLoadRequested>(_onLoadRequested);
     on<FeedbackSubmitRequested>(_onSubmitRequested);
   }

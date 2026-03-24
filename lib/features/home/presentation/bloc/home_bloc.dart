@@ -9,8 +9,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final GetHomeSummaryUseCase _getHomeSummaryUseCase;
 
   HomeBloc({required GetHomeSummaryUseCase getHomeSummaryUseCase})
-      : _getHomeSummaryUseCase = getHomeSummaryUseCase,
-        super(const HomeInitial()) {
+    : _getHomeSummaryUseCase = getHomeSummaryUseCase,
+      super(const HomeInitial()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeDateSelected>(_onDateSelected);
   }

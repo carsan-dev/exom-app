@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
@@ -19,7 +20,7 @@ class FeedbackPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Feedback'),
+          title: Text(context.copy('Feedback', 'Feedback')),
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
         ),
@@ -28,7 +29,12 @@ class FeedbackPage extends StatelessWidget {
             if (state is FeedbackSubmitSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Feedback enviado correctamente'),
+                  content: Text(
+                    context.copy(
+                      'Feedback enviado correctamente',
+                      'Feedback sent successfully',
+                    ),
+                  ),
                   backgroundColor: AppColors.success,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -71,7 +77,7 @@ class FeedbackPage extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                       child: Text(
-                        'Historial',
+                        context.copy('Historial', 'History'),
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: palette.textPrimary,
                           fontSize: 17,
@@ -85,7 +91,10 @@ class FeedbackPage extends StatelessWidget {
                       padding: const EdgeInsets.all(24),
                       child: Center(
                         child: Text(
-                          'Aún no has enviado ningún feedback',
+                          context.copy(
+                            'Aún no has enviado ningún feedback',
+                            'You have not sent any feedback yet',
+                          ),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: palette.textDisabled,
                             fontSize: 13,
@@ -159,7 +168,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enviar feedback',
+              context.copy('Enviar feedback', 'Send feedback'),
               style: theme.textTheme.titleMedium?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 15,
@@ -170,14 +179,14 @@ class _FeedbackFormState extends State<_FeedbackForm> {
             Row(
               children: [
                 _TypeChip(
-                  label: 'Imagen',
+                  label: context.copy('Imagen', 'Image'),
                   icon: Icons.image_outlined,
                   selected: _mediaType == 'IMAGE',
                   onTap: () => setState(() => _mediaType = 'IMAGE'),
                 ),
                 const SizedBox(width: 8),
                 _TypeChip(
-                  label: 'Vídeo',
+                  label: context.copy('Vídeo', 'Video'),
                   icon: Icons.videocam_outlined,
                   selected: _mediaType == 'VIDEO',
                   onTap: () => setState(() => _mediaType = 'VIDEO'),
@@ -189,7 +198,10 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               controller: _urlController,
               style: TextStyle(color: palette.textPrimary, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'URL del archivo (imagen o vídeo)',
+                hintText: context.copy(
+                  'URL del archivo (imagen o vídeo)',
+                  'File URL (image or video)',
+                ),
                 prefixIcon: Icon(
                   Icons.link,
                   color: palette.textDisabled,
@@ -198,7 +210,10 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return 'La URL es obligatoria';
+                  return context.copy(
+                    'La URL es obligatoria',
+                    'URL is required',
+                  );
                 }
                 return null;
               },
@@ -208,8 +223,11 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               controller: _notesController,
               style: TextStyle(color: palette.textPrimary, fontSize: 14),
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Notas adicionales (opcional)',
+              decoration: InputDecoration(
+                hintText: context.copy(
+                  'Notas adicionales (opcional)',
+                  'Additional notes (optional)',
+                ),
                 alignLabelWithHint: true,
               ),
             ),
@@ -227,7 +245,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('Enviar feedback'),
+                    : Text(context.copy('Enviar feedback', 'Send feedback')),
               ),
             ),
           ],
@@ -302,7 +320,10 @@ class _FeedbackCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final dateStr = DateFormat('dd MMM yyyy', 'es').format(feedback.createdAt);
+    final dateStr = DateFormat(
+      'dd MMM yyyy',
+      context.isEnglish ? 'en' : 'es',
+    ).format(feedback.createdAt);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -328,7 +349,9 @@ class _FeedbackCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   feedback.exerciseName ??
-                      (feedback.isVideo ? 'Vídeo' : 'Imagen'),
+                      (feedback.isVideo
+                          ? context.copy('Vídeo', 'Video')
+                          : context.copy('Imagen', 'Image')),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -408,7 +431,9 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        isReviewed ? 'Revisado' : 'Pendiente',
+        isReviewed
+            ? context.copy('Revisado', 'Reviewed')
+            : context.copy('Pendiente', 'Pending'),
         style: TextStyle(
           color: isReviewed ? AppColors.success : AppColors.warning,
           fontSize: 11,

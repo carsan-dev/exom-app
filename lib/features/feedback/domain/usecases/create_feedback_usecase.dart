@@ -12,9 +12,9 @@ class CreateFeedbackUseCase {
     String? notes,
     String? exerciseId,
   }) => _repository.createFeedback(
-        mediaType: mediaType,
-        mediaUrl: mediaUrl,
-        notes: notes,
-        exerciseId: exerciseId,
-      );
+    mediaType: mediaType,
+    mediaUrl: mediaUrl,
+    notes: notes,
+    exerciseId: exerciseId,
+  );
 }

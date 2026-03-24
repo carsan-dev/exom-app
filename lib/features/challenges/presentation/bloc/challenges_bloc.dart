@@ -17,10 +17,10 @@ class ChallengesBloc extends Bloc<ChallengesEvent, ChallengesState> {
     required GetMyChallengesUseCase getMyChallengesUseCase,
     required UpdateChallengeProgressUseCase updateChallengeProgressUseCase,
     required GetMyAchievementsUseCase getMyAchievementsUseCase,
-  })  : _getMyChallengesUseCase = getMyChallengesUseCase,
-        _updateChallengeProgressUseCase = updateChallengeProgressUseCase,
-        _getMyAchievementsUseCase = getMyAchievementsUseCase,
-        super(const ChallengesInitial()) {
+  }) : _getMyChallengesUseCase = getMyChallengesUseCase,
+       _updateChallengeProgressUseCase = updateChallengeProgressUseCase,
+       _getMyAchievementsUseCase = getMyAchievementsUseCase,
+       super(const ChallengesInitial()) {
     on<ChallengesLoadRequested>(_onLoadRequested);
     on<ChallengeProgressUpdated>(_onProgressUpdated);
   }
@@ -41,11 +41,13 @@ class ChallengesBloc extends Bloc<ChallengesEvent, ChallengesState> {
       final mainGoal = challenges.where((c) => c.isMainGoal).toList();
       final weekly = challenges.where((c) => !c.isMainGoal).toList();
 
-      emit(ChallengesLoaded(
-        mainGoals: mainGoal,
-        weeklyChallenges: weekly,
-        achievements: achievements,
-      ));
+      emit(
+        ChallengesLoaded(
+          mainGoals: mainGoal,
+          weeklyChallenges: weekly,
+          achievements: achievements,
+        ),
+      );
     } catch (e) {
       emit(ChallengesError(e.toString()));
     }

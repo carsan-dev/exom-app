@@ -8,7 +8,8 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
   const FeedbackRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<List<FeedbackEntity>> getMyFeedback() => _remoteDataSource.getMyFeedback();
+  Future<List<FeedbackEntity>> getMyFeedback() =>
+      _remoteDataSource.getMyFeedback();
 
   @override
   Future<FeedbackEntity> createFeedback({
@@ -17,9 +18,9 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
     String? notes,
     String? exerciseId,
   }) => _remoteDataSource.createFeedback(
-        mediaType: mediaType,
-        mediaUrl: mediaUrl,
-        notes: notes,
-        exerciseId: exerciseId,
-      );
+    mediaType: mediaType,
+    mediaUrl: mediaUrl,
+    notes: notes,
+    exerciseId: exerciseId,
+  );
 }

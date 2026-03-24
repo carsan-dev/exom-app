@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 
@@ -33,15 +34,20 @@ class RecapStepGeneral extends StatelessWidget {
       child: Column(
         children: [
           RecapSectionCard(
-            title: 'Estado general',
-            subtitle: 'Tu contexto mental y emocional también cuenta.',
+            title: context.copy('Estado general', 'General state'),
+            subtitle: context.copy(
+              'Tu contexto mental y emocional también cuenta.',
+              'Your mental and emotional context also matters.',
+            ),
             icon: Icons.mood,
             child: Column(
               children: [
                 RecapChoiceChipsField(
-                  label: 'Ánimo predominante',
-                  helperText:
-                      'Cómo te has sentido la mayor parte de la semana.',
+                  label: context.copy('Ánimo predominante', 'Main mood'),
+                  helperText: context.copy(
+                    'Cómo te has sentido la mayor parte de la semana.',
+                    'How you felt most of the week.',
+                  ),
                   value: formData['mood'] as String?,
                   options: const [
                     'MAL',
@@ -64,22 +70,31 @@ class RecapStepGeneral extends StatelessWidget {
                   activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    'Valorar nivel de estrés',
+                    context.copy(
+                      'Valorar nivel de estrés',
+                      'Rate stress level',
+                    ),
                     style: TextStyle(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
-                    'Actívalo si quieres reportar la presión o carga de la semana.',
+                    context.copy(
+                      'Actívalo si quieres reportar la presión o carga de la semana.',
+                      'Enable it if you want to report the pressure or load of the week.',
+                    ),
                     style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (stressEnabled) ...[
                   const SizedBox(height: 8),
                   RecapEmojiRatingField(
-                    label: 'Estrés percibido',
-                    helperText: '¿Cuánto estrés has sentido esta semana?',
+                    label: context.copy('Estrés percibido', 'Perceived stress'),
+                    helperText: context.copy(
+                      '¿Cuánto estrés has sentido esta semana?',
+                      'How much stress did you feel this week?',
+                    ),
                     value: stressLevel.clamp(0, 4),
                     onChanged: (value) => onChanged('stress_level', value),
                   ),
@@ -88,30 +103,45 @@ class RecapStepGeneral extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: 'Feedback sobre el servicio',
-            subtitle: 'Ayuda a mejorar la experiencia y el acompañamiento.',
+            title: context.copy(
+              'Feedback sobre el servicio',
+              'Service feedback',
+            ),
+            subtitle: context.copy(
+              'Ayuda a mejorar la experiencia y el acompañamiento.',
+              'Help improve the experience and support.',
+            ),
             icon: Icons.rate_review_outlined,
             child: Column(
               children: [
                 RecapStarRatingField(
-                  label: 'Valora la app',
-                  helperText: 'Tu experiencia general con la aplicación.',
+                  label: context.copy('Valora la app', 'Rate the app'),
+                  helperText: context.copy(
+                    'Tu experiencia general con la aplicación.',
+                    'Your overall experience with the app.',
+                  ),
                   value: appRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_app_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapStarRatingField(
-                  label: 'Valora el servicio',
-                  helperText: 'Cómo percibes el soporte recibido esta semana.',
+                  label: context.copy('Valora el servicio', 'Rate the service'),
+                  helperText: context.copy(
+                    'Cómo percibes el soporte recibido esta semana.',
+                    'How you rate the support received this week.',
+                  ),
                   value: serviceRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_service_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapMultiSelectField(
-                  label: 'Áreas a mejorar',
-                  helperText: 'Selecciona los puntos donde quieres más apoyo.',
+                  label: context.copy('Áreas a mejorar', 'Areas to improve'),
+                  helperText: context.copy(
+                    'Selecciona los puntos donde quieres más apoyo.',
+                    'Select the points where you want more support.',
+                  ),
                   values: improvementAreas,
                   options: const [
                     'ENTRENAMIENTO',
@@ -127,23 +157,33 @@ class RecapStepGeneral extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: 'Comentarios finales',
-            subtitle: 'Cierra la semana con lo más relevante para tu coach.',
+            title: context.copy('Comentarios finales', 'Final comments'),
+            subtitle: context.copy(
+              'Cierra la semana con lo más relevante para tu coach.',
+              'Close the week with what matters most for your coach.',
+            ),
             icon: Icons.chat_bubble_outline,
             child: Column(
               children: [
                 RecapTextAreaField(
-                  label: 'Notas generales',
-                  hintText:
-                      'Comparte cualquier detalle relevante de tu semana.',
+                  label: context.copy('Notas generales', 'General notes'),
+                  hintText: context.copy(
+                    'Comparte cualquier detalle relevante de tu semana.',
+                    'Share any relevant detail from your week.',
+                  ),
                   initialValue: formData['general_notes'] as String? ?? '',
                   onChanged: (value) => onChanged('general_notes', value),
                 ),
                 const SizedBox(height: 18),
                 RecapTextAreaField(
-                  label: 'Sugerencias o mejoras',
-                  hintText:
-                      'Ej: me gustaría más contexto en las sesiones o una mejor guía para el fin de semana.',
+                  label: context.copy(
+                    'Sugerencias o mejoras',
+                    'Suggestions or improvements',
+                  ),
+                  hintText: context.copy(
+                    'Ej: me gustaría más contexto en las sesiones o una mejor guía para el fin de semana.',
+                    'Eg: I would like more context in the sessions or better guidance for the weekend.',
+                  ),
                   initialValue:
                       formData['improvement_feedback_text'] as String? ?? '',
                   onChanged: (value) =>

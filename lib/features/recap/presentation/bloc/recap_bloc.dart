@@ -20,11 +20,11 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     required CreateRecapUseCase createRecapUseCase,
     required UpdateRecapUseCase updateRecapUseCase,
     required SubmitRecapUseCase submitRecapUseCase,
-  })  : _getMyRecapsUseCase = getMyRecapsUseCase,
-        _createRecapUseCase = createRecapUseCase,
-        _updateRecapUseCase = updateRecapUseCase,
-        _submitRecapUseCase = submitRecapUseCase,
-        super(const RecapInitial()) {
+  }) : _getMyRecapsUseCase = getMyRecapsUseCase,
+       _createRecapUseCase = createRecapUseCase,
+       _updateRecapUseCase = updateRecapUseCase,
+       _submitRecapUseCase = submitRecapUseCase,
+       super(const RecapInitial()) {
     on<RecapLoadRequested>(_onLoadRequested);
     on<RecapCreateRequested>(_onCreateRequested);
     on<RecapFormStarted>(_onFormStarted);
@@ -69,39 +69,40 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     emit(RecapFormActive(step: 0, formData: Map.from(_formData)));
   }
 
-  void _onFormStarted(
-    RecapFormStarted event,
-    Emitter<RecapState> emit,
-  ) {
+  void _onFormStarted(RecapFormStarted event, Emitter<RecapState> emit) {
     _editingRecapId = event.recapId;
     _formData = Map.from(event.initialData);
-    emit(RecapFormActive(step: 0, formData: Map.from(_formData), recapId: event.recapId));
+    emit(
+      RecapFormActive(
+        step: 0,
+        formData: Map.from(_formData),
+        recapId: event.recapId,
+      ),
+    );
   }
 
-  void _onFieldUpdated(
-    RecapFieldUpdated event,
-    Emitter<RecapState> emit,
-  ) {
+  void _onFieldUpdated(RecapFieldUpdated event, Emitter<RecapState> emit) {
     _formData[event.field] = event.value;
     final current = state;
     if (current is RecapFormActive) {
-      emit(RecapFormActive(
-        step: current.step,
-        formData: Map.from(_formData),
-        recapId: _editingRecapId,
-      ));
+      emit(
+        RecapFormActive(
+          step: current.step,
+          formData: Map.from(_formData),
+          recapId: _editingRecapId,
+        ),
+      );
     }
   }
 
-  void _onStepChanged(
-    RecapStepChanged event,
-    Emitter<RecapState> emit,
-  ) {
-    emit(RecapFormActive(
-      step: event.step,
-      formData: Map.from(_formData),
-      recapId: _editingRecapId,
-    ));
+  void _onStepChanged(RecapStepChanged event, Emitter<RecapState> emit) {
+    emit(
+      RecapFormActive(
+        step: event.step,
+        formData: Map.from(_formData),
+        recapId: _editingRecapId,
+      ),
+    );
   }
 
   Future<void> _onSaveRequested(
@@ -146,10 +147,7 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     }
   }
 
-  void _onFormCancelled(
-    RecapFormCancelled event,
-    Emitter<RecapState> emit,
-  ) {
+  void _onFormCancelled(RecapFormCancelled event, Emitter<RecapState> emit) {
     _formData = {};
     _editingRecapId = null;
     add(const RecapLoadRequested());

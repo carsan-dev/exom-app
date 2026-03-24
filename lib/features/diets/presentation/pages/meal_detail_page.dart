@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
@@ -71,16 +72,16 @@ class _MealScaffold extends StatefulWidget {
 }
 
 class _MealScaffoldState extends State<_MealScaffold> {
-  String _mealTypeLabel(String type) {
+  String _mealTypeLabel(BuildContext context, String type) {
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
-        return 'Desayuno';
+        return context.copy('Desayuno', 'Breakfast');
       case 'LUNCH':
-        return 'Almuerzo';
+        return context.copy('Almuerzo', 'Lunch');
       case 'SNACK':
-        return 'Snack';
+        return context.copy('Snack', 'Snack');
       case 'DINNER':
-        return 'Cena';
+        return context.copy('Cena', 'Dinner');
       default:
         return type;
     }
@@ -136,7 +137,7 @@ class _MealScaffoldState extends State<_MealScaffold> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        _mealTypeLabel(meal.type),
+                        _mealTypeLabel(context, meal.type),
                         style: TextStyle(
                           color: semantic.calorie,
                           fontSize: 12,
@@ -169,7 +170,12 @@ class _MealScaffoldState extends State<_MealScaffold> {
                 child: OutlinedButton.icon(
                   onPressed: _launchRecipe,
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Ver Receta en Google'),
+                  label: Text(
+                    context.copy(
+                      'Ver receta en Google',
+                      'Open recipe in Google',
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: semantic.calorie,
                     side: BorderSide(color: semantic.calorie),
@@ -205,7 +211,12 @@ class _MealScaffoldState extends State<_MealScaffold> {
                   size: 20,
                 ),
                 label: Text(
-                  isCompleted ? 'Completada' : 'Marcar como completada',
+                  isCompleted
+                      ? context.copy('Completada', 'Completed')
+                      : context.copy(
+                          'Marcar como completada',
+                          'Mark as completed',
+                        ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isCompleted
@@ -296,7 +307,7 @@ class _MacroSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Información nutricional',
+            context.copy('Información nutricional', 'Nutritional information'),
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 15,
@@ -309,28 +320,28 @@ class _MacroSection extends StatelessWidget {
             children: [
               if (meal.calories != null)
                 _MacroRing(
-                  label: 'Calorías',
+                  label: context.copy('Calorías', 'Calories'),
                   value: '${meal.calories}',
                   unit: 'kcal',
                   color: semantic.calorie,
                 ),
               if (meal.proteinG != null)
                 _MacroRing(
-                  label: 'Proteína',
+                  label: context.copy('Proteína', 'Protein'),
                   value: meal.proteinG!.toStringAsFixed(1),
                   unit: 'g',
                   color: palette.primary,
                 ),
               if (meal.carbsG != null)
                 _MacroRing(
-                  label: 'Carbos',
+                  label: context.copy('Carbos', 'Carbs'),
                   value: meal.carbsG!.toStringAsFixed(1),
                   unit: 'g',
                   color: semantic.info,
                 ),
               if (meal.fatG != null)
                 _MacroRing(
-                  label: 'Grasas',
+                  label: context.copy('Grasas', 'Fats'),
                   value: meal.fatG!.toStringAsFixed(1),
                   unit: 'g',
                   color: semantic.warning,
@@ -463,7 +474,7 @@ class _IngredientsSection extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
           child: Text(
-            'Ingredientes',
+            context.copy('Ingredientes', 'Ingredients'),
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 16,

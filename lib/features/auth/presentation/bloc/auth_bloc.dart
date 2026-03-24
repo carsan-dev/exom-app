@@ -19,11 +19,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SocialLoginUseCase socialLoginUseCase,
     required LogoutUseCase logoutUseCase,
     required FirebaseAuthService firebaseAuthService,
-  })  : _loginUseCase = loginUseCase,
-        _socialLoginUseCase = socialLoginUseCase,
-        _logoutUseCase = logoutUseCase,
-        _firebaseAuthService = firebaseAuthService,
-        super(const AuthInitial()) {
+  }) : _loginUseCase = loginUseCase,
+       _socialLoginUseCase = socialLoginUseCase,
+       _logoutUseCase = logoutUseCase,
+       _firebaseAuthService = firebaseAuthService,
+       super(const AuthInitial()) {
     on<AuthCheckStatusRequested>(_onCheckStatus);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthGoogleLoginRequested>(_onGoogleLoginRequested);

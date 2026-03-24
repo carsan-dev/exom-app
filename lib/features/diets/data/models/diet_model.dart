@@ -56,9 +56,15 @@ class MealModel {
       carbsG: (json['carbs_g'] as num?)?.toDouble(),
       fatG: (json['fat_g'] as num?)?.toDouble(),
       nutritionalBadges:
-          (json['nutritional_badges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      ingredients: (json['ingredients'] as List<dynamic>?)
-              ?.map((e) => MealIngredientModel.fromJson(e as Map<String, dynamic>))
+          (json['nutritional_badges'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      ingredients:
+          (json['ingredients'] as List<dynamic>?)
+              ?.map(
+                (e) => MealIngredientModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );
@@ -92,7 +98,8 @@ class DietModel {
       totalProteinG: (json['total_protein_g'] as num?)?.toDouble(),
       totalCarbsG: (json['total_carbs_g'] as num?)?.toDouble(),
       totalFatG: (json['total_fat_g'] as num?)?.toDouble(),
-      meals: (json['meals'] as List<dynamic>?)
+      meals:
+          (json['meals'] as List<dynamic>?)
               ?.map((e) => MealModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],

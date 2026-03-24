@@ -16,10 +16,10 @@ class ProfileModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'first_name': firstName,
-        'last_name': lastName,
-        'avatar_url': avatarUrl,
-      };
+    'first_name': firstName,
+    'last_name': lastName,
+    'avatar_url': avatarUrl,
+  };
 }
 
 class UserModel {
@@ -47,20 +47,20 @@ class UserModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'email': email,
-        'role': role,
-        'profile': profile?.toJson(),
-      };
+    'id': id,
+    'email': email,
+    'role': role,
+    'profile': profile?.toJson(),
+  };
 
   UserEntity toEntity() => UserEntity(
-        id: id,
-        email: email,
-        role: role,
-        firstName: profile?.firstName,
-        lastName: profile?.lastName,
-        avatarUrl: profile?.avatarUrl,
-      );
+    id: id,
+    email: email,
+    role: role,
+    firstName: profile?.firstName,
+    lastName: profile?.lastName,
+    avatarUrl: profile?.avatarUrl,
+  );
 }
 
 class AuthResponseModel {
@@ -77,7 +77,7 @@ class AuthResponseModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'access_token': accessToken,
-        'user': user.toJson(),
-      };
+    'access_token': accessToken,
+    'user': user.toJson(),
+  };
 }

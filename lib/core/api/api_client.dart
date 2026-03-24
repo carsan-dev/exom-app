@@ -79,7 +79,10 @@ class ApiClient {
     return responseData as T;
   }
 
-  Future<void> delete(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<void> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     await _dio.delete(path, queryParameters: queryParameters);
   }
 }
@@ -99,7 +102,10 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     if (err.response?.statusCode == 401) {
       // Token might be expired, try to refresh
       try {

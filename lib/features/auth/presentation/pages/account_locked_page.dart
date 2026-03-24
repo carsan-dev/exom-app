@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 import '../bloc/auth_bloc.dart';
@@ -33,7 +34,7 @@ class AccountLockedPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Cuenta bloqueada',
+                context.copy('Cuenta bloqueada', 'Account locked'),
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -43,7 +44,10 @@ class AccountLockedPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.',
+                context.copy(
+                  'Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.',
+                  'Your account has been temporarily locked.\nContact your coach for more information.',
+                ),
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontSize: 15,
                   color: palette.textSecondary,
@@ -56,7 +60,9 @@ class AccountLockedPage extends StatelessWidget {
                 onPressed: () {
                   context.read<AuthBloc>().add(const AuthLogoutRequested());
                 },
-                child: const Text('Volver al inicio de sesión'),
+                child: Text(
+                  context.copy('Volver al inicio de sesión', 'Back to login'),
+                ),
               ),
             ],
           ),

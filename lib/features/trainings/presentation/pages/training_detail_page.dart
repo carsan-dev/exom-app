@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
@@ -51,7 +52,7 @@ class _TrainingDetailView extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               surfaceTintColor: Colors.transparent,
-              title: const Text('Error'),
+              title: Text(context.copy('Error', 'Error')),
             ),
             body: ErrorWidget2(message: state.message, onRetry: null),
           );
@@ -197,7 +198,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               // Warmup
               if (training.warmupDescription != null) ...[
                 _SectionTitle(
-                  title: 'Calentamiento',
+                  title: context.copy('Calentamiento', 'Warm-up'),
                   icon: Icons.whatshot_outlined,
                   color: semantic.warning,
                 ),
@@ -206,10 +207,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
               // Exercises section
               _SectionTitle(
-                title: 'Ejercicios',
+                title: context.copy('Ejercicios', 'Exercises'),
                 icon: Icons.fitness_center,
                 color: color,
-                trailing: '$total ejercicios',
+                trailing: '$total ${context.copy('ejercicios', 'exercises')}',
               ),
 
               ...training.exercises.map(
@@ -233,7 +234,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               // Cooldown
               if (training.cooldownDescription != null) ...[
                 _SectionTitle(
-                  title: 'Enfriamiento',
+                  title: context.copy('Enfriamiento', 'Cooldown'),
                   icon: Icons.ac_unit_outlined,
                   color: semantic.info,
                 ),
@@ -248,7 +249,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   maxLines: 3,
                   style: TextStyle(color: palette.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Añadir nota rápida (Opcional)',
+                    hintText: context.copy(
+                      'Añadir nota rápida (Opcional)',
+                      'Add a quick note (optional)',
+                    ),
                     hintStyle: TextStyle(color: palette.textDisabled),
                     prefixIcon: Icon(
                       Icons.edit_note,
@@ -284,7 +288,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '$completed/$total ejercicios completados',
+                        '$completed/$total ${context.copy('ejercicios completados', 'completed exercises')}',
                         style: TextStyle(
                           color: palette.textSecondary,
                           fontSize: 13,
@@ -344,7 +348,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         size: 18,
                       ),
                       label: Text(
-                        allDone ? '¡Entrenamiento completado!' : 'Completar',
+                        allDone
+                            ? context.copy(
+                                '¡Entrenamiento completado!',
+                                'Workout completed!',
+                              )
+                            : context.copy('Completar', 'Complete'),
                       ),
                     ),
                   ),
@@ -572,7 +581,8 @@ class _ExerciseCard extends StatelessWidget {
                       const SizedBox(width: 12),
                       _MiniStat(
                         icon: Icons.timer_outlined,
-                        label: '${trainingExercise.restSeconds}s descanso',
+                        label:
+                            '${trainingExercise.restSeconds}s ${context.copy('descanso', 'rest')}',
                       ),
                     ],
                   ),
@@ -776,19 +786,19 @@ class _ExerciseDetailSheet extends StatelessWidget {
         Row(
           children: [
             _SheetStat(
-              label: 'Series',
+              label: context.copy('Series', 'Sets'),
               value: '${trainingExercise.sets}',
               icon: Icons.repeat,
             ),
             const SizedBox(width: 12),
             _SheetStat(
-              label: 'Reps/Dur.',
+              label: context.copy('Reps/Dur.', 'Reps/Time'),
               value: trainingExercise.repsOrDuration,
               icon: Icons.bolt,
             ),
             const SizedBox(width: 12),
             _SheetStat(
-              label: 'Descanso',
+              label: context.copy('Descanso', 'Rest'),
               value: '${trainingExercise.restSeconds}s',
               icon: Icons.timer_outlined,
             ),
@@ -797,16 +807,22 @@ class _ExerciseDetailSheet extends StatelessWidget {
 
         if (exercise.explanationText != null) ...[
           const SizedBox(height: 20),
-          _DetailSection(title: 'Descripción', text: exercise.explanationText!),
+          _DetailSection(
+            title: context.copy('Descripción', 'Description'),
+            text: exercise.explanationText!,
+          ),
         ],
         if (exercise.techniqueText != null) ...[
           const SizedBox(height: 16),
-          _DetailSection(title: 'Técnica', text: exercise.techniqueText!),
+          _DetailSection(
+            title: context.copy('Técnica', 'Technique'),
+            text: exercise.techniqueText!,
+          ),
         ],
         if (exercise.commonErrorsText != null) ...[
           const SizedBox(height: 16),
           _DetailSection(
-            title: 'Errores comunes',
+            title: context.copy('Errores comunes', 'Common mistakes'),
             text: exercise.commonErrorsText!,
             titleColor: semantic.warning,
           ),

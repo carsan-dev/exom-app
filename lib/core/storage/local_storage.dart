@@ -94,10 +94,10 @@ class LocalStorage {
   ThemeMode getThemeModePreference() =>
       themeModeFromStorageValue(getSetting<String>(_themeModeKey));
 
-  Future<void> saveLocalePreference(Locale locale) =>
+  Future<void> saveLocalePreference(Locale? locale) =>
       saveSetting(_localeKey, localeToStorageValue(locale));
 
-  Locale getLocalePreference() =>
+  Locale? getLocalePreference() =>
       localeFromStorageValue(getSetting<String>(_localeKey));
 
   Future<void> saveUnitSystemPreference(UnitSystem unitSystem) =>

@@ -18,6 +18,15 @@ void main() {
       expect(cubit.state.themeMode, ThemeMode.system);
       expect(cubit.state.locale, const Locale('en'));
       expect(cubit.state.unitSystem, UnitSystem.imperial);
+      expect(cubit.state.isSystemLocale, false);
+    });
+
+    test('defaults to system locale when no locale is stored', () {
+      final storage = FakeLocalStorage();
+      final cubit = AppPreferencesCubit(storage);
+
+      expect(cubit.state.locale, isNull);
+      expect(cubit.state.isSystemLocale, true);
     });
 
     test('persists updates before emitting new state', () async {
@@ -41,12 +50,12 @@ void main() {
 class FakeLocalStorage extends LocalStorage {
   FakeLocalStorage({
     this.themeMode = ThemeMode.dark,
-    this.locale = const Locale('es', 'ES'),
+    this.locale,
     this.unitSystem = UnitSystem.metric,
   });
 
   ThemeMode themeMode;
-  Locale locale;
+  Locale? locale;
   UnitSystem unitSystem;
 
   @override
@@ -58,10 +67,10 @@ class FakeLocalStorage extends LocalStorage {
   }
 
   @override
-  Locale getLocalePreference() => locale;
+  Locale? getLocalePreference() => locale;
 
   @override
-  Future<void> saveLocalePreference(Locale value) async {
+  Future<void> saveLocalePreference(Locale? value) async {
     locale = value;
   }
 

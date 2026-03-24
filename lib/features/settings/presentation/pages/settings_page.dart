@@ -125,14 +125,15 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _setLocale(Locale locale) async {
+  Future<void> _setLocale(Locale? locale) async {
     final previousLanguageWasEnglish = context.isEnglish;
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setLocale(locale);
 
-    final languageLabel = switch (locale.languageCode) {
+    final languageLabel = switch (locale?.languageCode) {
       'en' => 'English',
-      _ => 'Español',
+      'es' => 'Español',
+      _ => previousLanguageWasEnglish ? 'System' : 'Sistema',
     };
 
     messenger.showSnackBar(
@@ -270,13 +271,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: tr.copy('Idioma', 'Language'),
                 children: [
                   _ThemeModeTile(
+                    icon: Icons.phone_android_outlined,
+                    title: tr.copy('Sistema', 'System'),
+                    subtitle: tr.copy(
+                      'Usa automáticamente el idioma configurado en tu dispositivo',
+                      'Automatically use the language configured on your device',
+                    ),
+                    selected: preferences.isSystemLocale,
+                    onTap: () => _setLocale(null),
+                  ),
+                  _ThemeModeTile(
                     icon: Icons.language,
                     title: 'Español',
                     subtitle: tr.copy(
                       'Interfaz principal en español.',
                       'Main interface in Spanish.',
                     ),
-                    selected: preferences.locale.languageCode == 'es',
+                    selected: !preferences.isSystemLocale &&
+                        preferences.locale?.languageCode == 'es',
                     onTap: () => _setLocale(const Locale('es', 'ES')),
                   ),
                   _ThemeModeTile(
@@ -286,7 +298,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Interfaz principal en inglés.',
                       'Main interface in English.',
                     ),
-                    selected: preferences.locale.languageCode == 'en',
+                    selected: !preferences.isSystemLocale &&
+                        preferences.locale?.languageCode == 'en',
                     onTap: () => _setLocale(const Locale('en')),
                   ),
                 ],

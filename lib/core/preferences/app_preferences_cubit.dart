@@ -12,17 +12,22 @@ class AppPreferencesState extends Equatable {
   });
 
   final ThemeMode themeMode;
-  final Locale locale;
+
+  /// `null` means "follow the system locale".
+  final Locale? locale;
+
   final UnitSystem unitSystem;
+
+  bool get isSystemLocale => locale == null;
 
   AppPreferencesState copyWith({
     ThemeMode? themeMode,
-    Locale? locale,
+    Object? locale = _sentinel,
     UnitSystem? unitSystem,
   }) {
     return AppPreferencesState(
       themeMode: themeMode ?? this.themeMode,
-      locale: locale ?? this.locale,
+      locale: locale == _sentinel ? this.locale : locale as Locale?,
       unitSystem: unitSystem ?? this.unitSystem,
     );
   }
@@ -30,11 +35,13 @@ class AppPreferencesState extends Equatable {
   @override
   List<Object?> get props => [
     themeMode,
-    locale.languageCode,
-    locale.countryCode,
+    locale?.languageCode,
+    locale?.countryCode,
     unitSystem,
   ];
 }
+
+const _sentinel = Object();
 
 class AppPreferencesCubit extends Cubit<AppPreferencesState> {
   AppPreferencesCubit(this._localStorage)
@@ -57,7 +64,7 @@ class AppPreferencesCubit extends Cubit<AppPreferencesState> {
     emit(state.copyWith(themeMode: themeMode));
   }
 
-  Future<void> setLocale(Locale locale) async {
+  Future<void> setLocale(Locale? locale) async {
     final normalizedLocale = localeFromStorageValue(
       localeToStorageValue(locale),
     );

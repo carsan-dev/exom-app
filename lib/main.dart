@@ -88,7 +88,7 @@ class _ExomAppView extends StatelessWidget {
           routerConfig: AppRouter.router,
           scaffoldMessengerKey: AppRouter.scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
-          locale: state.locale,
+          locale: state.locale, // null → system locale
           supportedLocales: AppPreferencesDefaults.supportedLocales,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

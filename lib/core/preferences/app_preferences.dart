@@ -5,7 +5,7 @@ enum UnitSystem { metric, imperial }
 class AppPreferencesDefaults {
   AppPreferencesDefaults._();
 
-  static const themeMode = ThemeMode.dark;
+  static const themeMode = ThemeMode.system;
   static const locale = Locale('es', 'ES');
   static const unitSystem = UnitSystem.metric;
 
@@ -40,7 +40,9 @@ ThemeMode themeModeFromStorageValue(String? value) {
   }
 }
 
-String localeToStorageValue(Locale locale) {
+String localeToStorageValue(Locale? locale) {
+  if (locale == null) return 'system';
+
   final countryCode = locale.countryCode;
   if (countryCode == null || countryCode.isEmpty) {
     return locale.languageCode;
@@ -49,16 +51,18 @@ String localeToStorageValue(Locale locale) {
   return '${locale.languageCode}_$countryCode';
 }
 
-Locale localeFromStorageValue(String? value) {
+Locale? localeFromStorageValue(String? value) {
   switch (value) {
+    case 'system':
+      return null;
     case 'en':
     case 'en_US':
       return const Locale('en');
     case 'es':
     case 'es_ES':
-      return AppPreferencesDefaults.locale;
+      return const Locale('es', 'ES');
     default:
-      return AppPreferencesDefaults.locale;
+      return null;
   }
 }
 

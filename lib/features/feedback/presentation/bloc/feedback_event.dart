@@ -21,3 +21,19 @@ class FeedbackSubmitRequested extends FeedbackEvent {
     this.exerciseId,
   });
 }
+
+class FeedbackUploadAndSubmit extends FeedbackEvent {
+  final File file;
+  final String contentType;
+  final String mediaType;
+  final String? notes;
+  final String? exerciseId;
+
+  const FeedbackUploadAndSubmit({
+    required this.file,
+    required this.contentType,
+    required this.mediaType,
+    this.notes,
+    this.exerciseId,
+  });
+}

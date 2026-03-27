@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/feedback/data/models/feedback_model.dart';
 
@@ -9,6 +11,7 @@ abstract class FeedbackRemoteDataSource {
     String? notes,
     String? exerciseId,
   });
+  Future<String> uploadMedia(File file, String contentType);
 }
 
 class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
@@ -65,5 +68,35 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       }
     }
     throw Exception('Invalid create feedback response');
+  }
+
+  @override
+  Future<String> uploadMedia(File file, String contentType) async {
+    final ext = file.path.split('.').last.toLowerCase();
+    final fileKey =
+        'feedback/${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+    final presigned = await _apiClient.post<Map<String, dynamic>>(
+      '/uploads/presigned',
+      data: {'file_key': fileKey, 'content_type': contentType},
+    );
+
+    final uploadUrl = presigned['upload_url'] as String;
+    final fileUrl = presigned['file_url'] as String;
+
+    final bytes = await file.readAsBytes();
+    await Dio().put(
+      uploadUrl,
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': bytes.length.toString(),
+        },
+        contentType: contentType,
+      ),
+    );
+
+    return fileUrl;
   }
 }

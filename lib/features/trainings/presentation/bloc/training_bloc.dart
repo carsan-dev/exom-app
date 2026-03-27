@@ -102,10 +102,13 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         _getTrainingUseCase(event.id),
         _getCompletedExercisesUseCase(targetDate),
       ]);
+      final progress =
+          results[1] as ({Set<String> ids, Map<String, double> weights});
       emit(
         TrainingDetailLoaded(
           results[0] as TrainingEntity,
-          completedExerciseIds: results[1] as Set<String>,
+          completedExerciseIds: progress.ids,
+          exerciseWeights: progress.weights,
           selectedDate: targetDate,
         ),
       );
@@ -121,23 +124,37 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     final current = state;
     if (current is TrainingDetailLoaded) {
       final previous = Set<String>.from(current.completedExerciseIds);
+      final previousWeights = Map<String, double>.from(current.exerciseWeights);
       final updated = Set<String>.from(current.completedExerciseIds);
+      final updatedWeights = Map<String, double>.from(current.exerciseWeights);
+
       if (event.completed) {
         updated.add(event.exerciseId);
+        if (event.weightUsed != null) {
+          updatedWeights[event.exerciseId] = event.weightUsed!;
+        }
       } else {
         updated.remove(event.exerciseId);
+        updatedWeights.remove(event.exerciseId);
       }
-      emit(current.copyWith(completedExerciseIds: updated));
+      emit(current.copyWith(
+        completedExerciseIds: updated,
+        exerciseWeights: updatedWeights,
+      ));
 
       try {
         final date = current.selectedDate;
         if (event.completed) {
-          await _markExerciseCompletedUseCase(event.exerciseId, date);
+          await _markExerciseCompletedUseCase(event.exerciseId, date,
+              weightUsed: event.weightUsed);
         } else {
           await _unmarkExerciseCompletedUseCase(event.exerciseId, date);
         }
       } catch (_) {
-        emit(current.copyWith(completedExerciseIds: previous));
+        emit(current.copyWith(
+          completedExerciseIds: previous,
+          exerciseWeights: previousWeights,
+        ));
       }
     }
   }

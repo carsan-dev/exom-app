@@ -7,6 +7,9 @@ import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_timer_overlay.dart';
+import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/navigation/app_router.dart';
 
 class TrainingDetailPage extends StatelessWidget {
   final String trainingId;
@@ -214,23 +217,30 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 trailing: '$total ${l10n.exercises}',
               ),
 
-              ...training.exercises.map(
-                (ex) => _ExerciseCard(
+              ...List.generate(training.exercises.length, (index) {
+                final ex = training.exercises[index];
+                final nextEx = index + 1 < training.exercises.length
+                    ? training.exercises[index + 1].exercise.name
+                    : null;
+                return _ExerciseCard(
                   trainingExercise: ex,
                   isCompleted: widget.state.completedExerciseIds.contains(
                     ex.exercise.id,
                   ),
-                  onToggle: (val) {
+                  weightUsed: widget.state.exerciseWeights[ex.exercise.id],
+                  nextExerciseName: nextEx,
+                  onToggle: (val, {double? weightUsed}) {
                     context.read<TrainingBloc>().add(
                       MarkExerciseCompleted(
                         trainingExerciseId: ex.id,
                         exerciseId: ex.exercise.id,
                         completed: val,
+                        weightUsed: weightUsed,
                       ),
                     );
                   },
-                ),
-              ),
+                );
+              }),
 
               // Cooldown
               if (training.cooldownDescription != null) ...[
@@ -474,12 +484,16 @@ class _DescriptionCard extends StatelessWidget {
 class _ExerciseCard extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
   final bool isCompleted;
-  final ValueChanged<bool> onToggle;
+  final double? weightUsed;
+  final String? nextExerciseName;
+  final void Function(bool completed, {double? weightUsed}) onToggle;
 
   const _ExerciseCard({
     required this.trainingExercise,
     required this.isCompleted,
     required this.onToggle,
+    this.weightUsed,
+    this.nextExerciseName,
   });
 
   @override
@@ -580,6 +594,15 @@ class _ExerciseCard extends StatelessWidget {
                         label:
                             '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
+                      if (weightUsed != null) ...[
+                        const SizedBox(width: 12),
+                        _MiniStat(
+                          icon: Icons.fitness_center,
+                          label: l10n.weightBadgeLabel(
+                              weightUsed!.toStringAsFixed(
+                                  weightUsed! % 1 == 0 ? 0 : 1)),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -591,7 +614,22 @@ class _ExerciseCard extends StatelessWidget {
                 Icon(Icons.info_outline, color: palette.textDisabled, size: 16),
                 const SizedBox(height: 8),
                 GestureDetector(
-                  onTap: () => onToggle(!isCompleted),
+                  onTap: () async {
+                    if (!isCompleted) {
+                      final weight = await _showWeightSheet(context, l10n);
+                      if (!context.mounted) return;
+                      onToggle(true, weightUsed: weight);
+                      if (nextExerciseName != null) {
+                        await RestTimerOverlay.show(
+                          context,
+                          restSeconds: trainingExercise.restSeconds,
+                          nextExerciseName: nextExerciseName,
+                        );
+                      }
+                    } else {
+                      onToggle(false);
+                    }
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 26,
@@ -619,6 +657,94 @@ class _ExerciseCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<double?> _showWeightSheet(
+      BuildContext context, AppLocalizations l10n) async {
+    final palette = context.exomPalette;
+    final controller = TextEditingController();
+    double? result;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: palette.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.weightInputTitle,
+                style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: l10n.weightInputHint,
+                  hintStyle: TextStyle(color: palette.textDisabled),
+                  suffixText: 'kg',
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(l10n.weightInputSkip),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final val = double.tryParse(
+                          controller.text.trim().replaceAll(',', '.'),
+                        );
+                        result = val;
+                        Navigator.of(ctx).pop();
+                      },
+                      child: Text(l10n.weightInputSave),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return result;
   }
 
   void _showExerciseDetail(BuildContext context) {
@@ -824,6 +950,21 @@ class _ExerciseDetailSheet extends StatelessWidget {
             titleColor: semantic.warning,
           ),
         ],
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push(AppRoutes.feedback, extra: <String, String?>{
+                'exerciseId': exercise.id,
+                'exerciseName': exercise.name,
+              });
+            },
+            icon: const Icon(Icons.feedback_outlined, size: 18),
+            label: Text(AppLocalizations.of(context)!.feedbackSendFromExercise),
+          ),
+        ),
         const SizedBox(height: 32),
       ],
     );

@@ -442,5 +442,32 @@
   "challenges": "Challenges",
   "profile": "Profile",
   "calendar": "Calendar",
-  "diets": "Diets"
+  "diets": "Diets",
+
+  "restTimerTitle": "Rest",
+  "restTimerNextExercise": "Next: {name}",
+  "@restTimerNextExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "restTimerSkip": "Skip",
+
+  "weightInputTitle": "Weight used?",
+  "weightInputHint": "e.g. 20 (optional)",
+  "weightInputSkip": "Skip",
+  "weightInputSave": "Save",
+  "weightBadgeLabel": "{weight} kg",
+  "@weightBadgeLabel": {
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+
+  "feedbackSelectImage": "Image",
+  "feedbackSelectVideo": "Video",
+  "feedbackFromCamera": "From camera",
+  "feedbackFromGallery": "From gallery",
+  "feedbackUploading": "Uploading...",
+  "feedbackSendFromExercise": "Send feedback"
 }

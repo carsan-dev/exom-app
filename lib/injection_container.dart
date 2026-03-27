@@ -89,6 +89,7 @@ import 'package:exom_app/features/feedback/data/repositories/feedback_repository
 import 'package:exom_app/features/feedback/domain/repositories/feedback_repository.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
+import 'package:exom_app/features/feedback/domain/usecases/upload_feedback_media_usecase.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 
 // Services
@@ -338,11 +339,15 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => CreateFeedbackUseCase(sl<FeedbackRepository>()),
   );
+  sl.registerLazySingleton(
+    () => UploadFeedbackMediaUseCase(sl<FeedbackRepository>()),
+  );
 
   sl.registerFactory(
     () => FeedbackBloc(
       getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
       createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
+      uploadFeedbackMediaUseCase: sl<UploadFeedbackMediaUseCase>(),
     ),
   );
 

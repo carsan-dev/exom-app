@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 
 abstract class FeedbackRepository {
@@ -8,4 +9,5 @@ abstract class FeedbackRepository {
     String? notes,
     String? exerciseId,
   });
+  Future<String> uploadMedia(File file, String contentType);
 }

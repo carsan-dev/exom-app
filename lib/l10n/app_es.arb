@@ -477,5 +477,32 @@
   "challenges": "Retos",
   "profile": "Perfil",
   "calendar": "Calendario",
-  "diets": "Dietas"
+  "diets": "Dietas",
+
+  "restTimerTitle": "Descanso",
+  "restTimerNextExercise": "Siguiente: {name}",
+  "@restTimerNextExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "restTimerSkip": "Saltar",
+
+  "weightInputTitle": "¿Peso utilizado?",
+  "weightInputHint": "ej. 20 (opcional)",
+  "weightInputSkip": "Omitir",
+  "weightInputSave": "Guardar",
+  "weightBadgeLabel": "{weight} kg",
+  "@weightBadgeLabel": {
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+
+  "feedbackSelectImage": "Imagen",
+  "feedbackSelectVideo": "Vídeo",
+  "feedbackFromCamera": "Desde cámara",
+  "feedbackFromGallery": "Desde galería",
+  "feedbackUploading": "Subiendo...",
+  "feedbackSendFromExercise": "Enviar feedback"
 }

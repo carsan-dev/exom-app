@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:exom_app/features/feedback/data/datasources/feedback_remote_datasource.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/domain/repositories/feedback_repository.dart';
@@ -23,4 +24,8 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
     notes: notes,
     exerciseId: exerciseId,
   );
+
+  @override
+  Future<String> uploadMedia(File file, String contentType) =>
+      _remoteDataSource.uploadMedia(file, contentType);
 }

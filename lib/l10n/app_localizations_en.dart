@@ -1379,4 +1379,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get diets => 'Diets';
+
+  @override
+  String get restTimerTitle => 'Rest';
+
+  @override
+  String restTimerNextExercise(String name) {
+    return 'Next: $name';
+  }
+
+  @override
+  String get restTimerSkip => 'Skip';
+
+  @override
+  String get weightInputTitle => 'Weight used?';
+
+  @override
+  String get weightInputHint => 'e.g. 20 (optional)';
+
+  @override
+  String get weightInputSkip => 'Skip';
+
+  @override
+  String get weightInputSave => 'Save';
+
+  @override
+  String weightBadgeLabel(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get feedbackSelectImage => 'Image';
+
+  @override
+  String get feedbackSelectVideo => 'Video';
+
+  @override
+  String get feedbackFromCamera => 'From camera';
+
+  @override
+  String get feedbackFromGallery => 'From gallery';
+
+  @override
+  String get feedbackUploading => 'Uploading...';
+
+  @override
+  String get feedbackSendFromExercise => 'Send feedback';
 }

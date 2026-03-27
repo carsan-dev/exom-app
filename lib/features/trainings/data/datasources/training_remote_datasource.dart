@@ -9,10 +9,12 @@ abstract class TrainingRemoteDataSource {
   Future<TrainingModel?> getTodayTraining({String? date});
   Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20});
   Future<TrainingModel> getTraining(String id);
-  Future<void> markExerciseCompleted(String exerciseId, String date);
+  Future<void> markExerciseCompleted(String exerciseId, String date,
+      {double? weightUsed});
   Future<void> unmarkExerciseCompleted(String exerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
-  Future<Set<String>> getCompletedExerciseIds({String? date});
+  Future<({Set<String> ids, Map<String, double> weights})>
+      getCompletedExerciseIds({String? date});
 }
 
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
@@ -189,11 +191,16 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<void> markExerciseCompleted(String exerciseId, String date) async {
+  Future<void> markExerciseCompleted(String exerciseId, String date,
+      {double? weightUsed}) async {
     try {
       final response = await _apiClient.dio.post<dynamic>(
         '/progress/exercises/complete',
-        data: {'exercise_id': exerciseId, 'date': date},
+        data: {
+          'exercise_id': exerciseId,
+          'date': date,
+          if (weightUsed != null) 'weight_used': weightUsed,
+        },
       );
       await _cacheProgressResponse(response, date);
     } on DioException catch (error) {
@@ -251,7 +258,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<Set<String>> getCompletedExerciseIds({String? date}) async {
+  Future<({Set<String> ids, Map<String, double> weights})>
+      getCompletedExerciseIds({String? date}) async {
     final targetDate = _resolvedDate(date);
     final cacheKey = 'completed_exercises_$targetDate';
 
@@ -264,26 +272,34 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       if (data is Map<String, dynamic>) {
         final inner = (data['data'] as Map<String, dynamic>?) ?? data;
         final list = inner['exercises_completed'] as List? ?? [];
-        final completedIds = list
-            .map(
-              (entry) =>
-                  (entry as Map<String, dynamic>)['exercise_id'] as String,
-            )
-            .toList(growable: false);
-        await _localStorage.cacheData(cacheKey, completedIds);
+        final ids = <String>{};
+        final weights = <String, double>{};
+        for (final entry in list) {
+          final map = entry as Map<String, dynamic>;
+          final id = map['exercise_id'] as String;
+          ids.add(id);
+          final w = map['weight_used'];
+          if (w != null) {
+            weights[id] = (w as num).toDouble();
+          }
+        }
+        await _localStorage.cacheData(cacheKey, ids.toList());
         await _localStorage.cacheData('day_progress_$targetDate', inner);
         await _localStorage.cacheData('home_progress_$targetDate', inner);
-        return completedIds.toSet();
+        return (ids: ids, weights: weights);
       }
-      return {};
+      return (ids: <String>{}, weights: <String, double>{});
     } catch (error) {
       if (isOfflineError(error)) {
         final cached = _localStorage.getCachedList(cacheKey);
         if (cached != null) {
-          return cached.map((item) => item.toString()).toSet();
+          return (
+            ids: cached.map((item) => item.toString()).toSet(),
+            weights: <String, double>{},
+          );
         }
       }
-      return {};
+      return (ids: <String>{}, weights: <String, double>{});
     }
   }
 }

@@ -178,7 +178,13 @@ class AppRouter {
       GoRoute(path: AppRoutes.recap, builder: (_, __) => const RecapPage()),
       GoRoute(
         path: AppRoutes.feedback,
-        builder: (_, __) => const FeedbackPage(),
+        builder: (_, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return FeedbackPage(
+            exerciseId: extra?['exerciseId'],
+            exerciseName: extra?['exerciseName'],
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.settings,

@@ -34,8 +34,10 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<void> markExerciseCompleted(String exerciseId, String date) {
-    return _remoteDataSource.markExerciseCompleted(exerciseId, date);
+  Future<void> markExerciseCompleted(String exerciseId, String date,
+      {double? weightUsed}) {
+    return _remoteDataSource.markExerciseCompleted(exerciseId, date,
+        weightUsed: weightUsed);
   }
 
   @override
@@ -49,7 +51,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<Set<String>> getCompletedExerciseIds({String? date}) {
+  Future<({Set<String> ids, Map<String, double> weights})>
+      getCompletedExerciseIds({String? date}) {
     return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 

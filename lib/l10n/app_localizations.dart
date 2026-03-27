@@ -2635,6 +2635,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Dietas'**
   String get diets;
+
+  /// No description provided for @restTimerTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso'**
+  String get restTimerTitle;
+
+  /// No description provided for @restTimerNextExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: {name}'**
+  String restTimerNextExercise(String name);
+
+  /// No description provided for @restTimerSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Saltar'**
+  String get restTimerSkip;
+
+  /// No description provided for @weightInputTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Peso utilizado?'**
+  String get weightInputTitle;
+
+  /// No description provided for @weightInputHint.
+  ///
+  /// In es, this message translates to:
+  /// **'ej. 20 (opcional)'**
+  String get weightInputHint;
+
+  /// No description provided for @weightInputSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Omitir'**
+  String get weightInputSkip;
+
+  /// No description provided for @weightInputSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get weightInputSave;
+
+  /// No description provided for @weightBadgeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{weight} kg'**
+  String weightBadgeLabel(String weight);
+
+  /// No description provided for @feedbackSelectImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen'**
+  String get feedbackSelectImage;
+
+  /// No description provided for @feedbackSelectVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo'**
+  String get feedbackSelectVideo;
+
+  /// No description provided for @feedbackFromCamera.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde cámara'**
+  String get feedbackFromCamera;
+
+  /// No description provided for @feedbackFromGallery.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde galería'**
+  String get feedbackFromGallery;
+
+  /// No description provided for @feedbackUploading.
+  ///
+  /// In es, this message translates to:
+  /// **'Subiendo...'**
+  String get feedbackUploading;
+
+  /// No description provided for @feedbackSendFromExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar feedback'**
+  String get feedbackSendFromExercise;
 }
 
 class _AppLocalizationsDelegate

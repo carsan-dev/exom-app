@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -5,10 +6,14 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
+import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
 import 'package:exom_app/injection_container.dart';
 
 class FeedbackPage extends StatelessWidget {
-  const FeedbackPage({super.key});
+  final String? exerciseId;
+  final String? exerciseName;
+
+  const FeedbackPage({super.key, this.exerciseId, this.exerciseName});
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +75,11 @@ class FeedbackPage extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 40),
                 children: [
-                  _FeedbackForm(isSubmitting: state is FeedbackSubmitting),
+                  _FeedbackForm(
+                    isSubmitting: state is FeedbackSubmitting,
+                    exerciseId: exerciseId,
+                    exerciseName: exerciseName,
+                  ),
                   if (items.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -108,39 +117,68 @@ class FeedbackPage extends StatelessWidget {
 }
 
 class _FeedbackForm extends StatefulWidget {
-  const _FeedbackForm({required this.isSubmitting});
+  const _FeedbackForm({
+    required this.isSubmitting,
+    this.exerciseId,
+    this.exerciseName,
+  });
 
   final bool isSubmitting;
+  final String? exerciseId;
+  final String? exerciseName;
 
   @override
   State<_FeedbackForm> createState() => _FeedbackFormState();
 }
 
 class _FeedbackFormState extends State<_FeedbackForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _urlController = TextEditingController();
   final _notesController = TextEditingController();
   String _mediaType = 'IMAGE';
+  File? _selectedFile;
 
   @override
   void dispose() {
-    _urlController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
+  String _contentType() {
+    if (_selectedFile == null) {
+      return _mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg';
+    }
+    final ext = _selectedFile!.path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'mov':
+        return 'video/quicktime';
+      case 'avi':
+        return 'video/x-msvideo';
+      case 'mp4':
+        return 'video/mp4';
+      default:
+        return _mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg';
+    }
+  }
+
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (_selectedFile == null) return;
     context.read<FeedbackBloc>().add(
-      FeedbackSubmitRequested(
+      FeedbackUploadAndSubmit(
+        file: _selectedFile!,
+        contentType: _contentType(),
         mediaType: _mediaType,
-        mediaUrl: _urlController.text.trim(),
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        exerciseId: widget.exerciseId,
       ),
     );
-    _urlController.clear();
+    setState(() => _selectedFile = null);
     _notesController.clear();
   }
 
@@ -158,141 +196,69 @@ class _FeedbackFormState extends State<_FeedbackForm> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: palette.divider),
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.sendFeedback,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: palette.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.sendFeedback,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _TypeChip(
-                  label: l10n.image,
-                  icon: Icons.image_outlined,
-                  selected: _mediaType == 'IMAGE',
-                  onTap: () => setState(() => _mediaType = 'IMAGE'),
-                ),
-                const SizedBox(width: 8),
-                _TypeChip(
-                  label: l10n.video,
-                  icon: Icons.videocam_outlined,
-                  selected: _mediaType == 'VIDEO',
-                  onTap: () => setState(() => _mediaType = 'VIDEO'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _urlController,
-              style: TextStyle(color: palette.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: l10n.fileUrlImageOrVideo,
-                prefixIcon: Icon(
-                  Icons.link,
-                  color: palette.textDisabled,
-                  size: 18,
-                ),
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return l10n.urlIsRequired;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notesController,
-              style: TextStyle(color: palette.textPrimary, fontSize: 14),
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: l10n.additionalNotesOptional,
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: widget.isSubmitting ? null : _submit,
-                child: widget.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(l10n.sendFeedback),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? palette.primary.withValues(alpha: 0.15)
-              : palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? palette.primary : palette.divider,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? palette.primary : palette.textDisabled,
-            ),
-            const SizedBox(width: 6),
+          if (widget.exerciseName != null) ...[
+            const SizedBox(height: 6),
             Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: selected ? palette.primary : palette.textSecondary,
+              widget.exerciseName!,
+              style: TextStyle(
+                color: palette.primary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          FeedbackMediaPicker(
+            selectedFile: _selectedFile,
+            mediaType: _mediaType,
+            isUploading: widget.isSubmitting,
+            onMediaTypeChanged: (type) => setState(() {
+              _mediaType = type;
+              _selectedFile = null;
+            }),
+            onFileSelected: (file) => setState(() => _selectedFile = file),
+            onClear: () => setState(() => _selectedFile = null),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _notesController,
+            style: TextStyle(color: palette.textPrimary, fontSize: 14),
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: l10n.additionalNotesOptional,
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed:
+                  (widget.isSubmitting || _selectedFile == null) ? null : _submit,
+              child: widget.isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(l10n.sendFeedback),
+            ),
+          ),
+        ],
       ),
     );
   }

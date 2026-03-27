@@ -243,6 +243,17 @@
   "calculateAndUseButton": "Calculate and use",
   "metricsSuccessMessage": "Metrics saved successfully",
 
+  "recapStartTitle": "Weekly ReCap Form",
+  "recapStartDescription": "Complete the four steps so your coach understands how your week went and can adjust your plan.",
+  "recapStartButton": "Start",
+  "recapSendFormButton": "Send form",
+  "recapReviewAndSendButton": "Review and send",
+  "recapImprovementTitle": "Help us improve",
+  "recapImprovementRatingsTitle": "Ratings",
+  "recapImprovementRatingsSubtitle": "Your feedback helps us improve the experience and support.",
+  "recapWhatCanWeImprove": "What can we improve?",
+  "recapTellUsMore": "Tell us more",
+
   "recapSentSuccessfully": "Recap sent successfully",
   "newRecap": "New recap",
   "editRecap": "Edit recap",

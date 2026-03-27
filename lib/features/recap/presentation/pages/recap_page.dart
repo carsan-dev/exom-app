@@ -8,7 +8,9 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_start_view.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_general.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_step_improvement.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_nutrition.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_recovery.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_training.dart';
@@ -99,7 +101,9 @@ class _RecapViewState extends State<_RecapView> {
           appBar: AppBar(
             title: Text(
               isFormActive
-                  ? formState.recapId == null
+                  ? formState.step == 5
+                        ? AppLocalizations.of(context)!.recapImprovementTitle
+                        : formState.recapId == null
                         ? AppLocalizations.of(context)!.newRecap
                         : AppLocalizations.of(context)!.editRecap
                   : AppLocalizations.of(context)!.weeklyRecapTitle,
@@ -705,71 +709,94 @@ class _RecapFormView extends StatelessWidget {
     required this.formatWeekRange,
   });
 
+  // step 0 = start view, steps 1-4 = core form, step 5 = improvement
+  static const int _stepStart = 0;
+  static const int _stepImprovement = 5;
+
+  bool get _isStartStep => state.step == _stepStart;
+  bool get _isImprovementStep => state.step == _stepImprovement;
+  bool get _isCoreStep => state.step >= 1 && state.step <= 4;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final isLastStep = state.step == stepTitles.length - 1;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       children: [
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: palette.divider),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                formatWeekRange(state.formData),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+        // Header with badges — only for core steps 1-4
+        if (_isCoreStep) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatWeekRange(state.formData),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                AppLocalizations.of(context)!.completeTheFourBlocksAndSendYourWeeklySummary,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 13,
+                const SizedBox(height: 6),
+                Text(
+                  l10n.completeTheFourBlocksAndSendYourWeeklySummary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: List.generate(stepTitles.length, (index) {
-                  final isActive = index == state.step;
-                  final isCompleted = index < state.step;
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: index == stepTitles.length - 1 ? 0 : 8,
+                const SizedBox(height: 18),
+                Row(
+                  children: List.generate(stepTitles.length, (index) {
+                    // state.step 1-4 maps to badge index 0-3
+                    final badgeStep = state.step - 1;
+                    final isActive = index == badgeStep;
+                    final isCompleted = index < badgeStep;
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: index == stepTitles.length - 1 ? 0 : 8,
+                        ),
+                        child: _StepBadge(
+                          label: stepTitles[index],
+                          index: index + 1,
+                          isActive: isActive,
+                          isCompleted: isCompleted,
+                        ),
                       ),
-                      child: _StepBadge(
-                        label: stepTitles[index],
-                        index: index + 1,
-                        isActive: isActive,
-                        isCompleted: isCompleted,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
+        // Page content
         Expanded(
           child: PageView(
             controller: pageController,
             physics: const NeverScrollableScrollPhysics(),
             children: [
+              // step 0: start view
+              RecapStartView(
+                formData: state.formData,
+                weekLabel: formatWeekRange(state.formData),
+                onStart: () => onStepChanged(1),
+                onReviewAndSend: () => onStepChanged(5),
+                onCancel: onCancel,
+              ),
+              // steps 1-4: core form
               RecapStepTraining(
                 formData: state.formData,
                 onChanged: onFieldChanged,
@@ -786,61 +813,68 @@ class _RecapFormView extends StatelessWidget {
                 formData: state.formData,
                 onChanged: onFieldChanged,
               ),
+              // step 5: improvement
+              RecapStepImprovement(
+                formData: state.formData,
+                onChanged: onFieldChanged,
+              ),
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              border: Border(top: BorderSide(color: palette.divider)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    if (state.step == 0)
-                      TextButton(
-                        onPressed: onCancel,
-                        child: Text(AppLocalizations.of(context)!.cancel),
-                      )
-                    else
+        // Bottom navigation — hidden on start view (it has its own buttons)
+        if (!_isStartStep)
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                border: Border(top: BorderSide(color: palette.divider)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
                       TextButton.icon(
                         onPressed: () => onStepChanged(state.step - 1),
                         icon: const Icon(Icons.arrow_back),
-                        label: Text(AppLocalizations.of(context)!.previous),
+                        label: Text(
+                          state.step == 1 ? l10n.cancel : l10n.previous,
+                        ),
                       ),
-                    const Spacer(),
-                    OutlinedButton.icon(
-                      onPressed: onSaveDraft,
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(AppLocalizations.of(context)!.save),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: isLastStep
-                        ? onSubmit
-                        : () => onStepChanged(state.step + 1),
-                    icon: Icon(
-                      isLastStep ? Icons.send_rounded : Icons.arrow_forward,
-                    ),
-                    label: Text(
-                      isLastStep
-                          ? AppLocalizations.of(context)!.sendRecap
-                          : AppLocalizations.of(context)!.continueToNextStep,
+                      const Spacer(),
+                      OutlinedButton.icon(
+                        onPressed: onSaveDraft,
+                        icon: const Icon(Icons.save_outlined),
+                        label: Text(l10n.save),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isImprovementStep
+                          ? onSubmit
+                          : () => onStepChanged(state.step + 1),
+                      icon: Icon(
+                        _isImprovementStep
+                            ? Icons.send_rounded
+                            : Icons.arrow_forward,
+                      ),
+                      label: Text(
+                        _isImprovementStep
+                            ? l10n.sendRecap
+                            : state.step == 4
+                            ? l10n.recapImprovementTitle
+                            : l10n.continueToNextStep,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }

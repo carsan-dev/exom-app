@@ -18,15 +18,6 @@ class RecapStepGeneral extends StatelessWidget {
   Widget build(BuildContext context) {
     final stressEnabled = formData['stress_enabled'] as bool? ?? false;
     final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 2;
-    final appRating =
-        (formData['improvement_app_rating'] as num?)?.toInt() ?? 4;
-    final serviceRating =
-        (formData['improvement_service_rating'] as num?)?.toInt() ?? 4;
-    final improvementAreas =
-        (formData['improvement_areas'] as List<dynamic>?)
-            ?.map((item) => item.toString())
-            .toList() ??
-        const <String>[];
     final palette = context.exomPalette;
 
     return SingleChildScrollView(
@@ -84,68 +75,12 @@ class RecapStepGeneral extends StatelessWidget {
                     onChanged: (value) => onChanged('stress_level', value),
                   ),
                 ],
-              ],
-            ),
-          ),
-          RecapSectionCard(
-            title: AppLocalizations.of(context)!.serviceFeedback,
-            subtitle: AppLocalizations.of(context)!.helpImproveTheExperienceAndSupport,
-            icon: Icons.rate_review_outlined,
-            child: Column(
-              children: [
-                RecapStarRatingField(
-                  label: AppLocalizations.of(context)!.rateTheApp,
-                  helperText: AppLocalizations.of(context)!.yourOverallExperienceWithTheApp,
-                  value: appRating.round().clamp(1, 5),
-                  onChanged: (value) =>
-                      onChanged('improvement_app_rating', value),
-                ),
                 const SizedBox(height: 20),
-                RecapStarRatingField(
-                  label: AppLocalizations.of(context)!.rateTheService,
-                  helperText: AppLocalizations.of(context)!.howYouRateTheSupportReceivedThisWeek,
-                  value: serviceRating.round().clamp(1, 5),
-                  onChanged: (value) =>
-                      onChanged('improvement_service_rating', value),
-                ),
-                const SizedBox(height: 20),
-                RecapMultiSelectField(
-                  label: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
-                  helperText: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
-                  values: improvementAreas,
-                  options: const [
-                    'ENTRENAMIENTO',
-                    'NUTRICION',
-                    'ADHERENCIA',
-                    'RECUPERACION',
-                    'MOTIVACION',
-                    'APP',
-                  ],
-                  onChanged: (value) => onChanged('improvement_areas', value),
-                ),
-              ],
-            ),
-          ),
-          RecapSectionCard(
-            title: AppLocalizations.of(context)!.finalComments,
-            subtitle: AppLocalizations.of(context)!.closeTheWeekWithWhatMattersForYourCoach,
-            icon: Icons.chat_bubble_outline,
-            child: Column(
-              children: [
                 RecapTextAreaField(
                   label: AppLocalizations.of(context)!.notes,
                   hintText: AppLocalizations.of(context)!.shareAnyRelevantDetailFromYourWeek,
                   initialValue: formData['general_notes'] as String? ?? '',
                   onChanged: (value) => onChanged('general_notes', value),
-                ),
-                const SizedBox(height: 18),
-                RecapTextAreaField(
-                  label: AppLocalizations.of(context)!.suggestionsOrImprovements,
-                  hintText: AppLocalizations.of(context)!.egIWouldLikeMoreContextInTheSessions,
-                  initialValue:
-                      formData['improvement_feedback_text'] as String? ?? '',
-                  onChanged: (value) =>
-                      onChanged('improvement_feedback_text', value),
                 ),
               ],
             ),

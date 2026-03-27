@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 import '../bloc/auth_bloc.dart';
@@ -13,6 +13,7 @@ class AccountLockedPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -34,7 +35,7 @@ class AccountLockedPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                context.copy('Cuenta bloqueada', 'Account locked'),
+                l10n.accountLockedTitle,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -44,10 +45,7 @@ class AccountLockedPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                context.copy(
-                  'Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.',
-                  'Your account has been temporarily locked.\nContact your coach for more information.',
-                ),
+                l10n.accountLockedMessage,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontSize: 15,
                   color: palette.textSecondary,
@@ -60,9 +58,7 @@ class AccountLockedPage extends StatelessWidget {
                 onPressed: () {
                   context.read<AuthBloc>().add(const AuthLogoutRequested());
                 },
-                child: Text(
-                  context.copy('Volver al inicio de sesión', 'Back to login'),
-                ),
+                child: Text(l10n.backToLoginButton),
               ),
             ],
           ),

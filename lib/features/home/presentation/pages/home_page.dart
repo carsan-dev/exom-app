@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -75,24 +75,24 @@ class _DateHeader extends StatelessWidget {
     final todayNorm = DateTime(today.year, today.month, today.day);
     final dateNorm = DateTime(date.year, date.month, date.day);
     final diff = dateNorm.difference(todayNorm).inDays;
-    final tr = context;
+    final l10n = AppLocalizations.of(context)!;
 
     switch (diff) {
       case 0:
-        return tr.copy('Hoy', 'Today');
+        return l10n.todayLabel;
       case 1:
-        return tr.copy('Mañana', 'Tomorrow');
+        return l10n.tomorrowLabel;
       case 2:
-        return tr.copy('Pasado mañana', 'Day after tomorrow');
+        return l10n.dayAfterTomorrowLabel;
       case -1:
-        return tr.copy('Ayer', 'Yesterday');
+        return l10n.yesterdayLabel;
       case -2:
-        return tr.copy('Antes de ayer', 'Two days ago');
+        return l10n.twoDaysAgoLabel;
       default:
         if (diff > 0) {
-          return tr.copy('En $diff días', 'In $diff days');
+          return l10n.inDaysLabel(diff);
         }
-        return tr.copy('Hace ${diff.abs()} días', '${diff.abs()} days ago');
+        return l10n.daysAgoLabel(diff.abs());
     }
   }
 
@@ -100,9 +100,10 @@ class _DateHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final locale = Localizations.localeOf(context).toString();
+    final locale = Localizations.localeOf(context).languageCode;
     final dayName = DateFormat('EEEE', locale).format(selectedDate);
-    final dayMonth = context.isEnglish
+    final isEnglish = locale == 'en';
+    final dayMonth = isEnglish
         ? DateFormat('MMMM d', locale).format(selectedDate)
         : DateFormat('d \'de\' MMMM', locale).format(selectedDate);
     final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
@@ -197,6 +198,7 @@ class _RestDayBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       color: palette.primary,
@@ -238,7 +240,7 @@ class _RestDayBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  context.copy('Día de descanso', 'Rest day'),
+                  l10n.restDayTitle,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 22,
@@ -247,10 +249,7 @@ class _RestDayBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  context.copy(
-                    'No tienes entrenamiento asignado para hoy.\nAprovecha para recuperarte.',
-                    'You have no training assigned for today.\nTake the chance to recover.',
-                  ),
+                  l10n.restDayMessage,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: palette.textSecondary,
@@ -272,7 +271,7 @@ class _RestDayBody extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(context.copy('Ver calendario', 'Open calendar')),
+                  child: Text(l10n.openCalendarButton),
                 ),
               ],
             ),

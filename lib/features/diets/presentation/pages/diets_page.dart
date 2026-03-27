@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
@@ -43,6 +43,7 @@ class _DietsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<DietBloc, DietState>(
       builder: (context, state) {
         if (state is DietLoading || state is DietInitial) {
@@ -59,25 +60,14 @@ class _DietsView extends StatelessWidget {
         if (state is DietNoContent) {
           return EmptyWidget(
             message: selectedDate == null
-                ? context.copy(
-                    'No tienes dieta asignada hoy',
-                    'You have no diet assigned today',
-                  )
-                : context.copy(
-                    'No tienes dieta asignada para esa fecha',
-                    'You have no diet assigned for that date',
-                  ),
-            subtitle: context.copy(
-              'Contacta a tu entrenador para que te asigne un plan nutricional',
-              'Ask your coach to assign you a nutrition plan',
-            ),
+                ? l10n.noDietTodayMessage
+                : l10n.noDietForDateMessage,
+            subtitle: l10n.contactCoachForPlanMessage,
             icon: Icons.restaurant_menu_outlined,
             action: ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.message_outlined, size: 16),
-              label: Text(
-                context.copy('Contactar entrenador', 'Contact coach'),
-              ),
+              label: Text(l10n.contactCoachButton),
             ),
           );
         }
@@ -163,11 +153,12 @@ class _MealsSectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
-        context.copy('Comidas del día', 'Meals of the day'),
+        l10n.mealsOfTheDayLabel,
         style: theme.textTheme.labelLarge?.copyWith(
           color: palette.textSecondary,
           fontSize: 13,
@@ -195,6 +186,7 @@ class _DietHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -246,8 +238,8 @@ class _DietHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             dateLabel == 'hoy'
-                ? context.copy('Plan de hoy', 'Today\'s plan')
-                : '${context.copy('Plan de', 'Plan for')} $dateLabel',
+                ? l10n.todaysPlanLabel
+                : '${l10n.planForLabel} $dateLabel',
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
               fontSize: 12,

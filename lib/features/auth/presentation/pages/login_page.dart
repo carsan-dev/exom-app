@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
@@ -101,6 +101,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildBranding(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       children: [
@@ -135,10 +136,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         const SizedBox(height: 6),
         Text(
-          context.copy(
-            'Tu entrenador personal, siempre contigo',
-            'Your personal coach, always with you',
-          ),
+          l10n.appTagline,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: palette.textSecondary,
             fontSize: 14,
@@ -151,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildEmailField(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return TextFormField(
       controller: _emailController,
@@ -158,18 +157,15 @@ class _LoginPageState extends State<LoginPage> {
       textInputAction: TextInputAction.next,
       style: TextStyle(color: palette.textPrimary),
       decoration: InputDecoration(
-        labelText: context.copy('Correo electrónico', 'Email'),
+        labelText: l10n.emailFieldLabel,
         prefixIcon: Icon(Icons.email_outlined, color: palette.textSecondary),
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return context.copy(
-            'Introduce tu correo electrónico',
-            'Enter your email',
-          );
+          return l10n.emailValidationEmpty;
         }
         if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
-          return context.copy('Correo electrónico no válido', 'Invalid email');
+          return l10n.emailValidationInvalid;
         }
         return null;
       },
@@ -178,6 +174,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildPasswordField(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return TextFormField(
       controller: _passwordController,
@@ -186,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
       onFieldSubmitted: (_) => _onLoginPressed(),
       style: TextStyle(color: palette.textPrimary),
       decoration: InputDecoration(
-        labelText: context.copy('Contraseña', 'Password'),
+        labelText: l10n.passwordFieldLabel,
         prefixIcon: Icon(Icons.lock_outline, color: palette.textSecondary),
         suffixIcon: IconButton(
           icon: Icon(
@@ -200,13 +197,10 @@ class _LoginPageState extends State<LoginPage> {
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return context.copy('Introduce tu contraseña', 'Enter your password');
+          return l10n.passwordValidationEmpty;
         }
         if (value.length < 8) {
-          return context.copy(
-            'La contraseña debe tener al menos 8 caracteres',
-            'Password must be at least 8 characters',
-          );
+          return l10n.passwordValidationLength;
         }
         return null;
       },
@@ -214,28 +208,23 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildForgotPassword(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
         onPressed: () => _onForgotPassword(context),
-        child: Text(
-          context.copy('¿Olvidaste tu contraseña?', 'Forgot your password?'),
-        ),
+        child: Text(l10n.forgotPasswordButton),
       ),
     );
   }
 
   Future<void> _onForgotPassword(BuildContext context) async {
     final email = _emailController.text.trim();
+    final l10n = AppLocalizations.of(context)!;
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            context.copy(
-              'Introduce tu email primero',
-              'Enter your email first',
-            ),
-          ),
+          content: Text(l10n.emailFirstPrompt),
         ),
       );
       return;
@@ -246,12 +235,7 @@ class _LoginPageState extends State<LoginPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              context.copy(
-                'Email de recuperación enviado. Revisa tu bandeja de entrada.',
-                'Recovery email sent. Check your inbox.',
-              ),
-            ),
+            content: Text(AppLocalizations.of(context)!.passwordResetEmailSent),
           ),
         );
       }
@@ -260,10 +244,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.copy(
-                'No se pudo enviar el email. Verifica la dirección.',
-                'Could not send the email. Check the address.',
-              ),
+              AppLocalizations.of(context)!.passwordResetEmailFailed,
             ),
           ),
         );
@@ -275,6 +256,7 @@ class _LoginPageState extends State<LoginPage> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final l10n = AppLocalizations.of(context)!;
         return ElevatedButton(
           onPressed: isLoading ? null : _onLoginPressed,
           child: isLoading
@@ -286,7 +268,7 @@ class _LoginPageState extends State<LoginPage> {
                     color: Colors.white,
                   ),
                 )
-              : Text(context.copy('Iniciar sesión', 'Log in')),
+              : Text(l10n.loginButton),
         );
       },
     );
@@ -295,6 +277,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildDivider(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Row(
       children: [
@@ -302,7 +285,7 @@ class _LoginPageState extends State<LoginPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            context.copy('o continúa con', 'or continue with'),
+            l10n.continueWithDivider,
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
               fontSize: 13,
@@ -318,6 +301,7 @@ class _LoginPageState extends State<LoginPage> {
     final isAndroid = Platform.isAndroid;
     final isIOS = Platform.isIOS;
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
@@ -331,10 +315,7 @@ class _LoginPageState extends State<LoginPage> {
                   size: 26,
                   color: palette.textPrimary,
                 ),
-                label: context.copy(
-                  'Continuar con Google',
-                  'Continue with Google',
-                ),
+                label: l10n.continueWithGoogle,
                 isLoading: isLoading,
                 onPressed: () => context.read<AuthBloc>().add(
                   const AuthGoogleLoginRequested(),
@@ -344,10 +325,7 @@ class _LoginPageState extends State<LoginPage> {
               if (isAndroid) const SizedBox(height: 12),
               SocialLoginButton(
                 icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
-                label: context.copy(
-                  'Continuar con Apple',
-                  'Continue with Apple',
-                ),
+                label: l10n.continueWithApple,
                 isLoading: isLoading,
                 onPressed: () => context.read<AuthBloc>().add(
                   const AuthAppleLoginRequested(),

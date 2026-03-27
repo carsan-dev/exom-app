@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
@@ -53,22 +52,8 @@ class WeekDaySelector extends StatelessWidget {
   }
 
   String _labelForDay(BuildContext context, DateTime dayDate) {
-    if (context.isEnglish) {
-      return DateFormat(
-        'E',
-        'en',
-      ).format(dayDate).substring(0, 1).toUpperCase();
-    }
-
-    return switch (dayDate.weekday) {
-      DateTime.monday => 'L',
-      DateTime.tuesday => 'M',
-      DateTime.wednesday => 'X',
-      DateTime.thursday => 'J',
-      DateTime.friday => 'V',
-      DateTime.saturday => 'S',
-      _ => 'D',
-    };
+    final languageCode = Localizations.localeOf(context).languageCode;
+    return DateFormat('E', languageCode).format(dayDate).substring(0, 1).toUpperCase();
   }
 }
 

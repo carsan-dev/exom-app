@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 
@@ -34,20 +34,14 @@ class RecapStepGeneral extends StatelessWidget {
       child: Column(
         children: [
           RecapSectionCard(
-            title: context.copy('Estado general', 'General state'),
-            subtitle: context.copy(
-              'Tu contexto mental y emocional también cuenta.',
-              'Your mental and emotional context also matters.',
-            ),
+            title: AppLocalizations.of(context)!.generalState,
+            subtitle: AppLocalizations.of(context)!.yourMentalAndEmotionalContextAlsoMatters,
             icon: Icons.mood,
             child: Column(
               children: [
                 RecapChoiceChipsField(
-                  label: context.copy('Ánimo predominante', 'Main mood'),
-                  helperText: context.copy(
-                    'Cómo te has sentido la mayor parte de la semana.',
-                    'How you felt most of the week.',
-                  ),
+                  label: AppLocalizations.of(context)!.mainMood,
+                  helperText: AppLocalizations.of(context)!.howYouFeltMostOfTheWeek,
                   value: formData['mood'] as String?,
                   options: const [
                     'MAL',
@@ -70,31 +64,22 @@ class RecapStepGeneral extends StatelessWidget {
                   activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    context.copy(
-                      'Valorar nivel de estrés',
-                      'Rate stress level',
-                    ),
+                    AppLocalizations.of(context)!.rateStressLevel,
                     style: TextStyle(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
-                    context.copy(
-                      'Actívalo si quieres reportar la presión o carga de la semana.',
-                      'Enable it if you want to report the pressure or load of the week.',
-                    ),
+                    AppLocalizations.of(context)!.enableItIfYouWantToReportThePressureOrLoadOfTheWeek,
                     style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (stressEnabled) ...[
                   const SizedBox(height: 8),
                   RecapEmojiRatingField(
-                    label: context.copy('Estrés percibido', 'Perceived stress'),
-                    helperText: context.copy(
-                      '¿Cuánto estrés has sentido esta semana?',
-                      'How much stress did you feel this week?',
-                    ),
+                    label: AppLocalizations.of(context)!.perceivedStress,
+                    helperText: AppLocalizations.of(context)!.howMuchStressDidYouFeelThisWeek,
                     value: stressLevel.clamp(0, 4),
                     onChanged: (value) => onChanged('stress_level', value),
                   ),
@@ -103,45 +88,30 @@ class RecapStepGeneral extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: context.copy(
-              'Feedback sobre el servicio',
-              'Service feedback',
-            ),
-            subtitle: context.copy(
-              'Ayuda a mejorar la experiencia y el acompañamiento.',
-              'Help improve the experience and support.',
-            ),
+            title: AppLocalizations.of(context)!.serviceFeedback,
+            subtitle: AppLocalizations.of(context)!.helpImproveTheExperienceAndSupport,
             icon: Icons.rate_review_outlined,
             child: Column(
               children: [
                 RecapStarRatingField(
-                  label: context.copy('Valora la app', 'Rate the app'),
-                  helperText: context.copy(
-                    'Tu experiencia general con la aplicación.',
-                    'Your overall experience with the app.',
-                  ),
+                  label: AppLocalizations.of(context)!.rateTheApp,
+                  helperText: AppLocalizations.of(context)!.yourOverallExperienceWithTheApp,
                   value: appRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_app_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapStarRatingField(
-                  label: context.copy('Valora el servicio', 'Rate the service'),
-                  helperText: context.copy(
-                    'Cómo percibes el soporte recibido esta semana.',
-                    'How you rate the support received this week.',
-                  ),
+                  label: AppLocalizations.of(context)!.rateTheService,
+                  helperText: AppLocalizations.of(context)!.howYouRateTheSupportReceivedThisWeek,
                   value: serviceRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_service_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapMultiSelectField(
-                  label: context.copy('Áreas a mejorar', 'Areas to improve'),
-                  helperText: context.copy(
-                    'Selecciona los puntos donde quieres más apoyo.',
-                    'Select the points where you want more support.',
-                  ),
+                  label: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
+                  helperText: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
                   values: improvementAreas,
                   options: const [
                     'ENTRENAMIENTO',
@@ -157,33 +127,21 @@ class RecapStepGeneral extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: context.copy('Comentarios finales', 'Final comments'),
-            subtitle: context.copy(
-              'Cierra la semana con lo más relevante para tu coach.',
-              'Close the week with what matters most for your coach.',
-            ),
+            title: AppLocalizations.of(context)!.finalComments,
+            subtitle: AppLocalizations.of(context)!.closeTheWeekWithWhatMattersForYourCoach,
             icon: Icons.chat_bubble_outline,
             child: Column(
               children: [
                 RecapTextAreaField(
-                  label: context.copy('Notas generales', 'General notes'),
-                  hintText: context.copy(
-                    'Comparte cualquier detalle relevante de tu semana.',
-                    'Share any relevant detail from your week.',
-                  ),
+                  label: AppLocalizations.of(context)!.notes,
+                  hintText: AppLocalizations.of(context)!.shareAnyRelevantDetailFromYourWeek,
                   initialValue: formData['general_notes'] as String? ?? '',
                   onChanged: (value) => onChanged('general_notes', value),
                 ),
                 const SizedBox(height: 18),
                 RecapTextAreaField(
-                  label: context.copy(
-                    'Sugerencias o mejoras',
-                    'Suggestions or improvements',
-                  ),
-                  hintText: context.copy(
-                    'Ej: me gustaría más contexto en las sesiones o una mejor guía para el fin de semana.',
-                    'Eg: I would like more context in the sessions or better guidance for the weekend.',
-                  ),
+                  label: AppLocalizations.of(context)!.suggestionsOrImprovements,
+                  hintText: AppLocalizations.of(context)!.egIWouldLikeMoreContextInTheSessions,
                   initialValue:
                       formData['improvement_feedback_text'] as String? ?? '',
                   onChanged: (value) =>

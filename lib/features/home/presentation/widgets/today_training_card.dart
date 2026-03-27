@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
@@ -30,17 +30,18 @@ class TodayTrainingCard extends StatelessWidget {
   }
 
   String _typeLabel(BuildContext context, String? type) {
+    final l10n = AppLocalizations.of(context)!;
     switch (type?.toUpperCase()) {
       case 'FUERZA':
-        return context.copy('Fuerza', 'Strength');
+        return l10n.trainingStrength;
       case 'CARDIO':
         return 'Cardio';
       case 'HIIT':
         return 'HIIT';
       case 'FLEXIBILIDAD':
-        return context.copy('Flexibilidad', 'Mobility');
+        return l10n.trainingMobility;
       default:
-        return type ?? context.copy('Entrenamiento', 'Training');
+        return type ?? l10n.training;
     }
   }
 
@@ -49,6 +50,7 @@ class TodayTrainingCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     final color = _typeColor(context, summary.trainingType);
 
     return Container(
@@ -89,10 +91,7 @@ class TodayTrainingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        context.copy(
-                          'Entrenamiento de hoy',
-                          'Today\'s training',
-                        ),
+                        l10n.todaysTrainingTitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: palette.textSecondary,
                           fontSize: 12,
@@ -101,8 +100,7 @@ class TodayTrainingCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        summary.trainingName ??
-                            context.copy('Sin nombre', 'Untitled'),
+                        summary.trainingName ?? l10n.trainingUntitledLabel,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: palette.textPrimary,
                           fontSize: 18,
@@ -146,7 +144,7 @@ class TodayTrainingCard extends StatelessWidget {
                 if (summary.trainingCompleted)
                   _StatChip(
                     icon: Icons.check_circle_outline,
-                    label: context.copy('Completado', 'Completed'),
+                    label: l10n.completed,
                     color: semantic.success,
                   ),
               ],
@@ -161,7 +159,7 @@ class TodayTrainingCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      context.copy('Progreso', 'Progress'),
+                      l10n.progress,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: palette.textSecondary,
                         fontSize: 12,
@@ -169,7 +167,7 @@ class TodayTrainingCard extends StatelessWidget {
                     ),
                     Text(
                       summary.totalExercises > 0
-                          ? '${summary.exercisesCompleted}/${summary.totalExercises} ${context.copy('ejercicios', 'exercises')}'
+                          ? '${summary.exercisesCompleted}/${summary.totalExercises} ${l10n.exercises}'
                           : summary.trainingCompleted
                           ? '100%'
                           : '0%',
@@ -214,10 +212,10 @@ class TodayTrainingCard extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: Text(
                   summary.trainingCompleted
-                      ? context.copy('Ver entrenamiento', 'Open training')
+                      ? l10n.viewTrainingButton
                       : summary.exercisesCompleted > 0
-                      ? context.copy('Continuar', 'Continue')
-                      : context.copy('Comenzar', 'Start'),
+                      ? l10n.continueTrainingButton
+                      : l10n.startTrainingButton,
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color,

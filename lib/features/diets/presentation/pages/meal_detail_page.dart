@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
@@ -73,15 +73,16 @@ class _MealScaffold extends StatefulWidget {
 
 class _MealScaffoldState extends State<_MealScaffold> {
   String _mealTypeLabel(BuildContext context, String type) {
+    final l10n = AppLocalizations.of(context)!;
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
-        return context.copy('Desayuno', 'Breakfast');
+        return l10n.mealTypeBreakfast;
       case 'LUNCH':
-        return context.copy('Almuerzo', 'Lunch');
+        return l10n.mealTypeLunch;
       case 'SNACK':
-        return context.copy('Snack', 'Snack');
+        return l10n.mealTypeSnack;
       case 'DINNER':
-        return context.copy('Cena', 'Dinner');
+        return l10n.mealTypeDinner;
       default:
         return type;
     }
@@ -100,6 +101,7 @@ class _MealScaffoldState extends State<_MealScaffold> {
     final meal = widget.meal;
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     final dietState = context.watch<DietBloc>().state;
     final isCompleted = dietState is MealDetailLoaded
         ? dietState.isCompleted
@@ -170,12 +172,7 @@ class _MealScaffoldState extends State<_MealScaffold> {
                 child: OutlinedButton.icon(
                   onPressed: _launchRecipe,
                   icon: const Icon(Icons.search, size: 18),
-                  label: Text(
-                    context.copy(
-                      'Ver receta en Google',
-                      'Open recipe in Google',
-                    ),
-                  ),
+                  label: Text(l10n.openRecipeButton),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: semantic.calorie,
                     side: BorderSide(color: semantic.calorie),
@@ -212,11 +209,8 @@ class _MealScaffoldState extends State<_MealScaffold> {
                 ),
                 label: Text(
                   isCompleted
-                      ? context.copy('Completada', 'Completed')
-                      : context.copy(
-                          'Marcar como completada',
-                          'Mark as completed',
-                        ),
+                      ? l10n.completedFeminine
+                      : l10n.markMealCompletedButton,
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isCompleted
@@ -287,6 +281,7 @@ class _MacroSection extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     final hasData =
         meal.calories != null ||
         meal.proteinG != null ||
@@ -307,7 +302,7 @@ class _MacroSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.copy('Información nutricional', 'Nutritional information'),
+            l10n.nutritionalInfoTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 15,
@@ -320,28 +315,28 @@ class _MacroSection extends StatelessWidget {
             children: [
               if (meal.calories != null)
                 _MacroRing(
-                  label: context.copy('Calorías', 'Calories'),
+                  label: l10n.caloriesLabel,
                   value: '${meal.calories}',
                   unit: 'kcal',
                   color: semantic.calorie,
                 ),
               if (meal.proteinG != null)
                 _MacroRing(
-                  label: context.copy('Proteína', 'Protein'),
+                  label: l10n.proteinLabel,
                   value: meal.proteinG!.toStringAsFixed(1),
                   unit: 'g',
                   color: palette.primary,
                 ),
               if (meal.carbsG != null)
                 _MacroRing(
-                  label: context.copy('Carbos', 'Carbs'),
+                  label: l10n.carbsLabel,
                   value: meal.carbsG!.toStringAsFixed(1),
                   unit: 'g',
                   color: semantic.info,
                 ),
               if (meal.fatG != null)
                 _MacroRing(
-                  label: context.copy('Grasas', 'Fats'),
+                  label: l10n.fatsLabel,
                   value: meal.fatG!.toStringAsFixed(1),
                   unit: 'g',
                   color: semantic.warning,
@@ -468,13 +463,14 @@ class _IngredientsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
           child: Text(
-            context.copy('Ingredientes', 'Ingredients'),
+            l10n.ingredientsTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 16,

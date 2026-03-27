@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 
@@ -68,7 +68,8 @@ String recapCopy(BuildContext context, String value) {
 
   final translation = translations[value];
   if (translation != null) {
-    return context.copy(translation[0], translation[1]);
+    final languageCode = Localizations.localeOf(context).languageCode;
+    return languageCode == 'en' ? translation[1] : translation[0];
   }
 
   return formatRecapOption(value);

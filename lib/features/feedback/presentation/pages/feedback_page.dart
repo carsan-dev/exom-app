@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
@@ -14,13 +14,14 @@ class FeedbackPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return BlocProvider(
       create: (_) => sl<FeedbackBloc>()..add(const FeedbackLoadRequested()),
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Text(context.copy('Feedback', 'Feedback')),
+          title: Text(l10n.feedback),
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
         ),
@@ -30,10 +31,7 @@ class FeedbackPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    context.copy(
-                      'Feedback enviado correctamente',
-                      'Feedback sent successfully',
-                    ),
+                    AppLocalizations.of(context)!.feedbackSentSuccessfully,
                   ),
                   backgroundColor: AppColors.success,
                   shape: RoundedRectangleBorder(
@@ -77,7 +75,7 @@ class FeedbackPage extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                       child: Text(
-                        context.copy('Historial', 'History'),
+                        l10n.history,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: palette.textPrimary,
                           fontSize: 17,
@@ -91,10 +89,7 @@ class FeedbackPage extends StatelessWidget {
                       padding: const EdgeInsets.all(24),
                       child: Center(
                         child: Text(
-                          context.copy(
-                            'Aún no has enviado ningún feedback',
-                            'You have not sent any feedback yet',
-                          ),
+                          l10n.noFeedbackYet,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: palette.textDisabled,
                             fontSize: 13,
@@ -153,6 +148,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -168,7 +164,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.copy('Enviar feedback', 'Send feedback'),
+              l10n.sendFeedback,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 15,
@@ -179,14 +175,14 @@ class _FeedbackFormState extends State<_FeedbackForm> {
             Row(
               children: [
                 _TypeChip(
-                  label: context.copy('Imagen', 'Image'),
+                  label: l10n.image,
                   icon: Icons.image_outlined,
                   selected: _mediaType == 'IMAGE',
                   onTap: () => setState(() => _mediaType = 'IMAGE'),
                 ),
                 const SizedBox(width: 8),
                 _TypeChip(
-                  label: context.copy('Vídeo', 'Video'),
+                  label: l10n.video,
                   icon: Icons.videocam_outlined,
                   selected: _mediaType == 'VIDEO',
                   onTap: () => setState(() => _mediaType = 'VIDEO'),
@@ -198,10 +194,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               controller: _urlController,
               style: TextStyle(color: palette.textPrimary, fontSize: 14),
               decoration: InputDecoration(
-                hintText: context.copy(
-                  'URL del archivo (imagen o vídeo)',
-                  'File URL (image or video)',
-                ),
+                hintText: l10n.fileUrlImageOrVideo,
                 prefixIcon: Icon(
                   Icons.link,
                   color: palette.textDisabled,
@@ -210,10 +203,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return context.copy(
-                    'La URL es obligatoria',
-                    'URL is required',
-                  );
+                  return l10n.urlIsRequired;
                 }
                 return null;
               },
@@ -224,10 +214,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
               style: TextStyle(color: palette.textPrimary, fontSize: 14),
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: context.copy(
-                  'Notas adicionales (opcional)',
-                  'Additional notes (optional)',
-                ),
+                hintText: l10n.additionalNotesOptional,
                 alignLabelWithHint: true,
               ),
             ),
@@ -245,7 +232,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
                           strokeWidth: 2,
                         ),
                       )
-                    : Text(context.copy('Enviar feedback', 'Send feedback')),
+                    : Text(l10n.sendFeedback),
               ),
             ),
           ],
@@ -320,9 +307,10 @@ class _FeedbackCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
     final dateStr = DateFormat(
       'dd MMM yyyy',
-      context.isEnglish ? 'en' : 'es',
+      Localizations.localeOf(context).languageCode,
     ).format(feedback.createdAt);
 
     return Container(
@@ -349,9 +337,7 @@ class _FeedbackCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   feedback.exerciseName ??
-                      (feedback.isVideo
-                          ? context.copy('Vídeo', 'Video')
-                          : context.copy('Imagen', 'Image')),
+                      (feedback.isVideo ? l10n.video : l10n.image),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -422,6 +408,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -431,9 +418,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        isReviewed
-            ? context.copy('Revisado', 'Reviewed')
-            : context.copy('Pendiente', 'Pending'),
+        isReviewed ? l10n.reviewed : l10n.pending,
         style: TextStyle(
           color: isReviewed ? AppColors.success : AppColors.warning,
           fontSize: 11,

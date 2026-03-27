@@ -7,7 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -38,7 +38,7 @@ class ProfilePage extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          context.copy('Perfil', 'Profile'),
+          AppLocalizations.of(context)!.profilePageTitle,
           style: TextStyle(
             color: palette.textPrimary,
             fontSize: 18,
@@ -165,11 +165,11 @@ class _ProfileHeader extends StatelessWidget {
   String _levelLabel(BuildContext context, String? level) {
     switch (level?.toUpperCase()) {
       case 'BEGINNER':
-        return context.copy('Principiante', 'Beginner');
+        return AppLocalizations.of(context)!.beginnerLevel;
       case 'INTERMEDIATE':
-        return context.copy('Intermedio', 'Intermediate');
+        return AppLocalizations.of(context)!.intermediateLevel;
       case 'ADVANCED':
-        return context.copy('Avanzado', 'Advanced');
+        return AppLocalizations.of(context)!.advancedLevel;
       default:
         return level ?? '';
     }
@@ -178,13 +178,13 @@ class _ProfileHeader extends StatelessWidget {
   String _goalLabel(BuildContext context, String? goal) {
     switch (goal?.toUpperCase()) {
       case 'LOSE_WEIGHT':
-        return context.copy('Perder peso', 'Lose weight');
+        return AppLocalizations.of(context)!.loseWeightGoal;
       case 'GAIN_MUSCLE':
-        return context.copy('Ganar músculo', 'Gain muscle');
+        return AppLocalizations.of(context)!.gainMuscleGoal;
       case 'MAINTAIN':
-        return context.copy('Mantener', 'Maintain');
+        return AppLocalizations.of(context)!.maintainGoal;
       case 'IMPROVE_FITNESS':
-        return context.copy('Mejorar fitness', 'Improve fitness');
+        return AppLocalizations.of(context)!.improveFitnessGoal;
       default:
         return goal ?? '';
     }
@@ -264,7 +264,7 @@ class _ProfileHeader extends StatelessWidget {
                     _InlineStat(
                       icon: Icons.local_fire_department_outlined,
                       text:
-                          '${context.copy('Racha', 'Streak')} ${profile.streakDays} ${context.copy('días', 'days')}',
+                          '${AppLocalizations.of(context)!.streak} ${profile.streakDays} ${AppLocalizations.of(context)!.days}',
                       iconColor: AppColors.calorieAccent,
                     ),
                   ],
@@ -403,7 +403,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.monitor_weight_outlined,
-              label: context.copy('Actualizar peso', 'Update weight'),
+              label: AppLocalizations.of(context)!.updateWeightButton,
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -416,7 +416,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.straighten_outlined,
-              label: context.copy('Actualizar medidas', 'Update measurements'),
+              label: AppLocalizations.of(context)!.updateMeasurementsButton,
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -429,7 +429,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.bar_chart_outlined,
-              label: context.copy('ReCap semanal', 'Weekly recap'),
+              label: AppLocalizations.of(context)!.weeklyRecapButton,
               onTap: () => context.push(AppRoutes.recap),
             ),
           ),
@@ -516,7 +516,7 @@ class _WeightChartCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.copy('Progreso del peso', 'Weight progress'),
+            AppLocalizations.of(context)!.weightProgressTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 15,
@@ -561,7 +561,7 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          context.copy('Sin datos todavía', 'No data yet'),
+          AppLocalizations.of(context)!.noDataYetMessage,
           style: theme.textTheme.titleMedium?.copyWith(
             color: palette.textPrimary,
             fontSize: 16,
@@ -570,10 +570,7 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          context.copy(
-            'Registra tu peso y medidas para empezar\na ver tu evolución.',
-            'Log your weight and measurements to start\nseeing your progress.',
-          ),
+          AppLocalizations.of(context)!.logMetricsPrompt,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: palette.textSecondary,
@@ -590,7 +587,7 @@ class _EmptyChart extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: Text(context.copy('Registrar métricas', 'Log metrics')),
+          child: Text(AppLocalizations.of(context)!.logMetricsButton),
         ),
         const SizedBox(height: 8),
       ],
@@ -617,7 +614,7 @@ class _FilledChart extends StatelessWidget {
       return FlSpot(e.key.toDouble(), e.value.weightKg!);
     }).toList();
 
-    final dateFormat = DateFormat('d MMM', context.isEnglish ? 'en' : 'es');
+    final dateFormat = DateFormat('d MMM', Localizations.localeOf(context).languageCode);
 
     return Column(
       children: [
@@ -761,7 +758,7 @@ class _IndicatorCards extends StatelessWidget {
         return AlertDialog(
           backgroundColor: palette.surface,
           title: Text(
-            context.copy('Objetivo de masa muscular', 'Muscle mass goal'),
+            AppLocalizations.of(context)!.muscleMassGoalTitle,
             style: TextStyle(color: palette.textPrimary),
           ),
           content: TextField(
@@ -770,15 +767,15 @@ class _IndicatorCards extends StatelessWidget {
             style: TextStyle(color: palette.textPrimary),
             decoration: InputDecoration(
               hintText: unitSystem == UnitSystem.imperial
-                  ? context.copy('Ej: 75.0', 'Eg: 75.0')
-                  : context.copy('Ej: 34.0', 'Eg: 34.0'),
+                  ? 'Eg: 75.0'
+                  : 'Eg: 34.0',
               suffixText: weightUnitSymbol(unitSystem),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(context.copy('Cancelar', 'Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -791,7 +788,7 @@ class _IndicatorCards extends StatelessWidget {
                   ).pop(UnitConverters.weightFromDisplay(parsed, unitSystem));
                 }
               },
-              child: Text(context.copy('Guardar', 'Save')),
+              child: Text(AppLocalizations.of(context)!.save),
             ),
           ],
         );
@@ -836,20 +833,17 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
-                    title: context.copy('Masa muscular', 'Muscle mass'),
+                    title: AppLocalizations.of(context)!.muscleMassLabel,
                     value: formatWeight(latestMuscleMass, unitSystem),
                     subtitle: muscleGoal != null
-                        ? '${context.copy('Objetivo', 'Goal')} ${formatWeight(muscleGoal, unitSystem)}'
-                        : context.copy('Define tu objetivo', 'Set your goal'),
+                        ? '${AppLocalizations.of(context)!.goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
+                        : AppLocalizations.of(context)!.setYourGoal,
                     bottomLabel: latestMetric != null
-                        ? '${context.copy('Última medición', 'Latest measurement')} ${DateFormat('dd MMM', context.isEnglish ? 'en' : 'es').format(latestMetric!.date)}'
-                        : context.copy(
-                            'Actualiza tus métricas',
-                            'Update your metrics',
-                          ),
+                        ? '${AppLocalizations.of(context)!.latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
+                        : AppLocalizations.of(context)!.updateYourMetrics,
                     progress: muscleProgress,
                     color: AppColors.calorieAccent,
-                    progressCaption: context.copy('actual', 'current'),
+                    progressCaption: AppLocalizations.of(context)!.currentCaption,
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
                       icon: Icon(
@@ -861,15 +855,9 @@ class _IndicatorCards extends StatelessWidget {
                     ),
                   )
                 : _EmptyIndicatorCard(
-                    title: context.copy('Masa muscular', 'Muscle mass'),
-                    message: context.copy(
-                      'Registra una medición directa o usa la estimación SEEN desde métricas para ver la evolución.',
-                      'Log a direct measurement or use the SEEN estimate from metrics to see your progress.',
-                    ),
-                    actionLabel: context.copy(
-                      'Registrar o calcular',
-                      'Log or calculate',
-                    ),
+                    title: AppLocalizations.of(context)!.muscleMassLabel,
+                    message: AppLocalizations.of(context)!.muscleGoalEmptyState,
+                    actionLabel: AppLocalizations.of(context)!.logOrCalculateButton,
                     onAction: () async {
                       await context.push('/profile/metrics');
                       if (context.mounted) {
@@ -893,17 +881,17 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: avgSleep != null
                 ? _CircularIndicatorCard(
-                    title: context.copy('Sueño', 'Sleep'),
+                    title: AppLocalizations.of(context)!.sleep,
                     value: '${avgSleep.toStringAsFixed(1)} h',
                     subtitle:
-                        '${(sleepPercent! * 100).toInt()}% ${context.copy('del objetivo', 'of goal')}',
+                        '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context)!.ofGoalPercentage}',
                     bottomLabel:
-                        '$daysInGoal/${sleepEntries.length} ${context.copy('días dentro del objetivo', 'days within goal')}',
+                        '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context)!.daysWithinGoal}',
                     progress: sleepPercent,
                     color: AppColors.sleepAccent,
-                    progressCaption: context.copy('hoy', 'today'),
+                    progressCaption: AppLocalizations.of(context)!.todayCaption,
                   )
-                : _EmptyIndicatorCard(title: context.copy('Sueño', 'Sleep')),
+                : _EmptyIndicatorCard(title: AppLocalizations.of(context)!.sleep),
           ),
         ],
       ),
@@ -1214,7 +1202,7 @@ class _BodyDataSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                context.copy('Datos corporales', 'Body data'),
+                AppLocalizations.of(context)!.bodyDataTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: palette.textPrimary,
                   fontSize: 15,
@@ -1223,7 +1211,7 @@ class _BodyDataSection extends StatelessWidget {
               ),
               if (latestMetric != null)
                 Text(
-                  '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestMetric!.date)}',
+                  '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textDisabled,
                     fontSize: 10,
@@ -1236,46 +1224,40 @@ class _BodyDataSection extends StatelessWidget {
           _DataRow(
             icon: Icons.monitor_weight_outlined,
             label: latestWeight != null
-                ? '${context.copy('Peso', 'Weight')}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
-                : '${context.copy('Peso', 'Weight')}: --',
+                ? '${AppLocalizations.of(context)!.weight}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
+                : '${AppLocalizations.of(context)!.weight}: --',
             detail: latestWeight != null
-                ? '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestWeight.date)}'
+                ? '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestWeight.date)}'
                 : null,
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.fitness_center,
             label: latestMetric?.muscleMassKg != null
-                ? '${context.copy('Masa muscular', 'Muscle mass')}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
-                : '${context.copy('Masa muscular', 'Muscle mass')}: --',
+                ? '${AppLocalizations.of(context)!.muscleMassLabel}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
+                : '${AppLocalizations.of(context)!.muscleMassLabel}: --',
             detail: profile.muscleMassGoalKg != null
-                ? '${context.copy('Objetivo', 'Goal')} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
-                : context.copy('Objetivo no configurado', 'Goal not set'),
+                ? '${AppLocalizations.of(context)!.goalLabel} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
+                : AppLocalizations.of(context)!.setYourGoal,
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.height,
             label: currentHeightCm != null
-                ? '${context.copy('Altura', 'Height')}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
-                : '${context.copy('Altura', 'Height')}: --',
+                ? '${AppLocalizations.of(context)!.height}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
+                : '${AppLocalizations.of(context)!.height}: --',
             detail: currentHeightCm != null
-                ? context.copy(
-                    'Sincronizada con perfil y métricas',
-                    'Synced with profile and metrics',
-                  )
-                : context.copy(
-                    'Añádela en métricas para mejorar el seguimiento',
-                    'Add it in metrics to improve tracking',
-                  ),
+                ? AppLocalizations.of(context)!.syncedWithProfileAndMetrics
+                : AppLocalizations.of(context)!.addHeightInMetrics,
           ),
           const SizedBox(height: 10),
           // Measurements row
           _DataRow(
             icon: Icons.straighten_outlined,
-            label: context.copy('Medidas', 'Measurements'),
+            label: AppLocalizations.of(context)!.measurementsLabel,
             detail: hasMeasurements
-                ? '${context.copy('Última actualización', 'Last updated')} ${dateFormat.format(latestMetric!.date)}'
-                : context.copy('Sin datos', 'No data'),
+                ? '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}'
+                : AppLocalizations.of(context)!.noDataLabel,
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1296,7 +1278,7 @@ class _BodyDataSection extends StatelessWidget {
                 ),
               ),
               child: Text(
-                context.copy('Actualizar métricas', 'Update metrics'),
+                AppLocalizations.of(context)!.updateMetricsButton,
               ),
             ),
           ),

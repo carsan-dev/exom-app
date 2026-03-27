@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -70,6 +70,7 @@ class _TrainingsView extends StatelessWidget {
     String dateLabel,
   ) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       color: palette.primary,
@@ -85,8 +86,8 @@ class _TrainingsView extends StatelessWidget {
           if (state.todayTraining != null) ...[
             _SectionHeader(
               title: selectedDate == null
-                  ? context.copy('Entrenamiento de hoy', 'Today\'s training')
-                  : '${context.copy('Entrenamiento', 'Training')} $dateLabel',
+                  ? l10n.todaysTrainingTitle
+                  : '${l10n.training} $dateLabel',
             ),
             _TodayTrainingBanner(
               training: state.todayTraining!,
@@ -96,24 +97,16 @@ class _TrainingsView extends StatelessWidget {
           ] else ...[
             _SectionHeader(
               title: selectedDate == null
-                  ? context.copy('Hoy', 'Today')
+                  ? l10n.todayLabel
                   : dateLabel,
             ),
             _NoTrainingToday(selectedDate: selectedDate),
           ],
-          _SectionHeader(
-            title: context.copy('Todos los entrenamientos', 'All trainings'),
-          ),
+          _SectionHeader(title: l10n.allTrainingsSection),
           if (state.trainings.isEmpty)
             EmptyWidget(
-              message: context.copy(
-                'No hay entrenamientos disponibles',
-                'No trainings available',
-              ),
-              subtitle: context.copy(
-                'Contacta a tu entrenador para que te asigne un plan',
-                'Ask your coach to assign you a plan',
-              ),
+              message: l10n.noTrainingsAvailable,
+              subtitle: l10n.askCoachForPlan,
               icon: Icons.fitness_center_outlined,
             )
           else
@@ -177,6 +170,7 @@ class _TodayTrainingBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
     final color = _typeColor(context, training.type);
 
     return GestureDetector(
@@ -279,7 +273,7 @@ class _TodayTrainingBanner extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${training.exercises.length} ejercicios',
+                        '${training.exercises.length} ${l10n.exercises}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: palette.textSecondary,
                           fontSize: 12,
@@ -307,6 +301,7 @@ class _NoTrainingToday extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -333,14 +328,8 @@ class _NoTrainingToday extends StatelessWidget {
               children: [
                 Text(
                   selectedDate == null
-                      ? context.copy(
-                          'No hay entrenamiento asignado hoy',
-                          'No training assigned today',
-                        )
-                      : context.copy(
-                          'No hay entrenamiento asignado para esa fecha',
-                          'No training assigned for that date',
-                        ),
+                      ? l10n.noTrainingAssignedToday
+                      : l10n.noTrainingAssignedForDate,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -349,10 +338,7 @@ class _NoTrainingToday extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  context.copy(
-                    'Disfruta tu día de descanso',
-                    'Enjoy your rest day',
-                  ),
+                  l10n.enjoyRestDay,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 12,
@@ -394,6 +380,7 @@ class _TrainingListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
     final color = _typeColor(context, training.type);
 
     return GestureDetector(
@@ -478,7 +465,7 @@ class _TrainingListItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 2),
                       Text(
-                        '${training.exercises.length} ej.',
+                        '${training.exercises.length} ${l10n.exercises}.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: palette.textDisabled,
                           fontSize: 11,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/config/external_links.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
@@ -10,66 +10,31 @@ class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
 
   List<_Faq> _faqs(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return [
       _Faq(
-        question: context.copy(
-          '¿Cómo registro mi peso, masa muscular y medidas?',
-          'How do I log my weight, muscle mass, and measurements?',
-        ),
-        answer: context.copy(
-          'Ve a tu perfil y entra en "Mis métricas". Desde ahí puedes guardar peso, masa muscular, horas de sueño y medidas corporales. Si no tienes una medición directa de masa muscular, puedes usar la calculadora SEEN con edad, altura, sexo y pantorrilla para obtener una estimación.',
-          'Go to your profile and open "My metrics". There you can save weight, muscle mass, sleep hours, and body measurements. If you do not have a direct muscle-mass measurement, you can use the SEEN calculator with age, height, sex, and calf size to get an estimate.',
-        ),
+        question: l10n.registerWeightMuscleAndMeasurements,
+        answer: l10n.registerWeightExplanation,
       ),
       _Faq(
-        question: context.copy(
-          '¿Cómo marco un entrenamiento como completado?',
-          'How do I mark a workout as completed?',
-        ),
-        answer: context.copy(
-          'Entra en el entrenamiento del día desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.',
-          'Open the day\'s workout from Home or from Trainings. You can mark exercises one by one or complete the entire session from the final summary.',
-        ),
+        question: l10n.markWorkoutCompleted,
+        answer: l10n.markWorkoutExplanation,
       ),
       _Faq(
-        question: context.copy(
-          '¿Cómo marco una comida como completada?',
-          'How do I mark a meal as completed?',
-        ),
-        answer: context.copy(
-          'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. El Home y el Calendario reflejará el avance real del día.',
-          'Open the day\'s diet, enter the corresponding meal, and tap the complete button. Home and Calendar will reflect the actual progress for the day.',
-        ),
+        question: l10n.markMealCompleted,
+        answer: l10n.markMealExplanation,
       ),
       _Faq(
-        question: context.copy(
-          '¿Puedo usar la app sin conexión?',
-          'Can I use the app offline?',
-        ),
-        answer: context.copy(
-          'Sí. La app conserva en caché el último Home, Perfil, Calendario, Dieta, Entreno y Métricas cargados. Sin conexión puedes consultar esos datos, aunque no se enviarán cambios al servidor.',
-          'Yes. The app caches the latest loaded Home, Profile, Calendar, Diet, Training, and Metrics. Offline you can review that data, although changes will not be sent to the server.',
-        ),
+        question: l10n.useAppOffline,
+        answer: l10n.useAppOfflineExplanation,
       ),
       _Faq(
-        question: context.copy(
-          '¿Para qué sirve el ReCap semanal?',
-          'What is the weekly recap for?',
-        ),
-        answer: context.copy(
-          'El ReCap te permite resumir tu semana para que tu entrenador entienda cómo has rendido, comido, descansado y qué sensaciones has tenido.',
-          'The recap lets you summarize your week so your coach understands how you performed, ate, rested, and how you felt.',
-        ),
+        question: l10n.weeklyRecapPurpose,
+        answer: l10n.weeklyRecapExplanation,
       ),
       _Faq(
-        question: context.copy(
-          '¿Cómo contacto con mi entrenador o reporto un problema?',
-          'How do I contact my coach or report an issue?',
-        ),
-        answer: context.copy(
-          'Usa la sección Feedback para enviar dudas, incidencias o material técnico. Es el canal principal dentro de la app para que tu entrenador o el equipo de soporte puedan darte seguimiento.',
-          'Use the Feedback section to send questions, issues, or technical material. It is the main in-app channel for your coach or the support team to follow up with you.',
-        ),
+        question: l10n.contactCoachReportProblem,
+        answer: l10n.contactCoachExplanation,
       ),
     ];
   }
@@ -91,11 +56,12 @@ class HelpPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(context.copy('Ayuda', 'Help')),
+        title: Text(l10n.help),
         backgroundColor: theme.scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
       ),
@@ -113,7 +79,7 @@ class HelpPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.copy('Centro de ayuda', 'Help center'),
+                  l10n.helpCenter,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 20,
@@ -122,10 +88,7 @@ class HelpPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  context.copy(
-                    'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo offline y vías de contacto.',
-                    'Everything important to use EXOM day to day: metrics, training, diet, offline mode, and contact options.',
-                  ),
+                  l10n.helpCenterDescription,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 14,
@@ -141,11 +104,8 @@ class HelpPage extends StatelessWidget {
               Expanded(
                 child: _QuickActionCard(
                   icon: Icons.feedback_outlined,
-                  title: context.copy('Feedback', 'Feedback'),
-                  subtitle: context.copy(
-                    'Enviar duda o incidencia',
-                    'Send a question or issue',
-                  ),
+                  title: l10n.feedback,
+                  subtitle: l10n.sendQuestionOrIssue,
                   onTap: () => context.push(AppRoutes.feedback),
                 ),
               ),
@@ -153,11 +113,8 @@ class HelpPage extends StatelessWidget {
               Expanded(
                 child: _QuickActionCard(
                   icon: Icons.settings_outlined,
-                  title: context.copy('Ajustes', 'Settings'),
-                  subtitle: context.copy(
-                    'Notificaciones y caché',
-                    'Notifications and cache',
-                  ),
+                  title: l10n.settings,
+                  subtitle: l10n.notificationsAndCache,
                   onTap: () => context.push(AppRoutes.settings),
                 ),
               ),
@@ -175,7 +132,7 @@ class HelpPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.copy('Soporte y enlaces', 'Support and links'),
+                  l10n.supportAndLinks,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 15,
@@ -185,53 +142,32 @@ class HelpPage extends StatelessWidget {
                 const SizedBox(height: 10),
                 _HelpLinkTile(
                   icon: Icons.support_agent_outlined,
-                  title: context.copy('Centro de soporte', 'Support center'),
-                  subtitle: context.copy(
-                    'Abre la página externa de soporte y contacto de EXOM.',
-                    'Open EXOM\'s external support and contact page.',
-                  ),
+                  title: l10n.supportCenter,
+                  subtitle: l10n.supportCenterDescription,
                   onTap: () => _openExternalLink(
                     context,
                     ExternalLinks.supportPage,
-                    context.copy(
-                      'No se pudo abrir la página de soporte.',
-                      'Could not open the support page.',
-                    ),
+                    l10n.couldNotOpenSupportPage,
                   ),
                 ),
                 _HelpLinkTile(
                   icon: Icons.privacy_tip_outlined,
-                  title: context.copy(
-                    'Política de privacidad',
-                    'Privacy policy',
-                  ),
-                  subtitle: context.copy(
-                    'Consulta cómo se gestionan tus datos y privacidad.',
-                    'See how your data and privacy are handled.',
-                  ),
+                  title: l10n.privacyPolicyOption,
+                  subtitle: l10n.privacyPolicyDescription,
                   onTap: () => _openExternalLink(
                     context,
                     ExternalLinks.privacyPolicy,
-                    context.copy(
-                      'No se pudo abrir la política de privacidad.',
-                      'Could not open the privacy policy.',
-                    ),
+                    l10n.privacyPolicyNotOpenedError,
                   ),
                 ),
                 _HelpLinkTile(
                   icon: Icons.alternate_email,
-                  title: context.copy('Escribir a soporte', 'Email support'),
-                  subtitle: context.copy(
-                    'Abre tu cliente de correo con un email a soporte@exom.app.',
-                    'Open your mail client with an email to soporte@exom.app.',
-                  ),
+                  title: l10n.emailSupportOption,
+                  subtitle: l10n.emailSupportDescription,
                   onTap: () => _openExternalLink(
                     context,
                     ExternalLinks.supportEmail,
-                    context.copy(
-                      'No se pudo abrir la aplicación de correo.',
-                      'Could not open the mail app.',
-                    ),
+                    l10n.mailAppNotOpenedError,
                   ),
                 ),
               ],
@@ -239,7 +175,7 @@ class HelpPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            context.copy('Preguntas frecuentes', 'Frequently asked questions'),
+            l10n.frequentlyAskedQuestions,
             style: theme.textTheme.titleLarge?.copyWith(
               color: palette.textPrimary,
               fontSize: 17,
@@ -260,7 +196,7 @@ class HelpPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.copy('Créditos', 'Credits'),
+                  l10n.creditsOption,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 15,
@@ -269,10 +205,7 @@ class HelpPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  context.copy(
-                    'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con app móvil en Flutter y backend en NestJS.',
-                    'EXOM product created as added value for clients. Main development by Carlos Sanchez Roman, with a Flutter mobile app and NestJS backend.',
-                  ),
+                  l10n.creditsDescription,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                     fontSize: 13,
@@ -282,15 +215,12 @@ class HelpPage extends StatelessWidget {
                 const SizedBox(height: 10),
                 _HelpLinkTile(
                   icon: Icons.code,
-                  title: context.copy('Desarrollador', 'Developer'),
+                  title: l10n.developer,
                   subtitle: 'Carlos Sanchez Roman · github.com/carsan-dev',
                   onTap: () => _openExternalLink(
                     context,
                     ExternalLinks.developerGithub,
-                    context.copy(
-                      'No se pudo abrir el perfil de GitHub.',
-                      'Could not open the GitHub profile.',
-                    ),
+                    l10n.couldNotOpenGithubProfile,
                   ),
                 ),
               ],

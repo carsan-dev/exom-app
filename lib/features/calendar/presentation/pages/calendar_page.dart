@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -40,9 +40,9 @@ class _CalendarViewState extends State<_CalendarView> {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<CalendarBloc, CalendarState>(
       builder: (context, state) {
-        final tr = context;
         if (state is CalendarLoading || state is CalendarInitial) {
           return const ShimmerList(count: 3, itemHeight: 200);
         }
@@ -58,10 +58,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  tr.copy(
-                    'Error al cargar el calendario',
-                    'Could not load the calendar',
-                  ),
+                  l10n.calendarLoadError,
                   style: TextStyle(color: palette.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -76,7 +73,7 @@ class _CalendarViewState extends State<_CalendarView> {
                     );
                   },
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: Text(tr.copy('Reintentar', 'Retry')),
+                  label: Text(l10n.retry),
                 ),
               ],
             ),
@@ -91,6 +88,7 @@ class _CalendarViewState extends State<_CalendarView> {
   }
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
+    final l10n = AppLocalizations.of(context)!;
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -114,14 +112,14 @@ class _CalendarViewState extends State<_CalendarView> {
           child: Row(
             children: [
               _ToggleChip(
-                label: context.copy('Entrenos', 'Training'),
+                label: l10n.training,
                 icon: Icons.fitness_center,
                 isSelected: _showTrainings,
                 onTap: () => setState(() => _showTrainings = true),
               ),
               const SizedBox(width: 10),
               _ToggleChip(
-                label: context.copy('Dietas', 'Diets'),
+                label: l10n.diets,
                 icon: Icons.restaurant_menu,
                 isSelected: !_showTrainings,
                 onTap: () => setState(() => _showTrainings = false),
@@ -299,6 +297,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _buildWeekProgress(BuildContext context, CalendarLoaded state) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     final summary = state.weekSummary;
     if (summary == null) return const SizedBox.shrink();
 
@@ -310,18 +309,12 @@ class _CalendarViewState extends State<_CalendarView> {
     if (_showTrainings) {
       completed = summary.trainingsCompleted;
       total = summary.trainingsAssigned;
-      label = context.copy(
-        'entrenos completados esta semana',
-        'training sessions completed this week',
-      );
+      label = l10n.trainingsCompletedThisWeek;
       color = palette.primary;
     } else {
       completed = summary.mealsCompleted;
       total = summary.totalMeals;
-      label = context.copy(
-        'comidas completadas esta semana',
-        'meals completed this week',
-      );
+      label = l10n.mealsCompletedThisWeek;
       color = semantic.calorie;
     }
 
@@ -368,12 +361,17 @@ class _CalendarViewState extends State<_CalendarView> {
     );
     final day = dayMap[key];
     final isToday = isSameDay(state.selectedDate, DateTime.now());
-    final locale = Localizations.localeOf(context).toString();
-    final dateLabel = isToday
-        ? context.copy('Hoy', 'Today')
-        : context.isEnglish
-        ? DateFormat('MMMM d', locale).format(state.selectedDate)
-        : DateFormat('d \'de\' MMMM', locale).format(state.selectedDate);
+    final locale = Localizations.localeOf(context).languageCode;
+    final isEn = locale == 'en';
+    final l10n = AppLocalizations.of(context)!;
+    final String dateLabel;
+    if (isToday) {
+      dateLabel = l10n.todayLabel;
+    } else {
+      dateLabel = isEn
+          ? DateFormat('MMMM d', locale).format(state.selectedDate)
+          : DateFormat("d 'de' MMMM", locale).format(state.selectedDate);
+    }
 
     if (day == null) {
       return _emptyDayCard(context, dateLabel);
@@ -393,6 +391,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _emptyDayCard(BuildContext context, String dateLabel) {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -423,10 +422,7 @@ class _CalendarViewState extends State<_CalendarView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.copy(
-                    'Sin actividad asignada',
-                    'No activity assigned',
-                  ),
+                  l10n.noActivityAssigned,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -449,6 +445,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _restDayCard(BuildContext context, String dateLabel) {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -475,7 +472,7 @@ class _CalendarViewState extends State<_CalendarView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.copy('Día de descanso', 'Rest day'),
+                  l10n.restDayTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 14,
@@ -504,13 +501,14 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
 
     final statusColor = day.trainingCompleted
         ? semantic.success
         : palette.primary;
     final statusLabel = day.trainingCompleted
-        ? context.copy('Completado', 'Completed')
-        : context.copy('Pendiente', 'Pending');
+        ? l10n.completed
+        : l10n.pending;
     final statusIcon = day.trainingCompleted
         ? Icons.check_circle
         : Icons.schedule;
@@ -543,7 +541,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${context.copy('Entrenamiento', 'Training')} • $dateLabel',
+                      '${l10n.training} • $dateLabel',
                       style: TextStyle(
                         color: palette.textPrimary,
                         fontSize: 14,
@@ -577,7 +575,7 @@ class _CalendarViewState extends State<_CalendarView> {
               onPressed: () =>
                   context.go('/trainings?date=${_apiDate(day.date)}'),
               icon: const Icon(Icons.arrow_forward, size: 16),
-              label: Text(context.copy('Ver detalle', 'Open detail')),
+              label: Text(l10n.openDetail),
               style: OutlinedButton.styleFrom(
                 foregroundColor: palette.primary,
                 side: BorderSide(color: palette.primary),
@@ -602,11 +600,12 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
 
     final statusColor = day.dietCompleted ? semantic.success : semantic.calorie;
     final statusLabel = day.dietCompleted
-        ? context.copy('Completada', 'Completed')
-        : context.copy('Pendiente', 'Pending');
+        ? l10n.completedFeminine
+        : l10n.pending;
     final statusIcon = day.dietCompleted ? Icons.check_circle : Icons.schedule;
 
     return Container(
@@ -641,7 +640,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${context.copy('Plan Nutritivo', 'Diet plan')} • $dateLabel',
+                      '${l10n.nutritionPlanDefault} • $dateLabel',
                       style: TextStyle(
                         color: palette.textPrimary,
                         fontSize: 14,
@@ -674,7 +673,7 @@ class _CalendarViewState extends State<_CalendarView> {
             child: OutlinedButton.icon(
               onPressed: () => context.go('/diets?date=${_apiDate(day.date)}'),
               icon: const Icon(Icons.arrow_forward, size: 16),
-              label: Text(context.copy('Ver plan', 'Open plan')),
+              label: Text(l10n.openPlan),
               style: OutlinedButton.styleFrom(
                 foregroundColor: semantic.calorie,
                 side: BorderSide(color: semantic.calorie),
@@ -714,9 +713,8 @@ class _MonthHeader extends StatelessWidget {
     final locale = Localizations.localeOf(context).toString();
     final monthName = DateFormat('MMMM', locale).format(DateTime(year, month));
     final capitalMonth = monthName[0].toUpperCase() + monthName.substring(1);
-    final title = context.isEnglish
-        ? '$capitalMonth $year'
-        : '$capitalMonth de $year';
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    final title = isEn ? '$capitalMonth $year' : '$capitalMonth de $year';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
@@ -15,6 +15,7 @@ class ChallengesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return BlocProvider(
       create: (_) =>
@@ -22,9 +23,7 @@ class ChallengesPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Text(
-            context.copy('Retos y Logros', 'Challenges and Achievements'),
-          ),
+          title: Text(l10n.challengesTitle),
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
         ),
@@ -41,10 +40,7 @@ class ChallengesPage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      context.copy(
-                        'Error al cargar los retos',
-                        'Could not load challenges',
-                      ),
+                      AppLocalizations.of(context)!.challengesLoadError,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: palette.textSecondary,
                       ),
@@ -56,7 +52,7 @@ class ChallengesPage extends StatelessWidget {
                           const ChallengesLoadRequested(),
                         );
                       },
-                      child: Text(context.copy('Reintentar', 'Retry')),
+                      child: Text(AppLocalizations.of(context)!.retry),
                     ),
                   ],
                 ),
@@ -80,6 +76,7 @@ class _ChallengesContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasContent =
         state.mainGoals.isNotEmpty ||
         state.weeklyChallenges.isNotEmpty ||
@@ -99,24 +96,15 @@ class _ChallengesContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           if (state.mainGoals.isNotEmpty) ...[
-            _SectionTitle(
-              title: context.copy('Objetivo principal', 'Main goal'),
-            ),
+            _SectionTitle(title: l10n.mainGoalSection),
             ...state.mainGoals.map((c) => _MainGoalCard(challenge: c)),
           ],
           if (state.weeklyChallenges.isNotEmpty) ...[
-            _SectionTitle(
-              title: context.copy('Retos semanales', 'Weekly challenges'),
-            ),
+            _SectionTitle(title: l10n.weeklyChallengesSection),
             ...state.weeklyChallenges.map((c) => _ChallengeCard(challenge: c)),
           ],
           if (state.achievements.isNotEmpty) ...[
-            _SectionTitle(
-              title: context.copy(
-                'Logros desbloqueados',
-                'Unlocked achievements',
-              ),
-            ),
+            _SectionTitle(title: l10n.unlockedAchievementsSection),
             SizedBox(
               height: 120,
               child: ListView.separated(
@@ -166,6 +154,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -183,7 +172,7 @@ class _EmptyState extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  context.copy('Sin retos activos', 'No active challenges'),
+                  l10n.noActiveChallenges,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 20,
@@ -192,10 +181,7 @@ class _EmptyState extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  context.copy(
-                    'Tu entrenador te asignará retos próximamente.',
-                    'Your coach will assign challenges soon.',
-                  ),
+                  l10n.noActiveChallengesMessage,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: palette.textSecondary,
@@ -207,7 +193,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            context.copy('Retos', 'Challenges'),
+            l10n.challenges,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textMuted,
               fontSize: 14,
@@ -219,12 +205,12 @@ class _EmptyState extends StatelessWidget {
             2,
             (i) => _PlaceholderCard(
               icon: Icons.flag_outlined,
-              label: context.copy('Reto pendiente', 'Pending challenge'),
+              label: l10n.pendingChallengeLabel,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            context.copy('Logros', 'Achievements'),
+            l10n.achievements,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textMuted,
               fontSize: 14,
@@ -321,6 +307,7 @@ class _MainGoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -397,7 +384,7 @@ class _MainGoalCard extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                '${context.copy('Fecha límite', 'Deadline')}: ${DateFormat('dd MMM yyyy', context.isEnglish ? 'en' : 'es').format(challenge.deadline!)}',
+                '${l10n.challengeDeadlineLabel}: ${DateFormat('dd MMM yyyy', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: palette.textDisabled,
                   fontSize: 11,
@@ -420,6 +407,7 @@ class _ChallengeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -476,7 +464,7 @@ class _ChallengeCard extends StatelessWidget {
           if (challenge.deadline != null) ...[
             const SizedBox(height: 6),
             Text(
-              '${context.copy('Hasta', 'Until')} ${DateFormat('dd MMM', context.isEnglish ? 'en' : 'es').format(challenge.deadline!)}',
+              '${l10n.challengeUntilLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: palette.textDisabled,
                 fontSize: 11,

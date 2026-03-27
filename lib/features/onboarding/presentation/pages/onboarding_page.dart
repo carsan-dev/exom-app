@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
@@ -38,6 +38,7 @@ class OnboardingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -51,7 +52,7 @@ class OnboardingPage extends StatelessWidget {
               SvgPicture.asset(_logoAsset(context), height: 32),
               const SizedBox(height: 40),
               Text(
-                context.copy('¡Bienvenido\na EXOM!', 'Welcome\nto EXOM!'),
+                l10n.welcomeOnboarding,
                 style: theme.textTheme.displayLarge?.copyWith(
                   color: palette.textPrimary,
                   fontSize: 36,
@@ -61,10 +62,7 @@ class OnboardingPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                context.copy(
-                  'Sigue estos pasos para comenzar tu experiencia.',
-                  'Follow these steps to get started.',
-                ),
+                l10n.onboardingStepsMessage,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: palette.textSecondary,
                   fontSize: 16,
@@ -83,9 +81,7 @@ class OnboardingPage extends StatelessWidget {
                     await sl<LocalStorage>().setOnboardingComplete();
                     if (context.mounted) context.go('/profile');
                   },
-                  child: Text(
-                    context.copy('Completar perfil', 'Complete profile'),
-                  ),
+                  child: Text(l10n.completeProfileButton),
                 ),
               ),
               const SizedBox(height: 16),
@@ -97,7 +93,7 @@ class OnboardingPage extends StatelessWidget {
                     if (context.mounted) context.go('/');
                   },
                   child: Text(
-                    context.copy('Hacerlo más tarde', 'Do it later'),
+                    l10n.doItLaterButton,
                     style: TextStyle(color: palette.textMuted),
                   ),
                 ),
@@ -133,28 +129,17 @@ class _StepTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     final stepTitle = switch (index) {
-      1 => context.copy('Completa tu perfil', 'Complete your profile'),
-      2 => context.copy('Espera a tu entrenador', 'Wait for your coach'),
-      _ => context.copy(
-        'Empieza tu transformación',
-        'Start your transformation',
-      ),
+      1 => l10n.completeProfileTitle,
+      2 => l10n.waitForCoachTitle,
+      _ => l10n.startTransformationTitle,
     };
     final stepSubtitle = switch (index) {
-      1 => context.copy(
-        'Añade tus datos para que el entrenador pueda personalizarte el plan.',
-        'Add your details so your coach can personalize your plan.',
-      ),
-      2 => context.copy(
-        'Te asignaremos un entrenador personal que diseñará tu rutina.',
-        'We will assign you a personal coach who will design your routine.',
-      ),
-      _ => context.copy(
-        'Sigue tu plan, registra tu progreso y alcanza tus objetivos.',
-        'Follow your plan, track your progress, and reach your goals.',
-      ),
+      1 => l10n.completeProfileSubtitle,
+      2 => l10n.waitForCoachSubtitle,
+      _ => l10n.startTransformationSubtitle,
     };
 
     return Padding(

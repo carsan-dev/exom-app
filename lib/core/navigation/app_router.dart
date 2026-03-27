@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 // Auth pages
@@ -189,10 +189,7 @@ class AppRouter {
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Text(
-          context.copy(
-            'Página no encontrada: ${state.error}',
-            'Page not found: ${state.error}',
-          ),
+          AppLocalizations.of(context)!.pageNotFoundError(state.error.toString()),
         ),
       ),
     ),
@@ -234,6 +231,7 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -296,8 +294,8 @@ class _AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final tr = context;
-    final name = user?.displayName ?? tr.copy('Usuario', 'User');
+    final l10n = AppLocalizations.of(context)!;
+    final name = user?.displayName ?? l10n.userDefaultName;
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
@@ -331,7 +329,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    tr.copy('Miembro EXOM', 'EXOM Member'),
+                    l10n.exomMemberLabel,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textSecondary,
                       fontSize: 13,
@@ -347,7 +345,7 @@ class _AppDrawer extends StatelessWidget {
                 children: [
                   _DrawerItem(
                     icon: Icons.person_outline,
-                    label: tr.copy('Perfil', 'Profile'),
+                    label: l10n.profileMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.profile);
@@ -355,7 +353,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.emoji_events_outlined,
-                    label: tr.copy('Retos', 'Challenges'),
+                    label: l10n.challengesMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.go(AppRoutes.challenges);
@@ -363,7 +361,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.bar_chart_outlined,
-                    label: tr.copy('Recap Semanal', 'Weekly Recap'),
+                    label: l10n.weeklyRecapMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.recap);
@@ -371,7 +369,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.feedback_outlined,
-                    label: tr.copy('Feedback', 'Feedback'),
+                    label: l10n.feedbackMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.feedback);
@@ -379,7 +377,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.settings_outlined,
-                    label: tr.copy('Ajustes', 'Settings'),
+                    label: l10n.settingsMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.settings);
@@ -387,7 +385,7 @@ class _AppDrawer extends StatelessWidget {
                   ),
                   _DrawerItem(
                     icon: Icons.help_outline,
-                    label: tr.copy('Ayuda', 'Help'),
+                    label: l10n.helpMenuItem,
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.help);
@@ -396,7 +394,7 @@ class _AppDrawer extends StatelessWidget {
                   Divider(color: palette.divider, height: 24),
                   _DrawerItem(
                     icon: Icons.logout,
-                    label: tr.copy('Cerrar Sesión', 'Log Out'),
+                    label: l10n.logOutMenuItem,
                     color: AppColors.error,
                     onTap: () {
                       Navigator.pop(context);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:exom_app/core/i18n/context_copy.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
@@ -52,7 +52,7 @@ class _TrainingDetailView extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               surfaceTintColor: Colors.transparent,
-              title: Text(context.copy('Error', 'Error')),
+              title: const Text('Error'),
             ),
             body: ErrorWidget2(message: state.message, onRetry: null),
           );
@@ -107,6 +107,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final training = widget.state.training;
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     final color = _typeColor(context, training.type);
     final completed = widget.state.completedExerciseIds.length;
     final total = training.exercises.length;
@@ -198,7 +199,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               // Warmup
               if (training.warmupDescription != null) ...[
                 _SectionTitle(
-                  title: context.copy('Calentamiento', 'Warm-up'),
+                  title: l10n.warmUp,
                   icon: Icons.whatshot_outlined,
                   color: semantic.warning,
                 ),
@@ -207,10 +208,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
               // Exercises section
               _SectionTitle(
-                title: context.copy('Ejercicios', 'Exercises'),
+                title: l10n.exercises,
                 icon: Icons.fitness_center,
                 color: color,
-                trailing: '$total ${context.copy('ejercicios', 'exercises')}',
+                trailing: '$total ${l10n.exercises}',
               ),
 
               ...training.exercises.map(
@@ -234,7 +235,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               // Cooldown
               if (training.cooldownDescription != null) ...[
                 _SectionTitle(
-                  title: context.copy('Enfriamiento', 'Cooldown'),
+                  title: l10n.cooldown,
                   icon: Icons.ac_unit_outlined,
                   color: semantic.info,
                 ),
@@ -249,10 +250,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   maxLines: 3,
                   style: TextStyle(color: palette.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: context.copy(
-                      'Añadir nota rápida (Opcional)',
-                      'Add a quick note (optional)',
-                    ),
+                    hintText: l10n.addQuickNoteOptional,
                     hintStyle: TextStyle(color: palette.textDisabled),
                     prefixIcon: Icon(
                       Icons.edit_note,
@@ -288,7 +286,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '$completed/$total ${context.copy('ejercicios completados', 'completed exercises')}',
+                        '$completed/$total ${l10n.completedExercisesLabel}',
                         style: TextStyle(
                           color: palette.textSecondary,
                           fontSize: 13,
@@ -349,11 +347,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       ),
                       label: Text(
                         allDone
-                            ? context.copy(
-                                '¡Entrenamiento completado!',
-                                'Workout completed!',
-                              )
-                            : context.copy('Completar', 'Complete'),
+                            ? l10n.workoutCompletedMessage
+                            : l10n.completed,
                       ),
                     ),
                   ),
@@ -492,6 +487,7 @@ class _ExerciseCard extends StatelessWidget {
     final ex = trainingExercise.exercise;
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
 
     return GestureDetector(
       onTap: () => _showExerciseDetail(context),
@@ -582,7 +578,7 @@ class _ExerciseCard extends StatelessWidget {
                       _MiniStat(
                         icon: Icons.timer_outlined,
                         label:
-                            '${trainingExercise.restSeconds}s ${context.copy('descanso', 'rest')}',
+                            '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
                     ],
                   ),
@@ -700,6 +696,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(24),
@@ -786,19 +783,19 @@ class _ExerciseDetailSheet extends StatelessWidget {
         Row(
           children: [
             _SheetStat(
-              label: context.copy('Series', 'Sets'),
+              label: l10n.sets,
               value: '${trainingExercise.sets}',
               icon: Icons.repeat,
             ),
             const SizedBox(width: 12),
             _SheetStat(
-              label: context.copy('Reps/Dur.', 'Reps/Time'),
+              label: l10n.repsOrTime,
               value: trainingExercise.repsOrDuration,
               icon: Icons.bolt,
             ),
             const SizedBox(width: 12),
             _SheetStat(
-              label: context.copy('Descanso', 'Rest'),
+              label: l10n.restLabel,
               value: '${trainingExercise.restSeconds}s',
               icon: Icons.timer_outlined,
             ),
@@ -808,21 +805,21 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (exercise.explanationText != null) ...[
           const SizedBox(height: 20),
           _DetailSection(
-            title: context.copy('Descripción', 'Description'),
+            title: l10n.description,
             text: exercise.explanationText!,
           ),
         ],
         if (exercise.techniqueText != null) ...[
           const SizedBox(height: 16),
           _DetailSection(
-            title: context.copy('Técnica', 'Technique'),
+            title: l10n.technique,
             text: exercise.techniqueText!,
           ),
         ],
         if (exercise.commonErrorsText != null) ...[
           const SizedBox(height: 16),
           _DetailSection(
-            title: context.copy('Errores comunes', 'Common mistakes'),
+            title: l10n.commonMistakes,
             text: exercise.commonErrorsText!,
             titleColor: semantic.warning,
           ),

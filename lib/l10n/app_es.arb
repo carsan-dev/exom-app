@@ -144,9 +144,6 @@
   "fileUrlImageOrVideo": "URL del archivo (imagen o vídeo)",
   "urlIsRequired": "La URL es obligatoria",
   "additionalNotesOptional": "Notas adicionales (opcional)",
-  "reviewed": "Revisado",
-  "pending": "Pendiente",
-
   "challengesTitle": "Retos y Logros",
   "challengesLoadError": "Error al cargar los retos",
   "mainGoalSection": "Objetivo principal",

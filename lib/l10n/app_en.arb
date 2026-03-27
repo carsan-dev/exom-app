@@ -129,9 +129,6 @@
   "fileUrlImageOrVideo": "File URL (image or video)",
   "urlIsRequired": "URL is required",
   "additionalNotesOptional": "Additional notes (optional)",
-  "reviewed": "Reviewed",
-  "pending": "Pending",
-
   "challengesTitle": "Challenges and Achievements",
   "challengesLoadError": "Could not load challenges",
   "mainGoalSection": "Main goal",

@@ -794,18 +794,6 @@ abstract class AppLocalizations {
   /// **'Notas adicionales (opcional)'**
   String get additionalNotesOptional;
 
-  /// No description provided for @reviewed.
-  ///
-  /// In es, this message translates to:
-  /// **'Revisado'**
-  String get reviewed;
-
-  /// No description provided for @pending.
-  ///
-  /// In es, this message translates to:
-  /// **'Pendiente'**
-  String get pending;
-
   /// No description provided for @challengesTitle.
   ///
   /// In es, this message translates to:
@@ -1465,6 +1453,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Métricas guardadas correctamente'**
   String get metricsSuccessMessage;
+
+  /// No description provided for @recapStartTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Formulario ReCap semanal'**
+  String get recapStartTitle;
+
+  /// No description provided for @recapStartDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa los cuatro pasos para que tu entrenador entienda cómo ha ido tu semana y pueda ajustar el plan.'**
+  String get recapStartDescription;
+
+  /// No description provided for @recapStartButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Comenzar'**
+  String get recapStartButton;
+
+  /// No description provided for @recapSendFormButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar formulario'**
+  String get recapSendFormButton;
+
+  /// No description provided for @recapReviewAndSendButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar y enviar'**
+  String get recapReviewAndSendButton;
+
+  /// No description provided for @recapImprovementTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayúdanos a mejorar'**
+  String get recapImprovementTitle;
+
+  /// No description provided for @recapImprovementRatingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Valoraciones'**
+  String get recapImprovementRatingsTitle;
+
+  /// No description provided for @recapImprovementRatingsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión nos ayuda a mejorar la experiencia y el acompañamiento.'**
+  String get recapImprovementRatingsSubtitle;
+
+  /// No description provided for @recapWhatCanWeImprove.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué podemos mejorar?'**
+  String get recapWhatCanWeImprove;
+
+  /// No description provided for @recapTellUsMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntanos más'**
+  String get recapTellUsMore;
 
   /// No description provided for @recapSentSuccessfully.
   ///
@@ -2407,6 +2455,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Vídeo'**
   String get video;
+
+  /// No description provided for @reviewed.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisado'**
+  String get reviewed;
+
+  /// No description provided for @pending.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get pending;
 
   /// No description provided for @today.
   ///

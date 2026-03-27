@@ -375,12 +375,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get additionalNotesOptional => 'Notas adicionales (opcional)';
 
   @override
-  String get reviewed => 'Revisado';
-
-  @override
-  String get pending => 'Pendiente';
-
-  @override
   String get challengesTitle => 'Retos y Logros';
 
   @override
@@ -746,6 +740,38 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get metricsSuccessMessage => 'Métricas guardadas correctamente';
+
+  @override
+  String get recapStartTitle => 'Formulario ReCap semanal';
+
+  @override
+  String get recapStartDescription =>
+      'Completa los cuatro pasos para que tu entrenador entienda cómo ha ido tu semana y pueda ajustar el plan.';
+
+  @override
+  String get recapStartButton => 'Comenzar';
+
+  @override
+  String get recapSendFormButton => 'Enviar formulario';
+
+  @override
+  String get recapReviewAndSendButton => 'Revisar y enviar';
+
+  @override
+  String get recapImprovementTitle => 'Ayúdanos a mejorar';
+
+  @override
+  String get recapImprovementRatingsTitle => 'Valoraciones';
+
+  @override
+  String get recapImprovementRatingsSubtitle =>
+      'Tu opinión nos ayuda a mejorar la experiencia y el acompañamiento.';
+
+  @override
+  String get recapWhatCanWeImprove => '¿Qué podemos mejorar?';
+
+  @override
+  String get recapTellUsMore => 'Cuéntanos más';
 
   @override
   String get recapSentSuccessfully => 'Recap enviado correctamente';
@@ -1279,6 +1305,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get video => 'Vídeo';
+
+  @override
+  String get reviewed => 'Revisado';
+
+  @override
+  String get pending => 'Pendiente';
 
   @override
   String get today => 'Hoy';

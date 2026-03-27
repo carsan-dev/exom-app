@@ -372,12 +372,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get additionalNotesOptional => 'Additional notes (optional)';
 
   @override
-  String get reviewed => 'Reviewed';
-
-  @override
-  String get pending => 'Pending';
-
-  @override
   String get challengesTitle => 'Challenges and Achievements';
 
   @override
@@ -733,6 +727,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get metricsSuccessMessage => 'Metrics saved successfully';
+
+  @override
+  String get recapStartTitle => 'Weekly ReCap Form';
+
+  @override
+  String get recapStartDescription =>
+      'Complete the four steps so your coach understands how your week went and can adjust your plan.';
+
+  @override
+  String get recapStartButton => 'Start';
+
+  @override
+  String get recapSendFormButton => 'Send form';
+
+  @override
+  String get recapReviewAndSendButton => 'Review and send';
+
+  @override
+  String get recapImprovementTitle => 'Help us improve';
+
+  @override
+  String get recapImprovementRatingsTitle => 'Ratings';
+
+  @override
+  String get recapImprovementRatingsSubtitle =>
+      'Your feedback helps us improve the experience and support.';
+
+  @override
+  String get recapWhatCanWeImprove => 'What can we improve?';
+
+  @override
+  String get recapTellUsMore => 'Tell us more';
 
   @override
   String get recapSentSuccessfully => 'Recap sent successfully';
@@ -1263,6 +1289,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get video => 'Video';
+
+  @override
+  String get reviewed => 'Reviewed';
+
+  @override
+  String get pending => 'Pending';
 
   @override
   String get today => 'Today';

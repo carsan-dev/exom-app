@@ -121,7 +121,16 @@
   "sets": "Sets",
   "repsOrTime": "Reps/Time",
   "restLabel": "Rest",
+  "exerciseMetadata": "{sets} sets x {reps} · Rest {rest}s",
+  "@exerciseMetadata": {
+    "placeholders": {
+      "sets": { "type": "int" },
+      "reps": { "type": "String" },
+      "rest": { "type": "int" }
+    }
+  },
   "description": "Description",
+  "explanation": "Explanation",
   "technique": "Technique",
   "commonMistakes": "Common mistakes",
 

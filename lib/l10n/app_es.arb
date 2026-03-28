@@ -136,7 +136,16 @@
   "sets": "Series",
   "repsOrTime": "Reps/Dur.",
   "restLabel": "Descanso",
+  "exerciseMetadata": "{sets} series x {reps} · Descanso {rest}s",
+  "@exerciseMetadata": {
+    "placeholders": {
+      "sets": { "type": "int" },
+      "reps": { "type": "String" },
+      "rest": { "type": "int" }
+    }
+  },
   "description": "Descripción",
+  "explanation": "Explicación",
   "technique": "Técnica",
   "commonMistakes": "Errores comunes",
 

@@ -752,11 +752,23 @@ abstract class AppLocalizations {
   /// **'Descanso'**
   String get restLabel;
 
+  /// No description provided for @exerciseMetadata.
+  ///
+  /// In es, this message translates to:
+  /// **'{sets} series x {reps} · Descanso {rest}s'**
+  String exerciseMetadata(int sets, String reps, int rest);
+
   /// No description provided for @description.
   ///
   /// In es, this message translates to:
   /// **'Descripción'**
   String get description;
+
+  /// No description provided for @explanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Explicación'**
+  String get explanation;
 
   /// No description provided for @technique.
   ///

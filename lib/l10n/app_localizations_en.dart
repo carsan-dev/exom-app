@@ -351,7 +351,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restLabel => 'Rest';
 
   @override
+  String exerciseMetadata(int sets, String reps, int rest) {
+    return '$sets sets x $reps · Rest ${rest}s';
+  }
+
+  @override
   String get description => 'Description';
+
+  @override
+  String get explanation => 'Explanation';
 
   @override
   String get technique => 'Technique';

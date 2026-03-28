@@ -354,7 +354,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restLabel => 'Descanso';
 
   @override
+  String exerciseMetadata(int sets, String reps, int rest) {
+    return '$sets series x $reps · Descanso ${rest}s';
+  }
+
+  @override
   String get description => 'Descripción';
+
+  @override
+  String get explanation => 'Explicación';
 
   @override
   String get technique => 'Técnica';

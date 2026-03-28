@@ -518,5 +518,80 @@
   "feedbackFromCamera": "Desde cámara",
   "feedbackFromGallery": "Desde galería",
   "feedbackUploading": "Subiendo...",
-  "feedbackSendFromExercise": "Enviar feedback"
+  "feedbackSendFromExercise": "Enviar feedback",
+
+  "errorNetwork": "Error de red",
+  "errorAccountLocked": "Cuenta bloqueada — contacta a tu entrenador",
+  "errorSessionExpired": "Sesión expirada. Inicia sesión nuevamente",
+  "errorForbidden": "No tienes permisos para realizar esta acción",
+  "errorNotFound": "Recurso no encontrado",
+  "errorServer": "Error del servidor. Inténtalo más tarde",
+
+  "retryButton": "Reintentar",
+  "contactSupportButton": "Contactar soporte",
+  "viewOfflineButton": "Ver offline",
+  "goToCalendarButton": "Ir al calendario",
+  "goHomeButton": "Inicio",
+  "serverErrorTitle": "Algo salió mal",
+  "serverErrorMessage": "El servidor no pudo procesar tu solicitud",
+  "serverErrorMessageWithCode": "Error {code}. El servidor no pudo procesar tu solicitud",
+  "@serverErrorMessageWithCode": {
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "noConnectionTitle": "Sin conexión a internet",
+  "noConnectionMessage": "Comprueba tu conexión e inténtalo de nuevo",
+  "notFoundTitle": "Contenido no disponible",
+  "notFoundMessage": "No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible",
+
+  "selectedDateLabel": "la fecha seleccionada",
+
+  "measureNeck": "Cuello",
+  "measureShoulders": "Hombros",
+  "measureChest": "Pecho",
+  "measureArm": "Brazo",
+  "measureForearm": "Antebrazo",
+  "measureWaist": "Cintura",
+  "measureHips": "Caderas",
+  "measureThigh": "Muslo",
+  "measureCalf": "Gemelo",
+
+  "noTrainingsAssigned": "No tienes entrenamientos asignados",
+  "noTrainingsAssignedSubtitle": "Tu entrenador aún no te ha asignado un plan",
+  "noActivitiesThisMonth": "Sin actividades este mes",
+  "noActivitiesThisMonthSubtitle": "No hay entrenamientos ni dietas programados",
+
+  "onboardingWelcomeTitle": "¡Bienvenido a EXOM!",
+  "onboardingWelcomeDescription": "Configura tu perfil en unos pocos pasos para que tu entrenador pueda personalizar tu plan.",
+  "onboardingStartButton": "Empezar",
+  "onboardingDoItLaterButton": "Hacerlo después",
+  "onboardingBasicsTitle": "Datos básicos",
+  "onboardingFirstNameLabel": "Nombre",
+  "onboardingLastNameLabel": "Apellido",
+  "onboardingBirthDateLabel": "Fecha de nacimiento",
+  "onboardingAvatarLabel": "Foto de perfil (opcional)",
+  "onboardingBodyTitle": "Tu cuerpo",
+  "onboardingHeightLabel": "Altura (cm)",
+  "onboardingWeightLabel": "Peso (kg)",
+  "onboardingGoalsTitle": "Tus objetivos",
+  "onboardingLevelLabel": "Nivel",
+  "onboardingMainGoalLabel": "Objetivo principal",
+  "onboardingMuscleMassGoalLabel": "Meta de masa muscular (kg, opcional)",
+  "onboardingTargetCaloriesLabel": "Calorías objetivo (opcional)",
+  "onboardingCompleteProfileButton": "Completar perfil",
+  "onboardingSummaryTitle": "Resumen",
+  "onboardingConfirmButton": "Confirmar",
+  "onboardingEditButton": "Editar",
+  "onboardingProgressComplete": "Perfil {percent}% completo",
+  "@onboardingProgressComplete": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "onboardingSkipButton": "Saltar",
+  "onboardingNextButton": "Siguiente",
+  "onboardingSubmittingMessage": "Guardando tu perfil...",
+  "onboardingSuccessMessage": "¡Perfil completado!",
+  "onboardingErrorMessage": "Error al guardar el perfil. Inténtalo de nuevo."
 }

@@ -483,5 +483,80 @@
   "feedbackFromCamera": "From camera",
   "feedbackFromGallery": "From gallery",
   "feedbackUploading": "Uploading...",
-  "feedbackSendFromExercise": "Send feedback"
+  "feedbackSendFromExercise": "Send feedback",
+
+  "errorNetwork": "Network error",
+  "errorAccountLocked": "Account locked — contact your coach",
+  "errorSessionExpired": "Session expired. Please log in again",
+  "errorForbidden": "You don't have permission for this action",
+  "errorNotFound": "Resource not found",
+  "errorServer": "Server error. Try again later",
+
+  "retryButton": "Retry",
+  "contactSupportButton": "Contact support",
+  "viewOfflineButton": "View offline",
+  "goToCalendarButton": "Go to calendar",
+  "goHomeButton": "Home",
+  "serverErrorTitle": "Something went wrong",
+  "serverErrorMessage": "The server couldn't process your request",
+  "serverErrorMessageWithCode": "Error {code}. The server couldn't process your request",
+  "@serverErrorMessageWithCode": {
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "noConnectionTitle": "No internet connection",
+  "noConnectionMessage": "Check your connection and try again",
+  "notFoundTitle": "Content not available",
+  "notFoundMessage": "We couldn't find what you're looking for. It may have been removed or isn't available yet",
+
+  "selectedDateLabel": "the selected date",
+
+  "measureNeck": "Neck",
+  "measureShoulders": "Shoulders",
+  "measureChest": "Chest",
+  "measureArm": "Arm",
+  "measureForearm": "Forearm",
+  "measureWaist": "Waist",
+  "measureHips": "Hips",
+  "measureThigh": "Thigh",
+  "measureCalf": "Calf",
+
+  "noTrainingsAssigned": "No trainings assigned",
+  "noTrainingsAssignedSubtitle": "Your coach hasn't assigned a plan yet",
+  "noActivitiesThisMonth": "No activities this month",
+  "noActivitiesThisMonthSubtitle": "No trainings or diets scheduled",
+
+  "onboardingWelcomeTitle": "Welcome to EXOM!",
+  "onboardingWelcomeDescription": "Set up your profile in a few steps so your coach can personalize your plan.",
+  "onboardingStartButton": "Get started",
+  "onboardingDoItLaterButton": "Do it later",
+  "onboardingBasicsTitle": "Basic info",
+  "onboardingFirstNameLabel": "First name",
+  "onboardingLastNameLabel": "Last name",
+  "onboardingBirthDateLabel": "Date of birth",
+  "onboardingAvatarLabel": "Profile photo (optional)",
+  "onboardingBodyTitle": "Your body",
+  "onboardingHeightLabel": "Height (cm)",
+  "onboardingWeightLabel": "Weight (kg)",
+  "onboardingGoalsTitle": "Your goals",
+  "onboardingLevelLabel": "Level",
+  "onboardingMainGoalLabel": "Main goal",
+  "onboardingMuscleMassGoalLabel": "Muscle mass goal (kg, optional)",
+  "onboardingTargetCaloriesLabel": "Target calories (optional)",
+  "onboardingCompleteProfileButton": "Complete profile",
+  "onboardingSummaryTitle": "Summary",
+  "onboardingConfirmButton": "Confirm",
+  "onboardingEditButton": "Edit",
+  "onboardingProgressComplete": "Profile {percent}% complete",
+  "@onboardingProgressComplete": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "onboardingSkipButton": "Skip",
+  "onboardingNextButton": "Next",
+  "onboardingSubmittingMessage": "Saving your profile...",
+  "onboardingSuccessMessage": "Profile complete!",
+  "onboardingErrorMessage": "Error saving profile. Please try again."
 }

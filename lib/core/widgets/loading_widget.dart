@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../theme/app_theme.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key});
@@ -24,6 +25,7 @@ class ErrorWidget2 extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -45,7 +47,7 @@ class ErrorWidget2 extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: onRetry,
-                child: const Text('Reintentar'),
+                child: Text(l10n.retryButton),
               ),
             ],
           ],
@@ -130,6 +132,7 @@ class ServerErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -152,7 +155,7 @@ class ServerErrorWidget extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Algo salió mal',
+              l10n.serverErrorTitle,
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 20,
@@ -162,8 +165,8 @@ class ServerErrorWidget extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               errorCode != null
-                  ? 'Error $errorCode. El servidor no pudo procesar tu solicitud.'
-                  : 'El servidor no pudo procesar tu solicitud.',
+                  ? l10n.serverErrorMessageWithCode(errorCode!)
+                  : l10n.serverErrorMessage,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
@@ -178,7 +181,7 @@ class ServerErrorWidget extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Reintentar'),
+                  label: Text(l10n.retryButton),
                 ),
               ),
             if (onContactSupport != null) ...[
@@ -188,7 +191,7 @@ class ServerErrorWidget extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onContactSupport,
                   icon: const Icon(Icons.feedback_outlined, size: 18),
-                  label: const Text('Contactar soporte'),
+                  label: Text(l10n.contactSupportButton),
                 ),
               ),
             ],
@@ -209,6 +212,7 @@ class NoConnectionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -231,7 +235,7 @@ class NoConnectionWidget extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Sin conexión a internet',
+              l10n.noConnectionTitle,
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 20,
@@ -240,7 +244,7 @@ class NoConnectionWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Comprueba tu conexión e inténtalo de nuevo.',
+              l10n.noConnectionMessage,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
@@ -255,7 +259,7 @@ class NoConnectionWidget extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Reintentar'),
+                  label: Text(l10n.retryButton),
                 ),
               ),
             if (onViewOffline != null) ...[
@@ -265,7 +269,7 @@ class NoConnectionWidget extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onViewOffline,
                   icon: const Icon(Icons.offline_pin_outlined, size: 18),
-                  label: const Text('Ver offline'),
+                  label: Text(l10n.viewOfflineButton),
                 ),
               ),
             ],
@@ -286,6 +290,7 @@ class NotFoundWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -308,7 +313,7 @@ class NotFoundWidget extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Contenido no disponible',
+              l10n.notFoundTitle,
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 20,
@@ -317,7 +322,7 @@ class NotFoundWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible.',
+              l10n.notFoundMessage,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
@@ -332,7 +337,7 @@ class NotFoundWidget extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onGoToCalendar,
                   icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                  label: const Text('Ir al calendario'),
+                  label: Text(l10n.goToCalendarButton),
                 ),
               ),
             if (onGoHome != null) ...[
@@ -342,7 +347,7 @@ class NotFoundWidget extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onGoHome,
                   icon: const Icon(Icons.home_outlined, size: 18),
-                  label: const Text('Inicio'),
+                  label: Text(l10n.goHomeButton),
                 ),
               ),
             ],

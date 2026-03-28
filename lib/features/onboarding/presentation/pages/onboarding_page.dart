@@ -121,6 +121,7 @@ class _OnboardingViewState extends State<_OnboardingView> {
                           OnboardingBasicsStep(
                             initialData: state.accumulatedData,
                             initialAvatarUrl: state.avatarUrl,
+                            avatarUploading: state.avatarUploading,
                             onNext: (data) => context
                                 .read<OnboardingBloc>()
                                 .add(OnboardingStepCompleted(step: 1, data: data)),

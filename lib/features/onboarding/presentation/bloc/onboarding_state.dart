@@ -17,24 +17,28 @@ class OnboardingStepActive extends OnboardingState {
   final int totalSteps;
   final Map<String, dynamic> accumulatedData;
   final String? avatarUrl;
+  final bool avatarUploading;
 
   const OnboardingStepActive({
     required this.currentStep,
     required this.totalSteps,
     required this.accumulatedData,
     this.avatarUrl,
+    this.avatarUploading = false,
   });
 
   OnboardingStepActive copyWith({
     int? currentStep,
     Map<String, dynamic>? accumulatedData,
     String? avatarUrl,
+    bool? avatarUploading,
   }) {
     return OnboardingStepActive(
       currentStep: currentStep ?? this.currentStep,
       totalSteps: totalSteps,
       accumulatedData: accumulatedData ?? this.accumulatedData,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      avatarUploading: avatarUploading ?? this.avatarUploading,
     );
   }
 }

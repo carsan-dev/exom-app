@@ -89,13 +89,13 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     final current = state;
     if (current is! OnboardingStepActive) return;
 
-    emit(const OnboardingLoading());
+    emit(current.copyWith(avatarUploading: true));
     try {
       final file = File(event.filePath);
       final profile = await uploadAvatar(file);
-      emit(current.copyWith(avatarUrl: profile.avatarUrl));
+      emit(current.copyWith(avatarUrl: profile.avatarUrl, avatarUploading: false));
     } catch (e) {
-      emit(current);
+      emit(current.copyWith(avatarUploading: false));
     }
   }
 

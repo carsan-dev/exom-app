@@ -10,6 +10,7 @@ class OnboardingBasicsStep extends StatefulWidget {
     super.key,
     required this.initialData,
     required this.initialAvatarUrl,
+    this.avatarUploading = false,
     required this.onNext,
     required this.onSkip,
     required this.onAvatarPicked,
@@ -17,6 +18,7 @@ class OnboardingBasicsStep extends StatefulWidget {
 
   final Map<String, dynamic> initialData;
   final String? initialAvatarUrl;
+  final bool avatarUploading;
   final void Function(Map<String, dynamic> data) onNext;
   final VoidCallback onSkip;
   final void Function(String filePath) onAvatarPicked;
@@ -122,7 +124,7 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
             // Avatar picker
             Center(
               child: GestureDetector(
-                onTap: _pickImage,
+                onTap: widget.avatarUploading ? null : _pickImage,
                 child: Stack(
                   children: [
                     CircleAvatar(
@@ -137,18 +139,38 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                           ? Icon(Icons.person, color: palette.textDisabled, size: 40)
                           : null,
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: palette.primary,
-                          shape: BoxShape.circle,
+                    if (widget.avatarUploading)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Icon(Icons.camera_alt, color: palette.onPrimary, size: 16),
+                      )
+                    else
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: palette.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.camera_alt, color: palette.onPrimary, size: 16),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

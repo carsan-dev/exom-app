@@ -88,7 +88,10 @@ class _MealDetailSheetContent extends StatelessWidget {
                   ),
                 ),
               ),
-              const ShimmerList(count: 4, itemHeight: 80),
+              for (int i = 0; i < 4; i++) ...[
+                const ShimmerCard(height: 80),
+                if (i < 3) const SizedBox(height: 12),
+              ],
             ],
           );
         }

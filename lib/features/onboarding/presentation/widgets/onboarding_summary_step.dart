@@ -185,10 +185,13 @@ class OnboardingSummaryStep extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     switch (level.toUpperCase()) {
       case 'BEGINNER':
+      case 'PRINCIPIANTE':
         return l10n.beginnerLevel;
       case 'INTERMEDIATE':
+      case 'INTERMEDIO':
         return l10n.intermediateLevel;
       case 'ADVANCED':
+      case 'AVANZADO':
         return l10n.advancedLevel;
       default:
         return level;

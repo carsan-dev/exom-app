@@ -1,4 +1,8 @@
 class ProfileModel {
+  static const beginnerLevel = 'PRINCIPIANTE';
+  static const intermediateLevel = 'INTERMEDIO';
+  static const advancedLevel = 'AVANZADO';
+
   final String id;
   final String? firstName;
   final String? lastName;
@@ -37,6 +41,23 @@ class ProfileModel {
     this.targetCalories,
   });
 
+  static String? normalizeLevelValue(String? value) {
+    final normalized = value?.trim().toUpperCase();
+    switch (normalized) {
+      case 'BEGINNER':
+      case beginnerLevel:
+        return beginnerLevel;
+      case 'INTERMEDIATE':
+      case intermediateLevel:
+        return intermediateLevel;
+      case 'ADVANCED':
+      case advancedLevel:
+        return advancedLevel;
+      default:
+        return value?.trim();
+    }
+  }
+
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     final userMap = json['user'] as Map<String, dynamic>?;
     return ProfileModel(
@@ -46,7 +67,7 @@ class ProfileModel {
       email: userMap?['email'] as String?,
       phone: json['phone'] as String?,
       avatarUrl: json['avatar_url'] as String?,
-      level: json['level'] as String?,
+      level: normalizeLevelValue(json['level'] as String?),
       goal: json['main_goal'] as String?,
       heightCm: (json['height'] as num?)?.toDouble(),
       sex: json['sex'] as String?,
@@ -60,6 +81,28 @@ class ProfileModel {
       currentBmi: (json['currentBmi'] as num?)?.toDouble(),
       targetCalories: (json['target_calories'] as num?)?.toInt(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'first_name': firstName,
+      'last_name': lastName,
+      if (email != null) 'user': {'email': email},
+      'phone': phone,
+      'avatar_url': avatarUrl,
+      'level': normalizeLevelValue(level),
+      'main_goal': goal,
+      'height': heightCm,
+      'sex': sex,
+      'birth_date': birthDate?.toIso8601String(),
+      'totalTrainings': totalTrainings,
+      'streakDays': streakDays,
+      'current_weight': currentWeightKg,
+      'muscle_mass_goal': muscleMassGoalKg,
+      'currentBmi': currentBmi,
+      'target_calories': targetCalories,
+    };
   }
 
   String get fullName =>

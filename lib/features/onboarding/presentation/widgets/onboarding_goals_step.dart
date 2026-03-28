@@ -24,7 +24,7 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   late final TextEditingController _muscleMassController;
   late final TextEditingController _caloriesController;
 
-  static const _levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+  static const _levels = ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO'];
 
   @override
   void initState() {
@@ -65,13 +65,16 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   }
 
   String _levelLabel(BuildContext context, String level) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     switch (level) {
       case 'BEGINNER':
+      case 'PRINCIPIANTE':
         return l10n.beginnerLevel;
       case 'INTERMEDIATE':
+      case 'INTERMEDIO':
         return l10n.intermediateLevel;
       case 'ADVANCED':
+      case 'AVANZADO':
         return l10n.advancedLevel;
       default:
         return level;
@@ -82,7 +85,7 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -144,7 +147,9 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
 
           TextFormField(
             controller: _goalController,
-            decoration: InputDecoration(labelText: l10n.onboardingMainGoalLabel),
+            decoration: InputDecoration(
+              labelText: l10n.onboardingMainGoalLabel,
+            ),
             maxLines: 2,
           ),
           const SizedBox(height: 16),
@@ -183,7 +188,7 @@ class _CompleteButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
 
     return Column(

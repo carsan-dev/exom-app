@@ -38,7 +38,7 @@ class ProfilePage extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          AppLocalizations.of(context)!.profilePageTitle,
+          AppLocalizations.of(context).profilePageTitle,
           style: TextStyle(
             color: palette.textPrimary,
             fontSize: 18,
@@ -165,11 +165,14 @@ class _ProfileHeader extends StatelessWidget {
   String _levelLabel(BuildContext context, String? level) {
     switch (level?.toUpperCase()) {
       case 'BEGINNER':
-        return AppLocalizations.of(context)!.beginnerLevel;
+      case 'PRINCIPIANTE':
+        return AppLocalizations.of(context).beginnerLevel;
       case 'INTERMEDIATE':
-        return AppLocalizations.of(context)!.intermediateLevel;
+      case 'INTERMEDIO':
+        return AppLocalizations.of(context).intermediateLevel;
       case 'ADVANCED':
-        return AppLocalizations.of(context)!.advancedLevel;
+      case 'AVANZADO':
+        return AppLocalizations.of(context).advancedLevel;
       default:
         return level ?? '';
     }
@@ -178,13 +181,13 @@ class _ProfileHeader extends StatelessWidget {
   String _goalLabel(BuildContext context, String? goal) {
     switch (goal?.toUpperCase()) {
       case 'LOSE_WEIGHT':
-        return AppLocalizations.of(context)!.loseWeightGoal;
+        return AppLocalizations.of(context).loseWeightGoal;
       case 'GAIN_MUSCLE':
-        return AppLocalizations.of(context)!.gainMuscleGoal;
+        return AppLocalizations.of(context).gainMuscleGoal;
       case 'MAINTAIN':
-        return AppLocalizations.of(context)!.maintainGoal;
+        return AppLocalizations.of(context).maintainGoal;
       case 'IMPROVE_FITNESS':
-        return AppLocalizations.of(context)!.improveFitnessGoal;
+        return AppLocalizations.of(context).improveFitnessGoal;
       default:
         return goal ?? '';
     }
@@ -264,7 +267,7 @@ class _ProfileHeader extends StatelessWidget {
                     _InlineStat(
                       icon: Icons.local_fire_department_outlined,
                       text:
-                          '${AppLocalizations.of(context)!.streak} ${profile.streakDays} ${AppLocalizations.of(context)!.days}',
+                          '${AppLocalizations.of(context).streak} ${profile.streakDays} ${AppLocalizations.of(context).days}',
                       iconColor: AppColors.calorieAccent,
                     ),
                   ],
@@ -403,7 +406,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.monitor_weight_outlined,
-              label: AppLocalizations.of(context)!.updateWeightButton,
+              label: AppLocalizations.of(context).updateWeightButton,
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -416,7 +419,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.straighten_outlined,
-              label: AppLocalizations.of(context)!.updateMeasurementsButton,
+              label: AppLocalizations.of(context).updateMeasurementsButton,
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
@@ -429,7 +432,7 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _ActionChip(
               icon: Icons.bar_chart_outlined,
-              label: AppLocalizations.of(context)!.weeklyRecapButton,
+              label: AppLocalizations.of(context).weeklyRecapButton,
               onTap: () => context.push(AppRoutes.recap),
             ),
           ),
@@ -516,7 +519,7 @@ class _WeightChartCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context)!.weightProgressTitle,
+            AppLocalizations.of(context).weightProgressTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
               fontSize: 15,
@@ -561,7 +564,7 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          AppLocalizations.of(context)!.noDataYetMessage,
+          AppLocalizations.of(context).noDataYetMessage,
           style: theme.textTheme.titleMedium?.copyWith(
             color: palette.textPrimary,
             fontSize: 16,
@@ -570,7 +573,7 @@ class _EmptyChart extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          AppLocalizations.of(context)!.logMetricsPrompt,
+          AppLocalizations.of(context).logMetricsPrompt,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: palette.textSecondary,
@@ -587,7 +590,7 @@ class _EmptyChart extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: Text(AppLocalizations.of(context)!.logMetricsButton),
+          child: Text(AppLocalizations.of(context).logMetricsButton),
         ),
         const SizedBox(height: 8),
       ],
@@ -614,7 +617,10 @@ class _FilledChart extends StatelessWidget {
       return FlSpot(e.key.toDouble(), e.value.weightKg!);
     }).toList();
 
-    final dateFormat = DateFormat('d MMM', Localizations.localeOf(context).languageCode);
+    final dateFormat = DateFormat(
+      'd MMM',
+      Localizations.localeOf(context).languageCode,
+    );
 
     return Column(
       children: [
@@ -758,7 +764,7 @@ class _IndicatorCards extends StatelessWidget {
         return AlertDialog(
           backgroundColor: palette.surface,
           title: Text(
-            AppLocalizations.of(context)!.muscleMassGoalTitle,
+            AppLocalizations.of(context).muscleMassGoalTitle,
             style: TextStyle(color: palette.textPrimary),
           ),
           content: TextField(
@@ -775,7 +781,7 @@ class _IndicatorCards extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(AppLocalizations.of(context)!.cancel),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -788,7 +794,7 @@ class _IndicatorCards extends StatelessWidget {
                   ).pop(UnitConverters.weightFromDisplay(parsed, unitSystem));
                 }
               },
-              child: Text(AppLocalizations.of(context)!.save),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
         );
@@ -833,17 +839,19 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context)!.muscleMassLabel,
+                    title: AppLocalizations.of(context).muscleMassLabel,
                     value: formatWeight(latestMuscleMass, unitSystem),
                     subtitle: muscleGoal != null
-                        ? '${AppLocalizations.of(context)!.goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
-                        : AppLocalizations.of(context)!.setYourGoal,
+                        ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
+                        : AppLocalizations.of(context).setYourGoal,
                     bottomLabel: latestMetric != null
-                        ? '${AppLocalizations.of(context)!.latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
-                        : AppLocalizations.of(context)!.updateYourMetrics,
+                        ? '${AppLocalizations.of(context).latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
+                        : AppLocalizations.of(context).updateYourMetrics,
                     progress: muscleProgress,
                     color: AppColors.calorieAccent,
-                    progressCaption: AppLocalizations.of(context)!.currentCaption,
+                    progressCaption: AppLocalizations.of(
+                      context,
+                    ).currentCaption,
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
                       icon: Icon(
@@ -855,9 +863,11 @@ class _IndicatorCards extends StatelessWidget {
                     ),
                   )
                 : _EmptyIndicatorCard(
-                    title: AppLocalizations.of(context)!.muscleMassLabel,
-                    message: AppLocalizations.of(context)!.muscleGoalEmptyState,
-                    actionLabel: AppLocalizations.of(context)!.logOrCalculateButton,
+                    title: AppLocalizations.of(context).muscleMassLabel,
+                    message: AppLocalizations.of(context).muscleGoalEmptyState,
+                    actionLabel: AppLocalizations.of(
+                      context,
+                    ).logOrCalculateButton,
                     onAction: () async {
                       await context.push('/profile/metrics');
                       if (context.mounted) {
@@ -881,17 +891,19 @@ class _IndicatorCards extends StatelessWidget {
           Expanded(
             child: avgSleep != null
                 ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context)!.sleep,
+                    title: AppLocalizations.of(context).sleep,
                     value: '${avgSleep.toStringAsFixed(1)} h',
                     subtitle:
-                        '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context)!.ofGoalPercentage}',
+                        '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context).ofGoalPercentage}',
                     bottomLabel:
-                        '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context)!.daysWithinGoal}',
+                        '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context).daysWithinGoal}',
                     progress: sleepPercent,
                     color: AppColors.sleepAccent,
-                    progressCaption: AppLocalizations.of(context)!.todayCaption,
+                    progressCaption: AppLocalizations.of(context).todayCaption,
                   )
-                : _EmptyIndicatorCard(title: AppLocalizations.of(context)!.sleep),
+                : _EmptyIndicatorCard(
+                    title: AppLocalizations.of(context).sleep,
+                  ),
           ),
         ],
       ),
@@ -1202,7 +1214,7 @@ class _BodyDataSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                AppLocalizations.of(context)!.bodyDataTitle,
+                AppLocalizations.of(context).bodyDataTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: palette.textPrimary,
                   fontSize: 15,
@@ -1211,7 +1223,7 @@ class _BodyDataSection extends StatelessWidget {
               ),
               if (latestMetric != null)
                 Text(
-                  '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}',
+                  '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textDisabled,
                     fontSize: 10,
@@ -1224,40 +1236,40 @@ class _BodyDataSection extends StatelessWidget {
           _DataRow(
             icon: Icons.monitor_weight_outlined,
             label: latestWeight != null
-                ? '${AppLocalizations.of(context)!.weight}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
-                : '${AppLocalizations.of(context)!.weight}: --',
+                ? '${AppLocalizations.of(context).weight}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
+                : '${AppLocalizations.of(context).weight}: --',
             detail: latestWeight != null
-                ? '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestWeight.date)}'
+                ? '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestWeight.date)}'
                 : null,
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.fitness_center,
             label: latestMetric?.muscleMassKg != null
-                ? '${AppLocalizations.of(context)!.muscleMassLabel}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
-                : '${AppLocalizations.of(context)!.muscleMassLabel}: --',
+                ? '${AppLocalizations.of(context).muscleMassLabel}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
+                : '${AppLocalizations.of(context).muscleMassLabel}: --',
             detail: profile.muscleMassGoalKg != null
-                ? '${AppLocalizations.of(context)!.goalLabel} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
-                : AppLocalizations.of(context)!.setYourGoal,
+                ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
+                : AppLocalizations.of(context).setYourGoal,
           ),
           const SizedBox(height: 10),
           _DataRow(
             icon: Icons.height,
             label: currentHeightCm != null
-                ? '${AppLocalizations.of(context)!.height}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
-                : '${AppLocalizations.of(context)!.height}: --',
+                ? '${AppLocalizations.of(context).height}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
+                : '${AppLocalizations.of(context).height}: --',
             detail: currentHeightCm != null
-                ? AppLocalizations.of(context)!.syncedWithProfileAndMetrics
-                : AppLocalizations.of(context)!.addHeightInMetrics,
+                ? AppLocalizations.of(context).syncedWithProfileAndMetrics
+                : AppLocalizations.of(context).addHeightInMetrics,
           ),
           const SizedBox(height: 10),
           // Measurements row
           _DataRow(
             icon: Icons.straighten_outlined,
-            label: AppLocalizations.of(context)!.measurementsLabel,
+            label: AppLocalizations.of(context).measurementsLabel,
             detail: hasMeasurements
-                ? '${AppLocalizations.of(context)!.lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}'
-                : AppLocalizations.of(context)!.noDataLabel,
+                ? '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}'
+                : AppLocalizations.of(context).noDataLabel,
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1277,9 +1289,7 @@ class _BodyDataSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
-                AppLocalizations.of(context)!.updateMetricsButton,
-              ),
+              child: Text(AppLocalizations.of(context).updateMetricsButton),
             ),
           ),
         ],

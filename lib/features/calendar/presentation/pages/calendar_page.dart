@@ -368,16 +368,14 @@ class _CalendarViewState extends State<_CalendarView> {
     );
     final day = dayMap[key];
     final isToday = isSameDay(state.selectedDate, DateTime.now());
-    final locale = Localizations.localeOf(context).languageCode;
-    final isEn = locale == 'en';
+    final locale = Localizations.localeOf(context).toString();
     final l10n = AppLocalizations.of(context);
     final String dateLabel;
     if (isToday) {
       dateLabel = l10n.todayLabel;
     } else {
-      dateLabel = isEn
-          ? DateFormat('MMMM d', locale).format(state.selectedDate)
-          : DateFormat("d 'de' MMMM", locale).format(state.selectedDate);
+      final formattedDate = DateFormat.MMMMd(locale).format(state.selectedDate);
+      dateLabel = toBeginningOfSentenceCase(formattedDate) ?? formattedDate;
     }
 
     if (day == null) {
@@ -508,7 +506,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     final statusColor = day.trainingCompleted
         ? semantic.success
@@ -605,7 +603,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     final statusColor = day.dietCompleted ? semantic.success : semantic.calorie;
     final statusLabel = day.dietCompleted

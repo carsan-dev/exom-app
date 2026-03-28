@@ -47,9 +47,15 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<ProfileModel> updateProfile(Map<String, dynamic> data) async {
+    final normalizedData = Map<String, dynamic>.from(data);
+    final level = normalizedData['level'];
+    if (level is String) {
+      normalizedData['level'] = ProfileModel.normalizeLevelValue(level);
+    }
+
     final response = await _apiClient.dio.put<dynamic>(
       '/profile/me',
-      data: data,
+      data: normalizedData,
     );
     final payload = response.data;
     if (payload is Map<String, dynamic>) {

@@ -21,7 +21,6 @@ import '../../features/trainings/presentation/pages/training_detail_page.dart';
 
 // Diet pages
 import '../../features/diets/presentation/pages/diets_page.dart';
-import '../../features/diets/presentation/pages/meal_detail_page.dart';
 
 // Calendar pages
 import '../../features/calendar/presentation/pages/calendar_page.dart';
@@ -62,7 +61,6 @@ class AppRoutes {
   static const trainings = '/trainings';
   static const trainingDetail = '/trainings/:id';
   static const diets = '/diets';
-  static const mealDetail = '/meals/:id';
   static const calendar = '/calendar';
   static const profile = '/profile';
   static const metrics = '/metrics';
@@ -163,15 +161,6 @@ class AppRouter {
         routes: [
           GoRoute(path: 'metrics', builder: (_, __) => const MetricsPage()),
         ],
-      ),
-
-      // Meal detail (no shell nav bar)
-      GoRoute(
-        path: '/meals/:id',
-        builder: (_, state) => MealDetailPage(
-          mealId: state.pathParameters['id']!,
-          selectedDate: state.uri.queryParameters['date'],
-        ),
       ),
 
       // Modal routes (no shell)

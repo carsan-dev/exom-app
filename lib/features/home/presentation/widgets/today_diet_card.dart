@@ -5,6 +5,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
+import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 
 class TodayDietCard extends StatelessWidget {
   const TodayDietCard({super.key, required this.summary});
@@ -146,7 +147,10 @@ class TodayDietCard extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () async {
                 if (hasNextMeal) {
-                  await context.push('/meals/${summary.nextMealId}');
+                  await showMealDetailSheet(
+                    context,
+                    mealId: summary.nextMealId!,
+                  );
                 } else {
                   await context.push('/diets');
                 }

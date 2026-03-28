@@ -1,19 +1,54 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
+import 'package:exom_app/injection_container.dart';
 
-class MealDetailPage extends StatelessWidget {
+/// Shows the meal detail as a modal bottom sheet.
+Future<void> showMealDetailSheet(
+  BuildContext context, {
+  required String mealId,
+  String? selectedDate,
+  VoidCallback? onDismissed,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: context.exomPalette.surface,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (_, scrollController) => MealDetailSheet(
+        mealId: mealId,
+        selectedDate: selectedDate,
+        scrollController: scrollController,
+      ),
+    ),
+  );
+  onDismissed?.call();
+}
+
+class MealDetailSheet extends StatelessWidget {
+  const MealDetailSheet({
+    super.key,
+    required this.mealId,
+    required this.scrollController,
+    this.selectedDate,
+  });
+
   final String mealId;
   final String? selectedDate;
-
-  const MealDetailPage({super.key, required this.mealId, this.selectedDate});
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -21,40 +56,51 @@ class MealDetailPage extends StatelessWidget {
       create: (_) =>
           sl<DietBloc>()
             ..add(MealDetailLoadRequested(mealId, date: selectedDate)),
-      child: const _MealDetailView(),
+      child: _MealDetailSheetContent(scrollController: scrollController),
     );
   }
 }
 
-class _MealDetailView extends StatelessWidget {
-  const _MealDetailView();
+class _MealDetailSheetContent extends StatelessWidget {
+  const _MealDetailSheetContent({required this.scrollController});
+
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
     return BlocBuilder<DietBloc, DietState>(
       builder: (context, state) {
         if (state is DietLoading || state is DietInitial) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            appBar: AppBar(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              surfaceTintColor: Colors.transparent,
-            ),
-            body: const ShimmerList(count: 5, itemHeight: 80),
+          return ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: palette.textDisabled.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const ShimmerList(count: 4, itemHeight: 80),
+            ],
           );
         }
         if (state is DietError) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            appBar: AppBar(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              surfaceTintColor: Colors.transparent,
-            ),
-            body: ErrorWidget2(message: state.message),
-          );
+          return Center(child: ErrorWidget2(message: state.message));
         }
         if (state is MealDetailLoaded) {
-          return _MealScaffold(meal: state.meal);
+          return _MealSheetBody(
+            meal: state.meal,
+            isCompleted: state.isCompleted,
+            scrollController: scrollController,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -62,16 +108,22 @@ class _MealDetailView extends StatelessWidget {
   }
 }
 
-class _MealScaffold extends StatefulWidget {
-  final MealEntity meal;
+class _MealSheetBody extends StatefulWidget {
+  const _MealSheetBody({
+    required this.meal,
+    required this.isCompleted,
+    required this.scrollController,
+  });
 
-  const _MealScaffold({required this.meal});
+  final MealEntity meal;
+  final bool isCompleted;
+  final ScrollController scrollController;
 
   @override
-  State<_MealScaffold> createState() => _MealScaffoldState();
+  State<_MealSheetBody> createState() => _MealSheetBodyState();
 }
 
-class _MealScaffoldState extends State<_MealScaffold> {
+class _MealSheetBodyState extends State<_MealSheetBody> {
   String _mealTypeLabel(BuildContext context, String type) {
     final l10n = AppLocalizations.of(context)!;
     switch (type.toUpperCase()) {
@@ -105,131 +157,160 @@ class _MealScaffoldState extends State<_MealScaffold> {
     final dietState = context.watch<DietBloc>().state;
     final isCompleted = dietState is MealDetailLoaded
         ? dietState.isCompleted
-        : false;
+        : widget.isCompleted;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
-        title: Text(meal.name),
-      ),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.only(bottom: 100),
+    return ListView(
+      controller: widget.scrollController,
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        // Drag handle + close button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+          child: Row(
             children: [
-              // Hero image or placeholder
-              _MealHeroImage(meal: meal),
-
-              const SizedBox(height: 16),
-
-              // Meal type badge + name
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: semantic.calorie.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _mealTypeLabel(context, meal.type),
-                        style: TextStyle(
-                          color: semantic.calorie,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Macros section
-              _MacroSection(meal: meal),
-
-              const SizedBox(height: 8),
-
-              // Nutritional badges
-              if (meal.nutritionalBadges.isNotEmpty)
-                _NutritionalBadges(badges: meal.nutritionalBadges),
-
-              // Ingredients
-              if (meal.ingredients.isNotEmpty)
-                _IngredientsSection(ingredients: meal.ingredients),
-
-              // Recipe button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: OutlinedButton.icon(
-                  onPressed: _launchRecipe,
-                  icon: const Icon(Icons.search, size: 18),
-                  label: Text(l10n.openRecipeButton),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: semantic.calorie,
-                    side: BorderSide(color: semantic.calorie),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 40),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: palette.textDisabled.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close,
+                    color: palette.textSecondary,
+                    size: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ),
             ],
           ),
+        ),
 
-          // Bottom button
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                border: Border(top: BorderSide(color: palette.divider)),
+        // Meal name + type badge
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                meal.name,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.read<DietBloc>().add(
-                    MarkMealCompleted(mealId: meal.id, completed: !isCompleted),
-                  );
-                },
-                icon: Icon(
-                  isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-                  size: 20,
-                ),
-                label: Text(
-                  isCompleted
-                      ? l10n.completedFeminine
-                      : l10n.markMealCompletedButton,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted
-                      ? semantic.success
-                      : palette.primary,
-                  foregroundColor: palette.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: semantic.calorie.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _mealTypeLabel(context, meal.type),
+                      style: TextStyle(
+                        color: semantic.calorie,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Nutritional badges
+        if (meal.nutritionalBadges.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _NutritionalBadges(badges: meal.nutritionalBadges),
+        ],
+
+        const SizedBox(height: 14),
+
+        // Hero image or placeholder
+        _MealHeroImage(meal: meal),
+
+        // Macros section
+        _MacroSection(meal: meal),
+
+        const SizedBox(height: 4),
+
+        // Ingredients
+        if (meal.ingredients.isNotEmpty)
+          _IngredientsSection(ingredients: meal.ingredients),
+
+        // Recipe button
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: OutlinedButton.icon(
+            onPressed: _launchRecipe,
+            icon: const Icon(Icons.search, size: 18),
+            label: Text(l10n.openRecipeButton),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: semantic.calorie,
+              side: BorderSide(color: semantic.calorie),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+
+        // Complete / uncomplete button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              context.read<DietBloc>().add(
+                MarkMealCompleted(mealId: meal.id, completed: !isCompleted),
+              );
+            },
+            icon: Icon(
+              isCompleted ? Icons.check_circle : Icons.check_circle_outline,
+              size: 20,
+            ),
+            label: Text(
+              isCompleted
+                  ? l10n.completedFeminine
+                  : l10n.markMealCompletedButton,
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isCompleted ? semantic.success : palette.primary,
+              foregroundColor: palette.onPrimary,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
+
+// ─── Sub-Widgets ───────────────────────────────────────────────────────────────
 
 class _MealHeroImage extends StatelessWidget {
   final MealEntity meal;
@@ -239,25 +320,25 @@ class _MealHeroImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final primary = context.exomPalette.primary;
+    final primary = palette.primary;
     return meal.imageUrl != null
         ? CachedNetworkImage(
             imageUrl: meal.imageUrl!,
-            height: 220,
+            height: 200,
             width: double.infinity,
             fit: BoxFit.cover,
             placeholder: (_, __) => Container(
-              height: 220,
+              height: 200,
               color: palette.surfaceVariant,
               child: Center(child: CircularProgressIndicator(color: primary)),
             ),
-            errorWidget: (_, __, ___) => _PlaceholderHero(),
+            errorWidget: (_, __, ___) => _MealPlaceholderHero(),
           )
-        : _PlaceholderHero();
+        : _MealPlaceholderHero();
   }
 }
 
-class _PlaceholderHero extends StatelessWidget {
+class _MealPlaceholderHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -468,7 +549,7 @@ class _IngredientsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
           child: Text(
             l10n.ingredientsTitle,
             style: theme.textTheme.titleMedium?.copyWith(

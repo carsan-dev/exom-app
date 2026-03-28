@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
+import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 import 'package:exom_app/injection_container.dart';
 
 class DietsPage extends StatelessWidget {
@@ -403,8 +403,11 @@ class _MealCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        final dateQuery = selectedDate != null ? '?date=$selectedDate' : '';
-        await context.push('/meals/${meal.id}$dateQuery');
+        await showMealDetailSheet(
+          context,
+          mealId: meal.id,
+          selectedDate: selectedDate,
+        );
         if (context.mounted) {
           context.read<DietBloc>().add(DietLoadRequested(date: selectedDate));
         }
@@ -607,3 +610,4 @@ class _MealIconFallback extends StatelessWidget {
     );
   }
 }
+

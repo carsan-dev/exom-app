@@ -36,12 +36,13 @@ class ChallengesPage extends StatelessWidget {
               );
             }
             if (state is ChallengesError) {
-              return ErrorWidget2(
-                message: AppLocalizations.of(context)!.challengesLoadError,
-                onRetry: () => context.read<ChallengesBloc>().add(
-                  const ChallengesLoadRequested(),
-                ),
+              void retry() => context.read<ChallengesBloc>().add(
+                const ChallengesLoadRequested(),
               );
+              if (state.message.startsWith('ApiException(0)')) {
+                return NoConnectionWidget(onRetry: retry);
+              }
+              return ServerErrorWidget(onRetry: retry);
             }
             if (state is ChallengesLoaded) {
               return _ChallengesContent(state: state);

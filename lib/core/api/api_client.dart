@@ -148,7 +148,12 @@ class ApiException implements Exception {
   const ApiException({required this.statusCode, required this.message});
 
   factory ApiException.fromDioError(DioException e) {
-    final statusCode = e.response?.statusCode ?? 500;
+    final isNetwork = e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError ||
+        e.response == null;
+    final statusCode = isNetwork ? 0 : (e.response?.statusCode ?? 500);
     final data = e.response?.data;
     String message = 'Error de red';
 
@@ -174,6 +179,8 @@ class ApiException implements Exception {
   bool get isUnauthorized => statusCode == 401;
   bool get isLocked => statusCode == 423;
   bool get isNotFound => statusCode == 404;
+  bool get isNetworkError => statusCode == 0;
+  bool get isServerError => statusCode >= 500;
 
   @override
   String toString() => 'ApiException($statusCode): $message';

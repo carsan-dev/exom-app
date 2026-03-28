@@ -47,15 +47,16 @@ class _CalendarViewState extends State<_CalendarView> {
           return const ShimmerList(count: 3, itemHeight: 200);
         }
         if (state is CalendarError) {
-          return ErrorWidget2(
-            message: l10n.calendarLoadError,
-            onRetry: () {
-              final now = DateTime.now();
-              context.read<CalendarBloc>().add(
-                CalendarMonthLoadRequested(year: now.year, month: now.month),
-              );
-            },
-          );
+          void retry() {
+            final now = DateTime.now();
+            context.read<CalendarBloc>().add(
+              CalendarMonthLoadRequested(year: now.year, month: now.month),
+            );
+          }
+          if (state.message.startsWith('ApiException(0)')) {
+            return NoConnectionWidget(onRetry: retry);
+          }
+          return ServerErrorWidget(onRetry: retry);
         }
         if (state is CalendarLoaded) {
           return _buildContent(context, state);

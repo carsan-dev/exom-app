@@ -626,7 +626,8 @@ class _ExerciseCard extends StatelessWidget {
                 GestureDetector(
                   onTap: () async {
                     if (!isCompleted) {
-                      final weight = await _showWeightSheet(context, l10n);
+                      final weight = await _showWeightSheet(context, l10n,
+                          previousWeight: weightUsed);
                       if (!context.mounted) return;
                       onToggle(true, weightUsed: weight);
                       if (nextExerciseName != null) {
@@ -688,6 +689,7 @@ class _ExerciseCard extends StatelessWidget {
           trainingExercise: trainingExercise,
           scrollController: scrollController,
           isCompleted: isCompleted,
+          weightUsed: weightUsed,
         ),
       ),
     );
@@ -713,9 +715,14 @@ class _SheetCompletionResult {
 }
 
 Future<double?> _showWeightSheet(
-    BuildContext context, AppLocalizations l10n) async {
+    BuildContext context, AppLocalizations l10n,
+    {double? previousWeight}) async {
   final palette = context.exomPalette;
-  final controller = TextEditingController();
+  final controller = TextEditingController(
+    text: previousWeight != null
+        ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
+        : '',
+  );
   double? result;
 
   await showModalBottomSheet(
@@ -841,12 +848,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
   final ScrollController scrollController;
   final bool isCompleted;
+  final double? weightUsed;
 
   const _ExerciseDetailSheet({
     required this.exercise,
     required this.trainingExercise,
     required this.scrollController,
     required this.isCompleted,
+    this.weightUsed,
   });
 
   @override
@@ -959,6 +968,35 @@ class _ExerciseDetailSheet extends StatelessWidget {
           ],
         ),
 
+        if (weightUsed != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: semantic.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: semantic.success.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.fitness_center, color: semantic.success, size: 18),
+                const SizedBox(width: 10),
+                Text(
+                  l10n.weightBadgeLabel(weightUsed!.toStringAsFixed(
+                      weightUsed! % 1 == 0 ? 0 : 1)),
+                  style: TextStyle(
+                    color: semantic.success,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         if (exercise.explanationText != null) ...[
           const SizedBox(height: 20),
           _DetailSection(
@@ -987,7 +1025,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () async {
               if (!isCompleted) {
-                final weight = await _showWeightSheet(context, l10n);
+                final weight = await _showWeightSheet(context, l10n,
+                    previousWeight: weightUsed);
                 if (!context.mounted) return;
                 Navigator.of(context).pop(
                   _SheetCompletionResult(completed: true, weight: weight),

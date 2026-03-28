@@ -2761,6 +2761,360 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Enviar feedback'**
   String get feedbackSendFromExercise;
+
+  /// No description provided for @errorNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Error de red'**
+  String get errorNetwork;
+
+  /// No description provided for @errorAccountLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta bloqueada — contacta a tu entrenador'**
+  String get errorAccountLocked;
+
+  /// No description provided for @errorSessionExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión expirada. Inicia sesión nuevamente'**
+  String get errorSessionExpired;
+
+  /// No description provided for @errorForbidden.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes permisos para realizar esta acción'**
+  String get errorForbidden;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Recurso no encontrado'**
+  String get errorNotFound;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In es, this message translates to:
+  /// **'Error del servidor. Inténtalo más tarde'**
+  String get errorServer;
+
+  /// No description provided for @retryButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get retryButton;
+
+  /// No description provided for @contactSupportButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Contactar soporte'**
+  String get contactSupportButton;
+
+  /// No description provided for @viewOfflineButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver offline'**
+  String get viewOfflineButton;
+
+  /// No description provided for @goToCalendarButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir al calendario'**
+  String get goToCalendarButton;
+
+  /// No description provided for @goHomeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get goHomeButton;
+
+  /// No description provided for @serverErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal'**
+  String get serverErrorTitle;
+
+  /// No description provided for @serverErrorMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'El servidor no pudo procesar tu solicitud'**
+  String get serverErrorMessage;
+
+  /// No description provided for @serverErrorMessageWithCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Error {code}. El servidor no pudo procesar tu solicitud'**
+  String serverErrorMessageWithCode(String code);
+
+  /// No description provided for @noConnectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión a internet'**
+  String get noConnectionTitle;
+
+  /// No description provided for @noConnectionMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprueba tu conexión e inténtalo de nuevo'**
+  String get noConnectionMessage;
+
+  /// No description provided for @notFoundTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contenido no disponible'**
+  String get notFoundTitle;
+
+  /// No description provided for @notFoundMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible'**
+  String get notFoundMessage;
+
+  /// No description provided for @selectedDateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'la fecha seleccionada'**
+  String get selectedDateLabel;
+
+  /// No description provided for @measureNeck.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuello'**
+  String get measureNeck;
+
+  /// No description provided for @measureShoulders.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombros'**
+  String get measureShoulders;
+
+  /// No description provided for @measureChest.
+  ///
+  /// In es, this message translates to:
+  /// **'Pecho'**
+  String get measureChest;
+
+  /// No description provided for @measureArm.
+  ///
+  /// In es, this message translates to:
+  /// **'Brazo'**
+  String get measureArm;
+
+  /// No description provided for @measureForearm.
+  ///
+  /// In es, this message translates to:
+  /// **'Antebrazo'**
+  String get measureForearm;
+
+  /// No description provided for @measureWaist.
+  ///
+  /// In es, this message translates to:
+  /// **'Cintura'**
+  String get measureWaist;
+
+  /// No description provided for @measureHips.
+  ///
+  /// In es, this message translates to:
+  /// **'Caderas'**
+  String get measureHips;
+
+  /// No description provided for @measureThigh.
+  ///
+  /// In es, this message translates to:
+  /// **'Muslo'**
+  String get measureThigh;
+
+  /// No description provided for @measureCalf.
+  ///
+  /// In es, this message translates to:
+  /// **'Gemelo'**
+  String get measureCalf;
+
+  /// No description provided for @noTrainingsAssigned.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes entrenamientos asignados'**
+  String get noTrainingsAssigned;
+
+  /// No description provided for @noTrainingsAssignedSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrenador aún no te ha asignado un plan'**
+  String get noTrainingsAssignedSubtitle;
+
+  /// No description provided for @noActivitiesThisMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin actividades este mes'**
+  String get noActivitiesThisMonth;
+
+  /// No description provided for @noActivitiesThisMonthSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay entrenamientos ni dietas programados'**
+  String get noActivitiesThisMonthSubtitle;
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Bienvenido a EXOM!'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura tu perfil en unos pocos pasos para que tu entrenador pueda personalizar tu plan.'**
+  String get onboardingWelcomeDescription;
+
+  /// No description provided for @onboardingStartButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get onboardingStartButton;
+
+  /// No description provided for @onboardingDoItLaterButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Hacerlo después'**
+  String get onboardingDoItLaterButton;
+
+  /// No description provided for @onboardingBasicsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos básicos'**
+  String get onboardingBasicsTitle;
+
+  /// No description provided for @onboardingFirstNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get onboardingFirstNameLabel;
+
+  /// No description provided for @onboardingLastNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Apellido'**
+  String get onboardingLastNameLabel;
+
+  /// No description provided for @onboardingBirthDateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get onboardingBirthDateLabel;
+
+  /// No description provided for @onboardingAvatarLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto de perfil (opcional)'**
+  String get onboardingAvatarLabel;
+
+  /// No description provided for @onboardingBodyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuerpo'**
+  String get onboardingBodyTitle;
+
+  /// No description provided for @onboardingHeightLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Altura (cm)'**
+  String get onboardingHeightLabel;
+
+  /// No description provided for @onboardingWeightLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso (kg)'**
+  String get onboardingWeightLabel;
+
+  /// No description provided for @onboardingGoalsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus objetivos'**
+  String get onboardingGoalsTitle;
+
+  /// No description provided for @onboardingLevelLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nivel'**
+  String get onboardingLevelLabel;
+
+  /// No description provided for @onboardingMainGoalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo principal'**
+  String get onboardingMainGoalLabel;
+
+  /// No description provided for @onboardingMuscleMassGoalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Meta de masa muscular (kg, opcional)'**
+  String get onboardingMuscleMassGoalLabel;
+
+  /// No description provided for @onboardingTargetCaloriesLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Calorías objetivo (opcional)'**
+  String get onboardingTargetCaloriesLabel;
+
+  /// No description provided for @onboardingCompleteProfileButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar perfil'**
+  String get onboardingCompleteProfileButton;
+
+  /// No description provided for @onboardingSummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen'**
+  String get onboardingSummaryTitle;
+
+  /// No description provided for @onboardingConfirmButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get onboardingConfirmButton;
+
+  /// No description provided for @onboardingEditButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get onboardingEditButton;
+
+  /// No description provided for @onboardingProgressComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil {percent}% completo'**
+  String onboardingProgressComplete(int percent);
+
+  /// No description provided for @onboardingSkipButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Saltar'**
+  String get onboardingSkipButton;
+
+  /// No description provided for @onboardingNextButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get onboardingNextButton;
+
+  /// No description provided for @onboardingSubmittingMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardando tu perfil...'**
+  String get onboardingSubmittingMessage;
+
+  /// No description provided for @onboardingSuccessMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Perfil completado!'**
+  String get onboardingSuccessMessage;
+
+  /// No description provided for @onboardingErrorMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Error al guardar el perfil. Inténtalo de nuevo.'**
+  String get onboardingErrorMessage;
 }
 
 class _AppLocalizationsDelegate

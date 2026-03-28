@@ -1,197 +1,176 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_progress_indicator.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_welcome_step.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_basics_step.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_body_step.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_goals_step.dart';
+import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_summary_step.dart';
 
 class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
 
-  static const _steps = [
-    _OnboardingStep(
-      icon: Icons.person_outline,
-      title: 'Completa tu perfil',
-      subtitle:
-          'Añade tus datos para que el entrenador pueda personalizarte el plan.',
-    ),
-    _OnboardingStep(
-      icon: Icons.sports_gymnastics,
-      title: 'Espera a tu entrenador',
-      subtitle: 'Te asignaremos un entrenador personal que diseñará tu rutina.',
-    ),
-    _OnboardingStep(
-      icon: Icons.rocket_launch_outlined,
-      title: 'Empieza tu transformación',
-      subtitle: 'Sigue tu plan, registra tu progreso y alcanza tus objetivos.',
-    ),
-  ];
-
-  String _logoAsset(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
-        ? 'assets/images/logo_dark.svg'
-        : 'assets/images/logo.svg';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              SvgPicture.asset(_logoAsset(context), height: 32),
-              const SizedBox(height: 40),
-              Text(
-                l10n.welcomeOnboarding,
-                style: theme.textTheme.displayLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  height: 1.15,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.onboardingStepsMessage,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 16,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 48),
-              ...List.generate(_steps.length, (i) {
-                return _StepTile(index: i + 1, step: _steps[i]);
-              }),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await sl<LocalStorage>().setOnboardingComplete();
-                    if (context.mounted) context.go('/profile');
-                  },
-                  child: Text(l10n.completeProfileButton),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () async {
-                    await sl<LocalStorage>().setOnboardingComplete();
-                    if (context.mounted) context.go('/');
-                  },
-                  child: Text(
-                    l10n.doItLaterButton,
-                    style: TextStyle(color: palette.textMuted),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+    return BlocProvider(
+      create: (_) => sl<OnboardingBloc>()..add(const OnboardingStarted()),
+      child: const _OnboardingView(),
     );
   }
 }
 
-class _OnboardingStep {
-  const _OnboardingStep({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
+class _OnboardingView extends StatefulWidget {
+  const _OnboardingView();
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
+  @override
+  State<_OnboardingView> createState() => _OnboardingViewState();
 }
 
-class _StepTile extends StatelessWidget {
-  const _StepTile({required this.index, required this.step});
+class _OnboardingViewState extends State<_OnboardingView> {
+  final _pageController = PageController();
 
-  final int index;
-  final _OnboardingStep step;
+  void _goToPage(int page) {
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
 
-    final stepTitle = switch (index) {
-      1 => l10n.completeProfileTitle,
-      2 => l10n.waitForCoachTitle,
-      _ => l10n.startTransformationTitle,
-    };
-    final stepSubtitle = switch (index) {
-      1 => l10n.completeProfileSubtitle,
-      2 => l10n.waitForCoachSubtitle,
-      _ => l10n.startTransformationSubtitle,
-    };
+    return BlocListener<OnboardingBloc, OnboardingState>(
+      listener: (context, state) {
+        if (state is OnboardingCompleted) {
+          context.go('/');
+        }
+        if (state is OnboardingError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.onboardingErrorMessage),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        if (state is OnboardingStepActive) {
+          _goToPage(state.currentStep);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: SafeArea(
+          child: BlocBuilder<OnboardingBloc, OnboardingState>(
+            builder: (context, state) {
+              if (state is OnboardingLoading || state is OnboardingInitial) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: palette.primary,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$index',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: palette.onPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  stepTitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+              if (state is OnboardingSubmitting) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(l10n.onboardingSubmittingMessage),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  stepSubtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
+                );
+              }
+
+              if (state is OnboardingStepActive) {
+                return Column(
+                  children: [
+                    // Progress indicator for steps 1-4
+                    if (state.currentStep > 0) ...[
+                      const SizedBox(height: 16),
+                      OnboardingProgressIndicator(
+                        currentStep: state.currentStep - 1,
+                        totalSteps: state.totalSteps - 1,
+                      ),
+                    ],
+                    Expanded(
+                      child: PageView(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
+                          // Step 0: Welcome
+                          OnboardingWelcomeStep(
+                            onStart: () => context
+                                .read<OnboardingBloc>()
+                                .add(const OnboardingStepCompleted(step: 0, data: {})),
+                            onSkip: () => context
+                                .read<OnboardingBloc>()
+                                .add(const OnboardingSkipped()),
+                          ),
+                          // Step 1: Basics
+                          OnboardingBasicsStep(
+                            initialData: state.accumulatedData,
+                            initialAvatarUrl: state.avatarUrl,
+                            onNext: (data) => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 1, data: data)),
+                            onSkip: () => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 1, data: const {})),
+                            onAvatarPicked: (path) => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingAvatarPicked(path)),
+                          ),
+                          // Step 2: Body
+                          OnboardingBodyStep(
+                            initialData: state.accumulatedData,
+                            onNext: (data) => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 2, data: data)),
+                            onSkip: () => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 2, data: const {})),
+                          ),
+                          // Step 3: Goals
+                          OnboardingGoalsStep(
+                            initialData: state.accumulatedData,
+                            onNext: (data) => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 3, data: data)),
+                            onSkip: () => context
+                                .read<OnboardingBloc>()
+                                .add(OnboardingStepCompleted(step: 3, data: const {})),
+                          ),
+                          // Step 4: Summary
+                          OnboardingSummaryStep(
+                            accumulatedData: state.accumulatedData,
+                            avatarUrl: state.avatarUrl,
+                            onConfirm: () => context
+                                .read<OnboardingBloc>()
+                                .add(const OnboardingSubmitted()),
+                            onEdit: () => _goToPage(1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
           ),
-        ],
+        ),
       ),
     );
   }

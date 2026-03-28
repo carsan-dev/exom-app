@@ -1464,4 +1464,193 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedbackSendFromExercise => 'Enviar feedback';
+
+  @override
+  String get errorNetwork => 'Error de red';
+
+  @override
+  String get errorAccountLocked =>
+      'Cuenta bloqueada — contacta a tu entrenador';
+
+  @override
+  String get errorSessionExpired => 'Sesión expirada. Inicia sesión nuevamente';
+
+  @override
+  String get errorForbidden => 'No tienes permisos para realizar esta acción';
+
+  @override
+  String get errorNotFound => 'Recurso no encontrado';
+
+  @override
+  String get errorServer => 'Error del servidor. Inténtalo más tarde';
+
+  @override
+  String get retryButton => 'Reintentar';
+
+  @override
+  String get contactSupportButton => 'Contactar soporte';
+
+  @override
+  String get viewOfflineButton => 'Ver offline';
+
+  @override
+  String get goToCalendarButton => 'Ir al calendario';
+
+  @override
+  String get goHomeButton => 'Inicio';
+
+  @override
+  String get serverErrorTitle => 'Algo salió mal';
+
+  @override
+  String get serverErrorMessage => 'El servidor no pudo procesar tu solicitud';
+
+  @override
+  String serverErrorMessageWithCode(String code) {
+    return 'Error $code. El servidor no pudo procesar tu solicitud';
+  }
+
+  @override
+  String get noConnectionTitle => 'Sin conexión a internet';
+
+  @override
+  String get noConnectionMessage =>
+      'Comprueba tu conexión e inténtalo de nuevo';
+
+  @override
+  String get notFoundTitle => 'Contenido no disponible';
+
+  @override
+  String get notFoundMessage =>
+      'No encontramos lo que buscas. Puede que haya sido eliminado o aún no está disponible';
+
+  @override
+  String get selectedDateLabel => 'la fecha seleccionada';
+
+  @override
+  String get measureNeck => 'Cuello';
+
+  @override
+  String get measureShoulders => 'Hombros';
+
+  @override
+  String get measureChest => 'Pecho';
+
+  @override
+  String get measureArm => 'Brazo';
+
+  @override
+  String get measureForearm => 'Antebrazo';
+
+  @override
+  String get measureWaist => 'Cintura';
+
+  @override
+  String get measureHips => 'Caderas';
+
+  @override
+  String get measureThigh => 'Muslo';
+
+  @override
+  String get measureCalf => 'Gemelo';
+
+  @override
+  String get noTrainingsAssigned => 'No tienes entrenamientos asignados';
+
+  @override
+  String get noTrainingsAssignedSubtitle =>
+      'Tu entrenador aún no te ha asignado un plan';
+
+  @override
+  String get noActivitiesThisMonth => 'Sin actividades este mes';
+
+  @override
+  String get noActivitiesThisMonthSubtitle =>
+      'No hay entrenamientos ni dietas programados';
+
+  @override
+  String get onboardingWelcomeTitle => '¡Bienvenido a EXOM!';
+
+  @override
+  String get onboardingWelcomeDescription =>
+      'Configura tu perfil en unos pocos pasos para que tu entrenador pueda personalizar tu plan.';
+
+  @override
+  String get onboardingStartButton => 'Empezar';
+
+  @override
+  String get onboardingDoItLaterButton => 'Hacerlo después';
+
+  @override
+  String get onboardingBasicsTitle => 'Datos básicos';
+
+  @override
+  String get onboardingFirstNameLabel => 'Nombre';
+
+  @override
+  String get onboardingLastNameLabel => 'Apellido';
+
+  @override
+  String get onboardingBirthDateLabel => 'Fecha de nacimiento';
+
+  @override
+  String get onboardingAvatarLabel => 'Foto de perfil (opcional)';
+
+  @override
+  String get onboardingBodyTitle => 'Tu cuerpo';
+
+  @override
+  String get onboardingHeightLabel => 'Altura (cm)';
+
+  @override
+  String get onboardingWeightLabel => 'Peso (kg)';
+
+  @override
+  String get onboardingGoalsTitle => 'Tus objetivos';
+
+  @override
+  String get onboardingLevelLabel => 'Nivel';
+
+  @override
+  String get onboardingMainGoalLabel => 'Objetivo principal';
+
+  @override
+  String get onboardingMuscleMassGoalLabel =>
+      'Meta de masa muscular (kg, opcional)';
+
+  @override
+  String get onboardingTargetCaloriesLabel => 'Calorías objetivo (opcional)';
+
+  @override
+  String get onboardingCompleteProfileButton => 'Completar perfil';
+
+  @override
+  String get onboardingSummaryTitle => 'Resumen';
+
+  @override
+  String get onboardingConfirmButton => 'Confirmar';
+
+  @override
+  String get onboardingEditButton => 'Editar';
+
+  @override
+  String onboardingProgressComplete(int percent) {
+    return 'Perfil $percent% completo';
+  }
+
+  @override
+  String get onboardingSkipButton => 'Saltar';
+
+  @override
+  String get onboardingNextButton => 'Siguiente';
+
+  @override
+  String get onboardingSubmittingMessage => 'Guardando tu perfil...';
+
+  @override
+  String get onboardingSuccessMessage => '¡Perfil completado!';
+
+  @override
+  String get onboardingErrorMessage =>
+      'Error al guardar el perfil. Inténtalo de nuevo.';
 }

@@ -102,6 +102,9 @@ import 'package:exom_app/features/metrics/domain/repositories/metrics_repository
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 
+// Onboarding
+import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+
 final sl = GetIt.instance;
 
 Future<void> initDependencies() async {
@@ -389,6 +392,16 @@ Future<void> initDependencies() async {
       saveMetricUseCase: sl<SaveMetricUseCase>(),
       metricsRepository: sl<MetricsRepository>(),
       updateProfileUseCase: sl<UpdateProfileUseCase>(),
+    ),
+  );
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
+  sl.registerFactory(
+    () => OnboardingBloc(
+      getProfile: sl<GetProfileUseCase>(),
+      updateProfile: sl<UpdateProfileUseCase>(),
+      uploadAvatar: sl<UploadAvatarUseCase>(),
+      localStorage: sl<LocalStorage>(),
     ),
   );
 }

@@ -669,97 +669,9 @@ class _ExerciseCard extends StatelessWidget {
     );
   }
 
-  Future<double?> _showWeightSheet(
-      BuildContext context, AppLocalizations l10n) async {
-    final palette = context.exomPalette;
-    final controller = TextEditingController();
-    double? result;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: palette.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: palette.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.weightInputTitle,
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: l10n.weightInputHint,
-                  hintStyle: TextStyle(color: palette.textDisabled),
-                  suffixText: 'kg',
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text(l10n.weightInputSkip),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final val = double.tryParse(
-                          controller.text.trim().replaceAll(',', '.'),
-                        );
-                        result = val;
-                        Navigator.of(ctx).pop();
-                      },
-                      child: Text(l10n.weightInputSave),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    return result;
-  }
-
-  void _showExerciseDetail(BuildContext context) {
+  void _showExerciseDetail(BuildContext context) async {
     final ex = trainingExercise.exercise;
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<_SheetCompletionResult>(
       context: context,
       backgroundColor: context.exomPalette.surface,
       isScrollControlled: true,
@@ -776,14 +688,116 @@ class _ExerciseCard extends StatelessWidget {
           trainingExercise: trainingExercise,
           scrollController: scrollController,
           isCompleted: isCompleted,
-          onToggle: (val, {double? weightUsed}) {
-            Navigator.of(context).pop();
-            onToggle(val, weightUsed: weightUsed);
-          },
         ),
       ),
     );
+
+    if (result == null || !context.mounted) return;
+
+    onToggle(result.completed, weightUsed: result.weight);
+
+    if (result.completed && nextExerciseName != null) {
+      await RestTimerOverlay.show(
+        context,
+        restSeconds: trainingExercise.restSeconds,
+        nextExerciseName: nextExerciseName,
+      );
+    }
   }
+}
+
+class _SheetCompletionResult {
+  final bool completed;
+  final double? weight;
+  const _SheetCompletionResult({required this.completed, this.weight});
+}
+
+Future<double?> _showWeightSheet(
+    BuildContext context, AppLocalizations l10n) async {
+  final palette = context.exomPalette;
+  final controller = TextEditingController();
+  double? result;
+
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: palette.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(ctx).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: palette.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.weightInputTitle,
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              style: TextStyle(color: palette.textPrimary, fontSize: 15),
+              decoration: InputDecoration(
+                hintText: l10n.weightInputHint,
+                hintStyle: TextStyle(color: palette.textDisabled),
+                suffixText: 'kg',
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(l10n.weightInputSkip),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final val = double.tryParse(
+                        controller.text.trim().replaceAll(',', '.'),
+                      );
+                      result = val;
+                      Navigator.of(ctx).pop();
+                    },
+                    child: Text(l10n.weightInputSave),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  return result;
 }
 
 class _ExercisePlaceholder extends StatelessWidget {
@@ -827,14 +841,12 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
   final ScrollController scrollController;
   final bool isCompleted;
-  final void Function(bool completed, {double? weightUsed}) onToggle;
 
   const _ExerciseDetailSheet({
     required this.exercise,
     required this.trainingExercise,
     required this.scrollController,
     required this.isCompleted,
-    required this.onToggle,
   });
 
   @override
@@ -973,8 +985,18 @@ class _ExerciseDetailSheet extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              onToggle(!isCompleted);
+            onPressed: () async {
+              if (!isCompleted) {
+                final weight = await _showWeightSheet(context, l10n);
+                if (!context.mounted) return;
+                Navigator.of(context).pop(
+                  _SheetCompletionResult(completed: true, weight: weight),
+                );
+              } else {
+                Navigator.of(context).pop(
+                  const _SheetCompletionResult(completed: false),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: isCompleted

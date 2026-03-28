@@ -602,17 +602,35 @@ abstract class AppLocalizations {
   /// **'Cena'**
   String get mealTypeDinner;
 
+  /// No description provided for @richInLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Rico en'**
+  String get richInLabel;
+
   /// No description provided for @openRecipeButton.
   ///
   /// In es, this message translates to:
   /// **'Ver receta en Google'**
   String get openRecipeButton;
 
+  /// No description provided for @recipeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Receta'**
+  String get recipeButton;
+
   /// No description provided for @mealCompletedButton.
   ///
   /// In es, this message translates to:
   /// **'Completada'**
   String get mealCompletedButton;
+
+  /// No description provided for @completeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar'**
+  String get completeButton;
 
   /// No description provided for @markMealCompletedButton.
   ///

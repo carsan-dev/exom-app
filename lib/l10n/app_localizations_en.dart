@@ -275,10 +275,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealTypeDinner => 'Dinner';
 
   @override
+  String get richInLabel => 'Rich in';
+
+  @override
   String get openRecipeButton => 'Open recipe in Google';
 
   @override
+  String get recipeButton => 'Recipe';
+
+  @override
   String get mealCompletedButton => 'Completed';
+
+  @override
+  String get completeButton => 'Complete';
 
   @override
   String get markMealCompletedButton => 'Mark as completed';

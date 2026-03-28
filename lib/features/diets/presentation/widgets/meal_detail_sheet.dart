@@ -9,7 +9,6 @@ import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/injection_container.dart';
 
-/// Shows the meal detail as a modal bottom sheet.
 Future<void> showMealDetailSheet(
   BuildContext context, {
   required String mealId,
@@ -23,12 +22,12 @@ Future<void> showMealDetailSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => DraggableScrollableSheet(
+    builder: (sheetContext) => DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
-      builder: (_, scrollController) => MealDetailSheet(
+      builder: (sheetContext, scrollController) => MealDetailSheet(
         mealId: mealId,
         selectedDate: selectedDate,
         scrollController: scrollController,
@@ -53,51 +52,49 @@ class MealDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
+      create: (blocContext) =>
           sl<DietBloc>()
             ..add(MealDetailLoadRequested(mealId, date: selectedDate)),
-      child: _MealDetailSheetContent(scrollController: scrollController),
+      child: _MealDetailSheetContent(
+        mealId: mealId,
+        selectedDate: selectedDate,
+        scrollController: scrollController,
+      ),
     );
   }
 }
 
 class _MealDetailSheetContent extends StatelessWidget {
-  const _MealDetailSheetContent({required this.scrollController});
+  const _MealDetailSheetContent({
+    required this.mealId,
+    required this.selectedDate,
+    required this.scrollController,
+  });
 
+  final String mealId;
+  final String? selectedDate;
   final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
     return BlocBuilder<DietBloc, DietState>(
       builder: (context, state) {
         if (state is DietLoading || state is DietInitial) {
-          return ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: palette.textDisabled.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              for (int i = 0; i < 4; i++) ...[
-                const ShimmerCard(height: 80),
-                if (i < 3) const SizedBox(height: 12),
-              ],
-            ],
+          return _MealDetailLoading(scrollController: scrollController);
+        }
+
+        if (state is DietError) {
+          return _MealDetailError(
+            scrollController: scrollController,
+            message: state.message,
+            onRetry: () {
+              context.read<DietBloc>().add(
+                MealDetailLoadRequested(mealId, date: selectedDate),
+              );
+            },
           );
         }
-        if (state is DietError) {
-          return Center(child: ErrorWidget2(message: state.message));
-        }
+
         if (state is MealDetailLoaded) {
           return _MealSheetBody(
             meal: state.meal,
@@ -105,13 +102,128 @@ class _MealDetailSheetContent extends StatelessWidget {
             scrollController: scrollController,
           );
         }
+
         return const SizedBox.shrink();
       },
     );
   }
 }
 
-class _MealSheetBody extends StatefulWidget {
+class _MealDetailLoading extends StatelessWidget {
+  const _MealDetailLoading({required this.scrollController});
+
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      children: [
+        _SheetTopBar(handleColor: palette.primary),
+        const SizedBox(height: 16),
+        const ShimmerCard(height: 28),
+        const SizedBox(height: 12),
+        Row(
+          children: const [
+            ShimmerCard(
+              height: 28,
+              width: 84,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            SizedBox(width: 8),
+            ShimmerCard(
+              height: 28,
+              width: 78,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            SizedBox(width: 8),
+            ShimmerCard(
+              height: 28,
+              width: 74,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Divider(color: palette.divider, height: 1),
+        const SizedBox(height: 16),
+        const ShimmerCard(
+          height: 196,
+          borderRadius: BorderRadius.all(Radius.circular(18)),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: const [
+            ShimmerCard(
+              height: 34,
+              width: 92,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            ShimmerCard(
+              height: 34,
+              width: 84,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            ShimmerCard(
+              height: 34,
+              width: 84,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+            ShimmerCard(
+              height: 34,
+              width: 84,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const ShimmerCard(height: 164),
+        const SizedBox(height: 28),
+        Row(
+          children: const [
+            Expanded(child: ShimmerCard(height: 52)),
+            SizedBox(width: 12),
+            Expanded(child: ShimmerCard(height: 52)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MealDetailError extends StatelessWidget {
+  const _MealDetailError({
+    required this.scrollController,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final ScrollController scrollController;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      children: [
+        _SheetTopBar(handleColor: palette.primary),
+        const SizedBox(height: 24),
+        ErrorWidget2(message: message, onRetry: onRetry),
+      ],
+    );
+  }
+}
+
+class _MealSheetBody extends StatelessWidget {
   const _MealSheetBody({
     required this.meal,
     required this.isCompleted,
@@ -122,503 +234,550 @@ class _MealSheetBody extends StatefulWidget {
   final bool isCompleted;
   final ScrollController scrollController;
 
-  @override
-  State<_MealSheetBody> createState() => _MealSheetBodyState();
-}
-
-class _MealSheetBodyState extends State<_MealSheetBody> {
-  String _mealTypeLabel(BuildContext context, String type) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (type.toUpperCase()) {
-      case 'BREAKFAST':
-        return l10n.mealTypeBreakfast;
-      case 'LUNCH':
-        return l10n.mealTypeLunch;
-      case 'SNACK':
-        return l10n.mealTypeSnack;
-      case 'DINNER':
-        return l10n.mealTypeDinner;
-      default:
-        return type;
-    }
-  }
-
   Future<void> _launchRecipe() async {
-    final query = Uri.encodeComponent('${widget.meal.name} receta');
+    final query = Uri.encodeComponent('${meal.name} receta');
     final url = Uri.parse('https://www.google.com/search?q=$query');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final meal = widget.meal;
+  String _formatNumber(double value) {
+    if (value % 1 == 0) return value.toInt().toString();
+    return value
+        .toStringAsFixed(2)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  List<_MacroChipData> _buildMacroChips(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final items = <_MacroChipData>[];
+
+    if (meal.calories != null) {
+      items.add(
+        _MacroChipData(label: '${meal.calories} kcal', color: semantic.calorie),
+      );
+    }
+
+    if (meal.proteinG != null) {
+      items.add(
+        _MacroChipData(
+          label:
+              '${l10n.proteinLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.proteinG!)} g',
+          color: semantic.accent,
+        ),
+      );
+    }
+
+    if (meal.carbsG != null) {
+      items.add(
+        _MacroChipData(
+          label:
+              '${l10n.carbsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.carbsG!)} g',
+          color: semantic.warning,
+        ),
+      );
+    }
+
+    if (meal.fatG != null) {
+      items.add(
+        _MacroChipData(
+          label:
+              '${l10n.fatsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.fatG!)} g',
+          color: palette.primary,
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  Color _badgeColor(BuildContext context, String badge) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final normalized = badge.toLowerCase();
+
+    if (normalized.contains('prote')) return semantic.accent;
+    if (normalized.contains('gras') || normalized.contains('fat')) {
+      return palette.primary;
+    }
+    if (normalized.contains('fib') || normalized.contains('fiber')) {
+      return palette.textSecondary;
+    }
+    if (normalized.contains('carb')) return semantic.warning;
+    return semantic.calorie;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context);
     final dietState = context.watch<DietBloc>().state;
-    final isCompleted = dietState is MealDetailLoaded
+    final macroChips = _buildMacroChips(context);
+    final badges = meal.nutritionalBadges
+        .map((badge) => badge.trim())
+        .where((badge) => badge.isNotEmpty)
+        .toList();
+    final resolvedCompleted = dietState is MealDetailLoaded
         ? dietState.isCompleted
-        : widget.isCompleted;
+        : isCompleted;
 
     return ListView(
-      controller: widget.scrollController,
-      padding: const EdgeInsets.only(bottom: 32),
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       children: [
-        // Drag handle + close button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-          child: Row(
-            children: [
-              const SizedBox(width: 40),
-              Expanded(
-                child: Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: palette.textDisabled.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 40,
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(
-                    Icons.close,
-                    color: palette.textSecondary,
-                    size: 20,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ),
-            ],
+        _SheetTopBar(handleColor: palette.primary),
+        const SizedBox(height: 8),
+        Text(
+          meal.name,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: palette.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
           ),
         ),
-
-        // Meal name + type badge
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                meal.name,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: semantic.calorie.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _mealTypeLabel(context, meal.type),
-                      style: TextStyle(
-                        color: semantic.calorie,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Nutritional badges
-        if (meal.nutritionalBadges.isNotEmpty) ...[
+        if (badges.isNotEmpty) ...[
           const SizedBox(height: 10),
-          _NutritionalBadges(badges: meal.nutritionalBadges),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Text(
+                  l10n.richInLabel,
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ...badges.map(
+                (badge) => _NutritionalBadgePill(
+                  label: badge,
+                  color: _badgeColor(context, badge),
+                ),
+              ),
+            ],
+          ),
         ],
-
         const SizedBox(height: 14),
-
-        // Hero image or placeholder
+        Divider(color: palette.divider, height: 1),
+        const SizedBox(height: 16),
         _MealHeroImage(meal: meal),
-
-        // Macros section
-        _MacroSection(meal: meal),
-
-        const SizedBox(height: 4),
-
-        // Ingredients
-        if (meal.ingredients.isNotEmpty)
+        if (macroChips.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _MacroChipsRow(items: macroChips),
+        ],
+        if (meal.ingredients.isNotEmpty) ...[
+          const SizedBox(height: 24),
           _IngredientsSection(ingredients: meal.ingredients),
-
-        // Recipe button
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: OutlinedButton.icon(
-            onPressed: _launchRecipe,
-            icon: const Icon(Icons.search, size: 18),
-            label: Text(l10n.openRecipeButton),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: semantic.calorie,
-              side: BorderSide(color: semantic.calorie),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        ],
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  context.read<DietBloc>().add(
+                    MarkMealCompleted(
+                      mealId: meal.id,
+                      completed: !resolvedCompleted,
+                    ),
+                  );
+                },
+                icon: Icon(
+                  resolvedCompleted
+                      ? Icons.check_circle
+                      : Icons.check_circle_outline,
+                  size: 18,
+                ),
+                label: Text(
+                  resolvedCompleted
+                      ? l10n.mealCompletedButton
+                      : l10n.completeButton,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: resolvedCompleted
+                      ? semantic.success
+                      : palette.primary,
+                  foregroundColor: palette.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-
-        // Complete / uncomplete button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: ElevatedButton.icon(
-            onPressed: () {
-              context.read<DietBloc>().add(
-                MarkMealCompleted(mealId: meal.id, completed: !isCompleted),
-              );
-            },
-            icon: Icon(
-              isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-              size: 20,
-            ),
-            label: Text(
-              isCompleted
-                  ? l10n.completedFeminine
-                  : l10n.markMealCompletedButton,
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? semantic.success : palette.primary,
-              foregroundColor: palette.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _launchRecipe,
+                icon: const Icon(Icons.search, size: 18),
+                label: Text(l10n.recipeButton),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: palette.textPrimary,
+                  side: BorderSide(color: palette.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ],
     );
   }
 }
 
-// ─── Sub-Widgets ───────────────────────────────────────────────────────────────
+class _SheetTopBar extends StatelessWidget {
+  const _SheetTopBar({required this.handleColor});
 
-class _MealHeroImage extends StatelessWidget {
-  final MealEntity meal;
-
-  const _MealHeroImage({required this.meal});
+  final Color handleColor;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final primary = palette.primary;
-    return meal.imageUrl != null
-        ? CachedNetworkImage(
-            imageUrl: meal.imageUrl!,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
-              height: 200,
-              color: palette.surfaceVariant,
-              child: Center(child: CircularProgressIndicator(color: primary)),
-            ),
-            errorWidget: (_, __, ___) => _MealPlaceholderHero(),
-          )
-        : _MealPlaceholderHero();
-  }
-}
-
-class _MealPlaceholderHero extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return Container(
-      height: 200,
-      color: palette.surfaceVariant,
-      child: Center(
-        child: Icon(Icons.restaurant, color: palette.textDisabled, size: 64),
-      ),
-    );
-  }
-}
-
-class _MacroSection extends StatelessWidget {
-  final MealEntity meal;
-
-  const _MacroSection({required this.meal});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
-    final hasData =
-        meal.calories != null ||
-        meal.proteinG != null ||
-        meal.carbsG != null ||
-        meal.fatG != null;
-
-    if (!hasData) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SizedBox(
+      height: 48,
+      child: Stack(
+        alignment: Alignment.topCenter,
         children: [
-          Text(
-            l10n.nutritionalInfoTitle,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              if (meal.calories != null)
-                _MacroRing(
-                  label: l10n.caloriesLabel,
-                  value: '${meal.calories}',
-                  unit: 'kcal',
-                  color: semantic.calorie,
-                ),
-              if (meal.proteinG != null)
-                _MacroRing(
-                  label: l10n.proteinLabel,
-                  value: meal.proteinG!.toStringAsFixed(1),
-                  unit: 'g',
-                  color: palette.primary,
-                ),
-              if (meal.carbsG != null)
-                _MacroRing(
-                  label: l10n.carbsLabel,
-                  value: meal.carbsG!.toStringAsFixed(1),
-                  unit: 'g',
-                  color: semantic.info,
-                ),
-              if (meal.fatG != null)
-                _MacroRing(
-                  label: l10n.fatsLabel,
-                  value: meal.fatG!.toStringAsFixed(1),
-                  unit: 'g',
-                  color: semantic.warning,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroRing extends StatelessWidget {
-  final String label;
-  final String value;
-  final String unit;
-  final Color color;
-
-  const _MacroRing({
-    required this.label,
-    required this.value,
-    required this.unit,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 3),
-            color: color.withValues(alpha: 0.1),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-                Text(
-                  unit,
-                  style: TextStyle(
-                    color: color.withValues(alpha: 0.8),
-                    fontSize: 9,
-                  ),
+          Container(
+            width: 72,
+            height: 6,
+            margin: const EdgeInsets.only(top: 10),
+            decoration: BoxDecoration(
+              color: handleColor.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: handleColor.withValues(alpha: 0.24),
+                  blurRadius: 14,
+                  spreadRadius: 1,
                 ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+          Align(
+            alignment: Alignment.topRight,
+            child: _SheetHeaderAction(
+              icon: Icons.close,
+              onTap: () => Navigator.of(context).pop(),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              highlighted: true,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _NutritionalBadges extends StatelessWidget {
-  final List<String> badges;
+class _SheetHeaderAction extends StatelessWidget {
+  const _SheetHeaderAction({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+    this.highlighted = false,
+  });
 
-  const _NutritionalBadges({required this.badges});
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
-    final semantic = context.exomSemantic;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        children: badges
-            .map(
-              (b) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: semantic.calorie.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  b,
-                  style: TextStyle(
-                    color: semantic.calorie,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+    final palette = context.exomPalette;
+
+    return Material(
+      color: highlighted
+          ? palette.surfaceVariant.withValues(alpha: 0.92)
+          : palette.surface.withValues(alpha: 0.72),
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Tooltip(
+          message: tooltip,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Icon(icon, color: palette.textPrimary, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MealHeroImage extends StatelessWidget {
+  const _MealHeroImage({required this.meal});
+
+  final MealEntity meal;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final imageUrl = meal.imageUrl?.trim();
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+
+    return Container(
+      height: 196,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: palette.surfaceVariant,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.divider),
+      ),
+      child: hasImage
+          ? CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, imageUrl) => Container(
+                color: palette.surfaceVariant,
+                alignment: Alignment.center,
+                child: CircularProgressIndicator(color: palette.primary),
               ),
+              errorWidget: (context, imageUrl, error) =>
+                  const _MealPlaceholderHero(),
             )
-            .toList(),
+          : const _MealPlaceholderHero(),
+    );
+  }
+}
+
+class _MealPlaceholderHero extends StatelessWidget {
+  const _MealPlaceholderHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [palette.surfaceVariant, palette.surface],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.restaurant_rounded,
+        color: palette.textDisabled,
+        size: 48,
+      ),
+    );
+  }
+}
+
+class _MacroChipData {
+  const _MacroChipData({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+}
+
+class _MacroChipsRow extends StatelessWidget {
+  const _MacroChipsRow({required this.items});
+
+  final List<_MacroChipData> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items
+          .map(
+            (item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: item.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: item.color.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: item.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    item.label,
+                    style: TextStyle(
+                      color: item.color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _NutritionalBadgePill extends StatelessWidget {
+  const _NutritionalBadgePill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 }
 
 class _IngredientsSection extends StatelessWidget {
+  const _IngredientsSection({required this.ingredients});
+
   final List<MealIngredientEntity> ingredients;
 
-  const _IngredientsSection({required this.ingredients});
+  String _formatQuantity(double value) {
+    if (value % 1 == 0) return value.toInt().toString();
+    return value
+        .toStringAsFixed(2)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  IconData _fallbackIcon(String ingredientName) {
+    final normalized = ingredientName.toLowerCase();
+
+    if (normalized.contains('leche') ||
+        normalized.contains('yogur') ||
+        normalized.contains('yogurt') ||
+        normalized.contains('bebida')) {
+      return Icons.local_drink_outlined;
+    }
+
+    if (normalized.contains('pollo') ||
+        normalized.contains('atun') ||
+        normalized.contains('pesc') ||
+        normalized.contains('carne') ||
+        normalized.contains('huevo')) {
+      return Icons.local_dining_outlined;
+    }
+
+    if (normalized.contains('avena') ||
+        normalized.contains('semilla') ||
+        normalized.contains('platano') ||
+        normalized.contains('plátano') ||
+        normalized.contains('fruta') ||
+        normalized.contains('verdura')) {
+      return Icons.eco_outlined;
+    }
+
+    return Icons.restaurant_outlined;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-          child: Text(
-            l10n.ingredientsTitle,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+        Text(
+          l10n.ingredientsTitle,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: palette.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: palette.divider),
-          ),
-          child: Column(
-            children: ingredients.asMap().entries.map((entry) {
-              final i = entry.key;
-              final ing = entry.value;
-              final isLast = i == ingredients.length - 1;
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: palette.primary.withValues(alpha: 0.6),
-                            shape: BoxShape.circle,
-                          ),
+        const SizedBox(height: 8),
+        Divider(color: palette.divider, height: 1),
+        const SizedBox(height: 12),
+        ...ingredients.asMap().entries.map((entry) {
+          final index = entry.key;
+          final ingredient = entry.value;
+          final iconLabel = ingredient.icon?.trim();
+          final showGlyph =
+              iconLabel != null &&
+              iconLabel.isNotEmpty &&
+              iconLabel.length <= 2;
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index == ingredients.length - 1 ? 0 : 12,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceVariant,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: palette.divider),
+                  ),
+                  alignment: Alignment.center,
+                  child: showGlyph
+                      ? Text(iconLabel, style: const TextStyle(fontSize: 14))
+                      : Icon(
+                          _fallbackIcon(ingredient.name),
+                          color: palette.textSecondary,
+                          size: 16,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            ing.name,
-                            style: TextStyle(
-                              color: palette.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${ing.quantity % 1 == 0 ? ing.quantity.toInt() : ing.quantity} ${ing.unit}',
-                          style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    ingredient.name,
+                    style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  if (!isLast)
-                    Divider(height: 1, color: palette.divider, indent: 36),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '${_formatQuantity(ingredient.quantity)} ${ingredient.unit}',
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }

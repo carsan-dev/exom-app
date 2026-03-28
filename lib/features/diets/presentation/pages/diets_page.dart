@@ -28,16 +28,17 @@ class _DietsView extends StatelessWidget {
 
   final String? selectedDate;
 
-  String _dateLabel() {
-    if (selectedDate == null) return 'hoy';
+  String _dateLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (selectedDate == null) return l10n.todayLabel.toLowerCase();
     final parsed = DateTime.tryParse(selectedDate!);
-    if (parsed == null) return 'la fecha seleccionada';
+    if (parsed == null) return l10n.selectedDateLabel;
     final now = DateTime.now();
     final isToday =
         parsed.year == now.year &&
         parsed.month == now.month &&
         parsed.day == now.day;
-    if (isToday) return 'hoy';
+    if (isToday) return l10n.todayLabel.toLowerCase();
     return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
   }
 
@@ -75,7 +76,7 @@ class _DietsView extends StatelessWidget {
           return _DietContent(
             state: state,
             selectedDate: selectedDate,
-            dateLabel: _dateLabel(),
+            dateLabel: _dateLabel(context),
           );
         }
         return const SizedBox.shrink();
@@ -225,7 +226,7 @@ class _DietHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$completedCount/${diet.meals.length} completadas',
+                  '$completedCount/${diet.meals.length} ${l10n.completedFeminine.toLowerCase()}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: semantic.calorie,
                     fontSize: 12,
@@ -237,7 +238,7 @@ class _DietHeader extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            dateLabel == 'hoy'
+            dateLabel == l10n.todayLabel.toLowerCase()
                 ? l10n.todaysPlanLabel
                 : '${l10n.planForLabel} $dateLabel',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -251,28 +252,28 @@ class _DietHeader extends StatelessWidget {
             children: [
               if (diet.totalCalories != null)
                 _MacroStat(
-                  label: 'Calorías',
+                  label: l10n.caloriesLabel,
                   value: '${diet.totalCalories}',
                   unit: 'kcal',
                   color: semantic.calorie,
                 ),
               if (diet.totalProteinG != null)
                 _MacroStat(
-                  label: 'Proteína',
+                  label: l10n.proteinLabel,
                   value: diet.totalProteinG!.toStringAsFixed(0),
                   unit: 'g',
                   color: palette.primary,
                 ),
               if (diet.totalCarbsG != null)
                 _MacroStat(
-                  label: 'Carbos',
+                  label: l10n.carbsLabel,
                   value: diet.totalCarbsG!.toStringAsFixed(0),
                   unit: 'g',
                   color: semantic.info,
                 ),
               if (diet.totalFatG != null)
                 _MacroStat(
-                  label: 'Grasas',
+                  label: l10n.fatsLabel,
                   value: diet.totalFatG!.toStringAsFixed(0),
                   unit: 'g',
                   color: semantic.warning,
@@ -361,16 +362,17 @@ class _MealCard extends StatelessWidget {
     }
   }
 
-  String _mealLabel(String type) {
+  String _mealLabel(BuildContext context, String type) {
+    final l10n = AppLocalizations.of(context)!;
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
-        return 'Desayuno';
+        return l10n.mealTypeBreakfast;
       case 'LUNCH':
-        return 'Almuerzo';
+        return l10n.mealTypeLunch;
       case 'SNACK':
-        return 'Snack';
+        return l10n.mealTypeSnack;
       case 'DINNER':
-        return 'Cena';
+        return l10n.mealTypeDinner;
       default:
         return type;
     }
@@ -463,7 +465,7 @@ class _MealCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _mealLabel(meal.type),
+                      _mealLabel(context, meal.type),
                       style: TextStyle(
                         color: color,
                         fontSize: 10,

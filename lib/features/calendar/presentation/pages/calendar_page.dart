@@ -47,36 +47,14 @@ class _CalendarViewState extends State<_CalendarView> {
           return const ShimmerList(count: 3, itemHeight: 200);
         }
         if (state is CalendarError) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  color: palette.textDisabled,
-                  size: 48,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.calendarLoadError,
-                  style: TextStyle(color: palette.textSecondary, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    final now = DateTime.now();
-                    context.read<CalendarBloc>().add(
-                      CalendarMonthLoadRequested(
-                        year: now.year,
-                        month: now.month,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: Text(l10n.retry),
-                ),
-              ],
-            ),
+          return ErrorWidget2(
+            message: l10n.calendarLoadError,
+            onRetry: () {
+              final now = DateTime.now();
+              context.read<CalendarBloc>().add(
+                CalendarMonthLoadRequested(year: now.year, month: now.month),
+              );
+            },
           );
         }
         if (state is CalendarLoaded) {
@@ -94,6 +72,10 @@ class _CalendarViewState extends State<_CalendarView> {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
       dayMap[key] = day;
     }
+
+    final hasActivities = state.days.any(
+      (d) => d.hasTraining || d.hasDiet || d.isRestDay,
+    );
 
     return Column(
       children: [
@@ -134,8 +116,16 @@ class _CalendarViewState extends State<_CalendarView> {
             padding: const EdgeInsets.only(bottom: 32),
             children: [
               _buildCalendar(context, state, dayMap),
-              _buildWeekProgress(context, state),
-              _buildSelectedDayCard(context, state, dayMap),
+              if (!hasActivities)
+                EmptyWidget(
+                  message: l10n.noActivitiesThisMonth,
+                  subtitle: l10n.noActivitiesThisMonthSubtitle,
+                  icon: Icons.event_busy_outlined,
+                )
+              else ...[
+                _buildWeekProgress(context, state),
+                _buildSelectedDayCard(context, state, dayMap),
+              ],
             ],
           ),
         ),

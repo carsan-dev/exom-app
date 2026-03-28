@@ -127,6 +127,32 @@ class _MetricsViewState extends State<_MetricsView> {
   static const _backLeftFlex = [3, 9];
   static const _backRightFlex = [6, 9];
 
+  String _localizedZoneLabel(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (key) {
+      case 'Cuello':
+        return l10n.measureNeck;
+      case 'Hombros':
+        return l10n.measureShoulders;
+      case 'Pecho':
+        return l10n.measureChest;
+      case 'Brazo':
+        return l10n.measureArm;
+      case 'Antebrazo':
+        return l10n.measureForearm;
+      case 'Cintura':
+        return l10n.measureWaist;
+      case 'Caderas':
+        return l10n.measureHips;
+      case 'Muslo':
+        return l10n.measureThigh;
+      case 'Pantorrilla':
+        return l10n.measureCalf;
+      default:
+        return key;
+    }
+  }
+
   String _weightHint(UnitSystem unitSystem) {
     return unitSystem == UnitSystem.imperial ? 'Eg: 166.4' : 'Eg: 75.5';
   }
@@ -341,7 +367,7 @@ class _MetricsViewState extends State<_MetricsView> {
         if (_selectedMeasure != null) ...[
           const SizedBox(height: 16),
           _MeasureInput(
-            label: _selectedMeasure!,
+            label: _localizedZoneLabel(context, _selectedMeasure!),
             controller: _measureControllers[_selectedMeasure]!,
             onChanged: (_) => _touchedMeasures.add(_selectedMeasure!),
           ),
@@ -393,7 +419,7 @@ class _MetricsViewState extends State<_MetricsView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              zone,
+              _localizedZoneLabel(context, zone),
               style: TextStyle(
                 color: isSelected ? semantic.info : palette.textSecondary,
                 fontSize: 11,
@@ -571,7 +597,7 @@ class _MetricsViewState extends State<_MetricsView> {
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
         _showValidationMessage(
-          AppLocalizations.of(context)!.measurementReviewTemplate(entry.key.toLowerCase()),
+          AppLocalizations.of(context)!.measurementReviewTemplate(_localizedZoneLabel(context, entry.key).toLowerCase()),
         );
         return;
       }
@@ -1327,7 +1353,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   final key = _measureControllers.keys
                                       .elementAt(index);
                                   return _MeasureInput(
-                                    label: key,
+                                    label: _localizedZoneLabel(context, key),
                                     controller: _measureControllers[key]!,
                                     onChanged: (_) => _touchedMeasures.add(key),
                                   );

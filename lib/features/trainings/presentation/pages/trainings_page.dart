@@ -28,16 +28,17 @@ class _TrainingsView extends StatelessWidget {
 
   final String? selectedDate;
 
-  String _dateLabel() {
-    if (selectedDate == null) return 'hoy';
+  String _dateLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (selectedDate == null) return l10n.todayLabel.toLowerCase();
     final parsed = DateTime.tryParse(selectedDate!);
-    if (parsed == null) return 'la fecha seleccionada';
+    if (parsed == null) return l10n.selectedDateLabel;
     final now = DateTime.now();
     final isToday =
         parsed.year == now.year &&
         parsed.month == now.month &&
         parsed.day == now.day;
-    if (isToday) return 'hoy';
+    if (isToday) return l10n.todayLabel.toLowerCase();
     return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}';
   }
 
@@ -56,8 +57,16 @@ class _TrainingsView extends StatelessWidget {
             ),
           );
         }
+        if (state is TrainingNoContent) {
+          final l10n = AppLocalizations.of(context)!;
+          return EmptyWidget(
+            message: l10n.noTrainingsAssigned,
+            subtitle: l10n.noTrainingsAssignedSubtitle,
+            icon: Icons.fitness_center_outlined,
+          );
+        }
         if (state is TrainingsLoaded) {
-          return _buildContent(context, state, _dateLabel());
+          return _buildContent(context, state, _dateLabel(context));
         }
         return const SizedBox.shrink();
       },

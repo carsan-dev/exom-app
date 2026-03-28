@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
@@ -35,26 +36,10 @@ class ChallengesPage extends StatelessWidget {
               );
             }
             if (state is ChallengesError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.challengesLoadError,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () {
-                        context.read<ChallengesBloc>().add(
-                          const ChallengesLoadRequested(),
-                        );
-                      },
-                      child: Text(AppLocalizations.of(context)!.retry),
-                    ),
-                  ],
+              return ErrorWidget2(
+                message: AppLocalizations.of(context)!.challengesLoadError,
+                onRetry: () => context.read<ChallengesBloc>().add(
+                  const ChallengesLoadRequested(),
                 ),
               );
             }

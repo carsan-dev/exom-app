@@ -97,6 +97,8 @@
   "openRecipeButton": "Open recipe in Google",
   "mealCompletedButton": "Completed",
   "markMealCompletedButton": "Mark as completed",
+  "markExerciseCompletedButton": "Mark as completed",
+  "exerciseCompletedButton": "Exercise completed",
   "nutritionalInfoTitle": "Nutritional information",
   "caloriesLabel": "Calories",
   "proteinLabel": "Protein",

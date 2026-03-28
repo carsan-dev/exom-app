@@ -112,6 +112,8 @@
   "openRecipeButton": "Ver receta en Google",
   "mealCompletedButton": "Completada",
   "markMealCompletedButton": "Marcar como completada",
+  "markExerciseCompletedButton": "Marcar como completado",
+  "exerciseCompletedButton": "Ejercicio completado",
   "nutritionalInfoTitle": "Información nutricional",
   "caloriesLabel": "Calorías",
   "proteinLabel": "Proteína",

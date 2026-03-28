@@ -288,6 +288,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get markMealCompletedButton => 'Marcar como completada';
 
   @override
+  String get markExerciseCompletedButton => 'Marcar como completado';
+
+  @override
+  String get exerciseCompletedButton => 'Ejercicio completado';
+
+  @override
   String get nutritionalInfoTitle => 'Información nutricional';
 
   @override

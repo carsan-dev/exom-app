@@ -620,6 +620,18 @@ abstract class AppLocalizations {
   /// **'Marcar como completada'**
   String get markMealCompletedButton;
 
+  /// No description provided for @markExerciseCompletedButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar como completado'**
+  String get markExerciseCompletedButton;
+
+  /// No description provided for @exerciseCompletedButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio completado'**
+  String get exerciseCompletedButton;
+
   /// No description provided for @nutritionalInfoTitle.
   ///
   /// In es, this message translates to:

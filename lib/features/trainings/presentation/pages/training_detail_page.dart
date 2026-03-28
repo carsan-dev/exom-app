@@ -37,7 +37,17 @@ class _TrainingDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TrainingBloc, TrainingState>(
+    return BlocConsumer<TrainingBloc, TrainingState>(
+      listener: (context, state) {
+        if (state is TrainingDetailLoaded && state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      },
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
           return Scaffold(
@@ -765,6 +775,11 @@ class _ExerciseCard extends StatelessWidget {
           exercise: ex,
           trainingExercise: trainingExercise,
           scrollController: scrollController,
+          isCompleted: isCompleted,
+          onToggle: (val, {double? weightUsed}) {
+            Navigator.of(context).pop();
+            onToggle(val, weightUsed: weightUsed);
+          },
         ),
       ),
     );
@@ -811,11 +826,15 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final ExerciseEntity exercise;
   final TrainingExerciseEntity trainingExercise;
   final ScrollController scrollController;
+  final bool isCompleted;
+  final void Function(bool completed, {double? weightUsed}) onToggle;
 
   const _ExerciseDetailSheet({
     required this.exercise,
     required this.trainingExercise,
     required this.scrollController,
+    required this.isCompleted,
+    required this.onToggle,
   });
 
   @override
@@ -951,6 +970,33 @@ class _ExerciseDetailSheet extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              onToggle(!isCompleted);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isCompleted
+                  ? semantic.success
+                  : palette.primary,
+              foregroundColor: palette.onPrimary,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            icon: Icon(
+              isCompleted
+                  ? Icons.check_circle
+                  : Icons.check_circle_outline,
+              size: 20,
+            ),
+            label: Text(
+              isCompleted
+                  ? l10n.exerciseCompletedButton
+                  : l10n.markExerciseCompletedButton,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(

@@ -150,10 +150,11 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         } else {
           await _unmarkExerciseCompletedUseCase(event.exerciseId, date);
         }
-      } catch (_) {
+      } catch (e) {
         emit(current.copyWith(
           completedExerciseIds: previous,
           exerciseWeights: previousWeights,
+          errorMessage: e.toString(),
         ));
       }
     }

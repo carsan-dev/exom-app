@@ -284,6 +284,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markMealCompletedButton => 'Mark as completed';
 
   @override
+  String get markExerciseCompletedButton => 'Mark as completed';
+
+  @override
+  String get exerciseCompletedButton => 'Exercise completed';
+
+  @override
   String get nutritionalInfoTitle => 'Nutritional information';
 
   @override

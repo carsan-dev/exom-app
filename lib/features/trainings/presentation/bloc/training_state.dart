@@ -36,12 +36,14 @@ class TrainingDetailLoaded extends TrainingState {
   final Set<String> completedExerciseIds;
   final String selectedDate;
   final Map<String, double> exerciseWeights;
+  final String? errorMessage;
 
   const TrainingDetailLoaded(
     this.training, {
     this.completedExerciseIds = const {},
     required this.selectedDate,
     this.exerciseWeights = const {},
+    this.errorMessage,
   });
 
   TrainingDetailLoaded copyWith({
@@ -49,12 +51,14 @@ class TrainingDetailLoaded extends TrainingState {
     Set<String>? completedExerciseIds,
     String? selectedDate,
     Map<String, double>? exerciseWeights,
+    String? errorMessage,
   }) {
     return TrainingDetailLoaded(
       training ?? this.training,
       completedExerciseIds: completedExerciseIds ?? this.completedExerciseIds,
       selectedDate: selectedDate ?? this.selectedDate,
       exerciseWeights: exerciseWeights ?? this.exerciseWeights,
+      errorMessage: errorMessage,
     );
   }
 }

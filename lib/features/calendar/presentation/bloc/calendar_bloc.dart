@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
@@ -51,8 +52,14 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
           month: event.month,
         ),
       );
-    } catch (e) {
-      emit(CalendarError(e.toString()));
+    } catch (error) {
+      final apiException = ApiException.maybeFrom(error);
+      emit(
+        CalendarError(
+          message: apiException?.message ?? error.toString(),
+          apiException: apiException,
+        ),
+      );
     }
   }
 

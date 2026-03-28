@@ -257,19 +257,29 @@ class _MetricsViewState extends State<_MetricsView> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _viewTab('Frontal', Icons.person_outline, _bodyFront, () {
-              setState(() {
-                _bodyFront = true;
-                _selectedMeasure = null;
-              });
-            }),
+            _viewTab(
+              AppLocalizations.of(context).frontViewLabel,
+              Icons.person_outline,
+              _bodyFront,
+              () {
+                setState(() {
+                  _bodyFront = true;
+                  _selectedMeasure = null;
+                });
+              },
+            ),
             const SizedBox(width: 8),
-            _viewTab('Posterior', Icons.person_outline, !_bodyFront, () {
-              setState(() {
-                _bodyFront = false;
-                _selectedMeasure = null;
-              });
-            }),
+            _viewTab(
+              AppLocalizations.of(context).backViewLabel,
+              Icons.person_outline,
+              !_bodyFront,
+              () {
+                setState(() {
+                  _bodyFront = false;
+                  _selectedMeasure = null;
+                });
+              },
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -597,7 +607,9 @@ class _MetricsViewState extends State<_MetricsView> {
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
         _showValidationMessage(
-          AppLocalizations.of(context)!.measurementReviewTemplate(_localizedZoneLabel(context, entry.key).toLowerCase()),
+          AppLocalizations.of(context)!.measurementReviewTemplate(
+            _localizedZoneLabel(context, entry.key).toLowerCase(),
+          ),
         );
         return;
       }
@@ -609,9 +621,7 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     if (data.isEmpty) {
-      _showValidationMessage(
-        AppLocalizations.of(context)!.noChangesMessage,
-      );
+      _showValidationMessage(AppLocalizations.of(context)!.noChangesMessage);
       return;
     }
 
@@ -707,7 +717,9 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.heightSectionTitle,
+                        labelText: AppLocalizations.of(
+                          context,
+                        )!.heightSectionTitle,
                         suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
@@ -738,7 +750,9 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         DropdownMenuItem(
                           value: SeenBiologicalSex.female,
-                          child: Text(AppLocalizations.of(context)!.femaleOption),
+                          child: Text(
+                            AppLocalizations.of(context)!.femaleOption,
+                          ),
                         ),
                       ],
                       onChanged: (value) {
@@ -771,21 +785,27 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (age == null || age <= 0) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(context)!.invalidAgeError;
+                        errorText = AppLocalizations.of(
+                          context,
+                        )!.invalidAgeError;
                       });
                       return;
                     }
 
                     if (heightValue == null || heightValue <= 0) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(context)!.invalidHeightError;
+                        errorText = AppLocalizations.of(
+                          context,
+                        )!.invalidHeightError;
                       });
                       return;
                     }
 
                     if (calfValue == null || calfValue <= 0) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(context)!.invalidCalfError;
+                        errorText = AppLocalizations.of(
+                          context,
+                        )!.invalidCalfError;
                       });
                       return;
                     }
@@ -801,7 +821,9 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (selectedSex == null) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(context)!.selectSexError;
+                        errorText = AppLocalizations.of(
+                          context,
+                        )!.selectSexError;
                       });
                       return;
                     }
@@ -815,7 +837,9 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     if (result == null) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(context)!.estimationFailedError;
+                        errorText = AppLocalizations.of(
+                          context,
+                        )!.estimationFailedError;
                       });
                       return;
                     }
@@ -857,13 +881,12 @@ class _MetricsViewState extends State<_MetricsView> {
       );
     });
 
-    final seenMsg =
-        'SEEN estimate applied: ${formatWeight(estimate.estimatedAsmKg, unitSystem)} (ASMI ${estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)} kg/m²)';
+    final seenMsg = AppLocalizations.of(context).seenEstimateApplied(
+      formatWeight(estimate.estimatedAsmKg, unitSystem),
+      estimate.estimatedAsmiKgPerM2.toStringAsFixed(2),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(seenMsg),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(seenMsg), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -953,9 +976,7 @@ class _MetricsViewState extends State<_MetricsView> {
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 20),
                   SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context)!.metricsSuccessMessage,
-                  ),
+                  Text(AppLocalizations.of(context)!.metricsSuccessMessage),
                 ],
               ),
               backgroundColor: semantic.success,
@@ -1156,7 +1177,9 @@ class _MetricsViewState extends State<_MetricsView> {
                     ),
 
                     _SectionCard(
-                      title: AppLocalizations.of(context)!.muscleMassSectionTitle,
+                      title: AppLocalizations.of(
+                        context,
+                      )!.muscleMassSectionTitle,
                       icon: Icons.fitness_center,
                       color: semantic.calorie,
                       child: Column(
@@ -1202,7 +1225,9 @@ class _MetricsViewState extends State<_MetricsView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  AppLocalizations.of(context)!.seenCalculatorTitle,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.seenCalculatorTitle,
                                   style: TextStyle(
                                     color: palette.textPrimary,
                                     fontSize: 13,
@@ -1211,7 +1236,9 @@ class _MetricsViewState extends State<_MetricsView> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  AppLocalizations.of(context)!.seenCalculatorDescription,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.seenCalculatorDescription,
                                   style: TextStyle(
                                     color: palette.textSecondary,
                                     fontSize: 12,
@@ -1226,7 +1253,9 @@ class _MetricsViewState extends State<_MetricsView> {
                                         _openSeenEstimateCalculator(context),
                                     icon: const Icon(Icons.calculate_outlined),
                                     label: Text(
-                                      AppLocalizations.of(context)!.calculateEstimateButton,
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.calculateEstimateButton,
                                     ),
                                   ),
                                 ),
@@ -1239,7 +1268,9 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     // Sleep section
                     _SectionCard(
-                      title: AppLocalizations.of(context)!.sleepHoursSectionTitle,
+                      title: AppLocalizations.of(
+                        context,
+                      )!.sleepHoursSectionTitle,
                       icon: Icons.bedtime_outlined,
                       color: semantic.sleep,
                       child: Column(
@@ -1302,7 +1333,9 @@ class _MetricsViewState extends State<_MetricsView> {
 
                     // Body measurements
                     _SectionCard(
-                      title: AppLocalizations.of(context)!.bodyMeasurementsTitle,
+                      title: AppLocalizations.of(
+                        context,
+                      )!.bodyMeasurementsTitle,
                       icon: Icons.straighten,
                       color: semantic.info,
                       trailing: GestureDetector(
@@ -1324,7 +1357,9 @@ class _MetricsViewState extends State<_MetricsView> {
                             Text(
                               _bodyMapMode
                                   ? AppLocalizations.of(context)!.listViewToggle
-                                  : AppLocalizations.of(context)!.bodyViewToggle,
+                                  : AppLocalizations.of(
+                                      context,
+                                    )!.bodyViewToggle,
                               style: TextStyle(
                                 color: semantic.info,
                                 fontSize: 12,
@@ -1510,20 +1545,21 @@ class _SleepEmoji extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final String emoji;
     final String label;
     if (hours < 6) {
       emoji = '😴';
-      label = 'Muy poco sueño';
+      label = l10n.sleepVeryLow;
     } else if (hours < 7) {
       emoji = '😕';
-      label = 'Sueño insuficiente';
+      label = l10n.sleepInsufficient;
     } else if (hours <= 9) {
       emoji = '😊';
-      label = 'Sueño óptimo';
+      label = l10n.sleepOptimal;
     } else {
       emoji = '😪';
-      label = 'Demasiado sueño';
+      label = l10n.sleepTooMuch;
     }
 
     return Row(

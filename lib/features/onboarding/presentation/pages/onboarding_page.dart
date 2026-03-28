@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_progress_indicator.dart';
@@ -48,20 +50,54 @@ class _OnboardingViewState extends State<_OnboardingView> {
     super.dispose();
   }
 
+  Widget _buildLoadError(BuildContext context, OnboardingLoadError state) {
+    void retry() {
+      context.read<OnboardingBloc>().add(const OnboardingStarted());
+    }
+
+    final apiException = state.apiException;
+    if (apiException?.isNetworkError == true) {
+      return NoConnectionWidget(onRetry: retry);
+    }
+    if (apiException?.isServerError == true) {
+      return ServerErrorWidget(
+        errorCode: apiException!.statusCode.toString(),
+        onRetry: retry,
+      );
+    }
+    return ErrorWidget2(
+      message: apiException != null
+          ? localizedApiError(context, apiException)
+          : AppLocalizations.of(context).onboardingErrorMessage,
+      onRetry: retry,
+    );
+  }
+
+  String _submitErrorMessage(
+    BuildContext context,
+    OnboardingSubmitError state,
+  ) {
+    final apiException = state.apiException;
+    if (apiException != null) {
+      return localizedApiError(context, apiException);
+    }
+    return AppLocalizations.of(context).onboardingErrorMessage;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return BlocListener<OnboardingBloc, OnboardingState>(
       listener: (context, state) {
         if (state is OnboardingCompleted) {
           context.go('/');
         }
-        if (state is OnboardingError) {
+        if (state is OnboardingSubmitError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.onboardingErrorMessage),
+              content: Text(_submitErrorMessage(context, state)),
               backgroundColor: AppColors.error,
             ),
           );
@@ -77,6 +113,10 @@ class _OnboardingViewState extends State<_OnboardingView> {
             builder: (context, state) {
               if (state is OnboardingLoading || state is OnboardingInitial) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state is OnboardingLoadError) {
+                return _buildLoadError(context, state);
               }
 
               if (state is OnboardingSubmitting) {
@@ -110,24 +150,25 @@ class _OnboardingViewState extends State<_OnboardingView> {
                         children: [
                           // Step 0: Welcome
                           OnboardingWelcomeStep(
-                            onStart: () => context
-                                .read<OnboardingBloc>()
-                                .add(const OnboardingStepCompleted(step: 0, data: {})),
-                            onSkip: () => context
-                                .read<OnboardingBloc>()
-                                .add(const OnboardingSkipped()),
+                            onStart: () => context.read<OnboardingBloc>().add(
+                              const OnboardingStepCompleted(step: 0, data: {}),
+                            ),
+                            onSkip: () => context.read<OnboardingBloc>().add(
+                              const OnboardingSkipped(),
+                            ),
                           ),
                           // Step 1: Basics
                           OnboardingBasicsStep(
                             initialData: state.accumulatedData,
                             initialAvatarUrl: state.avatarUrl,
                             avatarUploading: state.avatarUploading,
-                            onNext: (data) => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 1, data: data)),
-                            onSkip: () => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 1, data: const {})),
+                            onNext: (data) =>
+                                context.read<OnboardingBloc>().add(
+                                  OnboardingStepCompleted(step: 1, data: data),
+                                ),
+                            onSkip: () => context.read<OnboardingBloc>().add(
+                              const OnboardingSkipped(),
+                            ),
                             onAvatarPicked: (path) => context
                                 .read<OnboardingBloc>()
                                 .add(OnboardingAvatarPicked(path)),
@@ -135,31 +176,41 @@ class _OnboardingViewState extends State<_OnboardingView> {
                           // Step 2: Body
                           OnboardingBodyStep(
                             initialData: state.accumulatedData,
-                            onNext: (data) => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 2, data: data)),
-                            onSkip: () => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 2, data: const {})),
+                            onNext: (data) =>
+                                context.read<OnboardingBloc>().add(
+                                  OnboardingStepCompleted(step: 2, data: data),
+                                ),
+                            onSkip: () => context.read<OnboardingBloc>().add(
+                              const OnboardingSkipped(),
+                            ),
                           ),
                           // Step 3: Goals
                           OnboardingGoalsStep(
                             initialData: state.accumulatedData,
-                            onNext: (data) => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 3, data: data)),
-                            onSkip: () => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingStepCompleted(step: 3, data: const {})),
+                            onNext: (data) =>
+                                context.read<OnboardingBloc>().add(
+                                  OnboardingStepCompleted(step: 3, data: data),
+                                ),
+                            onSkip: () => context.read<OnboardingBloc>().add(
+                              const OnboardingSkipped(),
+                            ),
                           ),
                           // Step 4: Summary
                           OnboardingSummaryStep(
                             accumulatedData: state.accumulatedData,
                             avatarUrl: state.avatarUrl,
-                            onConfirm: () => context
+                            onConfirm: () => context.read<OnboardingBloc>().add(
+                              const OnboardingSubmitted(),
+                            ),
+                            onEditBasics: () => context
                                 .read<OnboardingBloc>()
-                                .add(const OnboardingSubmitted()),
-                            onEdit: () => _goToPage(1),
+                                .add(const OnboardingStepSelected(1)),
+                            onEditBody: () => context
+                                .read<OnboardingBloc>()
+                                .add(const OnboardingStepSelected(2)),
+                            onEditGoals: () => context
+                                .read<OnboardingBloc>()
+                                .add(const OnboardingStepSelected(3)),
                           ),
                         ],
                       ),

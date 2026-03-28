@@ -15,6 +15,12 @@ class OnboardingStepCompleted extends OnboardingEvent {
   const OnboardingStepCompleted({required this.step, required this.data});
 }
 
+class OnboardingStepSelected extends OnboardingEvent {
+  final int step;
+
+  const OnboardingStepSelected(this.step);
+}
+
 class OnboardingAvatarPicked extends OnboardingEvent {
   final String filePath;
 

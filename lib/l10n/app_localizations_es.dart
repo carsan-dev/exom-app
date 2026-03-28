@@ -336,6 +336,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openDetail => 'Ver detalle';
 
   @override
+  String get goToMonthButton => 'Ir al mes';
+
+  @override
   String get warmUp => 'Calentamiento';
 
   @override
@@ -704,6 +707,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Indica cuántas horas dormiste en la noche correspondiente a esta fecha.';
 
   @override
+  String get sleepVeryLow => 'Muy poco sueño';
+
+  @override
+  String get sleepInsufficient => 'Sueño insuficiente';
+
+  @override
+  String get sleepOptimal => 'Sueño óptimo';
+
+  @override
+  String get sleepTooMuch => 'Demasiado sueño';
+
+  @override
   String get bodyMeasurementsTitle => 'Medidas corporales';
 
   @override
@@ -711,6 +726,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get bodyViewToggle => 'Cuerpo';
+
+  @override
+  String get frontViewLabel => 'Frontal';
+
+  @override
+  String get backViewLabel => 'Posterior';
 
   @override
   String get saveMetricsButton => 'Guardar métricas';
@@ -763,6 +784,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get metricsSuccessMessage => 'Métricas guardadas correctamente';
+
+  @override
+  String seenEstimateApplied(String estimate, String asmi) {
+    return 'Estimación SEEN aplicada: $estimate (ASMI $asmi kg/m²)';
+  }
 
   @override
   String get recapStartTitle => 'Formulario ReCap semanal';
@@ -1620,6 +1646,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingTargetCaloriesLabel => 'Calorías objetivo (opcional)';
+
+  @override
+  String get onboardingFirstNameRequired => 'Introduce tu nombre';
+
+  @override
+  String get onboardingLastNameRequired => 'Introduce tu apellido';
 
   @override
   String get onboardingCompleteProfileButton => 'Completar perfil';

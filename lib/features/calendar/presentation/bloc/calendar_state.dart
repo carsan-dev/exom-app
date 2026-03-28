@@ -30,5 +30,7 @@ class CalendarLoaded extends CalendarState {
 
 class CalendarError extends CalendarState {
   final String message;
-  const CalendarError(this.message);
+  final ApiException? apiException;
+
+  const CalendarError({required this.message, this.apiException});
 }

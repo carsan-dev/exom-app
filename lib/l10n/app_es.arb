@@ -129,6 +129,7 @@
   "mealsCompletedThisWeek": "comidas completadas esta semana",
   "noActivityAssigned": "Sin actividad asignada",
   "openDetail": "Ver detalle",
+  "goToMonthButton": "Ir al mes",
 
   "warmUp": "Calentamiento",
   "cooldown": "Enfriamiento",
@@ -257,9 +258,15 @@
   "calculateEstimateButton": "Calcular estimación",
   "sleepHoursSectionTitle": "Horas de sueño",
   "sleepHoursDescription": "Indica cuántas horas dormiste en la noche correspondiente a esta fecha.",
+  "sleepVeryLow": "Muy poco sueño",
+  "sleepInsufficient": "Sueño insuficiente",
+  "sleepOptimal": "Sueño óptimo",
+  "sleepTooMuch": "Demasiado sueño",
   "bodyMeasurementsTitle": "Medidas corporales",
   "listViewToggle": "Lista",
   "bodyViewToggle": "Cuerpo",
+  "frontViewLabel": "Frontal",
+  "backViewLabel": "Posterior",
   "saveMetricsButton": "Guardar métricas",
   "quickSeenEstimate": "Estimación rápida SEEN",
   "seenFormulaDescription": "Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.",
@@ -276,6 +283,13 @@
   "estimationFailedError": "No se ha podido calcular una estimación válida con esos datos.",
   "calculateAndUseButton": "Calcular y usar",
   "metricsSuccessMessage": "Métricas guardadas correctamente",
+  "seenEstimateApplied": "Estimación SEEN aplicada: {estimate} (ASMI {asmi} kg/m²)",
+  "@seenEstimateApplied": {
+    "placeholders": {
+      "estimate": { "type": "String" },
+      "asmi": { "type": "String" }
+    }
+  },
 
   "recapStartTitle": "Formulario ReCap semanal",
   "recapStartDescription": "Completa los cuatro pasos para que tu entrenador entienda cómo ha ido tu semana y pueda ajustar el plan.",
@@ -579,6 +593,8 @@
   "onboardingMainGoalLabel": "Objetivo principal",
   "onboardingMuscleMassGoalLabel": "Meta de masa muscular (kg, opcional)",
   "onboardingTargetCaloriesLabel": "Calorías objetivo (opcional)",
+  "onboardingFirstNameRequired": "Introduce tu nombre",
+  "onboardingLastNameRequired": "Introduce tu apellido",
   "onboardingCompleteProfileButton": "Completar perfil",
   "onboardingSummaryTitle": "Resumen",
   "onboardingConfirmButton": "Confirmar",

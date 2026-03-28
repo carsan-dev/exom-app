@@ -147,31 +147,48 @@ class ApiException implements Exception {
 
   const ApiException({required this.statusCode, required this.message});
 
+  static ApiException? maybeFrom(Object error) {
+    if (error is ApiException) {
+      return error;
+    }
+    if (error is DioException) {
+      return ApiException.fromDioError(error);
+    }
+    return null;
+  }
+
   factory ApiException.fromDioError(DioException e) {
-    final isNetwork = e.type == DioExceptionType.connectionTimeout ||
+    final isNetwork =
+        e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.connectionError ||
         e.response == null;
     final statusCode = isNetwork ? 0 : (e.response?.statusCode ?? 500);
     final data = e.response?.data;
-    String message = 'Error de red';
+    String? message;
 
     if (data is Map<String, dynamic>) {
       final msg = data['message'];
-      if (msg is String) message = msg;
-      if (msg is List) message = msg.join(', ');
-    } else if (statusCode == 423) {
-      message = 'Cuenta bloqueada — contacta a tu entrenador';
-    } else if (statusCode == 401) {
-      message = 'Sesión expirada. Inicia sesión nuevamente';
-    } else if (statusCode == 403) {
-      message = 'No tienes permisos para realizar esta acción';
-    } else if (statusCode == 404) {
-      message = 'Recurso no encontrado';
-    } else if (statusCode >= 500) {
-      message = 'Error del servidor. Inténtalo más tarde';
+      if (msg is String && msg.trim().isNotEmpty) {
+        message = msg.trim();
+      }
+      if (msg is List) {
+        final joined = msg
+            .whereType<Object>()
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .join(', ');
+        if (joined.isNotEmpty) {
+          message = joined;
+        }
+      }
     }
+
+    message ??= e.message?.trim();
+    message ??= e.response?.statusMessage?.trim();
+    message ??= e.error?.toString().trim();
+    message ??= 'Request failed';
 
     return ApiException(statusCode: statusCode, message: message);
   }

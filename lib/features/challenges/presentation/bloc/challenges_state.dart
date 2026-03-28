@@ -26,5 +26,7 @@ class ChallengesLoaded extends ChallengesState {
 
 class ChallengesError extends ChallengesState {
   final String message;
-  const ChallengesError(this.message);
+  final ApiException? apiException;
+
+  const ChallengesError({required this.message, this.apiException});
 }

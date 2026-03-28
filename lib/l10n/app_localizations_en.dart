@@ -333,6 +333,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openDetail => 'Open detail';
 
   @override
+  String get goToMonthButton => 'Go to month';
+
+  @override
   String get warmUp => 'Warm-up';
 
   @override
@@ -693,6 +696,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter how many hours you slept on the night corresponding to this date.';
 
   @override
+  String get sleepVeryLow => 'Very low sleep';
+
+  @override
+  String get sleepInsufficient => 'Insufficient sleep';
+
+  @override
+  String get sleepOptimal => 'Optimal sleep';
+
+  @override
+  String get sleepTooMuch => 'Too much sleep';
+
+  @override
   String get bodyMeasurementsTitle => 'Body measurements';
 
   @override
@@ -700,6 +715,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bodyViewToggle => 'Body';
+
+  @override
+  String get frontViewLabel => 'Front';
+
+  @override
+  String get backViewLabel => 'Back';
 
   @override
   String get saveMetricsButton => 'Save metrics';
@@ -750,6 +771,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get metricsSuccessMessage => 'Metrics saved successfully';
+
+  @override
+  String seenEstimateApplied(String estimate, String asmi) {
+    return 'SEEN estimate applied: $estimate (ASMI $asmi kg/m²)';
+  }
 
   @override
   String get recapStartTitle => 'Weekly ReCap Form';
@@ -1600,6 +1626,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingTargetCaloriesLabel => 'Target calories (optional)';
+
+  @override
+  String get onboardingFirstNameRequired => 'Enter your first name';
+
+  @override
+  String get onboardingLastNameRequired => 'Enter your last name';
 
   @override
   String get onboardingCompleteProfileButton => 'Complete profile';

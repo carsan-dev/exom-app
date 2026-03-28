@@ -716,6 +716,12 @@ abstract class AppLocalizations {
   /// **'Ver detalle'**
   String get openDetail;
 
+  /// No description provided for @goToMonthButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir al mes'**
+  String get goToMonthButton;
+
   /// No description provided for @warmUp.
   ///
   /// In es, this message translates to:
@@ -1382,6 +1388,30 @@ abstract class AppLocalizations {
   /// **'Indica cuántas horas dormiste en la noche correspondiente a esta fecha.'**
   String get sleepHoursDescription;
 
+  /// No description provided for @sleepVeryLow.
+  ///
+  /// In es, this message translates to:
+  /// **'Muy poco sueño'**
+  String get sleepVeryLow;
+
+  /// No description provided for @sleepInsufficient.
+  ///
+  /// In es, this message translates to:
+  /// **'Sueño insuficiente'**
+  String get sleepInsufficient;
+
+  /// No description provided for @sleepOptimal.
+  ///
+  /// In es, this message translates to:
+  /// **'Sueño óptimo'**
+  String get sleepOptimal;
+
+  /// No description provided for @sleepTooMuch.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiado sueño'**
+  String get sleepTooMuch;
+
   /// No description provided for @bodyMeasurementsTitle.
   ///
   /// In es, this message translates to:
@@ -1399,6 +1429,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cuerpo'**
   String get bodyViewToggle;
+
+  /// No description provided for @frontViewLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Frontal'**
+  String get frontViewLabel;
+
+  /// No description provided for @backViewLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Posterior'**
+  String get backViewLabel;
 
   /// No description provided for @saveMetricsButton.
   ///
@@ -1495,6 +1537,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Métricas guardadas correctamente'**
   String get metricsSuccessMessage;
+
+  /// No description provided for @seenEstimateApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimación SEEN aplicada: {estimate} (ASMI {asmi} kg/m²)'**
+  String seenEstimateApplied(String estimate, String asmi);
 
   /// No description provided for @recapStartTitle.
   ///
@@ -3055,6 +3103,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Calorías objetivo (opcional)'**
   String get onboardingTargetCaloriesLabel;
+
+  /// No description provided for @onboardingFirstNameRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce tu nombre'**
+  String get onboardingFirstNameRequired;
+
+  /// No description provided for @onboardingLastNameRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce tu apellido'**
+  String get onboardingLastNameRequired;
 
   /// No description provided for @onboardingCompleteProfileButton.
   ///

@@ -51,8 +51,16 @@ class OnboardingCompleted extends OnboardingState {
   const OnboardingCompleted();
 }
 
-class OnboardingError extends OnboardingState {
+class OnboardingLoadError extends OnboardingState {
   final String message;
+  final ApiException? apiException;
 
-  const OnboardingError(this.message);
+  const OnboardingLoadError({required this.message, this.apiException});
+}
+
+class OnboardingSubmitError extends OnboardingState {
+  final String message;
+  final ApiException? apiException;
+
+  const OnboardingSubmitError({required this.message, this.apiException});
 }

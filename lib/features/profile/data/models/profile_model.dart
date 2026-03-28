@@ -15,6 +15,7 @@ class ProfileModel {
   final double? currentWeightKg;
   final double? muscleMassGoalKg;
   final double? currentBmi;
+  final int? targetCalories;
 
   const ProfileModel({
     required this.id,
@@ -33,6 +34,7 @@ class ProfileModel {
     this.currentWeightKg,
     this.muscleMassGoalKg,
     this.currentBmi,
+    this.targetCalories,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -56,6 +58,7 @@ class ProfileModel {
       currentWeightKg: (json['current_weight'] as num?)?.toDouble(),
       muscleMassGoalKg: (json['muscle_mass_goal'] as num?)?.toDouble(),
       currentBmi: (json['currentBmi'] as num?)?.toDouble(),
+      targetCalories: (json['target_calories'] as num?)?.toInt(),
     );
   }
 

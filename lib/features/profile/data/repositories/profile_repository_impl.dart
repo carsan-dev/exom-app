@@ -45,6 +45,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       currentWeightKg: model.currentWeightKg,
       muscleMassGoalKg: model.muscleMassGoalKg,
       currentBmi: model.currentBmi,
+      targetCalories: model.targetCalories,
     );
   }
 }

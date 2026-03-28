@@ -100,9 +100,11 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
-    final avatarFile = _localAvatarPath != null ? File(_localAvatarPath!) : null;
+    final avatarFile = _localAvatarPath != null
+        ? File(_localAvatarPath!)
+        : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -133,10 +135,17 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                       backgroundImage: avatarFile != null
                           ? FileImage(avatarFile)
                           : (widget.initialAvatarUrl != null
-                              ? NetworkImage(widget.initialAvatarUrl!)
-                              : null) as ImageProvider?,
-                      child: (avatarFile == null && widget.initialAvatarUrl == null)
-                          ? Icon(Icons.person, color: palette.textDisabled, size: 40)
+                                    ? NetworkImage(widget.initialAvatarUrl!)
+                                    : null)
+                                as ImageProvider?,
+                      child:
+                          (avatarFile == null &&
+                              widget.initialAvatarUrl == null)
+                          ? Icon(
+                              Icons.person,
+                              color: palette.textDisabled,
+                              size: 40,
+                            )
                           : null,
                     ),
                     if (widget.avatarUploading)
@@ -168,7 +177,11 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                             color: palette.primary,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.camera_alt, color: palette.onPrimary, size: 16),
+                          child: Icon(
+                            Icons.camera_alt,
+                            color: palette.onPrimary,
+                            size: 16,
+                          ),
                         ),
                       ),
                   ],
@@ -186,15 +199,23 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
 
             TextFormField(
               controller: _firstNameController,
-              decoration: InputDecoration(labelText: l10n.onboardingFirstNameLabel),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l10n.emailValidationEmpty : null,
+              decoration: InputDecoration(
+                labelText: l10n.onboardingFirstNameLabel,
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? l10n.onboardingFirstNameRequired
+                  : null,
               textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _lastNameController,
-              decoration: InputDecoration(labelText: l10n.onboardingLastNameLabel),
+              decoration: InputDecoration(
+                labelText: l10n.onboardingLastNameLabel,
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? l10n.onboardingLastNameRequired
+                  : null,
               textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 16),
@@ -209,8 +230,8 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                 child: Text(
                   _birthDate != null
                       ? '${_birthDate!.day.toString().padLeft(2, '0')}/'
-                          '${_birthDate!.month.toString().padLeft(2, '0')}/'
-                          '${_birthDate!.year}'
+                            '${_birthDate!.month.toString().padLeft(2, '0')}/'
+                            '${_birthDate!.year}'
                       : '',
                   style: TextStyle(color: palette.textPrimary, fontSize: 16),
                 ),
@@ -235,7 +256,7 @@ class _StepButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
 
     return Column(

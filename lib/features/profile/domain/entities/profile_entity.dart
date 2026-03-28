@@ -15,6 +15,7 @@ class ProfileEntity {
   final double? currentWeightKg;
   final double? muscleMassGoalKg;
   final double? currentBmi;
+  final int? targetCalories;
 
   const ProfileEntity({
     required this.id,
@@ -33,6 +34,7 @@ class ProfileEntity {
     this.currentWeightKg,
     this.muscleMassGoalKg,
     this.currentBmi,
+    this.targetCalories,
   });
 
   String get fullName =>

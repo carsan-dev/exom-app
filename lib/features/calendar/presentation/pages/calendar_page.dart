@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
@@ -39,24 +40,13 @@ class _CalendarViewState extends State<_CalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<CalendarBloc, CalendarState>(
       builder: (context, state) {
         if (state is CalendarLoading || state is CalendarInitial) {
           return const ShimmerList(count: 3, itemHeight: 200);
         }
         if (state is CalendarError) {
-          void retry() {
-            final now = DateTime.now();
-            context.read<CalendarBloc>().add(
-              CalendarMonthLoadRequested(year: now.year, month: now.month),
-            );
-          }
-          if (state.message.startsWith('ApiException(0)')) {
-            return NoConnectionWidget(onRetry: retry);
-          }
-          return ServerErrorWidget(onRetry: retry);
+          return _buildErrorState(context, state);
         }
         if (state is CalendarLoaded) {
           return _buildContent(context, state);
@@ -66,8 +56,34 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
+  Widget _buildErrorState(BuildContext context, CalendarError state) {
+    void retry() {
+      final now = DateTime.now();
+      context.read<CalendarBloc>().add(
+        CalendarMonthLoadRequested(year: now.year, month: now.month),
+      );
+    }
+
+    final apiException = state.apiException;
+    if (apiException?.isNetworkError == true) {
+      return NoConnectionWidget(onRetry: retry);
+    }
+    if (apiException?.isServerError == true) {
+      return ServerErrorWidget(
+        errorCode: apiException!.statusCode.toString(),
+        onRetry: retry,
+      );
+    }
+    return ErrorWidget2(
+      message: apiException != null
+          ? localizedApiError(context, apiException)
+          : AppLocalizations.of(context).calendarLoadError,
+      onRetry: retry,
+    );
+  }
+
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -288,7 +304,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _buildWeekProgress(BuildContext context, CalendarLoaded state) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final summary = state.weekSummary;
     if (summary == null) return const SizedBox.shrink();
 
@@ -354,7 +370,7 @@ class _CalendarViewState extends State<_CalendarView> {
     final isToday = isSameDay(state.selectedDate, DateTime.now());
     final locale = Localizations.localeOf(context).languageCode;
     final isEn = locale == 'en';
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final String dateLabel;
     if (isToday) {
       dateLabel = l10n.todayLabel;
@@ -382,7 +398,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _emptyDayCard(BuildContext context, String dateLabel) {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -436,7 +452,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget _restDayCard(BuildContext context, String dateLabel) {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -497,9 +513,7 @@ class _CalendarViewState extends State<_CalendarView> {
     final statusColor = day.trainingCompleted
         ? semantic.success
         : palette.primary;
-    final statusLabel = day.trainingCompleted
-        ? l10n.completed
-        : l10n.pending;
+    final statusLabel = day.trainingCompleted ? l10n.completed : l10n.pending;
     final statusIcon = day.trainingCompleted
         ? Icons.check_circle
         : Icons.schedule;
@@ -702,10 +716,10 @@ class _MonthHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final locale = Localizations.localeOf(context).toString();
-    final monthName = DateFormat('MMMM', locale).format(DateTime(year, month));
-    final capitalMonth = monthName[0].toUpperCase() + monthName.substring(1);
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
-    final title = isEn ? '$capitalMonth $year' : '$capitalMonth de $year';
+    final formattedTitle = DateFormat.yMMMM(
+      locale,
+    ).format(DateTime(year, month));
+    final title = toBeginningOfSentenceCase(formattedTitle);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
@@ -822,21 +836,6 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
   late int _year;
   late int _month;
 
-  static const _monthLabels = [
-    'Ene',
-    'Feb',
-    'Mar',
-    'Abr',
-    'May',
-    'Jun',
-    'Jul',
-    'Ago',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dic',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -847,6 +846,7 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     return Dialog(
       backgroundColor: palette.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -904,7 +904,7 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      _monthLabels[index],
+                      _monthLabel(context, m),
                       style: TextStyle(
                         color: isSelected
                             ? palette.onPrimary
@@ -926,12 +926,18 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context, [_year, _month]),
-                child: const Text('Ir al mes'),
+                child: Text(l10n.goToMonthButton),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _monthLabel(BuildContext context, int month) {
+    final locale = Localizations.localeOf(context).toString();
+    final label = DateFormat.MMM(locale).format(DateTime(2000, month));
+    return toBeginningOfSentenceCase(label);
   }
 }

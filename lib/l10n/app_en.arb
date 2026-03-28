@@ -114,6 +114,7 @@
   "mealsCompletedThisWeek": "meals completed this week",
   "noActivityAssigned": "No activity assigned",
   "openDetail": "Open detail",
+  "goToMonthButton": "Go to month",
 
   "warmUp": "Warm-up",
   "cooldown": "Cooldown",
@@ -237,9 +238,15 @@
   "calculateEstimateButton": "Calculate estimate",
   "sleepHoursSectionTitle": "Sleep hours",
   "sleepHoursDescription": "Enter how many hours you slept on the night corresponding to this date.",
+  "sleepVeryLow": "Very low sleep",
+  "sleepInsufficient": "Insufficient sleep",
+  "sleepOptimal": "Optimal sleep",
+  "sleepTooMuch": "Too much sleep",
   "bodyMeasurementsTitle": "Body measurements",
   "listViewToggle": "List",
   "bodyViewToggle": "Body",
+  "frontViewLabel": "Front",
+  "backViewLabel": "Back",
   "saveMetricsButton": "Save metrics",
   "quickSeenEstimate": "Quick SEEN estimate",
   "seenFormulaDescription": "Use the SEEN formula to estimate skeletal muscle mass from age, height, sex, and calf circumference.",
@@ -256,6 +263,13 @@
   "estimationFailedError": "Could not calculate a valid estimate with those values.",
   "calculateAndUseButton": "Calculate and use",
   "metricsSuccessMessage": "Metrics saved successfully",
+  "seenEstimateApplied": "SEEN estimate applied: {estimate} (ASMI {asmi} kg/m²)",
+  "@seenEstimateApplied": {
+    "placeholders": {
+      "estimate": { "type": "String" },
+      "asmi": { "type": "String" }
+    }
+  },
 
   "recapStartTitle": "Weekly ReCap Form",
   "recapStartDescription": "Complete the four steps so your coach understands how your week went and can adjust your plan.",
@@ -544,6 +558,8 @@
   "onboardingMainGoalLabel": "Main goal",
   "onboardingMuscleMassGoalLabel": "Muscle mass goal (kg, optional)",
   "onboardingTargetCaloriesLabel": "Target calories (optional)",
+  "onboardingFirstNameRequired": "Enter your first name",
+  "onboardingLastNameRequired": "Enter your last name",
   "onboardingCompleteProfileButton": "Complete profile",
   "onboardingSummaryTitle": "Summary",
   "onboardingConfirmButton": "Confirm",

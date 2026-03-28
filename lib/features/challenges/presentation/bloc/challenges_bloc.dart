@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/usecases/get_my_challenges_usecase.dart';
@@ -48,8 +49,14 @@ class ChallengesBloc extends Bloc<ChallengesEvent, ChallengesState> {
           achievements: achievements,
         ),
       );
-    } catch (e) {
-      emit(ChallengesError(e.toString()));
+    } catch (error) {
+      final apiException = ApiException.maybeFrom(error);
+      emit(
+        ChallengesError(
+          message: apiException?.message ?? error.toString(),
+          apiException: apiException,
+        ),
+      );
     }
   }
 
@@ -60,8 +67,14 @@ class ChallengesBloc extends Bloc<ChallengesEvent, ChallengesState> {
     try {
       await _updateChallengeProgressUseCase(event.challengeId, event.newValue);
       add(const ChallengesLoadRequested());
-    } catch (e) {
-      emit(ChallengesError(e.toString()));
+    } catch (error) {
+      final apiException = ApiException.maybeFrom(error);
+      emit(
+        ChallengesError(
+          message: apiException?.message ?? error.toString(),
+          apiException: apiException,
+        ),
+      );
     }
   }
 }

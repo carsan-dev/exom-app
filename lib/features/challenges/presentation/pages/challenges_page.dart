@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -12,11 +13,33 @@ import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.d
 class ChallengesPage extends StatelessWidget {
   const ChallengesPage({super.key});
 
+  Widget _buildErrorState(BuildContext context, ChallengesError state) {
+    void retry() =>
+        context.read<ChallengesBloc>().add(const ChallengesLoadRequested());
+
+    final apiException = state.apiException;
+    if (apiException?.isNetworkError == true) {
+      return NoConnectionWidget(onRetry: retry);
+    }
+    if (apiException?.isServerError == true) {
+      return ServerErrorWidget(
+        errorCode: apiException!.statusCode.toString(),
+        onRetry: retry,
+      );
+    }
+    return ErrorWidget2(
+      message: apiException != null
+          ? localizedApiError(context, apiException)
+          : AppLocalizations.of(context).challengesLoadError,
+      onRetry: retry,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return BlocProvider(
       create: (_) =>
@@ -36,13 +59,7 @@ class ChallengesPage extends StatelessWidget {
               );
             }
             if (state is ChallengesError) {
-              void retry() => context.read<ChallengesBloc>().add(
-                const ChallengesLoadRequested(),
-              );
-              if (state.message.startsWith('ApiException(0)')) {
-                return NoConnectionWidget(onRetry: retry);
-              }
-              return ServerErrorWidget(onRetry: retry);
+              return _buildErrorState(context, state);
             }
             if (state is ChallengesLoaded) {
               return _ChallengesContent(state: state);
@@ -62,7 +79,7 @@ class _ChallengesContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final hasContent =
         state.mainGoals.isNotEmpty ||
         state.weeklyChallenges.isNotEmpty ||
@@ -140,7 +157,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

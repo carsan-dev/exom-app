@@ -22,4 +22,9 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
   Future<List<AchievementEntity>> getMyAchievements() {
     return _remoteDataSource.getMyAchievements();
   }
+
+  @override
+  Future<int> getMyStreakDays() {
+    return _remoteDataSource.getMyStreakDays();
+  }
 }

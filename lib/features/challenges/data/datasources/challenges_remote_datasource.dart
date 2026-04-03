@@ -6,6 +6,7 @@ abstract class ChallengesRemoteDataSource {
   Future<List<ChallengeModel>> getMyChallenges();
   Future<void> updateProgress(String challengeId, double value);
   Future<List<AchievementModel>> getMyAchievements();
+  Future<int> getMyStreakDays();
 }
 
 class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
@@ -49,5 +50,18 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       }
     }
     return [];
+  }
+
+  @override
+  Future<int> getMyStreakDays() async {
+    final response = await _apiClient.dio.get<dynamic>('/streaks/me');
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final payload = data['data'];
+      if (payload is Map<String, dynamic>) {
+        return (payload['current_days'] as num?)?.toInt() ?? 0;
+      }
+    }
+    return 0;
   }
 }

@@ -39,4 +39,25 @@ class ChallengeModel extends ChallengeEntity {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'challenge_id': challengeId,
+      'current_value': currentValue,
+      'is_completed': isCompleted,
+      'completed_at': completedAt?.toIso8601String(),
+      'assigned_at': assignedAt.toIso8601String(),
+      'challenge': {
+        'id': challengeId,
+        'title': title,
+        'description': description,
+        'type': type,
+        'target_value': targetValue,
+        'unit': unit,
+        'is_manual': isManual,
+        'deadline': deadline?.toIso8601String(),
+      },
+    };
+  }
 }

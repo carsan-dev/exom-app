@@ -71,6 +71,7 @@ import 'package:exom_app/features/challenges/domain/repositories/challenges_repo
 import 'package:exom_app/features/challenges/domain/usecases/get_my_challenges_usecase.dart';
 import 'package:exom_app/features/challenges/domain/usecases/update_challenge_progress_usecase.dart';
 import 'package:exom_app/features/challenges/domain/usecases/get_my_achievements_usecase.dart';
+import 'package:exom_app/features/challenges/domain/usecases/get_my_streak_usecase.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
 
 // Recap
@@ -297,12 +298,16 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => GetMyAchievementsUseCase(sl<ChallengesRepository>()),
   );
+  sl.registerLazySingleton(
+    () => GetMyStreakUseCase(sl<ChallengesRepository>()),
+  );
 
   sl.registerFactory(
     () => ChallengesBloc(
       getMyChallengesUseCase: sl<GetMyChallengesUseCase>(),
       updateChallengeProgressUseCase: sl<UpdateChallengeProgressUseCase>(),
       getMyAchievementsUseCase: sl<GetMyAchievementsUseCase>(),
+      getMyStreakUseCase: sl<GetMyStreakUseCase>(),
     ),
   );
 

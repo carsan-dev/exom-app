@@ -3,15 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
 class ChallengesPage extends StatelessWidget {
   const ChallengesPage({super.key});
+
+  Future<void> _refreshChallenges(BuildContext context) async {
+    context.read<ChallengesBloc>().add(const ChallengesLoadRequested());
+  }
 
   Widget _buildErrorState(BuildContext context, ChallengesError state) {
     void retry() =>
@@ -38,34 +42,36 @@ class ChallengesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
 
     return BlocProvider(
       create: (_) =>
           GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(l10n.challengesTitle),
-          backgroundColor: theme.scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
-        ),
-        body: BlocBuilder<ChallengesBloc, ChallengesState>(
-          builder: (context, state) {
-            if (state is ChallengesLoading) {
-              return Center(
-                child: CircularProgressIndicator(color: palette.primary),
-              );
-            }
-            if (state is ChallengesError) {
-              return _buildErrorState(context, state);
-            }
-            if (state is ChallengesLoaded) {
-              return _ChallengesContent(state: state);
-            }
-            return const SizedBox.shrink();
-          },
+        body: SafeArea(
+          child: BlocBuilder<ChallengesBloc, ChallengesState>(
+            builder: (context, state) {
+              if (state is ChallengesInitial || state is ChallengesLoading) {
+                return const LoadingWidget();
+              }
+              if (state is ChallengesError) {
+                return _buildErrorState(context, state);
+              }
+              if (state is ChallengesLoaded) {
+                return _ChallengesContent(
+                  state: state,
+                  onRefresh: () => _refreshChallenges(context),
+                );
+              }
+              if (state is ChallengesEmpty) {
+                return _ChallengesEmptyContent(
+                  state: state,
+                  onRefresh: () => _refreshChallenges(context),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -73,31 +79,24 @@ class ChallengesPage extends StatelessWidget {
 }
 
 class _ChallengesContent extends StatelessWidget {
-  const _ChallengesContent({required this.state});
+  const _ChallengesContent({required this.state, required this.onRefresh});
 
   final ChallengesLoaded state;
+  final RefreshCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hasContent =
-        state.mainGoals.isNotEmpty ||
-        state.weeklyChallenges.isNotEmpty ||
-        state.achievements.isNotEmpty;
-
-    if (!hasContent) {
-      return const _EmptyState();
-    }
 
     return RefreshIndicator(
       color: context.exomPalette.primary,
       backgroundColor: context.exomPalette.surface,
-      onRefresh: () async {
-        context.read<ChallengesBloc>().add(const ChallengesLoadRequested());
-      },
+      onRefresh: onRefresh,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 40),
         children: [
+          _ChallengesHeader(streakDays: state.streakDays),
           if (state.mainGoals.isNotEmpty) ...[
             _SectionTitle(title: l10n.mainGoalSection),
             ...state.mainGoals.map((c) => _MainGoalCard(challenge: c)),
@@ -108,18 +107,134 @@ class _ChallengesContent extends StatelessWidget {
           ],
           if (state.achievements.isNotEmpty) ...[
             _SectionTitle(title: l10n.unlockedAchievementsSection),
-            SizedBox(
-              height: 120,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: state.achievements.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (_, i) =>
-                    _AchievementCard(achievement: state.achievements[i]),
-              ),
-            ),
+            _AchievementsCarousel(achievements: state.achievements),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengesEmptyContent extends StatelessWidget {
+  const _ChallengesEmptyContent({required this.state, required this.onRefresh});
+
+  final ChallengesEmpty state;
+  final RefreshCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return RefreshIndicator(
+      color: context.exomPalette.primary,
+      backgroundColor: context.exomPalette.surface,
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 40),
+        children: [
+          _ChallengesHeader(streakDays: state.streakDays),
+          const _EmptyChallengesCard(),
+          _SectionTitle(title: l10n.unlockedAchievementsSection),
+          if (state.achievements.isNotEmpty)
+            _AchievementsCarousel(achievements: state.achievements)
+          else
+            const _EmptyAchievementsCard(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengesHeader extends StatelessWidget {
+  const _ChallengesHeader({required this.streakDays});
+
+  final int streakDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.challengesTitle,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.challengesSubtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          _StreakSummaryCard(days: streakDays),
+        ],
+      ),
+    );
+  }
+}
+
+class _StreakSummaryCard extends StatelessWidget {
+  const _StreakSummaryCard({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 92),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.local_fire_department_rounded,
+            color: AppColors.warning,
+            size: 24,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$days ${l10n.days}',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: AppColors.warning,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.streak,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
@@ -150,8 +265,8 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+class _EmptyChallengesCard extends StatelessWidget {
+  const _EmptyChallengesCard();
 
   @override
   Widget build(BuildContext context) {
@@ -159,143 +274,142 @@ class _EmptyState extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.divider),
+        color: palette.surface,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
-          Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.emoji_events_outlined,
-                  color: palette.textDisabled,
-                  size: 56,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.noActiveChallenges,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.noActiveChallengesMessage,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: palette.textDisabled.withValues(alpha: 0.35),
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            l10n.challenges,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textMuted,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...List.generate(
-            2,
-            (i) => _PlaceholderCard(
-              icon: Icons.flag_outlined,
-              label: l10n.pendingChallengeLabel,
+            child: Icon(
+              Icons.star_border_rounded,
+              color: palette.textDisabled,
+              size: 34,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            l10n.achievements,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textMuted,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+            l10n.noActiveChallenges,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 100,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 4,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, _) => Container(
-                width: 90,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderMedium, width: 1.5),
-                  color: palette.surfaceVariant,
-                ),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: palette.textDisabled,
-                  size: 28,
-                ),
-              ),
+          Text(
+            l10n.noActiveChallengesMessage,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 14,
+              height: 1.45,
             ),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
 
-class _PlaceholderCard extends StatelessWidget {
-  const _PlaceholderCard({required this.icon, required this.label});
+class _EmptyAchievementsCard extends StatelessWidget {
+  const _EmptyAchievementsCard();
 
-  final IconData icon;
-  final String label;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.divider),
+        color: palette.surface,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(
+              4,
+              (_) => const _AchievementPlaceholderCard(),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.lockedAchievementsHint,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AchievementsCarousel extends StatelessWidget {
+  const _AchievementsCarousel({required this.achievements});
+
+  final List<AchievementEntity> achievements;
+
+  @override
+  Widget build(BuildContext context) {
+    if (achievements.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: achievements.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, index) =>
+            _AchievementCard(achievement: achievements[index]),
+      ),
+    );
+  }
+}
+
+class _AchievementPlaceholderCard extends StatelessWidget {
+  const _AchievementPlaceholderCard();
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      width: 56,
+      height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.borderMedium, width: 1.5),
         color: palette.surfaceVariant,
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: palette.textDisabled, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 12,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.borderMedium,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 8,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    color: palette.borderSoft,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Icon(
+        Icons.lock_outline_rounded,
+        color: palette.textDisabled,
+        size: 28,
       ),
     );
   }

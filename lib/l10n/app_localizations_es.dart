@@ -401,7 +401,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get additionalNotesOptional => 'Notas adicionales (opcional)';
 
   @override
-  String get challengesTitle => 'Retos y Logros';
+  String get challengesTitle => 'Mis Retos';
+
+  @override
+  String get challengesSubtitle => 'Supera tus límites cada día';
 
   @override
   String get challengesLoadError => 'Error al cargar los retos';
@@ -420,7 +423,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noActiveChallengesMessage =>
-      'Tu entrenador te asignará retos próximamente.';
+      'Tu entrenador aún no te ha asignado retos. Empieza completando tus entrenamientos y comidas para desbloquear retos automáticos.';
+
+  @override
+  String get lockedAchievementsHint =>
+      'Completa retos para desbloquear medallas';
 
   @override
   String get pendingChallengeLabel => 'Reto pendiente';

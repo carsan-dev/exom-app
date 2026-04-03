@@ -398,7 +398,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get additionalNotesOptional => 'Additional notes (optional)';
 
   @override
-  String get challengesTitle => 'Challenges and Achievements';
+  String get challengesTitle => 'My Challenges';
+
+  @override
+  String get challengesSubtitle => 'Push your limits every day';
 
   @override
   String get challengesLoadError => 'Could not load challenges';
@@ -417,7 +420,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noActiveChallengesMessage =>
-      'Your coach will assign challenges soon.';
+      'Your coach has not assigned any challenges yet. Start completing your workouts and meals to unlock automatic challenges.';
+
+  @override
+  String get lockedAchievementsHint => 'Complete challenges to unlock medals';
 
   @override
   String get pendingChallengeLabel => 'Pending challenge';

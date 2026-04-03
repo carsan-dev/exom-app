@@ -845,8 +845,14 @@ abstract class AppLocalizations {
   /// No description provided for @challengesTitle.
   ///
   /// In es, this message translates to:
-  /// **'Retos y Logros'**
+  /// **'Mis Retos'**
   String get challengesTitle;
+
+  /// No description provided for @challengesSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Supera tus límites cada día'**
+  String get challengesSubtitle;
 
   /// No description provided for @challengesLoadError.
   ///
@@ -881,8 +887,14 @@ abstract class AppLocalizations {
   /// No description provided for @noActiveChallengesMessage.
   ///
   /// In es, this message translates to:
-  /// **'Tu entrenador te asignará retos próximamente.'**
+  /// **'Tu entrenador aún no te ha asignado retos. Empieza completando tus entrenamientos y comidas para desbloquear retos automáticos.'**
   String get noActiveChallengesMessage;
+
+  /// No description provided for @lockedAchievementsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa retos para desbloquear medallas'**
+  String get lockedAchievementsHint;
 
   /// No description provided for @pendingChallengeLabel.
   ///

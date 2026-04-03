@@ -5,6 +5,8 @@ import 'package:exom_app/features/recap/domain/usecases/get_my_recaps_usecase.da
 import 'package:exom_app/features/recap/domain/usecases/create_recap_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/update_recap_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/submit_recap_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/get_recap_detail_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/mark_recap_feedback_read_usecase.dart';
 
 part 'recap_event.dart';
 part 'recap_state.dart';
@@ -14,16 +16,22 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
   final CreateRecapUseCase _createRecapUseCase;
   final UpdateRecapUseCase _updateRecapUseCase;
   final SubmitRecapUseCase _submitRecapUseCase;
+  final GetRecapDetailUseCase _getRecapDetailUseCase;
+  final MarkRecapFeedbackReadUseCase _markRecapFeedbackReadUseCase;
 
   RecapBloc({
     required GetMyRecapsUseCase getMyRecapsUseCase,
     required CreateRecapUseCase createRecapUseCase,
     required UpdateRecapUseCase updateRecapUseCase,
     required SubmitRecapUseCase submitRecapUseCase,
+    required GetRecapDetailUseCase getRecapDetailUseCase,
+    required MarkRecapFeedbackReadUseCase markRecapFeedbackReadUseCase,
   }) : _getMyRecapsUseCase = getMyRecapsUseCase,
        _createRecapUseCase = createRecapUseCase,
        _updateRecapUseCase = updateRecapUseCase,
        _submitRecapUseCase = submitRecapUseCase,
+       _getRecapDetailUseCase = getRecapDetailUseCase,
+       _markRecapFeedbackReadUseCase = markRecapFeedbackReadUseCase,
        super(const RecapInitial()) {
     on<RecapLoadRequested>(_onLoadRequested);
     on<RecapCreateRequested>(_onCreateRequested);
@@ -33,6 +41,8 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     on<RecapSaveRequested>(_onSaveRequested);
     on<RecapSubmitRequested>(_onSubmitRequested);
     on<RecapFormCancelled>(_onFormCancelled);
+    on<RecapDetailRequested>(_onDetailRequested);
+    on<RecapFeedbackMarkReadRequested>(_onFeedbackMarkReadRequested);
   }
 
   Map<String, dynamic> _formData = {};
@@ -42,7 +52,10 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     RecapLoadRequested event,
     Emitter<RecapState> emit,
   ) async {
-    emit(const RecapLoading());
+    if (state is! RecapListLoaded && state is! RecapSubmitted) {
+      emit(const RecapLoading());
+    }
+
     try {
       final recaps = await _getMyRecapsUseCase();
       emit(RecapListLoaded(recaps));
@@ -151,5 +164,41 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     _formData = {};
     _editingRecapId = null;
     add(const RecapLoadRequested());
+  }
+
+  Future<void> _onDetailRequested(
+    RecapDetailRequested event,
+    Emitter<RecapState> emit,
+  ) async {
+    emit(const RecapDetailLoading());
+    try {
+      final recap = await _getRecapDetailUseCase(event.recapId);
+      emit(RecapDetailLoaded(recap));
+    } catch (e) {
+      emit(RecapDetailError(e.toString()));
+    }
+  }
+
+  Future<void> _onFeedbackMarkReadRequested(
+    RecapFeedbackMarkReadRequested event,
+    Emitter<RecapState> emit,
+  ) async {
+    final currentState = state;
+
+    try {
+      await _markRecapFeedbackReadUseCase(event.recapId);
+
+      if (currentState is RecapDetailLoaded &&
+          currentState.recap.id == event.recapId &&
+          currentState.recap.hasUnreadClientFeedback) {
+        emit(
+          RecapDetailLoaded(
+            currentState.recap.copyWith(clientFeedbackReadAt: DateTime.now()),
+          ),
+        );
+      }
+    } catch (_) {
+      // Fire-and-forget: don't surface this error to the user
+    }
   }
 }

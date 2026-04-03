@@ -3,9 +3,11 @@ import 'package:exom_app/features/recap/data/models/recap_model.dart';
 
 abstract class RecapRemoteDataSource {
   Future<List<RecapModel>> getMyRecaps();
+  Future<RecapModel> getMyRecapById(String id);
   Future<RecapModel> createRecap(Map<String, dynamic> data);
   Future<RecapModel> updateRecap(String id, Map<String, dynamic> data);
   Future<void> submitRecap(String id);
+  Future<void> markFeedbackRead(String id);
 }
 
 class RecapRemoteDataSourceImpl implements RecapRemoteDataSource {
@@ -34,6 +36,19 @@ class RecapRemoteDataSourceImpl implements RecapRemoteDataSource {
       }
     }
     return [];
+  }
+
+  @override
+  Future<RecapModel> getMyRecapById(String id) async {
+    final response = await _apiClient.dio.get<dynamic>('/recaps/my/$id');
+    final respData = response.data;
+    if (respData is Map<String, dynamic>) {
+      final inner = respData['data'];
+      if (inner is Map<String, dynamic>) {
+        return RecapModel.fromJson(inner);
+      }
+    }
+    throw Exception('Invalid recap detail response');
   }
 
   @override
@@ -71,5 +86,10 @@ class RecapRemoteDataSourceImpl implements RecapRemoteDataSource {
   @override
   Future<void> submitRecap(String id) async {
     await _apiClient.dio.post<dynamic>('/recaps/$id/submit');
+  }
+
+  @override
+  Future<void> markFeedbackRead(String id) async {
+    await _apiClient.dio.post<dynamic>('/recaps/my/$id/read-feedback');
   }
 }

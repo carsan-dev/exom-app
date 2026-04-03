@@ -11,6 +11,10 @@ class RecapRepositoryImpl implements RecapRepository {
   Future<List<RecapEntity>> getMyRecaps() => _remoteDataSource.getMyRecaps();
 
   @override
+  Future<RecapEntity> getMyRecapById(String id) =>
+      _remoteDataSource.getMyRecapById(id);
+
+  @override
   Future<RecapEntity> createRecap(Map<String, dynamic> data) =>
       _remoteDataSource.createRecap(data);
 
@@ -20,4 +24,8 @@ class RecapRepositoryImpl implements RecapRepository {
 
   @override
   Future<void> submitRecap(String id) => _remoteDataSource.submitRecap(id);
+
+  @override
+  Future<void> markFeedbackRead(String id) =>
+      _remoteDataSource.markFeedbackRead(id);
 }

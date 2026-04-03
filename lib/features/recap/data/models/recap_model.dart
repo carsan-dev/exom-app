@@ -27,6 +27,10 @@ class RecapModel extends RecapEntity {
     super.improvementServiceRating,
     super.improvementAreas,
     super.improvementFeedbackText,
+    super.clientFeedbackText,
+    super.clientFeedbackSentAt,
+    super.clientFeedbackReadAt,
+    super.reviewedAt,
     required super.createdAt,
   });
 
@@ -65,6 +69,16 @@ class RecapModel extends RecapEntity {
               .toList() ??
           [],
       improvementFeedbackText: json['improvement_feedback_text'] as String?,
+      clientFeedbackText: json['client_feedback_text'] as String?,
+      clientFeedbackSentAt: json['client_feedback_sent_at'] != null
+          ? DateTime.parse(json['client_feedback_sent_at'] as String)
+          : null,
+      clientFeedbackReadAt: json['client_feedback_read_at'] != null
+          ? DateTime.parse(json['client_feedback_read_at'] as String)
+          : null,
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.parse(json['reviewed_at'] as String)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

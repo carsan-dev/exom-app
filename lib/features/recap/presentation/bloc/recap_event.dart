@@ -45,3 +45,15 @@ class RecapSubmitRequested extends RecapEvent {
 class RecapFormCancelled extends RecapEvent {
   const RecapFormCancelled();
 }
+
+class RecapDetailRequested extends RecapEvent {
+  final String recapId;
+
+  const RecapDetailRequested(this.recapId);
+}
+
+class RecapFeedbackMarkReadRequested extends RecapEvent {
+  final String recapId;
+
+  const RecapFeedbackMarkReadRequested(this.recapId);
+}

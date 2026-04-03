@@ -34,6 +34,22 @@ class RecapSubmitted extends RecapListLoaded {
   const RecapSubmitted(super.recaps);
 }
 
+class RecapDetailLoading extends RecapState {
+  const RecapDetailLoading();
+}
+
+class RecapDetailLoaded extends RecapState {
+  final RecapEntity recap;
+
+  const RecapDetailLoaded(this.recap);
+}
+
+class RecapDetailError extends RecapState {
+  final String message;
+
+  const RecapDetailError(this.message);
+}
+
 class RecapError extends RecapState {
   final String message;
 

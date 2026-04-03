@@ -79,6 +79,8 @@ import 'package:exom_app/features/recap/data/repositories/recap_repository_impl.
 import 'package:exom_app/features/recap/domain/repositories/recap_repository.dart';
 import 'package:exom_app/features/recap/domain/usecases/create_recap_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/get_my_recaps_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/get_recap_detail_usecase.dart';
+import 'package:exom_app/features/recap/domain/usecases/mark_recap_feedback_read_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/submit_recap_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/update_recap_usecase.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
@@ -317,6 +319,10 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetMyRecapsUseCase(sl<RecapRepository>()));
   sl.registerLazySingleton(() => UpdateRecapUseCase(sl<RecapRepository>()));
   sl.registerLazySingleton(() => SubmitRecapUseCase(sl<RecapRepository>()));
+  sl.registerLazySingleton(() => GetRecapDetailUseCase(sl<RecapRepository>()));
+  sl.registerLazySingleton(
+    () => MarkRecapFeedbackReadUseCase(sl<RecapRepository>()),
+  );
 
   sl.registerFactory(
     () => RecapBloc(
@@ -324,6 +330,8 @@ Future<void> initDependencies() async {
       createRecapUseCase: sl<CreateRecapUseCase>(),
       updateRecapUseCase: sl<UpdateRecapUseCase>(),
       submitRecapUseCase: sl<SubmitRecapUseCase>(),
+      getRecapDetailUseCase: sl<GetRecapDetailUseCase>(),
+      markRecapFeedbackReadUseCase: sl<MarkRecapFeedbackReadUseCase>(),
     ),
   );
 

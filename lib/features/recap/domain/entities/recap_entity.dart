@@ -35,6 +35,13 @@ class RecapEntity {
   final List<String> improvementAreas;
   final String? improvementFeedbackText;
 
+  // Admin feedback (visible to client)
+  final String? clientFeedbackText;
+  final DateTime? clientFeedbackSentAt;
+  final DateTime? clientFeedbackReadAt;
+
+  // Dates
+  final DateTime? reviewedAt;
   final DateTime createdAt;
 
   const RecapEntity({
@@ -63,10 +70,55 @@ class RecapEntity {
     this.improvementServiceRating,
     this.improvementAreas = const [],
     this.improvementFeedbackText,
+    this.clientFeedbackText,
+    this.clientFeedbackSentAt,
+    this.clientFeedbackReadAt,
+    this.reviewedAt,
     required this.createdAt,
   });
 
   bool get isDraft => status == 'DRAFT';
   bool get isSubmitted => status == 'SUBMITTED';
   bool get isReviewed => status == 'REVIEWED';
+
+  bool get hasClientFeedback =>
+      clientFeedbackText != null && clientFeedbackText!.trim().isNotEmpty;
+
+  bool get hasUnreadClientFeedback =>
+      hasClientFeedback && clientFeedbackReadAt == null;
+
+  RecapEntity copyWith({DateTime? clientFeedbackReadAt}) {
+    return RecapEntity(
+      id: id,
+      weekStartDate: weekStartDate,
+      weekEndDate: weekEndDate,
+      status: status,
+      trainingEffort: trainingEffort,
+      trainingSessions: trainingSessions,
+      trainingProgress: trainingProgress,
+      trainingNotes: trainingNotes,
+      nutritionQuality: nutritionQuality,
+      hydrationEnabled: hydrationEnabled,
+      hydrationLevel: hydrationLevel,
+      foodQuality: foodQuality,
+      nutritionNotes: nutritionNotes,
+      sleepHoursRange: sleepHoursRange,
+      fatigueLevel: fatigueLevel,
+      musclePainZones: musclePainZones,
+      recoveryNotes: recoveryNotes,
+      mood: mood,
+      stressEnabled: stressEnabled,
+      stressLevel: stressLevel,
+      generalNotes: generalNotes,
+      improvementAppRating: improvementAppRating,
+      improvementServiceRating: improvementServiceRating,
+      improvementAreas: improvementAreas,
+      improvementFeedbackText: improvementFeedbackText,
+      clientFeedbackText: clientFeedbackText,
+      clientFeedbackSentAt: clientFeedbackSentAt,
+      clientFeedbackReadAt: clientFeedbackReadAt ?? this.clientFeedbackReadAt,
+      reviewedAt: reviewedAt,
+      createdAt: createdAt,
+    );
+  }
 }

@@ -24,28 +24,29 @@ class RecapStepImprovement extends StatelessWidget {
             ?.map((item) => item.toString())
             .toList() ??
         const <String>[];
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         children: [
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.recapImprovementRatingsTitle,
-            subtitle: AppLocalizations.of(context)!.recapImprovementRatingsSubtitle,
+            title: l10n.recapImprovementRatingsTitle,
+            subtitle: l10n.recapImprovementRatingsSubtitle,
             icon: Icons.star_outline_rounded,
             child: Column(
               children: [
                 RecapStarRatingField(
-                  label: AppLocalizations.of(context)!.rateTheService,
-                  helperText: AppLocalizations.of(context)!.howYouRateTheSupportReceivedThisWeek,
+                  label: l10n.rateTheService,
+                  helperText: l10n.howYouRateTheSupportReceivedThisWeek,
                   value: serviceRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_service_rating', value),
                 ),
                 const SizedBox(height: 20),
                 RecapStarRatingField(
-                  label: AppLocalizations.of(context)!.rateTheApp,
-                  helperText: AppLocalizations.of(context)!.yourOverallExperienceWithTheApp,
+                  label: l10n.rateTheApp,
+                  helperText: l10n.yourOverallExperienceWithTheApp,
                   value: appRating.round().clamp(1, 5),
                   onChanged: (value) =>
                       onChanged('improvement_app_rating', value),
@@ -54,12 +55,12 @@ class RecapStepImprovement extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.recapWhatCanWeImprove,
-            subtitle: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
+            title: l10n.recapWhatCanWeImprove,
+            subtitle: l10n.selectThePointsWhereYouWantMoreSupport,
             icon: Icons.tune_rounded,
             child: RecapMultiSelectField(
-              label: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
-              helperText: AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
+              label: l10n.selectThePointsWhereYouWantMoreSupport,
+              helperText: l10n.selectThePointsWhereYouWantMoreSupport,
               values: improvementAreas,
               options: const [
                 'ENTRENAMIENTO',
@@ -73,12 +74,12 @@ class RecapStepImprovement extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.recapTellUsMore,
-            subtitle: AppLocalizations.of(context)!.closeTheWeekWithWhatMattersForYourCoach,
+            title: l10n.recapTellUsMore,
+            subtitle: l10n.closeTheWeekWithWhatMattersForYourCoach,
             icon: Icons.chat_bubble_outline_rounded,
             child: RecapTextAreaField(
-              label: AppLocalizations.of(context)!.suggestionsOrImprovements,
-              hintText: AppLocalizations.of(context)!.egIWouldLikeMoreContextInTheSessions,
+              label: l10n.suggestionsOrImprovements,
+              hintText: l10n.egIWouldLikeMoreContextInTheSessions,
               initialValue:
                   formData['improvement_feedback_text'] as String? ?? '',
               onChanged: (value) =>

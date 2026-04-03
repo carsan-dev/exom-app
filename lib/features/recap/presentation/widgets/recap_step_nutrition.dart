@@ -19,28 +19,29 @@ class RecapStepNutrition extends StatelessWidget {
     final foodQuality = (formData['food_quality'] as num?)?.toInt() ?? 2;
     final hydrationEnabled = formData['hydration_enabled'] as bool? ?? false;
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         children: [
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.weekQuality,
-            subtitle: AppLocalizations.of(context)!.rateHowYourNutritionWentTheseDays,
+            title: l10n.weekQuality,
+            subtitle: l10n.rateHowYourNutritionWentTheseDays,
             icon: Icons.restaurant_menu,
             child: Column(
               children: [
                 RecapChoiceChipsField(
-                  label: AppLocalizations.of(context)!.nutritionQuality,
-                  helperText: AppLocalizations.of(context)!.yourOverallPerceptionOfThisWeeksNutrition,
+                  label: l10n.nutritionQuality,
+                  helperText: l10n.yourOverallPerceptionOfThisWeeksNutrition,
                   value: formData['nutrition_quality'] as String?,
                   options: const ['BAJA', 'MODERADA', 'ALTA', 'MUY_ALTA'],
                   onSelected: (value) => onChanged('nutrition_quality', value),
                 ),
                 const SizedBox(height: 20),
                 RecapEmojiRatingField(
-                  label: AppLocalizations.of(context)!.mealQuality,
-                  helperText: AppLocalizations.of(context)!.howDoYouRateYourNutritionThisWeek,
+                  label: l10n.mealQuality,
+                  helperText: l10n.howDoYouRateYourNutritionThisWeek,
                   value: foodQuality.clamp(0, 4),
                   onChanged: (value) => onChanged('food_quality', value),
                 ),
@@ -48,8 +49,8 @@ class RecapStepNutrition extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.hydration,
-            subtitle: AppLocalizations.of(context)!.tellUsIfYouPaidAttentionToThisArea,
+            title: l10n.hydration,
+            subtitle: l10n.tellUsIfYouPaidAttentionToThisArea,
             icon: Icons.water_drop_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,22 +66,22 @@ class RecapStepNutrition extends StatelessWidget {
                   activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    AppLocalizations.of(context)!.iWantToRateMyHydration,
+                    l10n.iWantToRateMyHydration,
                     style: TextStyle(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
-                    AppLocalizations.of(context)!.enableItIfYouWantToReportHowItWentDuringTheWeek,
+                    l10n.enableItIfYouWantToReportHowItWentDuringTheWeek,
                     style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (hydrationEnabled) ...[
                   const SizedBox(height: 8),
                   RecapChoiceChipsField(
-                    label: AppLocalizations.of(context)!.hydrationLevel,
-                    helperText: AppLocalizations.of(context)!.chooseTheOptionThatFitsYouBest,
+                    label: l10n.hydrationLevel,
+                    helperText: l10n.chooseTheOptionThatFitsYouBest,
                     value: formData['hydration_level'] as String?,
                     options: const ['MALA', 'REGULAR', 'BUENA', 'MUY_BUENA'],
                     onSelected: (value) => onChanged('hydration_level', value),
@@ -90,12 +91,12 @@ class RecapStepNutrition extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.nutritionNotes,
-            subtitle: AppLocalizations.of(context)!.addContextForIssuesCravingsOrDifficulties,
+            title: l10n.nutritionNotes,
+            subtitle: l10n.addContextForIssuesCravingsOrDifficulties,
             icon: Icons.edit_note,
             child: RecapTextAreaField(
-              label: AppLocalizations.of(context)!.recapTrainingObservations,
-              hintText: AppLocalizations.of(context)!.egItWasHardToOrganizeBreakfasts,
+              label: l10n.recapTrainingObservations,
+              hintText: l10n.egItWasHardToOrganizeBreakfasts,
               initialValue: formData['nutrition_notes'] as String? ?? '',
               onChanged: (value) => onChanged('nutrition_notes', value),
             ),

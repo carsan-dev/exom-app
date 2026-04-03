@@ -36,6 +36,7 @@ import '../../features/challenges/presentation/pages/challenges_page.dart';
 
 // Recap pages
 import '../../features/recap/presentation/pages/recap_page.dart';
+import '../../features/recap/presentation/pages/recap_detail_page.dart';
 
 // Feedback pages
 import '../../features/feedback/presentation/pages/feedback_page.dart';
@@ -66,7 +67,10 @@ class AppRoutes {
   static const metrics = '/metrics';
   static const challenges = '/challenges';
   static const recap = '/recap';
+  static const recapDetailBase = '/recap';
   static const feedback = '/feedback';
+
+  static String recapDetail(String id) => '/recap/$id';
   static const settings = '/settings';
   static const help = '/help';
 }
@@ -100,14 +104,17 @@ class AppRouter {
     ),
     routes: [
       // Auth
-      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginPage()),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginPage(),
+      ),
       GoRoute(
         path: AppRoutes.accountLocked,
-        builder: (_, __) => const AccountLockedPage(),
+        builder: (context, state) => const AccountLockedPage(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (_, __) => const OnboardingPage(),
+        builder: (context, state) => const OnboardingPage(),
       ),
 
       // Main shell with bottom nav
@@ -116,7 +123,8 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (_, __) => const NoTransitionPage(child: HomePage()),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
           ),
           GoRoute(
             path: AppRoutes.trainings,
@@ -143,12 +151,12 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.calendar,
-            pageBuilder: (_, __) =>
+            pageBuilder: (context, state) =>
                 const NoTransitionPage(child: CalendarPage()),
           ),
           GoRoute(
             path: AppRoutes.challenges,
-            pageBuilder: (_, __) =>
+            pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ChallengesPage()),
           ),
         ],
@@ -157,14 +165,27 @@ class AppRouter {
       // Profile (no shell nav bar — accessible from drawer)
       GoRoute(
         path: AppRoutes.profile,
-        builder: (_, __) => const ProfilePage(),
+        builder: (context, state) => const ProfilePage(),
         routes: [
-          GoRoute(path: 'metrics', builder: (_, __) => const MetricsPage()),
+          GoRoute(
+            path: 'metrics',
+            builder: (context, state) => const MetricsPage(),
+          ),
         ],
       ),
 
       // Modal routes (no shell)
-      GoRoute(path: AppRoutes.recap, builder: (_, __) => const RecapPage()),
+      GoRoute(
+        path: AppRoutes.recap,
+        builder: (context, state) => const RecapPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) =>
+                RecapDetailPage(recapId: state.pathParameters['id']!),
+          ),
+        ],
+      ),
       GoRoute(
         path: AppRoutes.feedback,
         builder: (_, state) {
@@ -177,14 +198,19 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (_, __) => const SettingsPage(),
+        builder: (context, state) => const SettingsPage(),
       ),
-      GoRoute(path: AppRoutes.help, builder: (_, __) => const HelpPage()),
+      GoRoute(
+        path: AppRoutes.help,
+        builder: (context, state) => const HelpPage(),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Text(
-          AppLocalizations.of(context)!.pageNotFoundError(state.error.toString()),
+          AppLocalizations.of(
+            context,
+          ).pageNotFoundError(state.error.toString()),
         ),
       ),
     ),
@@ -226,8 +252,6 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: PreferredSize(
@@ -289,7 +313,7 @@ class _AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final name = user?.displayName ?? l10n.userDefaultName;
     final theme = Theme.of(context);
     final palette = context.exomPalette;

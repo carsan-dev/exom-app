@@ -18,27 +18,28 @@ class RecapStepTraining extends StatelessWidget {
     final trainingEffort = (formData['training_effort'] as num?)?.toInt() ?? 2;
     final trainingSessions =
         (formData['training_sessions'] as num?)?.toInt() ?? 2;
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         children: [
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.loadAndFeelings,
-            subtitle: AppLocalizations.of(context)!.tellUsHowYouFeltTrainingThisWeek,
+            title: l10n.loadAndFeelings,
+            subtitle: l10n.tellUsHowYouFeltTrainingThisWeek,
             icon: Icons.fitness_center,
             child: Column(
               children: [
                 RecapEmojiRatingField(
-                  label: AppLocalizations.of(context)!.overallEffort,
-                  helperText: AppLocalizations.of(context)!.howDidYouFeelWithTheTrainingLoad,
+                  label: l10n.overallEffort,
+                  helperText: l10n.howDidYouFeelWithTheTrainingLoad,
                   value: trainingEffort.round().clamp(0, 4),
                   onChanged: (value) => onChanged('training_effort', value),
                 ),
                 const SizedBox(height: 20),
                 RecapEmojiRatingField(
-                  label: AppLocalizations.of(context)!.completedSessions,
-                  helperText: AppLocalizations.of(context)!.howDoYouRateTheNumberOfSessions,
+                  label: l10n.completedSessions,
+                  helperText: l10n.howDoYouRateTheNumberOfSessions,
                   value: trainingSessions.round().clamp(0, 4),
                   onChanged: (value) => onChanged('training_sessions', value),
                 ),
@@ -46,12 +47,12 @@ class RecapStepTraining extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.perceivedProgress,
-            subtitle: AppLocalizations.of(context)!.chooseTheProgressThatBestReflectsYourWeek,
+            title: l10n.perceivedProgress,
+            subtitle: l10n.chooseTheProgressThatBestReflectsYourWeek,
             icon: Icons.trending_up,
             child: RecapChoiceChipsField(
-              label: AppLocalizations.of(context)!.progressPerception,
-              helperText: AppLocalizations.of(context)!.yourOverallFeelingAboutThePlanProgress,
+              label: l10n.progressPerception,
+              helperText: l10n.yourOverallFeelingAboutThePlanProgress,
               value: formData['training_progress'] as String?,
               options: const [
                 'NADA',
@@ -64,12 +65,12 @@ class RecapStepTraining extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.trainingNotes,
-            subtitle: AppLocalizations.of(context)!.addContextSoYourCoachCanReviewYourWeekBetter,
+            title: l10n.trainingNotes,
+            subtitle: l10n.addContextSoYourCoachCanReviewYourWeekBetter,
             icon: Icons.notes,
             child: RecapTextAreaField(
-              label: AppLocalizations.of(context)!.recapTrainingObservations,
-              hintText: AppLocalizations.of(context)!.egItWasHardToKeepThePaceOnThursday,
+              label: l10n.recapTrainingObservations,
+              hintText: l10n.egItWasHardToKeepThePaceOnThursday,
               initialValue: formData['training_notes'] as String? ?? '',
               onChanged: (value) => onChanged('training_notes', value),
             ),

@@ -20,28 +20,29 @@ class RecapStepRecovery extends StatelessWidget {
             ?.map((item) => item.toString())
             .toList() ??
         const <String>[];
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         children: [
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.restAndRecovery,
-            subtitle: AppLocalizations.of(context)!.rateHowYourBodyRespondedThisWeek,
+            title: l10n.restAndRecovery,
+            subtitle: l10n.rateHowYourBodyRespondedThisWeek,
             icon: Icons.hotel_outlined,
             child: Column(
               children: [
                 RecapChoiceChipsField(
-                  label: AppLocalizations.of(context)!.sleepHoursSectionTitle,
-                  helperText: AppLocalizations.of(context)!.selectTheRangeThatRepeatedTheMost,
+                  label: l10n.sleepHoursSectionTitle,
+                  helperText: l10n.selectTheRangeThatRepeatedTheMost,
                   value: formData['sleep_hours_range'] as String?,
                   options: const ['MENOS_5', 'ENTRE_5_6', 'ENTRE_6_7', 'MAS_8'],
                   onSelected: (value) => onChanged('sleep_hours_range', value),
                 ),
                 const SizedBox(height: 20),
                 RecapChoiceChipsField(
-                  label: AppLocalizations.of(context)!.fatigueLevel,
-                  helperText: AppLocalizations.of(context)!.howYourOverallEnergyFelt,
+                  label: l10n.fatigueLevel,
+                  helperText: l10n.howYourOverallEnergyFelt,
                   value: formData['fatigue_level'] as String?,
                   options: const ['CANSADO', 'NORMAL', 'BIEN', 'FUERTE'],
                   onSelected: (value) => onChanged('fatigue_level', value),
@@ -50,22 +51,22 @@ class RecapStepRecovery extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.discomfortOrTightness,
-            subtitle: AppLocalizations.of(context)!.tapTheAreasThatFeltTheMostLoaded,
+            title: l10n.discomfortOrTightness,
+            subtitle: l10n.tapTheAreasThatFeltTheMostLoaded,
             icon: Icons.accessibility_new,
             child: Column(
               children: [
                 RecapBodyMapField(
-                  label: AppLocalizations.of(context)!.areasWithPainOrTension,
-                  helperText: AppLocalizations.of(context)!.tapTheAffectedBodyAreas,
+                  label: l10n.areasWithPainOrTension,
+                  helperText: l10n.tapTheAffectedBodyAreas,
                   values: musclePainZones,
                   onChanged: (value) => onChanged('muscle_pain_zones', value),
                 ),
                 if (musclePainZones.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   RecapChoiceChipsField(
-                    label: AppLocalizations.of(context)!.painIntensity,
-                    helperText: AppLocalizations.of(context)!.overallLevelOfDiscomfortFelt,
+                    label: l10n.painIntensity,
+                    helperText: l10n.overallLevelOfDiscomfortFelt,
                     value: formData['pain_intensity'] as String?,
                     options: const ['LEVE', 'MODERADO', 'ALTO', 'MUY_ALTO'],
                     onSelected: (value) => onChanged('pain_intensity', value),
@@ -75,12 +76,12 @@ class RecapStepRecovery extends StatelessWidget {
             ),
           ),
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.recoveryNotes,
-            subtitle: AppLocalizations.of(context)!.addAnythingImportantToAdjustThePlan,
+            title: l10n.recoveryNotes,
+            subtitle: l10n.addAnythingImportantToAdjustThePlan,
             icon: Icons.self_improvement,
             child: RecapTextAreaField(
-              label: AppLocalizations.of(context)!.recapTrainingObservations,
-              hintText: AppLocalizations.of(context)!.egIStillHaveLowerBackTightness,
+              label: l10n.recapTrainingObservations,
+              hintText: l10n.egIStillHaveLowerBackTightness,
               initialValue: formData['recovery_notes'] as String? ?? '',
               onChanged: (value) => onChanged('recovery_notes', value),
             ),

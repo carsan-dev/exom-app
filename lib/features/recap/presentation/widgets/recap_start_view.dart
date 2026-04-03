@@ -38,7 +38,7 @@ class RecapStartView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     final sections = [
       (icon: Icons.fitness_center_rounded, label: l10n.recapTraining),
@@ -47,7 +47,10 @@ class RecapStartView extends StatelessWidget {
       (icon: Icons.mood_rounded, label: l10n.recapGeneral),
     ];
 
-    final allComplete = List.generate(4, (i) => _isStepComplete(i)).every((c) => c);
+    final allComplete = List.generate(
+      4,
+      (i) => _isStepComplete(i),
+    ).every((c) => c);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -64,7 +67,11 @@ class RecapStartView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_rounded, size: 15, color: palette.primary),
+                Icon(
+                  Icons.calendar_today_rounded,
+                  size: 15,
+                  color: palette.primary,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   weekLabel,
@@ -160,7 +167,10 @@ class RecapStartView extends StatelessWidget {
                                   : Colors.transparent,
                               border: isComplete
                                   ? null
-                                  : Border.all(color: palette.divider, width: 2),
+                                  : Border.all(
+                                      color: palette.divider,
+                                      width: 2,
+                                    ),
                             ),
                             child: isComplete
                                 ? const Icon(
@@ -174,7 +184,12 @@ class RecapStartView extends StatelessWidget {
                       ),
                     ),
                     if (!isLast)
-                      Divider(height: 1, indent: 18, endIndent: 18, color: palette.divider),
+                      Divider(
+                        height: 1,
+                        indent: 18,
+                        endIndent: 18,
+                        color: palette.divider,
+                      ),
                   ],
                 );
               }),
@@ -186,9 +201,7 @@ class RecapStartView extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: allComplete ? onReviewAndSend : onStart,
               icon: Icon(
-                allComplete
-                    ? Icons.send_rounded
-                    : Icons.play_arrow_rounded,
+                allComplete ? Icons.send_rounded : Icons.play_arrow_rounded,
               ),
               label: Text(
                 allComplete
@@ -200,10 +213,7 @@ class RecapStartView extends StatelessWidget {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: TextButton(
-              onPressed: onCancel,
-              child: Text(l10n.cancel),
-            ),
+            child: TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
           ),
         ],
       ),

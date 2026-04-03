@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
+import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_start_view.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_general.dart';
@@ -51,6 +52,7 @@ class _RecapViewState extends State<_RecapView> {
       listener: (context, state) {
         final palette = context.exomPalette;
         final semantic = context.exomSemantic;
+        final l10n = AppLocalizations.of(context);
         if (state is RecapFormActive) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!_pageController.hasClients) return;
@@ -65,9 +67,7 @@ class _RecapViewState extends State<_RecapView> {
         if (state is RecapSubmitted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                AppLocalizations.of(context)!.recapSentSuccessfully,
-              ),
+              content: Text(l10n.recapSentSuccessfully),
               backgroundColor: semantic.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -95,6 +95,7 @@ class _RecapViewState extends State<_RecapView> {
         final isFormActive = formState != null;
         final theme = Theme.of(context);
         final palette = context.exomPalette;
+        final l10n = AppLocalizations.of(context);
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
@@ -102,11 +103,11 @@ class _RecapViewState extends State<_RecapView> {
             title: Text(
               isFormActive
                   ? formState.step == 5
-                        ? AppLocalizations.of(context)!.recapImprovementTitle
+                        ? l10n.recapImprovementTitle
                         : formState.recapId == null
-                        ? AppLocalizations.of(context)!.newRecap
-                        : AppLocalizations.of(context)!.editRecap
-                  : AppLocalizations.of(context)!.weeklyRecapTitle,
+                        ? l10n.newRecap
+                        : l10n.editRecap
+                  : l10n.weeklyRecapTitle,
             ),
             backgroundColor: theme.scaffoldBackgroundColor,
             surfaceTintColor: Colors.transparent,
@@ -142,7 +143,7 @@ class _RecapViewState extends State<_RecapView> {
                   backgroundColor: palette.primary,
                   foregroundColor: palette.onPrimary,
                   icon: const Icon(Icons.add),
-                  label: Text(AppLocalizations.of(context)!.newRecap),
+                  label: Text(l10n.newRecap),
                 )
               : null,
           body: AnimatedSwitcher(
@@ -155,11 +156,12 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   Widget _buildBody(BuildContext context, RecapState state) {
+    final l10n = AppLocalizations.of(context);
     final stepTitles = [
-      AppLocalizations.of(context)!.recapTraining,
-      AppLocalizations.of(context)!.recapNutrition,
-      AppLocalizations.of(context)!.recapRecovery,
-      AppLocalizations.of(context)!.recapGeneral,
+      l10n.recapTraining,
+      l10n.recapNutrition,
+      l10n.recapRecovery,
+      l10n.recapGeneral,
     ];
 
     if (state is RecapLoading || state is RecapInitial) {
@@ -200,9 +202,12 @@ class _RecapViewState extends State<_RecapView> {
         },
         onCreate: () =>
             context.read<RecapBloc>().add(const RecapCreateRequested()),
-        onOpenRecap: (recap) {
+        onOpenRecap: (recap) async {
           if (recap.isReviewed) {
-            _showRecapSummary(context, recap);
+            await context.push(AppRoutes.recapDetail(recap.id));
+            if (!context.mounted) return;
+
+            context.read<RecapBloc>().add(const RecapLoadRequested());
             return;
           }
 
@@ -229,7 +234,7 @@ class _RecapViewState extends State<_RecapView> {
               Icon(Icons.error_outline, color: palette.error, size: 42),
               const SizedBox(height: 16),
               Text(
-                AppLocalizations.of(context)!.couldNotLoadRecap,
+                l10n.couldNotLoadRecap,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -242,7 +247,7 @@ class _RecapViewState extends State<_RecapView> {
               ElevatedButton(
                 onPressed: () =>
                     context.read<RecapBloc>().add(const RecapLoadRequested()),
-                child: Text(AppLocalizations.of(context)!.retry),
+                child: Text(l10n.retry),
               ),
             ],
           ),
@@ -282,183 +287,24 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   String _formatWeekRange(Map<String, dynamic> formData) {
+    final l10n = AppLocalizations.of(context);
     final start = formData['week_start_date'] as String?;
     final end = formData['week_end_date'] as String?;
-    if (start == null || end == null)
-      return AppLocalizations.of(context)!.weekWithoutDates;
+    if (start == null || end == null) {
+      return l10n.weekWithoutDates;
+    }
 
     final startDate = DateTime.tryParse(start);
     final endDate = DateTime.tryParse(end);
-    if (startDate == null || endDate == null)
-      return AppLocalizations.of(context)!.weekWithoutDates;
+    if (startDate == null || endDate == null) {
+      return l10n.weekWithoutDates;
+    }
 
-    final format = DateFormat('dd MMM', Localizations.localeOf(context).languageCode);
-    return '${format.format(startDate)} - ${format.format(endDate)}';
-  }
-
-  void _showRecapSummary(BuildContext context, RecapEntity recap) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.exomPalette.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _formatWeekRange(_buildInitialData(recap)),
-                          style: TextStyle(
-                            color: context.exomPalette.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      _StatusChip(status: recap.status),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  _SummarySection(
-                    title: AppLocalizations.of(context)!.recapTraining,
-                    children: [
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.effort,
-                        recap.trainingEffort?.toString() ?? '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.sessions,
-                        recap.trainingSessions?.toString() ?? '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.progress,
-                        recap.trainingProgress != null
-                            ? formatRecapOption(recap.trainingProgress!)
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.notes,
-                        recap.trainingNotes ?? '—',
-                      ),
-                    ],
-                  ),
-                  _SummarySection(
-                    title: AppLocalizations.of(context)!.recapNutrition,
-                    children: [
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.quality,
-                        recap.nutritionQuality != null
-                            ? formatRecapOption(recap.nutritionQuality!)
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.hydration,
-                        recap.hydrationEnabled
-                            ? formatRecapOption(
-                                recap.hydrationLevel ?? 'ACTIVA',
-                              )
-                            : AppLocalizations.of(context)!.notRatedFeminine,
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.meals,
-                        recap.foodQuality?.toString() ?? '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.notes,
-                        recap.nutritionNotes ?? '—',
-                      ),
-                    ],
-                  ),
-                  _SummarySection(
-                    title: AppLocalizations.of(context)!.recapRecovery,
-                    children: [
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.sleep,
-                        recap.sleepHoursRange != null
-                            ? formatRecapOption(recap.sleepHoursRange!)
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.fatigueLevel,
-                        recap.fatigueLevel != null
-                            ? formatRecapOption(recap.fatigueLevel!)
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.discomfortOrTightness,
-                        recap.musclePainZones.isEmpty
-                            ? AppLocalizations.of(context)!.noZonesSelected
-                            : recap.musclePainZones
-                                  .map(formatRecapOption)
-                                  .join(', '),
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.notes,
-                        recap.recoveryNotes ?? '—',
-                      ),
-                    ],
-                  ),
-                  _SummarySection(
-                    title: AppLocalizations.of(context)!.recapGeneral,
-                    children: [
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.mood,
-                        recap.mood != null
-                            ? formatRecapOption(recap.mood!)
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.stress,
-                        recap.stressEnabled
-                            ? '${recap.stressLevel ?? 0}/5'
-                            : AppLocalizations.of(context)!.notRated,
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.rateTheApp,
-                        recap.improvementAppRating != null
-                            ? '${recap.improvementAppRating}/5'
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.rateTheService,
-                        recap.improvementServiceRating != null
-                            ? '${recap.improvementServiceRating}/5'
-                            : '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.selectThePointsWhereYouWantMoreSupport,
-                        recap.improvementAreas.isEmpty
-                            ? AppLocalizations.of(context)!.noAreasSelected
-                            : recap.improvementAreas
-                                  .map(formatRecapOption)
-                                  .join(', '),
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.notes,
-                        recap.generalNotes ?? '—',
-                      ),
-                      _SummaryItem(
-                        AppLocalizations.of(context)!.feedback,
-                        recap.improvementFeedbackText ?? '—',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    final format = DateFormat(
+      'dd MMM',
+      Localizations.localeOf(context).languageCode,
     );
+    return '${format.format(startDate)} - ${format.format(endDate)}';
   }
 }
 
@@ -466,7 +312,7 @@ class _RecapListView extends StatelessWidget {
   final List<RecapEntity> recaps;
   final Future<void> Function() onRefresh;
   final VoidCallback onCreate;
-  final ValueChanged<RecapEntity> onOpenRecap;
+  final Future<void> Function(RecapEntity recap) onOpenRecap;
   final String Function(RecapEntity recap) formatWeekRange;
 
   const _RecapListView({
@@ -482,6 +328,7 @@ class _RecapListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     if (recaps.isEmpty) {
       return Center(
         child: Padding(
@@ -504,7 +351,7 @@ class _RecapListView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                AppLocalizations.of(context)!.youHaveNotSentAnyRecapYet,
+                l10n.youHaveNotSentAnyRecapYet,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: palette.textPrimary,
@@ -514,7 +361,7 @@ class _RecapListView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                AppLocalizations.of(context)!.useThisSpaceToSummarizeYourWeek,
+                l10n.useThisSpaceToSummarizeYourWeek,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: palette.textSecondary,
@@ -525,9 +372,7 @@ class _RecapListView extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onCreate,
                 icon: const Icon(Icons.add),
-                label: Text(
-                  AppLocalizations.of(context)!.createMyFirstRecap,
-                ),
+                label: Text(l10n.createMyFirstRecap),
               ),
             ],
           ),
@@ -554,7 +399,7 @@ class _RecapListView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.yourWeeklyHistory,
+                  l10n.yourWeeklyHistory,
                   style: TextStyle(
                     color: palette.textPrimary,
                     fontSize: 16,
@@ -563,7 +408,7 @@ class _RecapListView extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  AppLocalizations.of(context)!.trackYourWeeksReviewPreviousRecaps,
+                  l10n.trackYourWeeksReviewPreviousRecaps,
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: 13,
@@ -577,7 +422,9 @@ class _RecapListView extends StatelessWidget {
             (recap) => _RecapHistoryCard(
               recap: recap,
               weekLabel: formatWeekRange(recap),
-              onPressed: () => onOpenRecap(recap),
+              onPressed: () async {
+                await onOpenRecap(recap);
+              },
             ),
           ),
         ],
@@ -601,19 +448,30 @@ class _RecapHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final trainingProgress = recap.trainingProgress;
+    final nutritionQuality = recap.nutritionQuality;
+    final mood = recap.mood;
     final actionLabel = recap.isReviewed
-        ? AppLocalizations.of(context)!.viewSummary
+        ? l10n.viewSummary
         : recap.isSubmitted
-        ? AppLocalizations.of(context)!.update
-        : AppLocalizations.of(context)!.continueButton;
+        ? l10n.update
+        : l10n.continueButton;
+    final hasUnread = recap.hasUnreadClientFeedback;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: palette.surface,
+        color: hasUnread
+            ? palette.primary.withValues(alpha: 0.06)
+            : palette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
+        border: Border.all(
+          color: hasUnread
+              ? palette.primary.withValues(alpha: 0.35)
+              : palette.divider,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,12 +492,33 @@ class _RecapHistoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${AppLocalizations.of(context)!.created} ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
+                      '${l10n.created} ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: palette.textDisabled,
                         fontSize: 12,
                       ),
                     ),
+                    if (hasUnread) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.mark_chat_unread_outlined,
+                            size: 13,
+                            color: palette.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Nuevo comentario de tu entrenador',
+                            style: TextStyle(
+                              color: palette.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -653,21 +532,21 @@ class _RecapHistoryCard extends StatelessWidget {
             children: [
               _InfoPill(
                 icon: Icons.fitness_center,
-                label: recap.trainingProgress != null
-                    ? formatRecapOption(recap.trainingProgress!)
-                    : AppLocalizations.of(context)!.trainingNotRated,
+                label: trainingProgress != null
+                    ? formatRecapOption(trainingProgress)
+                    : l10n.trainingNotRated,
               ),
               _InfoPill(
                 icon: Icons.restaurant,
-                label: recap.nutritionQuality != null
-                    ? formatRecapOption(recap.nutritionQuality!)
-                    : AppLocalizations.of(context)!.nutritionNotRated,
+                label: nutritionQuality != null
+                    ? formatRecapOption(nutritionQuality)
+                    : l10n.nutritionNotRated,
               ),
               _InfoPill(
                 icon: Icons.mood,
-                label: recap.mood != null
-                    ? formatRecapOption(recap.mood!)
-                    : AppLocalizations.of(context)!.moodNotRated,
+                label: mood != null
+                    ? formatRecapOption(mood)
+                    : l10n.moodNotRated,
               ),
             ],
           ),
@@ -721,7 +600,7 @@ class _RecapFormView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       children: [
@@ -1003,80 +882,6 @@ class _InfoPill extends StatelessWidget {
               color: palette.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummarySection extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const _SummarySection({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _SummaryItem(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: palette.textDisabled,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 14,
-              height: 1.4,
             ),
           ),
         ],

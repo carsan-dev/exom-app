@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 

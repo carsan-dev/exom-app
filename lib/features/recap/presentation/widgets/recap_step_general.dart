@@ -19,20 +19,21 @@ class RecapStepGeneral extends StatelessWidget {
     final stressEnabled = formData['stress_enabled'] as bool? ?? false;
     final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 2;
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         children: [
           RecapSectionCard(
-            title: AppLocalizations.of(context)!.generalState,
-            subtitle: AppLocalizations.of(context)!.yourMentalAndEmotionalContextAlsoMatters,
+            title: l10n.generalState,
+            subtitle: l10n.yourMentalAndEmotionalContextAlsoMatters,
             icon: Icons.mood,
             child: Column(
               children: [
                 RecapChoiceChipsField(
-                  label: AppLocalizations.of(context)!.mainMood,
-                  helperText: AppLocalizations.of(context)!.howYouFeltMostOfTheWeek,
+                  label: l10n.mainMood,
+                  helperText: l10n.howYouFeltMostOfTheWeek,
                   value: formData['mood'] as String?,
                   options: const [
                     'MAL',
@@ -55,30 +56,30 @@ class RecapStepGeneral extends StatelessWidget {
                   activeThumbColor: palette.primary,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    AppLocalizations.of(context)!.rateStressLevel,
+                    l10n.rateStressLevel,
                     style: TextStyle(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
-                    AppLocalizations.of(context)!.enableItIfYouWantToReportThePressureOrLoadOfTheWeek,
+                    l10n.enableItIfYouWantToReportThePressureOrLoadOfTheWeek,
                     style: TextStyle(color: palette.textDisabled),
                   ),
                 ),
                 if (stressEnabled) ...[
                   const SizedBox(height: 8),
                   RecapEmojiRatingField(
-                    label: AppLocalizations.of(context)!.perceivedStress,
-                    helperText: AppLocalizations.of(context)!.howMuchStressDidYouFeelThisWeek,
+                    label: l10n.perceivedStress,
+                    helperText: l10n.howMuchStressDidYouFeelThisWeek,
                     value: stressLevel.clamp(0, 4),
                     onChanged: (value) => onChanged('stress_level', value),
                   ),
                 ],
                 const SizedBox(height: 20),
                 RecapTextAreaField(
-                  label: AppLocalizations.of(context)!.notes,
-                  hintText: AppLocalizations.of(context)!.shareAnyRelevantDetailFromYourWeek,
+                  label: l10n.notes,
+                  hintText: l10n.shareAnyRelevantDetailFromYourWeek,
                   initialValue: formData['general_notes'] as String? ?? '',
                   onChanged: (value) => onChanged('general_notes', value),
                 ),

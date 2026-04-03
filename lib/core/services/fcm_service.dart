@@ -174,6 +174,10 @@ class FcmService {
 
     final type = message.data['type']?.toLowerCase();
     switch (type) {
+      case 'recap_feedback':
+        // Route may carry a specific recap id, e.g. '/recap/<id>'
+        // The direct route path is preferred — already handled above via directRoute check.
+        return '/recap';
       case 'recap_reminder':
       case 'recap':
         return '/recap';

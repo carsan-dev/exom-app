@@ -98,6 +98,7 @@ class LocalNotificationService {
 
   bool _shouldPush(String route) {
     return route == AppRoutes.recap ||
+        route.startsWith('${AppRoutes.recap}/') ||
         route == AppRoutes.profile ||
         route == AppRoutes.feedback ||
         route == AppRoutes.settings ||

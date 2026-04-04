@@ -58,15 +58,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     Emitter<ProfileState> emit,
   ) async {
     final current = state;
+    final history = current is ProfileLoaded
+        ? current.weightHistory
+        : <BodyMetricEntity>[];
+    final latest = current is ProfileLoaded ? current.latestMetric : null;
     if (current is ProfileLoaded) {
-      emit(ProfileAvatarUploading(current.profile));
+      emit(ProfileAvatarUploading(
+        current.profile,
+        weightHistory: history,
+        latestMetric: latest,
+      ));
     }
     try {
       final updated = await _uploadAvatarUseCase(event.file);
-      final history = current is ProfileLoaded
-          ? current.weightHistory
-          : <BodyMetricEntity>[];
-      emit(ProfileLoaded(updated, weightHistory: history));
+      emit(ProfileLoaded(updated, weightHistory: history, latestMetric: latest));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }

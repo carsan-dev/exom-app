@@ -83,8 +83,8 @@ class _ProfileView extends StatelessWidget {
           return _ProfileContent(
             profile: state.profile,
             isUploadingAvatar: true,
-            weightHistory: const [],
-            latestMetric: null,
+            weightHistory: state.weightHistory,
+            latestMetric: state.latestMetric,
           );
         }
         return const SizedBox.shrink();

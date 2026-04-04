@@ -18,6 +18,7 @@ class RecapModel extends RecapEntity {
     super.sleepHoursRange,
     super.fatigueLevel,
     super.musclePainZones,
+    super.painIntensity,
     super.recoveryNotes,
     super.mood,
     super.stressEnabled,
@@ -56,6 +57,7 @@ class RecapModel extends RecapEntity {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      painIntensity: json['pain_intensity'] as String?,
       recoveryNotes: json['recovery_notes'] as String?,
       mood: json['mood'] as String?,
       stressEnabled: json['stress_enabled'] as bool? ?? false,

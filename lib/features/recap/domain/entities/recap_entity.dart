@@ -21,6 +21,7 @@ class RecapEntity {
   final String? sleepHoursRange;
   final String? fatigueLevel;
   final List<String> musclePainZones;
+  final String? painIntensity;
   final String? recoveryNotes;
 
   // General
@@ -61,6 +62,7 @@ class RecapEntity {
     this.sleepHoursRange,
     this.fatigueLevel,
     this.musclePainZones = const [],
+    this.painIntensity,
     this.recoveryNotes,
     this.mood,
     this.stressEnabled = false,
@@ -105,6 +107,7 @@ class RecapEntity {
       sleepHoursRange: sleepHoursRange,
       fatigueLevel: fatigueLevel,
       musclePainZones: musclePainZones,
+      painIntensity: painIntensity,
       recoveryNotes: recoveryNotes,
       mood: mood,
       stressEnabled: stressEnabled,

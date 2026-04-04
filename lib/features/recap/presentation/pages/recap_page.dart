@@ -203,7 +203,7 @@ class _RecapViewState extends State<_RecapView> {
         onCreate: () =>
             context.read<RecapBloc>().add(const RecapCreateRequested()),
         onOpenRecap: (recap) async {
-          if (recap.isReviewed) {
+          if (!recap.isDraft) {
             await context.push(AppRoutes.recapDetail(recap.id));
             if (!context.mounted) return;
 
@@ -274,6 +274,7 @@ class _RecapViewState extends State<_RecapView> {
       'sleep_hours_range': recap.sleepHoursRange,
       'fatigue_level': recap.fatigueLevel,
       'muscle_pain_zones': List<String>.from(recap.musclePainZones),
+      'pain_intensity': recap.painIntensity,
       'recovery_notes': recap.recoveryNotes,
       'mood': recap.mood,
       'stress_enabled': recap.stressEnabled,
@@ -452,11 +453,7 @@ class _RecapHistoryCard extends StatelessWidget {
     final trainingProgress = recap.trainingProgress;
     final nutritionQuality = recap.nutritionQuality;
     final mood = recap.mood;
-    final actionLabel = recap.isReviewed
-        ? l10n.viewSummary
-        : recap.isSubmitted
-        ? l10n.update
-        : l10n.continueButton;
+    final actionLabel = recap.isDraft ? l10n.continueButton : l10n.viewSummary;
     final hasUnread = recap.hasUnreadClientFeedback;
 
     return Container(

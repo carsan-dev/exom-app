@@ -19,7 +19,7 @@ class FeedbackPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return BlocProvider(
       create: (_) => sl<FeedbackBloc>()..add(const FeedbackLoadRequested()),
@@ -36,7 +36,7 @@ class FeedbackPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    AppLocalizations.of(context)!.feedbackSentSuccessfully,
+                    AppLocalizations.of(context).feedbackSentSuccessfully,
                   ),
                   backgroundColor: AppColors.success,
                   shape: RoundedRectangleBorder(
@@ -52,7 +52,6 @@ class FeedbackPage extends StatelessWidget {
                   backgroundColor: palette.error,
                 ),
               );
-              context.read<FeedbackBloc>().add(const FeedbackLoadRequested());
             }
           },
           builder: (context, state) {
@@ -186,7 +185,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -244,8 +243,9 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed:
-                  (widget.isSubmitting || _selectedFile == null) ? null : _submit,
+              onPressed: (widget.isSubmitting || _selectedFile == null)
+                  ? null
+                  : _submit,
               child: widget.isSubmitting
                   ? const SizedBox(
                       width: 20,
@@ -273,7 +273,7 @@ class _FeedbackCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final dateStr = DateFormat(
       'dd MMM yyyy',
       Localizations.localeOf(context).languageCode,
@@ -374,7 +374,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

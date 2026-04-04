@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
@@ -12,6 +13,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
   final GetMyFeedbackUseCase _getMyFeedbackUseCase;
   final CreateFeedbackUseCase _createFeedbackUseCase;
   final UploadFeedbackMediaUseCase _uploadFeedbackMediaUseCase;
+  List<FeedbackEntity> _cachedItems = const [];
 
   FeedbackBloc({
     required GetMyFeedbackUseCase getMyFeedbackUseCase,
@@ -33,9 +35,10 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     emit(const FeedbackLoading());
     try {
       final items = await _getMyFeedbackUseCase();
+      _cachedItems = items;
       emit(FeedbackLoaded(items));
-    } catch (e) {
-      emit(FeedbackError(e.toString()));
+    } catch (error) {
+      emit(FeedbackError(_errorMessage(error), _cachedItems));
     }
   }
 
@@ -43,7 +46,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     FeedbackSubmitRequested event,
     Emitter<FeedbackState> emit,
   ) async {
-    emit(const FeedbackSubmitting());
+    emit(FeedbackSubmitting(_cachedItems));
     try {
       await _createFeedbackUseCase(
         mediaType: event.mediaType,
@@ -52,9 +55,10 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
         exerciseId: event.exerciseId,
       );
       final items = await _getMyFeedbackUseCase();
+      _cachedItems = items;
       emit(FeedbackSubmitSuccess(items));
-    } catch (e) {
-      emit(FeedbackError(e.toString()));
+    } catch (error) {
+      emit(FeedbackError(_errorMessage(error), _cachedItems));
     }
   }
 
@@ -62,7 +66,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     FeedbackUploadAndSubmit event,
     Emitter<FeedbackState> emit,
   ) async {
-    emit(const FeedbackSubmitting());
+    emit(FeedbackSubmitting(_cachedItems));
     try {
       final fileUrl = await _uploadFeedbackMediaUseCase(
         event.file,
@@ -75,9 +79,24 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
         exerciseId: event.exerciseId,
       );
       final items = await _getMyFeedbackUseCase();
+      _cachedItems = items;
       emit(FeedbackSubmitSuccess(items));
-    } catch (e) {
-      emit(FeedbackError(e.toString()));
+    } catch (error) {
+      emit(FeedbackError(_errorMessage(error), _cachedItems));
     }
+  }
+
+  String _errorMessage(Object error) {
+    final apiException = ApiException.maybeFrom(error);
+    if (apiException != null) {
+      return apiException.message;
+    }
+
+    final message = error.toString().trim();
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length);
+    }
+
+    return message;
   }
 }

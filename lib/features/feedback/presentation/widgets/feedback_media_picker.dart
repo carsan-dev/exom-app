@@ -46,7 +46,7 @@ class FeedbackMediaPicker extends StatelessWidget {
   }
 
   void _showImageSourceSheet(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
 
     showModalBottomSheet(
@@ -62,18 +62,24 @@ class FeedbackMediaPicker extends StatelessWidget {
             const SizedBox(height: 8),
             ListTile(
               leading: Icon(Icons.camera_alt_outlined, color: palette.primary),
-              title: Text(l10n.feedbackFromCamera,
-                  style: TextStyle(color: palette.textPrimary)),
+              title: Text(
+                l10n.feedbackFromCamera,
+                style: TextStyle(color: palette.textPrimary),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(context, ImageSource.camera);
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.photo_library_outlined, color: palette.primary),
-              title: Text(l10n.feedbackFromGallery,
-                  style: TextStyle(color: palette.textPrimary)),
+              leading: Icon(
+                Icons.photo_library_outlined,
+                color: palette.primary,
+              ),
+              title: Text(
+                l10n.feedbackFromGallery,
+                style: TextStyle(color: palette.textPrimary),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(context, ImageSource.gallery);
@@ -89,7 +95,7 @@ class FeedbackMediaPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     if (isUploading) {
       return Container(
@@ -140,18 +146,14 @@ class FeedbackMediaPicker extends StatelessWidget {
             Expanded(
               child: Text(
                 selectedFile!.path.split('/').last,
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: palette.textPrimary, fontSize: 13),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (onClear != null)
               GestureDetector(
                 onTap: onClear,
-                child:
-                    Icon(Icons.close, color: palette.textDisabled, size: 18),
+                child: Icon(Icons.close, color: palette.textDisabled, size: 18),
               ),
           ],
         ),
@@ -214,8 +216,7 @@ class FeedbackMediaPicker extends StatelessWidget {
                   mediaType == 'VIDEO'
                       ? l10n.feedbackFromGallery
                       : l10n.feedbackSelectImage,
-                  style:
-                      TextStyle(color: palette.textSecondary, fontSize: 14),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 14),
                 ),
               ],
             ),

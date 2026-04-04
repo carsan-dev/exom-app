@@ -73,30 +73,36 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
   @override
   Future<String> uploadMedia(File file, String contentType) async {
     final ext = file.path.split('.').last.toLowerCase();
-    final fileKey =
-        'feedback/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final fileKey = 'feedback/${DateTime.now().millisecondsSinceEpoch}.$ext';
 
-    final presigned = await _apiClient.post<Map<String, dynamic>>(
-      '/uploads/presigned',
-      data: {'file_key': fileKey, 'content_type': contentType},
-    );
-
-    final uploadUrl = presigned['upload_url'] as String;
-    final fileUrl = presigned['file_url'] as String;
-
-    final bytes = await file.readAsBytes();
-    await Dio().put(
-      uploadUrl,
-      data: Stream.fromIterable([bytes]),
-      options: Options(
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': bytes.length.toString(),
-        },
-        contentType: contentType,
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: '${DateTime.now().millisecondsSinceEpoch}.$ext',
+        contentType: DioMediaType.parse(contentType),
       ),
-    );
+      'file_key': fileKey,
+      'content_type': contentType,
+    });
 
-    return fileUrl;
+    try {
+      final response = await _apiClient.dio.post<dynamic>(
+        '/uploads/file',
+        data: formData,
+      );
+
+      final payload = response.data;
+      if (payload is! Map<String, dynamic>) {
+        throw Exception('Invalid upload response');
+      }
+      return ((payload['data'] as Map<String, dynamic>)['file_url'] as String?)
+          ?? (payload['file_url'] as String);
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      final message = statusCode == null
+          ? 'No se pudo subir el archivo. Revisa tu conexion e intentalo de nuevo.'
+          : 'No se pudo completar la subida del archivo ($statusCode).';
+      throw Exception(message);
+    }
   }
 }

@@ -71,28 +71,31 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<ProfileModel> uploadAvatar(File file) async {
-    final fileKey = 'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileKey =
+        'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    final presigned = await _apiClient.post<Map<String, dynamic>>(
-      '/uploads/presigned',
-      data: {'file_key': fileKey, 'content_type': 'image/jpeg'},
-    );
-
-    final uploadUrl = presigned['upload_url'] as String;
-    final fileUrl = presigned['file_url'] as String;
-
-    final bytes = await file.readAsBytes();
-    await Dio().put(
-      uploadUrl,
-      data: Stream.fromIterable([bytes]),
-      options: Options(
-        headers: {
-          'Content-Type': 'image/jpeg',
-          'Content-Length': bytes.length.toString(),
-        },
-        contentType: 'image/jpeg',
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: '${DateTime.now().millisecondsSinceEpoch}.jpg',
+        contentType: DioMediaType('image', 'jpeg'),
       ),
+      'file_key': fileKey,
+      'content_type': 'image/jpeg',
+    });
+
+    final response = await _apiClient.dio.post<dynamic>(
+      '/uploads/file',
+      data: formData,
     );
+
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw Exception('Invalid upload response');
+    }
+    final fileUrl =
+        ((payload['data'] as Map<String, dynamic>)['file_url'] as String?) ??
+        (payload['file_url'] as String);
 
     return updateProfile({'avatar_url': fileUrl});
   }

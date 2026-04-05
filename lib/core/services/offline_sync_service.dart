@@ -130,7 +130,7 @@ class OfflineSyncService {
 
   Future<void> _enqueueAction(Map<String, dynamic> action) async {
     final queue = _localStorage.getPendingSyncActions();
-    queue.add({...action, 'queued_at': DateTime.now().toIso8601String()});
+    queue.add({...action, 'queued_at': DateTime.now().toUtc().toIso8601String()});
     await _persistQueue(queue);
   }
 

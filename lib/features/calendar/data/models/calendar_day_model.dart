@@ -12,7 +12,7 @@ class CalendarDayModel extends CalendarDayEntity {
 
   factory CalendarDayModel.fromJson(Map<String, dynamic> json) {
     return CalendarDayModel(
-      date: DateTime.parse(json['date'] as String),
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.utc(1970),
       hasTraining: json['has_training'] as bool? ?? false,
       hasDiet: json['has_diet'] as bool? ?? false,
       isRestDay: json['is_rest_day'] as bool? ?? false,

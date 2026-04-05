@@ -47,18 +47,18 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     emit(const DietLoading());
     try {
       final targetDate = _resolvedDate(event.date);
-      final results = await Future.wait([
-        _getTodayDietUseCase(targetDate),
-        _getCompletedMealsUseCase(targetDate),
-      ]);
-      final diet = results[0] as DietEntity?;
+      final diet = await _getTodayDietUseCase(targetDate);
       if (diet == null) {
         emit(DietNoContent(selectedDate: targetDate));
       } else {
+        Set<String> completedMealIds = {};
+        try {
+          completedMealIds = await _getCompletedMealsUseCase(targetDate);
+        } catch (_) {}
         emit(
           DietLoaded(
             diet,
-            completedMealIds: results[1] as Set<String>,
+            completedMealIds: completedMealIds,
             selectedDate: targetDate,
           ),
         );

@@ -36,7 +36,7 @@ class BodyMetricModel {
   factory BodyMetricModel.fromJson(Map<String, dynamic> json) {
     return BodyMetricModel(
       id: json['id'] as String? ?? '',
-      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.utc(1970),
       weightKg: (json['weight_kg'] as num?)?.toDouble(),
       heightCm: (json['height_cm'] as num?)?.toDouble(),
       muscleMassKg: (json['muscle_mass_kg'] as num?)?.toDouble(),

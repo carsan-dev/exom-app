@@ -33,7 +33,7 @@ class ApiClient {
       path,
       queryParameters: queryParameters,
     );
-    final data = response.data!['data'];
+    final data = response.data?['data'];
     if (fromJson != null && data is Map<String, dynamic>) {
       return fromJson(data);
     }
@@ -46,7 +46,7 @@ class ApiClient {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(path, data: data);
-    final responseData = response.data!['data'];
+    final responseData = response.data?['data'];
     if (fromJson != null && responseData is Map<String, dynamic>) {
       return fromJson(responseData);
     }
@@ -59,7 +59,7 @@ class ApiClient {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     final response = await _dio.put<Map<String, dynamic>>(path, data: data);
-    final responseData = response.data!['data'];
+    final responseData = response.data?['data'];
     if (fromJson != null && responseData is Map<String, dynamic>) {
       return fromJson(responseData);
     }
@@ -72,7 +72,7 @@ class ApiClient {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     final response = await _dio.patch<Map<String, dynamic>>(path, data: data);
-    final responseData = response.data!['data'];
+    final responseData = response.data?['data'];
     if (fromJson != null && responseData is Map<String, dynamic>) {
       return fromJson(responseData);
     }

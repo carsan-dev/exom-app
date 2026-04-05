@@ -19,7 +19,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadRequested event,
     Emitter<HomeState> emit,
   ) async {
-    final today = DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
     await _loadForDate(today, emit);
   }
 

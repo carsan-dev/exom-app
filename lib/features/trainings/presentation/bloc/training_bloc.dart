@@ -98,15 +98,15 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     emit(const TrainingLoading());
     try {
       final targetDate = _resolvedDate(event.date);
-      final results = await Future.wait([
-        _getTrainingUseCase(event.id),
-        _getCompletedExercisesUseCase(targetDate),
-      ]);
-      final progress =
-          results[1] as ({Set<String> ids, Map<String, double> weights});
+      final training = await _getTrainingUseCase(event.id);
+      ({Set<String> ids, Map<String, double> weights}) progress =
+          (ids: <String>{}, weights: <String, double>{});
+      try {
+        progress = await _getCompletedExercisesUseCase(targetDate);
+      } catch (_) {}
       emit(
         TrainingDetailLoaded(
-          results[0] as TrainingEntity,
+          training,
           completedExerciseIds: progress.ids,
           exerciseWeights: progress.weights,
           selectedDate: targetDate,

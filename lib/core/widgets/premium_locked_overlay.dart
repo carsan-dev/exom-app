@@ -21,40 +21,40 @@ class PremiumLockedOverlay extends StatelessWidget {
     return ClipRect(
       child: Stack(
         children: [
-          child,
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: child,
+          ),
           Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.lock_outlined,
-                        color: Color(0xFFFFB300),
-                        size: 32,
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_outlined,
+                      color: Color(0xFFFFB300),
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      customMessage ?? 'Función premium',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        customMessage ?? 'Función premium',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Disponible en el plan completo',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 12,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Disponible en el plan completo',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -147,18 +147,18 @@ class PremiumLockedInline extends StatelessWidget {
     return ClipRect(
       child: Stack(
         children: [
-          child,
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+            child: child,
+          ),
           Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.2),
-                child: const Center(
-                  child: Icon(
-                    Icons.lock_outlined,
-                    color: Color(0xFFFFB300),
-                    size: 16,
-                  ),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.2),
+              child: const Center(
+                child: Icon(
+                  Icons.lock_outlined,
+                  color: Color(0xFFFFB300),
+                  size: 16,
                 ),
               ),
             ),
@@ -189,35 +189,35 @@ class PremiumLockedSection extends StatelessWidget {
     return ClipRect(
       child: Stack(
         children: [
-          child,
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: child,
+          ),
           Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.lock_outlined,
-                        color: Color(0xFFFFB300),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          '$label — Premium',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_outlined,
+                      color: Color(0xFFFFB300),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '$label — Premium',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

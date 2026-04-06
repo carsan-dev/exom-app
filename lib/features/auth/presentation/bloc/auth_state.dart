@@ -41,3 +41,12 @@ class AuthError extends AuthState {
 class AuthAccountLocked extends AuthState {
   const AuthAccountLocked();
 }
+
+class AuthTrialExpired extends AuthState {
+  final String message;
+
+  const AuthTrialExpired(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

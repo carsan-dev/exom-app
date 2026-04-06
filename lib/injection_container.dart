@@ -6,6 +6,8 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
+import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -137,6 +139,12 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<OfflineSyncService>(
     () => OfflineSyncService(sl<ApiClient>(), sl<LocalStorage>()),
+  );
+
+  sl.registerLazySingleton<FeatureGateService>(
+    () => FeatureGateService(
+      const UserEntity(id: '', email: '', role: 'CLIENT', tier: 'HIGH_TICKET'),
+    ),
   );
 
   // ── Auth ──────────────────────────────────────────────────────────────────

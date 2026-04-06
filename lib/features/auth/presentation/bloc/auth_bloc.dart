@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
@@ -50,6 +52,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  void _syncFeatureGate(UserEntity user) {
+    GetIt.instance<FeatureGateService>().updateUser(user);
+  }
+
   Future<void> _onLoginRequested(
     AuthLoginRequested event,
     Emitter<AuthState> emit,
@@ -57,9 +63,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const AuthLoading());
     try {
       final user = await _loginUseCase(event.email, event.password);
+      _syncFeatureGate(user);
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
-      if (e.isLocked) {
+      if (e.isTrialExpired) {
+        emit(AuthTrialExpired(e.message));
+      } else if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else {
         emit(AuthError(e.message));
@@ -78,9 +87,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final credential = await _firebaseAuthService.signInWithGoogle();
       final token = await credential.user?.getIdToken() ?? '';
       final user = await _socialLoginUseCase(token, 'google');
+      _syncFeatureGate(user);
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
-      if (e.isLocked) {
+      if (e.isTrialExpired) {
+        emit(AuthTrialExpired(e.message));
+      } else if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else {
         emit(AuthError(e.message));
@@ -99,9 +111,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final credential = await _firebaseAuthService.signInWithApple();
       final token = await credential.user?.getIdToken() ?? '';
       final user = await _socialLoginUseCase(token, 'apple');
+      _syncFeatureGate(user);
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
-      if (e.isLocked) {
+      if (e.isTrialExpired) {
+        emit(AuthTrialExpired(e.message));
+      } else if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else {
         emit(AuthError(e.message));

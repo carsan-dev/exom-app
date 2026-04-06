@@ -10,5 +10,6 @@ abstract class AuthRepository {
     required String lastName,
   });
   Future<void> logout();
+  Future<UserEntity> getMe();
   UserEntity? getCurrentUser();
 }

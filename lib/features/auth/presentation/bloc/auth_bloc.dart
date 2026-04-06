@@ -5,6 +5,7 @@ import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/register_trial_usecase.dart';
@@ -16,6 +17,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SocialLoginUseCase _socialLoginUseCase;
   final LogoutUseCase _logoutUseCase;
   final RegisterTrialUseCase _registerTrialUseCase;
+  final GetMeUseCase _getMeUseCase;
   final FirebaseAuthService _firebaseAuthService;
 
   AuthBloc({
@@ -23,11 +25,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SocialLoginUseCase socialLoginUseCase,
     required LogoutUseCase logoutUseCase,
     required RegisterTrialUseCase registerTrialUseCase,
+    required GetMeUseCase getMeUseCase,
     required FirebaseAuthService firebaseAuthService,
   }) : _loginUseCase = loginUseCase,
        _socialLoginUseCase = socialLoginUseCase,
        _logoutUseCase = logoutUseCase,
        _registerTrialUseCase = registerTrialUseCase,
+       _getMeUseCase = getMeUseCase,
        _firebaseAuthService = firebaseAuthService,
        super(const AuthInitial()) {
     on<AuthCheckStatusRequested>(_onCheckStatus);
@@ -45,14 +49,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final firebaseUser = _firebaseAuthService.currentUser;
     if (firebaseUser == null) {
       emit(const AuthUnauthenticated());
-    } else {
-      // User is signed in to Firebase but we may not have profile yet
-      // Emit a minimal authenticated state from Firebase data
+      return;
+    }
+
+    // Fetch real user data (tier, trial_expires_at) from the backend
+    try {
+      final user = await _getMeUseCase();
+      _syncFeatureGate(user);
+      emit(AuthAuthenticated(user));
+    } on ApiException catch (e) {
+      if (e.isTrialExpired) {
+        emit(AuthTrialExpired(e.message));
+      } else if (e.isLocked) {
+        emit(const AuthAccountLocked());
+      } else {
+        // Backend unreachable or other error — fall back to Firebase data
+        final entity = UserEntity(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          role: 'CLIENT',
+        );
+        _syncFeatureGate(entity);
+        emit(AuthAuthenticated(entity));
+      }
+    } catch (_) {
+      // Network error — fall back to Firebase-only data
       final entity = UserEntity(
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         role: 'CLIENT',
       );
+      _syncFeatureGate(entity);
       emit(AuthAuthenticated(entity));
     }
   }

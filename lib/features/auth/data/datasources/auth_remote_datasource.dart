@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import '../models/auth_response_model.dart';
 
+
 abstract class AuthRemoteDataSource {
   Future<AuthResponseModel> login(String email, String password);
   Future<AuthResponseModel> socialLogin(String token, String provider);
@@ -11,6 +12,7 @@ abstract class AuthRemoteDataSource {
     required String firstName,
     required String lastName,
   });
+  Future<UserModel> getMe();
   Future<void> logout();
   Future<void> forgotPassword(String email);
 }
@@ -63,6 +65,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'last_name': lastName,
         },
         fromJson: AuthResponseModel.fromJson,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  @override
+  Future<UserModel> getMe() async {
+    try {
+      return await _apiClient.get<UserModel>(
+        '/auth/me',
+        fromJson: UserModel.fromJson,
       );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

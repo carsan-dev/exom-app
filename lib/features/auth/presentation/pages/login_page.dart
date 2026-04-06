@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/injection_container.dart';
 
@@ -226,11 +227,9 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final l10n = AppLocalizations.of(context)!;
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.emailFirstPrompt),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.emailFirstPrompt)));
       return;
     }
 
@@ -303,6 +302,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildTrialButton(BuildContext context) {
     final palette = context.exomPalette;
+    final flavor = FlavorConfig.instance.flavor;
+
+    if (flavor == Flavor.dev) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       children: [
@@ -570,8 +574,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                               : Icons.visibility_off_outlined,
                           color: palette.textSecondary,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscure = !_obscure),
+                        onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
                     validator: (v) {

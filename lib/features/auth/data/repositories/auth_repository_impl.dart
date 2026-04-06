@@ -65,5 +65,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity> getMe() async {
+    final userModel = await _remoteDataSource.getMe();
+    _currentUser = userModel.toEntity();
+    return _currentUser!;
+  }
+
+  @override
   UserEntity? getCurrentUser() => _currentUser;
 }

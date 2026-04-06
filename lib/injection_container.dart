@@ -17,6 +17,7 @@ import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/register_trial_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 // Home
@@ -164,6 +165,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => SocialLoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => RegisterTrialUseCase(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => GetMeUseCase(sl<AuthRepository>()));
 
   sl.registerFactory(
     () => AuthBloc(
@@ -171,6 +173,7 @@ Future<void> initDependencies() async {
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
       registerTrialUseCase: sl<RegisterTrialUseCase>(),
+      getMeUseCase: sl<GetMeUseCase>(),
       firebaseAuthService: sl<FirebaseAuthService>(),
     ),
   );

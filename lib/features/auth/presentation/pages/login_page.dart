@@ -303,10 +303,12 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildTrialButton(BuildContext context) {
     final palette = context.exomPalette;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         Text(
-          'No tienes cuenta?',
+          l10n.trialNoAccountPrompt,
           style: TextStyle(color: palette.textSecondary, fontSize: 13),
         ),
         const SizedBox(height: 8),
@@ -320,7 +322,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           icon: const Icon(Icons.timer_outlined, size: 18),
-          label: const Text('Probar gratis 14 dias'),
+          label: Text(l10n.trialRegisterButton),
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFFFB300),
             side: const BorderSide(color: Color(0xFFFFB300)),
@@ -421,6 +423,8 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -441,7 +445,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
         appBar: AppBar(
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
-          title: const Text('Prueba gratuita'),
+          title: Text(l10n.trialHeaderTitle),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -471,7 +475,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '14 dias gratis',
+                                l10n.trialHeaderTitle,
                                 style: TextStyle(
                                   color: palette.textPrimary,
                                   fontWeight: FontWeight.w700,
@@ -480,7 +484,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Prueba EXOM sin compromiso',
+                                l10n.trialHeaderSubtitle,
                                 style: TextStyle(
                                   color: palette.textSecondary,
                                   fontSize: 13,
@@ -500,7 +504,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     textInputAction: TextInputAction.next,
                     style: TextStyle(color: palette.textPrimary),
                     decoration: InputDecoration(
-                      labelText: 'Nombre',
+                      labelText: l10n.trialFormName,
                       prefixIcon: Icon(
                         Icons.person_outline,
                         color: palette.textSecondary,
@@ -515,7 +519,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     textInputAction: TextInputAction.next,
                     style: TextStyle(color: palette.textPrimary),
                     decoration: InputDecoration(
-                      labelText: 'Apellidos',
+                      labelText: l10n.trialFormLastName,
                       prefixIcon: Icon(
                         Icons.person_outline,
                         color: palette.textSecondary,
@@ -533,7 +537,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     textInputAction: TextInputAction.next,
                     style: TextStyle(color: palette.textPrimary),
                     decoration: InputDecoration(
-                      labelText: 'Email',
+                      labelText: l10n.trialFormEmail,
                       prefixIcon: Icon(
                         Icons.email_outlined,
                         color: palette.textSecondary,
@@ -542,7 +546,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Requerido';
                       if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v.trim())) {
-                        return 'Email no valido';
+                        return l10n.emailValidationInvalid;
                       }
                       return null;
                     },
@@ -557,7 +561,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     onFieldSubmitted: (_) => _onRegister(),
                     style: TextStyle(color: palette.textPrimary),
                     decoration: InputDecoration(
-                      labelText: 'Contrasena',
+                      labelText: l10n.trialFormPassword,
                       prefixIcon: Icon(
                         Icons.lock_outline,
                         color: palette.textSecondary,
@@ -574,7 +578,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Requerido';
-                      if (v.length < 8) return 'Minimo 8 caracteres';
+                      if (v.length < 8) return l10n.passwordValidationLength;
                       return null;
                     },
                   ),
@@ -595,7 +599,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Crear cuenta de prueba'),
+                            : Text(l10n.trialCreateAccountButton),
                       );
                     },
                   ),

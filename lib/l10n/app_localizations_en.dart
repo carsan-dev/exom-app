@@ -66,6 +66,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backToLoginButton => 'Back to login';
 
   @override
+  String get trialRegisterButton => 'Try 14 days for free';
+
+  @override
+  String get trialHeaderTitle => '14 days free';
+
+  @override
+  String get trialHeaderSubtitle => 'Try EXOM without commitment';
+
+  @override
+  String get trialFormName => 'First name';
+
+  @override
+  String get trialFormLastName => 'Last name';
+
+  @override
+  String get trialFormEmail => 'Email';
+
+  @override
+  String get trialFormPassword => 'Password';
+
+  @override
+  String get trialCreateAccountButton => 'Create trial account';
+
+  @override
+  String get trialNoAccountPrompt => 'Don\'t have an account?';
+
+  @override
   String get welcomeOnboarding => 'Welcome\nto EXOM!';
 
   @override

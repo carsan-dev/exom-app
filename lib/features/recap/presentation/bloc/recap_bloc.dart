@@ -8,6 +8,9 @@ import 'package:exom_app/features/recap/domain/usecases/submit_recap_usecase.dar
 import 'package:exom_app/features/recap/domain/usecases/get_recap_detail_usecase.dart';
 import 'package:exom_app/features/recap/domain/usecases/mark_recap_feedback_read_usecase.dart';
 
+import 'package:get_it/get_it.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
+
 part 'recap_event.dart';
 part 'recap_state.dart';
 
@@ -57,6 +60,10 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     }
 
     try {
+      if (!GetIt.I<FeatureGateService>().canSeeRecapHistory) {
+        emit(const RecapListLoaded([]));
+        return;
+      }
       final recaps = await _getMyRecapsUseCase();
       emit(RecapListLoaded(recaps));
     } catch (e) {
@@ -130,6 +137,10 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
         final created = await _createRecapUseCase(_formData);
         _editingRecapId = created.id;
       }
+      if (!GetIt.I<FeatureGateService>().canSeeRecapHistory) {
+        emit(const RecapListLoaded([]));
+        return;
+      }
       final recaps = await _getMyRecapsUseCase();
       emit(RecapListLoaded(recaps));
     } catch (e) {
@@ -152,6 +163,10 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
           await _updateRecapUseCase(targetId, _formData);
         }
         await _submitRecapUseCase(targetId);
+      }
+      if (!GetIt.I<FeatureGateService>().canSeeRecapHistory) {
+        emit(const RecapSubmitted([]));
+        return;
       }
       final recaps = await _getMyRecapsUseCase();
       emit(RecapSubmitted(recaps));

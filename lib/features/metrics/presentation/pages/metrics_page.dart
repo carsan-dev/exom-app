@@ -7,8 +7,11 @@ import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:get_it/get_it.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -1213,7 +1216,10 @@ class _MetricsViewState extends State<_MetricsView> {
                             onChanged: (_) => _muscleMassTouched = true,
                           ),
                           const SizedBox(height: 14),
-                          Container(
+                          PremiumLockedSection(
+                            isLocked: !GetIt.instance<FeatureGateService>().canUseBodyCompositionCalculator,
+                            label: AppLocalizations.of(context)!.seenCalculatorTitle,
+                            child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -1261,6 +1267,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                 ),
                               ],
                             ),
+                          ),
                           ),
                         ],
                       ),
@@ -1369,7 +1376,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           ],
                         ),
                       ),
-                      child: _bodyMapMode
+                      child: (_bodyMapMode && GetIt.instance<FeatureGateService>().canUseAnatomicalModel)
                           ? _buildBodyMapMeasurements()
                           : Padding(
                               padding: const EdgeInsets.only(top: 8),

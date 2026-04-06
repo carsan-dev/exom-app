@@ -12,8 +12,11 @@ import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
+import 'package:get_it/get_it.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -832,12 +835,17 @@ class _IndicatorCards extends StatelessWidget {
         : null;
     final daysInGoal = sleepEntries.where((e) => e.sleepHours! >= 7.0).length;
 
+    final gate = GetIt.instance<FeatureGateService>();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
           Expanded(
-            child: latestMuscleMass != null
+            child: PremiumLockedSection(
+              isLocked: !gate.canSeeMuscleMassChart,
+              label: AppLocalizations.of(context).muscleMassLabel,
+              child: latestMuscleMass != null
                 ? _CircularIndicatorCard(
                     title: AppLocalizations.of(context).muscleMassLabel,
                     value: formatWeight(latestMuscleMass, unitSystem),
@@ -886,10 +894,14 @@ class _IndicatorCards extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                     ),
                   ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: avgSleep != null
+            child: PremiumLockedSection(
+              isLocked: !gate.canSeeSleepChart,
+              label: AppLocalizations.of(context).sleep,
+              child: avgSleep != null
                 ? _CircularIndicatorCard(
                     title: AppLocalizations.of(context).sleep,
                     value: '${avgSleep.toStringAsFixed(1)} h',
@@ -904,6 +916,7 @@ class _IndicatorCards extends StatelessWidget {
                 : _EmptyIndicatorCard(
                     title: AppLocalizations.of(context).sleep,
                   ),
+            ),
           ),
         ],
       ),

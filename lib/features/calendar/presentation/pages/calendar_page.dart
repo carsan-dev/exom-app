@@ -143,6 +143,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 _buildWeekProgress(context, state),
                 _buildSelectedDayCard(context, state, dayMap),
               ],
+              _buildChallengesShortcut(context),
             ],
           ),
         ),
@@ -590,6 +591,28 @@ class _CalendarViewState extends State<_CalendarView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChallengesShortcut(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: OutlinedButton.icon(
+        onPressed: () => context.go('/challenges'),
+        icon: Icon(Icons.emoji_events_outlined, size: 18, color: palette.primary),
+        label: Text(l10n.challengesMenuItem),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.primary,
+          side: BorderSide(color: palette.primary.withValues(alpha: 0.3)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }

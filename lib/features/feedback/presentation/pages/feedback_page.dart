@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
@@ -17,9 +20,22 @@ class FeedbackPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gate = GetIt.instance<FeatureGateService>();
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+
+    if (!gate.canUseFeedback) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: Text(l10n.feedback),
+          backgroundColor: theme.scaffoldBackgroundColor,
+          surfaceTintColor: Colors.transparent,
+        ),
+        body: const PremiumLockedPage(),
+      );
+    }
 
     return BlocProvider(
       create: (_) => sl<FeedbackBloc>()..add(const FeedbackLoadRequested()),

@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
@@ -247,38 +250,41 @@ class _DietHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              if (diet.totalCalories != null)
-                _MacroStat(
-                  label: l10n.caloriesLabel,
-                  value: '${diet.totalCalories}',
-                  unit: 'kcal',
-                  color: semantic.calorie,
-                ),
-              if (diet.totalProteinG != null)
-                _MacroStat(
-                  label: l10n.proteinLabel,
-                  value: diet.totalProteinG!.toStringAsFixed(0),
-                  unit: 'g',
-                  color: palette.primary,
-                ),
-              if (diet.totalCarbsG != null)
-                _MacroStat(
-                  label: l10n.carbsLabel,
-                  value: diet.totalCarbsG!.toStringAsFixed(0),
-                  unit: 'g',
-                  color: semantic.info,
-                ),
-              if (diet.totalFatG != null)
-                _MacroStat(
-                  label: l10n.fatsLabel,
-                  value: diet.totalFatG!.toStringAsFixed(0),
-                  unit: 'g',
-                  color: semantic.warning,
-                ),
-            ],
+          PremiumLockedInline(
+            isLocked: !GetIt.instance<FeatureGateService>().canSeeMealMacros,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                if (diet.totalCalories != null)
+                  _MacroStat(
+                    label: l10n.caloriesLabel,
+                    value: '${diet.totalCalories}',
+                    unit: 'kcal',
+                    color: semantic.calorie,
+                  ),
+                if (diet.totalProteinG != null)
+                  _MacroStat(
+                    label: l10n.proteinLabel,
+                    value: diet.totalProteinG!.toStringAsFixed(0),
+                    unit: 'g',
+                    color: palette.primary,
+                  ),
+                if (diet.totalCarbsG != null)
+                  _MacroStat(
+                    label: l10n.carbsLabel,
+                    value: diet.totalCarbsG!.toStringAsFixed(0),
+                    unit: 'g',
+                    color: semantic.info,
+                  ),
+                if (diet.totalFatG != null)
+                  _MacroStat(
+                    label: l10n.fatsLabel,
+                    value: diet.totalFatG!.toStringAsFixed(0),
+                    unit: 'g',
+                    color: semantic.warning,
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -489,67 +495,73 @@ class _MealCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (meal.calories != null) ...[
-                        Icon(
-                          Icons.local_fire_department_outlined,
-                          color: palette.textDisabled,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${meal.calories} kcal',
-                          style: theme.textTheme.bodySmall?.copyWith(
+                  PremiumLockedInline(
+                    isLocked: !GetIt.instance<FeatureGateService>().canSeeMealMacros,
+                    child: Row(
+                      children: [
+                        if (meal.calories != null) ...[
+                          Icon(
+                            Icons.local_fire_department_outlined,
                             color: palette.textDisabled,
-                            fontSize: 11,
+                            size: 12,
                           ),
-                        ),
-                        const SizedBox(width: 10),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${meal.calories} kcal',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        if (meal.proteinG != null)
+                          Text(
+                            'P: ${meal.proteinG!.toStringAsFixed(0)}g',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 11,
+                            ),
+                          ),
+                        if (meal.carbsG != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            'C: ${meal.carbsG!.toStringAsFixed(0)}g',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ],
-                      if (meal.proteinG != null)
-                        Text(
-                          'P: ${meal.proteinG!.toStringAsFixed(0)}g',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textDisabled,
-                            fontSize: 11,
-                          ),
-                        ),
-                      if (meal.carbsG != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          'C: ${meal.carbsG!.toStringAsFixed(0)}g',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textDisabled,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                   if (meal.nutritionalBadges.isNotEmpty) ...[
                     const SizedBox(height: 5),
-                    Wrap(
-                      spacing: 4,
-                      children: meal.nutritionalBadges.take(3).map((b) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.surfaceVariant,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            b,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: palette.textDisabled,
-                              fontSize: 9,
+                    PremiumLockedInline(
+                      isLocked: !GetIt.instance<FeatureGateService>().canSeeMealNutritionalBadges,
+                      child: Wrap(
+                        spacing: 4,
+                        children: meal.nutritionalBadges.take(3).map((b) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            decoration: BoxDecoration(
+                              color: palette.surfaceVariant,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              b,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: palette.textDisabled,
+                                fontSize: 9,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ],
                 ],

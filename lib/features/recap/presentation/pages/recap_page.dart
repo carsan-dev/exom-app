@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -135,7 +138,8 @@ class _RecapViewState extends State<_RecapView> {
                     ),
                   ],
           ),
-          floatingActionButton: state is RecapListLoaded
+          floatingActionButton: state is RecapListLoaded &&
+                  GetIt.I<FeatureGateService>().canSeeRecapHistory
               ? FloatingActionButton.extended(
                   onPressed: () => context.read<RecapBloc>().add(
                     const RecapCreateRequested(),
@@ -157,6 +161,7 @@ class _RecapViewState extends State<_RecapView> {
 
   Widget _buildBody(BuildContext context, RecapState state) {
     final l10n = AppLocalizations.of(context);
+    final gate = GetIt.I<FeatureGateService>();
     final stepTitles = [
       l10n.recapTraining,
       l10n.recapNutrition,
@@ -172,6 +177,23 @@ class _RecapViewState extends State<_RecapView> {
     }
 
     if (state is RecapFormActive) {
+      if (!gate.canUseDetailedRecap) {
+        return _SimplifiedRecapForm(
+          key: const ValueKey('recap-form-simple'),
+          state: state,
+          onFieldChanged: (field, value) => context.read<RecapBloc>().add(
+            RecapFieldUpdated(field: field, value: value),
+          ),
+          onSaveDraft: () =>
+              context.read<RecapBloc>().add(const RecapSaveRequested()),
+          onSubmit: () => context.read<RecapBloc>().add(
+            RecapSubmitRequested(recapId: state.recapId),
+          ),
+          onCancel: () =>
+              context.read<RecapBloc>().add(const RecapFormCancelled()),
+          formatWeekRange: _formatWeekRange,
+        );
+      }
       return _RecapFormView(
         key: const ValueKey('recap-form'),
         pageController: _pageController,
@@ -190,6 +212,15 @@ class _RecapViewState extends State<_RecapView> {
         onCancel: () =>
             context.read<RecapBloc>().add(const RecapFormCancelled()),
         formatWeekRange: _formatWeekRange,
+      );
+    }
+
+    // LOW_TICKET: history is blocked — show landing with create button
+    if (!gate.canSeeRecapHistory) {
+      return _RecapLowTicketLanding(
+        key: const ValueKey('recap-low-ticket'),
+        onCreate: () =>
+            context.read<RecapBloc>().add(const RecapCreateRequested()),
       );
     }
 
@@ -883,6 +914,478 @@ class _InfoPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── LOW_TICKET landing: history blocked, create allowed ──────────────────────
+
+class _RecapLowTicketLanding extends StatelessWidget {
+  final VoidCallback onCreate;
+
+  const _RecapLowTicketLanding({
+    super.key,
+    required this.onCreate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: Column(
+        children: [
+          // Create recap card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.divider),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: palette.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    Icons.edit_calendar_outlined,
+                    color: palette.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.weeklyRecapTitle,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.useThisSpaceToSummarizeYourWeek,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onCreate,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.newRecap),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // History locked
+          PremiumLockedSection(
+            isLocked: true,
+            label: 'Histórico de recaps',
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: palette.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: palette.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.yourWeeklyHistory,
+                    style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.trackYourWeeksReviewPreviousRecaps,
+                    style: TextStyle(
+                      color: palette.textSecondary,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Placeholder recap cards (blurred)
+                  for (var i = 0; i < 2; i++) ...[
+                    Container(
+                      width: double.infinity,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: palette.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    if (i == 0) const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Simplified recap form for LOW_TICKET ─────────────────────────────────────
+
+class _SimplifiedRecapForm extends StatelessWidget {
+  final RecapFormActive state;
+  final void Function(String field, dynamic value) onFieldChanged;
+  final VoidCallback onSaveDraft;
+  final VoidCallback onSubmit;
+  final VoidCallback onCancel;
+  final String Function(Map<String, dynamic> formData) formatWeekRange;
+
+  const _SimplifiedRecapForm({
+    super.key,
+    required this.state,
+    required this.onFieldChanged,
+    required this.onSaveDraft,
+    required this.onSubmit,
+    required this.onCancel,
+    required this.formatWeekRange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final formData = state.formData;
+
+    final trainingEffort = (formData['training_effort'] as num?)?.toInt() ?? 2;
+    final trainingSessions =
+        (formData['training_sessions'] as num?)?.toInt() ?? 2;
+    final appRating =
+        (formData['improvement_app_rating'] as num?)?.toInt() ?? 4;
+    final serviceRating =
+        (formData['improvement_service_rating'] as num?)?.toInt() ?? 4;
+    final improvementAreas =
+        (formData['improvement_areas'] as List<dynamic>?)
+            ?.map((item) => item.toString())
+            .toList() ??
+        const <String>[];
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Week range header
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: palette.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 15,
+                        color: palette.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        formatWeekRange(formData),
+                        style: TextStyle(
+                          color: palette.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Training ──
+                RecapSectionCard(
+                  title: l10n.recapTraining,
+                  subtitle: l10n.tellUsHowYouFeltTrainingThisWeek,
+                  icon: Icons.fitness_center,
+                  child: Column(
+                    children: [
+                      RecapEmojiRatingField(
+                        label: l10n.completedSessions,
+                        helperText: l10n.howDoYouRateTheNumberOfSessions,
+                        value: trainingSessions.clamp(0, 4),
+                        onChanged: (value) =>
+                            onFieldChanged('training_sessions', value),
+                      ),
+                      const SizedBox(height: 20),
+                      RecapEmojiRatingField(
+                        label: l10n.overallEffort,
+                        helperText: l10n.howDidYouFeelWithTheTrainingLoad,
+                        value: trainingEffort.clamp(0, 4),
+                        onChanged: (value) =>
+                            onFieldChanged('training_effort', value),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Nutrition ──
+                RecapSectionCard(
+                  title: l10n.recapNutrition,
+                  subtitle: l10n.rateHowYourNutritionWentTheseDays,
+                  icon: Icons.restaurant_menu,
+                  child: RecapChoiceChipsField(
+                    label: l10n.nutritionQuality,
+                    helperText: l10n.yourOverallPerceptionOfThisWeeksNutrition,
+                    value: formData['nutrition_quality'] as String?,
+                    options: const ['BAJA', 'MODERADA', 'ALTA', 'MUY_ALTA'],
+                    onSelected: (value) =>
+                        onFieldChanged('nutrition_quality', value),
+                  ),
+                ),
+
+                // ── Recovery ──
+                RecapSectionCard(
+                  title: l10n.recapRecovery,
+                  subtitle: l10n.rateHowYourBodyRespondedThisWeek,
+                  icon: Icons.hotel_outlined,
+                  child: Column(
+                    children: [
+                      RecapChoiceChipsField(
+                        label: l10n.fatigueLevel,
+                        helperText: l10n.howYourOverallEnergyFelt,
+                        value: formData['fatigue_level'] as String?,
+                        options: const ['CANSADO', 'NORMAL', 'BIEN', 'FUERTE'],
+                        onSelected: (value) =>
+                            onFieldChanged('fatigue_level', value),
+                      ),
+                      const SizedBox(height: 20),
+                      RecapTextAreaField(
+                        label: l10n.recoveryNotes,
+                        hintText: l10n.egIStillHaveLowerBackTightness,
+                        initialValue:
+                            formData['recovery_notes'] as String? ?? '',
+                        onChanged: (value) =>
+                            onFieldChanged('recovery_notes', value),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── General ──
+                RecapSectionCard(
+                  title: l10n.recapGeneral,
+                  subtitle: l10n.yourMentalAndEmotionalContextAlsoMatters,
+                  icon: Icons.mood,
+                  child: Column(
+                    children: [
+                      RecapChoiceChipsField(
+                        label: l10n.mainMood,
+                        helperText: l10n.howYouFeltMostOfTheWeek,
+                        value: formData['mood'] as String?,
+                        options: const [
+                          'MAL',
+                          'REGULAR',
+                          'NORMAL',
+                          'BIEN',
+                          'MUY_BIEN',
+                        ],
+                        onSelected: (value) => onFieldChanged('mood', value),
+                      ),
+                      const SizedBox(height: 20),
+                      RecapTextAreaField(
+                        label: l10n.notes,
+                        hintText: l10n.shareAnyRelevantDetailFromYourWeek,
+                        initialValue:
+                            formData['general_notes'] as String? ?? '',
+                        onChanged: (value) =>
+                            onFieldChanged('general_notes', value),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Improvement (same as HIGH_TICKET) ──
+                RecapSectionCard(
+                  title: l10n.recapImprovementRatingsTitle,
+                  subtitle: l10n.recapImprovementRatingsSubtitle,
+                  icon: Icons.star_outline_rounded,
+                  child: Column(
+                    children: [
+                      RecapStarRatingField(
+                        label: l10n.rateTheService,
+                        helperText:
+                            l10n.howYouRateTheSupportReceivedThisWeek,
+                        value: serviceRating.clamp(1, 5),
+                        onChanged: (value) =>
+                            onFieldChanged('improvement_service_rating', value),
+                      ),
+                      const SizedBox(height: 20),
+                      RecapStarRatingField(
+                        label: l10n.rateTheApp,
+                        helperText: l10n.yourOverallExperienceWithTheApp,
+                        value: appRating.clamp(1, 5),
+                        onChanged: (value) =>
+                            onFieldChanged('improvement_app_rating', value),
+                      ),
+                    ],
+                  ),
+                ),
+                RecapSectionCard(
+                  title: l10n.recapWhatCanWeImprove,
+                  subtitle: l10n.selectThePointsWhereYouWantMoreSupport,
+                  icon: Icons.tune_rounded,
+                  child: RecapMultiSelectField(
+                    label: l10n.selectThePointsWhereYouWantMoreSupport,
+                    helperText: l10n.selectThePointsWhereYouWantMoreSupport,
+                    values: improvementAreas,
+                    options: const [
+                      'ENTRENAMIENTO',
+                      'NUTRICION',
+                      'ADHERENCIA',
+                      'RECUPERACION',
+                      'MOTIVACION',
+                      'APP',
+                    ],
+                    onChanged: (value) =>
+                        onFieldChanged('improvement_areas', value),
+                  ),
+                ),
+                RecapSectionCard(
+                  title: l10n.recapTellUsMore,
+                  subtitle: l10n.closeTheWeekWithWhatMattersForYourCoach,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  child: RecapTextAreaField(
+                    label: l10n.suggestionsOrImprovements,
+                    hintText: l10n.egIWouldLikeMoreContextInTheSessions,
+                    initialValue:
+                        formData['improvement_feedback_text'] as String? ?? '',
+                    onChanged: (value) =>
+                        onFieldChanged('improvement_feedback_text', value),
+                  ),
+                ),
+
+                // ── Premium teaser: detailed recap ──
+                PremiumLockedSection(
+                  isLocked: true,
+                  label: 'Recap detallado',
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: palette.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: palette.divider),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recap detallado',
+                          style: TextStyle(
+                            color: palette.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final step in [
+                          l10n.recapTraining,
+                          l10n.recapNutrition,
+                          l10n.recapRecovery,
+                          l10n.recapGeneral,
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.circle,
+                                  size: 6,
+                                  color: palette.textDisabled,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$step completo',
+                                  style: TextStyle(
+                                    color: palette.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Bottom bar: save draft + submit
+        SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              border: Border(top: BorderSide(color: palette.divider)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: onCancel,
+                      icon: const Icon(Icons.close),
+                      label: Text(l10n.cancel),
+                    ),
+                    const Spacer(),
+                    OutlinedButton.icon(
+                      onPressed: onSaveDraft,
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(l10n.save),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onSubmit,
+                    icon: const Icon(Icons.send_rounded),
+                    label: Text(l10n.sendRecap),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
@@ -610,7 +613,7 @@ class _ExerciseCard extends StatelessWidget {
                         icon: Icons.timer_outlined,
                         label: '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
-                      if (weightUsed != null) ...[
+                      if (weightUsed != null && GetIt.instance<FeatureGateService>().canSeeRegisteredWeight) ...[
                         const SizedBox(width: 12),
                         _MiniStat(
                           icon: Icons.fitness_center,
@@ -633,15 +636,19 @@ class _ExerciseCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
+                    final gate = GetIt.instance<FeatureGateService>();
                     if (!isCompleted) {
-                      final weight = await _showWeightSheet(
-                        context,
-                        l10n,
-                        previousWeight: weightUsed,
-                      );
-                      if (!context.mounted) return;
+                      double? weight;
+                      if (gate.canRegisterWeight) {
+                        weight = await _showWeightSheet(
+                          context,
+                          l10n,
+                          previousWeight: weightUsed,
+                        );
+                        if (!context.mounted) return;
+                      }
                       onToggle(true, weightUsed: weight);
-                      if (nextExerciseName != null) {
+                      if (gate.canUseRestTimer && nextExerciseName != null) {
                         await RestTimerOverlay.show(
                           context,
                           restSeconds: trainingExercise.restSeconds,
@@ -1008,13 +1015,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              Align(
-                alignment: Alignment.topLeft,
-                child: _SheetHeaderAction(
-                  icon: Icons.feedback_outlined,
-                  onTap: () => _openFeedback(context),
-                  tooltip: l10n.feedbackSendFromExercise,
-                ),
+              if (GetIt.instance<FeatureGateService>().canSendExerciseFeedback)
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: _SheetHeaderAction(
+                    icon: Icons.feedback_outlined,
+                    onTap: () => _openFeedback(context),
+                    tooltip: l10n.feedbackSendFromExercise,
+                  ),
               ),
               Align(
                 alignment: Alignment.topRight,
@@ -1199,26 +1207,38 @@ class _ExerciseDetailSheet extends StatelessWidget {
         ],
         if (_hasContent(exercise.techniqueText)) ...[
           const SizedBox(height: 24),
-          _VisibleDetailSection(
-            title: l10n.technique,
-            text: exercise.techniqueText!,
-            bulletItems: _extractBulletItems(exercise.techniqueText!),
+          PremiumLockedSection(
+            isLocked: !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
+            label: l10n.technique,
+            child: _VisibleDetailSection(
+              title: l10n.technique,
+              text: exercise.techniqueText!,
+              bulletItems: _extractBulletItems(exercise.techniqueText!),
+            ),
           ),
         ],
         if (_hasContent(exercise.commonErrorsText)) ...[
           const SizedBox(height: 20),
-          _VisibleDetailSection(
-            title: l10n.commonMistakes,
-            text: exercise.commonErrorsText!,
-            bulletItems: _extractBulletItems(exercise.commonErrorsText!),
+          PremiumLockedSection(
+            isLocked: !GetIt.instance<FeatureGateService>().canSeeCommonErrors,
+            label: l10n.commonMistakes,
+            child: _VisibleDetailSection(
+              title: l10n.commonMistakes,
+              text: exercise.commonErrorsText!,
+              bulletItems: _extractBulletItems(exercise.commonErrorsText!),
+            ),
           ),
         ],
         if (_hasContent(exercise.explanationText)) ...[
           const SizedBox(height: 20),
-          _VisibleDetailSection(
-            title: l10n.explanation,
-            text: exercise.explanationText!,
-            bulletItems: _extractBulletItems(exercise.explanationText!),
+          PremiumLockedSection(
+            isLocked: !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
+            label: l10n.explanation,
+            child: _VisibleDetailSection(
+              title: l10n.explanation,
+              text: exercise.explanationText!,
+              bulletItems: _extractBulletItems(exercise.explanationText!),
+            ),
           ),
         ],
         const SizedBox(height: 28),
@@ -1226,13 +1246,17 @@ class _ExerciseDetailSheet extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () async {
+              final gate = GetIt.instance<FeatureGateService>();
               if (!isCompleted) {
-                final weight = await _showWeightSheet(
-                  context,
-                  l10n,
-                  previousWeight: weightUsed,
-                );
-                if (!context.mounted) return;
+                double? weight;
+                if (gate.canRegisterWeight) {
+                  weight = await _showWeightSheet(
+                    context,
+                    l10n,
+                    previousWeight: weightUsed,
+                  );
+                  if (!context.mounted) return;
+                }
                 Navigator.of(
                   context,
                 ).pop(_SheetCompletionResult(completed: true, weight: weight));

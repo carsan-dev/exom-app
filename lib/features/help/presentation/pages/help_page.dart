@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
 class HelpPage extends StatelessWidget {
@@ -99,27 +101,43 @@ class HelpPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.feedback_outlined,
-                  title: l10n.feedback,
-                  subtitle: l10n.sendQuestionOrIssue,
-                  onTap: () => context.push(AppRoutes.feedback),
+          Builder(builder: (context) {
+            final gate = GetIt.instance<FeatureGateService>();
+            return Row(
+              children: [
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.feedback_outlined,
+                    title: l10n.feedback,
+                    subtitle: gate.canAccessFeedbackShortcut
+                        ? l10n.sendQuestionOrIssue
+                        : 'Premium',
+                    onTap: gate.canAccessFeedbackShortcut
+                        ? () => context.push(AppRoutes.feedback)
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Función disponible en el plan premium',
+                                ),
+                              ),
+                            );
+                          },
+                    locked: !gate.canAccessFeedbackShortcut,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.settings_outlined,
-                  title: l10n.settings,
-                  subtitle: l10n.notificationsAndCache,
-                  onTap: () => context.push(AppRoutes.settings),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.settings_outlined,
+                    title: l10n.settings,
+                    subtitle: l10n.notificationsAndCache,
+                    onTap: () => context.push(AppRoutes.settings),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(18),
@@ -238,12 +256,14 @@ class _QuickActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.locked = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -265,14 +285,24 @@ class _QuickActionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: palette.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: palette.primary, size: 20),
+              Stack(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: palette.surfaceVariant,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: locked ? palette.textDisabled : palette.primary, size: 20),
+                  ),
+                  if (locked)
+                    const Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Icon(Icons.lock, color: Color(0xFFFFB300), size: 14),
+                    ),
+                ],
               ),
               const SizedBox(height: 12),
               Text(

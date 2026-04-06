@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:exom_app/core/navigation/app_router.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -106,6 +107,12 @@ class _AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
+    // Trial expired — redirect to trial-expired screen
+    if (err.response?.statusCode == 402) {
+      AppRouter.router.go(AppRoutes.trialExpired);
+      return handler.next(err);
+    }
+
     if (err.response?.statusCode == 401) {
       // Token might be expired, try to refresh
       try {

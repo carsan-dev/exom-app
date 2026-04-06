@@ -5,6 +5,12 @@ import '../models/auth_response_model.dart';
 abstract class AuthRemoteDataSource {
   Future<AuthResponseModel> login(String email, String password);
   Future<AuthResponseModel> socialLogin(String token, String provider);
+  Future<AuthResponseModel> registerTrial({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  });
   Future<void> logout();
   Future<void> forgotPassword(String email);
 }
@@ -33,6 +39,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       return await _apiClient.post<AuthResponseModel>(
         '/auth/social',
         data: {'token': token, 'provider': provider},
+        fromJson: AuthResponseModel.fromJson,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  @override
+  Future<AuthResponseModel> registerTrial({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    try {
+      return await _apiClient.post<AuthResponseModel>(
+        '/auth/trial',
+        data: {
+          'email': email,
+          'password': password,
+          'first_name': firstName,
+          'last_name': lastName,
+        },
         fromJson: AuthResponseModel.fromJson,
       );
     } on DioException catch (e) {

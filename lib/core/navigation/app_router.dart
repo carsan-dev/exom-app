@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
+import 'package:exom_app/core/widgets/trial_banner.dart';
+import 'package:exom_app/core/widgets/trial_expired_screen.dart';
 
 // Auth pages
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -57,6 +61,7 @@ import '../../injection_container.dart';
 class AppRoutes {
   static const login = '/login';
   static const accountLocked = '/account-locked';
+  static const trialExpired = '/trial-expired';
   static const onboarding = '/onboarding';
   static const home = '/';
   static const trainings = '/trainings';
@@ -86,7 +91,9 @@ class AppRouter {
       final user = FirebaseAuth.instance.currentUser;
       final loc = state.matchedLocation;
       final isAuthRoute =
-          loc == AppRoutes.login || loc == AppRoutes.accountLocked;
+          loc == AppRoutes.login ||
+          loc == AppRoutes.accountLocked ||
+          loc == AppRoutes.trialExpired;
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
       if (user != null && loc == AppRoutes.login) return AppRoutes.home;
@@ -111,6 +118,14 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.accountLocked,
         builder: (context, state) => const AccountLockedPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.trialExpired,
+        builder: (context, state) => TrialExpiredScreen(
+          onLogout: () {
+            context.read<AuthBloc>().add(const AuthLogoutRequested());
+          },
+        ),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
@@ -223,6 +238,18 @@ class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
+  Widget _buildBodyWithTrialBanner(Widget child) {
+    final gate = GetIt.I<FeatureGateService>();
+    if (!gate.isTrial) return child;
+
+    return Column(
+      children: [
+        TrialBanner(daysRemaining: gate.trialDaysRemaining),
+        Expanded(child: child),
+      ],
+    );
+  }
+
   String _brandLogo(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
         ? 'assets/images/logo_dark.svg'
@@ -296,7 +323,7 @@ class MainShell extends StatelessWidget {
         ),
       ),
       endDrawer: const _AppDrawer(),
-      body: child,
+      body: _buildBodyWithTrialBanner(child),
       bottomNavigationBar: _ExomBottomNav(
         selectedIndex: selected,
         onTap: (i) => context.go(_tabs[i]),

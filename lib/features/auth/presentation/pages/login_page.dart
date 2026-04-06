@@ -56,6 +56,8 @@ class _LoginPageState extends State<LoginPage> {
           context.go(AppRoutes.home);
         } else if (state is AuthAccountLocked) {
           context.go(AppRoutes.accountLocked);
+        } else if (state is AuthTrialExpired) {
+          context.go(AppRoutes.trialExpired);
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -89,6 +91,8 @@ class _LoginPageState extends State<LoginPage> {
                   _buildDivider(context),
                   const SizedBox(height: 24),
                   _buildSocialButtons(context),
+                  const SizedBox(height: 32),
+                  _buildTrialButton(context),
                 ],
               ),
             ),
@@ -297,6 +301,41 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _buildTrialButton(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return Column(
+      children: [
+        Text(
+          'No tienes cuenta?',
+          style: TextStyle(color: palette.textSecondary, fontSize: 13),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<AuthBloc>(),
+                child: const _TrialRegisterPage(),
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.timer_outlined, size: 18),
+          label: const Text('Probar gratis 14 dias'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFFFB300),
+            side: const BorderSide(color: Color(0xFFFFB300)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            minimumSize: const Size(double.infinity, 0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSocialButtons(BuildContext context) {
     final isAndroid = Platform.isAndroid;
     final isIOS = Platform.isIOS;
@@ -335,6 +374,239 @@ class _LoginPageState extends State<LoginPage> {
           ],
         );
       },
+    );
+  }
+}
+
+// ── Trial Register Page ─────────────────────────────────────────────────────
+
+class _TrialRegisterPage extends StatefulWidget {
+  const _TrialRegisterPage();
+
+  @override
+  State<_TrialRegisterPage> createState() => _TrialRegisterPageState();
+}
+
+class _TrialRegisterPageState extends State<_TrialRegisterPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onRegister() {
+    if (_formKey.currentState?.validate() ?? false) {
+      context.read<AuthBloc>().add(
+        AuthTrialRegisterRequested(
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text,
+          firstName: _firstNameCtrl.text.trim(),
+          lastName: _lastNameCtrl.text.trim(),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          // Pop trial page, then the router redirect handles navigation
+          Navigator.of(context).pop();
+          context.go(AppRoutes.home);
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: palette.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          surfaceTintColor: Colors.transparent,
+          title: const Text('Prueba gratuita'),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFB300).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          color: Color(0xFFFFB300),
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '14 dias gratis',
+                                style: TextStyle(
+                                  color: palette.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Prueba EXOM sin compromiso',
+                                style: TextStyle(
+                                  color: palette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Name fields
+                  TextFormField(
+                    controller: _firstNameCtrl,
+                    textInputAction: TextInputAction.next,
+                    style: TextStyle(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Nombre',
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _lastNameCtrl,
+                    textInputAction: TextInputAction.next,
+                    style: TextStyle(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Apellidos',
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Email
+                  TextFormField(
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    style: TextStyle(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requerido';
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v.trim())) {
+                        return 'Email no valido';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password
+                  TextFormField(
+                    controller: _passwordCtrl,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _onRegister(),
+                    style: TextStyle(color: palette.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Contrasena',
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: palette.textSecondary,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: palette.textSecondary,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Requerido';
+                      if (v.length < 8) return 'Minimo 8 caracteres';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Register button
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      final isLoading = state is AuthLoading;
+                      return ElevatedButton(
+                        onPressed: isLoading ? null : _onRegister,
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Crear cuenta de prueba'),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

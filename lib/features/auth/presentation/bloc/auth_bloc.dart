@@ -7,6 +7,7 @@ import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/register_trial_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -14,22 +15,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final SocialLoginUseCase _socialLoginUseCase;
   final LogoutUseCase _logoutUseCase;
+  final RegisterTrialUseCase _registerTrialUseCase;
   final FirebaseAuthService _firebaseAuthService;
 
   AuthBloc({
     required LoginUseCase loginUseCase,
     required SocialLoginUseCase socialLoginUseCase,
     required LogoutUseCase logoutUseCase,
+    required RegisterTrialUseCase registerTrialUseCase,
     required FirebaseAuthService firebaseAuthService,
   }) : _loginUseCase = loginUseCase,
        _socialLoginUseCase = socialLoginUseCase,
        _logoutUseCase = logoutUseCase,
+       _registerTrialUseCase = registerTrialUseCase,
        _firebaseAuthService = firebaseAuthService,
        super(const AuthInitial()) {
     on<AuthCheckStatusRequested>(_onCheckStatus);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthGoogleLoginRequested>(_onGoogleLoginRequested);
     on<AuthAppleLoginRequested>(_onAppleLoginRequested);
+    on<AuthTrialRegisterRequested>(_onTrialRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
   }
 
@@ -121,6 +126,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(AuthError(e.message));
       }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onTrialRegisterRequested(
+    AuthTrialRegisterRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final user = await _registerTrialUseCase(
+        email: event.email,
+        password: event.password,
+        firstName: event.firstName,
+        lastName: event.lastName,
+      );
+      _syncFeatureGate(user);
+      emit(AuthAuthenticated(user));
+    } on ApiException catch (e) {
+      emit(AuthError(e.message));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

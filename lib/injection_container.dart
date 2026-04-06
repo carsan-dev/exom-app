@@ -16,6 +16,7 @@ import 'package:exom_app/features/auth/domain/repositories/auth_repository.dart'
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/register_trial_usecase.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 // Home
@@ -162,12 +163,14 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => SocialLoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => RegisterTrialUseCase(sl<AuthRepository>()));
 
   sl.registerFactory(
     () => AuthBloc(
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
+      registerTrialUseCase: sl<RegisterTrialUseCase>(),
       firebaseAuthService: sl<FirebaseAuthService>(),
     ),
   );

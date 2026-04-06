@@ -104,6 +104,14 @@ class AppRouter {
         if (!done) return AppRoutes.onboarding;
       }
 
+      // Check trial expiration
+      if (user != null && !isAuthRoute && loc != AppRoutes.trialExpired) {
+        final gate = GetIt.I<FeatureGateService>();
+        if (gate.isTrialExpired) {
+          return AppRoutes.trialExpired;
+        }
+      }
+
       return null;
     },
     refreshListenable: GoRouterRefreshStream(

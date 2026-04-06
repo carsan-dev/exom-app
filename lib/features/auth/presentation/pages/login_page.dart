@@ -302,11 +302,6 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildTrialButton(BuildContext context) {
     final palette = context.exomPalette;
-    final flavor = FlavorConfig.instance.flavor;
-
-    if (flavor == Flavor.dev) {
-      return const SizedBox.shrink();
-    }
 
     return Column(
       children: [

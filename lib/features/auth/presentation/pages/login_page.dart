@@ -305,6 +305,11 @@ class _LoginPageState extends State<LoginPage> {
 
     final l10n = AppLocalizations.of(context)!;
 
+    // TODO: Uncomment for production (stores) build to hide trial button in dev
+    // if (!FlavorConfig.instance.isDev) {
+    //   return const SizedBox.shrink();
+    // }
+
     return Column(
       children: [
         Text(

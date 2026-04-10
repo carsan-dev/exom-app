@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/injection_container.dart';
 
 import '../bloc/auth_bloc.dart';
@@ -45,9 +48,14 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  String _logoAsset(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? 'assets/images/logo_dark.svg'
+        : 'assets/images/logo.svg';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
 
     return BlocListener<AuthBloc, AuthState>(
@@ -65,31 +73,47 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       },
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
-                  _buildBranding(context),
-                  const SizedBox(height: 48),
-                  _buildEmailField(context),
-                  const SizedBox(height: 16),
-                  _buildPasswordField(context),
-                  const SizedBox(height: 8),
-                  _buildForgotPassword(context),
-                  const SizedBox(height: 24),
-                  _buildLoginButton(),
-                  const SizedBox(height: 24),
-                  _buildDivider(context),
-                  const SizedBox(height: 24),
-                  _buildSocialButtons(context),
-                ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 24),
+                    _buildBranding(context),
+                    const SizedBox(height: 36),
+                    GlassCard(
+                      margin: EdgeInsets.zero,
+                      padding: const EdgeInsets.all(24),
+                      borderRadius: 28,
+                      elevated: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildEmailField(context),
+                          const SizedBox(height: 16),
+                          _buildPasswordField(context),
+                          const SizedBox(height: 8),
+                          _buildForgotPassword(context),
+                          const SizedBox(height: 24),
+                          _buildLoginButton(),
+                          const SizedBox(height: 24),
+                          _buildDivider(context),
+                          const SizedBox(height: 24),
+                          _buildSocialButtons(context),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -105,41 +129,33 @@ class _LoginPageState extends State<LoginPage> {
 
     return Column(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: palette.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Center(
-            child: Text(
-              'EX',
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: palette.onPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 164,
+              height: 164,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.primary.withValues(alpha: 0.22),
+                    blurRadius: 70,
+                    spreadRadius: 10,
+                  ),
+                ],
               ),
             ),
-          ),
+            SvgPicture.asset(_logoAsset(context), height: 72),
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          'EXOM',
-          style: theme.textTheme.displayLarge?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 32,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 2,
-          ),
-        ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         Text(
           l10n.appTagline,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: palette.textSecondary,
+            color: palette.primary.withValues(alpha: 0.92),
             fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
         ),

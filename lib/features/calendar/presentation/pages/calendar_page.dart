@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
@@ -7,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
@@ -84,6 +88,8 @@ class _CalendarViewState extends State<_CalendarView> {
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
     final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -108,22 +114,32 @@ class _CalendarViewState extends State<_CalendarView> {
         // Toggle: Entrenos / Dietas
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Row(
-            children: [
-              _ToggleChip(
-                label: l10n.training,
-                icon: Icons.fitness_center,
-                isSelected: _showTrainings,
-                onTap: () => setState(() => _showTrainings = true),
-              ),
-              const SizedBox(width: 10),
-              _ToggleChip(
-                label: l10n.diets,
-                icon: Icons.restaurant_menu,
-                isSelected: !_showTrainings,
-                onTap: () => setState(() => _showTrainings = false),
-              ),
-            ],
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: GlassDecoration.elevated(borderRadius: 26),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ToggleChip(
+                    label: l10n.training,
+                    icon: Icons.fitness_center,
+                    color: palette.primary,
+                    isSelected: _showTrainings,
+                    onTap: () => setState(() => _showTrainings = true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ToggleChip(
+                    label: l10n.diets,
+                    icon: Icons.restaurant_menu,
+                    color: semantic.calorie,
+                    isSelected: !_showTrainings,
+                    onTap: () => setState(() => _showTrainings = false),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -176,6 +192,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final result = await showDialog<List<int>>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (dialogContext) => _MonthYearPickerDialog(
         initialYear: selectedYear,
         initialMonth: selectedMonth,
@@ -197,11 +214,8 @@ class _CalendarViewState extends State<_CalendarView> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+      decoration: GlassDecoration.elevated(borderRadius: 24),
       child: TableCalendar<CalendarDayEntity>(
         firstDay: DateTime(2024),
         lastDay: DateTime(2030),
@@ -249,11 +263,35 @@ class _CalendarViewState extends State<_CalendarView> {
           cellMargin: const EdgeInsets.all(4),
         ),
         calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, date, events) {
+          defaultBuilder: (context, date, _) {
             final key = DateTime(date.year, date.month, date.day);
-            final day = dayMap[key];
-            if (day == null) return null;
-            return _buildMarker(day);
+            return _buildDayCell(
+              context,
+              date,
+              dayMap[key],
+              isSelected: false,
+              isToday: false,
+            );
+          },
+          todayBuilder: (context, date, _) {
+            final key = DateTime(date.year, date.month, date.day);
+            return _buildDayCell(
+              context,
+              date,
+              dayMap[key],
+              isSelected: false,
+              isToday: true,
+            );
+          },
+          selectedBuilder: (context, date, _) {
+            final key = DateTime(date.year, date.month, date.day);
+            return _buildDayCell(
+              context,
+              date,
+              dayMap[key],
+              isSelected: true,
+              isToday: isSameDay(date, DateTime.now()),
+            );
           },
         ),
         onDaySelected: (selectedDay, focusedDay) {
@@ -272,32 +310,91 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget? _buildMarker(CalendarDayEntity day) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
+  bool _dayHasVisibleActivity(CalendarDayEntity? day) {
+    if (day == null) return false;
     if (_showTrainings) {
-      if (!day.hasTraining && !day.isRestDay) return null;
-      if (day.isRestDay) {
-        return _markerDot(palette.textDisabled);
-      }
-      return _markerDot(
-        day.trainingCompleted ? semantic.success : palette.primary,
-      );
-    } else {
-      if (!day.hasDiet) return null;
-      return _markerDot(
-        day.dietCompleted ? semantic.success : semantic.calorie,
-      );
+      return day.hasTraining || day.isRestDay;
     }
+    return day.hasDiet;
   }
 
-  Widget _markerDot(Color color) {
-    return Positioned(
-      bottom: 4,
+  Color _dayAccentColor(BuildContext context, CalendarDayEntity? day) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    if (day == null) return palette.primary;
+    if (_showTrainings) {
+      if (day.isRestDay) {
+        return palette.textDisabled;
+      }
+      return day.trainingCompleted ? semantic.success : palette.primary;
+    }
+    return day.dietCompleted ? semantic.success : semantic.calorie;
+  }
+
+  Widget _buildDayCell(
+    BuildContext context,
+    DateTime date,
+    CalendarDayEntity? day, {
+    required bool isSelected,
+    required bool isToday,
+  }) {
+    final palette = context.exomPalette;
+    final hasActivity = _dayHasVisibleActivity(day);
+    final accent = _dayAccentColor(context, day);
+    final borderColor = hasActivity || isSelected || isToday
+        ? accent.withValues(alpha: isSelected ? 0.40 : 0.24)
+        : palette.glassBorder.withValues(alpha: 0.10);
+    final fillColor = isSelected
+        ? accent.withValues(alpha: 0.18)
+        : isToday
+        ? palette.primary.withValues(alpha: 0.12)
+        : hasActivity
+        ? accent.withValues(alpha: 0.08)
+        : Colors.transparent;
+
+    return Center(
       child: Container(
-        width: 6,
-        height: 6,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        width: 40,
+        height: 46,
+        decoration: BoxDecoration(
+          color: fillColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor, width: 0.6),
+          boxShadow: hasActivity || isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                    spreadRadius: -8,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${date.day}',
+              style: TextStyle(
+                color: isToday ? palette.primary : palette.textPrimary,
+                fontSize: 14,
+                fontWeight: hasActivity || isSelected || isToday
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: hasActivity ? accent : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -332,9 +429,9 @@ class _CalendarViewState extends State<_CalendarView> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
+            decoration: GlassDecoration.card(
+              borderRadius: 999,
+              borderColor: color.withValues(alpha: 0.18),
             ),
             child: Text(
               '$completed/$total',
@@ -399,22 +496,21 @@ class _CalendarViewState extends State<_CalendarView> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.divider),
-      ),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: palette.surfaceVariant,
+              color: palette.glassBackground,
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: palette.glassBorder.withValues(alpha: 0.16),
+                width: 0.6,
+              ),
             ),
             child: Icon(
               Icons.event_busy,
@@ -453,22 +549,21 @@ class _CalendarViewState extends State<_CalendarView> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.divider),
-      ),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: palette.surfaceVariant,
+              color: palette.glassBackground,
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: palette.glassBorder.withValues(alpha: 0.16),
+                width: 0.6,
+              ),
             ),
             child: Icon(Icons.hotel, color: palette.textDisabled, size: 20),
           ),
@@ -517,14 +612,10 @@ class _CalendarViewState extends State<_CalendarView> {
         ? Icons.check_circle
         : Icons.schedule;
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.divider),
-      ),
+      accentColor: statusColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -536,6 +627,14 @@ class _CalendarViewState extends State<_CalendarView> {
                 decoration: BoxDecoration(
                   color: palette.primarySoft,
                   borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: statusColor.withValues(alpha: 0.16),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -8,
+                    ),
+                  ],
                 ),
                 child: Icon(Icons.fitness_center, color: statusColor, size: 20),
               ),
@@ -581,11 +680,11 @@ class _CalendarViewState extends State<_CalendarView> {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: Text(l10n.openDetail),
               style: OutlinedButton.styleFrom(
-                foregroundColor: palette.primary,
-                side: BorderSide(color: palette.primary),
+                foregroundColor: statusColor,
+                side: BorderSide(color: statusColor.withValues(alpha: 0.35)),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
@@ -601,16 +700,21 @@ class _CalendarViewState extends State<_CalendarView> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: GlassDecoration.card(borderRadius: 18),
       child: OutlinedButton.icon(
         onPressed: () => context.go('/challenges'),
-        icon: Icon(Icons.emoji_events_outlined, size: 18, color: palette.primary),
+        icon: Icon(
+          Icons.emoji_events_outlined,
+          size: 18,
+          color: palette.primary,
+        ),
         label: Text(l10n.challengesMenuItem),
         style: OutlinedButton.styleFrom(
           foregroundColor: palette.primary,
-          side: BorderSide(color: palette.primary.withValues(alpha: 0.3)),
+          side: BorderSide(color: palette.primary.withValues(alpha: 0.22)),
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
       ),
@@ -634,14 +738,10 @@ class _CalendarViewState extends State<_CalendarView> {
         : l10n.pending;
     final statusIcon = day.dietCompleted ? Icons.check_circle : Icons.schedule;
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.divider),
-      ),
+      accentColor: statusColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -653,6 +753,14 @@ class _CalendarViewState extends State<_CalendarView> {
                 decoration: BoxDecoration(
                   color: semantic.calorie.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: statusColor.withValues(alpha: 0.16),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -8,
+                    ),
+                  ],
                 ),
                 child: Icon(
                   Icons.restaurant_menu,
@@ -701,11 +809,11 @@ class _CalendarViewState extends State<_CalendarView> {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: Text(l10n.openPlan),
               style: OutlinedButton.styleFrom(
-                foregroundColor: semantic.calorie,
-                side: BorderSide(color: semantic.calorie),
+                foregroundColor: statusColor,
+                side: BorderSide(color: statusColor.withValues(alpha: 0.35)),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
@@ -746,9 +854,12 @@ class _MonthHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onPrevious,
-            icon: Icon(Icons.chevron_left, color: palette.textSecondary),
+          Container(
+            decoration: GlassDecoration.card(borderRadius: 14),
+            child: IconButton(
+              onPressed: onPrevious,
+              icon: Icon(Icons.chevron_left, color: palette.textSecondary),
+            ),
           ),
           Expanded(
             child: GestureDetector(
@@ -774,9 +885,12 @@ class _MonthHeader extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            onPressed: onNext,
-            icon: Icon(Icons.chevron_right, color: palette.textSecondary),
+          Container(
+            decoration: GlassDecoration.card(borderRadius: 14),
+            child: IconButton(
+              onPressed: onNext,
+              icon: Icon(Icons.chevron_right, color: palette.textSecondary),
+            ),
           ),
         ],
       ),
@@ -789,12 +903,14 @@ class _MonthHeader extends StatelessWidget {
 class _ToggleChip extends StatelessWidget {
   final String label;
   final IconData icon;
+  final Color color;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _ToggleChip({
     required this.label,
     required this.icon,
+    required this.color,
     required this.isSelected,
     required this.onTap,
   });
@@ -802,31 +918,29 @@ class _ToggleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? palette.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? palette.primary : palette.borderSoft,
-          ),
-        ),
+        decoration: isSelected
+            ? GlassDecoration.accentCard(color, borderRadius: 20)
+            : const BoxDecoration(),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               size: 16,
-              color: isSelected ? palette.onPrimary : palette.textSecondary,
+              color: isSelected ? color : palette.textSecondary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? palette.onPrimary : palette.textSecondary,
+                color: isSelected ? color : palette.textSecondary,
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -868,89 +982,119 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+
     return Dialog(
-      backgroundColor: palette.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Year selector
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: () => setState(() => _year--),
-                  icon: Icon(Icons.chevron_left, color: palette.textSecondary),
-                ),
-                Text(
-                  '$_year',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => setState(() => _year++),
-                  icon: Icon(Icons.chevron_right, color: palette.textSecondary),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.headerGlass,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: palette.glassBorder.withValues(alpha: 0.18),
+                width: 0.6,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x40000000),
+                  blurRadius: 32,
+                  offset: Offset(0, 10),
+                  spreadRadius: -8,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // Month grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.8,
-              ),
-              itemCount: 12,
-              itemBuilder: (context, index) {
-                final m = index + 1;
-                final isSelected = m == _month;
-                return GestureDetector(
-                  onTap: () => setState(() => _month = m),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? palette.primary
-                          : palette.surfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _monthLabel(context, m),
-                      style: TextStyle(
-                        color: isSelected
-                            ? palette.onPrimary
-                            : palette.textSecondary,
-                        fontSize: 13,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Year selector
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () => setState(() => _year--),
+                      icon: Icon(
+                        Icons.chevron_left,
+                        color: palette.textSecondary,
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
+                    Text(
+                      '$_year',
+                      style: TextStyle(
+                        color: palette.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _year++),
+                      icon: Icon(
+                        Icons.chevron_right,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-            // Confirm button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context, [_year, _month]),
-                child: Text(l10n.goToMonthButton),
-              ),
+                // Month grid
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.8,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) {
+                    final m = index + 1;
+                    final isSelected = m == _month;
+                    return GestureDetector(
+                      onTap: () => setState(() => _month = m),
+                      child: Container(
+                        decoration: isSelected
+                            ? GlassDecoration.accentCard(
+                                palette.primary,
+                                borderRadius: 12,
+                              )
+                            : GlassDecoration.card(borderRadius: 12),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _monthLabel(context, m),
+                          style: TextStyle(
+                            color: isSelected
+                                ? palette.primary
+                                : palette.textSecondary,
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Confirm button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, [_year, _month]),
+                    child: Text(l10n.goToMonthButton),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

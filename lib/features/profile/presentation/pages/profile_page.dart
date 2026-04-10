@@ -13,6 +13,7 @@ import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/injection_container.dart';
@@ -25,30 +26,34 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: palette.textPrimary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          AppLocalizations.of(context).profilePageTitle,
-          style: TextStyle(
-            color: palette.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: ExomGradients.scaffoldBackground(palette),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            AppLocalizations.of(context).profilePageTitle,
+            style: TextStyle(
+              color: palette.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-      ),
-      body: BlocProvider(
-        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
-        child: const _ProfileView(),
+        body: BlocProvider(
+          create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+          child: const _ProfileView(),
+        ),
       ),
     );
   }
@@ -204,10 +209,9 @@ class _ProfileHeader extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.divider),
+      decoration: GlassDecoration.accentCard(
+        AppColors.primary,
+        borderRadius: 24,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,8 +284,23 @@ class _ProfileHeader extends StatelessWidget {
           GestureDetector(
             onTap: isUploadingAvatar ? null : () => _pickAndUpload(context),
             child: Stack(
+              clipBehavior: Clip.none,
               alignment: Alignment.bottomRight,
               children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.28),
+                          blurRadius: 30,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.2),
@@ -313,9 +332,17 @@ class _ProfileHeader extends StatelessWidget {
                 if (!isUploadingAvatar)
                   Container(
                     padding: const EdgeInsets.all(5),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.24),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                          spreadRadius: -6,
+                        ),
+                      ],
                     ),
                     child: const Icon(
                       Icons.camera_alt,
@@ -345,9 +372,12 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: palette.surfaceVariant,
+        color: palette.glassBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.borderSoft),
+        border: Border.all(
+          color: palette.glassBorder.withValues(alpha: 0.16),
+          width: 0.6,
+        ),
       ),
       child: Text(
         label,
@@ -462,11 +492,7 @@ class _ActionChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: palette.borderSoft),
-        ),
+        decoration: GlassDecoration.card(borderRadius: 16),
         child: Column(
           children: [
             Icon(icon, color: AppColors.primary, size: 18),
@@ -510,11 +536,7 @@ class _WeightChartCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -630,9 +652,9 @@ class _FilledChart extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: palette.surfaceVariant,
-                borderRadius: BorderRadius.circular(8),
+              decoration: GlassDecoration.card(
+                borderRadius: 999,
+                borderColor: AppColors.primary.withValues(alpha: 0.18),
               ),
               child: Text(
                 '${dateFormat.format(entries.last.date)}  ${formatWeight(entries.last.weightKg, unitSystem)}',
@@ -939,11 +961,7 @@ class _CircularIndicatorCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.accentCard(color, borderRadius: 20),
       child: Column(
         children: [
           // Header
@@ -1109,11 +1127,7 @@ class _EmptyIndicatorCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.borderSoft),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 20),
       child: Column(
         children: [
           Row(
@@ -1202,11 +1216,7 @@ class _BodyDataSection extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

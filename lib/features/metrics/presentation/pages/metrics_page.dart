@@ -8,6 +8,7 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -416,15 +417,9 @@ class _MetricsViewState extends State<_MetricsView> {
       onTap: () => setState(() => _selectedMeasure = zone),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? semantic.info.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: isSelected
-              ? Border.all(color: semantic.info.withValues(alpha: 0.4))
-              : null,
-        ),
+        decoration: isSelected
+            ? GlassDecoration.accentCard(semantic.info, borderRadius: 10)
+            : const BoxDecoration(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -463,13 +458,12 @@ class _MetricsViewState extends State<_MetricsView> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? semantic.info.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? semantic.info : palette.divider),
-        ),
+        decoration: active
+            ? GlassDecoration.accentCard(semantic.info, borderRadius: 20)
+            : GlassDecoration.card(
+                borderRadius: 20,
+                borderColor: palette.glassBorder.withValues(alpha: 0.10),
+              ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1001,445 +995,462 @@ class _MetricsViewState extends State<_MetricsView> {
           );
         }
       },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.metricsPageTitle),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
         ),
-        body: BlocBuilder<MetricsBloc, MetricsState>(
-          builder: (context, state) {
-            final isSaving = state is MetricsSaving;
-            return Stack(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  children: [
-                    _SectionCard(
-                      title: AppLocalizations.of(context)!.recordDateTitle,
-                      icon: Icons.calendar_today_outlined,
-                      color: palette.primary,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!.recordDateDescription,
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: _pickMetricDate,
-                            icon: const Icon(Icons.event_outlined, size: 16),
-                            label: Text(_selectedDateLabel(context)),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _SectionCard(
-                      title: AppLocalizations.of(context)!.heightSectionTitle,
-                      icon: Icons.height,
-                      color: semantic.info,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!.heightDescription,
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _heightController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            style: TextStyle(color: palette.textPrimary),
-                            decoration: InputDecoration(
-                              hintText: _heightHint(unitSystem),
-                              suffixText: lengthUnitSymbol(unitSystem),
-                              suffixStyle: TextStyle(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text(AppLocalizations.of(context)!.metricsPageTitle),
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+          ),
+          body: BlocBuilder<MetricsBloc, MetricsState>(
+            builder: (context, state) {
+              final isSaving = state is MetricsSaving;
+              return Stack(
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.only(bottom: 100),
+                    children: [
+                      _SectionCard(
+                        title: AppLocalizations.of(context)!.recordDateTitle,
+                        icon: Icons.calendar_today_outlined,
+                        color: palette.primary,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(
+                              AppLocalizations.of(
+                                context,
+                              )!.recordDateDescription,
+                              style: TextStyle(
                                 color: palette.textSecondary,
+                                fontSize: 12,
+                                height: 1.5,
                               ),
                             ),
-                            onChanged: (_) => _heightTouched = true,
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: _pickMetricDate,
+                              icon: const Icon(Icons.event_outlined, size: 16),
+                              label: Text(_selectedDateLabel(context)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // Weight section
-                    _SectionCard(
-                      title: AppLocalizations.of(context)!.weightSectionTitle,
-                      icon: Icons.monitor_weight_outlined,
-                      color: palette.primary,
-                      child: Column(
-                        children: [
-                          // Toggle manual/slider
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context)!.manualEntryToggle,
-                                style: TextStyle(
-                                  color: palette.textSecondary,
-                                  fontSize: 13,
-                                ),
+                      _SectionCard(
+                        title: AppLocalizations.of(context)!.heightSectionTitle,
+                        icon: Icons.height,
+                        color: semantic.info,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(
+                              AppLocalizations.of(context)!.heightDescription,
+                              style: TextStyle(
+                                color: palette.textSecondary,
+                                fontSize: 12,
+                                height: 1.5,
                               ),
-                              Switch(
-                                value: _useManualWeight,
-                                onChanged: (val) =>
-                                    setState(() => _useManualWeight = val),
-                                activeThumbColor: palette.primary,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            AppLocalizations.of(context)!.weightUpdateNote,
-                            style: TextStyle(
-                              color: palette.textDisabled,
-                              fontSize: 11,
-                              height: 1.4,
                             ),
-                          ),
-                          if (_useManualWeight)
+                            const SizedBox(height: 12),
                             TextFormField(
-                              controller: _weightController,
+                              controller: _heightController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
                                   ),
                               style: TextStyle(color: palette.textPrimary),
                               decoration: InputDecoration(
-                                hintText: _weightHint(unitSystem),
+                                hintText: _heightHint(unitSystem),
+                                suffixText: lengthUnitSymbol(unitSystem),
+                                suffixStyle: TextStyle(
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                              onChanged: (_) => _heightTouched = true,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Weight section
+                      _SectionCard(
+                        title: AppLocalizations.of(context)!.weightSectionTitle,
+                        icon: Icons.monitor_weight_outlined,
+                        color: palette.primary,
+                        child: Column(
+                          children: [
+                            // Toggle manual/slider
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.manualEntryToggle,
+                                  style: TextStyle(
+                                    color: palette.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Switch(
+                                  value: _useManualWeight,
+                                  onChanged: (val) =>
+                                      setState(() => _useManualWeight = val),
+                                  activeThumbColor: palette.primary,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              AppLocalizations.of(context)!.weightUpdateNote,
+                              style: TextStyle(
+                                color: palette.textDisabled,
+                                fontSize: 11,
+                                height: 1.4,
+                              ),
+                            ),
+                            if (_useManualWeight)
+                              TextFormField(
+                                controller: _weightController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                style: TextStyle(color: palette.textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: _weightHint(unitSystem),
+                                  suffixText: weightUnitSymbol(unitSystem),
+                                  suffixStyle: TextStyle(
+                                    color: palette.textSecondary,
+                                  ),
+                                ),
+                                onChanged: (_) => _weightTouched = true,
+                              )
+                            else ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    formatWeight(40, unitSystem, decimals: 0),
+                                    style: TextStyle(
+                                      color: palette.textDisabled,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    formatWeight(_weight, unitSystem),
+                                    style: TextStyle(
+                                      color: palette.primary,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    formatWeight(160, unitSystem, decimals: 0),
+                                    style: TextStyle(
+                                      color: palette.textDisabled,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Slider(
+                                value: _weight,
+                                min: 40.0,
+                                max: 160.0,
+                                divisions: 240,
+                                activeColor: palette.primary,
+                                inactiveColor: palette.surfaceVariant,
+                                onChanged: (val) => setState(() {
+                                  _weight = val;
+                                  _weightTouched = true;
+                                }),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      _SectionCard(
+                        title: AppLocalizations.of(
+                          context,
+                        )!.muscleMassSectionTitle,
+                        icon: Icons.fitness_center,
+                        color: semantic.calorie,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(
+                              AppLocalizations.of(
+                                context,
+                              )!.muscleMassDescription,
+                              style: TextStyle(
+                                color: palette.textSecondary,
+                                fontSize: 12,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _muscleMassController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              style: TextStyle(color: palette.textPrimary),
+                              decoration: InputDecoration(
+                                hintText: unitSystem == UnitSystem.imperial
+                                    ? 'Eg: 71.7'
+                                    : 'Eg: 32.5',
                                 suffixText: weightUnitSymbol(unitSystem),
                                 suffixStyle: TextStyle(
                                   color: palette.textSecondary,
                                 ),
                               ),
-                              onChanged: (_) => _weightTouched = true,
-                            )
-                          else ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  formatWeight(40, unitSystem, decimals: 0),
-                                  style: TextStyle(
-                                    color: palette.textDisabled,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                Text(
-                                  formatWeight(_weight, unitSystem),
-                                  style: TextStyle(
-                                    color: palette.primary,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  formatWeight(160, unitSystem, decimals: 0),
-                                  style: TextStyle(
-                                    color: palette.textDisabled,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
+                              onChanged: (_) => _muscleMassTouched = true,
                             ),
-                            Slider(
-                              value: _weight,
-                              min: 40.0,
-                              max: 160.0,
-                              divisions: 240,
-                              activeColor: palette.primary,
-                              inactiveColor: palette.surfaceVariant,
-                              onChanged: (val) => setState(() {
-                                _weight = val;
-                                _weightTouched = true;
-                              }),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    _SectionCard(
-                      title: AppLocalizations.of(
-                        context,
-                      )!.muscleMassSectionTitle,
-                      icon: Icons.fitness_center,
-                      color: semantic.calorie,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!.muscleMassDescription,
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _muscleMassController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            style: TextStyle(color: palette.textPrimary),
-                            decoration: InputDecoration(
-                              hintText: unitSystem == UnitSystem.imperial
-                                  ? 'Eg: 71.7'
-                                  : 'Eg: 32.5',
-                              suffixText: weightUnitSymbol(unitSystem),
-                              suffixStyle: TextStyle(
-                                color: palette.textSecondary,
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: GlassDecoration.card(
+                                borderRadius: 18,
                               ),
-                            ),
-                            onChanged: (_) => _muscleMassTouched = true,
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: palette.surfaceVariant,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: palette.borderSoft),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.seenCalculatorTitle,
-                                  style: TextStyle(
-                                    color: palette.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.seenCalculatorDescription,
-                                  style: TextStyle(
-                                    color: palette.textSecondary,
-                                    fontSize: 12,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () =>
-                                        _openSeenEstimateCalculator(context),
-                                    icon: const Icon(Icons.calculate_outlined),
-                                    label: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.calculateEstimateButton,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Sleep section
-                    _SectionCard(
-                      title: AppLocalizations.of(
-                        context,
-                      )!.sleepHoursSectionTitle,
-                      icon: Icons.bedtime_outlined,
-                      color: semantic.sleep,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!.sleepHoursDescription,
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _sleepController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            style: TextStyle(color: palette.textPrimary),
-                            decoration: InputDecoration(
-                              hintText: 'Eg: 7.5',
-                              suffixText: 'h',
-                              suffixStyle: TextStyle(
-                                color: palette.textSecondary,
-                              ),
-                            ),
-                            onChanged: (value) {
-                              _sleepTouched = true;
-                              final parsed = _parseDouble(value);
-                              if (parsed != null) {
-                                _sleepHours = parsed.clamp(0.0, 24.0);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [6.0, 7.0, 8.0, 9.0]
-                                .map((value) {
-                                  return ActionChip(
-                                    label: Text(
-                                      '${value.toStringAsFixed(0)} h',
-                                    ),
-                                    onPressed: () => _setSleepValue(value),
-                                  );
-                                })
-                                .toList(growable: false),
-                          ),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.center,
-                            child: _SleepEmoji(_sleepHours),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Body measurements
-                    _SectionCard(
-                      title: AppLocalizations.of(
-                        context,
-                      )!.bodyMeasurementsTitle,
-                      icon: Icons.straighten,
-                      color: semantic.info,
-                      trailing: GestureDetector(
-                        onTap: () => setState(() {
-                          _bodyMapMode = !_bodyMapMode;
-                          _selectedMeasure = null;
-                        }),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _bodyMapMode
-                                  ? Icons.grid_view
-                                  : Icons.accessibility_new,
-                              color: semantic.info,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _bodyMapMode
-                                  ? AppLocalizations.of(context)!.listViewToggle
-                                  : AppLocalizations.of(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppLocalizations.of(
                                       context,
-                                    )!.bodyViewToggle,
-                              style: TextStyle(
-                                color: semantic.info,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                    )!.seenCalculatorTitle,
+                                    style: TextStyle(
+                                      color: palette.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.seenCalculatorDescription,
+                                    style: TextStyle(
+                                      color: palette.textSecondary,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _openSeenEstimateCalculator(context),
+                                      icon: const Icon(
+                                        Icons.calculate_outlined,
+                                      ),
+                                      label: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.calculateEstimateButton,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _bodyMapMode
-                              ? _buildBodyMapMeasurements()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: GridView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 2,
-                                          crossAxisSpacing: 12,
-                                          mainAxisSpacing: 12,
-                                          childAspectRatio: 2.0,
-                                        ),
-                                    itemCount: _measureControllers.length,
-                                    itemBuilder: (context, index) {
-                                      final key = _measureControllers.keys
-                                          .elementAt(index);
-                                      return _MeasureInput(
-                                        label: _localizedZoneLabel(
-                                          context,
-                                          key,
-                                        ),
-                                        controller: _measureControllers[key]!,
-                                        onChanged: (_) =>
-                                            _touchedMeasures.add(key),
-                                      );
-                                    },
+
+                      // Sleep section
+                      _SectionCard(
+                        title: AppLocalizations.of(
+                          context,
+                        )!.sleepHoursSectionTitle,
+                        icon: Icons.bedtime_outlined,
+                        color: semantic.sleep,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(
+                              AppLocalizations.of(
+                                context,
+                              )!.sleepHoursDescription,
+                              style: TextStyle(
+                                color: palette.textSecondary,
+                                fontSize: 12,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _sleepController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
                                   ),
+                              style: TextStyle(color: palette.textPrimary),
+                              decoration: InputDecoration(
+                                hintText: 'Eg: 7.5',
+                                suffixText: 'h',
+                                suffixStyle: TextStyle(
+                                  color: palette.textSecondary,
                                 ),
-                        ],
+                              ),
+                              onChanged: (value) {
+                                _sleepTouched = true;
+                                final parsed = _parseDouble(value);
+                                if (parsed != null) {
+                                  _sleepHours = parsed.clamp(0.0, 24.0);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [6.0, 7.0, 8.0, 9.0]
+                                  .map((value) {
+                                    return ActionChip(
+                                      label: Text(
+                                        '${value.toStringAsFixed(0)} h',
+                                      ),
+                                      onPressed: () => _setSleepValue(value),
+                                    );
+                                  })
+                                  .toList(growable: false),
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.center,
+                              child: _SleepEmoji(_sleepHours),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Body measurements
+                      _SectionCard(
+                        title: AppLocalizations.of(
+                          context,
+                        )!.bodyMeasurementsTitle,
+                        icon: Icons.straighten,
+                        color: semantic.info,
+                        trailing: GestureDetector(
+                          onTap: () => setState(() {
+                            _bodyMapMode = !_bodyMapMode;
+                            _selectedMeasure = null;
+                          }),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _bodyMapMode
+                                    ? Icons.grid_view
+                                    : Icons.accessibility_new,
+                                color: semantic.info,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _bodyMapMode
+                                    ? AppLocalizations.of(
+                                        context,
+                                      )!.listViewToggle
+                                    : AppLocalizations.of(
+                                        context,
+                                      )!.bodyViewToggle,
+                                style: TextStyle(
+                                  color: semantic.info,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _bodyMapMode
+                                ? _buildBodyMapMeasurements()
+                                : Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: GridView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      gridDelegate:
+                                          const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            crossAxisSpacing: 12,
+                                            mainAxisSpacing: 12,
+                                            childAspectRatio: 2.0,
+                                          ),
+                                      itemCount: _measureControllers.length,
+                                      itemBuilder: (context, index) {
+                                        final key = _measureControllers.keys
+                                            .elementAt(index);
+                                        return _MeasureInput(
+                                          label: _localizedZoneLabel(
+                                            context,
+                                            key,
+                                          ),
+                                          controller: _measureControllers[key]!,
+                                          onChanged: (_) =>
+                                              _touchedMeasures.add(key),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Save button
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: GlassDecoration.elevated(borderRadius: 24),
+                      child: ElevatedButton(
+                        onPressed: isSaving ? null : _save,
+                        child: isSaving
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                AppLocalizations.of(context)!.saveMetricsButton,
+                              ),
                       ),
                     ),
-                  ],
-                ),
-
-                // Save button
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: palette.surface,
-                      border: Border(top: BorderSide(color: palette.divider)),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: isSaving ? null : _save,
-                      child: isSaving
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              AppLocalizations.of(context)!.saveMetricsButton,
-                            ),
-                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1463,15 +1474,10 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

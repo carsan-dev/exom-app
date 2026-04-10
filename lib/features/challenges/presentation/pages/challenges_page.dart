@@ -4,6 +4,8 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
@@ -41,37 +43,32 @@ class ChallengesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return BlocProvider(
       create: (_) =>
           GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: BlocBuilder<ChallengesBloc, ChallengesState>(
-            builder: (context, state) {
-              if (state is ChallengesInitial || state is ChallengesLoading) {
-                return const LoadingWidget();
-              }
-              if (state is ChallengesError) {
-                return _buildErrorState(context, state);
-              }
-              if (state is ChallengesLoaded) {
-                return _ChallengesContent(
-                  state: state,
-                  onRefresh: () => _refreshChallenges(context),
-                );
-              }
-              if (state is ChallengesEmpty) {
-                return _ChallengesEmptyContent(
-                  state: state,
-                  onRefresh: () => _refreshChallenges(context),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+      child: SafeArea(
+        child: BlocBuilder<ChallengesBloc, ChallengesState>(
+          builder: (context, state) {
+            if (state is ChallengesInitial || state is ChallengesLoading) {
+              return const LoadingWidget();
+            }
+            if (state is ChallengesError) {
+              return _buildErrorState(context, state);
+            }
+            if (state is ChallengesLoaded) {
+              return _ChallengesContent(
+                state: state,
+                onRefresh: () => _refreshChallenges(context),
+              );
+            }
+            if (state is ChallengesEmpty) {
+              return _ChallengesEmptyContent(
+                state: state,
+                onRefresh: () => _refreshChallenges(context),
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );
@@ -206,10 +203,9 @@ class _StreakSummaryCard extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minWidth: 92),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+      decoration: GlassDecoration.accentCard(
+        AppColors.warning,
+        borderRadius: 18,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -274,14 +270,10 @@ class _EmptyChallengesCard extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: palette.divider),
-        color: palette.surface,
-      ),
+      borderRadius: 24,
       child: Column(
         children: [
           Container(
@@ -290,8 +282,9 @@ class _EmptyChallengesCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: palette.textDisabled.withValues(alpha: 0.35),
+                color: palette.glassBorder.withValues(alpha: 0.18),
               ),
+              color: palette.glassBackground,
             ),
             child: Icon(
               Icons.star_border_rounded,
@@ -334,14 +327,10 @@ class _EmptyAchievementsCard extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: palette.divider),
-        color: palette.surface,
-      ),
+      borderRadius: 24,
       child: Column(
         children: [
           Row(
@@ -401,10 +390,9 @@ class _AchievementPlaceholderCard extends StatelessWidget {
     return Container(
       width: 56,
       height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderMedium, width: 1.5),
-        color: palette.surfaceVariant,
+      decoration: GlassDecoration.card(
+        borderRadius: 14,
+        borderColor: palette.glassBorder.withValues(alpha: 0.18),
       ),
       child: Icon(
         Icons.lock_outline_rounded,
@@ -429,17 +417,20 @@ class _MainGoalCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.primary.withValues(alpha: 0.4)),
+      decoration: GlassDecoration.accentCard(
+        AppColors.warning,
+        borderRadius: 22,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.flag, color: AppColors.primary, size: 20),
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: AppColors.warning,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -462,50 +453,50 @@ class _MainGoalCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Stack(
-            alignment: Alignment.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(
-                width: 100,
-                height: 100,
-                child: CircularProgressIndicator(
-                  value: challenge.progress,
-                  strokeWidth: 8,
-                  backgroundColor: palette.divider,
-                  valueColor: AlwaysStoppedAnimation(
-                    challenge.isCompleted ? AppColors.success : palette.primary,
-                  ),
+              Text(
+                l10n.progress,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
                 '${(challenge.progress * 100).toInt()}%',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 20,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.warning,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          _GlowingProgressBar(
+            value: challenge.progress,
+            color: challenge.isCompleted
+                ? AppColors.success
+                : AppColors.warning,
+            backgroundColor: AppColors.warning.withValues(alpha: 0.18),
+          ),
           const SizedBox(height: 12),
-          Center(
-            child: Text(
-              '${challenge.currentValue.toStringAsFixed(0)} / ${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textSecondary,
-                fontSize: 13,
-              ),
+          Text(
+            '${challenge.currentValue.toStringAsFixed(0)} / ${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 13,
             ),
           ),
           if (challenge.deadline != null) ...[
             const SizedBox(height: 8),
-            Center(
-              child: Text(
-                '${l10n.challengeDeadlineLabel}: ${DateFormat('dd MMM yyyy', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textDisabled,
-                  fontSize: 11,
-                ),
+            Text(
+              '${l10n.challengeDeadlineLabel}: ${DateFormat('dd MMM yyyy', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textDisabled,
+                fontSize: 11,
               ),
             ),
           ],
@@ -525,15 +516,15 @@ class _ChallengeCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final progressColor = challenge.isCompleted
+        ? AppColors.warning
+        : palette.primary;
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 18,
+      accentColor: challenge.isCompleted ? AppColors.warning : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -543,7 +534,7 @@ class _ChallengeCard extends StatelessWidget {
                 challenge.isCompleted ? Icons.check_circle : Icons.emoji_events,
                 color: challenge.isCompleted
                     ? AppColors.success
-                    : AppColors.warning,
+                    : progressColor,
                 size: 18,
               ),
               const SizedBox(width: 8),
@@ -567,16 +558,10 @@ class _ChallengeCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: challenge.progress,
-              backgroundColor: palette.divider,
-              valueColor: AlwaysStoppedAnimation(
-                challenge.isCompleted ? AppColors.success : palette.primary,
-              ),
-              minHeight: 6,
-            ),
+          _GlowingProgressBar(
+            value: challenge.progress,
+            color: challenge.isCompleted ? AppColors.success : progressColor,
+            backgroundColor: palette.glassBackground,
           ),
           if (challenge.deadline != null) ...[
             const SizedBox(height: 6),
@@ -607,10 +592,9 @@ class _AchievementCard extends StatelessWidget {
     return Container(
       width: 100,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.divider),
+      decoration: GlassDecoration.accentCard(
+        AppColors.warning,
+        borderRadius: 16,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -633,6 +617,49 @@ class _AchievementCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GlowingProgressBar extends StatelessWidget {
+  const _GlowingProgressBar({
+    required this.value,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  final double value;
+  final Color color;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        height: 10,
+        color: backgroundColor,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: value.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 0),
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

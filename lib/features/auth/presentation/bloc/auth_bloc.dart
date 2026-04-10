@@ -48,6 +48,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final firebaseUser = _firebaseAuthService.currentUser;
     if (firebaseUser == null) {
+      _resetFeatureGate();
       emit(const AuthUnauthenticated());
       return;
     }
@@ -59,6 +60,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
       if (e.isTrialExpired) {
+        _markTrialExpired();
         emit(AuthTrialExpired(e.message));
       } else if (e.isLocked) {
         emit(const AuthAccountLocked());
@@ -68,6 +70,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           id: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           role: 'CLIENT',
+          tier: 'LOW_TICKET',
         );
         _syncFeatureGate(entity);
         emit(AuthAuthenticated(entity));
@@ -78,6 +81,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         role: 'CLIENT',
+        tier: 'LOW_TICKET',
       );
       _syncFeatureGate(entity);
       emit(AuthAuthenticated(entity));
@@ -86,6 +90,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _syncFeatureGate(UserEntity user) {
     GetIt.instance<FeatureGateService>().updateUser(user);
+  }
+
+  void _markTrialExpired() {
+    GetIt.instance<FeatureGateService>().markTrialExpired();
+  }
+
+  void _resetFeatureGate() {
+    GetIt.instance<FeatureGateService>().reset();
   }
 
   Future<void> _onLoginRequested(
@@ -99,6 +111,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
       if (e.isTrialExpired) {
+        _markTrialExpired();
         emit(AuthTrialExpired(e.message));
       } else if (e.isLocked) {
         emit(const AuthAccountLocked());
@@ -123,6 +136,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
       if (e.isTrialExpired) {
+        _markTrialExpired();
         emit(AuthTrialExpired(e.message));
       } else if (e.isLocked) {
         emit(const AuthAccountLocked());
@@ -147,6 +161,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
       if (e.isTrialExpired) {
+        _markTrialExpired();
         emit(AuthTrialExpired(e.message));
       } else if (e.isLocked) {
         emit(const AuthAccountLocked());
@@ -189,6 +204,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (_) {
       // Best effort logout
     }
+    _resetFeatureGate();
     emit(const AuthUnauthenticated());
   }
 }

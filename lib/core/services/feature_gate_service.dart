@@ -1,12 +1,29 @@
+import 'package:flutter/foundation.dart';
+
 import '../../features/auth/domain/entities/user_entity.dart';
 
-class FeatureGateService {
+class FeatureGateService extends ChangeNotifier {
   UserEntity _user;
+  bool _trialExpiredOverride = false;
 
   FeatureGateService(this._user);
 
   void updateUser(UserEntity user) {
     _user = user;
+    _trialExpiredOverride = user.isTrialExpired;
+    notifyListeners();
+  }
+
+  void markTrialExpired() {
+    if (_trialExpiredOverride) return;
+    _trialExpiredOverride = true;
+    notifyListeners();
+  }
+
+  void reset() {
+    _user = const UserEntity(id: '', email: '', role: 'CLIENT');
+    _trialExpiredOverride = false;
+    notifyListeners();
   }
 
   // ── Dietas ──
@@ -40,7 +57,7 @@ class FeatureGateService {
   bool get canAccessFeedbackShortcut => _user.isHighTicket;
 
   // ── Trial ──
-  bool get isTrial => _user.isTrial;
-  bool get isTrialExpired => _user.isTrialExpired;
+  bool get isTrial => _trialExpiredOverride || _user.isTrial;
+  bool get isTrialExpired => _trialExpiredOverride || _user.isTrialExpired;
   int get trialDaysRemaining => _user.trialDaysRemaining;
 }

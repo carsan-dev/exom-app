@@ -4,7 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/widgets/trial_banner.dart';
@@ -83,6 +85,25 @@ class AppRoutes {
 class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  static final Listenable _refreshListenable = Listenable.merge([
+    GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
+    GetIt.I<FeatureGateService>(),
+  ]);
+
+  static Future<void> _openContact(BuildContext context) async {
+    final launched = await launchUrl(
+      ExternalLinks.supportPage,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo abrir la pagina de contacto.'),
+        ),
+      );
+    }
+  }
 
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -114,9 +135,7 @@ class AppRouter {
 
       return null;
     },
-    refreshListenable: GoRouterRefreshStream(
-      FirebaseAuth.instance.authStateChanges(),
-    ),
+    refreshListenable: _refreshListenable,
     routes: [
       // Auth
       GoRoute(
@@ -130,6 +149,7 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.trialExpired,
         builder: (context, state) => TrialExpiredScreen(
+          onContactTrainer: () => _openContact(context),
           onLogout: () {
             context.read<AuthBloc>().add(const AuthLogoutRequested());
           },
@@ -248,13 +268,23 @@ class MainShell extends StatelessWidget {
 
   Widget _buildBodyWithTrialBanner(Widget child) {
     final gate = GetIt.I<FeatureGateService>();
-    if (!gate.isTrial) return child;
+    return AnimatedBuilder(
+      animation: gate,
+      builder: (context, _) {
+        if (!gate.isTrial || gate.isTrialExpired) {
+          return child;
+        }
 
-    return Column(
-      children: [
-        TrialBanner(daysRemaining: gate.trialDaysRemaining),
-        Expanded(child: child),
-      ],
+        return Column(
+          children: [
+            TrialBanner(
+              daysRemaining: gate.trialDaysRemaining,
+              onSubscribe: () => AppRouter._openContact(context),
+            ),
+            Expanded(child: child),
+          ],
+        );
+      },
     );
   }
 

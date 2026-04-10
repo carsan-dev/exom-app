@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
+import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -305,10 +307,9 @@ class _LoginPageState extends State<LoginPage> {
 
     final l10n = AppLocalizations.of(context)!;
 
-    // TODO: Uncomment for production (stores) build to hide trial button in dev
-    // if (!FlavorConfig.instance.isDev) {
-    //   return const SizedBox.shrink();
-    // }
+    if (!FlavorConfig.instance.isTrialSignupEnabled) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       children: [
@@ -400,6 +401,7 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   bool _obscure = true;
+  bool _acceptedTrialTerms = false;
 
   @override
   void dispose() {
@@ -412,6 +414,17 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
 
   void _onRegister() {
     if (_formKey.currentState?.validate() ?? false) {
+      if (!_acceptedTrialTerms) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Debes aceptar la politica de privacidad y las condiciones de la prueba.',
+            ),
+          ),
+        );
+        return;
+      }
+
       context.read<AuthBloc>().add(
         AuthTrialRegisterRequested(
           email: _emailCtrl.text.trim(),
@@ -431,12 +444,9 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (_, state) => state is AuthError,
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          // Pop trial page, then the router redirect handles navigation
-          Navigator.of(context).pop();
-          context.go(AppRoutes.home);
-        } else if (state is AuthError) {
+        if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
@@ -499,6 +509,23 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: palette.surfaceVariant,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: palette.divider),
+                    ),
+                    child: Text(
+                      'Prueba gratuita de 14 dias. Sin cargo. Acceso a funciones basicas.',
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -588,6 +615,49 @@ class _TrialRegisterPageState extends State<_TrialRegisterPage> {
                     },
                   ),
                   const SizedBox(height: 32),
+                  CheckboxListTile(
+                    value: _acceptedTrialTerms,
+                    onChanged: (value) =>
+                        setState(() => _acceptedTrialTerms = value ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: palette.primary,
+                    title: Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          'Acepto la',
+                          style: TextStyle(
+                            color: palette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => launchUrl(
+                            ExternalLinks.privacyPolicy,
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: Text(
+                            'politica de privacidad',
+                            style: TextStyle(
+                              color: palette.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'y entiendo las condiciones de la prueba gratuita.',
+                          style: TextStyle(
+                            color: palette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
 
                   // Register button
                   BlocBuilder<AuthBloc, AuthState>(

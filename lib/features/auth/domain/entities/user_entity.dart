@@ -14,7 +14,7 @@ class UserEntity extends Equatable {
     required this.id,
     required this.email,
     required this.role,
-    this.tier = 'HIGH_TICKET',
+    this.tier = 'LOW_TICKET',
     this.trialExpiresAt,
     this.firstName,
     this.lastName,
@@ -40,6 +40,14 @@ class UserEntity extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, email, role, tier, trialExpiresAt, firstName, lastName, avatarUrl];
+  List<Object?> get props => [
+    id,
+    email,
+    role,
+    tier,
+    trialExpiresAt,
+    firstName,
+    lastName,
+    avatarUrl,
+  ];
 }

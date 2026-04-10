@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get_it/get_it.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/services/feature_gate_service.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -109,6 +111,7 @@ class _AuthInterceptor extends Interceptor {
   ) async {
     // Trial expired — redirect to trial-expired screen
     if (err.response?.statusCode == 402) {
+      GetIt.I<FeatureGateService>().markTrialExpired();
       AppRouter.router.go(AppRoutes.trialExpired);
       return handler.next(err);
     }

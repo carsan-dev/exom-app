@@ -44,7 +44,7 @@ class UserModel {
       id: json['id'] as String,
       email: json['email'] as String,
       role: json['role'] as String,
-      tier: json['tier'] as String? ?? 'HIGH_TICKET',
+      tier: json['tier'] as String? ?? 'LOW_TICKET',
       trialExpiresAt: json['trial_expires_at'] != null
           ? DateTime.parse(json['trial_expires_at'] as String)
           : null,

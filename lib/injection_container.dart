@@ -145,7 +145,7 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<FeatureGateService>(
     () => FeatureGateService(
-      const UserEntity(id: '', email: '', role: 'CLIENT', tier: 'HIGH_TICKET'),
+      const UserEntity(id: '', email: '', role: 'CLIENT', tier: 'LOW_TICKET'),
     ),
   );
 

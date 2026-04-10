@@ -3,6 +3,10 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 
 const _devApiBaseUrlOverride = String.fromEnvironment('EXOM_API_BASE_URL');
+const _trialSignupEnabledOverride = bool.fromEnvironment(
+  'EXOM_ENABLE_TRIAL_SIGNUP',
+  defaultValue: false,
+);
 
 enum Flavor { dev, staging, prod }
 
@@ -68,4 +72,5 @@ class FlavorConfig {
 
   bool get isDev => flavor == Flavor.dev;
   bool get isProd => flavor == Flavor.prod;
+  bool get isTrialSignupEnabled => _trialSignupEnabledOverride;
 }

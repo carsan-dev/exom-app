@@ -16,15 +16,9 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<List<TrainingEntity>> getTrainings({
-    int page = 1,
-    int limit = 20,
-  }) async {
-    final models = await _remoteDataSource.getTrainings(
-      page: page,
-      limit: limit,
-    );
-    return models.map(_mapToEntity).toList();
+  Future<List<TrainingHistoryEntity>> getTrainings({String? date}) async {
+    final models = await _remoteDataSource.getTrainings(date: date);
+    return models.map(_mapHistoryToEntity).toList();
   }
 
   @override
@@ -34,10 +28,16 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<void> markExerciseCompleted(String exerciseId, String date,
-      {double? weightUsed}) {
-    return _remoteDataSource.markExerciseCompleted(exerciseId, date,
-        weightUsed: weightUsed);
+  Future<void> markExerciseCompleted(
+    String exerciseId,
+    String date, {
+    double? weightUsed,
+  }) {
+    return _remoteDataSource.markExerciseCompleted(
+      exerciseId,
+      date,
+      weightUsed: weightUsed,
+    );
   }
 
   @override
@@ -52,7 +52,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
 
   @override
   Future<({Set<String> ids, Map<String, double> weights})>
-      getCompletedExerciseIds({String? date}) {
+  getCompletedExerciseIds({String? date}) {
     return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 
@@ -88,6 +88,19 @@ class TrainingRepositoryImpl implements TrainingRepository {
         commonErrorsText: model.exercise.commonErrorsText,
         explanationText: model.exercise.explanationText,
       ),
+    );
+  }
+
+  TrainingHistoryEntity _mapHistoryToEntity(TrainingHistoryModel model) {
+    return TrainingHistoryEntity(
+      id: model.id,
+      name: model.name,
+      type: model.type,
+      level: model.level,
+      estimatedDurationMin: model.estimatedDurationMin,
+      estimatedCalories: model.estimatedCalories,
+      date: model.date,
+      isCompleted: model.isCompleted,
     );
   }
 }

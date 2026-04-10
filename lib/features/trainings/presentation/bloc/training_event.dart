@@ -6,8 +6,9 @@ abstract class TrainingEvent {
 
 class TrainingsLoadRequested extends TrainingEvent {
   final String? date;
+  final String? historyDate;
 
-  const TrainingsLoadRequested({this.date});
+  const TrainingsLoadRequested({this.date, this.historyDate});
 }
 
 class TodayTrainingLoadRequested extends TrainingEvent {

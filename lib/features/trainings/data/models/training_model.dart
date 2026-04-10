@@ -68,6 +68,49 @@ class TrainingExerciseModel {
   }
 }
 
+class TrainingHistoryModel {
+  final String id;
+  final String name;
+  final String type;
+  final String level;
+  final int? estimatedDurationMin;
+  final int? estimatedCalories;
+  final DateTime date;
+  final bool isCompleted;
+
+  const TrainingHistoryModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.level,
+    this.estimatedDurationMin,
+    this.estimatedCalories,
+    required this.date,
+    required this.isCompleted,
+  });
+
+  factory TrainingHistoryModel.fromAssignmentJson(
+    Map<String, dynamic> json, {
+    required bool isCompleted,
+  }) {
+    final training = (json['training'] as Map<String, dynamic>?) ?? const {};
+
+    return TrainingHistoryModel(
+      id: training['id'] as String? ?? '',
+      name: training['name'] as String? ?? '',
+      type: training['type'] as String? ?? '',
+      level: training['level'] as String? ?? '',
+      estimatedDurationMin: (training['estimated_duration_min'] as num?)
+          ?.toInt(),
+      estimatedCalories: (training['estimated_calories'] as num?)?.toInt(),
+      date:
+          DateTime.tryParse(json['date'] as String? ?? '') ??
+          DateTime.utc(1970),
+      isCompleted: isCompleted,
+    );
+  }
+}
+
 class TrainingModel {
   final String id;
   final String name;

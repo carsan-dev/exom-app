@@ -13,14 +13,16 @@ class TrainingLoading extends TrainingState {
 }
 
 class TrainingsLoaded extends TrainingState {
-  final List<TrainingEntity> trainings;
+  final List<TrainingHistoryEntity> history;
   final TrainingEntity? todayTraining;
   final String selectedDate;
+  final String historyDate;
 
   const TrainingsLoaded({
-    required this.trainings,
+    required this.history,
     this.todayTraining,
     required this.selectedDate,
+    required this.historyDate,
   });
 }
 
@@ -65,7 +67,10 @@ class TrainingDetailLoaded extends TrainingState {
 
 class TrainingError extends TrainingState {
   final String message;
-  const TrainingError(this.message);
+  final String? selectedDate;
+  final String? historyDate;
+
+  const TrainingError(this.message, {this.selectedDate, this.historyDate});
 }
 
 class TrainingNoContent extends TrainingState {

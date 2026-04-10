@@ -38,6 +38,28 @@ class TrainingExerciseEntity {
   });
 }
 
+class TrainingHistoryEntity {
+  final String id;
+  final String name;
+  final String type;
+  final String level;
+  final int? estimatedDurationMin;
+  final int? estimatedCalories;
+  final DateTime date;
+  final bool isCompleted;
+
+  const TrainingHistoryEntity({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.level,
+    this.estimatedDurationMin,
+    this.estimatedCalories,
+    required this.date,
+    required this.isCompleted,
+  });
+}
+
 class TrainingEntity {
   final String id;
   final String name;

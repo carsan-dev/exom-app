@@ -50,6 +50,10 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
 
   String _resolvedDate(String? date) => date ?? _todayDate();
 
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _onTodayTrainingLoad(
     TodayTrainingLoadRequested event,
     Emitter<TrainingState> emit,
@@ -75,19 +79,30 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     emit(const TrainingLoading());
     try {
       final targetDate = _resolvedDate(event.date);
+      final historyDate = _resolvedDate(event.historyDate ?? event.date);
       final results = await Future.wait([
-        _getTrainingsUseCase(),
+        _getTrainingsUseCase(date: historyDate),
         _getTodayTrainingUseCase(targetDate),
       ]);
+      final history = (results[0] as List<TrainingHistoryEntity>)
+          .where((entry) => _dateKey(entry.date) != targetDate)
+          .toList(growable: false);
       emit(
         TrainingsLoaded(
-          trainings: results[0] as List<TrainingEntity>,
+          history: history,
           todayTraining: results[1] as TrainingEntity?,
           selectedDate: targetDate,
+          historyDate: historyDate,
         ),
       );
     } catch (e) {
-      emit(TrainingError(e.toString()));
+      emit(
+        TrainingError(
+          e.toString(),
+          selectedDate: _resolvedDate(event.date),
+          historyDate: _resolvedDate(event.historyDate ?? event.date),
+        ),
+      );
     }
   }
 
@@ -99,8 +114,10 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     try {
       final targetDate = _resolvedDate(event.date);
       final training = await _getTrainingUseCase(event.id);
-      ({Set<String> ids, Map<String, double> weights}) progress =
-          (ids: <String>{}, weights: <String, double>{});
+      ({Set<String> ids, Map<String, double> weights}) progress = (
+        ids: <String>{},
+        weights: <String, double>{},
+      );
       try {
         progress = await _getCompletedExercisesUseCase(targetDate);
       } catch (_) {}
@@ -137,25 +154,32 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         updated.remove(event.exerciseId);
         updatedWeights.remove(event.exerciseId);
       }
-      emit(current.copyWith(
-        completedExerciseIds: updated,
-        exerciseWeights: updatedWeights,
-      ));
+      emit(
+        current.copyWith(
+          completedExerciseIds: updated,
+          exerciseWeights: updatedWeights,
+        ),
+      );
 
       try {
         final date = current.selectedDate;
         if (event.completed) {
-          await _markExerciseCompletedUseCase(event.exerciseId, date,
-              weightUsed: event.weightUsed);
+          await _markExerciseCompletedUseCase(
+            event.exerciseId,
+            date,
+            weightUsed: event.weightUsed,
+          );
         } else {
           await _unmarkExerciseCompletedUseCase(event.exerciseId, date);
         }
       } catch (e) {
-        emit(current.copyWith(
-          completedExerciseIds: previous,
-          exerciseWeights: previousWeights,
-          errorMessage: e.toString(),
-        ));
+        emit(
+          current.copyWith(
+            completedExerciseIds: previous,
+            exerciseWeights: previousWeights,
+            errorMessage: e.toString(),
+          ),
+        );
       }
     }
   }

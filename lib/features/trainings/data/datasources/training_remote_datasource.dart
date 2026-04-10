@@ -7,14 +7,17 @@ import 'package:exom_app/features/trainings/data/models/training_model.dart';
 
 abstract class TrainingRemoteDataSource {
   Future<TrainingModel?> getTodayTraining({String? date});
-  Future<List<TrainingModel>> getTrainings({int page = 1, int limit = 20});
+  Future<List<TrainingHistoryModel>> getTrainings({String? date});
   Future<TrainingModel> getTraining(String id);
-  Future<void> markExerciseCompleted(String exerciseId, String date,
-      {double? weightUsed});
+  Future<void> markExerciseCompleted(
+    String exerciseId,
+    String date, {
+    double? weightUsed,
+  });
   Future<void> unmarkExerciseCompleted(String exerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
   Future<({Set<String> ids, Map<String, double> weights})>
-      getCompletedExerciseIds({String? date});
+  getCompletedExerciseIds({String? date});
 }
 
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
@@ -23,6 +26,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   final OfflineSyncService _offlineSyncService;
 
   static const _emptyMarker = '__empty__';
+  static const _authMeCacheKey = 'auth_me';
 
   const TrainingRemoteDataSourceImpl(
     this._apiClient,
@@ -65,6 +69,100 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         .whereType<Map<String, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList(growable: false);
+  }
+
+  List<Map<String, dynamic>> _extractAssignmentDays(dynamic responseData) {
+    if (responseData is! Map<String, dynamic>) {
+      return const [];
+    }
+
+    final payload = responseData['data'];
+    final rawDays = switch (payload) {
+      Map<String, dynamic> map when map['days'] is List<dynamic> =>
+        map['days'] as List<dynamic>,
+      _ => const <dynamic>[],
+    };
+
+    return rawDays
+        .whereType<Map<String, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList(growable: false);
+  }
+
+  List<Map<String, dynamic>> _extractCalendarDays(dynamic responseData) {
+    if (responseData is! Map<String, dynamic>) {
+      return const [];
+    }
+
+    final payload = responseData['data'];
+    if (payload is! List<dynamic>) {
+      return const [];
+    }
+
+    return payload
+        .whereType<Map<String, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList(growable: false);
+  }
+
+  Map<String, bool> _trainingCompletionByDate(List<Map<String, dynamic>> days) {
+    return {
+      for (final day in days)
+        if (day['date'] is String)
+          day['date'] as String: day['training_completed'] as bool? ?? false,
+    };
+  }
+
+  Future<String> _getCurrentUserId() async {
+    final cachedUser = _localStorage.getCachedMap(_authMeCacheKey);
+    final cachedId = cachedUser?['id'] as String?;
+
+    try {
+      final response = await _apiClient.dio.get<dynamic>('/auth/me');
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = data['data'];
+        if (inner is Map<String, dynamic>) {
+          await _localStorage.cacheData(_authMeCacheKey, inner);
+          final id = inner['id'] as String?;
+          if (id != null && id.isNotEmpty) {
+            return id;
+          }
+        }
+      }
+
+      if (cachedId != null && cachedId.isNotEmpty) {
+        return cachedId;
+      }
+
+      throw Exception('Invalid current user response');
+    } catch (error) {
+      if (cachedId != null && cachedId.isNotEmpty && isOfflineError(error)) {
+        return cachedId;
+      }
+      rethrow;
+    }
+  }
+
+  List<TrainingHistoryModel> _buildTrainingHistory(
+    List<Map<String, dynamic>> assignmentDays,
+    List<Map<String, dynamic>> calendarDays,
+  ) {
+    final completionByDate = _trainingCompletionByDate(calendarDays);
+    final history = assignmentDays
+        .where((day) => day['training'] is Map<String, dynamic>)
+        .map(
+          (day) => TrainingHistoryModel.fromAssignmentJson(
+            day,
+            isCompleted:
+                completionByDate[day['date'] as String? ?? ''] ?? false,
+          ),
+        )
+        .where((entry) => entry.id.isNotEmpty)
+        .toList();
+
+    history.sort((left, right) => right.date.compareTo(left.date));
+    return List<TrainingHistoryModel>.unmodifiable(history);
   }
 
   Future<void> _cacheProgressResponse(
@@ -129,35 +227,46 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<List<TrainingModel>> getTrainings({
-    int page = 1,
-    int limit = 20,
-  }) async {
-    final cacheKey = 'trainings_list_${page}_$limit';
+  Future<List<TrainingHistoryModel>> getTrainings({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final monthDate = DateTime.tryParse(targetDate) ?? DateTime.now();
+    final userId = await _getCurrentUserId();
+    final assignmentsCacheKey =
+        'trainings_history_assignments_${userId}_${monthDate.year}_${monthDate.month}';
+    final calendarCacheKey =
+        'trainings_history_calendar_${monthDate.year}_${monthDate.month}';
 
     try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/trainings',
-        queryParameters: {'page': page, 'limit': limit},
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final items = data['data'];
-        if (items is List) {
-          final normalized = items
-              .whereType<Map<String, dynamic>>()
-              .map(Map<String, dynamic>.from)
-              .toList(growable: false);
-          await _localStorage.cacheData(cacheKey, normalized);
-          return normalized.map(TrainingModel.fromJson).toList(growable: false);
-        }
-      }
-      return [];
+      final responses = await Future.wait([
+        _apiClient.dio.get<dynamic>(
+          '/assignments/month',
+          queryParameters: {
+            'client_id': userId,
+            'year': monthDate.year,
+            'month': monthDate.month,
+          },
+        ),
+        _apiClient.dio.get<dynamic>(
+          '/calendar/month',
+          queryParameters: {'year': monthDate.year, 'month': monthDate.month},
+        ),
+      ]);
+
+      final assignmentDays = _extractAssignmentDays(responses[0].data);
+      final calendarDays = _extractCalendarDays(responses[1].data);
+
+      await _localStorage.cacheData(assignmentsCacheKey, assignmentDays);
+      await _localStorage.cacheData(calendarCacheKey, calendarDays);
+
+      return _buildTrainingHistory(assignmentDays, calendarDays);
     } catch (error) {
       if (isOfflineError(error)) {
-        final cached = _getCachedMapList(cacheKey);
-        if (cached != null) {
-          return cached.map(TrainingModel.fromJson).toList(growable: false);
+        final cachedAssignments =
+            _getCachedMapList(assignmentsCacheKey) ?? const [];
+        final cachedCalendar = _getCachedMapList(calendarCacheKey) ?? const [];
+
+        if (cachedAssignments.isNotEmpty || cachedCalendar.isNotEmpty) {
+          return _buildTrainingHistory(cachedAssignments, cachedCalendar);
         }
       }
       rethrow;
@@ -191,16 +300,23 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<void> markExerciseCompleted(String exerciseId, String date,
-      {double? weightUsed}) async {
+  Future<void> markExerciseCompleted(
+    String exerciseId,
+    String date, {
+    double? weightUsed,
+  }) async {
     try {
+      final payload = <String, dynamic>{
+        'exercise_id': exerciseId,
+        'date': date,
+      };
+      if (weightUsed != null) {
+        payload['weight_used'] = weightUsed;
+      }
+
       final response = await _apiClient.dio.post<dynamic>(
         '/progress/exercises/complete',
-        data: {
-          'exercise_id': exerciseId,
-          'date': date,
-          if (weightUsed != null) 'weight_used': weightUsed,
-        },
+        data: payload,
       );
       await _cacheProgressResponse(response, date);
     } on DioException catch (error) {
@@ -259,7 +375,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
 
   @override
   Future<({Set<String> ids, Map<String, double> weights})>
-      getCompletedExerciseIds({String? date}) async {
+  getCompletedExerciseIds({String? date}) async {
     final targetDate = _resolvedDate(date);
     final cacheKey = 'completed_exercises_$targetDate';
 

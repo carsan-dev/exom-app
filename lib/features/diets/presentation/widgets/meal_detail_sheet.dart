@@ -1,13 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/injection_container.dart';
@@ -319,7 +316,6 @@ class _MealSheetBody extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final gate = GetIt.instance<FeatureGateService>();
     final dietState = context.watch<DietBloc>().state;
     final macroChips = _buildMacroChips(context);
     final badges = meal.nutritionalBadges
@@ -346,32 +342,28 @@ class _MealSheetBody extends StatelessWidget {
         ),
         if (badges.isNotEmpty) ...[
           const SizedBox(height: 10),
-          PremiumLockedInline(
-            isLocked: !gate.canSeeMealNutritionalBadges,
-            onTap: () => showPremiumFeatureMessage(context),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  child: Text(
-                    l10n.richInLabel,
-                    style: TextStyle(
-                      color: palette.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Text(
+                  l10n.richInLabel,
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                ...badges.map(
-                  (badge) => _NutritionalBadgePill(
-                    label: badge,
-                    color: _badgeColor(context, badge),
-                  ),
+              ),
+              ...badges.map(
+                (badge) => _NutritionalBadgePill(
+                  label: badge,
+                  color: _badgeColor(context, badge),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
         const SizedBox(height: 14),
@@ -380,20 +372,11 @@ class _MealSheetBody extends StatelessWidget {
         _MealHeroImage(meal: meal),
         if (macroChips.isNotEmpty) ...[
           const SizedBox(height: 14),
-          PremiumLockedInline(
-            isLocked: !gate.canSeeMealMacros,
-            onTap: () => showPremiumFeatureMessage(context),
-            child: _MacroChipsRow(items: macroChips),
-          ),
+          _MacroChipsRow(items: macroChips),
         ],
         if (meal.ingredients.isNotEmpty) ...[
           const SizedBox(height: 24),
-          PremiumLockedSection(
-            isLocked: !gate.canSeeMealIngredients,
-            label: 'Ingredientes',
-            onTap: () => showPremiumFeatureMessage(context),
-            child: _IngredientsSection(ingredients: meal.ingredients),
-          ),
+          _IngredientsSection(ingredients: meal.ingredients),
         ],
         const SizedBox(height: 28),
         Row(
@@ -433,22 +416,16 @@ class _MealSheetBody extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: PremiumLockedInline(
-                isLocked: !gate.canSearchRecipe,
-                onTap: () => showPremiumFeatureMessage(context),
-                child: OutlinedButton.icon(
-                  onPressed: gate.canSearchRecipe
-                      ? _launchRecipe
-                      : () => showPremiumFeatureMessage(context),
-                  icon: const Icon(Icons.search, size: 18),
-                  label: Text(l10n.recipeButton),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.textPrimary,
-                    side: BorderSide(color: palette.divider),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+              child: OutlinedButton.icon(
+                onPressed: _launchRecipe,
+                icon: const Icon(Icons.search, size: 18),
+                label: Text(l10n.recipeButton),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: palette.textPrimary,
+                  side: BorderSide(color: palette.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),

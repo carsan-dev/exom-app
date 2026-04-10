@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
@@ -613,9 +610,7 @@ class _ExerciseCard extends StatelessWidget {
                         icon: Icons.timer_outlined,
                         label: '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
-                      if (weightUsed != null &&
-                          GetIt.instance<FeatureGateService>()
-                              .canSeeRegisteredWeight) ...[
+                      if (weightUsed != null) ...[
                         const SizedBox(width: 12),
                         _MiniStat(
                           icon: Icons.fitness_center,
@@ -638,19 +633,15 @@ class _ExerciseCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
-                    final gate = GetIt.instance<FeatureGateService>();
                     if (!isCompleted) {
-                      double? weight;
-                      if (gate.canRegisterWeight) {
-                        weight = await _showWeightSheet(
-                          context,
-                          l10n,
-                          previousWeight: weightUsed,
-                        );
-                        if (!context.mounted) return;
-                      }
+                      final weight = await _showWeightSheet(
+                        context,
+                        l10n,
+                        previousWeight: weightUsed,
+                      );
+                      if (!context.mounted) return;
                       onToggle(true, weightUsed: weight);
-                      if (gate.canUseRestTimer && nextExerciseName != null) {
+                      if (nextExerciseName != null) {
                         await RestTimerOverlay.show(
                           context,
                           restSeconds: trainingExercise.restSeconds,
@@ -720,9 +711,7 @@ class _ExerciseCard extends StatelessWidget {
 
     onToggle(result.completed, weightUsed: result.weight);
 
-    if (result.completed &&
-        nextExerciseName != null &&
-        GetIt.instance<FeatureGateService>().canUseRestTimer) {
+    if (result.completed && nextExerciseName != null) {
       await RestTimerOverlay.show(
         context,
         restSeconds: trainingExercise.restSeconds,
@@ -979,7 +968,6 @@ class _ExerciseDetailSheet extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final gate = GetIt.instance<FeatureGateService>();
     final typeColor = _typeColor(context);
     final thumbnailUrl = exercise.thumbnailUrl?.trim();
     final videoUrl = exercise.videoUrl?.trim();
@@ -1024,18 +1012,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 alignment: Alignment.topLeft,
                 child: _SheetHeaderAction(
                   icon: Icons.feedback_outlined,
-                  locked: !gate.canSendExerciseFeedback,
-                  onTap: () {
-                    if (gate.canSendExerciseFeedback) {
-                      _openFeedback(context);
-                      return;
-                    }
-
-                    showPremiumFeatureMessage(context);
-                  },
-                  tooltip: gate.canSendExerciseFeedback
-                      ? l10n.feedbackSendFromExercise
-                      : 'Feedback premium',
+                  onTap: () => _openFeedback(context),
+                  tooltip: l10n.feedbackSendFromExercise,
                 ),
               ),
               Align(
@@ -1221,40 +1199,26 @@ class _ExerciseDetailSheet extends StatelessWidget {
         ],
         if (_hasContent(exercise.techniqueText)) ...[
           const SizedBox(height: 24),
-          PremiumLockedSection(
-            isLocked:
-                !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
-            label: l10n.technique,
-            child: _VisibleDetailSection(
-              title: l10n.technique,
-              text: exercise.techniqueText!,
-              bulletItems: _extractBulletItems(exercise.techniqueText!),
-            ),
+          _VisibleDetailSection(
+            title: l10n.technique,
+            text: exercise.techniqueText!,
+            bulletItems: _extractBulletItems(exercise.techniqueText!),
           ),
         ],
         if (_hasContent(exercise.commonErrorsText)) ...[
           const SizedBox(height: 20),
-          PremiumLockedSection(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeCommonErrors,
-            label: l10n.commonMistakes,
-            child: _VisibleDetailSection(
-              title: l10n.commonMistakes,
-              text: exercise.commonErrorsText!,
-              bulletItems: _extractBulletItems(exercise.commonErrorsText!),
-            ),
+          _VisibleDetailSection(
+            title: l10n.commonMistakes,
+            text: exercise.commonErrorsText!,
+            bulletItems: _extractBulletItems(exercise.commonErrorsText!),
           ),
         ],
         if (_hasContent(exercise.explanationText)) ...[
           const SizedBox(height: 20),
-          PremiumLockedSection(
-            isLocked:
-                !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
-            label: l10n.explanation,
-            child: _VisibleDetailSection(
-              title: l10n.explanation,
-              text: exercise.explanationText!,
-              bulletItems: _extractBulletItems(exercise.explanationText!),
-            ),
+          _VisibleDetailSection(
+            title: l10n.explanation,
+            text: exercise.explanationText!,
+            bulletItems: _extractBulletItems(exercise.explanationText!),
           ),
         ],
         const SizedBox(height: 28),
@@ -1262,17 +1226,13 @@ class _ExerciseDetailSheet extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () async {
-              final gate = GetIt.instance<FeatureGateService>();
               if (!isCompleted) {
-                double? weight;
-                if (gate.canRegisterWeight) {
-                  weight = await _showWeightSheet(
-                    context,
-                    l10n,
-                    previousWeight: weightUsed,
-                  );
-                  if (!context.mounted) return;
-                }
+                final weight = await _showWeightSheet(
+                  context,
+                  l10n,
+                  previousWeight: weightUsed,
+                );
+                if (!context.mounted) return;
                 Navigator.of(
                   context,
                 ).pop(_SheetCompletionResult(completed: true, weight: weight));

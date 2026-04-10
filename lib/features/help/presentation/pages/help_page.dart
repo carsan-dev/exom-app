@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
@@ -96,37 +93,26 @@ class HelpPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Builder(
-            builder: (context) {
-              final gate = GetIt.instance<FeatureGateService>();
-              return Row(
-                children: [
-                  Expanded(
-                    child: PremiumLockedInline(
-                      isLocked: !gate.canAccessFeedbackShortcut,
-                      onTap: () => showPremiumFeatureMessage(context),
-                      child: _QuickActionCard(
-                        icon: Icons.feedback_outlined,
-                        title: l10n.feedback,
-                        subtitle: l10n.sendQuestionOrIssue,
-                        onTap: gate.canAccessFeedbackShortcut
-                            ? () => context.push(AppRoutes.feedback)
-                            : () => showPremiumFeatureMessage(context),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.settings_outlined,
-                      title: l10n.settings,
-                      subtitle: l10n.notificationsAndCache,
-                      onTap: () => context.push(AppRoutes.settings),
-                    ),
-                  ),
-                ],
-              );
-            },
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.feedback_outlined,
+                  title: l10n.feedback,
+                  subtitle: l10n.sendQuestionOrIssue,
+                  onTap: () => context.push(AppRoutes.feedback),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.settings_outlined,
+                  title: l10n.settings,
+                  subtitle: l10n.notificationsAndCache,
+                  onTap: () => context.push(AppRoutes.settings),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Container(

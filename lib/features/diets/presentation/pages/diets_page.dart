@@ -1,12 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
@@ -250,42 +247,38 @@ class _DietHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          PremiumLockedInline(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeMealMacros,
-            onTap: () => showPremiumFeatureMessage(context),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                if (diet.totalCalories != null)
-                  _MacroStat(
-                    label: l10n.caloriesLabel,
-                    value: '${diet.totalCalories}',
-                    unit: 'kcal',
-                    color: semantic.calorie,
-                  ),
-                if (diet.totalProteinG != null)
-                  _MacroStat(
-                    label: l10n.proteinLabel,
-                    value: diet.totalProteinG!.toStringAsFixed(0),
-                    unit: 'g',
-                    color: palette.primary,
-                  ),
-                if (diet.totalCarbsG != null)
-                  _MacroStat(
-                    label: l10n.carbsLabel,
-                    value: diet.totalCarbsG!.toStringAsFixed(0),
-                    unit: 'g',
-                    color: semantic.info,
-                  ),
-                if (diet.totalFatG != null)
-                  _MacroStat(
-                    label: l10n.fatsLabel,
-                    value: diet.totalFatG!.toStringAsFixed(0),
-                    unit: 'g',
-                    color: semantic.warning,
-                  ),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              if (diet.totalCalories != null)
+                _MacroStat(
+                  label: l10n.caloriesLabel,
+                  value: '${diet.totalCalories}',
+                  unit: 'kcal',
+                  color: semantic.calorie,
+                ),
+              if (diet.totalProteinG != null)
+                _MacroStat(
+                  label: l10n.proteinLabel,
+                  value: diet.totalProteinG!.toStringAsFixed(0),
+                  unit: 'g',
+                  color: palette.primary,
+                ),
+              if (diet.totalCarbsG != null)
+                _MacroStat(
+                  label: l10n.carbsLabel,
+                  value: diet.totalCarbsG!.toStringAsFixed(0),
+                  unit: 'g',
+                  color: semantic.info,
+                ),
+              if (diet.totalFatG != null)
+                _MacroStat(
+                  label: l10n.fatsLabel,
+                  value: diet.totalFatG!.toStringAsFixed(0),
+                  unit: 'g',
+                  color: semantic.warning,
+                ),
+            ],
           ),
         ],
       ),
@@ -408,24 +401,7 @@ class _MealCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context);
-    final gate = GetIt.instance<FeatureGateService>();
     final color = _mealColor(context, meal.type);
-    final lockedMacroLabels = <String>[
-      if (meal.calories != null) l10n.caloriesLabel,
-      if (meal.proteinG != null) l10n.proteinLabel,
-      if (meal.carbsG != null) l10n.carbsLabel,
-      if (meal.fatG != null) l10n.fatsLabel,
-    ];
-    final lockedBadgeLabels = meal.nutritionalBadges
-        .map((badge) => badge.trim())
-        .where((badge) => badge.isNotEmpty)
-        .take(3)
-        .toList();
-    final hasLockedMacros =
-        !gate.canSeeMealMacros && lockedMacroLabels.isNotEmpty;
-    final hasLockedBadges =
-        !gate.canSeeMealNutritionalBadges && lockedBadgeLabels.isNotEmpty;
 
     return GestureDetector(
       onTap: () async {
@@ -525,7 +501,9 @@ class _MealCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (gate.canSeeMealMacros)
+                  if (meal.calories != null ||
+                      meal.proteinG != null ||
+                      meal.carbsG != null)
                     Row(
                       children: [
                         if (meal.calories != null) ...[
@@ -566,40 +544,27 @@ class _MealCard extends StatelessWidget {
                     ),
                   if (meal.nutritionalBadges.isNotEmpty) ...[
                     const SizedBox(height: 5),
-                    if (gate.canSeeMealNutritionalBadges)
-                      Wrap(
-                        spacing: 4,
-                        children: meal.nutritionalBadges.take(3).map((b) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                    Wrap(
+                      spacing: 4,
+                      children: meal.nutritionalBadges.take(3).map((b) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.surfaceVariant,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            b,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 9,
                             ),
-                            decoration: BoxDecoration(
-                              color: palette.surfaceVariant,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              b,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: palette.textDisabled,
-                                fontSize: 9,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                  ],
-                  if (hasLockedMacros || hasLockedBadges) ...[
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: _LockedMealSummary(
-                        labels: [...lockedMacroLabels, ...lockedBadgeLabels],
-                        showMacros: hasLockedMacros,
-                        showBadges: hasLockedBadges,
-                        onTap: () => showPremiumFeatureMessage(context),
-                      ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ],
@@ -690,105 +655,6 @@ class _MealIconFallback extends StatelessWidget {
       height: 70,
       color: color.withValues(alpha: 0.12),
       child: Icon(icon, color: color, size: 30),
-    );
-  }
-}
-
-class _LockedMealSummary extends StatelessWidget {
-  const _LockedMealSummary({
-    required this.labels,
-    required this.showMacros,
-    required this.showBadges,
-    required this.onTap,
-  });
-
-  final List<String> labels;
-  final bool showMacros;
-  final bool showBadges;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
-    final preview = labels.take(4).join(' • ');
-
-    final title = switch ((showMacros, showBadges)) {
-      (true, true) =>
-        isEnglish
-            ? 'Premium nutrition details'
-            : 'Detalles premium de la comida',
-      (true, false) => isEnglish ? 'Premium macros' : 'Macros premium',
-      (false, true) => isEnglish ? 'Premium meal tags' : 'Etiquetas premium',
-      _ => isEnglish ? 'Premium details' : 'Detalles premium',
-    };
-
-    final subtitle = preview.isNotEmpty
-        ? preview
-        : (isEnglish
-              ? 'Unlock more nutritional context for this meal.'
-              : 'Desbloquea más contexto nutricional de esta comida.');
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: palette.surfaceVariant.withValues(alpha: 0.74),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: palette.divider),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFB300).withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.lock_outline,
-                  size: 16,
-                  color: Color(0xFFFFB300),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 10,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

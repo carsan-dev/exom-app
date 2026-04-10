@@ -7,11 +7,8 @@ import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
-import 'package:get_it/get_it.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -1216,63 +1213,53 @@ class _MetricsViewState extends State<_MetricsView> {
                             onChanged: (_) => _muscleMassTouched = true,
                           ),
                           const SizedBox(height: 14),
-                          PremiumLockedSection(
-                            isLocked: !GetIt.instance<FeatureGateService>()
-                                .canUseBodyCompositionCalculator,
-                            label: AppLocalizations.of(
-                              context,
-                            )!.seenCalculatorTitle,
-                            onTap: () => showPremiumFeatureMessage(context),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: palette.surfaceVariant,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: palette.borderSoft),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.seenCalculatorTitle,
-                                    style: TextStyle(
-                                      color: palette.textPrimary,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: palette.surfaceVariant,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: palette.borderSoft),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.seenCalculatorTitle,
+                                  style: TextStyle(
+                                    color: palette.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.seenCalculatorDescription,
+                                  style: TextStyle(
+                                    color: palette.textSecondary,
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _openSeenEstimateCalculator(context),
+                                    icon: const Icon(Icons.calculate_outlined),
+                                    label: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.calculateEstimateButton,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.seenCalculatorDescription,
-                                    style: TextStyle(
-                                      color: palette.textSecondary,
-                                      fontSize: 12,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () =>
-                                          _openSeenEstimateCalculator(context),
-                                      icon: const Icon(
-                                        Icons.calculate_outlined,
-                                      ),
-                                      label: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.calculateEstimateButton,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1352,18 +1339,10 @@ class _MetricsViewState extends State<_MetricsView> {
                       icon: Icons.straighten,
                       color: semantic.info,
                       trailing: GestureDetector(
-                        onTap: () {
-                          final gate = GetIt.instance<FeatureGateService>();
-                          if (!_bodyMapMode && !gate.canUseAnatomicalModel) {
-                            showPremiumFeatureMessage(context);
-                            return;
-                          }
-
-                          setState(() {
-                            _bodyMapMode = !_bodyMapMode;
-                            _selectedMeasure = null;
-                          });
-                        },
+                        onTap: () => setState(() {
+                          _bodyMapMode = !_bodyMapMode;
+                          _selectedMeasure = null;
+                        }),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1393,9 +1372,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          (_bodyMapMode &&
-                                  GetIt.instance<FeatureGateService>()
-                                      .canUseAnatomicalModel)
+                          _bodyMapMode
                               ? _buildBodyMapMeasurements()
                               : Padding(
                                   padding: const EdgeInsets.only(top: 8),
@@ -1426,67 +1403,6 @@ class _MetricsViewState extends State<_MetricsView> {
                                     },
                                   ),
                                 ),
-                          if (!GetIt.instance<FeatureGateService>()
-                              .canUseAnatomicalModel) ...[
-                            const SizedBox(height: 14),
-                            PremiumLockedSection(
-                              isLocked: true,
-                              label: 'Modelo anatómico',
-                              onTap: () => showPremiumFeatureMessage(context),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: palette.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: palette.borderSoft),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 44,
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: semantic.info.withValues(
-                                          alpha: 0.14,
-                                        ),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Icon(
-                                        Icons.accessibility_new,
-                                        color: semantic.info,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Modelo anatómico interactivo',
-                                            style: TextStyle(
-                                              color: palette.textPrimary,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Visualiza las zonas corporales y registra medidas con una vista guiada.',
-                                            style: TextStyle(
-                                              color: palette.textSecondary,
-                                              fontSize: 12,
-                                              height: 1.4,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),

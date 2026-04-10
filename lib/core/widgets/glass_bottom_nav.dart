@@ -1,0 +1,162 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
+
+/// Frosted glass bottom navigation bar with real BackdropFilter blur.
+///
+/// Preserves the animated green circle from the original _ExomBottomNav
+/// but adds a frosted glass bar background with blur effect.
+class GlassBottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const GlassBottomNav({
+    super.key,
+    required this.selectedIndex,
+    required this.onTap,
+  });
+
+  static const _icons = [
+    Icons.emoji_events_outlined,
+    Icons.fitness_center,
+    null, // center = EXOM logo
+    Icons.restaurant,
+    Icons.calendar_month,
+  ];
+
+  static const _circleSize = 64.0;
+  static const _barHeight = 64.0;
+  static const _circleOverlap = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final targetX = _slotCenterX(context, selectedIndex);
+    final palette = context.exomPalette;
+    final inactiveColor = palette.textDisabled;
+
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: _barHeight + _circleOverlap,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: targetX),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          builder: (context, centerX, _) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Frosted glass bar
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: _barHeight,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.navBarGlass,
+                          border: Border(
+                            top: BorderSide(
+                              color: palette.glassBorder.withValues(alpha: 0.20),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Green circle with glow
+                Positioned(
+                  left: centerX - _circleSize / 2,
+                  bottom: _barHeight - _circleSize + _circleOverlap,
+                  child: Container(
+                    width: _circleSize,
+                    height: _circleSize,
+                    decoration: BoxDecoration(
+                      color: palette.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: palette.primary.withValues(alpha: 0.35),
+                          blurRadius: 30,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: _buildIcon(
+                        selectedIndex,
+                        true,
+                        activeColor: palette.onPrimary,
+                        inactiveColor: inactiveColor,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Icon row (active slot hidden — rendered inside circle)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: _barHeight,
+                  child: Row(
+                    children: List.generate(5, (i) {
+                      return Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => onTap(i),
+                          child: Center(
+                            child: i == selectedIndex
+                                ? const SizedBox.shrink()
+                                : _buildIcon(
+                                    i,
+                                    false,
+                                    activeColor: palette.onPrimary,
+                                    inactiveColor: inactiveColor,
+                                  ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIcon(
+    int index,
+    bool isActive, {
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final color = isActive ? activeColor : inactiveColor;
+    const size = 28.0;
+    if (index == 2) {
+      return SvgPicture.asset(
+        'assets/images/logo_small.svg',
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      );
+    }
+    return Icon(_icons[index], size: size, color: color);
+  }
+
+  double _slotCenterX(BuildContext context, int index) {
+    final w = MediaQuery.of(context).size.width;
+    final slot = w / 5;
+    return slot * index + slot / 2;
+  }
+}

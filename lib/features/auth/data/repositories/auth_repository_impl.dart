@@ -36,24 +36,6 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<UserEntity> registerTrial({
-    required String email,
-    required String password,
-    required String firstName,
-    required String lastName,
-  }) async {
-    final response = await _remoteDataSource.registerTrial(
-      email: email,
-      password: password,
-      firstName: firstName,
-      lastName: lastName,
-    );
-    await _firebaseAuthService.signInWithCustomToken(response.accessToken);
-    _currentUser = response.user.toEntity();
-    return _currentUser!;
-  }
-
-  @override
   Future<void> logout() async {
     try {
       await _remoteDataSource.logout();

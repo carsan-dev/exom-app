@@ -18,6 +18,10 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     required this.onPrimary,
     required this.error,
     required this.shadow,
+    required this.glassBackground,
+    required this.glassBorder,
+    required this.gradientStart,
+    required this.gradientEnd,
   });
 
   final Color background;
@@ -35,6 +39,10 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
   final Color onPrimary;
   final Color error;
   final Color shadow;
+  final Color glassBackground;
+  final Color glassBorder;
+  final Color gradientStart;
+  final Color gradientEnd;
 
   @override
   ExomThemePalette copyWith({
@@ -53,6 +61,10 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     Color? onPrimary,
     Color? error,
     Color? shadow,
+    Color? glassBackground,
+    Color? glassBorder,
+    Color? gradientStart,
+    Color? gradientEnd,
   }) {
     return ExomThemePalette(
       background: background ?? this.background,
@@ -70,6 +82,10 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       onPrimary: onPrimary ?? this.onPrimary,
       error: error ?? this.error,
       shadow: shadow ?? this.shadow,
+      glassBackground: glassBackground ?? this.glassBackground,
+      glassBorder: glassBorder ?? this.glassBorder,
+      gradientStart: gradientStart ?? this.gradientStart,
+      gradientEnd: gradientEnd ?? this.gradientEnd,
     );
   }
 
@@ -100,6 +116,15 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t) ?? onPrimary,
       error: Color.lerp(error, other.error, t) ?? error,
       shadow: Color.lerp(shadow, other.shadow, t) ?? shadow,
+      glassBackground:
+          Color.lerp(glassBackground, other.glassBackground, t) ??
+          glassBackground,
+      glassBorder:
+          Color.lerp(glassBorder, other.glassBorder, t) ?? glassBorder,
+      gradientStart:
+          Color.lerp(gradientStart, other.gradientStart, t) ?? gradientStart,
+      gradientEnd:
+          Color.lerp(gradientEnd, other.gradientEnd, t) ?? gradientEnd,
     );
   }
 }
@@ -243,6 +268,16 @@ class AppColors {
   static const calorieAccent = Color(0xFFE8943A);
   static const sleepAccent = Color(0xFF9B7FCC);
 
+  // ── Glass & Gradients ──────────────────────────────────────────────────────
+  static const glassBackground = Color(0x1A2B150A);
+  static const glassBackgroundElevated = Color(0x332B150A);
+  static const glassBorderLight = Color(0x33C5E384);
+  static const glassBorderTop = Color(0x26FFFFFF);
+  static const gradientStart = Color(0xFF1A0D05);
+  static const gradientEnd = Color(0xFF2E170B);
+  static const navBarGlass = Color(0xCC200F07);
+  static const headerGlass = Color(0xB326140B);
+
   // ── Alias legacy ──────────────────────────────────────────────────────────
   static const secondary = primary;
   static const accent = error;
@@ -269,6 +304,10 @@ class AppTheme {
     onPrimary: AppColors.textOnPrimary,
     error: AppColors.error,
     shadow: Color(0x33000000),
+    glassBackground: AppColors.glassBackground,
+    glassBorder: AppColors.glassBorderLight,
+    gradientStart: AppColors.gradientStart,
+    gradientEnd: AppColors.gradientEnd,
   );
 
   static const ExomThemePalette _lightPalette = ExomThemePalette(
@@ -287,6 +326,10 @@ class AppTheme {
     onPrimary: Color(0xFFFFFBF5),
     error: Color(0xFFA33F33),
     shadow: Color(0x18000000),
+    glassBackground: Color(0x1AFFFFFF),
+    glassBorder: Color(0x33D2C3AE),
+    gradientStart: Color(0xFFF7F1E6),
+    gradientEnd: Color(0xFFF0E6D8),
   );
 
   static const ExomSemanticPalette _darkSemanticPalette = ExomSemanticPalette(
@@ -540,25 +583,3 @@ class AppTheme {
   }
 }
 
-/// Helper to create a glassmorphism-style decoration.
-class GlassDecoration {
-  GlassDecoration._();
-
-  /// Standard glass card decoration.
-  static BoxDecoration card({double borderRadius = 16, Color? borderColor}) {
-    return BoxDecoration(
-      color: AppColors.surfaceGlass,
-      borderRadius: BorderRadius.circular(borderRadius),
-      border: Border.all(color: borderColor ?? AppColors.borderSoft),
-    );
-  }
-
-  /// Light glass decoration (more transparent).
-  static BoxDecoration light({double borderRadius = 16, Color? borderColor}) {
-    return BoxDecoration(
-      color: AppColors.surfaceGlassLight,
-      borderRadius: BorderRadius.circular(borderRadius),
-      border: Border.all(color: borderColor ?? AppColors.borderSoft),
-    );
-  }
-}

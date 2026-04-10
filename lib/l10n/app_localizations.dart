@@ -206,60 +206,6 @@ abstract class AppLocalizations {
   /// **'Volver al inicio de sesión'**
   String get backToLoginButton;
 
-  /// No description provided for @trialRegisterButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Probar gratis 14 días'**
-  String get trialRegisterButton;
-
-  /// No description provided for @trialHeaderTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'14 días gratis'**
-  String get trialHeaderTitle;
-
-  /// No description provided for @trialHeaderSubtitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Prueba EXOM sin compromiso'**
-  String get trialHeaderSubtitle;
-
-  /// No description provided for @trialFormName.
-  ///
-  /// In es, this message translates to:
-  /// **'Nombre'**
-  String get trialFormName;
-
-  /// No description provided for @trialFormLastName.
-  ///
-  /// In es, this message translates to:
-  /// **'Apellidos'**
-  String get trialFormLastName;
-
-  /// No description provided for @trialFormEmail.
-  ///
-  /// In es, this message translates to:
-  /// **'Email'**
-  String get trialFormEmail;
-
-  /// No description provided for @trialFormPassword.
-  ///
-  /// In es, this message translates to:
-  /// **'Contraseña'**
-  String get trialFormPassword;
-
-  /// No description provided for @trialCreateAccountButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Crear cuenta de prueba'**
-  String get trialCreateAccountButton;
-
-  /// No description provided for @trialNoAccountPrompt.
-  ///
-  /// In es, this message translates to:
-  /// **'¿No tienes cuenta?'**
-  String get trialNoAccountPrompt;
-
   /// No description provided for @welcomeOnboarding.
   ///
   /// In es, this message translates to:

@@ -6,8 +6,6 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
-import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -16,7 +14,6 @@ import 'package:exom_app/features/auth/domain/repositories/auth_repository.dart'
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
-import 'package:exom_app/features/auth/domain/usecases/register_trial_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -143,12 +140,6 @@ Future<void> initDependencies() async {
     () => OfflineSyncService(sl<ApiClient>(), sl<LocalStorage>()),
   );
 
-  sl.registerLazySingleton<FeatureGateService>(
-    () => FeatureGateService(
-      const UserEntity(id: '', email: '', role: 'CLIENT', tier: 'LOW_TICKET'),
-    ),
-  );
-
   // ── Auth ──────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(sl<ApiClient>()),
@@ -164,7 +155,6 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => SocialLoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => RegisterTrialUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => GetMeUseCase(sl<AuthRepository>()));
 
   sl.registerFactory(
@@ -172,7 +162,6 @@ Future<void> initDependencies() async {
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
-      registerTrialUseCase: sl<RegisterTrialUseCase>(),
       getMeUseCase: sl<GetMeUseCase>(),
       firebaseAuthService: sl<FirebaseAuthService>(),
     ),

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
-import 'package:exom_app/core/widgets/trial_banner.dart';
-import 'package:exom_app/core/widgets/trial_expired_screen.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
 
 // Auth pages
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -63,7 +60,6 @@ import '../../injection_container.dart';
 class AppRoutes {
   static const login = '/login';
   static const accountLocked = '/account-locked';
-  static const trialExpired = '/trial-expired';
   static const onboarding = '/onboarding';
   static const home = '/';
   static const trainings = '/trainings';
@@ -85,25 +81,9 @@ class AppRoutes {
 class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  static final Listenable _refreshListenable = Listenable.merge([
-    GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
-    GetIt.I<FeatureGateService>(),
-  ]);
-
-  static Future<void> _openContact(BuildContext context) async {
-    final launched = await launchUrl(
-      ExternalLinks.supportPage,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo abrir la pagina de contacto.'),
-        ),
-      );
-    }
-  }
+  static final Listenable _refreshListenable = GoRouterRefreshStream(
+    FirebaseAuth.instance.authStateChanges(),
+  );
 
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -112,9 +92,7 @@ class AppRouter {
       final user = FirebaseAuth.instance.currentUser;
       final loc = state.matchedLocation;
       final isAuthRoute =
-          loc == AppRoutes.login ||
-          loc == AppRoutes.accountLocked ||
-          loc == AppRoutes.trialExpired;
+          loc == AppRoutes.login || loc == AppRoutes.accountLocked;
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
       if (user != null && loc == AppRoutes.login) return AppRoutes.home;
@@ -123,14 +101,6 @@ class AppRouter {
       if (user != null && !isAuthRoute && loc != AppRoutes.onboarding) {
         final done = sl<LocalStorage>().isOnboardingComplete;
         if (!done) return AppRoutes.onboarding;
-      }
-
-      // Check trial expiration
-      if (user != null && !isAuthRoute && loc != AppRoutes.trialExpired) {
-        final gate = GetIt.I<FeatureGateService>();
-        if (gate.isTrialExpired) {
-          return AppRoutes.trialExpired;
-        }
       }
 
       return null;
@@ -145,15 +115,6 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.accountLocked,
         builder: (context, state) => const AccountLockedPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.trialExpired,
-        builder: (context, state) => TrialExpiredScreen(
-          onContactTrainer: () => _openContact(context),
-          onLogout: () {
-            context.read<AuthBloc>().add(const AuthLogoutRequested());
-          },
-        ),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
@@ -266,28 +227,6 @@ class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
-  Widget _buildBodyWithTrialBanner(Widget child) {
-    final gate = GetIt.I<FeatureGateService>();
-    return AnimatedBuilder(
-      animation: gate,
-      builder: (context, _) {
-        if (!gate.isTrial || gate.isTrialExpired) {
-          return child;
-        }
-
-        return Column(
-          children: [
-            TrialBanner(
-              daysRemaining: gate.trialDaysRemaining,
-              onSubscribe: () => AppRouter._openContact(context),
-            ),
-            Expanded(child: child),
-          ],
-        );
-      },
-    );
-  }
-
   String _brandLogo(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
         ? 'assets/images/logo_dark.svg'
@@ -318,51 +257,46 @@ class MainShell extends StatelessWidget {
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // EXOM logo with text
-                SvgPicture.asset(_brandLogo(context), height: 28),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => context.push(AppRoutes.profile),
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: palette.surfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.person_outline,
-                      color: palette.textPrimary,
-                      size: 18,
-                    ),
-                  ),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(
+        title: SvgPicture.asset(_brandLogo(context), height: 28),
+        actions: [
+          IconButton(
+            onPressed: () => context.push(AppRoutes.profile),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: palette.glassBackground,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.glassBorder.withValues(alpha: 0.15),
+                  width: 0.5,
                 ),
-                // Hamburger menu
-                Builder(
-                  builder: (ctx) => IconButton(
-                    onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                    icon: Icon(
-                      Icons.menu,
-                      color: palette.textPrimary,
-                      size: 26,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              child: Icon(
+                Icons.person_outline,
+                color: palette.textPrimary,
+                size: 18,
+              ),
             ),
           ),
-        ),
+          Builder(
+            builder: (ctx) => IconButton(
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              icon: Icon(Icons.menu, color: palette.textPrimary, size: 26),
+            ),
+          ),
+        ],
       ),
       endDrawer: const _AppDrawer(),
-      body: _buildBodyWithTrialBanner(child),
-      bottomNavigationBar: _ExomBottomNav(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
+        ),
+        child: SizedBox.expand(child: child),
+      ),
+      bottomNavigationBar: GlassBottomNav(
         selectedIndex: selected,
         onTap: (i) => context.go(_tabs[i]),
       ),
@@ -384,111 +318,137 @@ class _AppDrawer extends StatelessWidget {
     final palette = context.exomPalette;
 
     return Drawer(
-      backgroundColor: palette.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              width: double.infinity,
-              decoration: BoxDecoration(color: palette.surfaceVariant),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SvgPicture.asset(
-                    Theme.of(context).brightness == Brightness.light
-                        ? 'assets/images/logo_dark.svg'
-                        : 'assets/images/logo.svg',
-                    height: 24,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [palette.gradientStart, palette.gradientEnd],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header with gradient
+              Container(
+                padding: const EdgeInsets.all(24),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      palette.primary.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    name,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: palette.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: palette.glassBorder.withValues(alpha: 0.15),
+                      width: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.exomMemberLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: palette.textSecondary,
-                      fontSize: 13,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SvgPicture.asset(
+                      Theme.of(context).brightness == Brightness.light
+                          ? 'assets/images/logo_dark.svg'
+                          : 'assets/images/logo.svg',
+                      height: 24,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: palette.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.exomMemberLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _DrawerItem(
-                    icon: Icons.person_outline,
-                    label: l10n.profileMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.profile);
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.emoji_events_outlined,
-                    label: l10n.challengesMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(AppRoutes.challenges);
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.bar_chart_outlined,
-                    label: l10n.weeklyRecapMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.recap);
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.feedback_outlined,
-                    label: l10n.feedbackMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.feedback);
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.settings_outlined,
-                    label: l10n.settingsMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.settings);
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.help_outline,
-                    label: l10n.helpMenuItem,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.help);
-                    },
-                  ),
-                  Divider(color: palette.divider, height: 24),
-                  _DrawerItem(
-                    icon: Icons.logout,
-                    label: l10n.logOutMenuItem,
-                    color: AppColors.error,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<AuthBloc>().add(const AuthLogoutRequested());
-                    },
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _DrawerItem(
+                      icon: Icons.person_outline,
+                      label: l10n.profileMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.profile);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.emoji_events_outlined,
+                      label: l10n.challengesMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go(AppRoutes.challenges);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.bar_chart_outlined,
+                      label: l10n.weeklyRecapMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.recap);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.feedback_outlined,
+                      label: l10n.feedbackMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.feedback);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.settings_outlined,
+                      label: l10n.settingsMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.settings);
+                      },
+                    ),
+                    _DrawerItem(
+                      icon: Icons.help_outline,
+                      label: l10n.helpMenuItem,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.help);
+                      },
+                    ),
+                    Divider(color: palette.divider, height: 24),
+                    _DrawerItem(
+                      icon: Icons.logout,
+                      label: l10n.logOutMenuItem,
+                      color: AppColors.error,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.read<AuthBloc>().add(
+                          const AuthLogoutRequested(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -525,149 +485,6 @@ class _DrawerItem extends StatelessWidget {
       horizontalTitleGap: 8,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     );
-  }
-}
-
-// ─── Custom Bottom Navigation ──────────────────────────────────────────────────
-
-class _ExomBottomNav extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const _ExomBottomNav({required this.selectedIndex, required this.onTap});
-
-  static const _icons = [
-    Icons.emoji_events_outlined,
-    Icons.fitness_center,
-    null, // center = EXOM logo
-    Icons.restaurant,
-    Icons.calendar_month,
-  ];
-
-  static const _circleSize = 64.0;
-  static const _barHeight = 64.0;
-  static const _circleOverlap = 10.0; // just slightly above bar top
-  @override
-  Widget build(BuildContext context) {
-    final targetX = _slotCenterX(context, selectedIndex);
-    final palette = context.exomPalette;
-    final inactiveColor = palette.textDisabled;
-
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: _barHeight + _circleOverlap,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(end: targetX),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          builder: (context, centerX, _) {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Flat bar — no notch
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: _barHeight,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: palette.surface,
-                      border: Border(
-                        top: BorderSide(color: palette.borderSoft, width: 0.5),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Green circle with glow
-                Positioned(
-                  left: centerX - _circleSize / 2,
-                  bottom: _barHeight - _circleSize + _circleOverlap,
-                  child: Container(
-                    width: _circleSize,
-                    height: _circleSize,
-                    decoration: BoxDecoration(
-                      color: palette.primary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.primary.withValues(alpha: 0.35),
-                          blurRadius: 30,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: _buildIcon(
-                        selectedIndex,
-                        true,
-                        activeColor: palette.onPrimary,
-                        inactiveColor: inactiveColor,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Icon row (active slot hidden — rendered inside circle)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: _barHeight,
-                  child: Row(
-                    children: List.generate(5, (i) {
-                      return Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => onTap(i),
-                          child: Center(
-                            child: i == selectedIndex
-                                ? const SizedBox.shrink()
-                                : _buildIcon(
-                                    i,
-                                    false,
-                                    activeColor: palette.onPrimary,
-                                    inactiveColor: inactiveColor,
-                                  ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIcon(
-    int index,
-    bool isActive, {
-    required Color activeColor,
-    required Color inactiveColor,
-  }) {
-    final color = isActive ? activeColor : inactiveColor;
-    final size = isActive ? 28.0 : 28.0;
-    if (index == 2) {
-      return SvgPicture.asset(
-        'assets/images/logo_small.svg',
-        width: size,
-        height: size,
-        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-      );
-    }
-    return Icon(_icons[index], size: size, color: color);
-  }
-
-  double _slotCenterX(BuildContext context, int index) {
-    final w = MediaQuery.of(context).size.width;
-    final slot = w / 5;
-    return slot * index + slot / 2;
   }
 }
 

@@ -1,9 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get_it/get_it.dart';
-import 'package:exom_app/core/navigation/app_router.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -109,13 +106,6 @@ class _AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    // Trial expired — redirect to trial-expired screen
-    if (err.response?.statusCode == 402) {
-      GetIt.I<FeatureGateService>().markTrialExpired();
-      AppRouter.router.go(AppRoutes.trialExpired);
-      return handler.next(err);
-    }
-
     if (err.response?.statusCode == 401) {
       // Token might be expired, try to refresh
       try {
@@ -204,7 +194,6 @@ class ApiException implements Exception {
   }
 
   bool get isUnauthorized => statusCode == 401;
-  bool get isTrialExpired => statusCode == 402;
   bool get isLocked => statusCode == 423;
   bool get isNotFound => statusCode == 404;
   bool get isNetworkError => statusCode == 0;

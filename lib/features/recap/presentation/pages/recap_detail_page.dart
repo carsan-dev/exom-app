@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
@@ -17,22 +14,6 @@ class RecapDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!GetIt.I<FeatureGateService>().canSeeRecapHistory) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: const Text('Detalle del recap'),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
-        ),
-        body: const PremiumLockedPage(
-          title: 'El recap detallado está disponible en el plan premium',
-          subtitle:
-              'Tu historial y el detalle completo se desbloquean con el plan completo.',
-        ),
-      );
-    }
-
     return BlocProvider(
       create: (_) => sl<RecapBloc>()..add(RecapDetailRequested(recapId)),
       child: _RecapDetailView(recapId: recapId),

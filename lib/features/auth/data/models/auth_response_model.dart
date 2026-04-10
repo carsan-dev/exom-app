@@ -26,16 +26,12 @@ class UserModel {
   final String id;
   final String email;
   final String role;
-  final String tier;
-  final DateTime? trialExpiresAt;
   final ProfileModel? profile;
 
   const UserModel({
     required this.id,
     required this.email,
     required this.role,
-    required this.tier,
-    this.trialExpiresAt,
     this.profile,
   });
 
@@ -44,10 +40,6 @@ class UserModel {
       id: json['id'] as String,
       email: json['email'] as String,
       role: json['role'] as String,
-      tier: json['tier'] as String? ?? 'LOW_TICKET',
-      trialExpiresAt: json['trial_expires_at'] != null
-          ? DateTime.parse(json['trial_expires_at'] as String)
-          : null,
       profile: json['profile'] != null
           ? ProfileModel.fromJson(json['profile'] as Map<String, dynamic>)
           : null,
@@ -58,8 +50,6 @@ class UserModel {
     'id': id,
     'email': email,
     'role': role,
-    'tier': tier,
-    'trial_expires_at': trialExpiresAt?.toIso8601String(),
     'profile': profile?.toJson(),
   };
 
@@ -67,8 +57,6 @@ class UserModel {
     id: id,
     email: email,
     role: role,
-    tier: tier,
-    trialExpiresAt: trialExpiresAt,
     firstName: profile?.firstName,
     lastName: profile?.lastName,
     avatarUrl: profile?.avatarUrl,

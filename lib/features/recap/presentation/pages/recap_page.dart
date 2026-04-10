@@ -138,7 +138,8 @@ class _RecapViewState extends State<_RecapView> {
                     ),
                   ],
           ),
-          floatingActionButton: state is RecapListLoaded &&
+          floatingActionButton:
+              state is RecapListLoaded &&
                   GetIt.I<FeatureGateService>().canSeeRecapHistory
               ? FloatingActionButton.extended(
                   onPressed: () => context.read<RecapBloc>().add(
@@ -923,10 +924,7 @@ class _InfoPill extends StatelessWidget {
 class _RecapLowTicketLanding extends StatelessWidget {
   final VoidCallback onCreate;
 
-  const _RecapLowTicketLanding({
-    super.key,
-    required this.onCreate,
-  });
+  const _RecapLowTicketLanding({super.key, required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
@@ -1075,9 +1073,13 @@ class _SimplifiedRecapForm extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final formData = state.formData;
 
-    final trainingEffort = (formData['training_effort'] as num?)?.toInt() ?? 2;
+    final trainingEffort = (formData['training_effort'] as num?)?.toInt() ?? 3;
     final trainingSessions =
         (formData['training_sessions'] as num?)?.toInt() ?? 2;
+    final dietAdherence = (formData['food_quality'] as num?)?.toInt() ?? 4;
+    final weeklyState = formData['mood'] as String? ?? 'BIEN';
+    final weekDifficulty = (formData['stress_level'] as num?)?.toInt() ?? 3;
+    final painChoice = formData['pain_intensity'] as String? ?? 'NO';
     final appRating =
         (formData['improvement_app_rating'] as num?)?.toInt() ?? 4;
     final serviceRating =
@@ -1099,8 +1101,10 @@ class _SimplifiedRecapForm extends StatelessWidget {
                 // Week range header
                 Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: palette.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
@@ -1129,22 +1133,28 @@ class _SimplifiedRecapForm extends StatelessWidget {
                 // ── Training ──
                 RecapSectionCard(
                   title: l10n.recapTraining,
-                  subtitle: l10n.tellUsHowYouFeltTrainingThisWeek,
+                  subtitle: 'Cuéntanos qué tal fue tu semana de entrenos.',
                   icon: Icons.fitness_center,
                   child: Column(
                     children: [
-                      RecapEmojiRatingField(
+                      RecapSliderField(
                         label: l10n.completedSessions,
-                        helperText: l10n.howDoYouRateTheNumberOfSessions,
-                        value: trainingSessions.clamp(0, 4),
+                        helperText:
+                            '¿Cuántos entrenos completaste esta semana?',
+                        value: trainingSessions.toDouble().clamp(0, 5),
+                        min: 0,
+                        max: 5,
+                        divisions: 5,
+                        valueLabelBuilder: (value) => value.round().toString(),
                         onChanged: (value) =>
-                            onFieldChanged('training_sessions', value),
+                            onFieldChanged('training_sessions', value.round()),
                       ),
                       const SizedBox(height: 20),
-                      RecapEmojiRatingField(
+                      RecapStarRatingField(
                         label: l10n.overallEffort,
-                        helperText: l10n.howDidYouFeelWithTheTrainingLoad,
-                        value: trainingEffort.clamp(0, 4),
+                        helperText:
+                            'Valora del 1 al 5 el esfuerzo general de la semana.',
+                        value: trainingEffort.clamp(1, 5),
                         onChanged: (value) =>
                             onFieldChanged('training_effort', value),
                       ),
@@ -1155,37 +1165,49 @@ class _SimplifiedRecapForm extends StatelessWidget {
                 // ── Nutrition ──
                 RecapSectionCard(
                   title: l10n.recapNutrition,
-                  subtitle: l10n.rateHowYourNutritionWentTheseDays,
+                  subtitle:
+                      'Solo necesitamos tu adherencia general a la dieta.',
                   icon: Icons.restaurant_menu,
-                  child: RecapChoiceChipsField(
-                    label: l10n.nutritionQuality,
-                    helperText: l10n.yourOverallPerceptionOfThisWeeksNutrition,
-                    value: formData['nutrition_quality'] as String?,
-                    options: const ['BAJA', 'MODERADA', 'ALTA', 'MUY_ALTA'],
-                    onSelected: (value) =>
-                        onFieldChanged('nutrition_quality', value),
+                  child: RecapStarRatingField(
+                    label: 'Adherencia a la dieta',
+                    helperText:
+                        '¿Hasta qué punto seguiste tu plan nutricional?',
+                    value: dietAdherence.clamp(1, 5),
+                    onChanged: (value) => onFieldChanged('food_quality', value),
                   ),
                 ),
 
                 // ── Recovery ──
                 RecapSectionCard(
                   title: l10n.recapRecovery,
-                  subtitle: l10n.rateHowYourBodyRespondedThisWeek,
+                  subtitle: 'Resume cómo respondió tu cuerpo esta semana.',
                   icon: Icons.hotel_outlined,
                   child: Column(
                     children: [
                       RecapChoiceChipsField(
-                        label: l10n.fatigueLevel,
-                        helperText: l10n.howYourOverallEnergyFelt,
+                        label: 'Recuperación general',
+                        helperText:
+                            '¿Cómo te has sentido a nivel de recuperación?',
                         value: formData['fatigue_level'] as String?,
                         options: const ['CANSADO', 'NORMAL', 'BIEN', 'FUERTE'],
                         onSelected: (value) =>
                             onFieldChanged('fatigue_level', value),
                       ),
                       const SizedBox(height: 20),
+                      RecapChoiceChipsField(
+                        label: '¿Has tenido molestias o dolor?',
+                        helperText:
+                            'Indícanos si hubo molestias generales durante la semana.',
+                        value: painChoice,
+                        options: const ['NO', 'SI'],
+                        onSelected: (value) =>
+                            onFieldChanged('pain_intensity', value),
+                      ),
+                      const SizedBox(height: 20),
                       RecapTextAreaField(
-                        label: l10n.recoveryNotes,
-                        hintText: l10n.egIStillHaveLowerBackTightness,
+                        label: 'Más contexto sobre tus molestias',
+                        hintText:
+                            'Ej: noté carga en lumbares después del viernes.',
                         initialValue:
                             formData['recovery_notes'] as String? ?? '',
                         onChanged: (value) =>
@@ -1198,27 +1220,47 @@ class _SimplifiedRecapForm extends StatelessWidget {
                 // ── General ──
                 RecapSectionCard(
                   title: l10n.recapGeneral,
-                  subtitle: l10n.yourMentalAndEmotionalContextAlsoMatters,
+                  subtitle:
+                      'Queremos entender cómo ha sido tu semana en general.',
                   icon: Icons.mood,
                   child: Column(
                     children: [
-                      RecapChoiceChipsField(
-                        label: l10n.mainMood,
-                        helperText: l10n.howYouFeltMostOfTheWeek,
-                        value: formData['mood'] as String?,
-                        options: const [
+                      RecapEmojiRatingField(
+                        label: 'Estado semanal',
+                        helperText:
+                            '¿Con qué sensación general te quedas esta semana?',
+                        value: const [
+                          'MUY_MAL',
                           'MAL',
-                          'REGULAR',
                           'NORMAL',
                           'BIEN',
                           'MUY_BIEN',
-                        ],
-                        onSelected: (value) => onFieldChanged('mood', value),
+                        ].indexOf(weeklyState).clamp(0, 4),
+                        onChanged: (value) => onFieldChanged(
+                          'mood',
+                          const [
+                            'MUY_MAL',
+                            'MAL',
+                            'NORMAL',
+                            'BIEN',
+                            'MUY_BIEN',
+                          ][value],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      RecapStarRatingField(
+                        label: 'Dificultad de la semana',
+                        helperText:
+                            'Valora del 1 al 5 qué tan difícil se te ha hecho seguir el plan.',
+                        value: weekDifficulty.clamp(1, 5),
+                        onChanged: (value) =>
+                            onFieldChanged('stress_level', value),
                       ),
                       const SizedBox(height: 20),
                       RecapTextAreaField(
-                        label: l10n.notes,
-                        hintText: l10n.shareAnyRelevantDetailFromYourWeek,
+                        label: '¿Qué ha sido lo más difícil?',
+                        hintText:
+                            'Cuéntanos qué fue lo que más te costó esta semana.',
                         initialValue:
                             formData['general_notes'] as String? ?? '',
                         onChanged: (value) =>
@@ -1237,8 +1279,7 @@ class _SimplifiedRecapForm extends StatelessWidget {
                     children: [
                       RecapStarRatingField(
                         label: l10n.rateTheService,
-                        helperText:
-                            l10n.howYouRateTheSupportReceivedThisWeek,
+                        helperText: l10n.howYouRateTheSupportReceivedThisWeek,
                         value: serviceRating.clamp(1, 5),
                         onChanged: (value) =>
                             onFieldChanged('improvement_service_rating', value),

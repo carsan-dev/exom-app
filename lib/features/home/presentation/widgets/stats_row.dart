@@ -7,6 +7,7 @@ import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 
 class StatsRow extends StatelessWidget {
@@ -110,17 +111,9 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            color: highlighted
-                ? color.withValues(alpha: 0.12)
-                : palette.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: highlighted
-                  ? color.withValues(alpha: 0.3)
-                  : palette.borderSoft,
-            ),
-          ),
+          decoration: highlighted
+              ? GlassDecoration.accentCard(color, borderRadius: 16)
+              : GlassDecoration.card(borderRadius: 16),
           child: Column(
             children: [
               Text(

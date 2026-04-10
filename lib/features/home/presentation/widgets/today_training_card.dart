@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
@@ -55,11 +56,7 @@ class TodayTrainingCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.accentCard(color),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -69,7 +66,7 @@ class TodayTrainingCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [color.withValues(alpha: 0.16), palette.surface],
+                colors: [color.withValues(alpha: 0.12), Colors.transparent],
               ),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
@@ -82,6 +79,13 @@ class TodayTrainingCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                      ),
+                    ],
                   ),
                   child: Icon(Icons.fitness_center, color: color, size: 24),
                 ),
@@ -180,15 +184,27 @@ class TodayTrainingCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: summary.totalExercises > 0
-                        ? summary.exercisesCompleted / summary.totalExercises
-                        : (summary.trainingCompleted ? 1 : 0),
-                    backgroundColor: palette.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                    minHeight: 6,
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.20),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: summary.totalExercises > 0
+                          ? summary.exercisesCompleted / summary.totalExercises
+                          : (summary.trainingCompleted ? 1 : 0),
+                      backgroundColor: palette.surfaceVariant,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                      minHeight: 6,
+                    ),
                   ),
                 ),
               ],

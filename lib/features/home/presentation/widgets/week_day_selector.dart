@@ -78,16 +78,36 @@ class _DayCircle extends StatelessWidget {
     Color textColor;
     Border? border;
 
+    List<BoxShadow>? shadows;
+
     if (isToday) {
       bgColor = palette.primary;
       textColor = palette.onPrimary;
+      shadows = [
+        BoxShadow(
+          color: palette.primary.withValues(alpha: 0.30),
+          blurRadius: 10,
+          spreadRadius: -1,
+        ),
+      ];
     } else if (isSelected) {
-      bgColor = Colors.transparent;
+      bgColor = palette.glassBackground;
       textColor = palette.primary;
       border = Border.all(color: palette.primary, width: 2);
+      shadows = [
+        BoxShadow(
+          color: palette.primary.withValues(alpha: 0.15),
+          blurRadius: 8,
+          spreadRadius: -2,
+        ),
+      ];
     } else if (isPast) {
-      bgColor = palette.surfaceVariant;
+      bgColor = palette.glassBackground;
       textColor = palette.textPrimary;
+      border = Border.all(
+        color: palette.glassBorder.withValues(alpha: 0.15),
+        width: 0.5,
+      );
     } else {
       bgColor = Colors.transparent;
       textColor = palette.textDisabled;
@@ -101,6 +121,7 @@ class _DayCircle extends StatelessWidget {
         color: bgColor,
         shape: BoxShape.circle,
         border: border,
+        boxShadow: shadows,
       ),
       child: Center(
         child: Text(

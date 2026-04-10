@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
@@ -140,8 +142,12 @@ class _DateHeader extends StatelessWidget {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: palette.surfaceVariant,
+                color: palette.glassBackground,
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.glassBorder.withValues(alpha: 0.15),
+                  width: 0.5,
+                ),
               ),
               child: Icon(
                 Icons.calendar_today_outlined,
@@ -213,22 +219,22 @@ class _RestDayBody extends StatelessWidget {
           const SizedBox(height: 12),
           const WeekDaySelector(),
           const SizedBox(height: 20),
-          Container(
+          GlassCard(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: palette.surface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.divider),
-            ),
+            borderRadius: 24,
             child: Column(
               children: [
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: palette.surfaceVariant,
+                    color: palette.glassBackground,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: palette.glassBorder.withValues(alpha: 0.15),
+                      width: 0.5,
+                    ),
                   ),
                   child: Center(
                     child: Icon(

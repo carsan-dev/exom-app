@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
@@ -23,11 +24,7 @@ class TodayDietCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.accentCard(semantic.calorie),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,6 +35,13 @@ class TodayDietCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: semantic.calorie.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: semantic.calorie.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      spreadRadius: -2,
+                    ),
+                  ],
                 ),
                 child: Icon(
                   Icons.restaurant_menu,
@@ -116,15 +120,27 @@ class TodayDietCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: summary.totalMeals > 0
-                    ? summary.mealsCompleted / summary.totalMeals
-                    : 0,
-                backgroundColor: palette.surfaceVariant,
-                valueColor: AlwaysStoppedAnimation<Color>(semantic.calorie),
-                minHeight: 6,
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: semantic.calorie.withValues(alpha: 0.20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: summary.totalMeals > 0
+                      ? summary.mealsCompleted / summary.totalMeals
+                      : 0,
+                  backgroundColor: palette.surfaceVariant,
+                  valueColor: AlwaysStoppedAnimation<Color>(semantic.calorie),
+                  minHeight: 6,
+                ),
               ),
             ),
             const SizedBox(height: 16),

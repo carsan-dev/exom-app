@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 class RestTimerOverlay extends StatefulWidget {
@@ -78,11 +80,12 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        child: Container(
+      decoration: GlassDecoration.elevated(borderRadius: 28),
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -105,9 +108,19 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
+          Container(
             width: 160,
             height: 160,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: palette.primary.withValues(alpha: 0.25),
+                  blurRadius: 20,
+                  spreadRadius: -4,
+                ),
+              ],
+            ),
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -159,6 +172,8 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
@@ -195,15 +196,7 @@ class _TodayTrainingBanner extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [color.withValues(alpha: 0.25), palette.surface],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
+        decoration: GlassDecoration.accentCard(color),
         child: Row(
           children: [
             Container(
@@ -315,18 +308,15 @@ class _NoTrainingToday extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: palette.surfaceVariant,
+              color: palette.glassBackground,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: palette.glassBorder.withValues(alpha: 0.15)),
             ),
             child: const Text('😴', style: TextStyle(fontSize: 24)),
           ),
@@ -402,11 +392,7 @@ class _TrainingListItem extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: palette.divider),
-        ),
+        decoration: GlassDecoration.card(),
         child: Row(
           children: [
             Container(
@@ -415,6 +401,13 @@ class _TrainingListItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    spreadRadius: -2,
+                  ),
+                ],
               ),
               child: Icon(Icons.fitness_center, color: color, size: 22),
             ),

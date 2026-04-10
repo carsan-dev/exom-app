@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
@@ -192,15 +193,7 @@ class _DietHeader extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [semantic.calorie.withValues(alpha: 0.12), palette.surface],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: semantic.calorie.withValues(alpha: 0.28)),
-      ),
+      decoration: GlassDecoration.accentCard(semantic.calorie),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -418,17 +411,15 @@ class _MealCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isCompleted
-              ? semantic.success.withValues(alpha: 0.06)
-              : palette.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isCompleted
-                ? semantic.success.withValues(alpha: 0.32)
-                : palette.divider,
-          ),
-        ),
+        decoration: isCompleted
+            ? BoxDecoration(
+                color: semantic.success.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: semantic.success.withValues(alpha: 0.32),
+                ),
+              )
+            : GlassDecoration.card(borderRadius: 18),
         child: Row(
           children: [
             ClipRRect(
@@ -553,8 +544,11 @@ class _MealCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: palette.surfaceVariant,
+                            color: palette.glassBackground,
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: palette.glassBorder.withValues(alpha: 0.15),
+                            ),
                           ),
                           child: Text(
                             b,

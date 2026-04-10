@@ -4,6 +4,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -129,30 +130,28 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final allDone = total > 0 && completed == total;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         title: Text(training.name),
       ),
-      body: Stack(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
+        ),
+        child: SizedBox.expand(
+          child: Stack(
         children: [
           ListView(
-            padding: const EdgeInsets.only(bottom: 160),
+            padding: EdgeInsets.only(top: kToolbarHeight + MediaQuery.of(context).padding.top, bottom: 160),
             children: [
               // Header card
               Container(
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withValues(alpha: 0.2), palette.surface],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
-                ),
+                decoration: GlassDecoration.accentCard(color),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -298,10 +297,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             right: 0,
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                border: Border(top: BorderSide(color: palette.divider)),
-              ),
+              decoration: GlassDecoration.elevated(),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -327,15 +323,28 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: palette.surfaceVariant,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        allDone ? semantic.success : color,
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (allDone ? semantic.success : color)
+                              .withValues(alpha: 0.20),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: palette.surfaceVariant,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          allDone ? semantic.success : color,
+                        ),
+                        minHeight: 8,
                       ),
-                      minHeight: 8,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -378,6 +387,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -475,11 +486,7 @@ class _DescriptionCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 14),
       child: Text(
         text,
         style: theme.textTheme.bodyMedium?.copyWith(
@@ -524,17 +531,15 @@ class _ExerciseCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isCompleted
-              ? semantic.success.withValues(alpha: 0.08)
-              : palette.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isCompleted
-                ? semantic.success.withValues(alpha: 0.35)
-                : palette.divider,
-          ),
-        ),
+        decoration: isCompleted
+            ? BoxDecoration(
+                color: semantic.success.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: semantic.success.withValues(alpha: 0.35),
+                ),
+              )
+            : GlassDecoration.card(),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

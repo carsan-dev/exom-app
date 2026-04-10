@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
@@ -531,11 +532,7 @@ class _MealHeroImage extends StatelessWidget {
     return Container(
       height: 196,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: palette.surfaceVariant,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 18),
       child: hasImage
           ? CachedNetworkImage(
               imageUrl: imageUrl,
@@ -741,9 +738,9 @@ class _IngredientsSection extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: palette.surfaceVariant,
+                    color: palette.glassBackground,
                     shape: BoxShape.circle,
-                    border: Border.all(color: palette.divider),
+                    border: Border.all(color: palette.glassBorder.withValues(alpha: 0.15)),
                   ),
                   alignment: Alignment.center,
                   child: showGlyph

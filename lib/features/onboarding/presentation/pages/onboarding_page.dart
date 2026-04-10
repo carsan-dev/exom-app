@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
@@ -86,7 +88,7 @@ class _OnboardingViewState extends State<_OnboardingView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
     return BlocListener<OnboardingBloc, OnboardingState>(
@@ -106,121 +108,150 @@ class _OnboardingViewState extends State<_OnboardingView> {
           _goToPage(state.currentStep);
         }
       },
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: BlocBuilder<OnboardingBloc, OnboardingState>(
-            builder: (context, state) {
-              if (state is OnboardingLoading || state is OnboardingInitial) {
-                return const Center(child: CircularProgressIndicator());
-              }
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: BlocBuilder<OnboardingBloc, OnboardingState>(
+              builder: (context, state) {
+                if (state is OnboardingLoading || state is OnboardingInitial) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (state is OnboardingLoadError) {
-                return _buildLoadError(context, state);
-              }
+                if (state is OnboardingLoadError) {
+                  return _buildLoadError(context, state);
+                }
 
-              if (state is OnboardingSubmitting) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(l10n.onboardingSubmittingMessage),
-                    ],
-                  ),
-                );
-              }
-
-              if (state is OnboardingStepActive) {
-                return Column(
-                  children: [
-                    // Progress indicator for steps 1-4
-                    if (state.currentStep > 0) ...[
-                      const SizedBox(height: 16),
-                      OnboardingProgressIndicator(
-                        currentStep: state.currentStep - 1,
-                        totalSteps: state.totalSteps - 1,
-                      ),
-                    ],
-                    Expanded(
-                      child: PageView(
-                        controller: _pageController,
-                        physics: const NeverScrollableScrollPhysics(),
+                if (state is OnboardingSubmitting) {
+                  return Center(
+                    child: GlassCard(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.all(24),
+                      borderRadius: 28,
+                      elevated: true,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Step 0: Welcome
-                          OnboardingWelcomeStep(
-                            onStart: () => context.read<OnboardingBloc>().add(
-                              const OnboardingStepCompleted(step: 0, data: {}),
-                            ),
-                            onSkip: () => context.read<OnboardingBloc>().add(
-                              const OnboardingSkipped(),
-                            ),
-                          ),
-                          // Step 1: Basics
-                          OnboardingBasicsStep(
-                            initialData: state.accumulatedData,
-                            initialAvatarUrl: state.avatarUrl,
-                            avatarUploading: state.avatarUploading,
-                            onNext: (data) =>
-                                context.read<OnboardingBloc>().add(
-                                  OnboardingStepCompleted(step: 1, data: data),
-                                ),
-                            onSkip: () => context.read<OnboardingBloc>().add(
-                              const OnboardingSkipped(),
-                            ),
-                            onAvatarPicked: (path) => context
-                                .read<OnboardingBloc>()
-                                .add(OnboardingAvatarPicked(path)),
-                          ),
-                          // Step 2: Body
-                          OnboardingBodyStep(
-                            initialData: state.accumulatedData,
-                            onNext: (data) =>
-                                context.read<OnboardingBloc>().add(
-                                  OnboardingStepCompleted(step: 2, data: data),
-                                ),
-                            onSkip: () => context.read<OnboardingBloc>().add(
-                              const OnboardingSkipped(),
-                            ),
-                          ),
-                          // Step 3: Goals
-                          OnboardingGoalsStep(
-                            initialData: state.accumulatedData,
-                            onNext: (data) =>
-                                context.read<OnboardingBloc>().add(
-                                  OnboardingStepCompleted(step: 3, data: data),
-                                ),
-                            onSkip: () => context.read<OnboardingBloc>().add(
-                              const OnboardingSkipped(),
-                            ),
-                          ),
-                          // Step 4: Summary
-                          OnboardingSummaryStep(
-                            accumulatedData: state.accumulatedData,
-                            avatarUrl: state.avatarUrl,
-                            onConfirm: () => context.read<OnboardingBloc>().add(
-                              const OnboardingSubmitted(),
-                            ),
-                            onEditBasics: () => context
-                                .read<OnboardingBloc>()
-                                .add(const OnboardingStepSelected(1)),
-                            onEditBody: () => context
-                                .read<OnboardingBloc>()
-                                .add(const OnboardingStepSelected(2)),
-                            onEditGoals: () => context
-                                .read<OnboardingBloc>()
-                                .add(const OnboardingStepSelected(3)),
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n.onboardingSubmittingMessage,
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
-                  ],
-                );
-              }
+                  );
+                }
 
-              return const SizedBox.shrink();
-            },
+                if (state is OnboardingStepActive) {
+                  return Column(
+                    children: [
+                      if (state.currentStep > 0) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: GlassDecoration.elevated(
+                            borderRadius: 999,
+                          ),
+                          child: OnboardingProgressIndicator(
+                            currentStep: state.currentStep - 1,
+                            totalSteps: state.totalSteps - 1,
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: PageView(
+                          controller: _pageController,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            OnboardingWelcomeStep(
+                              onStart: () => context.read<OnboardingBloc>().add(
+                                const OnboardingStepCompleted(
+                                  step: 0,
+                                  data: {},
+                                ),
+                              ),
+                              onSkip: () => context.read<OnboardingBloc>().add(
+                                const OnboardingSkipped(),
+                              ),
+                            ),
+                            OnboardingBasicsStep(
+                              initialData: state.accumulatedData,
+                              initialAvatarUrl: state.avatarUrl,
+                              avatarUploading: state.avatarUploading,
+                              onNext: (data) =>
+                                  context.read<OnboardingBloc>().add(
+                                    OnboardingStepCompleted(
+                                      step: 1,
+                                      data: data,
+                                    ),
+                                  ),
+                              onSkip: () => context.read<OnboardingBloc>().add(
+                                const OnboardingSkipped(),
+                              ),
+                              onAvatarPicked: (path) => context
+                                  .read<OnboardingBloc>()
+                                  .add(OnboardingAvatarPicked(path)),
+                            ),
+                            OnboardingBodyStep(
+                              initialData: state.accumulatedData,
+                              onNext: (data) =>
+                                  context.read<OnboardingBloc>().add(
+                                    OnboardingStepCompleted(
+                                      step: 2,
+                                      data: data,
+                                    ),
+                                  ),
+                              onSkip: () => context.read<OnboardingBloc>().add(
+                                const OnboardingSkipped(),
+                              ),
+                            ),
+                            OnboardingGoalsStep(
+                              initialData: state.accumulatedData,
+                              onNext: (data) =>
+                                  context.read<OnboardingBloc>().add(
+                                    OnboardingStepCompleted(
+                                      step: 3,
+                                      data: data,
+                                    ),
+                                  ),
+                              onSkip: () => context.read<OnboardingBloc>().add(
+                                const OnboardingSkipped(),
+                              ),
+                            ),
+                            OnboardingSummaryStep(
+                              accumulatedData: state.accumulatedData,
+                              avatarUrl: state.avatarUrl,
+                              onConfirm: () => context
+                                  .read<OnboardingBloc>()
+                                  .add(const OnboardingSubmitted()),
+                              onEditBasics: () => context
+                                  .read<OnboardingBloc>()
+                                  .add(const OnboardingStepSelected(1)),
+                              onEditBody: () => context
+                                  .read<OnboardingBloc>()
+                                  .add(const OnboardingStepSelected(2)),
+                              onEditGoals: () => context
+                                  .read<OnboardingBloc>()
+                                  .add(const OnboardingStepSelected(3)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         ),
       ),

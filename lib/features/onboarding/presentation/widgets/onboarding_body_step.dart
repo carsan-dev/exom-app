@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 
 class OnboardingBodyStep extends StatefulWidget {
   const OnboardingBodyStep({
@@ -30,7 +31,8 @@ class _OnboardingBodyStepState extends State<OnboardingBodyStep> {
   void initState() {
     super.initState();
     _height = (widget.initialData['height'] as num?)?.toDouble() ?? 170.0;
-    _weight = (widget.initialData['current_weight'] as num?)?.toDouble() ?? 70.0;
+    _weight =
+        (widget.initialData['current_weight'] as num?)?.toDouble() ?? 70.0;
     _heightController.text = _height.toStringAsFixed(0);
     _weightController.text = _weight.toStringAsFixed(1);
   }
@@ -72,122 +74,148 @@ class _OnboardingBodyStepState extends State<OnboardingBodyStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          Text(
-            l10n.onboardingBodyTitle,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: SingleChildScrollView(
+              child: GlassCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.all(24),
+                borderRadius: 28,
+                elevated: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.onboardingBodyTitle,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    Row(
+                      children: [
+                        Text(
+                          l10n.onboardingHeightLabel,
+                          style: TextStyle(
+                            color: palette.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => setState(
+                            () => _useManualHeight = !_useManualHeight,
+                          ),
+                          child: Text(
+                            l10n.manualEntryToggle,
+                            style: TextStyle(
+                              color: palette.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_useManualHeight)
+                      TextFormField(
+                        controller: _heightController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(suffixText: 'cm'),
+                      )
+                    else ...[
+                      Slider(
+                        value: _height.clamp(140.0, 220.0),
+                        min: 140,
+                        max: 220,
+                        divisions: 80,
+                        label: '${_height.toStringAsFixed(0)} cm',
+                        activeColor: palette.primary,
+                        onChanged: (v) => setState(() {
+                          _height = v;
+                          _heightController.text = v.toStringAsFixed(0);
+                        }),
+                      ),
+                      Center(
+                        child: Text(
+                          '${_height.toStringAsFixed(0)} cm',
+                          style: TextStyle(
+                            color: palette.textPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        Text(
+                          l10n.onboardingWeightLabel,
+                          style: TextStyle(
+                            color: palette.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => setState(
+                            () => _useManualWeight = !_useManualWeight,
+                          ),
+                          child: Text(
+                            l10n.manualEntryToggle,
+                            style: TextStyle(
+                              color: palette.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_useManualWeight)
+                      TextFormField(
+                        controller: _weightController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(suffixText: 'kg'),
+                      )
+                    else ...[
+                      Slider(
+                        value: _weight.clamp(40.0, 200.0),
+                        min: 40,
+                        max: 200,
+                        divisions: 160,
+                        label: '${_weight.toStringAsFixed(1)} kg',
+                        activeColor: palette.primary,
+                        onChanged: (v) => setState(() {
+                          _weight = v;
+                          _weightController.text = v.toStringAsFixed(1);
+                        }),
+                      ),
+                      Center(
+                        child: Text(
+                          '${_weight.toStringAsFixed(1)} kg',
+                          style: TextStyle(
+                            color: palette.textPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 32),
-
-          // Height
-          Row(
-            children: [
-              Text(
-                l10n.onboardingHeightLabel,
-                style: TextStyle(color: palette.textSecondary, fontSize: 14),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _useManualHeight = !_useManualHeight),
-                child: Text(
-                  l10n.manualEntryToggle,
-                  style: TextStyle(
-                    color: palette.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_useManualHeight)
-            TextFormField(
-              controller: _heightController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'cm'),
-            )
-          else ...[
-            Slider(
-              value: _height.clamp(140.0, 220.0),
-              min: 140,
-              max: 220,
-              divisions: 80,
-              label: '${_height.toStringAsFixed(0)} cm',
-              activeColor: palette.primary,
-              onChanged: (v) => setState(() {
-                _height = v;
-                _heightController.text = v.toStringAsFixed(0);
-              }),
-            ),
-            Center(
-              child: Text(
-                '${_height.toStringAsFixed(0)} cm',
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 24),
-
-          // Weight
-          Row(
-            children: [
-              Text(
-                l10n.onboardingWeightLabel,
-                style: TextStyle(color: palette.textSecondary, fontSize: 14),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _useManualWeight = !_useManualWeight),
-                child: Text(
-                  l10n.manualEntryToggle,
-                  style: TextStyle(
-                    color: palette.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_useManualWeight)
-            TextFormField(
-              controller: _weightController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'kg'),
-            )
-          else ...[
-            Slider(
-              value: _weight.clamp(40.0, 200.0),
-              min: 40,
-              max: 200,
-              divisions: 160,
-              label: '${_weight.toStringAsFixed(1)} kg',
-              activeColor: palette.primary,
-              onChanged: (v) => setState(() {
-                _weight = v;
-                _weightController.text = v.toStringAsFixed(1);
-              }),
-            ),
-            Center(
-              child: Text(
-                '${_weight.toStringAsFixed(1)} kg',
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-
-          const Spacer(),
+          const SizedBox(height: 16),
           _StepButtons(onNext: _submit, onSkip: widget.onSkip),
           const SizedBox(height: 16),
         ],

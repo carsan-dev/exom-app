@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 
 class OnboardingProgressIndicator extends StatelessWidget {
   const OnboardingProgressIndicator({
@@ -25,10 +26,20 @@ class OnboardingProgressIndicator extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: isActive ? 24 : 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: (isActive || isPast) ? palette.primary : palette.textDisabled,
-            borderRadius: BorderRadius.circular(4),
-          ),
+          decoration: isActive
+              ? GlassDecoration.accentCard(palette.primary, borderRadius: 999)
+              : BoxDecoration(
+                  color: isPast
+                      ? palette.primary.withValues(alpha: 0.7)
+                      : palette.glassBackground,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isPast
+                        ? palette.primary.withValues(alpha: 0.24)
+                        : palette.glassBorder.withValues(alpha: 0.14),
+                    width: 0.5,
+                  ),
+                ),
         );
       }),
     );

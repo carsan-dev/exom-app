@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 
 class OnboardingSummaryStep extends StatelessWidget {
   const OnboardingSummaryStep({
@@ -238,20 +239,18 @@ class _CompletionCard extends StatelessWidget {
             .where((value) => value.isNotEmpty)
             .join(' ');
 
-    return Container(
+    return GlassCard(
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 24,
+      elevated: true,
       child: Column(
         children: [
           Row(
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundColor: palette.surfaceVariant,
+                backgroundColor: palette.glassBackground,
                 backgroundImage: avatarUrl != null
                     ? NetworkImage(avatarUrl!)
                     : null,
@@ -287,10 +286,10 @@ class _CompletionCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: percent / 100,
-              backgroundColor: palette.surfaceVariant,
+              backgroundColor: palette.glassBackground,
               color: palette.primary,
               minHeight: 8,
             ),
@@ -318,13 +317,10 @@ class _SummarySection extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,6 +337,12 @@ class _SummarySection extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onEdit,
+                style: TextButton.styleFrom(
+                  foregroundColor: palette.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
                 child: Text(l10n.onboardingEditButton),
               ),
             ],

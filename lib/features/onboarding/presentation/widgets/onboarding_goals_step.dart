@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 
 class OnboardingGoalsStep extends StatefulWidget {
   const OnboardingGoalsStep({
@@ -93,85 +95,104 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          Text(
-            l10n.onboardingGoalsTitle,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Level selector
-          Text(
-            l10n.onboardingLevelLabel,
-            style: TextStyle(color: palette.textSecondary, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: _levels.map((level) {
-              final isSelected = _level == level;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _level = level),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? palette.primary : palette.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected ? palette.primary : palette.divider,
-                        ),
-                      ),
-                      child: Text(
-                        _levelLabel(context, level),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: isSelected
-                              ? palette.onPrimary
-                              : palette.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: GlassCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.all(24),
+                borderRadius: 28,
+                elevated: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.onboardingGoalsTitle,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+
+                    Text(
+                      l10n.onboardingLevelLabel,
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: _levels.map((level) {
+                        final isSelected = _level == level;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _level = level),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: isSelected
+                                    ? GlassDecoration.accentCard(
+                                        palette.primary,
+                                        borderRadius: 14,
+                                      )
+                                    : GlassDecoration.card(borderRadius: 14),
+                                child: Text(
+                                  _levelLabel(context, level),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? palette.primary
+                                        : palette.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    TextFormField(
+                      controller: _goalController,
+                      decoration: InputDecoration(
+                        labelText: l10n.onboardingMainGoalLabel,
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _muscleMassController,
+                      decoration: InputDecoration(
+                        labelText: l10n.onboardingMuscleMassGoalLabel,
+                        suffixText: 'kg',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _caloriesController,
+                      decoration: InputDecoration(
+                        labelText: l10n.onboardingTargetCaloriesLabel,
+                        suffixText: 'kcal',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ],
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-
-          TextFormField(
-            controller: _goalController,
-            decoration: InputDecoration(
-              labelText: l10n.onboardingMainGoalLabel,
+              ),
             ),
-            maxLines: 2,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _muscleMassController,
-            decoration: InputDecoration(
-              labelText: l10n.onboardingMuscleMassGoalLabel,
-              suffixText: 'kg',
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _caloriesController,
-            decoration: InputDecoration(
-              labelText: l10n.onboardingTargetCaloriesLabel,
-              suffixText: 'kcal',
-            ),
-            keyboardType: TextInputType.number,
-          ),
-
-          const Spacer(),
           _CompleteButtons(onComplete: _submit, onSkip: widget.onSkip),
           const SizedBox(height: 16),
         ],

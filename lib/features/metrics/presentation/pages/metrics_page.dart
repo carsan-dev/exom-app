@@ -1217,57 +1217,63 @@ class _MetricsViewState extends State<_MetricsView> {
                           ),
                           const SizedBox(height: 14),
                           PremiumLockedSection(
-                            isLocked: !GetIt.instance<FeatureGateService>().canUseBodyCompositionCalculator,
-                            label: AppLocalizations.of(context)!.seenCalculatorTitle,
+                            isLocked: !GetIt.instance<FeatureGateService>()
+                                .canUseBodyCompositionCalculator,
+                            label: AppLocalizations.of(
+                              context,
+                            )!.seenCalculatorTitle,
+                            onTap: () => showPremiumFeatureMessage(context),
                             child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: palette.surfaceVariant,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: palette.borderSoft),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.seenCalculatorTitle,
-                                  style: TextStyle(
-                                    color: palette.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.seenCalculatorDescription,
-                                  style: TextStyle(
-                                    color: palette.textSecondary,
-                                    fontSize: 12,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () =>
-                                        _openSeenEstimateCalculator(context),
-                                    icon: const Icon(Icons.calculate_outlined),
-                                    label: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.calculateEstimateButton,
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: palette.surfaceVariant,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: palette.borderSoft),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.seenCalculatorTitle,
+                                    style: TextStyle(
+                                      color: palette.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.seenCalculatorDescription,
+                                    style: TextStyle(
+                                      color: palette.textSecondary,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _openSeenEstimateCalculator(context),
+                                      icon: const Icon(
+                                        Icons.calculate_outlined,
+                                      ),
+                                      label: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.calculateEstimateButton,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                           ),
                         ],
                       ),
@@ -1346,10 +1352,18 @@ class _MetricsViewState extends State<_MetricsView> {
                       icon: Icons.straighten,
                       color: semantic.info,
                       trailing: GestureDetector(
-                        onTap: () => setState(() {
-                          _bodyMapMode = !_bodyMapMode;
-                          _selectedMeasure = null;
-                        }),
+                        onTap: () {
+                          final gate = GetIt.instance<FeatureGateService>();
+                          if (!_bodyMapMode && !gate.canUseAnatomicalModel) {
+                            showPremiumFeatureMessage(context);
+                            return;
+                          }
+
+                          setState(() {
+                            _bodyMapMode = !_bodyMapMode;
+                            _selectedMeasure = null;
+                          });
+                        },
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1376,32 +1390,105 @@ class _MetricsViewState extends State<_MetricsView> {
                           ],
                         ),
                       ),
-                      child: (_bodyMapMode && GetIt.instance<FeatureGateService>().canUseAnatomicalModel)
-                          ? _buildBodyMapMeasurements()
-                          : Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 12,
-                                      mainAxisSpacing: 12,
-                                      childAspectRatio: 2.0,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          (_bodyMapMode &&
+                                  GetIt.instance<FeatureGateService>()
+                                      .canUseAnatomicalModel)
+                              ? _buildBodyMapMeasurements()
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: GridView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
+                                          childAspectRatio: 2.0,
+                                        ),
+                                    itemCount: _measureControllers.length,
+                                    itemBuilder: (context, index) {
+                                      final key = _measureControllers.keys
+                                          .elementAt(index);
+                                      return _MeasureInput(
+                                        label: _localizedZoneLabel(
+                                          context,
+                                          key,
+                                        ),
+                                        controller: _measureControllers[key]!,
+                                        onChanged: (_) =>
+                                            _touchedMeasures.add(key),
+                                      );
+                                    },
+                                  ),
+                                ),
+                          if (!GetIt.instance<FeatureGateService>()
+                              .canUseAnatomicalModel) ...[
+                            const SizedBox(height: 14),
+                            PremiumLockedSection(
+                              isLocked: true,
+                              label: 'Modelo anatómico',
+                              onTap: () => showPremiumFeatureMessage(context),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: palette.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: palette.borderSoft),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: semantic.info.withValues(
+                                          alpha: 0.14,
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Icon(
+                                        Icons.accessibility_new,
+                                        color: semantic.info,
+                                      ),
                                     ),
-                                itemCount: _measureControllers.length,
-                                itemBuilder: (context, index) {
-                                  final key = _measureControllers.keys
-                                      .elementAt(index);
-                                  return _MeasureInput(
-                                    label: _localizedZoneLabel(context, key),
-                                    controller: _measureControllers[key]!,
-                                    onChanged: (_) => _touchedMeasures.add(key),
-                                  );
-                                },
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Modelo anatómico interactivo',
+                                            style: TextStyle(
+                                              color: palette.textPrimary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Visualiza las zonas corporales y registra medidas con una vista guiada.',
+                                            style: TextStyle(
+                                              color: palette.textSecondary,
+                                              fontSize: 12,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

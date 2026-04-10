@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
@@ -33,7 +35,15 @@ class FeedbackPage extends StatelessWidget {
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: Colors.transparent,
         ),
-        body: const PremiumLockedPage(),
+        body: PremiumLockedPage(
+          preview: const _FeedbackLockedPreview(),
+          onContactTrainer: () async {
+            await launchUrl(
+              ExternalLinks.supportPage,
+              mode: LaunchMode.externalApplication,
+            );
+          },
+        ),
       );
     }
 
@@ -127,6 +137,101 @@ class FeedbackPage extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _FeedbackLockedPreview extends StatelessWidget {
+  const _FeedbackLockedPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: palette.divider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 140,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: palette.surfaceVariant,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: palette.surfaceVariant,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: List.generate(
+                  3,
+                  (_) => Expanded(
+                    child: Container(
+                      height: 44,
+                      margin: const EdgeInsets.only(right: 10),
+                      decoration: BoxDecoration(
+                        color: palette.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        ...List.generate(
+          2,
+          (_) => Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: palette.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceVariant,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

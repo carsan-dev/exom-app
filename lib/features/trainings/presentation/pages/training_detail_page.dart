@@ -613,7 +613,9 @@ class _ExerciseCard extends StatelessWidget {
                         icon: Icons.timer_outlined,
                         label: '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
-                      if (weightUsed != null && GetIt.instance<FeatureGateService>().canSeeRegisteredWeight) ...[
+                      if (weightUsed != null &&
+                          GetIt.instance<FeatureGateService>()
+                              .canSeeRegisteredWeight) ...[
                         const SizedBox(width: 12),
                         _MiniStat(
                           icon: Icons.fitness_center,
@@ -718,7 +720,9 @@ class _ExerciseCard extends StatelessWidget {
 
     onToggle(result.completed, weightUsed: result.weight);
 
-    if (result.completed && nextExerciseName != null) {
+    if (result.completed &&
+        nextExerciseName != null &&
+        GetIt.instance<FeatureGateService>().canUseRestTimer) {
       await RestTimerOverlay.show(
         context,
         restSeconds: trainingExercise.restSeconds,
@@ -975,6 +979,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
+    final gate = GetIt.instance<FeatureGateService>();
     final typeColor = _typeColor(context);
     final thumbnailUrl = exercise.thumbnailUrl?.trim();
     final videoUrl = exercise.videoUrl?.trim();
@@ -1015,14 +1020,23 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              if (GetIt.instance<FeatureGateService>().canSendExerciseFeedback)
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: _SheetHeaderAction(
-                    icon: Icons.feedback_outlined,
-                    onTap: () => _openFeedback(context),
-                    tooltip: l10n.feedbackSendFromExercise,
-                  ),
+              Align(
+                alignment: Alignment.topLeft,
+                child: _SheetHeaderAction(
+                  icon: Icons.feedback_outlined,
+                  locked: !gate.canSendExerciseFeedback,
+                  onTap: () {
+                    if (gate.canSendExerciseFeedback) {
+                      _openFeedback(context);
+                      return;
+                    }
+
+                    showPremiumFeatureMessage(context);
+                  },
+                  tooltip: gate.canSendExerciseFeedback
+                      ? l10n.feedbackSendFromExercise
+                      : 'Feedback premium',
+                ),
               ),
               Align(
                 alignment: Alignment.topRight,
@@ -1208,7 +1222,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (_hasContent(exercise.techniqueText)) ...[
           const SizedBox(height: 24),
           PremiumLockedSection(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
+            isLocked:
+                !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
             label: l10n.technique,
             child: _VisibleDetailSection(
               title: l10n.technique,
@@ -1232,7 +1247,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (_hasContent(exercise.explanationText)) ...[
           const SizedBox(height: 20),
           PremiumLockedSection(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
+            isLocked:
+                !GetIt.instance<FeatureGateService>().canSeeExerciseExplanation,
             label: l10n.explanation,
             child: _VisibleDetailSection(
               title: l10n.explanation,
@@ -1293,12 +1309,14 @@ class _SheetHeaderAction extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
   final bool highlighted;
+  final bool locked;
 
   const _SheetHeaderAction({
     required this.icon,
     required this.onTap,
     required this.tooltip,
     this.highlighted = false,
+    this.locked = false,
   });
 
   @override
@@ -1315,13 +1333,40 @@ class _SheetHeaderAction extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Tooltip(
           message: tooltip,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Icon(
-              icon,
-              color: highlighted ? palette.textPrimary : palette.textSecondary,
-              size: 18,
-            ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  icon,
+                  color: locked
+                      ? const Color(0xFFFFB300)
+                      : highlighted
+                      ? palette.textPrimary
+                      : palette.textSecondary,
+                  size: 18,
+                ),
+              ),
+              if (locked)
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Container(
+                    width: 13,
+                    height: 13,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFB300),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock,
+                      size: 8,
+                      color: Color(0xFF1D1409),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

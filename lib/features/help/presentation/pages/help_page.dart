@@ -7,6 +7,7 @@ import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/services/feature_gate_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/premium_locked_overlay.dart';
 
 class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
@@ -22,14 +23,8 @@ class HelpPage extends StatelessWidget {
         question: l10n.markWorkoutCompleted,
         answer: l10n.markWorkoutExplanation,
       ),
-      _Faq(
-        question: l10n.markMealCompleted,
-        answer: l10n.markMealExplanation,
-      ),
-      _Faq(
-        question: l10n.useAppOffline,
-        answer: l10n.useAppOfflineExplanation,
-      ),
+      _Faq(question: l10n.markMealCompleted, answer: l10n.markMealExplanation),
+      _Faq(question: l10n.useAppOffline, answer: l10n.useAppOfflineExplanation),
       _Faq(
         question: l10n.weeklyRecapPurpose,
         answer: l10n.weeklyRecapExplanation,
@@ -101,43 +96,38 @@ class HelpPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Builder(builder: (context) {
-            final gate = GetIt.instance<FeatureGateService>();
-            return Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.feedback_outlined,
-                    title: l10n.feedback,
-                    subtitle: gate.canAccessFeedbackShortcut
-                        ? l10n.sendQuestionOrIssue
-                        : 'Premium',
-                    onTap: gate.canAccessFeedbackShortcut
-                        ? () => context.push(AppRoutes.feedback)
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Función disponible en el plan premium',
-                                ),
-                              ),
-                            );
-                          },
-                    locked: !gate.canAccessFeedbackShortcut,
+          Builder(
+            builder: (context) {
+              final gate = GetIt.instance<FeatureGateService>();
+              return Row(
+                children: [
+                  Expanded(
+                    child: PremiumLockedInline(
+                      isLocked: !gate.canAccessFeedbackShortcut,
+                      onTap: () => showPremiumFeatureMessage(context),
+                      child: _QuickActionCard(
+                        icon: Icons.feedback_outlined,
+                        title: l10n.feedback,
+                        subtitle: l10n.sendQuestionOrIssue,
+                        onTap: gate.canAccessFeedbackShortcut
+                            ? () => context.push(AppRoutes.feedback)
+                            : () => showPremiumFeatureMessage(context),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.settings_outlined,
-                    title: l10n.settings,
-                    subtitle: l10n.notificationsAndCache,
-                    onTap: () => context.push(AppRoutes.settings),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickActionCard(
+                      icon: Icons.settings_outlined,
+                      title: l10n.settings,
+                      subtitle: l10n.notificationsAndCache,
+                      onTap: () => context.push(AppRoutes.settings),
+                    ),
                   ),
-                ),
-              ],
-            );
-          }),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(18),
@@ -256,14 +246,12 @@ class _QuickActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.locked = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -294,14 +282,8 @@ class _QuickActionCard extends StatelessWidget {
                       color: palette.surfaceVariant,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(icon, color: locked ? palette.textDisabled : palette.primary, size: 20),
+                    child: Icon(icon, color: palette.primary, size: 20),
                   ),
-                  if (locked)
-                    const Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Icon(Icons.lock, color: Color(0xFFFFB300), size: 14),
-                    ),
                 ],
               ),
               const SizedBox(height: 12),

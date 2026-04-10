@@ -845,55 +845,58 @@ class _IndicatorCards extends StatelessWidget {
             child: PremiumLockedSection(
               isLocked: !gate.canSeeMuscleMassChart,
               label: AppLocalizations.of(context).muscleMassLabel,
+              onTap: () => showPremiumFeatureMessage(context),
               child: latestMuscleMass != null
-                ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context).muscleMassLabel,
-                    value: formatWeight(latestMuscleMass, unitSystem),
-                    subtitle: muscleGoal != null
-                        ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
-                        : AppLocalizations.of(context).setYourGoal,
-                    bottomLabel: latestMetric != null
-                        ? '${AppLocalizations.of(context).latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
-                        : AppLocalizations.of(context).updateYourMetrics,
-                    progress: muscleProgress,
-                    color: AppColors.calorieAccent,
-                    progressCaption: AppLocalizations.of(
-                      context,
-                    ).currentCaption,
-                    headerAction: IconButton(
-                      onPressed: () => _editMuscleGoal(context),
-                      icon: Icon(
-                        Icons.tune,
-                        color: palette.textDisabled,
-                        size: 16,
+                  ? _CircularIndicatorCard(
+                      title: AppLocalizations.of(context).muscleMassLabel,
+                      value: formatWeight(latestMuscleMass, unitSystem),
+                      subtitle: muscleGoal != null
+                          ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
+                          : AppLocalizations.of(context).setYourGoal,
+                      bottomLabel: latestMetric != null
+                          ? '${AppLocalizations.of(context).latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
+                          : AppLocalizations.of(context).updateYourMetrics,
+                      progress: muscleProgress,
+                      color: AppColors.calorieAccent,
+                      progressCaption: AppLocalizations.of(
+                        context,
+                      ).currentCaption,
+                      headerAction: IconButton(
+                        onPressed: () => _editMuscleGoal(context),
+                        icon: Icon(
+                          Icons.tune,
+                          color: palette.textDisabled,
+                          size: 16,
+                        ),
+                        visualDensity: VisualDensity.compact,
                       ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  )
-                : _EmptyIndicatorCard(
-                    title: AppLocalizations.of(context).muscleMassLabel,
-                    message: AppLocalizations.of(context).muscleGoalEmptyState,
-                    actionLabel: AppLocalizations.of(
-                      context,
-                    ).logOrCalculateButton,
-                    onAction: () async {
-                      await context.push('/profile/metrics');
-                      if (context.mounted) {
-                        context.read<ProfileBloc>().add(
-                          const ProfileLoadRequested(),
-                        );
-                      }
-                    },
-                    headerAction: IconButton(
-                      onPressed: () => _editMuscleGoal(context),
-                      icon: Icon(
-                        Icons.tune,
-                        color: palette.textDisabled,
-                        size: 16,
+                    )
+                  : _EmptyIndicatorCard(
+                      title: AppLocalizations.of(context).muscleMassLabel,
+                      message: AppLocalizations.of(
+                        context,
+                      ).muscleGoalEmptyState,
+                      actionLabel: AppLocalizations.of(
+                        context,
+                      ).logOrCalculateButton,
+                      onAction: () async {
+                        await context.push('/profile/metrics');
+                        if (context.mounted) {
+                          context.read<ProfileBloc>().add(
+                            const ProfileLoadRequested(),
+                          );
+                        }
+                      },
+                      headerAction: IconButton(
+                        onPressed: () => _editMuscleGoal(context),
+                        icon: Icon(
+                          Icons.tune,
+                          color: palette.textDisabled,
+                          size: 16,
+                        ),
+                        visualDensity: VisualDensity.compact,
                       ),
-                      visualDensity: VisualDensity.compact,
                     ),
-                  ),
             ),
           ),
           const SizedBox(width: 12),
@@ -901,21 +904,24 @@ class _IndicatorCards extends StatelessWidget {
             child: PremiumLockedSection(
               isLocked: !gate.canSeeSleepChart,
               label: AppLocalizations.of(context).sleep,
+              onTap: () => showPremiumFeatureMessage(context),
               child: avgSleep != null
-                ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context).sleep,
-                    value: '${avgSleep.toStringAsFixed(1)} h',
-                    subtitle:
-                        '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context).ofGoalPercentage}',
-                    bottomLabel:
-                        '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context).daysWithinGoal}',
-                    progress: sleepPercent,
-                    color: AppColors.sleepAccent,
-                    progressCaption: AppLocalizations.of(context).todayCaption,
-                  )
-                : _EmptyIndicatorCard(
-                    title: AppLocalizations.of(context).sleep,
-                  ),
+                  ? _CircularIndicatorCard(
+                      title: AppLocalizations.of(context).sleep,
+                      value: '${avgSleep.toStringAsFixed(1)} h',
+                      subtitle:
+                          '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context).ofGoalPercentage}',
+                      bottomLabel:
+                          '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context).daysWithinGoal}',
+                      progress: sleepPercent,
+                      color: AppColors.sleepAccent,
+                      progressCaption: AppLocalizations.of(
+                        context,
+                      ).todayCaption,
+                    )
+                  : _EmptyIndicatorCard(
+                      title: AppLocalizations.of(context).sleep,
+                    ),
             ),
           ),
         ],

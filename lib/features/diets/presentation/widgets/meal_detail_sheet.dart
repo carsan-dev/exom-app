@@ -319,6 +319,7 @@ class _MealSheetBody extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
+    final gate = GetIt.instance<FeatureGateService>();
     final dietState = context.watch<DietBloc>().state;
     final macroChips = _buildMacroChips(context);
     final badges = meal.nutritionalBadges
@@ -346,7 +347,8 @@ class _MealSheetBody extends StatelessWidget {
         if (badges.isNotEmpty) ...[
           const SizedBox(height: 10),
           PremiumLockedInline(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeMealNutritionalBadges,
+            isLocked: !gate.canSeeMealNutritionalBadges,
+            onTap: () => showPremiumFeatureMessage(context),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -379,15 +381,17 @@ class _MealSheetBody extends StatelessWidget {
         if (macroChips.isNotEmpty) ...[
           const SizedBox(height: 14),
           PremiumLockedInline(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeMealMacros,
+            isLocked: !gate.canSeeMealMacros,
+            onTap: () => showPremiumFeatureMessage(context),
             child: _MacroChipsRow(items: macroChips),
           ),
         ],
         if (meal.ingredients.isNotEmpty) ...[
           const SizedBox(height: 24),
           PremiumLockedSection(
-            isLocked: !GetIt.instance<FeatureGateService>().canSeeMealIngredients,
+            isLocked: !gate.canSeeMealIngredients,
             label: 'Ingredientes',
+            onTap: () => showPremiumFeatureMessage(context),
             child: _IngredientsSection(ingredients: meal.ingredients),
           ),
         ],
@@ -427,11 +431,15 @@ class _MealSheetBody extends StatelessWidget {
                 ),
               ),
             ),
-            if (GetIt.instance<FeatureGateService>().canSearchRecipe) ...[
-              const SizedBox(width: 12),
-              Expanded(
+            const SizedBox(width: 12),
+            Expanded(
+              child: PremiumLockedInline(
+                isLocked: !gate.canSearchRecipe,
+                onTap: () => showPremiumFeatureMessage(context),
                 child: OutlinedButton.icon(
-                  onPressed: _launchRecipe,
+                  onPressed: gate.canSearchRecipe
+                      ? _launchRecipe
+                      : () => showPremiumFeatureMessage(context),
                   icon: const Icon(Icons.search, size: 18),
                   label: Text(l10n.recipeButton),
                   style: OutlinedButton.styleFrom(
@@ -444,7 +452,7 @@ class _MealSheetBody extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ],

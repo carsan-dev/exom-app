@@ -26,16 +26,21 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.headerGlass,
+            color: isDark
+                ? AppColors.headerGlass
+                : AppColors.headerGlassLightTheme,
             border: Border(
               bottom: BorderSide(
-                color: palette.glassBorder.withValues(alpha: 0.15),
+                color: palette.glassBorder.withValues(
+                  alpha: isDark ? 0.15 : 0.10,
+                ),
                 width: 0.5,
               ),
             ),

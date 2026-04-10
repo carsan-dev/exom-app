@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 
 /// Frosted glass bottom navigation bar with real BackdropFilter blur.
 ///
@@ -57,19 +58,7 @@ class GlassBottomNav extends StatelessWidget {
                   child: ClipRect(
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.navBarGlass,
-                          border: Border(
-                            top: BorderSide(
-                              color: palette.glassBorder.withValues(
-                                alpha: 0.20,
-                              ),
-                              width: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
+                      child: Container(decoration: GlassDecoration.navBar()),
                     ),
                   ),
                 ),

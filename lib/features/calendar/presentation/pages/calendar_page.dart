@@ -982,6 +982,7 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -992,22 +993,24 @@ class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.headerGlass,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: palette.glassBorder.withValues(alpha: 0.18),
-                width: 0.6,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x40000000),
-                  blurRadius: 32,
-                  offset: Offset(0, 10),
-                  spreadRadius: -8,
-                ),
-              ],
-            ),
+            decoration: isDark
+                ? BoxDecoration(
+                    color: AppColors.headerGlass,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: palette.glassBorder.withValues(alpha: 0.18),
+                      width: 0.6,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x40000000),
+                        blurRadius: 32,
+                        offset: Offset(0, 10),
+                        spreadRadius: -8,
+                      ),
+                    ],
+                  )
+                : GlassDecoration.elevated(borderRadius: 24),
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,

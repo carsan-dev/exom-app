@@ -46,30 +46,28 @@ class ChallengesPage extends StatelessWidget {
     return BlocProvider(
       create: (_) =>
           GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
-      child: SafeArea(
-        child: BlocBuilder<ChallengesBloc, ChallengesState>(
-          builder: (context, state) {
-            if (state is ChallengesInitial || state is ChallengesLoading) {
-              return const LoadingWidget();
-            }
-            if (state is ChallengesError) {
-              return _buildErrorState(context, state);
-            }
-            if (state is ChallengesLoaded) {
-              return _ChallengesContent(
-                state: state,
-                onRefresh: () => _refreshChallenges(context),
-              );
-            }
-            if (state is ChallengesEmpty) {
-              return _ChallengesEmptyContent(
-                state: state,
-                onRefresh: () => _refreshChallenges(context),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
+      child: BlocBuilder<ChallengesBloc, ChallengesState>(
+        builder: (context, state) {
+          if (state is ChallengesInitial || state is ChallengesLoading) {
+            return const LoadingWidget();
+          }
+          if (state is ChallengesError) {
+            return _buildErrorState(context, state);
+          }
+          if (state is ChallengesLoaded) {
+            return _ChallengesContent(
+              state: state,
+              onRefresh: () => _refreshChallenges(context),
+            );
+          }
+          if (state is ChallengesEmpty) {
+            return _ChallengesEmptyContent(
+              state: state,
+              onRefresh: () => _refreshChallenges(context),
+            );
+          }
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
@@ -91,7 +89,7 @@ class _ChallengesContent extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
           _ChallengesHeader(streakDays: state.streakDays),
           if (state.mainGoals.isNotEmpty) ...[
@@ -128,7 +126,7 @@ class _ChallengesEmptyContent extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
           _ChallengesHeader(streakDays: state.streakDays),
           const _EmptyChallengesCard(),

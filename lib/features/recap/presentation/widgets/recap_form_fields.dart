@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 
 String formatRecapOption(String value) {
   return value
@@ -95,14 +97,10 @@ class RecapSectionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 22,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -111,9 +109,9 @@ class RecapSectionCard extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(
-                  color: palette.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+                decoration: GlassDecoration.accentCard(
+                  palette.primary,
+                  borderRadius: 12,
                 ),
                 child: Icon(icon, color: palette.primary, size: 20),
               ),
@@ -215,10 +213,7 @@ class RecapSliderField extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(left: 12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: palette.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: GlassDecoration.card(borderRadius: 12),
               child: Text(
                 valueLabelBuilder(value),
                 style: theme.textTheme.bodySmall?.copyWith(

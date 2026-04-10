@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -93,62 +95,66 @@ class _RecapViewState extends State<_RecapView> {
       builder: (context, state) {
         final formState = state is RecapFormActive ? state : null;
         final isFormActive = formState != null;
-        final theme = Theme.of(context);
         final palette = context.exomPalette;
         final l10n = AppLocalizations.of(context);
 
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: Text(
-              isFormActive
-                  ? formState.step == 5
-                        ? l10n.recapImprovementTitle
-                        : formState.recapId == null
-                        ? l10n.newRecap
-                        : l10n.editRecap
-                  : l10n.weeklyRecapTitle,
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: ExomGradients.scaffoldBackground(palette),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: Text(
+                isFormActive
+                    ? formState.step == 5
+                          ? l10n.recapImprovementTitle
+                          : formState.recapId == null
+                          ? l10n.newRecap
+                          : l10n.editRecap
+                    : l10n.weeklyRecapTitle,
+              ),
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              leading: isFormActive
+                  ? IconButton(
+                      onPressed: () => context.read<RecapBloc>().add(
+                        const RecapFormCancelled(),
+                      ),
+                      icon: const Icon(Icons.close),
+                    )
+                  : context.canPop()
+                  ? IconButton(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back),
+                    )
+                  : null,
+              actions: isFormActive
+                  ? null
+                  : [
+                      IconButton(
+                        onPressed: () => context.read<RecapBloc>().add(
+                          const RecapLoadRequested(),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
             ),
-            backgroundColor: theme.scaffoldBackgroundColor,
-            surfaceTintColor: Colors.transparent,
-            leading: isFormActive
-                ? IconButton(
+            floatingActionButton: state is RecapListLoaded
+                ? FloatingActionButton.extended(
                     onPressed: () => context.read<RecapBloc>().add(
-                      const RecapFormCancelled(),
+                      const RecapCreateRequested(),
                     ),
-                    icon: const Icon(Icons.close),
-                  )
-                : context.canPop()
-                ? IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back),
+                    backgroundColor: palette.primary,
+                    foregroundColor: palette.onPrimary,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.newRecap),
                   )
                 : null,
-            actions: isFormActive
-                ? null
-                : [
-                    IconButton(
-                      onPressed: () => context.read<RecapBloc>().add(
-                        const RecapLoadRequested(),
-                      ),
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ],
-          ),
-          floatingActionButton: state is RecapListLoaded
-              ? FloatingActionButton.extended(
-                  onPressed: () => context.read<RecapBloc>().add(
-                    const RecapCreateRequested(),
-                  ),
-                  backgroundColor: palette.primary,
-                  foregroundColor: palette.onPrimary,
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.newRecap),
-                )
-              : null,
-          body: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: _buildBody(context, state),
+            body: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: _buildBody(context, state),
+            ),
           ),
         );
       },
@@ -388,14 +394,10 @@ class _RecapListView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
-          Container(
+          GlassCard(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: palette.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: palette.divider),
-            ),
+            borderRadius: 22,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -456,20 +458,11 @@ class _RecapHistoryCard extends StatelessWidget {
     final actionLabel = recap.isDraft ? l10n.continueButton : l10n.viewSummary;
     final hasUnread = recap.hasUnreadClientFeedback;
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: hasUnread
-            ? palette.primary.withValues(alpha: 0.06)
-            : palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: hasUnread
-              ? palette.primary.withValues(alpha: 0.35)
-              : palette.divider,
-        ),
-      ),
+      borderRadius: 22,
+      accentColor: hasUnread ? palette.primary : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -607,11 +600,7 @@ class _RecapFormView extends StatelessWidget {
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: palette.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: palette.divider),
-            ),
+            decoration: GlassDecoration.elevated(borderRadius: 22),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -703,10 +692,7 @@ class _RecapFormView extends StatelessWidget {
             top: false,
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                border: Border(top: BorderSide(color: palette.divider)),
-              ),
+              decoration: GlassDecoration.elevated(borderRadius: 24),
               child: Column(
                 children: [
                   Row(
@@ -778,13 +764,9 @@ class _StepBadge extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isActive
-            ? palette.primary.withValues(alpha: 0.16)
-            : palette.surfaceVariant,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isActive ? palette.primary : palette.divider),
-      ),
+      decoration: isActive
+          ? GlassDecoration.accentCard(palette.primary, borderRadius: 16)
+          : GlassDecoration.card(borderRadius: 16),
       child: Row(
         children: [
           CircleAvatar(
@@ -837,10 +819,7 @@ class _StatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: GlassDecoration.accentCard(color, borderRadius: 999),
       child: Text(
         recapCopy(context, status),
         style: TextStyle(
@@ -864,10 +843,7 @@ class _InfoPill extends StatelessWidget {
     final palette = context.exomPalette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: palette.surfaceVariant,
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 999),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

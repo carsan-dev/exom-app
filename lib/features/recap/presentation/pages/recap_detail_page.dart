@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
@@ -38,69 +40,74 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Detalle del recap'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: ExomGradients.scaffoldBackground(palette),
       ),
-      body: BlocConsumer<RecapBloc, RecapState>(
-        listener: (context, state) {
-          if (state is RecapDetailLoaded && !_feedbackMarked) {
-            if (state.recap.hasUnreadClientFeedback) {
-              _feedbackMarked = true;
-              context.read<RecapBloc>().add(
-                RecapFeedbackMarkReadRequested(widget.recapId),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Detalle del recap'),
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+        ),
+        body: BlocConsumer<RecapBloc, RecapState>(
+          listener: (context, state) {
+            if (state is RecapDetailLoaded && !_feedbackMarked) {
+              if (state.recap.hasUnreadClientFeedback) {
+                _feedbackMarked = true;
+                context.read<RecapBloc>().add(
+                  RecapFeedbackMarkReadRequested(widget.recapId),
+                );
+              }
+            }
+          },
+          builder: (context, state) {
+            if (state is RecapDetailLoading) {
+              return Center(
+                child: CircularProgressIndicator(color: palette.primary),
               );
             }
-          }
-        },
-        builder: (context, state) {
-          if (state is RecapDetailLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: palette.primary),
-            );
-          }
 
-          if (state is RecapDetailError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, color: palette.error, size: 42),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No se pudo cargar el recap',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      state.message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: palette.textSecondary),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => context.read<RecapBloc>().add(
-                        RecapDetailRequested(widget.recapId),
+            if (state is RecapDetailError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, color: palette.error, size: 42),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No se pudo cargar el recap',
+                        style: theme.textTheme.titleMedium,
                       ),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        state.message,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: palette.textSecondary),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => context.read<RecapBloc>().add(
+                          RecapDetailRequested(widget.recapId),
+                        ),
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          if (state is RecapDetailLoaded) {
-            return _RecapDetailContent(recap: state.recap);
-          }
+            if (state is RecapDetailLoaded) {
+              return _RecapDetailContent(recap: state.recap);
+            }
 
-          return const SizedBox.shrink();
-        },
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
@@ -121,13 +128,11 @@ class _RecapDetailContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         // Header card
-        Container(
+        GlassCard(
+          margin: EdgeInsets.zero,
           padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: palette.divider),
-          ),
+          borderRadius: 22,
+          elevated: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -292,11 +297,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.exomPalette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.exomPalette.divider),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -374,10 +375,7 @@ class _StatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: GlassDecoration.accentCard(color, borderRadius: 999),
       child: Text(
         label,
         style: TextStyle(

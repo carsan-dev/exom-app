@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 
 class RecapFeedbackCard extends StatelessWidget {
@@ -22,17 +23,9 @@ class RecapFeedbackCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isUnread
-            ? palette.primary.withValues(alpha: 0.08)
-            : palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isUnread
-              ? palette.primary.withValues(alpha: 0.4)
-              : palette.divider,
-        ),
-      ),
+      decoration: isUnread
+          ? GlassDecoration.accentCard(palette.primary, borderRadius: 22)
+          : GlassDecoration.card(borderRadius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -59,14 +52,14 @@ class RecapFeedbackCard extends StatelessWidget {
                     horizontal: 8,
                     vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color: palette.primary,
-                    borderRadius: BorderRadius.circular(999),
+                  decoration: GlassDecoration.accentCard(
+                    palette.primary,
+                    borderRadius: 999,
                   ),
                   child: Text(
                     'Nuevo',
                     style: TextStyle(
-                      color: palette.onPrimary,
+                      color: palette.primary,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),

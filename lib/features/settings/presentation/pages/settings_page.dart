@@ -11,6 +11,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/injection_container.dart';
@@ -81,9 +82,9 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.cacheDeletedMessage)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.cacheDeletedMessage)));
   }
 
   Future<void> _setThemeMode(ThemeMode themeMode) async {
@@ -98,9 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
     };
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(l10n.themeAppliedNotification(themeLabel)),
-      ),
+      SnackBar(content: Text(l10n.themeAppliedNotification(themeLabel))),
     );
   }
 
@@ -115,9 +114,7 @@ class _SettingsPageState extends State<SettingsPage> {
     };
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(l10n.unitsAppliedNotification(unitLabel)),
-      ),
+      SnackBar(content: Text(l10n.unitsAppliedNotification(unitLabel))),
     );
   }
 
@@ -133,9 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
     };
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(l10n.languageAppliedNotification(languageLabel)),
-      ),
+      SnackBar(content: Text(l10n.languageAppliedNotification(languageLabel))),
     );
   }
 
@@ -151,6 +146,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const _CreditsSheet(),
     );
   }
@@ -163,228 +159,241 @@ class _SettingsPageState extends State<SettingsPage> {
         final palette = context.exomPalette;
         final l10n = AppLocalizations.of(context)!;
 
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: Text(l10n.settingsPageTitle),
-            backgroundColor: theme.scaffoldBackgroundColor,
-            surfaceTintColor: Colors.transparent,
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: ExomGradients.scaffoldBackground(palette),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              _SettingsGroup(
-                title: l10n.appearanceSettingsTitle,
-                children: [
-                  _ThemeModeTile(
-                    icon: Icons.phone_android_outlined,
-                    title: l10n.systemThemeOption,
-                    subtitle: l10n.systemThemeDescription,
-                    selected: preferences.themeMode == ThemeMode.system,
-                    onTap: () => _setThemeMode(ThemeMode.system),
-                  ),
-                  _ThemeModeTile(
-                    icon: Icons.light_mode_outlined,
-                    title: l10n.lightThemeOption,
-                    subtitle: l10n.lightThemeDescription,
-                    selected: preferences.themeMode == ThemeMode.light,
-                    onTap: () => _setThemeMode(ThemeMode.light),
-                  ),
-                  _ThemeModeTile(
-                    icon: Icons.dark_mode_outlined,
-                    title: l10n.darkThemeOption,
-                    subtitle: l10n.darkThemeDescription,
-                    selected: preferences.themeMode == ThemeMode.dark,
-                    onTap: () => _setThemeMode(ThemeMode.dark),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.accountSettingsTitle,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.person_outline,
-                    title: l10n.editProfileOption,
-                    subtitle: l10n.editProfileDescription,
-                    onTap: () => context.push(AppRoutes.profile),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.straighten_outlined,
-                    title: l10n.myMetricsOption,
-                    subtitle: l10n.myMetricsDescription,
-                    onTap: () => context.push('/profile/metrics'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.unitsSettingsTitle,
-                children: [
-                  _ThemeModeTile(
-                    icon: Icons.straighten,
-                    title: l10n.metricOption,
-                    subtitle: l10n.metricDescription,
-                    selected: preferences.unitSystem == UnitSystem.metric,
-                    onTap: () => _setUnitSystem(UnitSystem.metric),
-                  ),
-                  _ThemeModeTile(
-                    icon: Icons.square_foot,
-                    title: 'Imperial',
-                    subtitle: l10n.imperialDescription,
-                    selected: preferences.unitSystem == UnitSystem.imperial,
-                    onTap: () => _setUnitSystem(UnitSystem.imperial),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.languageSettingsTitle,
-                children: [
-                  _ThemeModeTile(
-                    icon: Icons.phone_android_outlined,
-                    title: l10n.systemLanguageOption,
-                    subtitle: l10n.systemLanguageDescription,
-                    selected: preferences.isSystemLocale,
-                    onTap: () => _setLocale(null),
-                  ),
-                  _ThemeModeTile(
-                    icon: Icons.language,
-                    title: 'Español',
-                    subtitle: l10n.spanishLanguageDescription,
-                    selected: !preferences.isSystemLocale &&
-                        preferences.locale?.languageCode == 'es',
-                    onTap: () => _setLocale(const Locale('es', 'ES')),
-                  ),
-                  _ThemeModeTile(
-                    icon: Icons.translate,
-                    title: 'English',
-                    subtitle: l10n.englishLanguageDescription,
-                    selected: !preferences.isSystemLocale &&
-                        preferences.locale?.languageCode == 'en',
-                    onTap: () => _setLocale(const Locale('en')),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.privacySettingsTitle,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.privacy_tip_outlined,
-                    title: l10n.privacyPolicyOption,
-                    subtitle: l10n.privacyPolicyDescription,
-                    onTap: () => _openExternalLink(
-                      ExternalLinks.privacyPolicy,
-                      l10n.privacyPolicyNotOpenedError,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              title: Text(l10n.settingsPageTitle),
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+            ),
+            body: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              children: [
+                _SettingsGroup(
+                  title: l10n.appearanceSettingsTitle,
+                  children: [
+                    _ThemeModeTile(
+                      icon: Icons.phone_android_outlined,
+                      title: l10n.systemThemeOption,
+                      subtitle: l10n.systemThemeDescription,
+                      selected: preferences.themeMode == ThemeMode.system,
+                      onTap: () => _setThemeMode(ThemeMode.system),
                     ),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.support_agent_outlined,
-                    title: l10n.supportContactOption,
-                    subtitle: l10n.supportContactDescription,
-                    onTap: () => _openExternalLink(
-                      ExternalLinks.supportPage,
-                      l10n.supportPageNotOpenedError,
+                    _ThemeModeTile(
+                      icon: Icons.light_mode_outlined,
+                      title: l10n.lightThemeOption,
+                      subtitle: l10n.lightThemeDescription,
+                      selected: preferences.themeMode == ThemeMode.light,
+                      onTap: () => _setThemeMode(ThemeMode.light),
                     ),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.alternate_email,
-                    title: l10n.emailSupportOption,
-                    subtitle: l10n.emailSupportOptionDescription,
-                    onTap: () => _openExternalLink(
-                      ExternalLinks.supportEmail,
-                      l10n.mailAppNotOpenedError,
+                    _ThemeModeTile(
+                      icon: Icons.dark_mode_outlined,
+                      title: l10n.darkThemeOption,
+                      subtitle: l10n.darkThemeDescription,
+                      selected: preferences.themeMode == ThemeMode.dark,
+                      onTap: () => _setThemeMode(ThemeMode.dark),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.notificationsSettingsTitle,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.notifications_active_outlined,
-                    title: l10n.pushNotificationsOption,
-                    subtitle: l10n.pushNotificationsDescription,
-                    trailing: Switch(
-                      value: _notificationsEnabled,
-                      onChanged: _busy ? null : _toggleNotifications,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.accountSettingsTitle,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.person_outline,
+                      title: l10n.editProfileOption,
+                      subtitle: l10n.editProfileDescription,
+                      onTap: () => context.push(AppRoutes.profile),
                     ),
-                    onTap: _busy
-                        ? null
-                        : () => _toggleNotifications(!_notificationsEnabled),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.dataAndSupportTitle,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.cloud_off_outlined,
-                    title: l10n.offlineModeOption,
-                    subtitle: l10n.offlineModeDescription,
-                    onTap: null,
-                  ),
-                  _SettingsTile(
-                    icon: Icons.cleaning_services_outlined,
-                    title: l10n.clearCacheOption,
-                    subtitle: l10n.clearCacheDescription,
-                    onTap: _clearOfflineCache,
-                  ),
-                  _SettingsTile(
-                    icon: Icons.feedback_outlined,
-                    title: l10n.sendFeedbackOption,
-                    subtitle: l10n.sendFeedbackDescription,
-                    onTap: () => context.push(AppRoutes.feedback),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.help_outline,
-                    title: l10n.helpAndFaqOption,
-                    subtitle: l10n.helpAndFaqDescription,
-                    onTap: () => context.push(AppRoutes.help),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _SettingsGroup(
-                title: l10n.applicationSettingsTitle,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.info_outline,
-                    title: l10n.versionOption,
-                    subtitle: l10n.versionDescription,
-                    trailing: Text(
-                      '1.0.0',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textDisabled,
-                        fontSize: 13,
+                    _SettingsTile(
+                      icon: Icons.straighten_outlined,
+                      title: l10n.myMetricsOption,
+                      subtitle: l10n.myMetricsDescription,
+                      onTap: () => context.push('/profile/metrics'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.unitsSettingsTitle,
+                  children: [
+                    _ThemeModeTile(
+                      icon: Icons.straighten,
+                      title: l10n.metricOption,
+                      subtitle: l10n.metricDescription,
+                      selected: preferences.unitSystem == UnitSystem.metric,
+                      onTap: () => _setUnitSystem(UnitSystem.metric),
+                    ),
+                    _ThemeModeTile(
+                      icon: Icons.square_foot,
+                      title: 'Imperial',
+                      subtitle: l10n.imperialDescription,
+                      selected: preferences.unitSystem == UnitSystem.imperial,
+                      onTap: () => _setUnitSystem(UnitSystem.imperial),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.languageSettingsTitle,
+                  children: [
+                    _ThemeModeTile(
+                      icon: Icons.phone_android_outlined,
+                      title: l10n.systemLanguageOption,
+                      subtitle: l10n.systemLanguageDescription,
+                      selected: preferences.isSystemLocale,
+                      onTap: () => _setLocale(null),
+                    ),
+                    _ThemeModeTile(
+                      icon: Icons.language,
+                      title: 'Español',
+                      subtitle: l10n.spanishLanguageDescription,
+                      selected:
+                          !preferences.isSystemLocale &&
+                          preferences.locale?.languageCode == 'es',
+                      onTap: () => _setLocale(const Locale('es', 'ES')),
+                    ),
+                    _ThemeModeTile(
+                      icon: Icons.translate,
+                      title: 'English',
+                      subtitle: l10n.englishLanguageDescription,
+                      selected:
+                          !preferences.isSystemLocale &&
+                          preferences.locale?.languageCode == 'en',
+                      onTap: () => _setLocale(const Locale('en')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.privacySettingsTitle,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: l10n.privacyPolicyOption,
+                      subtitle: l10n.privacyPolicyDescription,
+                      onTap: () => _openExternalLink(
+                        ExternalLinks.privacyPolicy,
+                        l10n.privacyPolicyNotOpenedError,
                       ),
                     ),
-                    onTap: null,
-                  ),
-                  _SettingsTile(
-                    icon: Icons.auto_awesome_outlined,
-                    title: l10n.creditsOption,
-                    subtitle: l10n.creditsOptionDescription,
-                    onTap: _showCredits,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: () {
-                  context.read<AuthBloc>().add(const AuthLogoutRequested());
-                },
-                icon: const Icon(Icons.logout, size: 18),
-                label: Text(l10n.logOutButton),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: palette.error,
-                  side: BorderSide(color: palette.error),
+                    _SettingsTile(
+                      icon: Icons.support_agent_outlined,
+                      title: l10n.supportContactOption,
+                      subtitle: l10n.supportContactDescription,
+                      onTap: () => _openExternalLink(
+                        ExternalLinks.supportPage,
+                        l10n.supportPageNotOpenedError,
+                      ),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.alternate_email,
+                      title: l10n.emailSupportOption,
+                      subtitle: l10n.emailSupportOptionDescription,
+                      onTap: () => _openExternalLink(
+                        ExternalLinks.supportEmail,
+                        l10n.mailAppNotOpenedError,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.notificationsSettingsTitle,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.notifications_active_outlined,
+                      title: l10n.pushNotificationsOption,
+                      subtitle: l10n.pushNotificationsDescription,
+                      trailing: Switch(
+                        value: _notificationsEnabled,
+                        onChanged: _busy ? null : _toggleNotifications,
+                      ),
+                      onTap: _busy
+                          ? null
+                          : () => _toggleNotifications(!_notificationsEnabled),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.dataAndSupportTitle,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.cloud_off_outlined,
+                      title: l10n.offlineModeOption,
+                      subtitle: l10n.offlineModeDescription,
+                      onTap: null,
+                    ),
+                    _SettingsTile(
+                      icon: Icons.cleaning_services_outlined,
+                      title: l10n.clearCacheOption,
+                      subtitle: l10n.clearCacheDescription,
+                      onTap: _clearOfflineCache,
+                    ),
+                    _SettingsTile(
+                      icon: Icons.feedback_outlined,
+                      title: l10n.sendFeedbackOption,
+                      subtitle: l10n.sendFeedbackDescription,
+                      onTap: () => context.push(AppRoutes.feedback),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.help_outline,
+                      title: l10n.helpAndFaqOption,
+                      subtitle: l10n.helpAndFaqDescription,
+                      onTap: () => context.push(AppRoutes.help),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _SettingsGroup(
+                  title: l10n.applicationSettingsTitle,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.info_outline,
+                      title: l10n.versionOption,
+                      subtitle: l10n.versionDescription,
+                      trailing: Text(
+                        '1.0.0',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textDisabled,
+                          fontSize: 13,
+                        ),
+                      ),
+                      onTap: null,
+                    ),
+                    _SettingsTile(
+                      icon: Icons.auto_awesome_outlined,
+                      title: l10n.creditsOption,
+                      subtitle: l10n.creditsOptionDescription,
+                      onTap: _showCredits,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.read<AuthBloc>().add(const AuthLogoutRequested());
+                  },
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: Text(l10n.logOutButton),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: palette.error,
+                    side: BorderSide(
+                      color: palette.error.withValues(alpha: 0.35),
+                    ),
+                    backgroundColor: palette.glassBackground,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -414,8 +423,10 @@ class _CreditsSheet extends StatelessWidget {
     final palette = context.exomPalette;
 
     return SafeArea(
-      child: Padding(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 24),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        decoration: GlassDecoration.elevated(borderRadius: 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,10 +452,7 @@ class _CreditsSheet extends StatelessWidget {
               leading: Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(
-                  color: palette.surfaceVariant,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: GlassDecoration.card(borderRadius: 12),
                 child: Icon(Icons.code, color: palette.primary, size: 20),
               ),
               title: Text(
@@ -490,18 +498,7 @@ class _SettingsGroup extends StatelessWidget {
     final palette = context.exomPalette;
 
     return Container(
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.borderSoft),
-        boxShadow: [
-          BoxShadow(
-            color: palette.shadow,
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(
         children: [
           Padding(
@@ -550,10 +547,7 @@ class _SettingsTile extends StatelessWidget {
       leading: Container(
         width: 38,
         height: 38,
-        decoration: BoxDecoration(
-          color: palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: GlassDecoration.card(borderRadius: 12),
         child: Icon(icon, color: palette.textSecondary, size: 20),
       ),
       title: Text(
@@ -606,10 +600,9 @@ class _ThemeModeTile extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         width: 38,
         height: 38,
-        decoration: BoxDecoration(
-          color: selected ? palette.primarySoft : palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: selected
+            ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
+            : GlassDecoration.card(borderRadius: 12),
         child: Icon(
           icon,
           color: selected ? palette.primary : palette.textSecondary,

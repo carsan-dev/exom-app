@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 class FeedbackMediaPicker extends StatelessWidget {
@@ -51,42 +52,49 @@ class FeedbackMediaPicker extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: palette.surface,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              leading: Icon(Icons.camera_alt_outlined, color: palette.primary),
-              title: Text(
-                l10n.feedbackFromCamera,
-                style: TextStyle(color: palette.textPrimary),
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          decoration: GlassDecoration.elevated(borderRadius: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Icon(
+                  Icons.camera_alt_outlined,
+                  color: palette.primary,
+                ),
+                title: Text(
+                  l10n.feedbackFromCamera,
+                  style: TextStyle(color: palette.textPrimary),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(context, ImageSource.camera);
+                },
               ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(context, ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.photo_library_outlined,
-                color: palette.primary,
+              ListTile(
+                leading: Icon(
+                  Icons.photo_library_outlined,
+                  color: palette.primary,
+                ),
+                title: Text(
+                  l10n.feedbackFromGallery,
+                  style: TextStyle(color: palette.textPrimary),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(context, ImageSource.gallery);
+                },
               ),
-              title: Text(
-                l10n.feedbackFromGallery,
-                style: TextStyle(color: palette.textPrimary),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(context, ImageSource.gallery);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -100,10 +108,7 @@ class FeedbackMediaPicker extends StatelessWidget {
     if (isUploading) {
       return Container(
         height: 56,
-        decoration: BoxDecoration(
-          color: palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: GlassDecoration.card(borderRadius: 14),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -128,10 +133,9 @@ class FeedbackMediaPicker extends StatelessWidget {
     if (selectedFile != null) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: palette.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+        decoration: GlassDecoration.accentCard(
+          palette.primary,
+          borderRadius: 14,
         ),
         child: Row(
           children: [
@@ -193,14 +197,7 @@ class FeedbackMediaPicker extends StatelessWidget {
           },
           child: Container(
             height: 56,
-            decoration: BoxDecoration(
-              color: palette.surfaceVariant,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: palette.divider,
-                style: BorderStyle.solid,
-              ),
-            ),
+            decoration: GlassDecoration.card(borderRadius: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -250,15 +247,9 @@ class _TypeChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? palette.primary.withValues(alpha: 0.15)
-              : palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? palette.primary : palette.divider,
-          ),
-        ),
+        decoration: selected
+            ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
+            : GlassDecoration.card(borderRadius: 12),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

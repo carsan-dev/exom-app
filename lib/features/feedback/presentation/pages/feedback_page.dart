@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
@@ -23,92 +25,99 @@ class FeedbackPage extends StatelessWidget {
 
     return BlocProvider(
       create: (_) => sl<FeedbackBloc>()..add(const FeedbackLoadRequested()),
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(l10n.feedback),
-          backgroundColor: theme.scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ExomGradients.scaffoldBackground(palette),
         ),
-        body: BlocConsumer<FeedbackBloc, FeedbackState>(
-          listener: (context, state) {
-            if (state is FeedbackSubmitSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context).feedbackSentSuccessfully,
-                  ),
-                  backgroundColor: AppColors.success,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            }
-            if (state is FeedbackError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: palette.error,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is FeedbackLoading) {
-              return Center(
-                child: CircularProgressIndicator(color: palette.primary),
-              );
-            }
-
-            final items = (state is FeedbackLoaded)
-                ? state.items
-                : <FeedbackEntity>[];
-
-            return RefreshIndicator(
-              color: palette.primary,
-              backgroundColor: palette.surface,
-              onRefresh: () async {
-                context.read<FeedbackBloc>().add(const FeedbackLoadRequested());
-              },
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 40),
-                children: [
-                  _FeedbackForm(
-                    isSubmitting: state is FeedbackSubmitting,
-                    exerciseId: exerciseId,
-                    exerciseName: exerciseName,
-                  ),
-                  if (items.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: Text(
-                        l10n.history,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: palette.textPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text(l10n.feedback),
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+          ),
+          body: BlocConsumer<FeedbackBloc, FeedbackState>(
+            listener: (context, state) {
+              if (state is FeedbackSubmitSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(context).feedbackSentSuccessfully,
                     ),
-                    ...items.map((f) => _FeedbackCard(feedback: f)),
-                  ] else if (state is FeedbackLoaded)
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(
+                    backgroundColor: AppColors.success,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }
+              if (state is FeedbackError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: palette.error,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state is FeedbackLoading) {
+                return Center(
+                  child: CircularProgressIndicator(color: palette.primary),
+                );
+              }
+
+              final items = (state is FeedbackLoaded)
+                  ? state.items
+                  : <FeedbackEntity>[];
+
+              return RefreshIndicator(
+                color: palette.primary,
+                backgroundColor: palette.surface,
+                onRefresh: () async {
+                  context.read<FeedbackBloc>().add(
+                    const FeedbackLoadRequested(),
+                  );
+                },
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  children: [
+                    _FeedbackForm(
+                      isSubmitting: state is FeedbackSubmitting,
+                      exerciseId: exerciseId,
+                      exerciseName: exerciseName,
+                    ),
+                    if (items.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                         child: Text(
-                          l10n.noFeedbackYet,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textDisabled,
-                            fontSize: 13,
+                          l10n.history,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: palette.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            );
-          },
+                      ...items.map((f) => _FeedbackCard(feedback: f)),
+                    ] else if (state is FeedbackLoaded)
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: Text(
+                            l10n.noFeedbackYet,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -187,14 +196,11 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 22,
+      elevated: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,14 +285,10 @@ class _FeedbackCard extends StatelessWidget {
       Localizations.localeOf(context).languageCode,
     ).format(feedback.createdAt);
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.divider),
-      ),
+      borderRadius: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -328,13 +330,7 @@ class _FeedbackCard extends StatelessWidget {
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: palette.surfaceVariant,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: 0.3),
-                ),
-              ),
+              decoration: GlassDecoration.card(borderRadius: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -377,11 +373,9 @@ class _StatusBadge extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isReviewed
-            ? AppColors.success.withValues(alpha: 0.15)
-            : AppColors.warning.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
+      decoration: GlassDecoration.accentCard(
+        isReviewed ? AppColors.success : AppColors.warning,
+        borderRadius: 999,
       ),
       child: Text(
         isReviewed ? l10n.reviewed : l10n.pending,

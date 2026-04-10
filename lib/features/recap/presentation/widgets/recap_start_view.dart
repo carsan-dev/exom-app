@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 
 class RecapStartView extends StatelessWidget {
   final Map<String, dynamic> formData;
@@ -61,9 +63,9 @@ class RecapStartView extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: palette.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+            decoration: GlassDecoration.accentCard(
+              palette.primary,
+              borderRadius: 14,
             ),
             child: Row(
               children: [
@@ -103,12 +105,10 @@ class RecapStartView extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           // Sections list
-          Container(
-            decoration: BoxDecoration(
-              color: palette.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: palette.divider),
-            ),
+          GlassCard(
+            margin: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
+            borderRadius: 22,
             child: Column(
               children: List.generate(sections.length, (index) {
                 final section = sections[index];
@@ -127,12 +127,12 @@ class RecapStartView extends StatelessWidget {
                           Container(
                             width: 36,
                             height: 36,
-                            decoration: BoxDecoration(
-                              color: isComplete
-                                  ? palette.primary.withValues(alpha: 0.12)
-                                  : palette.surfaceVariant,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                            decoration: isComplete
+                                ? GlassDecoration.accentCard(
+                                    palette.primary,
+                                    borderRadius: 12,
+                                  )
+                                : GlassDecoration.card(borderRadius: 12),
                             child: Icon(
                               section.icon,
                               size: 18,
@@ -168,8 +168,8 @@ class RecapStartView extends StatelessWidget {
                               border: isComplete
                                   ? null
                                   : Border.all(
-                                      color: palette.divider,
-                                      width: 2,
+                                      color: palette.glassBorder,
+                                      width: 1.2,
                                     ),
                             ),
                             child: isComplete

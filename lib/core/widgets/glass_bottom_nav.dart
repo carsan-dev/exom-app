@@ -28,6 +28,7 @@ class GlassBottomNav extends StatelessWidget {
   static const _circleSize = 64.0;
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0;
+  static const totalHeight = _barHeight + _circleOverlap;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +39,7 @@ class GlassBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: SizedBox(
-        height: _barHeight + _circleOverlap,
+        height: totalHeight,
         child: TweenAnimationBuilder<double>(
           tween: Tween(end: targetX),
           duration: const Duration(milliseconds: 300),
@@ -61,7 +62,9 @@ class GlassBottomNav extends StatelessWidget {
                           color: AppColors.navBarGlass,
                           border: Border(
                             top: BorderSide(
-                              color: palette.glassBorder.withValues(alpha: 0.20),
+                              color: palette.glassBorder.withValues(
+                                alpha: 0.20,
+                              ),
                               width: 0.5,
                             ),
                           ),

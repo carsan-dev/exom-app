@@ -256,9 +256,14 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
+    final mediaQuery = MediaQuery.of(context);
+    final topInset = mediaQuery.padding.top + kToolbarHeight;
+    final bottomInset = mediaQuery.padding.bottom + GlassBottomNav.totalHeight;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: GlassAppBar(
         title: SvgPicture.asset(_brandLogo(context), height: 28),
         actions: [
@@ -294,7 +299,10 @@ class MainShell extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: ExomGradients.scaffoldBackground(palette),
         ),
-        child: SizedBox.expand(child: child),
+        child: Padding(
+          padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
+          child: SizedBox.expand(child: child),
+        ),
       ),
       bottomNavigationBar: GlassBottomNav(
         selectedIndex: selected,

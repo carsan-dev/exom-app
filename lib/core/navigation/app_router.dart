@@ -53,11 +53,15 @@ import '../../features/help/presentation/pages/help_page.dart';
 // Onboarding pages
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 
+// Splash
+import '../../features/splash/presentation/pages/splash_page.dart';
+
 // Storage
 import '../../core/storage/local_storage.dart';
 import '../../injection_container.dart';
 
 class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const accountLocked = '/account-locked';
   static const onboarding = '/onboarding';
@@ -87,10 +91,12 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.splash,
     redirect: (context, state) {
-      final user = FirebaseAuth.instance.currentUser;
       final loc = state.matchedLocation;
+      if (loc == AppRoutes.splash) return null;
+
+      final user = FirebaseAuth.instance.currentUser;
       final isAuthRoute =
           loc == AppRoutes.login || loc == AppRoutes.accountLocked;
 
@@ -107,10 +113,26 @@ class AppRouter {
     },
     refreshListenable: _refreshListenable,
     routes: [
+      // Splash
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => const SplashPage(),
+      ),
       // Auth
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LoginPage(),
+          transitionDuration: const Duration(milliseconds: 600),
+          transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+            child: child,
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.accountLocked,

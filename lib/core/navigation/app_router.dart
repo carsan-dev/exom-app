@@ -160,15 +160,6 @@ class AppRouter {
                 selectedDate: state.uri.queryParameters['date'],
               ),
             ),
-            routes: [
-              GoRoute(
-                path: ':id',
-                builder: (_, state) => TrainingDetailPage(
-                  trainingId: state.pathParameters['id']!,
-                  selectedDate: state.uri.queryParameters['date'],
-                ),
-              ),
-            ],
           ),
           GoRoute(
             path: AppRoutes.diets,
@@ -187,6 +178,15 @@ class AppRouter {
                 const NoTransitionPage(child: ChallengesPage()),
           ),
         ],
+      ),
+
+      // Training detail (no shell — full-screen push)
+      GoRoute(
+        path: AppRoutes.trainingDetail,
+        builder: (_, state) => TrainingDetailPage(
+          trainingId: state.pathParameters['id']!,
+          selectedDate: state.uri.queryParameters['date'],
+        ),
       ),
 
       // Profile (no shell nav bar — accessible from drawer)

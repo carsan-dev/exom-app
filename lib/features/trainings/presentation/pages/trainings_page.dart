@@ -91,10 +91,11 @@ class _TrainingsView extends StatelessWidget {
     String dateLabel,
   ) {
     final palette = context.exomPalette;
+    final trainingAccent = context.trainingAccent;
     final l10n = AppLocalizations.of(context);
 
     return RefreshIndicator(
-      color: palette.primary,
+      color: trainingAccent,
       backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<TrainingBloc>().add(
@@ -371,7 +372,7 @@ Color _trainingTypeColor(BuildContext context, String type) {
 
   switch (type.toUpperCase()) {
     case 'FUERZA':
-      return palette.primary;
+      return context.trainingAccent;
     case 'CARDIO':
       return semantic.info;
     case 'HIIT':
@@ -511,7 +512,7 @@ class _MonthArrowButton extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       icon: Icon(
         icon,
-        color: onTap == null ? palette.textDisabled : palette.primary,
+        color: onTap == null ? palette.textDisabled : context.trainingAccent,
       ),
     );
   }

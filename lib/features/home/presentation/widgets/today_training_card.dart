@@ -19,7 +19,7 @@ class TodayTrainingCard extends StatelessWidget {
 
     switch (type?.toUpperCase()) {
       case 'FUERZA':
-        return palette.primary;
+        return context.trainingAccent;
       case 'CARDIO':
         return semantic.info;
       case 'HIIT':
@@ -32,7 +32,7 @@ class TodayTrainingCard extends StatelessWidget {
   }
 
   String _typeLabel(BuildContext context, String? type) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     switch (type?.toUpperCase()) {
       case 'FUERZA':
         return l10n.trainingStrength;
@@ -52,7 +52,7 @@ class TodayTrainingCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final color = _typeColor(context, summary.trainingType);
 
     return Container(

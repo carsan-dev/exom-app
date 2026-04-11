@@ -356,7 +356,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
     switch (type.toUpperCase()) {
       case 'FUERZA':
-        return palette.primary;
+        return context.trainingAccent;
       case 'CARDIO':
         return semantic.info;
       case 'HIIT':
@@ -629,9 +629,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: allDone
-                                ? semantic.success
-                                : palette.primary,
+                            backgroundColor: allDone ? semantic.success : color,
                             foregroundColor: palette.onPrimary,
                           ),
                           icon: Icon(
@@ -1174,7 +1172,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     final semantic = context.exomSemantic;
     switch (trainingType.toUpperCase()) {
       case 'FUERZA':
-        return palette.primary;
+        return context.trainingAccent;
       case 'CARDIO':
         return semantic.info;
       case 'HIIT':
@@ -1469,7 +1467,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                       ),
                       child: Icon(
                         Icons.play_arrow_rounded,
-                        color: palette.primary,
+                        color: typeColor,
                         size: 54,
                       ),
                     ),
@@ -1536,7 +1534,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? semantic.success : palette.primary,
+              backgroundColor: isCompleted ? semantic.success : typeColor,
               foregroundColor: palette.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),

@@ -370,12 +370,13 @@ class _DietHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final dietAccent = context.dietAccent;
     final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.accentCard(semantic.calorie),
+      decoration: GlassDecoration.accentCard(dietAccent),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -397,13 +398,13 @@ class _DietHeader extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: semantic.calorie.withValues(alpha: 0.14),
+                  color: dietAccent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$completedCount/${diet.meals.length} ${l10n.completedFeminine.toLowerCase()}',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: semantic.calorie,
+                    color: dietAccent,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),

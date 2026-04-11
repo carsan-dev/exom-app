@@ -345,8 +345,6 @@ class _CalendarViewState extends State<_CalendarView> {
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
     final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -380,7 +378,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   child: _ToggleChip(
                     label: l10n.training,
                     icon: Icons.fitness_center,
-                    color: palette.primary,
+                    color: context.trainingAccent,
                     isSelected: _showTrainings,
                     onTap: () => setState(() => _showTrainings = true),
                   ),
@@ -390,7 +388,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   child: _ToggleChip(
                     label: l10n.diets,
                     icon: Icons.restaurant_menu,
-                    color: semantic.calorie,
+                    color: context.dietAccent,
                     isSelected: !_showTrainings,
                     onTap: () => setState(() => _showTrainings = false),
                   ),
@@ -576,16 +574,17 @@ class _CalendarViewState extends State<_CalendarView> {
   }
 
   Color _dayAccentColor(BuildContext context, CalendarDayEntity? day) {
-    final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    if (day == null) return palette.primary;
+    if (day == null) {
+      return _showTrainings ? context.trainingAccent : context.dietAccent;
+    }
     if (_showTrainings) {
       if (day.isRestDay) {
-        return palette.textDisabled;
+        return context.exomPalette.textDisabled;
       }
-      return day.trainingCompleted ? semantic.success : palette.primary;
+      return day.trainingCompleted ? semantic.success : context.trainingAccent;
     }
-    return day.dietCompleted ? semantic.success : semantic.calorie;
+    return day.dietCompleted ? semantic.success : context.dietAccent;
   }
 
   Widget _buildDayCell(
@@ -658,7 +657,6 @@ class _CalendarViewState extends State<_CalendarView> {
 
   Widget _buildWeekProgress(BuildContext context, CalendarLoaded state) {
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final summary = state.weekSummary;
     if (summary == null) return const SizedBox.shrink();
@@ -672,12 +670,12 @@ class _CalendarViewState extends State<_CalendarView> {
       completed = summary.trainingsCompleted;
       total = summary.trainingsAssigned;
       label = l10n.trainingsCompletedThisWeek;
-      color = palette.primary;
+      color = context.trainingAccent;
     } else {
       completed = summary.mealsCompleted;
       total = summary.totalMeals;
       label = l10n.mealsCompletedThisWeek;
-      color = semantic.calorie;
+      color = context.dietAccent;
     }
 
     return Padding(
@@ -863,7 +861,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
     final statusColor = day.trainingCompleted
         ? semantic.success
-        : palette.primary;
+        : context.trainingAccent;
     final statusLabel = day.trainingCompleted ? l10n.completed : l10n.pending;
     final statusIcon = day.trainingCompleted
         ? Icons.check_circle
@@ -882,7 +880,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: palette.primarySoft,
+                  color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -989,7 +987,9 @@ class _CalendarViewState extends State<_CalendarView> {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
 
-    final statusColor = day.dietCompleted ? semantic.success : semantic.calorie;
+    final statusColor = day.dietCompleted
+        ? semantic.success
+        : context.dietAccent;
     final statusLabel = day.dietCompleted
         ? l10n.completedFeminine
         : l10n.pending;
@@ -1008,7 +1008,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: semantic.calorie.withValues(alpha: 0.12),
+                  color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(

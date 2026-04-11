@@ -120,12 +120,10 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       glassBackground:
           Color.lerp(glassBackground, other.glassBackground, t) ??
           glassBackground,
-      glassBorder:
-          Color.lerp(glassBorder, other.glassBorder, t) ?? glassBorder,
+      glassBorder: Color.lerp(glassBorder, other.glassBorder, t) ?? glassBorder,
       gradientStart:
           Color.lerp(gradientStart, other.gradientStart, t) ?? gradientStart,
-      gradientEnd:
-          Color.lerp(gradientEnd, other.gradientEnd, t) ?? gradientEnd,
+      gradientEnd: Color.lerp(gradientEnd, other.gradientEnd, t) ?? gradientEnd,
     );
   }
 }
@@ -199,6 +197,10 @@ extension ExomThemeContext on BuildContext {
       (Theme.of(this).brightness == Brightness.dark
           ? AppTheme._darkSemanticPalette
           : AppTheme._lightSemanticPalette);
+
+  Color get trainingAccent => exomSemantic.calorie;
+
+  Color get dietAccent => exomPalette.primary;
 }
 
 class AppColors {
@@ -671,4 +673,3 @@ class AppTheme {
     );
   }
 }
-

@@ -8,7 +8,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/injection_container.dart';
 
@@ -73,10 +73,7 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       },
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ExomGradients.scaffoldBackground(palette),
-        ),
+      child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: SafeArea(

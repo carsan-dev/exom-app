@@ -14,8 +14,9 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
@@ -28,10 +29,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: ExomGradients.scaffoldBackground(palette),
-      ),
+    return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(

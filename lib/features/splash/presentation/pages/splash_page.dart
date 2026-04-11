@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/injection_container.dart';
 
 class SplashPage extends StatefulWidget {
@@ -16,8 +16,7 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
-    with TickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late final AnimationController _entry;
   late final AnimationController _pulse;
   late final AnimationController _exit;
@@ -82,15 +81,13 @@ class _SplashPageState extends State<SplashPage>
       curve: const Interval(0.60, 0.95, curve: Curves.easeOut),
     );
 
-    _taglineSlide = Tween<Offset>(
-      begin: const Offset(0, 0.6),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entry,
-        curve: const Interval(0.60, 0.95, curve: Curves.easeOutCubic),
-      ),
-    );
+    _taglineSlide = Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _entry,
+            curve: const Interval(0.60, 0.95, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _entry.forward().whenComplete(_holdThenExit);
   }
@@ -125,65 +122,64 @@ class _SplashPageState extends State<SplashPage>
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final logoAsset =
-        isLight ? 'assets/images/logo_dark.svg' : 'assets/images/logo.svg';
+    final logoAsset = isLight
+        ? 'assets/images/logo_dark.svg'
+        : 'assets/images/logo.svg';
 
     return Scaffold(
       backgroundColor: palette.gradientStart,
       body: FadeTransition(
         opacity: CurvedAnimation(parent: _exit, curve: Curves.easeInOut),
         child: AnimatedBuilder(
-        animation: Listenable.merge([_entry, _pulse]),
-        builder: (context, _) {
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: ExomGradients.scaffoldBackground(palette),
-            ),
-            child: Stack(
-              children: [
-                _RadialGlow(
-                  color: palette.primary,
-                  opacity: _bgFade.value * 0.55,
-                ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Spacer(flex: 3),
-                      _LogoMark(
-                        asset: logoAsset,
-                        scale: _logoScale.value,
-                        fade: _logoFade.value,
-                        glow: _glowOpacity.value,
-                        pulse: _pulse.value,
-                        ringSweep: _ringSweep.value,
-                        accent: palette.primary,
-                        discFill: palette.glassBackground,
-                      ),
-                      const SizedBox(height: 36),
-                      FadeTransition(
-                        opacity: _taglineFade,
-                        child: SlideTransition(
-                          position: _taglineSlide,
-                          child: _Tagline(palette: palette),
-                        ),
-                      ),
-                      const Spacer(flex: 4),
-                      Opacity(
-                        opacity: _taglineFade.value,
-                        child: _LoadingDots(
-                          color: palette.primary,
-                          t: _pulse.value,
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-                    ],
+          animation: Listenable.merge([_entry, _pulse]),
+          builder: (context, _) {
+            return ExomAnimatedBackground(
+              intensity: 0.45,
+              child: Stack(
+                children: [
+                  _RadialGlow(
+                    color: palette.primary,
+                    opacity: _bgFade.value * 0.32,
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Spacer(flex: 3),
+                        _LogoMark(
+                          asset: logoAsset,
+                          scale: _logoScale.value,
+                          fade: _logoFade.value,
+                          glow: _glowOpacity.value,
+                          pulse: _pulse.value,
+                          ringSweep: _ringSweep.value,
+                          accent: palette.primary,
+                          discFill: palette.glassBackground,
+                        ),
+                        const SizedBox(height: 36),
+                        FadeTransition(
+                          opacity: _taglineFade,
+                          child: SlideTransition(
+                            position: _taglineSlide,
+                            child: _Tagline(palette: palette),
+                          ),
+                        ),
+                        const Spacer(flex: 4),
+                        Opacity(
+                          opacity: _taglineFade.value,
+                          child: _LoadingDots(
+                            color: palette.primary,
+                            t: _pulse.value,
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -205,7 +201,7 @@ class _RadialGlow extends StatelessWidget {
             center: const Alignment(0, -0.15),
             radius: 0.9,
             colors: [
-              color.withValues(alpha: 0.18 * opacity),
+              color.withValues(alpha: 0.1 * opacity),
               Colors.transparent,
             ],
           ),
@@ -266,14 +262,14 @@ class _LogoMark extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: accent.withValues(alpha: 0.45 * glow * pulseFactor),
-                  blurRadius: 80,
-                  spreadRadius: 10,
+                  color: accent.withValues(alpha: 0.2 * glow * pulseFactor),
+                  blurRadius: 54,
+                  spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: accent.withValues(alpha: 0.25 * glow),
-                  blurRadius: 40,
-                  spreadRadius: 4,
+                  color: accent.withValues(alpha: 0.08 * glow),
+                  blurRadius: 20,
+                  spreadRadius: 0,
                 ),
               ],
             ),
@@ -286,12 +282,12 @@ class _LogoMark extends StatelessWidget {
               shape: BoxShape.circle,
               color: discFill,
               border: Border.all(
-                color: accent.withValues(alpha: 0.35 * glow),
+                color: accent.withValues(alpha: 0.22 * glow),
                 width: 1.2,
               ),
               gradient: RadialGradient(
                 colors: [
-                  accent.withValues(alpha: 0.18 * glow),
+                  accent.withValues(alpha: 0.08 * glow),
                   Colors.transparent,
                 ],
               ),
@@ -302,11 +298,7 @@ class _LogoMark extends StatelessWidget {
             scale: scale,
             child: Opacity(
               opacity: fade,
-              child: SvgPicture.asset(
-                asset,
-                height: 84,
-                fit: BoxFit.contain,
-              ),
+              child: SvgPicture.asset(asset, height: 84, fit: BoxFit.contain),
             ),
           ),
         ],
@@ -378,6 +370,13 @@ class _Tagline extends StatelessWidget {
             fontWeight: FontWeight.w900,
             letterSpacing: 8,
             height: 1,
+            shadows: const [
+              Shadow(
+                color: Color(0x66000000),
+                blurRadius: 16,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 10),
@@ -386,11 +385,7 @@ class _Tagline extends StatelessWidget {
           height: 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Colors.transparent,
-                palette.primary,
-                Colors.transparent,
-              ],
+              colors: [Colors.transparent, palette.primary, Colors.transparent],
             ),
           ),
         ),
@@ -402,6 +397,13 @@ class _Tagline extends StatelessWidget {
             fontSize: 13,
             fontWeight: FontWeight.w500,
             letterSpacing: 2.5,
+            shadows: const [
+              Shadow(
+                color: Color(0x55000000),
+                blurRadius: 12,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
         ),
       ],

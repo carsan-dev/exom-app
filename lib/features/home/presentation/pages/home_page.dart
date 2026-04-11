@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -178,16 +178,21 @@ class _LoadedBody extends StatelessWidget {
       onRefresh: () async {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+      child: Stack(
         children: [
-          _DateHeader(selectedDate: selectedDate),
-          const SizedBox(height: 12),
-          const WeekDaySelector(),
-          const SizedBox(height: 20),
-          TodayTrainingCard(summary: summary),
-          TodayDietCard(summary: summary),
-          StatsRow(summary: summary),
+          const _HomeHeroAccent(),
+          ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              _DateHeader(selectedDate: selectedDate),
+              const SizedBox(height: 12),
+              const WeekDaySelector(),
+              const SizedBox(height: 20),
+              TodayTrainingCard(summary: summary),
+              TodayDietCard(summary: summary),
+              StatsRow(summary: summary),
+            ],
+          ),
         ],
       ),
     );
@@ -212,79 +217,123 @@ class _RestDayBody extends StatelessWidget {
       onRefresh: () async {
         context.read<HomeBloc>().add(const HomeLoadRequested());
       },
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+      child: Stack(
         children: [
-          _DateHeader(selectedDate: selectedDate),
-          const SizedBox(height: 12),
-          const WeekDaySelector(),
-          const SizedBox(height: 20),
-          GlassCard(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(32),
-            borderRadius: 24,
-            child: Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: palette.glassBackground,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: palette.glassBorder.withValues(alpha: 0.15),
-                      width: 0.5,
+          const _HomeHeroAccent(),
+          ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              _DateHeader(selectedDate: selectedDate),
+              const SizedBox(height: 12),
+              const WeekDaySelector(),
+              const SizedBox(height: 20),
+              GlassCard(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(32),
+                borderRadius: 24,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: palette.glassBackground,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: palette.glassBorder.withValues(alpha: 0.15),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.fitness_center,
+                          color: palette.textDisabled,
+                          size: 36,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.fitness_center,
-                      color: palette.textDisabled,
-                      size: 36,
+                    const SizedBox(height: 20),
+                    Text(
+                      l10n.restDayTitle,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: palette.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  l10n.restDayTitle,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.restDayMessage,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                OutlinedButton(
-                  onPressed: () => context.go('/calendar'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.primary,
-                    side: BorderSide(color: palette.primary),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.restDayMessage,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: palette.textSecondary,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 20),
+                    OutlinedButton(
+                      onPressed: () => context.go('/calendar'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: palette.primary,
+                        side: BorderSide(color: palette.primary),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(l10n.openCalendarButton),
                     ),
-                  ),
-                  child: Text(l10n.openCalendarButton),
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(height: 16),
+              StatsRow(summary: summary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeHeroAccent extends StatelessWidget {
+  const _HomeHeroAccent();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return IgnorePointer(
+      child: Transform.translate(
+        offset: const Offset(0, -48),
+        child: SizedBox(
+          height: isDark ? 420 : 380,
+          width: double.infinity,
+          child: ShaderMask(
+            shaderCallback: (bounds) {
+              return const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.white, Colors.white, Colors.transparent],
+                stops: [0, 0.72, 1],
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.dstIn,
+            child: Opacity(
+              opacity: isDark ? 0.82 : 0.68,
+              child: ExomAnimatedBackground(
+                intensity: isDark ? 0.5 : 0.42,
+                showBase: false,
+                showVeil: false,
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          StatsRow(summary: summary),
-        ],
+        ),
       ),
     );
   }

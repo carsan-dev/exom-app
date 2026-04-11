@@ -5,6 +5,7 @@ import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
@@ -88,7 +89,6 @@ class _OnboardingViewState extends State<_OnboardingView> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
     return BlocListener<OnboardingBloc, OnboardingState>(
@@ -108,10 +108,7 @@ class _OnboardingViewState extends State<_OnboardingView> {
           _goToPage(state.currentStep);
         }
       },
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ExomGradients.scaffoldBackground(palette),
-        ),
+      child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: SafeArea(

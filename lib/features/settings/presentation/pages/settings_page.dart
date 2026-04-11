@@ -12,6 +12,7 @@ import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/injection_container.dart';
@@ -159,10 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final palette = context.exomPalette;
         final l10n = AppLocalizations.of(context)!;
 
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: ExomGradients.scaffoldBackground(palette),
-          ),
+        return ExomStaticBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
             appBar: AppBar(

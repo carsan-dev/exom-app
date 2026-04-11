@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
 
@@ -125,13 +125,14 @@ class AppRouter {
           key: state.pageKey,
           child: const LoginPage(),
           transitionDuration: const Duration(milliseconds: 600),
-          transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ),
-            child: child,
-          ),
+          transitionsBuilder: (ctx, animation, secondary, child) =>
+              FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
+                ),
+                child: child,
+              ),
         ),
       ),
       GoRoute(
@@ -317,10 +318,7 @@ class MainShell extends StatelessWidget {
         ],
       ),
       endDrawer: const _AppDrawer(),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ExomGradients.scaffoldBackground(palette),
-        ),
+      body: ExomStaticBackground(
         child: Padding(
           padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
           child: SizedBox.expand(child: child),

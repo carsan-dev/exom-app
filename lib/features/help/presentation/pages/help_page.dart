@@ -6,6 +6,7 @@ import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 
 class HelpPage extends StatelessWidget {
@@ -54,10 +55,7 @@ class HelpPage extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: ExomGradients.scaffoldBackground(palette),
-      ),
+    return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(

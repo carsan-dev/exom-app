@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -137,257 +138,262 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         surfaceTintColor: Colors.transparent,
         title: Text(training.name),
       ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ExomGradients.scaffoldBackground(palette),
-        ),
+      body: ExomStaticBackground(
         child: SizedBox.expand(
           child: Stack(
-        children: [
-          ListView(
-            padding: EdgeInsets.only(top: kToolbarHeight + MediaQuery.of(context).padding.top, bottom: 160),
             children: [
-              // Header card
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(20),
-                decoration: GlassDecoration.accentCard(color),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        _Badge(label: training.type, color: color),
-                        _Badge(
-                          label: training.level,
-                          color: palette.textSecondary,
-                        ),
-                        if (training.estimatedDurationMin != null)
-                          _Badge(
-                            label: '${training.estimatedDurationMin} min',
-                            icon: Icons.timer_outlined,
-                            color: semantic.info,
-                          ),
-                        if (training.estimatedCalories != null)
-                          _Badge(
-                            label: '${training.estimatedCalories} kcal',
-                            icon: Icons.local_fire_department_outlined,
-                            color: semantic.calorie,
-                          ),
-                      ],
-                    ),
-                    if (training.tags.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        children: training.tags
-                            .map(
-                              (t) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '#$t',
-                                  style: TextStyle(
-                                    color: palette.textDisabled,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
-                  ],
+              ListView(
+                padding: EdgeInsets.only(
+                  top: kToolbarHeight + MediaQuery.of(context).padding.top,
+                  bottom: 160,
                 ),
-              ),
-
-              // Warmup
-              if (training.warmupDescription != null) ...[
-                _SectionTitle(
-                  title: l10n.warmUp,
-                  icon: Icons.whatshot_outlined,
-                  color: semantic.warning,
-                ),
-                _DescriptionCard(text: training.warmupDescription!),
-              ],
-
-              // Exercises section
-              _SectionTitle(
-                title: l10n.exercises,
-                icon: Icons.fitness_center,
-                color: color,
-                trailing: '$total ${l10n.exercises}',
-              ),
-
-              ...List.generate(training.exercises.length, (index) {
-                final ex = training.exercises[index];
-                final nextEx = index + 1 < training.exercises.length
-                    ? training.exercises[index + 1].exercise.name
-                    : null;
-                return _ExerciseCard(
-                  trainingExercise: ex,
-                  trainingType: training.type,
-                  trainingLevel: training.level,
-                  isCompleted: widget.state.completedExerciseIds.contains(
-                    ex.exercise.id,
-                  ),
-                  weightUsed: widget.state.exerciseWeights[ex.exercise.id],
-                  nextExerciseName: nextEx,
-                  onToggle: (val, {double? weightUsed}) {
-                    context.read<TrainingBloc>().add(
-                      MarkExerciseCompleted(
-                        trainingExerciseId: ex.id,
-                        exerciseId: ex.exercise.id,
-                        completed: val,
-                        weightUsed: weightUsed,
-                      ),
-                    );
-                  },
-                );
-              }),
-
-              // Cooldown
-              if (training.cooldownDescription != null) ...[
-                _SectionTitle(
-                  title: l10n.cooldown,
-                  icon: Icons.ac_unit_outlined,
-                  color: semantic.info,
-                ),
-                _DescriptionCard(text: training.cooldownDescription!),
-              ],
-
-              // Quick notes
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: TextField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  style: TextStyle(color: palette.textPrimary, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: l10n.addQuickNoteOptional,
-                    hintStyle: TextStyle(color: palette.textDisabled),
-                    prefixIcon: Icon(
-                      Icons.edit_note,
-                      color: palette.textDisabled,
-                    ),
-                    filled: true,
-                    fillColor: palette.surfaceVariant,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // Bottom bar: progress + Completar button
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: GlassDecoration.elevated(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$completed/$total ${l10n.completedExercisesLabel}',
-                        style: TextStyle(
-                          color: palette.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        '${(progress * 100).round()}%',
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+                  // Header card
                   Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (allDone ? semantic.success : color)
-                              .withValues(alpha: 0.20),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: GlassDecoration.accentCard(color),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _Badge(label: training.type, color: color),
+                            _Badge(
+                              label: training.level,
+                              color: palette.textSecondary,
+                            ),
+                            if (training.estimatedDurationMin != null)
+                              _Badge(
+                                label: '${training.estimatedDurationMin} min',
+                                icon: Icons.timer_outlined,
+                                color: semantic.info,
+                              ),
+                            if (training.estimatedCalories != null)
+                              _Badge(
+                                label: '${training.estimatedCalories} kcal',
+                                icon: Icons.local_fire_department_outlined,
+                                color: semantic.calorie,
+                              ),
+                          ],
                         ),
+                        if (training.tags.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 6,
+                            children: training.tags
+                                .map(
+                                  (t) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: palette.surfaceVariant,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '#$t',
+                                      style: TextStyle(
+                                        color: palette.textDisabled,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: palette.surfaceVariant,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          allDone ? semantic.success : color,
-                        ),
-                        minHeight: 8,
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (allDone) {
-                          Navigator.of(context).pop(true);
-                          return;
-                        }
 
+                  // Warmup
+                  if (training.warmupDescription != null) ...[
+                    _SectionTitle(
+                      title: l10n.warmUp,
+                      icon: Icons.whatshot_outlined,
+                      color: semantic.warning,
+                    ),
+                    _DescriptionCard(text: training.warmupDescription!),
+                  ],
+
+                  // Exercises section
+                  _SectionTitle(
+                    title: l10n.exercises,
+                    icon: Icons.fitness_center,
+                    color: color,
+                    trailing: '$total ${l10n.exercises}',
+                  ),
+
+                  ...List.generate(training.exercises.length, (index) {
+                    final ex = training.exercises[index];
+                    final nextEx = index + 1 < training.exercises.length
+                        ? training.exercises[index + 1].exercise.name
+                        : null;
+                    return _ExerciseCard(
+                      trainingExercise: ex,
+                      trainingType: training.type,
+                      trainingLevel: training.level,
+                      isCompleted: widget.state.completedExerciseIds.contains(
+                        ex.exercise.id,
+                      ),
+                      weightUsed: widget.state.exerciseWeights[ex.exercise.id],
+                      nextExerciseName: nextEx,
+                      onToggle: (val, {double? weightUsed}) {
                         context.read<TrainingBloc>().add(
-                          CompleteTrainingRequested(
-                            notes: _notesController.text.trim().isEmpty
-                                ? null
-                                : _notesController.text.trim(),
+                          MarkExerciseCompleted(
+                            trainingExerciseId: ex.id,
+                            exerciseId: ex.exercise.id,
+                            completed: val,
+                            weightUsed: weightUsed,
                           ),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: allDone
-                            ? semantic.success
-                            : palette.primary,
-                        foregroundColor: palette.onPrimary,
+                    );
+                  }),
+
+                  // Cooldown
+                  if (training.cooldownDescription != null) ...[
+                    _SectionTitle(
+                      title: l10n.cooldown,
+                      icon: Icons.ac_unit_outlined,
+                      color: semantic.info,
+                    ),
+                    _DescriptionCard(text: training.cooldownDescription!),
+                  ],
+
+                  // Quick notes
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      style: TextStyle(
+                        color: palette.textPrimary,
+                        fontSize: 14,
                       ),
-                      icon: Icon(
-                        allDone
-                            ? Icons.check_circle_outline
-                            : Icons.done_outline,
-                        size: 18,
-                      ),
-                      label: Text(
-                        allDone ? l10n.workoutCompletedMessage : l10n.completed,
+                      decoration: InputDecoration(
+                        hintText: l10n.addQuickNoteOptional,
+                        hintStyle: TextStyle(color: palette.textDisabled),
+                        prefixIcon: Icon(
+                          Icons.edit_note,
+                          color: palette.textDisabled,
+                        ),
+                        filled: true,
+                        fillColor: palette.surfaceVariant,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
+
+              // Bottom bar: progress + Completar button
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  decoration: GlassDecoration.elevated(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '$completed/$total ${l10n.completedExercisesLabel}',
+                            style: TextStyle(
+                              color: palette.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            '${(progress * 100).round()}%',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (allDone ? semantic.success : color)
+                                  .withValues(alpha: 0.20),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: palette.surfaceVariant,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              allDone ? semantic.success : color,
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (allDone) {
+                              Navigator.of(context).pop(true);
+                              return;
+                            }
+
+                            context.read<TrainingBloc>().add(
+                              CompleteTrainingRequested(
+                                notes: _notesController.text.trim().isEmpty
+                                    ? null
+                                    : _notesController.text.trim(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: allDone
+                                ? semantic.success
+                                : palette.primary,
+                            foregroundColor: palette.onPrimary,
+                          ),
+                          icon: Icon(
+                            allDone
+                                ? Icons.check_circle_outline
+                                : Icons.done_outline,
+                            size: 18,
+                          ),
+                          label: Text(
+                            allDone
+                                ? l10n.workoutCompletedMessage
+                                : l10n.completed,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );

@@ -10,6 +10,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -995,10 +996,7 @@ class _MetricsViewState extends State<_MetricsView> {
           );
         }
       },
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ExomGradients.scaffoldBackground(palette),
-        ),
+      child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(

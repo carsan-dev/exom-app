@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
@@ -30,10 +32,21 @@ class FeedbackPage extends StatelessWidget {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: Text(l10n.feedback),
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
+          appBar: GlassAppBar(
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              l10n.feedback,
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.374,
+              ),
+            ),
           ),
           body: BlocConsumer<FeedbackBloc, FeedbackState>(
             listener: (context, state) {
@@ -68,6 +81,9 @@ class FeedbackPage extends StatelessWidget {
                   ? state.items
                   : <FeedbackEntity>[];
 
+              final topInset =
+                  MediaQuery.paddingOf(context).top + kToolbarHeight;
+              final bottomInset = MediaQuery.paddingOf(context).bottom;
               return RefreshIndicator(
                 color: palette.primary,
                 backgroundColor: palette.surface,
@@ -77,7 +93,7 @@ class FeedbackPage extends StatelessWidget {
                   );
                 },
                 child: ListView(
-                  padding: const EdgeInsets.only(bottom: 40),
+                  padding: EdgeInsets.only(top: topInset, bottom: 40 + bottomInset),
                   children: [
                     _FeedbackForm(
                       isSubmitting: state is FeedbackSubmitting,
@@ -126,8 +142,10 @@ class _FeedbackLoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return ListView(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(top: topInset, bottom: 40 + bottomInset),
       children: const [
         _FeedbackFormSkeleton(),
         Padding(

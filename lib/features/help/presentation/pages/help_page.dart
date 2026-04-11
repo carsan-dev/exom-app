@@ -7,6 +7,7 @@ import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 
 class HelpPage extends StatelessWidget {
@@ -58,13 +59,29 @@ class HelpPage extends StatelessWidget {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(l10n.help),
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        appBar: GlassAppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            l10n.help,
+            style: TextStyle(
+              color: palette.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.374,
+            ),
+          ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            MediaQuery.paddingOf(context).top + kToolbarHeight + 12,
+            16,
+            32 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             GlassCard(
               margin: EdgeInsets.zero,

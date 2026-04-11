@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
@@ -11,6 +12,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -999,19 +1001,35 @@ class _MetricsViewState extends State<_MetricsView> {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: Text(AppLocalizations.of(context)!.metricsPageTitle),
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
+          appBar: GlassAppBar(
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              AppLocalizations.of(context)!.metricsPageTitle,
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.374,
+              ),
+            ),
           ),
           body: BlocBuilder<MetricsBloc, MetricsState>(
             builder: (context, state) {
               final isSaving = state is MetricsSaving;
               final bottomInset = MediaQuery.of(context).padding.bottom;
+              final topInset =
+                  MediaQuery.paddingOf(context).top + kToolbarHeight;
               return Stack(
                 children: [
                   ListView(
-                    padding: EdgeInsets.only(bottom: 124 + bottomInset),
+                    padding: EdgeInsets.only(
+                      top: topInset,
+                      bottom: 124 + bottomInset,
+                    ),
                     children: [
                       _SectionCard(
                         title: AppLocalizations.of(context)!.recordDateTitle,

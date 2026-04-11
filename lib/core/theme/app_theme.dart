@@ -268,7 +268,7 @@ class AppColors {
   static const calorieAccent = Color(0xFFE8943A);
   static const sleepAccent = Color(0xFF9B7FCC);
 
-  // ── Glass & Gradients ──────────────────────────────────────────────────────
+  // ── Glass & Gradients (DARK theme) ────────────────────────────────────────
   static const glassBackground = Color(0x1A2B150A);
   static const glassBackgroundElevated = Color(0x332B150A);
   static const glassBorderLight = Color(0x33C5E384);
@@ -277,6 +277,15 @@ class AppColors {
   static const gradientEnd = Color(0xFF2E170B);
   static const navBarGlass = Color(0xCC200F07);
   static const headerGlass = Color(0xB326140B);
+
+  // ── Glass & Gradients (LIGHT theme) ───────────────────────────────────────
+  // Apple Fitness style: near-white warm cards with soft warm shadow.
+  // No muddy brown overlay — contrast comes from shadow + thin border.
+  static const glassBackgroundLightTheme = Color(0xF2FFFBF5);
+  static const glassBackgroundElevatedLightTheme = Color(0xFAFFFBF5);
+  static const glassBorderLightTheme = Color(0x1F2B150A);
+  static const navBarGlassLightTheme = Color(0xF2FFFBF5);
+  static const headerGlassLightTheme = Color(0xE6FFFBF5);
 
   // ── Alias legacy ──────────────────────────────────────────────────────────
   static const secondary = primary;
@@ -326,10 +335,10 @@ class AppTheme {
     onPrimary: Color(0xFFFFFBF5),
     error: Color(0xFFA33F33),
     shadow: Color(0x18000000),
-    glassBackground: Color(0x1AFFFFFF),
-    glassBorder: Color(0x33D2C3AE),
+    glassBackground: AppColors.glassBackgroundLightTheme,
+    glassBorder: AppColors.glassBorderLightTheme,
     gradientStart: Color(0xFFF7F1E6),
-    gradientEnd: Color(0xFFF0E6D8),
+    gradientEnd: Color(0xFFE6D9C2),
   );
 
   static const ExomSemanticPalette _darkSemanticPalette = ExomSemanticPalette(

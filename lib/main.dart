@@ -15,6 +15,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
@@ -92,6 +93,12 @@ class _ExomAppView extends StatelessWidget {
           locale: state.locale, // null → system locale
           supportedLocales: AppPreferencesDefaults.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
+          builder: (context, child) {
+            // Sync glass decoration brightness with the active theme so
+            // static GlassDecoration.* factories pick the right tokens.
+            GlassDecoration.brightness = Theme.of(context).brightness;
+            return child ?? const SizedBox.shrink();
+          },
         );
       },
     );

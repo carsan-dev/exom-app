@@ -791,58 +791,83 @@ class _RecapFormView extends StatelessWidget {
         ),
         // Bottom navigation — hidden on start view (it has its own buttons)
         if (!_isStartStep)
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: GlassDecoration.elevated(borderRadius: 24),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => onStepChanged(state.step - 1),
-                        icon: const Icon(Icons.arrow_back),
-                        label: Text(
-                          state.step == 1 ? l10n.cancel : l10n.previous,
-                        ),
-                      ),
-                      const Spacer(),
-                      OutlinedButton.icon(
-                        onPressed: onSaveDraft,
-                        icon: const Icon(Icons.save_outlined),
-                        label: Text(l10n.save),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isImprovementStep
-                          ? onSubmit
-                          : () => onStepChanged(state.step + 1),
-                      icon: Icon(
-                        _isImprovementStep
-                            ? Icons.send_rounded
-                            : Icons.arrow_forward,
-                      ),
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              16 + MediaQuery.of(context).padding.bottom,
+            ),
+            decoration: _recapStickyBarDecoration(context),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => onStepChanged(state.step - 1),
+                      icon: const Icon(Icons.arrow_back),
                       label: Text(
-                        _isImprovementStep
-                            ? l10n.sendRecap
-                            : state.step == 4
-                            ? l10n.recapImprovementTitle
-                            : l10n.continueToNextStep,
+                        state.step == 1 ? l10n.cancel : l10n.previous,
                       ),
                     ),
+                    const Spacer(),
+                    OutlinedButton.icon(
+                      onPressed: onSaveDraft,
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(l10n.save),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isImprovementStep
+                        ? onSubmit
+                        : () => onStepChanged(state.step + 1),
+                    icon: Icon(
+                      _isImprovementStep
+                          ? Icons.send_rounded
+                          : Icons.arrow_forward,
+                    ),
+                    label: Text(
+                      _isImprovementStep
+                          ? l10n.sendRecap
+                          : state.step == 4
+                          ? l10n.recapImprovementTitle
+                          : l10n.continueToNextStep,
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
       ],
     );
   }
+}
+
+BoxDecoration _recapStickyBarDecoration(BuildContext context) {
+  final palette = context.exomPalette;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  return BoxDecoration(
+    color: isDark ? AppColors.navBarGlass : AppColors.navBarGlassLightTheme,
+    border: Border(
+      top: BorderSide(
+        color: palette.glassBorder.withValues(alpha: isDark ? 0.18 : 0.10),
+        width: 0.6,
+      ),
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
+        blurRadius: 24,
+        offset: const Offset(0, -6),
+        spreadRadius: -14,
+      ),
+    ],
+  );
 }
 
 class _StepBadge extends StatelessWidget {

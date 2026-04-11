@@ -37,107 +37,105 @@ class GlassBottomNav extends StatelessWidget {
     final targetX = _slotCenterX(context, selectedIndex);
     final palette = context.exomPalette;
     final inactiveColor = palette.textDisabled;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: totalHeight,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(end: targetX),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          builder: (context, centerX, _) {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Frosted glass bar
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: _barHeight,
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                      child: Container(decoration: GlassDecoration.navBar()),
-                    ),
+    return SizedBox(
+      height: totalHeight + bottomInset,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: targetX),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        builder: (context, centerX, _) {
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Frosted glass bar, including bottom safe area.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: _barHeight + bottomInset,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                    child: Container(decoration: GlassDecoration.navBar()),
                   ),
                 ),
+              ),
 
-                // Green circle with glow
-                Positioned(
-                  left: centerX - _circleSize / 2,
-                  bottom: _barHeight - _circleSize + _circleOverlap,
-                  child: Container(
-                    width: _circleSize,
-                    height: _circleSize,
-                    decoration: BoxDecoration(
-                      color: palette.primary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.primary.withValues(alpha: 0.35),
-                          blurRadius: 30,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: _buildIcon(
-                        selectedIndex,
-                        true,
-                        activeColor: palette.onPrimary,
-                        inactiveColor: inactiveColor,
+              // Green circle with glow
+              Positioned(
+                left: centerX - _circleSize / 2,
+                bottom: bottomInset + _barHeight - _circleSize + _circleOverlap,
+                child: Container(
+                  width: _circleSize,
+                  height: _circleSize,
+                  decoration: BoxDecoration(
+                    color: palette.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: palette.primary.withValues(alpha: 0.35),
+                        blurRadius: 30,
+                        spreadRadius: 6,
                       ),
+                    ],
+                  ),
+                  child: Center(
+                    child: _buildIcon(
+                      selectedIndex,
+                      true,
+                      activeColor: palette.onPrimary,
+                      inactiveColor: inactiveColor,
                     ),
                   ),
                 ),
+              ),
 
-                // Icon row (active slot hidden — rendered inside circle)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: _barHeight,
-                  child: Row(
-                    children: List.generate(5, (i) {
-                      final isSelected = i == selectedIndex;
-                      return Expanded(
-                        child: Semantics(
-                          button: true,
-                          selected: isSelected,
-                          label: _a11yLabel(i),
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              if (!isSelected) {
-                                HapticFeedback.lightImpact();
-                              }
-                              onTap(i);
-                            },
-                            child: SizedBox(
-                              height: _barHeight,
-                              child: Center(
-                                child: isSelected
-                                    ? const SizedBox.shrink()
-                                    : _buildIcon(
-                                        i,
-                                        false,
-                                        activeColor: palette.onPrimary,
-                                        inactiveColor: inactiveColor,
-                                      ),
-                              ),
+              // Icon row (active slot hidden — rendered inside circle)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: bottomInset,
+                height: _barHeight,
+                child: Row(
+                  children: List.generate(5, (i) {
+                    final isSelected = i == selectedIndex;
+                    return Expanded(
+                      child: Semantics(
+                        button: true,
+                        selected: isSelected,
+                        label: _a11yLabel(i),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (!isSelected) {
+                              HapticFeedback.lightImpact();
+                            }
+                            onTap(i);
+                          },
+                          child: SizedBox(
+                            height: _barHeight,
+                            child: Center(
+                              child: isSelected
+                                  ? const SizedBox.shrink()
+                                  : _buildIcon(
+                                      i,
+                                      false,
+                                      activeColor: palette.onPrimary,
+                                      inactiveColor: inactiveColor,
+                                    ),
                             ),
                           ),
                         ),
-                      );
-                    }),
-                  ),
+                      ),
+                    );
+                  }),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

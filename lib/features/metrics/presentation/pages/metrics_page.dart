@@ -1007,10 +1007,11 @@ class _MetricsViewState extends State<_MetricsView> {
           body: BlocBuilder<MetricsBloc, MetricsState>(
             builder: (context, state) {
               final isSaving = state is MetricsSaving;
+              final bottomInset = MediaQuery.of(context).padding.bottom;
               return Stack(
                 children: [
                   ListView(
-                    padding: const EdgeInsets.only(bottom: 100),
+                    padding: EdgeInsets.only(bottom: 124 + bottomInset),
                     children: [
                       _SectionCard(
                         title: AppLocalizations.of(context)!.recordDateTitle,
@@ -1425,23 +1426,33 @@ class _MetricsViewState extends State<_MetricsView> {
                     left: 0,
                     right: 0,
                     child: Container(
-                      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: GlassDecoration.elevated(borderRadius: 24),
-                      child: ElevatedButton(
-                        onPressed: isSaving ? null : _save,
-                        child: isSaving
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+                      padding: EdgeInsets.fromLTRB(
+                        12,
+                        12,
+                        12,
+                        bottomInset > 0 ? bottomInset : 12,
+                      ),
+                      decoration: _metricsStickyBarDecoration(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: GlassDecoration.elevated(borderRadius: 24),
+                        child: ElevatedButton(
+                          onPressed: isSaving ? null : _save,
+                          child: isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.saveMetricsButton,
                                 ),
-                              )
-                            : Text(
-                                AppLocalizations.of(context)!.saveMetricsButton,
-                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -1453,6 +1464,29 @@ class _MetricsViewState extends State<_MetricsView> {
       ),
     );
   }
+}
+
+BoxDecoration _metricsStickyBarDecoration(BuildContext context) {
+  final palette = context.exomPalette;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  return BoxDecoration(
+    color: isDark ? AppColors.navBarGlass : AppColors.navBarGlassLightTheme,
+    border: Border(
+      top: BorderSide(
+        color: palette.glassBorder.withValues(alpha: isDark ? 0.18 : 0.10),
+        width: 0.6,
+      ),
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
+        blurRadius: 24,
+        offset: const Offset(0, -6),
+        spreadRadius: -14,
+      ),
+    ],
+  );
 }
 
 class _SectionCard extends StatelessWidget {

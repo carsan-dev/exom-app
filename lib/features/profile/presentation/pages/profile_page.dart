@@ -16,6 +16,8 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -27,22 +29,21 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
+        appBar: GlassAppBar(
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            icon: Icon(
+              Icons.arrow_back,
+              color: context.exomPalette.textPrimary,
+            ),
             onPressed: () => context.pop(),
           ),
           title: Text(
             AppLocalizations.of(context).profilePageTitle,
             style: TextStyle(
-              color: palette.textPrimary,
+              color: context.exomPalette.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -65,7 +66,7 @@ class _ProfileView extends StatelessWidget {
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         if (state is ProfileLoading || state is ProfileInitial) {
-          return const ShimmerList(count: 5, itemHeight: 100);
+          return const _ProfileLoadingView();
         }
         if (state is ProfileError) {
           return ErrorWidget2(
@@ -92,6 +93,335 @@ class _ProfileView extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+}
+
+class _ProfileLoadingView extends StatelessWidget {
+  const _ProfileLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 40),
+      children: const [
+        _ProfileHeaderSkeleton(),
+        _ProfileActionButtonsSkeleton(),
+        _ProfileChartSkeleton(),
+        _ProfileIndicatorsSkeleton(),
+        _ProfileBodyDataSkeleton(),
+      ],
+    );
+  }
+}
+
+class _ProfileHeaderSkeleton extends StatelessWidget {
+  const _ProfileHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerCard(
+                  height: 22,
+                  width: 144,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ShimmerCard(
+                      height: 22,
+                      width: 74,
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                    ),
+                    ShimmerCard(
+                      height: 22,
+                      width: 86,
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                ShimmerCard(
+                  height: 14,
+                  width: 152,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                SizedBox(height: 8),
+                ShimmerCard(
+                  height: 14,
+                  width: 128,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                SizedBox(height: 8),
+                ShimmerCard(
+                  height: 14,
+                  width: 164,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 16),
+          ShimmerCard(
+            height: 80,
+            width: 80,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileActionButtonsSkeleton extends StatelessWidget {
+  const _ProfileActionButtonsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: List.generate(3, (index) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
+              child: GlassCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
+                borderRadius: 16,
+                child: const Column(
+                  children: [
+                    ShimmerCard(
+                      height: 18,
+                      width: 18,
+                      borderRadius: BorderRadius.all(Radius.circular(9)),
+                    ),
+                    SizedBox(height: 8),
+                    ShimmerCard(
+                      height: 12,
+                      width: 74,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    SizedBox(height: 4),
+                    ShimmerCard(
+                      height: 12,
+                      width: 58,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _ProfileChartSkeleton extends StatelessWidget {
+  const _ProfileChartSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 22,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShimmerCard(
+            height: 18,
+            width: 138,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ShimmerCard(
+              height: 22,
+              width: 104,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+          ),
+          SizedBox(height: 12),
+          ShimmerCard(
+            height: 160,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileIndicatorsSkeleton extends StatelessWidget {
+  const _ProfileIndicatorsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          Expanded(child: _ProfileIndicatorCardSkeleton()),
+          SizedBox(width: 12),
+          Expanded(child: _ProfileIndicatorCardSkeleton()),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileIndicatorCardSkeleton extends StatelessWidget {
+  const _ProfileIndicatorCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(16),
+      borderRadius: 20,
+      child: const Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ShimmerCard(
+                  height: 16,
+                  width: 72,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ),
+              SizedBox(width: 8),
+              ShimmerCard(
+                height: 16,
+                width: 16,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ],
+          ),
+          SizedBox(height: 18),
+          ShimmerCard(
+            height: 90,
+            width: 90,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          SizedBox(height: 14),
+          ShimmerCard(
+            height: 16,
+            width: 88,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 8),
+          ShimmerCard(
+            height: 12,
+            width: 108,
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileBodyDataSkeleton extends StatelessWidget {
+  const _ProfileBodyDataSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 22,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ShimmerCard(
+                  height: 18,
+                  width: 92,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 12,
+                width: 86,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ],
+          ),
+          SizedBox(height: 18),
+          _ProfileDataRowSkeleton(),
+          SizedBox(height: 12),
+          _ProfileDataRowSkeleton(),
+          SizedBox(height: 12),
+          _ProfileDataRowSkeleton(),
+          SizedBox(height: 12),
+          _ProfileDataRowSkeleton(),
+          SizedBox(height: 18),
+          ShimmerCard(
+            height: 44,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileDataRowSkeleton extends StatelessWidget {
+  const _ProfileDataRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        ShimmerCard(
+          height: 16,
+          width: 16,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShimmerCard(
+                height: 14,
+                width: 168,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              SizedBox(height: 6),
+              ShimmerCard(
+                height: 12,
+                width: 92,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

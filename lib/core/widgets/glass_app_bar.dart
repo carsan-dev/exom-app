@@ -54,8 +54,21 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                 child: Row(
                   children: [
                     ?leading,
-                    ?title,
-                    const Spacer(),
+                    if (leading != null) const SizedBox(width: 12),
+                    if (title != null)
+                      Expanded(
+                        child: DefaultTextStyle(
+                          style: TextStyle(
+                            color: palette.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: title!,
+                          ),
+                        ),
+                      ),
                     if (actions != null) ...actions!,
                   ],
                 ),

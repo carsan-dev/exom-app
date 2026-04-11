@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -53,14 +55,7 @@ class _TrainingDetailView extends StatelessWidget {
       },
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            appBar: AppBar(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              surfaceTintColor: Colors.transparent,
-            ),
-            body: const ShimmerList(count: 6, itemHeight: 100),
-          );
+          return const _TrainingDetailLoadingScaffold();
         }
         if (state is TrainingError) {
           return Scaffold(
@@ -78,6 +73,261 @@ class _TrainingDetailView extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+}
+
+class _TrainingDetailLoadingScaffold extends StatelessWidget {
+  const _TrainingDetailLoadingScaffold();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExomStaticBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: GlassAppBar(
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: context.exomPalette.textPrimary,
+            ),
+            onPressed: () => context.pop(),
+          ),
+          title: const ShimmerCard(
+            height: 18,
+            width: 164,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ),
+        body: SizedBox.expand(
+          child: Stack(
+            children: [
+              ListView(
+                padding: EdgeInsets.only(
+                  bottom: 160 + MediaQuery.of(context).padding.bottom,
+                ),
+                children: const [
+                  GlassCard(
+                    margin: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(20),
+                    borderRadius: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ShimmerCard(
+                              height: 24,
+                              width: 72,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                            ),
+                            ShimmerCard(
+                              height: 24,
+                              width: 68,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                            ),
+                            ShimmerCard(
+                              height: 24,
+                              width: 84,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 14),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            ShimmerCard(
+                              height: 18,
+                              width: 54,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(8),
+                              ),
+                            ),
+                            ShimmerCard(
+                              height: 18,
+                              width: 62,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(8),
+                              ),
+                            ),
+                            ShimmerCard(
+                              height: 18,
+                              width: 58,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  _TrainingDetailSectionTitleSkeleton(showTrailing: false),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: ShimmerCard(
+                      height: 92,
+                      borderRadius: BorderRadius.all(Radius.circular(18)),
+                    ),
+                  ),
+                  _TrainingDetailSectionTitleSkeleton(showTrailing: true),
+                  _TrainingExerciseSkeletonCard(),
+                  _TrainingExerciseSkeletonCard(),
+                  _TrainingExerciseSkeletonCard(),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: ShimmerCard(
+                      height: 78,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  decoration: _trainingStickyBarDecoration(context),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          ShimmerCard(
+                            height: 14,
+                            width: 126,
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          ),
+                          Spacer(),
+                          ShimmerCard(
+                            height: 14,
+                            width: 38,
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      ShimmerCard(
+                        height: 8,
+                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                      ),
+                      SizedBox(height: 12),
+                      ShimmerCard(
+                        height: 48,
+                        borderRadius: BorderRadius.all(Radius.circular(14)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrainingDetailSectionTitleSkeleton extends StatelessWidget {
+  const _TrainingDetailSectionTitleSkeleton({required this.showTrailing});
+
+  final bool showTrailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        children: [
+          const ShimmerCard(
+            height: 18,
+            width: 118,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          const Spacer(),
+          if (showTrailing)
+            const ShimmerCard(
+              height: 14,
+              width: 86,
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingExerciseSkeletonCard extends StatelessWidget {
+  const _TrainingExerciseSkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            children: [
+              ShimmerCard(
+                height: 52,
+                width: 52,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerCard(
+                      height: 18,
+                      width: 164,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(height: 8),
+                    ShimmerCard(
+                      height: 14,
+                      width: 118,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 22,
+                width: 22,
+                borderRadius: BorderRadius.all(Radius.circular(11)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          ShimmerCard(
+            height: 14,
+            width: 210,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -130,22 +380,26 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final progress = total > 0 ? completed / total : 0.0;
     final allDone = total > 0 && completed == total;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
+    return ExomStaticBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        title: Text(training.name),
-      ),
-      body: ExomStaticBackground(
-        child: SizedBox.expand(
+        appBar: GlassAppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            training.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        body: SizedBox.expand(
           child: Stack(
             children: [
               ListView(
                 padding: EdgeInsets.only(
-                  top: kToolbarHeight + MediaQuery.of(context).padding.top,
-                  bottom: 160,
+                  bottom: 160 + MediaQuery.of(context).padding.bottom,
                 ),
                 children: [
                   // Header card
@@ -299,11 +553,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: SafeArea(
-                  top: false,
-                  child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  decoration: GlassDecoration.elevated(),
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  decoration: _trainingStickyBarDecoration(context),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -393,7 +650,6 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     ],
                   ),
                 ),
-                ),
               ),
             ],
           ),
@@ -401,6 +657,29 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       ),
     );
   }
+}
+
+BoxDecoration _trainingStickyBarDecoration(BuildContext context) {
+  final palette = context.exomPalette;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  return BoxDecoration(
+    color: isDark ? AppColors.navBarGlass : AppColors.navBarGlassLightTheme,
+    border: Border(
+      top: BorderSide(
+        color: palette.glassBorder.withValues(alpha: isDark ? 0.18 : 0.10),
+        width: 0.6,
+      ),
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+        blurRadius: 24,
+        offset: const Offset(0, -6),
+        spreadRadius: -14,
+      ),
+    ],
+  );
 }
 
 class _Badge extends StatelessWidget {
@@ -1283,14 +1562,12 @@ class _SheetHeaderAction extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
   final bool highlighted;
-  final bool locked;
 
   const _SheetHeaderAction({
     required this.icon,
     required this.onTap,
     required this.tooltip,
     this.highlighted = false,
-    this.locked = false,
   });
 
   @override
@@ -1314,32 +1591,12 @@ class _SheetHeaderAction extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 child: Icon(
                   icon,
-                  color: locked
-                      ? const Color(0xFFFFB300)
-                      : highlighted
+                  color: highlighted
                       ? palette.textPrimary
                       : palette.textSecondary,
                   size: 18,
                 ),
               ),
-              if (locked)
-                Positioned(
-                  right: 4,
-                  bottom: 4,
-                  child: Container(
-                    width: 13,
-                    height: 13,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFB300),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.lock,
-                      size: 8,
-                      color: Color(0xFF1D1409),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

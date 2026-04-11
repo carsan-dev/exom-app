@@ -281,6 +281,7 @@ Future<void> initDependencies() async {
     () => CalendarBloc(
       getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
       getWeekSummaryUseCase: sl<GetWeekSummaryUseCase>(),
+      getMyChallengesUseCase: sl<GetMyChallengesUseCase>(),
     ),
   );
 

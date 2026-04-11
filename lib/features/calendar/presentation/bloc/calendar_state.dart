@@ -15,6 +15,7 @@ class CalendarLoading extends CalendarState {
 class CalendarLoaded extends CalendarState {
   final List<CalendarDayEntity> days;
   final WeekSummaryEntity? weekSummary;
+  final List<ChallengeEntity> challenges;
   final DateTime selectedDate;
   final int year;
   final int month;
@@ -22,6 +23,7 @@ class CalendarLoaded extends CalendarState {
   const CalendarLoaded({
     required this.days,
     this.weekSummary,
+    required this.challenges,
     required this.selectedDate,
     required this.year,
     required this.month,

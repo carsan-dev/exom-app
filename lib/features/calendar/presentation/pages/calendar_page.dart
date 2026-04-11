@@ -14,6 +14,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
+import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key});
@@ -299,6 +300,17 @@ class _CalendarViewState extends State<_CalendarView> {
 
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
+  DateTime _normalizeDay(DateTime date) {
+    final localDate = date.toLocal();
+    return DateTime(localDate.year, localDate.month, localDate.day);
+  }
+
+  DateTime? _challengeMarkerDate(ChallengeEntity challenge) {
+    final markerDate = challenge.completedAt ?? challenge.deadline;
+    if (markerDate == null) return null;
+    return _normalizeDay(markerDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CalendarBloc, CalendarState>(
@@ -351,9 +363,20 @@ class _CalendarViewState extends State<_CalendarView> {
       dayMap[key] = day;
     }
 
-    final hasActivities = state.days.any(
-      (d) => d.hasTraining || d.hasDiet || d.isRestDay,
+    final challengeMap = <DateTime, List<ChallengeEntity>>{};
+    for (final challenge in state.challenges) {
+      final markerDate = _challengeMarkerDate(challenge);
+      if (markerDate == null) continue;
+      challengeMap.putIfAbsent(markerDate, () => []).add(challenge);
+    }
+
+    final hasChallengeMarkers = challengeMap.keys.any(
+      (date) => date.year == state.year && date.month == state.month,
     );
+
+    final hasActivities =
+        state.days.any((d) => d.hasTraining || d.hasDiet || d.isRestDay) ||
+        hasChallengeMarkers;
 
     return Column(
       children: [
@@ -403,7 +426,7 @@ class _CalendarViewState extends State<_CalendarView> {
           child: ListView(
             padding: const EdgeInsets.only(bottom: 32),
             children: [
-              _buildCalendar(context, state, dayMap),
+              _buildCalendar(context, state, dayMap, challengeMap),
               if (!hasActivities)
                 EmptyWidget(
                   message: l10n.noActivitiesThisMonth,
@@ -412,7 +435,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 )
               else ...[
                 _buildWeekProgress(context, state),
-                _buildSelectedDayCard(context, state, dayMap),
+                _buildSelectedDayCard(context, state, dayMap, challengeMap),
               ],
               _buildChallengesShortcut(context),
             ],
@@ -463,6 +486,7 @@ class _CalendarViewState extends State<_CalendarView> {
     BuildContext context,
     CalendarLoaded state,
     Map<DateTime, CalendarDayEntity> dayMap,
+    Map<DateTime, List<ChallengeEntity>> challengeMap,
   ) {
     final palette = context.exomPalette;
     final locale = Localizations.localeOf(context).toString();
@@ -524,6 +548,7 @@ class _CalendarViewState extends State<_CalendarView> {
               context,
               date,
               dayMap[key],
+              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
               isSelected: false,
               isToday: false,
             );
@@ -534,6 +559,7 @@ class _CalendarViewState extends State<_CalendarView> {
               context,
               date,
               dayMap[key],
+              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
               isSelected: false,
               isToday: true,
             );
@@ -544,6 +570,7 @@ class _CalendarViewState extends State<_CalendarView> {
               context,
               date,
               dayMap[key],
+              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
               isSelected: true,
               isToday: isSameDay(date, DateTime.now()),
             );
@@ -591,10 +618,12 @@ class _CalendarViewState extends State<_CalendarView> {
     BuildContext context,
     DateTime date,
     CalendarDayEntity? day, {
+    required bool hasChallengeMarker,
     required bool isSelected,
     required bool isToday,
   }) {
     final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
     final hasActivity = _dayHasVisibleActivity(day);
     final accent = _dayAccentColor(context, day);
     final borderColor = hasActivity || isSelected || isToday
@@ -627,28 +656,52 @@ class _CalendarViewState extends State<_CalendarView> {
                 ]
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(
-              '${date.day}',
-              style: TextStyle(
-                color: isToday ? palette.primary : palette.textPrimary,
-                fontSize: 14,
-                fontWeight: hasActivity || isSelected || isToday
-                    ? FontWeight.w700
-                    : FontWeight.w500,
+            Align(
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      color: isToday ? palette.primary : palette.textPrimary,
+                      fontSize: 14,
+                      fontWeight: hasActivity || isSelected || isToday
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: hasActivity ? accent : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 3),
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                color: hasActivity ? accent : Colors.transparent,
-                shape: BoxShape.circle,
+            if (hasChallengeMarker)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(
+                    color: semantic.warning.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 10,
+                    color: semantic.warning,
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -711,6 +764,7 @@ class _CalendarViewState extends State<_CalendarView> {
     BuildContext context,
     CalendarLoaded state,
     Map<DateTime, CalendarDayEntity> dayMap,
+    Map<DateTime, List<ChallengeEntity>> challengeMap,
   ) {
     if (state.selectedDate == DateTime(0)) return const SizedBox.shrink();
 
@@ -720,6 +774,7 @@ class _CalendarViewState extends State<_CalendarView> {
       state.selectedDate.day,
     );
     final day = dayMap[key];
+    final dayChallenges = challengeMap[key] ?? const <ChallengeEntity>[];
     final isToday = isSameDay(state.selectedDate, DateTime.now());
     final locale = Localizations.localeOf(context).toString();
     final l10n = AppLocalizations.of(context);
@@ -732,6 +787,9 @@ class _CalendarViewState extends State<_CalendarView> {
     }
 
     if (day == null) {
+      if (dayChallenges.isNotEmpty) {
+        return _challengeOnlyDayCard(context, dayChallenges, dateLabel);
+      }
       return _emptyDayCard(context, dateLabel);
     }
 
@@ -744,6 +802,109 @@ class _CalendarViewState extends State<_CalendarView> {
     } else {
       return _dietDayCard(context, day, dateLabel);
     }
+  }
+
+  Widget _challengeOnlyDayCard(
+    BuildContext context,
+    List<ChallengeEntity> challenges,
+    String dateLabel,
+  ) {
+    final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final titles = challenges
+        .map((challenge) => challenge.title.trim())
+        .where((title) => title.isNotEmpty)
+        .toList(growable: false);
+    final preview = titles.take(2).join(' • ');
+    final extraCount = titles.length > 2 ? titles.length - 2 : 0;
+    final description = preview.isEmpty
+        ? l10n.challengesMenuItem
+        : extraCount > 0
+        ? '$preview +$extraCount'
+        : preview;
+
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(20),
+      accentColor: semantic.warning,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: semantic.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: semantic.warning.withValues(alpha: 0.16),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -8,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  color: semantic.warning,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${l10n.challenges} • $dateLabel',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: palette.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.go('/challenges'),
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: Text(l10n.challengesMenuItem),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: semantic.warning,
+                side: BorderSide(
+                  color: semantic.warning.withValues(alpha: 0.35),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _emptyDayCard(BuildContext context, String dateLabel) {

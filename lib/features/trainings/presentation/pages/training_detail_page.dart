@@ -390,8 +390,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           ),
           title: Hero(
             tag: 'training-${training.id}-title',
-            flightShuttleBuilder:
-                (flightCtx, anim, dir, fromCtx, toCtx) {
+            flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
               return Material(
                 color: Colors.transparent,
                 child: Text(
@@ -944,46 +943,85 @@ class _ExerciseCard extends StatelessWidget {
               children: [
                 Icon(Icons.info_outline, color: palette.textDisabled, size: 16),
                 const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () async {
-                    if (!isCompleted) {
-                      final weight = await _showWeightSheet(
-                        context,
-                        l10n,
-                        previousWeight: weightUsed,
-                      );
-                      if (!context.mounted) return;
-                      onToggle(true, weightUsed: weight);
-                      if (nextExerciseName != null) {
-                        await RestTimerOverlay.show(
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () async {
+                      if (!isCompleted) {
+                        final weight = await _showWeightSheet(
                           context,
-                          restSeconds: trainingExercise.restSeconds,
-                          nextExerciseName: nextExerciseName,
+                          l10n,
+                          previousWeight: weightUsed,
                         );
+                        if (!context.mounted) return;
+                        onToggle(true, weightUsed: weight);
+                        if (nextExerciseName != null) {
+                          await RestTimerOverlay.show(
+                            context,
+                            restSeconds: trainingExercise.restSeconds,
+                            nextExerciseName: nextExerciseName,
+                          );
+                        }
+                      } else {
+                        onToggle(false);
                       }
-                    } else {
-                      onToggle(false);
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: isCompleted
-                          ? semantic.success
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isCompleted
-                            ? semantic.success
-                            : palette.textDisabled,
-                        width: 2,
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isCompleted
+                                  ? semantic.success
+                                  : palette.surfaceVariant,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isCompleted
+                                    ? semantic.success
+                                    : palette.textDisabled,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.check_rounded,
+                              color: isCompleted
+                                  ? Colors.white
+                                  : palette.textDisabled,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 52,
+                            child: Text(
+                              isCompleted
+                                  ? l10n.completed
+                                  : l10n.completeButton,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: isCompleted
+                                        ? semantic.success
+                                        : palette.textSecondary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.1,
+                                  ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: isCompleted
-                        ? const Icon(Icons.check, color: Colors.white, size: 16)
-                        : null,
                   ),
                 ),
               ],

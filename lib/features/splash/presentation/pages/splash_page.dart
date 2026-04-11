@@ -122,6 +122,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final isLight = Theme.of(context).brightness == Brightness.light;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     final logoAsset = isLight
         ? 'assets/images/logo_dark.svg'
         : 'assets/images/logo.svg';
@@ -172,7 +173,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             t: _pulse.value,
                           ),
                         ),
-                        const SizedBox(height: 48),
+                        SizedBox(height: 48 + bottomInset + 12),
                       ],
                     ),
                   ),

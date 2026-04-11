@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
@@ -31,7 +32,7 @@ class _DietsView extends StatelessWidget {
   final String? selectedDate;
 
   String _dateLabel(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     if (selectedDate == null) return l10n.todayLabel.toLowerCase();
     final parsed = DateTime.tryParse(selectedDate!);
     if (parsed == null) return l10n.selectedDateLabel;
@@ -46,11 +47,11 @@ class _DietsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return BlocBuilder<DietBloc, DietState>(
       builder: (context, state) {
         if (state is DietLoading || state is DietInitial) {
-          return const ShimmerList(count: 4, itemHeight: 140);
+          return const _DietsLoadingView();
         }
         if (state is DietError) {
           return ErrorWidget2(
@@ -83,6 +84,183 @@ class _DietsView extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+}
+
+class _DietsLoadingView extends StatelessWidget {
+  const _DietsLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.only(bottom: 32),
+      children: const [
+        _DietHeaderSkeleton(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: ShimmerCard(
+            height: 16,
+            width: 124,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ),
+        _MealCardSkeleton(),
+        _MealCardSkeleton(),
+        _MealCardSkeleton(),
+        _MealCardSkeleton(),
+      ],
+    );
+  }
+}
+
+class _DietHeaderSkeleton extends StatelessWidget {
+  const _DietHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ShimmerCard(
+                  height: 22,
+                  width: 176,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 28,
+                width: 92,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          ShimmerCard(
+            height: 14,
+            width: 132,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _DietMacroSkeleton(),
+              _DietMacroSkeleton(),
+              _DietMacroSkeleton(),
+              _DietMacroSkeleton(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DietMacroSkeleton extends StatelessWidget {
+  const _DietMacroSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        ShimmerCard(
+          height: 22,
+          width: 34,
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        SizedBox(height: 6),
+        ShimmerCard(
+          height: 12,
+          width: 18,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        SizedBox(height: 6),
+        ShimmerCard(
+          height: 12,
+          width: 42,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+      ],
+    );
+  }
+}
+
+class _MealCardSkeleton extends StatelessWidget {
+  const _MealCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 18,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            children: [
+              ShimmerCard(
+                height: 40,
+                width: 40,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerCard(
+                      height: 18,
+                      width: 140,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(height: 8),
+                    ShimmerCard(
+                      height: 14,
+                      width: 92,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 22,
+                width: 22,
+                borderRadius: BorderRadius.all(Radius.circular(11)),
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          Row(
+            children: [
+              ShimmerCard(
+                height: 14,
+                width: 64,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              SizedBox(width: 10),
+              ShimmerCard(
+                height: 14,
+                width: 74,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -159,7 +337,7 @@ class _MealsSectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -192,7 +370,7 @@ class _DietHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -360,7 +538,7 @@ class _MealCard extends StatelessWidget {
   }
 
   String _mealLabel(BuildContext context, String type) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
         return l10n.mealTypeBreakfast;
@@ -434,11 +612,11 @@ class _MealCard extends StatelessWidget {
                       width: 70,
                       height: 70,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => _MealIconFallback(
+                      placeholder: (context, url) => _MealIconFallback(
                         icon: _mealIcon(meal.type),
                         color: color,
                       ),
-                      errorWidget: (_, __, ___) => _MealIconFallback(
+                      errorWidget: (context, url, error) => _MealIconFallback(
                         icon: _mealIcon(meal.type),
                         color: color,
                       ),
@@ -551,7 +729,9 @@ class _MealCard extends StatelessWidget {
                             color: palette.glassBackground,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: palette.glassBorder.withValues(alpha: 0.15),
+                              color: palette.glassBorder.withValues(
+                                alpha: 0.15,
+                              ),
                             ),
                           ),
                           child: Text(

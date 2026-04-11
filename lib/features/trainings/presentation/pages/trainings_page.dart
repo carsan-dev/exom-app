@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -50,7 +51,7 @@ class _TrainingsView extends StatelessWidget {
     return BlocBuilder<TrainingBloc, TrainingState>(
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
-          return const ShimmerList(count: 5, itemHeight: 120);
+          return const _TrainingsLoadingView();
         }
         if (state is TrainingError) {
           return ErrorWidget2(
@@ -174,6 +175,190 @@ class _TrainingsView extends StatelessWidget {
                 historyDate: state.historyDate,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingsLoadingView extends StatelessWidget {
+  const _TrainingsLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.only(bottom: 32),
+      children: const [
+        _TrainingsSectionHeaderSkeleton(),
+        _TodayTrainingBannerSkeleton(),
+        SizedBox(height: 8),
+        _TrainingsSectionHeaderSkeleton(showSelector: true, width: 84),
+        _TrainingHistorySkeletonCard(),
+        _TrainingHistorySkeletonCard(),
+        _TrainingHistorySkeletonCard(),
+      ],
+    );
+  }
+}
+
+class _TrainingsSectionHeaderSkeleton extends StatelessWidget {
+  const _TrainingsSectionHeaderSkeleton({
+    this.width = 132,
+    this.showSelector = false,
+  });
+
+  final double width;
+  final bool showSelector;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        children: [
+          ShimmerCard(
+            height: 16,
+            width: width,
+            borderRadius: const BorderRadius.all(Radius.circular(10)),
+          ),
+          const Spacer(),
+          if (showSelector)
+            const ShimmerCard(
+              height: 32,
+              width: 118,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayTrainingBannerSkeleton extends StatelessWidget {
+  const _TodayTrainingBannerSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Row(
+        children: [
+          const ShimmerCard(
+            height: 56,
+            width: 56,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ShimmerCard(
+                      height: 18,
+                      width: 68,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    SizedBox(width: 8),
+                    ShimmerCard(
+                      height: 14,
+                      width: 54,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+                ShimmerCard(
+                  height: 20,
+                  width: 180,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                SizedBox(height: 10),
+                Row(
+                  children: [
+                    ShimmerCard(
+                      height: 14,
+                      width: 72,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(width: 12),
+                    ShimmerCard(
+                      height: 14,
+                      width: 92,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const ShimmerCard(
+            height: 18,
+            width: 18,
+            borderRadius: BorderRadius.all(Radius.circular(9)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingHistorySkeletonCard extends StatelessWidget {
+  const _TrainingHistorySkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            children: [
+              ShimmerCard(
+                height: 14,
+                width: 92,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              Spacer(),
+              ShimmerCard(
+                height: 24,
+                width: 84,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          ShimmerCard(
+            height: 18,
+            width: 172,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              ShimmerCard(
+                height: 16,
+                width: 72,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+              SizedBox(width: 8),
+              ShimmerCard(
+                height: 14,
+                width: 54,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+            ],
+          ),
         ],
       ),
     );

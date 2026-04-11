@@ -30,6 +30,263 @@ class CalendarPage extends StatelessWidget {
   }
 }
 
+class _CalendarLoadingView extends StatelessWidget {
+  const _CalendarLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _CalendarMonthHeaderSkeleton(),
+        const _CalendarToggleSkeleton(),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: const [
+              _CalendarGridSkeleton(),
+              _CalendarWeekProgressSkeleton(),
+              _CalendarSelectedDaySkeleton(),
+              _CalendarShortcutSkeleton(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CalendarMonthHeaderSkeleton extends StatelessWidget {
+  const _CalendarMonthHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      child: Row(
+        children: const [
+          ShimmerCard(
+            height: 44,
+            width: 44,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          Expanded(
+            child: Center(
+              child: ShimmerCard(
+                height: 20,
+                width: 154,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+          ),
+          ShimmerCard(
+            height: 44,
+            width: 44,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarToggleSkeleton extends StatelessWidget {
+  const _CalendarToggleSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: GlassCard(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(4),
+        borderRadius: 26,
+        child: const Row(
+          children: [
+            Expanded(
+              child: ShimmerCard(
+                height: 34,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: ShimmerCard(
+                height: 34,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarGridSkeleton extends StatelessWidget {
+  const _CalendarGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+      borderRadius: 24,
+      child: Column(
+        children: [
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+              ShimmerCard(
+                height: 12,
+                width: 18,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.86,
+            ),
+            itemCount: 35,
+            itemBuilder: (context, index) => const ShimmerCard(
+              height: 46,
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarWeekProgressSkeleton extends StatelessWidget {
+  const _CalendarWeekProgressSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Row(
+        children: [
+          ShimmerCard(
+            height: 24,
+            width: 52,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          SizedBox(width: 8),
+          ShimmerCard(
+            height: 14,
+            width: 154,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarSelectedDaySkeleton extends StatelessWidget {
+  const _CalendarSelectedDaySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 18,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ShimmerCard(
+                height: 40,
+                width: 40,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerCard(
+                      height: 16,
+                      width: 126,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(height: 8),
+                    ShimmerCard(
+                      height: 14,
+                      width: 82,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          ShimmerCard(
+            height: 40,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarShortcutSkeleton extends StatelessWidget {
+  const _CalendarShortcutSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: ShimmerCard(
+        height: 48,
+        borderRadius: BorderRadius.all(Radius.circular(18)),
+      ),
+    );
+  }
+}
+
 class _CalendarView extends StatefulWidget {
   const _CalendarView();
 
@@ -47,7 +304,7 @@ class _CalendarViewState extends State<_CalendarView> {
     return BlocBuilder<CalendarBloc, CalendarState>(
       builder: (context, state) {
         if (state is CalendarLoading || state is CalendarInitial) {
-          return const ShimmerList(count: 3, itemHeight: 200);
+          return const _CalendarLoadingView();
         }
         if (state is CalendarError) {
           return _buildErrorState(context, state);

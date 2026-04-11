@@ -40,7 +40,7 @@ class _HomeView extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, HomeState state) {
     if (state is HomeLoading || state is HomeInitial) {
-      return const ShimmerList(count: 4, itemHeight: 160);
+      return const _HomeLoadingBody();
     }
 
     if (state is HomeError) {
@@ -68,6 +68,220 @@ class _HomeView extends StatelessWidget {
   }
 }
 
+class _HomeLoadingBody extends StatelessWidget {
+  const _HomeLoadingBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        const _HomeHeroAccent(),
+        ListView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          padding: const EdgeInsets.only(bottom: 32),
+          children: const [
+            _HomeDateHeaderSkeleton(),
+            SizedBox(height: 12),
+            _HomeWeekSelectorSkeleton(),
+            SizedBox(height: 20),
+            _HomeFeatureCardSkeleton(),
+            _HomeFeatureCardSkeleton(showSecondaryChip: false),
+            _HomeStatsRowSkeleton(),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeDateHeaderSkeleton extends StatelessWidget {
+  const _HomeDateHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ExomSpacing.lg,
+        ExomSpacing.sm,
+        ExomSpacing.lg,
+        ExomSpacing.xs,
+      ),
+      child: Row(
+        children: const [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerCard(
+                  height: 34,
+                  width: 148,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                SizedBox(height: 8),
+                ShimmerCard(
+                  height: 16,
+                  width: 188,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          ShimmerCard(
+            height: 44,
+            width: 44,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeWeekSelectorSkeleton extends StatelessWidget {
+  const _HomeWeekSelectorSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.lg),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(
+          7,
+          (index) => const ShimmerCard(
+            height: 44,
+            width: 44,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFeatureCardSkeleton extends StatelessWidget {
+  const _HomeFeatureCardSkeleton({this.showSecondaryChip = true});
+
+  final bool showSecondaryChip;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Row(
+        children: [
+          const ShimmerCard(
+            height: 56,
+            width: 56,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const ShimmerCard(
+                      height: 20,
+                      width: 72,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    if (showSecondaryChip) ...[
+                      const SizedBox(width: 8),
+                      const ShimmerCard(
+                        height: 14,
+                        width: 60,
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const ShimmerCard(
+                  height: 20,
+                  width: 176,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                const SizedBox(height: 8),
+                const ShimmerCard(
+                  height: 14,
+                  width: 148,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const ShimmerCard(
+            height: 18,
+            width: 18,
+            borderRadius: BorderRadius.all(Radius.circular(9)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeStatsRowSkeleton extends StatelessWidget {
+  const _HomeStatsRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ExomSpacing.lg,
+        vertical: ExomSpacing.sm,
+      ),
+      child: Row(
+        children: List.generate(3, (index) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == 2 ? 0 : ExomSpacing.md),
+              child: GlassCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ExomSpacing.md,
+                  vertical: ExomSpacing.md + 2,
+                ),
+                borderRadius: 16,
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShimmerCard(
+                      height: 24,
+                      width: 48,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    SizedBox(height: ExomSpacing.xxs),
+                    ShimmerCard(
+                      height: 12,
+                      width: 32,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    SizedBox(height: ExomSpacing.xs + 2),
+                    ShimmerCard(
+                      height: 14,
+                      width: 58,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
 class _DateHeader extends StatelessWidget {
   const _DateHeader({required this.selectedDate});
 
@@ -78,7 +292,7 @@ class _DateHeader extends StatelessWidget {
     final todayNorm = DateTime(today.year, today.month, today.day);
     final dateNorm = DateTime(date.year, date.month, date.day);
     final diff = dateNorm.difference(todayNorm).inDays;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     switch (diff) {
       case 0:
@@ -147,7 +361,7 @@ class _DateHeader extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => context.go('/calendar'),
-            tooltip: AppLocalizations.of(context)!.openCalendarButton,
+            tooltip: AppLocalizations.of(context).openCalendarButton,
             iconSize: 18,
             constraints: const BoxConstraints.tightFor(width: 44, height: 44),
             padding: EdgeInsets.zero,
@@ -224,7 +438,7 @@ class _RestDayBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return RefreshIndicator(
       color: palette.primary,

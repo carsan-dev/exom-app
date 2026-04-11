@@ -115,7 +115,7 @@ class _OnboardingViewState extends State<_OnboardingView> {
             child: BlocBuilder<OnboardingBloc, OnboardingState>(
               builder: (context, state) {
                 if (state is OnboardingLoading || state is OnboardingInitial) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const _OnboardingLoadingView();
                 }
 
                 if (state is OnboardingLoadError) {
@@ -251,6 +251,71 @@ class _OnboardingViewState extends State<_OnboardingView> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OnboardingLoadingView extends StatelessWidget {
+  const _OnboardingLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SizedBox(height: 40),
+          Center(
+            child: ShimmerCard(
+              height: 132,
+              width: 132,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+          ),
+          SizedBox(height: 28),
+          GlassCard(
+            margin: EdgeInsets.zero,
+            padding: EdgeInsets.all(24),
+            borderRadius: 28,
+            elevated: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerCard(
+                  height: 34,
+                  width: 188,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                SizedBox(height: 12),
+                ShimmerCard(
+                  height: 16,
+                  width: 220,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                SizedBox(height: 8),
+                ShimmerCard(
+                  height: 16,
+                  width: 196,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                SizedBox(height: 32),
+                ShimmerCard(
+                  height: 48,
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                ),
+                SizedBox(height: 12),
+                ShimmerCard(
+                  height: 20,
+                  width: 132,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ],
+            ),
+          ),
+          Spacer(),
+        ],
       ),
     );
   }

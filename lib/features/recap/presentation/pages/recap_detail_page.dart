@@ -5,6 +5,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
@@ -62,9 +63,7 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
           },
           builder: (context, state) {
             if (state is RecapDetailLoading) {
-              return Center(
-                child: CircularProgressIndicator(color: palette.primary),
-              );
+              return const _RecapDetailLoadingView();
             }
 
             if (state is RecapDetailError) {
@@ -107,6 +106,134 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _RecapDetailLoadingView extends StatelessWidget {
+  const _RecapDetailLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      children: const [
+        _RecapDetailHeaderSkeleton(),
+        SizedBox(height: 16),
+        ShimmerCard(
+          height: 132,
+          borderRadius: BorderRadius.all(Radius.circular(22)),
+        ),
+        SizedBox(height: 16),
+        _RecapDetailSectionSkeleton(),
+        SizedBox(height: 14),
+        _RecapDetailSectionSkeleton(),
+        SizedBox(height: 14),
+        _RecapDetailSectionSkeleton(),
+        SizedBox(height: 14),
+        _RecapDetailSectionSkeleton(),
+        SizedBox(height: 14),
+        _RecapDetailSectionSkeleton(),
+      ],
+    );
+  }
+}
+
+class _RecapDetailHeaderSkeleton extends StatelessWidget {
+  const _RecapDetailHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(18),
+      borderRadius: 22,
+      elevated: true,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ShimmerCard(
+                  height: 20,
+                  width: 154,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 28,
+                width: 72,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          ShimmerCard(
+            height: 14,
+            width: 132,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecapDetailSectionSkeleton extends StatelessWidget {
+  const _RecapDetailSectionSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(18),
+      borderRadius: 22,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShimmerCard(
+            height: 16,
+            width: 84,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 14),
+          _RecapDetailFieldSkeleton(),
+          SizedBox(height: 12),
+          _RecapDetailFieldSkeleton(),
+          SizedBox(height: 12),
+          _RecapDetailFieldSkeleton(),
+          SizedBox(height: 12),
+          _RecapDetailFieldSkeleton(longValue: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecapDetailFieldSkeleton extends StatelessWidget {
+  const _RecapDetailFieldSkeleton({this.longValue = false});
+
+  final bool longValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const ShimmerCard(
+          height: 12,
+          width: 86,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        const SizedBox(height: 6),
+        ShimmerCard(
+          height: longValue ? 36 : 14,
+          width: longValue ? null : 164,
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+        ),
+      ],
     );
   }
 }

@@ -3,13 +3,13 @@ class AchievementEntity {
   final String name;
   final String description;
   final String? iconUrl;
-  final DateTime unlockedAt;
+  final DateTime? unlockedAt;
 
   const AchievementEntity({
     required this.id,
     required this.name,
     required this.description,
     this.iconUrl,
-    required this.unlockedAt,
+    this.unlockedAt,
   });
 }

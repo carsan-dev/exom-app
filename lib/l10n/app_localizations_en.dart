@@ -416,6 +416,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockedAchievementsSection => 'Unlocked achievements';
 
   @override
+  String get viewAllButton => 'View all';
+
+  @override
+  String get achievementBoardTitle => 'All achievements';
+
+  @override
   String get noActiveChallenges => 'No active challenges';
 
   @override

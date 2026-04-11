@@ -165,6 +165,8 @@
   "mainGoalSection": "Objetivo principal",
   "weeklyChallengesSection": "Retos semanales",
   "unlockedAchievementsSection": "Logros desbloqueados",
+  "viewAllButton": "Ver todos",
+  "achievementBoardTitle": "Todos los logros",
   "noActiveChallenges": "Sin retos activos",
   "noActiveChallengesMessage": "Tu entrenador aún no te ha asignado retos. Empieza completando tus entrenamientos y comidas para desbloquear retos automáticos.",
   "lockedAchievementsHint": "Completa retos para desbloquear medallas",

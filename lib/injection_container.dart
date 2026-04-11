@@ -69,6 +69,7 @@ import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart'
 import 'package:exom_app/features/challenges/data/datasources/challenges_remote_datasource.dart';
 import 'package:exom_app/features/challenges/data/repositories/challenges_repository_impl.dart';
 import 'package:exom_app/features/challenges/domain/repositories/challenges_repository.dart';
+import 'package:exom_app/features/challenges/domain/usecases/get_achievement_catalog_usecase.dart';
 import 'package:exom_app/features/challenges/domain/usecases/get_my_challenges_usecase.dart';
 import 'package:exom_app/features/challenges/domain/usecases/update_challenge_progress_usecase.dart';
 import 'package:exom_app/features/challenges/domain/usecases/get_my_achievements_usecase.dart';
@@ -299,6 +300,9 @@ Future<void> initDependencies() async {
     () => UpdateChallengeProgressUseCase(sl<ChallengesRepository>()),
   );
   sl.registerLazySingleton(
+    () => GetAchievementCatalogUseCase(sl<ChallengesRepository>()),
+  );
+  sl.registerLazySingleton(
     () => GetMyAchievementsUseCase(sl<ChallengesRepository>()),
   );
   sl.registerLazySingleton(
@@ -309,6 +313,7 @@ Future<void> initDependencies() async {
     () => ChallengesBloc(
       getMyChallengesUseCase: sl<GetMyChallengesUseCase>(),
       updateChallengeProgressUseCase: sl<UpdateChallengeProgressUseCase>(),
+      getAchievementCatalogUseCase: sl<GetAchievementCatalogUseCase>(),
       getMyAchievementsUseCase: sl<GetMyAchievementsUseCase>(),
       getMyStreakUseCase: sl<GetMyStreakUseCase>(),
     ),

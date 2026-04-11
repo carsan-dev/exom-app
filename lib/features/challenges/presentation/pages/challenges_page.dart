@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -82,6 +84,10 @@ class _ChallengesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final showCatalogButton = state.achievementCatalog.isNotEmpty;
+    final unlockedIds = state.achievements
+        .map((achievement) => achievement.id)
+        .toSet();
 
     return RefreshIndicator(
       color: context.exomPalette.primary,
@@ -101,7 +107,17 @@ class _ChallengesContent extends StatelessWidget {
             ...state.weeklyChallenges.map((c) => _ChallengeCard(challenge: c)),
           ],
           if (state.achievements.isNotEmpty) ...[
-            _SectionTitle(title: l10n.unlockedAchievementsSection),
+            _SectionTitle(
+              title: l10n.unlockedAchievementsSection,
+              actionLabel: showCatalogButton ? l10n.viewAllButton : null,
+              onActionTap: showCatalogButton
+                  ? () => _showAchievementsBoard(
+                      context,
+                      catalog: state.achievementCatalog,
+                      unlockedIds: unlockedIds,
+                    )
+                  : null,
+            ),
             _AchievementsCarousel(achievements: state.achievements),
           ],
         ],
@@ -119,6 +135,10 @@ class _ChallengesEmptyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final showCatalogButton = state.achievementCatalog.isNotEmpty;
+    final unlockedIds = state.achievements
+        .map((achievement) => achievement.id)
+        .toSet();
 
     return RefreshIndicator(
       color: context.exomPalette.primary,
@@ -130,7 +150,17 @@ class _ChallengesEmptyContent extends StatelessWidget {
         children: [
           _ChallengesHeader(streakDays: state.streakDays),
           const _EmptyChallengesCard(),
-          _SectionTitle(title: l10n.unlockedAchievementsSection),
+          _SectionTitle(
+            title: l10n.unlockedAchievementsSection,
+            actionLabel: showCatalogButton ? l10n.viewAllButton : null,
+            onActionTap: showCatalogButton
+                ? () => _showAchievementsBoard(
+                    context,
+                    catalog: state.achievementCatalog,
+                    unlockedIds: unlockedIds,
+                  )
+                : null,
+          ),
           if (state.achievements.isNotEmpty)
             _AchievementsCarousel(achievements: state.achievements)
           else
@@ -236,9 +266,15 @@ class _StreakSummaryCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
+  const _SectionTitle({
+    required this.title,
+    this.actionLabel,
+    this.onActionTap,
+  });
 
   final String title;
+  final String? actionLabel;
+  final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -247,13 +283,268 @@ class _SectionTitle extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Text(
-        title,
-        style: theme.textTheme.titleLarge?.copyWith(
-          color: palette.textPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: palette.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (actionLabel != null && onActionTap != null)
+            TextButton(
+              onPressed: onActionTap,
+              style: TextButton.styleFrom(
+                foregroundColor: palette.primary,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              ),
+              child: Text(
+                actionLabel!,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: palette.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _showAchievementsBoard(
+  BuildContext context, {
+  required List<AchievementEntity> catalog,
+  required Set<String> unlockedIds,
+}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: isDark ? const Color(0xB3000000) : const Color(0x40000000),
+    builder: (_) =>
+        _AchievementsBoardSheet(catalog: catalog, unlockedIds: unlockedIds),
+  );
+}
+
+class _AchievementsBoardSheet extends StatelessWidget {
+  const _AchievementsBoardSheet({
+    required this.catalog,
+    required this.unlockedIds,
+  });
+
+  final List<AchievementEntity> catalog;
+  final Set<String> unlockedIds;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final crossAxisCount = MediaQuery.sizeOf(context).width >= 720 ? 3 : 2;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.78,
+      minChildSize: 0.5,
+      maxChildSize: 0.94,
+      builder: (context, scrollController) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                decoration: isDark
+                    ? BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xF72A150A), Color(0xF233190C)],
+                        ),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: palette.glassBorder.withValues(alpha: 0.16),
+                          width: 0.6,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 36,
+                            offset: Offset(0, 16),
+                            spreadRadius: -8,
+                          ),
+                        ],
+                      )
+                    : GlassDecoration.elevated(borderRadius: 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: palette.textDisabled.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.achievementBoardTitle,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: palette.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${unlockedIds.length}/${catalog.length}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: GridView.builder(
+                        controller: scrollController,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.92,
+                        ),
+                        itemCount: catalog.length,
+                        itemBuilder: (_, index) {
+                          final achievement = catalog[index];
+                          return _AchievementBoardCard(
+                            achievement: achievement,
+                            isUnlocked: unlockedIds.contains(achievement.id),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AchievementBoardCard extends StatelessWidget {
+  const _AchievementBoardCard({
+    required this.achievement,
+    required this.isUnlocked,
+  });
+
+  final AchievementEntity achievement;
+  final bool isUnlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final iconColor = isUnlocked ? AppColors.warning : palette.textDisabled;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: isUnlocked
+          ? GlassDecoration.accentCard(AppColors.warning, borderRadius: 20)
+          : GlassDecoration.card(
+              borderRadius: 20,
+              borderColor: palette.glassBorder.withValues(alpha: 0.14),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: isUnlocked ? 0.18 : 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  isUnlocked
+                      ? Icons.workspace_premium_rounded
+                      : Icons.workspace_premium_outlined,
+                  color: iconColor,
+                  size: 26,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                isUnlocked
+                    ? Icons.check_circle_rounded
+                    : Icons.lock_outline_rounded,
+                color: iconColor,
+                size: 18,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            achievement.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: isUnlocked ? palette.textPrimary : palette.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              achievement.description,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isUnlocked
+                    ? palette.textSecondary
+                    : palette.textDisabled,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

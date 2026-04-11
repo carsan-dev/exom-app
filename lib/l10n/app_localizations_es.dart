@@ -419,6 +419,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unlockedAchievementsSection => 'Logros desbloqueados';
 
   @override
+  String get viewAllButton => 'Ver todos';
+
+  @override
+  String get achievementBoardTitle => 'Todos los logros';
+
+  @override
   String get noActiveChallenges => 'Sin retos activos';
 
   @override

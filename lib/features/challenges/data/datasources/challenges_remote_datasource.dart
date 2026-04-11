@@ -6,6 +6,7 @@ abstract class ChallengesRemoteDataSource {
   Future<List<ChallengeModel>> getMyChallenges();
   Future<void> updateProgress(String challengeId, double value);
   Future<List<AchievementModel>> getMyAchievements();
+  Future<List<AchievementModel>> getAchievementCatalog();
   Future<int> getMyStreakDays();
 }
 
@@ -46,6 +47,24 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       if (items is List) {
         return items
             .map((e) => AchievementModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    }
+    return [];
+  }
+
+  @override
+  Future<List<AchievementModel>> getAchievementCatalog() async {
+    final response = await _apiClient.dio.get<dynamic>('/achievements/catalog');
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final items = data['data'];
+      if (items is List) {
+        return items
+            .map(
+              (e) =>
+                  AchievementModel.fromCatalogJson(e as Map<String, dynamic>),
+            )
             .toList();
       }
     }

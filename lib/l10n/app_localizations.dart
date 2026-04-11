@@ -878,6 +878,18 @@ abstract class AppLocalizations {
   /// **'Logros desbloqueados'**
   String get unlockedAchievementsSection;
 
+  /// No description provided for @viewAllButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get viewAllButton;
+
+  /// No description provided for @achievementBoardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los logros'**
+  String get achievementBoardTitle;
+
   /// No description provided for @noActiveChallenges.
   ///
   /// In es, this message translates to:

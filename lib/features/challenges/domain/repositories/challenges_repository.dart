@@ -5,5 +5,6 @@ abstract class ChallengesRepository {
   Future<List<ChallengeEntity>> getMyChallenges();
   Future<void> updateProgress(String challengeId, double value);
   Future<List<AchievementEntity>> getMyAchievements();
+  Future<List<AchievementEntity>> getAchievementCatalog();
   Future<int> getMyStreakDays();
 }

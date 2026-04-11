@@ -599,12 +599,36 @@ class _TodayTrainingBanner extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    training.name,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: palette.textPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                  Hero(
+                    tag: 'training-${training.id}-title',
+                    flightShuttleBuilder:
+                        (flightCtx, anim, dir, fromCtx, toCtx) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          training.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: palette.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.374,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Text(
+                        training.name,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: palette.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.374,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

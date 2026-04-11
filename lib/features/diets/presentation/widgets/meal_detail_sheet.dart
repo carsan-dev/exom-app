@@ -339,12 +339,35 @@ class _MealSheetBody extends StatelessWidget {
       children: [
         _SheetTopBar(handleColor: palette.textDisabled),
         const SizedBox(height: 8),
-        Text(
-          meal.name,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+        Hero(
+          tag: 'meal-${meal.id}-title',
+          flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
+            return Material(
+              color: Colors.transparent,
+              child: Text(
+                meal.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.374,
+                ),
+              ),
+            );
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: Text(
+              meal.name,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: palette.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.374,
+              ),
+            ),
           ),
         ),
         if (badges.isNotEmpty) ...[

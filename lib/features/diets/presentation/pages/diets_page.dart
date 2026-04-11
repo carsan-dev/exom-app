@@ -651,18 +651,43 @@ class _MealCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          meal.name,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isCompleted
-                                ? palette.textSecondary
-                                : palette.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                            decorationColor: palette.textSecondary,
+                        child: Hero(
+                          tag: 'meal-${meal.id}-title',
+                          flightShuttleBuilder:
+                              (flightCtx, anim, dir, fromCtx, toCtx) {
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: Text(
+                                    meal.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleLarge
+                                        ?.copyWith(
+                                          color: palette.textPrimary,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.374,
+                                        ),
+                                  ),
+                                );
+                              },
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Text(
+                              meal.name,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: isCompleted
+                                    ? palette.textSecondary
+                                    : palette.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                decorationColor: palette.textSecondary,
+                                letterSpacing: -0.224,
+                              ),
+                            ),
                           ),
                         ),
                       ),

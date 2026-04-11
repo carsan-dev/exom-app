@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -82,6 +86,20 @@ class AppRoutes {
   static const help = '/help';
 }
 
+/// Build a platform-aware [Page]: native iOS swipe-back via [CupertinoPage],
+/// Material slide on Android. Used for full-screen routes outside the shell.
+Page<T> _platformPage<T>({
+  required LocalKey key,
+  required Widget child,
+  String? name,
+}) {
+  final isIos = !kIsWeb && Platform.isIOS;
+  if (isIos) {
+    return CupertinoPage<T>(key: key, name: name, child: child);
+  }
+  return MaterialPage<T>(key: key, name: name, child: child);
+}
+
 class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -150,8 +168,21 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HomePage()),
+            pageBuilder: (context, state) => CustomTransitionPage(
+              key: state.pageKey,
+              child: const HomePage(),
+              transitionDuration: const Duration(milliseconds: 420),
+              reverseTransitionDuration: const Duration(milliseconds: 240),
+              transitionsBuilder: (ctx, animation, secondary, child) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                  child: child,
+                );
+              },
+            ),
           ),
           GoRoute(
             path: AppRoutes.trainings,
@@ -180,23 +211,35 @@ class AppRouter {
         ],
       ),
 
-      // Training detail (no shell — full-screen push)
+      // Training detail (no shell — full-screen push with native iOS swipe-back)
       GoRoute(
         path: AppRoutes.trainingDetail,
-        builder: (_, state) => TrainingDetailPage(
-          trainingId: state.pathParameters['id']!,
-          selectedDate: state.uri.queryParameters['date'],
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: TrainingDetailPage(
+            trainingId: state.pathParameters['id']!,
+            selectedDate: state.uri.queryParameters['date'],
+          ),
         ),
       ),
 
       // Profile (no shell nav bar — accessible from drawer)
       GoRoute(
         path: AppRoutes.profile,
-        builder: (context, state) => const ProfilePage(),
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: const ProfilePage(),
+        ),
         routes: [
           GoRoute(
             path: 'metrics',
-            builder: (context, state) => const MetricsPage(),
+            pageBuilder: (_, state) => _platformPage(
+              key: state.pageKey,
+              name: state.name,
+              child: const MetricsPage(),
+            ),
           ),
         ],
       ),
@@ -204,32 +247,51 @@ class AppRouter {
       // Modal routes (no shell)
       GoRoute(
         path: AppRoutes.recap,
-        builder: (context, state) => const RecapPage(),
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: const RecapPage(),
+        ),
         routes: [
           GoRoute(
             path: ':id',
-            builder: (_, state) =>
-                RecapDetailPage(recapId: state.pathParameters['id']!),
+            pageBuilder: (_, state) => _platformPage(
+              key: state.pageKey,
+              name: state.name,
+              child: RecapDetailPage(recapId: state.pathParameters['id']!),
+            ),
           ),
         ],
       ),
       GoRoute(
         path: AppRoutes.feedback,
-        builder: (_, state) {
+        pageBuilder: (_, state) {
           final extra = state.extra as Map<String, String?>?;
-          return FeedbackPage(
-            exerciseId: extra?['exerciseId'],
-            exerciseName: extra?['exerciseName'],
+          return _platformPage(
+            key: state.pageKey,
+            name: state.name,
+            child: FeedbackPage(
+              exerciseId: extra?['exerciseId'],
+              exerciseName: extra?['exerciseName'],
+            ),
           );
         },
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (context, state) => const SettingsPage(),
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: const SettingsPage(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.help,
-        builder: (context, state) => const HelpPage(),
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: const HelpPage(),
+        ),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

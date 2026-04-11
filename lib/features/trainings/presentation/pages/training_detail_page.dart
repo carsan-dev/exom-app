@@ -299,7 +299,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: Container(
+                child: SafeArea(
+                  top: false,
+                  child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   decoration: GlassDecoration.elevated(),
                   child: Column(
@@ -390,6 +392,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
             ],

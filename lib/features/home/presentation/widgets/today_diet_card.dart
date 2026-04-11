@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -162,6 +163,7 @@ class TodayDietCard extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () async {
+                HapticFeedback.selectionClick();
                 if (hasNextMeal) {
                   await showMealDetailSheet(
                     context,

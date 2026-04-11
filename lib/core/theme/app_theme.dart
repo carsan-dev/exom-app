@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -297,6 +298,19 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
+  // Typography family: on Apple platforms, null defers to the system font
+  // (SF Pro Display/Text, with optical sizing). On Android/others we ship
+  // Cabinet Grotesk as the display/body face — see pubspec.yaml for weights.
+  static String? get fontFamily {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return null;
+      default:
+        return 'CabinetGrotesk';
+    }
+  }
+
   static const ExomThemePalette _darkPalette = ExomThemePalette(
     background: AppColors.background,
     surface: AppColors.card,
@@ -415,68 +429,119 @@ class AppTheme {
       cardColor: palette.surface,
       dividerColor: palette.divider,
       shadowColor: palette.shadow,
-      fontFamily: 'Inter',
+      fontFamily: fontFamily,
       extensions: <ThemeExtension<dynamic>>[
         palette,
         isDark ? _darkSemanticPalette : _lightSemanticPalette,
       ],
+      // Typography follows Apple's optical-sizing philosophy: headlines
+      // compress (1.07–1.19 line-height) with negative tracking, body text
+      // opens up (1.43–1.47) but still tracks slightly tight. See DESIGN.md.
       textTheme: TextTheme(
         displayLarge: TextStyle(
           fontSize: 32,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
+          height: 1.07,
+          letterSpacing: -0.8,
           color: palette.textPrimary,
-          letterSpacing: -0.5,
         ),
         displayMedium: TextStyle(
           fontSize: 28,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
+          height: 1.10,
+          letterSpacing: -0.6,
+          color: palette.textPrimary,
+        ),
+        displaySmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          height: 1.14,
+          letterSpacing: -0.5,
           color: palette.textPrimary,
         ),
         headlineLarge: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
+          height: 1.14,
+          letterSpacing: -0.5,
           color: palette.textPrimary,
         ),
         headlineMedium: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
+          height: 1.19,
+          letterSpacing: -0.4,
           color: palette.textPrimary,
         ),
         headlineSmall: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
+          height: 1.24,
+          letterSpacing: -0.37,
           color: palette.textPrimary,
         ),
         titleLarge: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
+          height: 1.30,
+          letterSpacing: -0.32,
           color: palette.textPrimary,
         ),
         titleMedium: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
+          height: 1.29,
+          letterSpacing: -0.22,
+          color: palette.textPrimary,
+        ),
+        titleSmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          height: 1.33,
+          letterSpacing: -0.12,
           color: palette.textPrimary,
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
-          fontWeight: FontWeight.normal,
+          fontWeight: FontWeight.w400,
+          height: 1.47,
+          letterSpacing: -0.32,
           color: palette.textPrimary,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
-          fontWeight: FontWeight.normal,
+          fontWeight: FontWeight.w400,
+          height: 1.43,
+          letterSpacing: -0.22,
           color: palette.textSecondary,
         ),
         bodySmall: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.normal,
+          fontWeight: FontWeight.w400,
+          height: 1.33,
+          letterSpacing: -0.12,
           color: palette.textSecondary,
         ),
         labelLarge: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
+          height: 1.29,
+          letterSpacing: -0.22,
           color: palette.textPrimary,
-          letterSpacing: 0.5,
+        ),
+        labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          height: 1.33,
+          letterSpacing: -0.12,
+          color: palette.textPrimary,
+        ),
+        labelSmall: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          height: 1.40,
+          letterSpacing: -0.08,
+          color: palette.textSecondary,
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -486,8 +551,11 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: fontFamily,
           fontSize: 20,
           fontWeight: FontWeight.w700,
+          height: 1.19,
+          letterSpacing: -0.4,
           color: palette.textPrimary,
         ),
       ),
@@ -499,7 +567,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.19,
+            letterSpacing: -0.32,
+          ),
           elevation: 0,
         ),
       ),
@@ -511,7 +585,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.19,
+            letterSpacing: -0.32,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

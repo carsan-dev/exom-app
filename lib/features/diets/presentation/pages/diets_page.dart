@@ -5,6 +5,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
@@ -111,6 +112,9 @@ class _DietContent extends StatelessWidget {
         context.read<DietBloc>().add(DietLoadRequested(date: selectedDate));
       },
       child: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         padding: const EdgeInsets.only(bottom: 32),
         children: [
           _DietHeader(
@@ -396,7 +400,7 @@ class _MealCard extends StatelessWidget {
     final semantic = context.exomSemantic;
     final color = _mealColor(context, meal.type);
 
-    return GestureDetector(
+    return TappableScale(
       onTap: () async {
         await showMealDetailSheet(
           context,

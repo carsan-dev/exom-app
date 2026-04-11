@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/tappable_scale.dart';
 
 /// Simulated glass card widget (no BackdropFilter — performant for lists).
 ///
 /// Replaces the common pattern of `Container(decoration: BoxDecoration(color: palette.surface...))`.
 /// Uses semi-transparent fill + subtle gradient + luminous border + soft shadow.
+///
+/// When `onTap` is provided the card animates (scale + selection haptic) on
+/// press — no more Material ripple on top of the glass surface.
 class GlassCard extends StatelessWidget {
   const GlassCard({
     super.key,
@@ -14,6 +18,7 @@ class GlassCard extends StatelessWidget {
     this.borderRadius = 20,
     this.accentColor,
     this.onTap,
+    this.onLongPress,
     this.elevated = false,
   });
 
@@ -23,6 +28,7 @@ class GlassCard extends StatelessWidget {
   final double borderRadius;
   final Color? accentColor;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool elevated;
 
   @override
@@ -42,9 +48,10 @@ class GlassCard extends StatelessWidget {
       ),
     );
 
-    if (onTap != null) {
-      return GestureDetector(
+    if (onTap != null || onLongPress != null) {
+      return TappableScale(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: container,
       );
     }

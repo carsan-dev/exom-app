@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -112,7 +113,12 @@ class _DateHeader extends StatelessWidget {
     final label = _relativeLabel(context, selectedDate);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        ExomSpacing.lg,
+        ExomSpacing.sm,
+        ExomSpacing.lg,
+        ExomSpacing.xs,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -125,6 +131,8 @@ class _DateHeader extends StatelessWidget {
                     color: palette.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
+                    height: 1.07,
+                    letterSpacing: -0.8,
                   ),
                 ),
                 Text(
@@ -139,8 +147,12 @@ class _DateHeader extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => context.go('/calendar'),
+            tooltip: AppLocalizations.of(context)!.openCalendarButton,
+            iconSize: 18,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            padding: EdgeInsets.zero,
             icon: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(ExomSpacing.sm),
               decoration: BoxDecoration(
                 color: palette.glassBackground,
                 borderRadius: BorderRadius.circular(10),
@@ -182,6 +194,9 @@ class _LoadedBody extends StatelessWidget {
         children: [
           const _HomeHeroAccent(),
           ListView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             padding: const EdgeInsets.only(bottom: 32),
             children: [
               _DateHeader(selectedDate: selectedDate),
@@ -221,6 +236,9 @@ class _RestDayBody extends StatelessWidget {
         children: [
           const _HomeHeroAccent(),
           ListView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             padding: const EdgeInsets.only(bottom: 32),
             children: [
               _DateHeader(selectedDate: selectedDate),

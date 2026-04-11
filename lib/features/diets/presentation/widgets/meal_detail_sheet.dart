@@ -119,11 +119,13 @@ class _MealDetailLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return ListView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.primary),
+        _SheetTopBar(handleColor: palette.textDisabled),
         const SizedBox(height: 16),
         const ShimmerCard(height: 28),
         const SizedBox(height: 12),
@@ -212,11 +214,13 @@ class _MealDetailError extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return ListView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.primary),
+        _SheetTopBar(handleColor: palette.textDisabled),
         const SizedBox(height: 24),
         ErrorWidget2(message: message, onRetry: onRetry),
       ],
@@ -327,11 +331,13 @@ class _MealSheetBody extends StatelessWidget {
         ? dietState.isCompleted
         : isCompleted;
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return ListView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.primary),
+        _SheetTopBar(handleColor: palette.textDisabled),
         const SizedBox(height: 8),
         Text(
           meal.name,
@@ -451,19 +457,12 @@ class _SheetTopBar extends StatelessWidget {
         alignment: Alignment.topCenter,
         children: [
           Container(
-            width: 72,
-            height: 6,
-            margin: const EdgeInsets.only(top: 10),
+            width: 44,
+            height: 5,
+            margin: const EdgeInsets.only(top: 8),
             decoration: BoxDecoration(
-              color: handleColor.withValues(alpha: 0.9),
+              color: handleColor.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: handleColor.withValues(alpha: 0.24),
-                  blurRadius: 14,
-                  spreadRadius: 1,
-                ),
-              ],
             ),
           ),
           Align(

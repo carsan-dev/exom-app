@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class WeekDaySelector extends StatelessWidget {
@@ -20,7 +22,7 @@ class WeekDaySelector extends StatelessWidget {
         if (state is HomeRestDay) selectedDate = state.selectedDate;
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.lg),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(7, (i) {
@@ -33,15 +35,22 @@ class WeekDaySelector extends StatelessWidget {
                   dayDate.month == selectedDate.month &&
                   dayDate.day == selectedDate.day;
 
-              return GestureDetector(
+              return TappableScale(
                 onTap: () {
                   context.read<HomeBloc>().add(HomeDateSelected(dayDate));
                 },
-                child: _DayCircle(
-                  label: _labelForDay(context, dayDate),
-                  isToday: isToday,
-                  isPast: isPast,
-                  isSelected: isSelected,
+                scale: 0.92,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: _DayCircle(
+                      label: _labelForDay(context, dayDate),
+                      isToday: isToday,
+                      isPast: isPast,
+                      isSelected: isSelected,
+                    ),
+                  ),
                 ),
               );
             }),

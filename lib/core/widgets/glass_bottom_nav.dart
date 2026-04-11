@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -100,19 +101,33 @@ class GlassBottomNav extends StatelessWidget {
                   height: _barHeight,
                   child: Row(
                     children: List.generate(5, (i) {
+                      final isSelected = i == selectedIndex;
                       return Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => onTap(i),
-                          child: Center(
-                            child: i == selectedIndex
-                                ? const SizedBox.shrink()
-                                : _buildIcon(
-                                    i,
-                                    false,
-                                    activeColor: palette.onPrimary,
-                                    inactiveColor: inactiveColor,
-                                  ),
+                        child: Semantics(
+                          button: true,
+                          selected: isSelected,
+                          label: _a11yLabel(i),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              if (!isSelected) {
+                                HapticFeedback.lightImpact();
+                              }
+                              onTap(i);
+                            },
+                            child: SizedBox(
+                              height: _barHeight,
+                              child: Center(
+                                child: isSelected
+                                    ? const SizedBox.shrink()
+                                    : _buildIcon(
+                                        i,
+                                        false,
+                                        activeColor: palette.onPrimary,
+                                        inactiveColor: inactiveColor,
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -150,5 +165,22 @@ class GlassBottomNav extends StatelessWidget {
     final w = MediaQuery.of(context).size.width;
     final slot = w / 5;
     return slot * index + slot / 2;
+  }
+
+  String _a11yLabel(int index) {
+    switch (index) {
+      case 0:
+        return 'Retos';
+      case 1:
+        return 'Entrenamientos';
+      case 2:
+        return 'Inicio';
+      case 3:
+        return 'Dietas';
+      case 4:
+        return 'Calendario';
+      default:
+        return '';
+    }
   }
 }

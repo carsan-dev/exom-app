@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -217,6 +218,7 @@ class TodayTrainingCard extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: summary.trainingId != null
                     ? () async {
+                        HapticFeedback.selectionClick();
                         await context.push('/trainings/${summary.trainingId}');
                         if (context.mounted) {
                           context.read<HomeBloc>().add(

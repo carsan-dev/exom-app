@@ -8,6 +8,8 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 
 class StatsRow extends StatelessWidget {
@@ -24,7 +26,10 @@ class StatsRow extends StatelessWidget {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: ExomSpacing.lg,
+        vertical: ExomSpacing.sm,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -41,7 +46,7 @@ class StatsRow extends StatelessWidget {
               onTap: () => context.push('/profile/metrics'),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: ExomSpacing.md),
           Expanded(
             child: _StatCard(
               value: '${summary.streakDays}',
@@ -53,7 +58,7 @@ class StatsRow extends StatelessWidget {
               onTap: () => context.push('/challenges'),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: ExomSpacing.md),
           Expanded(
             child: _StatCard(
               value: summary.lastSleepHours != null
@@ -104,59 +109,58 @@ class _StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: highlighted
-              ? GlassDecoration.accentCard(color, borderRadius: 16)
-              : GlassDecoration.card(borderRadius: 16),
-          child: Column(
-            children: [
-              Text(
-                value,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: highlighted ? color : palette.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
+    return TappableScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ExomSpacing.md,
+          vertical: ExomSpacing.md + 2,
+        ),
+        decoration: highlighted
+            ? GlassDecoration.accentCard(color, borderRadius: 16)
+            : GlassDecoration.card(borderRadius: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: highlighted ? color : palette.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                letterSpacing: -0.44,
               ),
-              const SizedBox(height: 2),
-              Text(
-                unit,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: highlighted ? color : palette.textSecondary,
-                  fontSize: 11,
-                ),
+            ),
+            const SizedBox(height: ExomSpacing.xxs),
+            Text(
+              unit,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: highlighted ? color : palette.textSecondary,
+                fontSize: 11,
               ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: highlighted ? color : palette.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+            ),
+            const SizedBox(height: ExomSpacing.xs + 2),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: highlighted ? color : palette.textSecondary,
+                fontSize: 13,
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: highlighted
-                        ? color.withValues(alpha: 0.7)
-                        : palette.textDisabled,
-                    fontSize: 10,
-                  ),
-                  textAlign: TextAlign.center,
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: ExomSpacing.xxs),
+              Text(
+                subtitle!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: highlighted
+                      ? color.withValues(alpha: 0.7)
+                      : palette.textDisabled,
                 ),
-              ],
+                textAlign: TextAlign.center,
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

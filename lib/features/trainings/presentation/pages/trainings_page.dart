@@ -6,6 +6,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/injection_container.dart';
@@ -103,6 +104,9 @@ class _TrainingsView extends StatelessWidget {
         );
       },
       child: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         padding: const EdgeInsets.only(bottom: 32),
         children: [
           if (state.todayTraining != null) ...[
@@ -346,7 +350,7 @@ class _TodayTrainingBanner extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final color = _trainingTypeColor(context, training.type);
 
-    return GestureDetector(
+    return TappableScale(
       onTap: () async {
         final dateQuery = selectedDate != null ? '?date=$selectedDate' : '';
         await context.push('/trainings/${training.id}$dateQuery');
@@ -541,7 +545,7 @@ class _TrainingHistoryListItem extends StatelessWidget {
     final statusColor = entry.isCompleted ? semantic.success : semantic.warning;
     final entryDate = _storageDate(entry.date);
 
-    return GestureDetector(
+    return TappableScale(
       onTap: () async {
         await context.push('/trainings/${entry.id}?date=$entryDate');
         if (context.mounted) {

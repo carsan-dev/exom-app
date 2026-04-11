@@ -8,6 +8,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -169,10 +170,7 @@ class _RecapViewState extends State<_RecapView> {
     ];
 
     if (state is RecapLoading || state is RecapInitial) {
-      return Center(
-        key: ValueKey('recap-loading'),
-        child: CircularProgressIndicator(color: context.exomPalette.primary),
-      );
+      return const _RecapLoadingView(key: ValueKey('recap-loading'));
     }
 
     if (state is RecapFormActive) {
@@ -310,6 +308,113 @@ class _RecapViewState extends State<_RecapView> {
       Localizations.localeOf(context).languageCode,
     );
     return '${format.format(startDate)} - ${format.format(endDate)}';
+  }
+}
+
+class _RecapLoadingView extends StatelessWidget {
+  const _RecapLoadingView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+      children: const [
+        ShimmerCard(
+          height: 92,
+          borderRadius: BorderRadius.all(Radius.circular(22)),
+        ),
+        SizedBox(height: 16),
+        _RecapHistorySkeletonCard(),
+        SizedBox(height: 14),
+        _RecapHistorySkeletonCard(),
+        SizedBox(height: 14),
+        _RecapHistorySkeletonCard(),
+      ],
+    );
+  }
+}
+
+class _RecapHistorySkeletonCard extends StatelessWidget {
+  const _RecapHistorySkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(18),
+      borderRadius: 22,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerCard(
+                      height: 20,
+                      width: 152,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    SizedBox(height: 8),
+                    ShimmerCard(
+                      height: 14,
+                      width: 110,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(height: 10),
+                    ShimmerCard(
+                      height: 14,
+                      width: 172,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 28,
+                width: 78,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ShimmerCard(
+                height: 30,
+                width: 102,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+              ShimmerCard(
+                height: 30,
+                width: 108,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+              ShimmerCard(
+                height: 30,
+                width: 94,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ShimmerCard(
+              height: 40,
+              width: 116,
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

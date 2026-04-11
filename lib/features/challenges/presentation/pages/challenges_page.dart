@@ -51,7 +51,7 @@ class ChallengesPage extends StatelessWidget {
       child: BlocBuilder<ChallengesBloc, ChallengesState>(
         builder: (context, state) {
           if (state is ChallengesInitial || state is ChallengesLoading) {
-            return const LoadingWidget();
+            return const _ChallengesLoadingContent();
           }
           if (state is ChallengesError) {
             return _buildErrorState(context, state);
@@ -70,6 +70,140 @@ class ChallengesPage extends StatelessWidget {
           }
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+}
+
+class _ChallengesLoadingContent extends StatelessWidget {
+  const _ChallengesLoadingContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
+      children: const [
+        _ChallengesHeaderSkeleton(),
+        _ChallengesSectionTitleSkeleton(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: ShimmerCard(
+            height: 188,
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+          ),
+        ),
+        _ChallengesSectionTitleSkeleton(width: 168),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: ShimmerCard(
+            height: 96,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: ShimmerCard(
+            height: 96,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+        ),
+        _ChallengesSectionTitleSkeleton(width: 190, showAction: true),
+        _ChallengesAchievementsSkeleton(),
+      ],
+    );
+  }
+}
+
+class _ChallengesHeaderSkeleton extends StatelessWidget {
+  const _ChallengesHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerCard(
+                  height: 34,
+                  width: 176,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                SizedBox(height: 8),
+                ShimmerCard(
+                  height: 16,
+                  width: 224,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          ShimmerCard(
+            height: 104,
+            width: 96,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengesSectionTitleSkeleton extends StatelessWidget {
+  const _ChallengesSectionTitleSkeleton({
+    this.width = 132,
+    this.showAction = false,
+  });
+
+  final double width;
+  final bool showAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        children: [
+          ShimmerCard(
+            height: 22,
+            width: width,
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          ),
+          const Spacer(),
+          if (showAction)
+            const ShimmerCard(
+              height: 28,
+              width: 72,
+              borderRadius: BorderRadius.all(Radius.circular(999)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengesAchievementsSkeleton extends StatelessWidget {
+  const _ChallengesAchievementsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: 3,
+        separatorBuilder: (_, index) => const SizedBox(width: 12),
+        itemBuilder: (_, index) => const ShimmerCard(
+          height: 120,
+          width: 116,
+          borderRadius: BorderRadius.all(Radius.circular(18)),
+        ),
       ),
     );
   }

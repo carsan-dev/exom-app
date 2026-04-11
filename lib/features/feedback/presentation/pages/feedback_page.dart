@@ -7,6 +7,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
@@ -60,9 +61,7 @@ class FeedbackPage extends StatelessWidget {
             },
             builder: (context, state) {
               if (state is FeedbackLoading) {
-                return Center(
-                  child: CircularProgressIndicator(color: palette.primary),
-                );
+                return const _FeedbackLoadingBody();
               }
 
               final items = (state is FeedbackLoaded)
@@ -117,6 +116,149 @@ class FeedbackPage extends StatelessWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FeedbackLoadingBody extends StatelessWidget {
+  const _FeedbackLoadingBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 40),
+      children: const [
+        _FeedbackFormSkeleton(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+          child: ShimmerCard(
+            height: 22,
+            width: 92,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+        _FeedbackHistorySkeletonCard(),
+        _FeedbackHistorySkeletonCard(),
+      ],
+    );
+  }
+}
+
+class _FeedbackFormSkeleton extends StatelessWidget {
+  const _FeedbackFormSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      borderRadius: 22,
+      elevated: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          ShimmerCard(
+            height: 18,
+            width: 132,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          SizedBox(height: 8),
+          ShimmerCard(
+            height: 14,
+            width: 116,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              ShimmerCard(
+                height: 32,
+                width: 118,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              SizedBox(width: 8),
+              ShimmerCard(
+                height: 32,
+                width: 118,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          ShimmerCard(
+            height: 56,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          SizedBox(height: 12),
+          ShimmerCard(
+            height: 92,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          SizedBox(height: 16),
+          ShimmerCard(
+            height: 48,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackHistorySkeletonCard extends StatelessWidget {
+  const _FeedbackHistorySkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 18,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            children: [
+              ShimmerCard(
+                height: 16,
+                width: 16,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: ShimmerCard(
+                  height: 16,
+                  width: 156,
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ),
+              SizedBox(width: 12),
+              ShimmerCard(
+                height: 24,
+                width: 72,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          ShimmerCard(
+            height: 14,
+            width: 188,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          SizedBox(height: 8),
+          ShimmerCard(
+            height: 54,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          SizedBox(height: 8),
+          ShimmerCard(
+            height: 12,
+            width: 84,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ],
       ),
     );
   }

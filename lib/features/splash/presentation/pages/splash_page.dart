@@ -227,7 +227,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 children: [
                   _RadialGlow(
                     color: palette.primary,
-                    opacity: _bgFade.value * 0.32,
+                    opacity: _bgFade.value * 0.2,
                   ),
                   Center(
                     child: Column(
@@ -292,7 +292,7 @@ class _RadialGlow extends StatelessWidget {
             center: const Alignment(0, -0.15),
             radius: 0.9,
             colors: [
-              color.withValues(alpha: 0.1 * opacity),
+              color.withValues(alpha: 0.06 * opacity),
               Colors.transparent,
             ],
           ),
@@ -356,12 +356,12 @@ class _LogoMark extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: accent.withValues(alpha: 0.2 * glow * pulseFactor),
+                  color: accent.withValues(alpha: 0.11 * glow * pulseFactor),
                   blurRadius: 54,
                   spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: accent.withValues(alpha: 0.08 * glow),
+                  color: accent.withValues(alpha: 0.04 * glow),
                   blurRadius: 20,
                   spreadRadius: 0,
                 ),
@@ -376,12 +376,12 @@ class _LogoMark extends StatelessWidget {
               shape: BoxShape.circle,
               color: discFill,
               border: Border.all(
-                color: accent.withValues(alpha: 0.22 * glow),
+                color: accent.withValues(alpha: 0.12 * glow),
                 width: 1.2,
               ),
               gradient: RadialGradient(
                 colors: [
-                  accent.withValues(alpha: 0.08 * glow),
+                  accent.withValues(alpha: 0.04 * glow),
                   Colors.transparent,
                 ],
               ),
@@ -420,7 +420,7 @@ class _RingPainter extends CustomPainter {
     final trackPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = color.withValues(alpha: 0.10 * opacity);
+      ..color = color.withValues(alpha: 0.05 * opacity);
     canvas.drawCircle(center, radius, trackPaint);
 
     final sweepPaint = Paint()
@@ -431,7 +431,7 @@ class _RingPainter extends CustomPainter {
         colors: [
           Colors.transparent,
           color.withValues(alpha: 0.0),
-          color.withValues(alpha: 0.9 * opacity),
+          color.withValues(alpha: 0.45 * opacity),
           color.withValues(alpha: 0.0),
         ],
         stops: const [0.0, 0.4, 0.85, 1.0],

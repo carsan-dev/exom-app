@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -76,19 +78,21 @@ class _HomeLoadingBody extends StatelessWidget {
     return Stack(
       children: [
         const _HomeHeroAccent(),
-        ListView(
+        CustomScrollView(
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          padding: const EdgeInsets.only(bottom: 32),
-          children: const [
-            _HomeDateHeaderSkeleton(),
-            SizedBox(height: 12),
-            _HomeWeekSelectorSkeleton(),
-            SizedBox(height: 20),
-            _HomeFeatureCardSkeleton(),
-            _HomeFeatureCardSkeleton(showSecondaryChip: false),
-            _HomeStatsRowSkeleton(),
+          slivers: [
+            const SliverToBoxAdapter(child: _HomeDateHeaderSkeleton()),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            const SliverToBoxAdapter(child: _HomeWeekSelectorSkeleton()),
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: _HomeFeatureCardSkeleton()),
+            const SliverToBoxAdapter(
+              child: _HomeFeatureCardSkeleton(showSecondaryChip: false),
+            ),
+            const SliverToBoxAdapter(child: _HomeStatsRowSkeleton()),
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
           ],
         ),
       ],
@@ -282,39 +286,67 @@ class _HomeStatsRowSkeleton extends StatelessWidget {
   }
 }
 
-class _DateHeader extends StatelessWidget {
-  const _DateHeader({required this.selectedDate});
+// ---------------------------------------------------------------------------
+// iOS-style collapsing large title header (SliverPersistentHeader).
+//
+// Expanded: 28px relative-date label + subtitle + calendar icon.
+// Collapsed: 20px label only + calendar icon, with light glass tint behind.
+// ---------------------------------------------------------------------------
+
+String _relativeLabel(BuildContext context, DateTime date) {
+  final today = DateTime.now();
+  final todayNorm = DateTime(today.year, today.month, today.day);
+  final dateNorm = DateTime(date.year, date.month, date.day);
+  final diff = dateNorm.difference(todayNorm).inDays;
+  final l10n = AppLocalizations.of(context);
+
+  switch (diff) {
+    case 0:
+      return l10n.todayLabel;
+    case 1:
+      return l10n.tomorrowLabel;
+    case 2:
+      return l10n.dayAfterTomorrowLabel;
+    case -1:
+      return l10n.yesterdayLabel;
+    case -2:
+      return l10n.twoDaysAgoLabel;
+    default:
+      if (diff > 0) {
+        return l10n.inDaysLabel(diff);
+      }
+      return l10n.daysAgoLabel(diff.abs());
+  }
+}
+
+class _HomeSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _HomeSliverHeaderDelegate({required this.selectedDate});
 
   final DateTime selectedDate;
 
-  String _relativeLabel(BuildContext context, DateTime date) {
-    final today = DateTime.now();
-    final todayNorm = DateTime(today.year, today.month, today.day);
-    final dateNorm = DateTime(date.year, date.month, date.day);
-    final diff = dateNorm.difference(todayNorm).inDays;
-    final l10n = AppLocalizations.of(context);
-
-    switch (diff) {
-      case 0:
-        return l10n.todayLabel;
-      case 1:
-        return l10n.tomorrowLabel;
-      case 2:
-        return l10n.dayAfterTomorrowLabel;
-      case -1:
-        return l10n.yesterdayLabel;
-      case -2:
-        return l10n.twoDaysAgoLabel;
-      default:
-        if (diff > 0) {
-          return l10n.inDaysLabel(diff);
-        }
-        return l10n.daysAgoLabel(diff.abs());
-    }
-  }
+  // Expanded: big title (28px * 1.07 ≈ 30) + gap 4 + subtitle (~20) + padding
+  static const double _max = 100.0;
+  // Collapsed: compact title (~22) + vertical padding
+  static const double _min = 56.0;
 
   @override
-  Widget build(BuildContext context) {
+  double get maxExtent => _max;
+
+  @override
+  double get minExtent => _min;
+
+  @override
+  bool shouldRebuild(covariant _HomeSliverHeaderDelegate old) =>
+      old.selectedDate != selectedDate;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final currentExtent = (_max - shrinkOffset).clamp(_min, _max).toDouble();
+    final t = (shrinkOffset / (_max - _min)).clamp(0.0, 1.0);
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final locale = Localizations.localeOf(context).languageCode;
@@ -326,63 +358,88 @@ class _DateHeader extends StatelessWidget {
     final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
     final label = _relativeLabel(context, selectedDate);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        ExomSpacing.lg,
-        ExomSpacing.sm,
-        ExomSpacing.lg,
-        ExomSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    // Interpolated font: 28 → 20 px, spacing –0.8 → –0.4
+    final fontSize = lerpDouble(28, 20, t)!;
+    final letterSpacing = lerpDouble(-0.8, -0.4, t)!;
+    // Subtitle fades out faster than the overall collapse
+    final subtitleOpacity = (1.0 - t * 2.5).clamp(0.0, 1.0);
+    // Glass tint behind collapsed header
+    final glassTint = t * 0.85;
+
+    return SizedBox(
+      height: currentExtent,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18 * t, sigmaY: 18 * t),
+          child: Container(
+            color: palette.background.withValues(alpha: glassTint * 0.72),
+            padding: EdgeInsets.fromLTRB(
+              ExomSpacing.lg,
+              lerpDouble(ExomSpacing.sm, ExomSpacing.lg, t)!,
+              ExomSpacing.lg,
+              ExomSpacing.xs,
+            ),
+            child: Row(
               children: [
-                Text(
-                  label,
-                  style: theme.textTheme.displayMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    height: 1.07,
-                    letterSpacing: -0.8,
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: theme.textTheme.displayMedium?.copyWith(
+                          color: palette.textPrimary,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w800,
+                          height: 1.07,
+                          letterSpacing: letterSpacing,
+                        ),
+                      ),
+                      if (subtitleOpacity > 0)
+                        Opacity(
+                          opacity: subtitleOpacity,
+                          child: Text(
+                            '$capitalDay $dayMonth',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: palette.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                Text(
-                  '$capitalDay $dayMonth',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
+                IconButton(
+                  onPressed: () => context.go('/calendar'),
+                  tooltip: AppLocalizations.of(context).openCalendarButton,
+                  iconSize: 18,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
+                  ),
+                  padding: EdgeInsets.zero,
+                  icon: Container(
+                    padding: const EdgeInsets.all(ExomSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: palette.glassBackground,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: palette.glassBorder.withValues(alpha: 0.15),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today_outlined,
+                      color: palette.textSecondary,
+                      size: 18,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => context.go('/calendar'),
-            tooltip: AppLocalizations.of(context).openCalendarButton,
-            iconSize: 18,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            padding: EdgeInsets.zero,
-            icon: Container(
-              padding: const EdgeInsets.all(ExomSpacing.sm),
-              decoration: BoxDecoration(
-                color: palette.glassBackground,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: palette.glassBorder.withValues(alpha: 0.15),
-                  width: 0.5,
-                ),
-              ),
-              child: Icon(
-                Icons.calendar_today_outlined,
-                color: palette.textSecondary,
-                size: 18,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -407,19 +464,22 @@ class _LoadedBody extends StatelessWidget {
       child: Stack(
         children: [
           const _HomeHeroAccent(),
-          ListView(
+          CustomScrollView(
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              _DateHeader(selectedDate: selectedDate),
-              const SizedBox(height: 12),
-              const WeekDaySelector(),
-              const SizedBox(height: 20),
-              TodayTrainingCard(summary: summary),
-              TodayDietCard(summary: summary),
-              StatsRow(summary: summary),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _HomeSliverHeaderDelegate(selectedDate: selectedDate),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              const SliverToBoxAdapter(child: WeekDaySelector()),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverToBoxAdapter(child: TodayTrainingCard(summary: summary)),
+              SliverToBoxAdapter(child: TodayDietCard(summary: summary)),
+              SliverToBoxAdapter(child: StatsRow(summary: summary)),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
         ],
@@ -449,81 +509,86 @@ class _RestDayBody extends StatelessWidget {
       child: Stack(
         children: [
           const _HomeHeroAccent(),
-          ListView(
+          CustomScrollView(
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              _DateHeader(selectedDate: selectedDate),
-              const SizedBox(height: 12),
-              const WeekDaySelector(),
-              const SizedBox(height: 20),
-              GlassCard(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(32),
-                borderRadius: 24,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: palette.glassBackground,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: palette.glassBorder.withValues(alpha: 0.15),
-                          width: 0.5,
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _HomeSliverHeaderDelegate(selectedDate: selectedDate),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              const SliverToBoxAdapter(child: WeekDaySelector()),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverToBoxAdapter(
+                child: GlassCard(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(32),
+                  borderRadius: 24,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: palette.glassBackground,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: palette.glassBorder.withValues(alpha: 0.15),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.fitness_center,
+                            color: palette.textDisabled,
+                            size: 36,
+                          ),
                         ),
                       ),
-                      child: Center(
-                        child: Icon(
-                          Icons.fitness_center,
-                          color: palette.textDisabled,
-                          size: 36,
+                      const SizedBox(height: 20),
+                      Text(
+                        l10n.restDayTitle,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: palette.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      l10n.restDayTitle,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.restDayMessage,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 14,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    OutlinedButton(
-                      onPressed: () => context.go('/calendar'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: palette.primary,
-                        side: BorderSide(color: palette.primary),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.restDayMessage,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: palette.textSecondary,
+                          fontSize: 14,
+                          height: 1.5,
                         ),
                       ),
-                      child: Text(l10n.openCalendarButton),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                      OutlinedButton(
+                        onPressed: () => context.go('/calendar'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: palette.primary,
+                          side: BorderSide(color: palette.primary),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l10n.openCalendarButton),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              StatsRow(summary: summary),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(child: StatsRow(summary: summary)),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
         ],

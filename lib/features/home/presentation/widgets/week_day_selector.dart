@@ -35,20 +35,27 @@ class WeekDaySelector extends StatelessWidget {
                   dayDate.month == selectedDate.month &&
                   dayDate.day == selectedDate.day;
 
-              return TappableScale(
-                onTap: () {
-                  context.read<HomeBloc>().add(HomeDateSelected(dayDate));
-                },
-                scale: 0.92,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: _DayCircle(
-                      label: _labelForDay(context, dayDate),
-                      isToday: isToday,
-                      isPast: isPast,
-                      isSelected: isSelected,
+              final fullDayName = _fullDayName(context, dayDate);
+
+              return Semantics(
+                button: true,
+                selected: isSelected,
+                label: isToday ? '$fullDayName, hoy' : fullDayName,
+                child: TappableScale(
+                  onTap: () {
+                    context.read<HomeBloc>().add(HomeDateSelected(dayDate));
+                  },
+                  scale: 0.92,
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: _DayCircle(
+                        label: _labelForDay(context, dayDate),
+                        isToday: isToday,
+                        isPast: isPast,
+                        isSelected: isSelected,
+                      ),
                     ),
                   ),
                 ),
@@ -63,6 +70,12 @@ class WeekDaySelector extends StatelessWidget {
   String _labelForDay(BuildContext context, DateTime dayDate) {
     final languageCode = Localizations.localeOf(context).languageCode;
     return DateFormat('E', languageCode).format(dayDate).substring(0, 1).toUpperCase();
+  }
+
+  String _fullDayName(BuildContext context, DateTime dayDate) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final name = DateFormat('EEEE d', languageCode).format(dayDate);
+    return name[0].toUpperCase() + name.substring(1);
   }
 }
 

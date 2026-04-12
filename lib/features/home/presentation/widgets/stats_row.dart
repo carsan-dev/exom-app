@@ -109,9 +109,12 @@ class _StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
-    return TappableScale(
-      onTap: onTap,
-      child: Container(
+    return Semantics(
+      button: onTap != null,
+      label: '$label: $value $unit',
+      child: TappableScale(
+        onTap: onTap,
+        child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: ExomSpacing.md,
           vertical: ExomSpacing.md + 2,
@@ -162,6 +165,7 @@ class _StatCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

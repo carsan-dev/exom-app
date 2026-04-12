@@ -22,13 +22,15 @@ class TodayDietCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final hasNextMeal = summary.nextMealId != null;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.accentCard(dietAccent),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Semantics(
+      label: '${l10n.todaysDietTitle}: ${summary.dietName ?? l10n.nutritionPlanDefault}',
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: GlassDecoration.accentCard(dietAccent),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Container(
@@ -186,7 +188,8 @@ class TodayDietCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -55,10 +55,12 @@ class TodayTrainingCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final color = _typeColor(context, summary.trainingType);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: GlassDecoration.accentCard(color),
-      child: Column(
+    return Semantics(
+      label: '${l10n.todaysTrainingTitle}: ${summary.trainingName ?? l10n.trainingUntitledLabel}',
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: GlassDecoration.accentCard(color),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -247,6 +249,7 @@ class TodayTrainingCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

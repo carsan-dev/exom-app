@@ -909,46 +909,50 @@ class _EmptyChart extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Icon(
-          Icons.show_chart,
-          color: AppColors.primary.withValues(alpha: 0.3),
-          size: 48,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          AppLocalizations.of(context).noDataYetMessage,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          Icon(
+            Icons.show_chart,
+            color: AppColors.primary.withValues(alpha: 0.3),
+            size: 48,
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          AppLocalizations.of(context).logMetricsPrompt,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textSecondary,
-            fontSize: 13,
-          ),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: onRegister,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.primary),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 12),
+          Text(
+            AppLocalizations.of(context).noDataYetMessage,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          child: Text(AppLocalizations.of(context).logMetricsButton),
-        ),
-        const SizedBox(height: 8),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            AppLocalizations.of(context).logMetricsPrompt,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: onRegister,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(AppLocalizations.of(context).logMetricsButton),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }

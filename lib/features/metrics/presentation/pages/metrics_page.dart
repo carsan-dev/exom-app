@@ -83,7 +83,7 @@ class _MetricsViewState extends State<_MetricsView> {
   @override
   void initState() {
     super.initState();
-    _populateHeightFromCachedProfile();
+    _populateFallbackValuesFromCachedProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadMetricForSelectedDate();
@@ -212,31 +212,53 @@ class _MetricsViewState extends State<_MetricsView> {
     });
   }
 
-  void _populateHeightFromCachedProfile() {
+  double? _cachedProfileNumber(String key) {
+    final rawValue = _getCachedProfile()?[key];
+    if (rawValue is num) {
+      return rawValue.toDouble();
+    }
+    return double.tryParse(rawValue?.toString() ?? '');
+  }
+
+  void _populateFallbackValuesFromCachedProfile() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
-    final profile = _getCachedProfile();
-    final rawHeight = profile?['height'];
-    final heightCm = rawHeight is num
-        ? rawHeight.toDouble()
-        : double.tryParse(rawHeight?.toString() ?? '');
+    final heightCm = _cachedProfileNumber('height');
+    final weightKg = _cachedProfileNumber('current_weight');
 
     if (heightCm != null && _heightController.text.isEmpty) {
       _heightController.text = formatLengthValue(heightCm, unitSystem);
     }
+
+    if (weightKg != null && _weightController.text.isEmpty) {
+      _weight = weightKg.clamp(40.0, 160.0);
+      _weightController.text = formatWeightValue(weightKg, unitSystem);
+      _useManualWeight = weightKg < 40.0 || weightKg > 160.0;
+    }
   }
 
   void _populateEmptyMetricState() {
-    _populateHeightFromCachedProfile();
+    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
+    final profileHeightCm = _cachedProfileNumber('height');
+    final profileWeightKg = _cachedProfileNumber('current_weight');
+
     setState(() {
-      _weight = 75.0;
+      _weight = (profileWeightKg ?? 75.0).clamp(40.0, 160.0);
       _sleepHours = 8.0;
       _heightTouched = false;
       _weightTouched = false;
       _muscleMassTouched = false;
       _sleepTouched = false;
       _touchedMeasures.clear();
+      _useManualWeight =
+          profileWeightKg != null &&
+          (profileWeightKg < 40.0 || profileWeightKg > 160.0);
     });
-    _weightController.clear();
+    _heightController.text = profileHeightCm != null
+        ? formatLengthValue(profileHeightCm, unitSystem)
+        : '';
+    _weightController.text = profileWeightKg != null
+        ? formatWeightValue(profileWeightKg, unitSystem)
+        : '';
     _muscleMassController.clear();
     _sleepController.clear();
     for (final controller in _measureControllers.values) {
@@ -501,6 +523,7 @@ class _MetricsViewState extends State<_MetricsView> {
   void _save() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final currentMetric = _currentMetricSnapshot();
+    final profileWeightKg = _cachedProfileNumber('current_weight');
     final data = <String, dynamic>{};
     final profileData = <String, dynamic>{};
 
@@ -541,6 +564,8 @@ class _MetricsViewState extends State<_MetricsView> {
       }
     } else if (currentMetric?.weightKg != null) {
       data['weight_kg'] = currentMetric!.weightKg;
+    } else if (currentMetric == null && profileWeightKg != null) {
+      data['weight_kg'] = profileWeightKg;
     }
 
     if (_sleepTouched) {

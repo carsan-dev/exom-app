@@ -1,8 +1,10 @@
 import 'package:get_it/get_it.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
+import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -113,8 +115,11 @@ import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.d
 final sl = GetIt.instance;
 
 Future<void> initDependencies() async {
+  final packageInfo = await PackageInfo.fromPlatform();
+
   // ── Core ──────────────────────────────────────────────────────────────────
   sl.registerLazySingleton<LocalStorage>(() => LocalStorage());
+  sl.registerLazySingleton<PackageInfo>(() => packageInfo);
   sl.registerLazySingleton<AppPreferencesCubit>(
     () => AppPreferencesCubit(sl<LocalStorage>()),
   );
@@ -139,6 +144,10 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<OfflineSyncService>(
     () => OfflineSyncService(sl<ApiClient>(), sl<LocalStorage>()),
+  );
+
+  sl.registerLazySingleton<AppUpdateService>(
+    () => AppUpdateService(sl<ApiClient>(), sl<PackageInfo>()),
   );
 
   // ── Auth ──────────────────────────────────────────────────────────────────

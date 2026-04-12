@@ -2420,6 +2420,30 @@ abstract class AppLocalizations {
   /// **'Build actual del cliente móvil'**
   String get versionDescription;
 
+  /// No description provided for @recommendedUpdateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva versión disponible'**
+  String get recommendedUpdateTitle;
+
+  /// No description provided for @recommendedUpdateMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay una actualización recomendada de EXOM. Puedes seguir usando la app, pero te recomendamos instalar la última versión.'**
+  String get recommendedUpdateMessage;
+
+  /// No description provided for @requiredUpdateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualización necesaria'**
+  String get requiredUpdateTitle;
+
+  /// No description provided for @requiredUpdateMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu versión de EXOM se ha quedado obsoleta. Actualiza la app para continuar.'**
+  String get requiredUpdateMessage;
+
   /// No description provided for @creditsOption.
   ///
   /// In es, this message translates to:
@@ -2443,6 +2467,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ajustes'**
   String get settingsPageTitle;
+
+  /// No description provided for @updateStoreNotOpenedError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir la tienda de aplicaciones.'**
+  String get updateStoreNotOpenedError;
 
   /// No description provided for @privacyPolicyNotOpenedError.
   ///

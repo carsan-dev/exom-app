@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -35,7 +34,7 @@ Future<void> main() async {
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await LocalStorage.init();
-  await FlavorConfig.init(Flavor.dev);
+  await FlavorConfig.init(FlavorConfig.initialFlavor);
   await initDependencies();
   runApp(const ExomApp());
   unawaited(_initializeFcm());

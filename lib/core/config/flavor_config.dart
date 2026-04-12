@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 
 const _devApiBaseUrlOverride = String.fromEnvironment('EXOM_API_BASE_URL');
+const _flavorOverride = String.fromEnvironment('EXOM_FLAVOR');
 
 enum Flavor { dev, staging, prod }
 
@@ -55,8 +57,22 @@ class FlavorConfig {
     return switch (flavor) {
       Flavor.dev => _resolveDevBaseUrl(),
       Flavor.staging => Future.value('https://api-staging.exom.app/api/v1'),
-      Flavor.prod => Future.value('https://api.exom.app/api/v1'),
+      Flavor.prod => Future.value('https://api.exommethod.com/api/v1'),
     };
+  }
+
+  static Flavor get initialFlavor {
+    switch (_flavorOverride.toLowerCase()) {
+      case 'dev':
+        return Flavor.dev;
+      case 'staging':
+        return Flavor.staging;
+      case 'prod':
+      case 'production':
+        return Flavor.prod;
+      default:
+        return kReleaseMode ? Flavor.prod : Flavor.dev;
+    }
   }
 
   static Future<void> init(Flavor flavor) async {

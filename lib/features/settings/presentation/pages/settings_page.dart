@@ -8,6 +8,7 @@ import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
+import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -159,6 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final theme = Theme.of(context);
         final palette = context.exomPalette;
         final l10n = AppLocalizations.of(context)!;
+        final appVersionLabel = sl<AppUpdateService>().currentVersionLabel;
 
         return ExomStaticBackground(
           child: Scaffold(
@@ -356,7 +358,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: l10n.versionOption,
                       subtitle: l10n.versionDescription,
                       trailing: Text(
-                        '1.0.0',
+                        appVersionLabel,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: palette.textDisabled,
                           fontSize: 13,

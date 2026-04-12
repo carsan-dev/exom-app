@@ -1283,6 +1283,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get versionDescription => 'Build actual del cliente móvil';
 
   @override
+  String get recommendedUpdateTitle => 'Nueva versión disponible';
+
+  @override
+  String get recommendedUpdateMessage =>
+      'Hay una actualización recomendada de EXOM. Puedes seguir usando la app, pero te recomendamos instalar la última versión.';
+
+  @override
+  String get requiredUpdateTitle => 'Actualización necesaria';
+
+  @override
+  String get requiredUpdateMessage =>
+      'Tu versión de EXOM se ha quedado obsoleta. Actualiza la app para continuar.';
+
+  @override
   String get creditsOption => 'Créditos';
 
   @override
@@ -1293,6 +1307,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsPageTitle => 'Ajustes';
+
+  @override
+  String get updateStoreNotOpenedError =>
+      'No se pudo abrir la tienda de aplicaciones.';
 
   @override
   String get privacyPolicyNotOpenedError =>

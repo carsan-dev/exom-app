@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/config/app_distribution_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
@@ -21,6 +23,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late final AnimationController _entry;
   late final AnimationController _pulse;
   late final AnimationController _exit;
+  late final Future<AppUpdateDecision> _updateDecisionFuture;
 
   late final Animation<double> _bgFade;
   late final Animation<double> _logoScale;
@@ -33,6 +36,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _updateDecisionFuture = sl<AppUpdateService>().checkForUpdates();
 
     _entry = AnimationController(
       vsync: this,
@@ -96,9 +100,89 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Future<void> _holdThenExit() async {
     await Future<void>.delayed(const Duration(milliseconds: 650));
     if (!mounted) return;
+
+    final shouldContinue = await _handlePendingUpdate();
+    if (!mounted || !shouldContinue) return;
+
     await _exit.reverse(from: 1.0);
     if (!mounted) return;
     _navigate();
+  }
+
+  Future<bool> _handlePendingUpdate() async {
+    final decision = await _updateDecisionFuture;
+    if (!mounted || !decision.shouldPrompt) {
+      return mounted;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    final title = decision.title.isNotEmpty
+        ? decision.title
+        : decision.isBlocking
+        ? l10n.requiredUpdateTitle
+        : l10n.recommendedUpdateTitle;
+    final message = decision.message.isNotEmpty
+        ? decision.message
+        : decision.isBlocking
+        ? l10n.requiredUpdateMessage
+        : l10n.recommendedUpdateMessage;
+
+    if (decision.isBlocking) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              FilledButton(
+                onPressed: () => _openStore(decision),
+                child: Text(l10n.update),
+              ),
+            ],
+          ),
+        ),
+      );
+      return false;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.continueButton),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop(true);
+              await _openStore(decision);
+            },
+            child: Text(l10n.update),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? true;
+  }
+
+  Future<void> _openStore(AppUpdateDecision decision) async {
+    final launched = await sl<AppUpdateService>().openStore(decision);
+    if (!mounted || launched) {
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.updateStoreNotOpenedError)));
   }
 
   void _navigate() {

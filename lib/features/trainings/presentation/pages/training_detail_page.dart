@@ -910,20 +910,20 @@ class _ExerciseCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 6),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
                     children: [
                       _MiniStat(
                         icon: Icons.repeat,
                         label:
                             '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
                       ),
-                      const SizedBox(width: 12),
                       _MiniStat(
                         icon: Icons.timer_outlined,
                         label: '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
                       if (weightUsed != null) ...[
-                        const SizedBox(width: 12),
                         _MiniStat(
                           icon: Icons.fitness_center,
                           label: l10n.weightBadgeLabel(

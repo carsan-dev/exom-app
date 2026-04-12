@@ -458,14 +458,13 @@ Future<void> _showAchievementsBoard(
   required List<AchievementEntity> catalog,
   required Set<String> unlockedIds,
 }) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: isDark ? const Color(0xB3000000) : const Color(0x40000000),
+    backgroundColor: context.exomPalette.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
     builder: (_) =>
         _AchievementsBoardSheet(catalog: catalog, unlockedIds: unlockedIds),
   );
@@ -494,104 +493,95 @@ class _AchievementsBoardSheet extends StatelessWidget {
       minChildSize: 0.5,
       maxChildSize: 0.94,
       builder: (context, scrollController) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                decoration: isDark
-                    ? BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xF72A150A), Color(0xF233190C)],
-                        ),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: palette.glassBorder.withValues(alpha: 0.16),
-                          width: 0.6,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x66000000),
-                            blurRadius: 36,
-                            offset: Offset(0, 16),
-                            spreadRadius: -8,
-                          ),
-                        ],
-                      )
-                    : GlassDecoration.elevated(borderRadius: 28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: palette.textDisabled.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              decoration: isDark
+                  ? BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xF72A150A), Color(0xF233190C)],
+                      ),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      border: Border.all(
+                        color: palette.glassBorder.withValues(alpha: 0.16),
+                        width: 0.6,
+                      ),
+                    )
+                  : GlassDecoration.elevated(borderRadius: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: palette.textDisabled.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.achievementBoardTitle,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: palette.textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.achievementBoardTitle,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: palette.textPrimary,
+                                fontWeight: FontWeight.w800,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${unlockedIds.length}/${catalog.length}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: palette.textSecondary,
-                                ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${unlockedIds.length}/${catalog.length}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: palette.textSecondary,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: palette.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: GridView.builder(
-                        controller: scrollController,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.92,
-                        ),
-                        itemCount: catalog.length,
-                        itemBuilder: (_, index) {
-                          final achievement = catalog[index];
-                          return _AchievementBoardCard(
-                            achievement: achievement,
-                            isUnlocked: unlockedIds.contains(achievement.id),
-                          );
-                        },
                       ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: palette.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: GridView.builder(
+                      controller: scrollController,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.92,
+                      ),
+                      itemCount: catalog.length,
+                      itemBuilder: (_, index) {
+                        final achievement = catalog[index];
+                        return _AchievementBoardCard(
+                          achievement: achievement,
+                          isUnlocked: unlockedIds.contains(achievement.id),
+                        );
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

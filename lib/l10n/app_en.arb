@@ -2,6 +2,7 @@
   "@@locale": "en",
 
   "appTagline": "Your personal coach, always with you",
+  "splashTagline": "Train. Eat. Evolve.",
   "emailFieldLabel": "Email",
   "emailValidationEmpty": "Enter your email",
   "emailValidationInvalid": "Invalid email",

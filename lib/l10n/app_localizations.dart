@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'Tu entrenador personal, siempre contigo'**
   String get appTagline;
 
+  /// No description provided for @splashTagline.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrena. Come. Evoluciona.'**
+  String get splashTagline;
+
   /// No description provided for @emailFieldLabel.
   ///
   /// In es, this message translates to:

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -120,6 +121,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
     final isLight = Theme.of(context).brightness == Brightness.light;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -162,7 +164,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                           opacity: _taglineFade,
                           child: SlideTransition(
                             position: _taglineSlide,
-                            child: _Tagline(palette: palette),
+                            child: _Tagline(
+                              palette: palette,
+                              tagline: l10n.splashTagline,
+                            ),
                           ),
                         ),
                         const Spacer(flex: 4),
@@ -355,9 +360,10 @@ class _RingPainter extends CustomPainter {
 }
 
 class _Tagline extends StatelessWidget {
-  const _Tagline({required this.palette});
+  const _Tagline({required this.palette, required this.tagline});
 
   final ExomThemePalette palette;
+  final String tagline;
 
   @override
   Widget build(BuildContext context) {
@@ -392,7 +398,7 @@ class _Tagline extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Train. Eat. Evolve.',
+          tagline,
           style: TextStyle(
             color: palette.textSecondary,
             fontSize: 13,

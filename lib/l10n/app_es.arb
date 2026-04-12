@@ -2,6 +2,7 @@
   "@@locale": "es",
 
   "appTagline": "Tu entrenador personal, siempre contigo",
+  "splashTagline": "Entrena. Come. Evoluciona.",
   "emailFieldLabel": "Correo electrónico",
   "emailValidationEmpty": "Introduce tu correo electrónico",
   "emailValidationInvalid": "Correo electrónico no válido",

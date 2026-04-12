@@ -12,6 +12,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appTagline => 'Tu entrenador personal, siempre contigo';
 
   @override
+  String get splashTagline => 'Entrena. Come. Evoluciona.';
+
+  @override
   String get emailFieldLabel => 'Correo electrónico';
 
   @override

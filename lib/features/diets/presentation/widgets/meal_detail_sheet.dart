@@ -238,11 +238,15 @@ class _MealSheetBody extends StatelessWidget {
   final bool isCompleted;
   final ScrollController scrollController;
 
-  Future<void> _launchRecipe() async {
-    final query = Uri.encodeComponent('${meal.name} receta');
-    final url = Uri.parse('https://www.google.com/search?q=$query');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+  Future<void> _launchRecipe(BuildContext context) async {
+    final url = Uri.https('www.google.com', '/search', {
+      'q': '${meal.name} receta',
+    });
+
+    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+
+    if (!launched) {
+      await launchUrl(url, mode: LaunchMode.platformDefault);
     }
   }
 
@@ -446,7 +450,7 @@ class _MealSheetBody extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _launchRecipe,
+                onPressed: () => _launchRecipe(context),
                 icon: const Icon(Icons.search, size: 18),
                 label: Text(l10n.recipeButton),
                 style: OutlinedButton.styleFrom(

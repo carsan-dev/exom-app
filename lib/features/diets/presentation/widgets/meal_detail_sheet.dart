@@ -20,6 +20,7 @@ Future<void> showMealDetailSheet(
     context: context,
     backgroundColor: context.exomPalette.surface,
     isScrollControlled: true,
+    useRootNavigator: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -118,14 +119,13 @@ class _MealDetailLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return ListView(
       controller: scrollController,
       padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.textDisabled),
+        _SheetTopBar(handleColor: context.dietAccent),
         const SizedBox(height: 16),
         const ShimmerCard(height: 28),
         const SizedBox(height: 12),
@@ -212,15 +212,13 @@ class _MealDetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return ListView(
       controller: scrollController,
       padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.textDisabled),
+        _SheetTopBar(handleColor: context.dietAccent),
         const SizedBox(height: 24),
         ErrorWidget2(message: message, onRetry: onRetry),
       ],
@@ -337,7 +335,7 @@ class _MealSheetBody extends StatelessWidget {
       controller: scrollController,
       padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
-        _SheetTopBar(handleColor: palette.textDisabled),
+        _SheetTopBar(handleColor: context.dietAccent),
         const SizedBox(height: 8),
         Hero(
           tag: 'meal-${meal.id}-title',
@@ -480,12 +478,19 @@ class _SheetTopBar extends StatelessWidget {
         alignment: Alignment.topCenter,
         children: [
           Container(
-            width: 44,
-            height: 5,
+            width: 72,
+            height: 6,
             margin: const EdgeInsets.only(top: 8),
             decoration: BoxDecoration(
-              color: handleColor.withValues(alpha: 0.55),
+              color: handleColor.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: handleColor.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
           ),
           Align(
@@ -762,7 +767,9 @@ class _IngredientsSection extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: palette.glassBackground,
                     shape: BoxShape.circle,
-                    border: Border.all(color: palette.glassBorder.withValues(alpha: 0.15)),
+                    border: Border.all(
+                      color: palette.glassBorder.withValues(alpha: 0.15),
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: showGlyph

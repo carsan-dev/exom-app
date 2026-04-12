@@ -30,9 +30,7 @@ class GlassBottomNav extends StatelessWidget {
   static const _circleSize = 64.0;
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0;
-  // Only the glass bar counts for layout — the circle floats above via
-  // Clip.none, so no scaffold background peeks through.
-  static const totalHeight = _barHeight;
+  static const totalHeight = _barHeight + _circleOverlap;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +40,7 @@ class GlassBottomNav extends StatelessWidget {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return SizedBox(
-      height: _barHeight + bottomInset,
+      height: totalHeight + bottomInset,
       child: TweenAnimationBuilder<double>(
         tween: Tween(end: targetX),
         duration: const Duration(milliseconds: 300),
@@ -51,12 +49,13 @@ class GlassBottomNav extends StatelessWidget {
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // Frosted glass bar — fills the full SizedBox.
+              // Frosted glass bar — fills full SizedBox including circle
+              // overlap zone so no scaffold background peeks through.
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: _barHeight + bottomInset,
+                height: totalHeight + bottomInset,
                 child: ClipRect(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),

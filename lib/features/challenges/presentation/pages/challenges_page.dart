@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -461,6 +459,7 @@ Future<void> _showAchievementsBoard(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
     backgroundColor: context.exomPalette.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -485,7 +484,6 @@ class _AchievementsBoardSheet extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final crossAxisCount = MediaQuery.sizeOf(context).width >= 720 ? 3 : 2;
-    final isDark = theme.brightness == Brightness.dark;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -495,94 +493,83 @@ class _AchievementsBoardSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              decoration: isDark
-                  ? BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xF72A150A), Color(0xF233190C)],
-                      ),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(28),
-                      ),
-                      border: Border.all(
-                        color: palette.glassBorder.withValues(alpha: 0.16),
-                        width: 0.6,
-                      ),
-                    )
-                  : GlassDecoration.elevated(borderRadius: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: palette.textDisabled.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+          child: Container(
+            color: palette.surface,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.warning.withValues(alpha: 0.25),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.achievementBoardTitle,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: palette.textPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.achievementBoardTitle,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: palette.textPrimary,
+                              fontWeight: FontWeight.w800,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${unlockedIds.length}/${catalog.length}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: palette.textSecondary,
-                              ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${unlockedIds.length}/${catalog.length}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textSecondary,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: GridView.builder(
-                      controller: scrollController,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.92,
-                      ),
-                      itemCount: catalog.length,
-                      itemBuilder: (_, index) {
-                        final achievement = catalog[index];
-                        return _AchievementBoardCard(
-                          achievement: achievement,
-                          isUnlocked: unlockedIds.contains(achievement.id),
-                        );
-                      },
                     ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: GridView.builder(
+                    controller: scrollController,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.92,
+                    ),
+                    itemCount: catalog.length,
+                    itemBuilder: (_, index) {
+                      final achievement = catalog[index];
+                      return _AchievementBoardCard(
+                        achievement: achievement,
+                        isUnlocked: unlockedIds.contains(achievement.id),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

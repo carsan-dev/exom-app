@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -456,7 +457,7 @@ Future<void> _showAchievementsBoard(
   required List<AchievementEntity> catalog,
   required Set<String> unlockedIds,
 }) {
-  return showModalBottomSheet<void>(
+  return showPageAwareModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

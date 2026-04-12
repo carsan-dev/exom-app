@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -16,7 +17,7 @@ Future<void> showMealDetailSheet(
   String? selectedDate,
   VoidCallback? onDismissed,
 }) async {
-  await showModalBottomSheet<void>(
+  await showPageAwareModalBottomSheet<void>(
     context: context,
     backgroundColor: context.exomPalette.surface,
     isScrollControlled: true,

@@ -14,3 +14,6 @@
 -keepclassmembers class * {
     native <methods>;
 }
+
+# Play Core (referenced by Flutter engine for deferred components)
+-dontwarn com.google.android.play.core.**

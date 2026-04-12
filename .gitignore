@@ -42,6 +42,8 @@ app.*.map.json
 # Firebase / Secrets
 **/google-services.json
 **/GoogleService-Info.plist
+**/google-services-local.json
+**/GoogleService-Info-local.plist
 .env
 *.keystore
 *.jks

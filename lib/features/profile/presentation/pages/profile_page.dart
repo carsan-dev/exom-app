@@ -102,8 +102,11 @@ class _ProfileLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomSpacing = math.max(40.0, 16.0 + bottomInset);
+
     return ListView(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(bottom: bottomSpacing),
       children: const [
         _ProfileHeaderSkeleton(),
         _ProfileActionButtonsSkeleton(),
@@ -442,6 +445,8 @@ class _ProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomSpacing = math.max(40.0, 16.0 + bottomInset);
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -450,7 +455,7 @@ class _ProfileContent extends StatelessWidget {
         context.read<ProfileBloc>().add(const ProfileLoadRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(bottom: bottomSpacing),
         children: [
           _ProfileHeader(
             profile: profile,

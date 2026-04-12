@@ -79,100 +79,99 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
         child: Container(
-      decoration: GlassDecoration.elevated(borderRadius: 28),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: palette.divider,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            l10n.restTimerTitle,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: palette.primary.withValues(alpha: 0.25),
-                  blurRadius: 20,
-                  spreadRadius: -4,
+          decoration: GlassDecoration.elevated(borderRadius: 28),
+          padding: EdgeInsets.fromLTRB(24, 20, 24, 40 + bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: palette.divider,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 160,
-                  height: 160,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) => CircularProgressIndicator(
-                      value: 1 - _controller.value,
-                      strokeWidth: 8,
-                      backgroundColor: palette.surfaceVariant,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(palette.primary),
-                    ),
-                  ),
-                ),
-                Text(
-                  '$_remaining',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 48,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (widget.nextExerciseName != null) ...[
-            const SizedBox(height: 20),
-            Text(
-              l10n.restTimerNextExercise(widget.nextExerciseName!),
-              style: TextStyle(
-                color: palette.textSecondary,
-                fontSize: 13,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                _timer.cancel();
-                widget.onDone();
-              },
-              child: Text(l10n.restTimerSkip),
-            ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.restTimerTitle,
+                style: TextStyle(
+                  color: palette.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.primary.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      spreadRadius: -4,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 160,
+                      height: 160,
+                      child: AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) => CircularProgressIndicator(
+                          value: 1 - _controller.value,
+                          strokeWidth: 8,
+                          backgroundColor: palette.surfaceVariant,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            palette.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$_remaining',
+                      style: TextStyle(
+                        color: palette.textPrimary,
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.nextExerciseName != null) ...[
+                const SizedBox(height: 20),
+                Text(
+                  l10n.restTimerNextExercise(widget.nextExerciseName!),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    _timer.cancel();
+                    widget.onDone();
+                  },
+                  child: Text(l10n.restTimerSkip),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );

@@ -1001,7 +1001,6 @@ class _MetricsViewState extends State<_MetricsView> {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          extendBodyBehindAppBar: true,
           appBar: GlassAppBar(
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: palette.textPrimary),
@@ -1021,17 +1020,13 @@ class _MetricsViewState extends State<_MetricsView> {
             builder: (context, state) {
               final isSaving = state is MetricsSaving;
               final bottomInset = MediaQuery.of(context).padding.bottom;
-              final topInset =
-                  MediaQuery.paddingOf(context).top + kToolbarHeight;
               return Stack(
                 children: [
                   ListView(
-                    padding: EdgeInsets.only(
-                      top: topInset,
-                      bottom: 124 + bottomInset,
-                    ),
+                    padding: EdgeInsets.only(bottom: 124 + bottomInset),
                     children: [
                       _SectionCard(
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                         title: AppLocalizations.of(context)!.recordDateTitle,
                         icon: Icons.calendar_today_outlined,
                         color: palette.primary,
@@ -1513,6 +1508,7 @@ class _SectionCard extends StatelessWidget {
   final Color color;
   final Widget child;
   final Widget? trailing;
+  final EdgeInsetsGeometry margin;
 
   const _SectionCard({
     required this.title,
@@ -1520,12 +1516,13 @@ class _SectionCard extends StatelessWidget {
     required this.color,
     required this.child,
     this.trailing,
+    this.margin = const EdgeInsets.fromLTRB(16, 16, 16, 0),
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: margin,
       padding: const EdgeInsets.all(20),
       decoration: GlassDecoration.card(borderRadius: 22),
       child: Column(

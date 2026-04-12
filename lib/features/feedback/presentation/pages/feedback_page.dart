@@ -32,7 +32,6 @@ class FeedbackPage extends StatelessWidget {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          extendBodyBehindAppBar: true,
           appBar: GlassAppBar(
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: palette.textPrimary),
@@ -81,8 +80,6 @@ class FeedbackPage extends StatelessWidget {
                   ? state.items
                   : <FeedbackEntity>[];
 
-              final topInset =
-                  MediaQuery.paddingOf(context).top + kToolbarHeight;
               final bottomInset = MediaQuery.paddingOf(context).bottom;
               return RefreshIndicator(
                 color: palette.primary,
@@ -93,7 +90,7 @@ class FeedbackPage extends StatelessWidget {
                   );
                 },
                 child: ListView(
-                  padding: EdgeInsets.only(top: topInset, bottom: 40 + bottomInset),
+                  padding: EdgeInsets.only(bottom: 40 + bottomInset),
                   children: [
                     _FeedbackForm(
                       isSubmitting: state is FeedbackSubmitting,
@@ -142,10 +139,9 @@ class _FeedbackLoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     return ListView(
-      padding: EdgeInsets.only(top: topInset, bottom: 40 + bottomInset),
+      padding: EdgeInsets.only(bottom: 40 + bottomInset),
       children: const [
         _FeedbackFormSkeleton(),
         Padding(
@@ -169,7 +165,7 @@ class _FeedbackFormSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(20),
       borderRadius: 22,
       elevated: true,
@@ -355,7 +351,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     final l10n = AppLocalizations.of(context);
 
     return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(20),
       borderRadius: 22,
       elevated: true,

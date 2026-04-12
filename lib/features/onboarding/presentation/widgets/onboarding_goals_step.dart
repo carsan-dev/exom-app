@@ -25,6 +25,7 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   late final TextEditingController _goalController;
   late final TextEditingController _muscleMassController;
   late final TextEditingController _caloriesController;
+  var _goalInitialized = false;
 
   static const _levels = ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO'];
 
@@ -32,9 +33,7 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   void initState() {
     super.initState();
     _level = widget.initialData['level'] as String?;
-    _goalController = TextEditingController(
-      text: widget.initialData['main_goal'] as String? ?? '',
-    );
+    _goalController = TextEditingController();
     final muscleGoal = widget.initialData['muscle_mass_goal'];
     _muscleMassController = TextEditingController(
       text: muscleGoal != null ? muscleGoal.toString() : '',
@@ -43,6 +42,18 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
     _caloriesController = TextEditingController(
       text: calories != null ? calories.toString() : '',
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_goalInitialized) {
+      return;
+    }
+
+    final initialGoal = widget.initialData['main_goal'] as String?;
+    _goalController.text = _normalizedGoalText(context, initialGoal);
+    _goalInitialized = true;
   }
 
   @override
@@ -64,6 +75,20 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
     final calories = int.tryParse(_caloriesController.text);
     if (calories != null) data['target_calories'] = calories;
     widget.onNext(data);
+  }
+
+  String _normalizedGoalText(BuildContext context, String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'hola') {
+      return _defaultGoalText(context);
+    }
+    return trimmed;
+  }
+
+  String _defaultGoalText(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'es'
+        ? 'Mejorar mi salud y sentirme mejor cada semana'
+        : 'Improve my health and feel better each week';
   }
 
   String _levelLabel(BuildContext context, String level) {

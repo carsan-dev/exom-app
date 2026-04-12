@@ -28,12 +28,16 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -76,40 +80,50 @@ class _LoginPageState extends State<LoginPage> {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: true,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 24),
-                    _buildBranding(context),
-                    const SizedBox(height: 36),
-                    GlassCard(
-                      margin: EdgeInsets.zero,
-                      padding: const EdgeInsets.all(24),
-                      borderRadius: 28,
-                      elevated: true,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildEmailField(context),
-                          const SizedBox(height: 16),
-                          _buildPasswordField(context),
-                          const SizedBox(height: 8),
-                          _buildForgotPassword(context),
-                          const SizedBox(height: 24),
-                          _buildLoginButton(),
-                          const SizedBox(height: 24),
-                          _buildDivider(context),
-                          const SizedBox(height: 24),
-                          _buildSocialButtons(context),
-                        ],
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildBranding(context),
+                      const SizedBox(height: 36),
+                      GlassCard(
+                        margin: EdgeInsets.zero,
+                        padding: const EdgeInsets.all(24),
+                        borderRadius: 28,
+                        elevated: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildEmailField(context),
+                            const SizedBox(height: 16),
+                            _buildPasswordField(context),
+                            const SizedBox(height: 8),
+                            _buildForgotPassword(context),
+                            const SizedBox(height: 24),
+                            _buildLoginButton(),
+                            const SizedBox(height: 24),
+                            _buildDivider(context),
+                            const SizedBox(height: 24),
+                            _buildSocialButtons(context),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -166,8 +180,10 @@ class _LoginPageState extends State<LoginPage> {
 
     return TextFormField(
       controller: _emailController,
+      focusNode: _emailFocus,
       keyboardType: TextInputType.emailAddress,
       textInputAction: TextInputAction.next,
+      onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
       style: TextStyle(color: palette.textPrimary),
       decoration: InputDecoration(
         labelText: l10n.emailFieldLabel,
@@ -191,6 +207,7 @@ class _LoginPageState extends State<LoginPage> {
 
     return TextFormField(
       controller: _passwordController,
+      focusNode: _passwordFocus,
       obscureText: _obscurePassword,
       textInputAction: TextInputAction.done,
       onFieldSubmitted: (_) => _onLoginPressed(),

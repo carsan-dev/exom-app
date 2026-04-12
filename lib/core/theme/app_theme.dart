@@ -343,9 +343,11 @@ class AppTheme {
     borderSoft: Color(0xFFD2C3AE),
     divider: Color(0xFFC7B7A1),
     textPrimary: Color(0xFF2B1A10),
-    textSecondary: Color(0xFF5B4739),
-    textMuted: Color(0xFF7B675A),
-    textDisabled: Color(0xFF725F53),
+    // Raised contrast for AA compliance on warm cream backgrounds:
+    // body12 at secondary was borderline over #FFFBF5 glass surfaces.
+    textSecondary: Color(0xFF4A3828),
+    textMuted: Color(0xFF6A5648),
+    textDisabled: Color(0xFF8A7768),
     primary: Color(0xFF5A7125),
     primarySoft: Color(0xFFE2EACB),
     onPrimary: Color(0xFFFFFBF5),

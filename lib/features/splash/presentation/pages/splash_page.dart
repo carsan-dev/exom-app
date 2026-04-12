@@ -20,6 +20,10 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+  static const _entryDuration = Duration(milliseconds: 2100);
+  static const _holdDuration = Duration(milliseconds: 250);
+  static const _exitDuration = Duration(milliseconds: 650);
+
   late final AnimationController _entry;
   late final AnimationController _pulse;
   late final AnimationController _exit;
@@ -38,10 +42,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     super.initState();
     _updateDecisionFuture = sl<AppUpdateService>().checkForUpdates();
 
-    _entry = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    );
+    _entry = AnimationController(vsync: this, duration: _entryDuration);
 
     _pulse = AnimationController(
       vsync: this,
@@ -50,7 +51,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
     _exit = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: _exitDuration,
       value: 1.0,
     );
 
@@ -98,7 +99,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   }
 
   Future<void> _holdThenExit() async {
-    await Future<void>.delayed(const Duration(milliseconds: 650));
+    await Future<void>.delayed(_holdDuration);
     if (!mounted) return;
 
     final shouldContinue = await _handlePendingUpdate();
@@ -325,10 +326,13 @@ class _LogoMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pulseFactor = 0.85 + (pulse * 0.15);
+    const outerRingSize = 320.0;
+    const glowHaloSize = 280.0;
+    const glassDiscSize = 272.0;
 
     return SizedBox(
-      width: 220,
-      height: 220,
+      width: outerRingSize,
+      height: outerRingSize,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -336,7 +340,7 @@ class _LogoMark extends StatelessWidget {
           Transform.rotate(
             angle: ringSweep * math.pi * 2,
             child: CustomPaint(
-              size: const Size(220, 220),
+              size: const Size(320, 320),
               painter: _RingPainter(
                 progress: ringSweep,
                 color: accent,
@@ -346,8 +350,8 @@ class _LogoMark extends StatelessWidget {
           ),
           // Glow halo
           Container(
-            width: 180,
-            height: 180,
+            width: glowHaloSize,
+            height: glowHaloSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
@@ -366,8 +370,8 @@ class _LogoMark extends StatelessWidget {
           ),
           // Glass disc behind logo
           Container(
-            width: 160,
-            height: 160,
+            width: glassDiscSize,
+            height: glassDiscSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: discFill,

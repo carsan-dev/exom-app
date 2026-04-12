@@ -178,8 +178,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 62,
       colors: [
         Colors.transparent,
-        warm.withValues(alpha: 0.1),
-        palette.primary.withValues(alpha: 0.035 * intensity),
+        warm.withValues(alpha: 0.035),
+        palette.primary.withValues(alpha: 0.012 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.2, 0.58, 1.0],
@@ -195,9 +195,9 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 52,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.025 * intensity),
-        palette.primary.withValues(alpha: 0.07 * intensity),
-        warm.withValues(alpha: 0.08),
+        Colors.white.withValues(alpha: 0.008 * intensity),
+        palette.primary.withValues(alpha: 0.025 * intensity),
+        warm.withValues(alpha: 0.028),
         Colors.transparent,
       ],
       stops: const [0.0, 0.14, 0.44, 0.76, 1.0],
@@ -214,8 +214,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 42,
       colors: [
         Colors.transparent,
-        palette.primary.withValues(alpha: 0.065 * intensity),
-        Colors.white.withValues(alpha: 0.03 * intensity),
+        palette.primary.withValues(alpha: 0.022 * intensity),
+        Colors.white.withValues(alpha: 0.01 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.24, 0.6, 1.0],
@@ -232,9 +232,9 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 56,
       colors: [
         Colors.transparent,
-        warm.withValues(alpha: 0.095),
-        palette.primary.withValues(alpha: 0.125 * intensity),
-        warm.withValues(alpha: 0.1),
+        warm.withValues(alpha: 0.032),
+        palette.primary.withValues(alpha: 0.042 * intensity),
+        warm.withValues(alpha: 0.035),
         Colors.transparent,
       ],
       stops: const [0.0, 0.12, 0.42, 0.78, 1.0],
@@ -251,8 +251,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 44,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.022 * intensity),
-        palette.primary.withValues(alpha: 0.082 * intensity),
+        Colors.white.withValues(alpha: 0.007 * intensity),
+        palette.primary.withValues(alpha: 0.028 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.28, 0.66, 1.0],
@@ -269,8 +269,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 60,
       colors: [
         Colors.transparent,
-        warm.withValues(alpha: 0.085),
-        palette.primary.withValues(alpha: 0.045 * intensity),
+        warm.withValues(alpha: 0.03),
+        palette.primary.withValues(alpha: 0.015 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.18, 0.58, 1.0],
@@ -414,7 +414,7 @@ class _ExomBackgroundPainter extends CustomPainter {
       size,
       centerY: centerY,
       amplitude: amplitude,
-      thickness: thickness,
+      thickness: thickness + blurSigma * 0.8,
       phase: phase,
       drift: drift,
     );
@@ -426,7 +426,6 @@ class _ExomBackgroundPainter extends CustomPainter {
         colors: colors,
         stops: stops,
       ).createShader(bounds)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurSigma)
       ..blendMode = blendMode;
 
     canvas.drawPath(path, paint);

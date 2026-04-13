@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/utils/image_compressor.dart';
 import 'package:exom_app/features/feedback/data/models/feedback_model.dart';
 
 abstract class FeedbackRemoteDataSource {
@@ -72,17 +73,20 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
 
   @override
   Future<String> uploadMedia(File file, String contentType) async {
-    final ext = file.path.split('.').last.toLowerCase();
+    final isImage = contentType.startsWith('image/');
+    final uploadFile = isImage ? await ImageCompressor.compress(file) : file;
+    final ext = uploadFile.path.split('.').last.toLowerCase();
     final fileKey = 'feedback/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final uploadContentType = isImage ? 'image/jpeg' : contentType;
 
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
-        file.path,
+        uploadFile.path,
         filename: '${DateTime.now().millisecondsSinceEpoch}.$ext',
-        contentType: DioMediaType.parse(contentType),
+        contentType: DioMediaType.parse(uploadContentType),
       ),
       'file_key': fileKey,
-      'content_type': contentType,
+      'content_type': uploadContentType,
     });
 
     try {

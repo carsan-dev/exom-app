@@ -27,8 +27,6 @@ class FeedbackMediaPicker extends StatelessWidget {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: source,
-      imageQuality: 80,
-      maxWidth: 1920,
     );
     if (picked != null) {
       onFileSelected(File(picked.path));

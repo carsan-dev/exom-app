@@ -10,7 +10,8 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
+import 'package:exom_app/core/models/body_zone.dart';
+import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
@@ -53,32 +54,34 @@ class _MetricsViewState extends State<_MetricsView> {
   final Set<String> _touchedMeasures = <String>{};
 
   bool _bodyMapMode = false;
-  bool _bodyFront = true;
-  String? _selectedMeasure;
+  BodyZone? _selectedMeasure;
 
   static const _measureZones = <_MeasureZoneConfig>[
-    _MeasureZoneConfig.single(zone: 'Cuello', fieldKey: 'neck_cm'),
-    _MeasureZoneConfig.single(zone: 'Hombros', fieldKey: 'shoulders_cm'),
-    _MeasureZoneConfig.single(zone: 'Pecho', fieldKey: 'chest_cm'),
+    _MeasureZoneConfig.single(zone: BodyZone.neck, fieldKey: 'neck_cm'),
+    _MeasureZoneConfig.single(
+      zone: BodyZone.shoulders,
+      fieldKey: 'shoulders_cm',
+    ),
+    _MeasureZoneConfig.single(zone: BodyZone.chest, fieldKey: 'chest_cm'),
     _MeasureZoneConfig.bilateral(
-      zone: 'Brazo',
+      zone: BodyZone.upperArm,
       leftFieldKey: 'arm_left_cm',
       rightFieldKey: 'arm_right_cm',
     ),
     _MeasureZoneConfig.bilateral(
-      zone: 'Antebrazo',
+      zone: BodyZone.forearm,
       leftFieldKey: 'forearm_left_cm',
       rightFieldKey: 'forearm_right_cm',
     ),
-    _MeasureZoneConfig.single(zone: 'Cintura', fieldKey: 'waist_cm'),
-    _MeasureZoneConfig.single(zone: 'Caderas', fieldKey: 'hips_cm'),
+    _MeasureZoneConfig.single(zone: BodyZone.waist, fieldKey: 'waist_cm'),
+    _MeasureZoneConfig.single(zone: BodyZone.hips, fieldKey: 'hips_cm'),
     _MeasureZoneConfig.bilateral(
-      zone: 'Muslo',
+      zone: BodyZone.thigh,
       leftFieldKey: 'thigh_left_cm',
       rightFieldKey: 'thigh_right_cm',
     ),
     _MeasureZoneConfig.bilateral(
-      zone: 'Pantorrilla',
+      zone: BodyZone.calf,
       leftFieldKey: 'calf_left_cm',
       rightFieldKey: 'calf_right_cm',
     ),
@@ -112,191 +115,31 @@ class _MetricsViewState extends State<_MetricsView> {
     super.dispose();
   }
 
-  // Front view zones (left column, right column)
-  static const _frontLeftZones = [
-    'Cuello',
-    'Hombros',
-    'Pecho',
-    'Cintura',
-    'Caderas',
+  static const _bodyMapLeftZones = [
+    BodyZone.neck,
+    BodyZone.shoulders,
+    BodyZone.chest,
+    BodyZone.waist,
+    BodyZone.hips,
   ];
-  static const _frontRightZones = [
-    'Brazo',
-    'Antebrazo',
-    'Muslo',
-    'Pantorrilla',
+  static const _bodyMapRightZones = [
+    BodyZone.upperArm,
+    BodyZone.forearm,
+    BodyZone.thigh,
+    BodyZone.calf,
   ];
-  // Back view zones
-  static const _backLeftZones = ['Cuello', 'Hombros', 'Cintura', 'Caderas'];
-  static const _backRightZones = ['Brazo', 'Antebrazo', 'Muslo', 'Pantorrilla'];
+  static const _bodyMapLeftFlex = [1, 2, 4, 6, 8];
+  static const _bodyMapRightFlex = [3, 4, 7, 9];
 
-  static const _frontHotspots = <_BodyHotspotConfig>[
-    _BodyHotspotConfig(
-      id: 'neck_center_front',
-      zone: 'Cuello',
-      position: Offset(0.50, 0.10),
-    ),
-    _BodyHotspotConfig(
-      id: 'shoulder_center_front',
-      zone: 'Hombros',
-      position: Offset(0.50, 0.18),
-    ),
-    _BodyHotspotConfig(
-      id: 'chest_center_front',
-      zone: 'Pecho',
-      position: Offset(0.50, 0.26),
-    ),
-    _BodyHotspotConfig(
-      id: 'upper_arm_left_front',
-      zone: 'Brazo',
-      position: Offset(0.22, 0.30),
-    ),
-    _BodyHotspotConfig(
-      id: 'upper_arm_right_front',
-      zone: 'Brazo',
-      position: Offset(0.78, 0.30),
-    ),
-    _BodyHotspotConfig(
-      id: 'forearm_left_front',
-      zone: 'Antebrazo',
-      position: Offset(0.18, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'forearm_right_front',
-      zone: 'Antebrazo',
-      position: Offset(0.82, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'waist_center_front',
-      zone: 'Cintura',
-      position: Offset(0.50, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'hips_center_front',
-      zone: 'Caderas',
-      position: Offset(0.50, 0.48),
-    ),
-    _BodyHotspotConfig(
-      id: 'thigh_left_front',
-      zone: 'Muslo',
-      position: Offset(0.40, 0.63),
-    ),
-    _BodyHotspotConfig(
-      id: 'thigh_right_front',
-      zone: 'Muslo',
-      position: Offset(0.60, 0.63),
-    ),
-    _BodyHotspotConfig(
-      id: 'calf_left_front',
-      zone: 'Pantorrilla',
-      position: Offset(0.38, 0.80),
-    ),
-    _BodyHotspotConfig(
-      id: 'calf_right_front',
-      zone: 'Pantorrilla',
-      position: Offset(0.62, 0.80),
-    ),
-  ];
-  static const _backHotspots = <_BodyHotspotConfig>[
-    _BodyHotspotConfig(
-      id: 'neck_center_back',
-      zone: 'Cuello',
-      position: Offset(0.50, 0.10),
-    ),
-    _BodyHotspotConfig(
-      id: 'shoulder_center_back',
-      zone: 'Hombros',
-      position: Offset(0.50, 0.18),
-    ),
-    _BodyHotspotConfig(
-      id: 'upper_arm_left_back',
-      zone: 'Brazo',
-      position: Offset(0.22, 0.30),
-    ),
-    _BodyHotspotConfig(
-      id: 'upper_arm_right_back',
-      zone: 'Brazo',
-      position: Offset(0.78, 0.30),
-    ),
-    _BodyHotspotConfig(
-      id: 'forearm_left_back',
-      zone: 'Antebrazo',
-      position: Offset(0.18, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'forearm_right_back',
-      zone: 'Antebrazo',
-      position: Offset(0.82, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'waist_center_back',
-      zone: 'Cintura',
-      position: Offset(0.50, 0.40),
-    ),
-    _BodyHotspotConfig(
-      id: 'hips_center_back',
-      zone: 'Caderas',
-      position: Offset(0.50, 0.48),
-    ),
-    _BodyHotspotConfig(
-      id: 'thigh_left_back',
-      zone: 'Muslo',
-      position: Offset(0.40, 0.63),
-    ),
-    _BodyHotspotConfig(
-      id: 'thigh_right_back',
-      zone: 'Muslo',
-      position: Offset(0.60, 0.63),
-    ),
-    _BodyHotspotConfig(
-      id: 'calf_left_back',
-      zone: 'Pantorrilla',
-      position: Offset(0.38, 0.80),
-    ),
-    _BodyHotspotConfig(
-      id: 'calf_right_back',
-      zone: 'Pantorrilla',
-      position: Offset(0.62, 0.80),
-    ),
-  ];
-
-  // Flex values for label positioning on columns
-  static const _frontLeftFlex = [1, 2, 4, 6, 8];
-  static const _frontRightFlex = [3, 4, 7, 9];
-  static const _backLeftFlex = [1, 2, 6, 8];
-  static const _backRightFlex = [3, 4, 7, 9];
-
-  String _localizedZoneLabel(BuildContext context, String key) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (key) {
-      case 'Cuello':
-        return l10n.measureNeck;
-      case 'Hombros':
-        return l10n.measureShoulders;
-      case 'Pecho':
-        return l10n.measureChest;
-      case 'Brazo':
-        return l10n.measureArm;
-      case 'Antebrazo':
-        return l10n.measureForearm;
-      case 'Cintura':
-        return l10n.measureWaist;
-      case 'Caderas':
-        return l10n.measureHips;
-      case 'Muslo':
-        return l10n.measureThigh;
-      case 'Pantorrilla':
-        return l10n.measureCalf;
-      default:
-        return key;
-    }
+  String _localizedZoneLabel(BuildContext context, BodyZone zone) {
+    return zone.label(AppLocalizations.of(context));
   }
 
-  _MeasureZoneConfig _measureZone(String zone) {
+  _MeasureZoneConfig _measureZone(BodyZone zone) {
     return _measureZones.firstWhere((config) => config.zone == zone);
   }
 
-  String _zoneForFieldKey(String fieldKey) {
+  BodyZone _zoneForFieldKey(String fieldKey) {
     return _measureZones
         .firstWhere((config) => config.fieldKeys.contains(fieldKey))
         .zone;
@@ -310,7 +153,7 @@ class _MetricsViewState extends State<_MetricsView> {
     _touchedMeasures.add(fieldKey);
   }
 
-  String _zoneValuePreview(String zone) {
+  String _zoneValuePreview(BodyZone zone) {
     final config = _measureZone(zone);
     if (!config.isBilateral) {
       return _controllerForField(config.fieldKey!).text.trim();
@@ -340,7 +183,7 @@ class _MetricsViewState extends State<_MetricsView> {
     return leftValue >= rightValue ? leftText : rightText;
   }
 
-  Widget _buildMeasureEditor(BuildContext context, String zone) {
+  Widget _buildMeasureEditor(BuildContext context, BodyZone zone) {
     final config = _measureZone(zone);
     if (!config.isBilateral) {
       return _MeasureInput(
@@ -350,7 +193,7 @@ class _MetricsViewState extends State<_MetricsView> {
       );
     }
 
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return _BilateralMeasureInput(
       label: _localizedZoneLabel(context, zone),
       leftLabel: l10n.leftSideShortLabel,
@@ -375,7 +218,7 @@ class _MetricsViewState extends State<_MetricsView> {
   String _selectedDateLabel(BuildContext context) {
     final today = DateUtils.dateOnly(DateTime.now());
     if (_selectedMetricDate == today) {
-      return AppLocalizations.of(context)!.todayLabel;
+      return AppLocalizations.of(context).todayLabel;
     }
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     return isEn
@@ -472,142 +315,58 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   Widget _buildBodyMapMeasurements() {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
-    final zones = _bodyFront ? _frontHotspots : _backHotspots;
-    final leftZones = _bodyFront ? _frontLeftZones : _backLeftZones;
-    final rightZones = _bodyFront ? _frontRightZones : _backRightZones;
-    final leftFlex = _bodyFront ? _frontLeftFlex : _backLeftFlex;
-    final rightFlex = _bodyFront ? _frontRightFlex : _backRightFlex;
+    const selectorHeight = 440.0;
+    const selectorBodyHeight = 388.0;
 
     return Column(
       children: [
-        // Toggle tabs
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _viewTab(
-              AppLocalizations.of(context).frontViewLabel,
-              Icons.person_outline,
-              _bodyFront,
-              () {
-                setState(() {
-                  _bodyFront = true;
-                  _selectedMeasure = null;
-                });
-              },
-            ),
-            const SizedBox(width: 8),
-            _viewTab(
-              AppLocalizations.of(context).backViewLabel,
-              Icons.person_outline,
-              !_bodyFront,
-              () {
-                setState(() {
-                  _bodyFront = false;
-                  _selectedMeasure = null;
-                });
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Body map with labels
         SizedBox(
-          height: 440,
+          height: selectorHeight,
           child: Row(
             children: [
-              // Left labels
               Expanded(
                 flex: 2,
-                child: _buildZoneColumn(
-                  leftZones,
-                  leftFlex,
-                  CrossAxisAlignment.end,
-                  unitSystem,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: SizedBox(
+                    height: selectorBodyHeight,
+                    child: _buildZoneColumn(
+                      _bodyMapLeftZones,
+                      _bodyMapLeftFlex,
+                      CrossAxisAlignment.end,
+                      unitSystem,
+                    ),
+                  ),
                 ),
               ),
-
-              // Body silhouette with hotspots
-              SizedBox(
-                width: 130,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bodyW = constraints.maxWidth;
-                    const bodyH = 440.0;
-                    return SizedBox(
-                      height: bodyH,
-                      child: Stack(
-                        children: [
-                          CustomPaint(
-                            size: Size(bodyW, bodyH),
-                            painter: BodySilhouettePainter(
-                              isBack: !_bodyFront,
-                              fillColor: palette.textSecondary.withValues(
-                                alpha: 0.08,
-                              ),
-                              strokeColor: palette.textSecondary.withValues(
-                                alpha: 0.22,
-                              ),
-                              detailColor: palette.textSecondary.withValues(
-                                alpha: 0.16,
-                              ),
-                            ),
-                          ),
-                          ...zones.map((hotspot) {
-                            final dx = hotspot.position.dx * bodyW;
-                            final dy = hotspot.position.dy * bodyH;
-                            return Positioned(
-                              left: dx - 8,
-                              top: dy - 8,
-                              child: GestureDetector(
-                                onTap: () => setState(
-                                  () => _selectedMeasure = hotspot.zone,
-                                ),
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _selectedMeasure == hotspot.zone
-                                        ? semantic.info
-                                        : semantic.info.withValues(alpha: 0.3),
-                                    border: Border.all(
-                                      color: semantic.info,
-                                      width: _selectedMeasure == hotspot.zone
-                                          ? 2
-                                          : 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              AnatomySelector(
+                height: selectorHeight,
+                selectedZone: _selectedMeasure,
+                onZoneSelected: (zone) {
+                  setState(() => _selectedMeasure = zone);
+                },
               ),
-
-              // Right labels
               Expanded(
                 flex: 2,
-                child: _buildZoneColumn(
-                  rightZones,
-                  rightFlex,
-                  CrossAxisAlignment.start,
-                  unitSystem,
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    height: selectorBodyHeight,
+                    child: _buildZoneColumn(
+                      _bodyMapRightZones,
+                      _bodyMapRightFlex,
+                      CrossAxisAlignment.start,
+                      unitSystem,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
 
-        // Input for selected zone
         if (_selectedMeasure != null) ...[
           const SizedBox(height: 16),
           _buildMeasureEditor(context, _selectedMeasure!),
@@ -617,7 +376,7 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   Widget _buildZoneColumn(
-    List<String> zones,
+    List<BodyZone> zones,
     List<int> flex,
     CrossAxisAlignment align,
     UnitSystem unitSystem,
@@ -636,7 +395,7 @@ class _MetricsViewState extends State<_MetricsView> {
     return Column(crossAxisAlignment: align, children: children);
   }
 
-  Widget _zoneLabel(String zone, UnitSystem unitSystem) {
+  Widget _zoneLabel(BodyZone zone, UnitSystem unitSystem) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final val = _zoneValuePreview(zone);
@@ -674,48 +433,6 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  Widget _viewTab(
-    String label,
-    IconData icon,
-    bool active,
-    VoidCallback onTap,
-  ) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: active
-            ? GlassDecoration.accentCard(semantic.info, borderRadius: 20)
-            : GlassDecoration.card(
-                borderRadius: 20,
-                borderColor: palette.glassBorder.withValues(alpha: 0.10),
-              ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: active ? semantic.info : palette.textDisabled,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active ? semantic.info : palette.textDisabled,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   BodyMetricEntity? _currentMetricSnapshot() {
     final state = context.read<MetricsBloc>().state;
     if (state is MetricsLoaded) {
@@ -727,6 +444,9 @@ class _MetricsViewState extends State<_MetricsView> {
   void _save() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final currentMetric = _currentMetricSnapshot();
+    final currentWeightKg = currentMetric?.weightKg;
+    final currentSleepHours = currentMetric?.sleepHours;
+    final currentMuscleMassKg = currentMetric?.muscleMassKg;
     final profileWeightKg = _cachedProfileNumber('current_weight');
     final data = <String, dynamic>{};
     final profileData = <String, dynamic>{};
@@ -738,7 +458,7 @@ class _MetricsViewState extends State<_MetricsView> {
       final rawHeight = _parseDouble(_heightController.text);
       if (rawHeight == null) {
         _showValidationMessage(
-          AppLocalizations.of(context)!.validHeightRequired,
+          AppLocalizations.of(context).validHeightRequired,
         );
         return;
       }
@@ -755,7 +475,7 @@ class _MetricsViewState extends State<_MetricsView> {
         final manualWeight = _parseDouble(_weightController.text);
         if (manualWeight == null) {
           _showValidationMessage(
-            AppLocalizations.of(context)!.validWeightRequired,
+            AppLocalizations.of(context).validWeightRequired,
           );
           return;
         }
@@ -766,8 +486,8 @@ class _MetricsViewState extends State<_MetricsView> {
       } else {
         data['weight_kg'] = _weight;
       }
-    } else if (currentMetric?.weightKg != null) {
-      data['weight_kg'] = currentMetric!.weightKg;
+    } else if (currentWeightKg != null) {
+      data['weight_kg'] = currentWeightKg;
     } else if (currentMetric == null && profileWeightKg != null) {
       data['weight_kg'] = profileWeightKg;
     }
@@ -775,14 +495,12 @@ class _MetricsViewState extends State<_MetricsView> {
     if (_sleepTouched) {
       final sleepHours = _parseDouble(_sleepController.text);
       if (sleepHours == null) {
-        _showValidationMessage(
-          AppLocalizations.of(context)!.validSleepRequired,
-        );
+        _showValidationMessage(AppLocalizations.of(context).validSleepRequired);
         return;
       }
       data['sleep_hours'] = sleepHours;
-    } else if (currentMetric?.sleepHours != null) {
-      data['sleep_hours'] = currentMetric!.sleepHours;
+    } else if (currentSleepHours != null) {
+      data['sleep_hours'] = currentSleepHours;
     }
 
     if (_muscleMassTouched) {
@@ -791,7 +509,7 @@ class _MetricsViewState extends State<_MetricsView> {
         final muscleMass = _parseDouble(rawMuscleMass);
         if (muscleMass == null) {
           _showValidationMessage(
-            AppLocalizations.of(context)!.validMuscleMassRequired,
+            AppLocalizations.of(context).validMuscleMassRequired,
           );
           return;
         }
@@ -800,8 +518,8 @@ class _MetricsViewState extends State<_MetricsView> {
           unitSystem,
         );
       }
-    } else if (currentMetric?.muscleMassKg != null) {
-      data['muscle_mass_kg'] = currentMetric!.muscleMassKg;
+    } else if (currentMuscleMassKg != null) {
+      data['muscle_mass_kg'] = currentMuscleMassKg;
     }
 
     final existingMeasures = <String, double?>{
@@ -837,7 +555,7 @@ class _MetricsViewState extends State<_MetricsView> {
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
         _showValidationMessage(
-          AppLocalizations.of(context)!.measurementReviewTemplate(
+          AppLocalizations.of(context).measurementReviewTemplate(
             _localizedZoneLabel(
               context,
               _zoneForFieldKey(entry.key),
@@ -854,7 +572,7 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     if (data.isEmpty) {
-      _showValidationMessage(AppLocalizations.of(context)!.noChangesMessage);
+      _showValidationMessage(AppLocalizations.of(context).noChangesMessage);
       return;
     }
 
@@ -916,7 +634,7 @@ class _MetricsViewState extends State<_MetricsView> {
             return AlertDialog(
               backgroundColor: palette.surface,
               title: Text(
-                AppLocalizations.of(context)!.quickSeenEstimate,
+                AppLocalizations.of(context).quickSeenEstimate,
                 style: TextStyle(color: palette.textPrimary),
               ),
               content: SingleChildScrollView(
@@ -925,7 +643,7 @@ class _MetricsViewState extends State<_MetricsView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.seenFormulaDescription,
+                      AppLocalizations.of(context).seenFormulaDescription,
                       style: TextStyle(
                         color: palette.textSecondary,
                         fontSize: 12,
@@ -938,8 +656,8 @@ class _MetricsViewState extends State<_MetricsView> {
                       keyboardType: TextInputType.number,
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.ageLabel,
-                        suffixText: AppLocalizations.of(context)!.yearsLabel,
+                        labelText: AppLocalizations.of(context).ageLabel,
+                        suffixText: AppLocalizations.of(context).yearsLabel,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -952,7 +670,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       decoration: InputDecoration(
                         labelText: AppLocalizations.of(
                           context,
-                        )!.heightSectionTitle,
+                        ).heightSectionTitle,
                         suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
@@ -964,7 +682,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.calfLabel,
+                        labelText: AppLocalizations.of(context).calfLabel,
                         suffixText: lengthUnitSymbol(unitSystem),
                       ),
                     ),
@@ -974,17 +692,17 @@ class _MetricsViewState extends State<_MetricsView> {
                       dropdownColor: palette.surfaceVariant,
                       style: TextStyle(color: palette.textPrimary),
                       decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.sexLabel,
+                        labelText: AppLocalizations.of(context).sexLabel,
                       ),
                       items: [
                         DropdownMenuItem(
                           value: SeenBiologicalSex.male,
-                          child: Text(AppLocalizations.of(context)!.maleOption),
+                          child: Text(AppLocalizations.of(context).maleOption),
                         ),
                         DropdownMenuItem(
                           value: SeenBiologicalSex.female,
                           child: Text(
-                            AppLocalizations.of(context)!.femaleOption,
+                            AppLocalizations.of(context).femaleOption,
                           ),
                         ),
                       ],
@@ -1008,7 +726,7 @@ class _MetricsViewState extends State<_MetricsView> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(AppLocalizations.of(context)!.cancel),
+                  child: Text(AppLocalizations.of(context).cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -1020,7 +738,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       setDialogState(() {
                         errorText = AppLocalizations.of(
                           context,
-                        )!.invalidAgeError;
+                        ).invalidAgeError;
                       });
                       return;
                     }
@@ -1029,7 +747,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       setDialogState(() {
                         errorText = AppLocalizations.of(
                           context,
-                        )!.invalidHeightError;
+                        ).invalidHeightError;
                       });
                       return;
                     }
@@ -1038,7 +756,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       setDialogState(() {
                         errorText = AppLocalizations.of(
                           context,
-                        )!.invalidCalfError;
+                        ).invalidCalfError;
                       });
                       return;
                     }
@@ -1052,11 +770,10 @@ class _MetricsViewState extends State<_MetricsView> {
                       unitSystem,
                     );
 
-                    if (selectedSex == null) {
+                    final confirmedSex = selectedSex;
+                    if (confirmedSex == null) {
                       setDialogState(() {
-                        errorText = AppLocalizations.of(
-                          context,
-                        )!.selectSexError;
+                        errorText = AppLocalizations.of(context).selectSexError;
                       });
                       return;
                     }
@@ -1065,14 +782,14 @@ class _MetricsViewState extends State<_MetricsView> {
                       calfCm: calfCm,
                       ageYears: age,
                       heightMeters: heightCm / 100,
-                      sex: selectedSex!,
+                      sex: confirmedSex,
                     );
 
                     if (result == null) {
                       setDialogState(() {
                         errorText = AppLocalizations.of(
                           context,
-                        )!.estimationFailedError;
+                        ).estimationFailedError;
                       });
                       return;
                     }
@@ -1092,7 +809,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     Navigator.of(dialogContext).pop(result);
                   },
                   child: Text(
-                    AppLocalizations.of(context)!.calculateAndUseButton,
+                    AppLocalizations.of(context).calculateAndUseButton,
                   ),
                 ),
               ],
@@ -1135,11 +852,13 @@ class _MetricsViewState extends State<_MetricsView> {
         : double.tryParse(rawProfileHeight?.toString() ?? '');
 
     setState(() {
-      if (metric.weightKg != null) {
-        _weight = metric.weightKg!.clamp(40.0, 160.0);
+      final weightKg = metric.weightKg;
+      if (weightKg != null) {
+        _weight = weightKg.clamp(40.0, 160.0);
       }
-      if (metric.sleepHours != null) {
-        _sleepHours = metric.sleepHours!.clamp(4.0, 12.0);
+      final sleepHours = metric.sleepHours;
+      if (sleepHours != null) {
+        _sleepHours = sleepHours.clamp(4.0, 12.0);
       }
       _heightTouched = false;
       _weightTouched = false;
@@ -1155,8 +874,9 @@ class _MetricsViewState extends State<_MetricsView> {
     _weightController.text = metric.weightKg != null
         ? formatWeightValue(metric.weightKg, unitSystem)
         : '';
-    _sleepController.text = metric.sleepHours != null
-        ? metric.sleepHours!.toStringAsFixed(1)
+    final sleepHours = metric.sleepHours;
+    _sleepController.text = sleepHours != null
+        ? sleepHours.toStringAsFixed(1)
         : '';
     if (metric.muscleMassKg != null) {
       _muscleMassController.text = formatWeightValue(
@@ -1203,8 +923,9 @@ class _MetricsViewState extends State<_MetricsView> {
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
         if (state is MetricsLoaded) {
-          if (state.current != null) {
-            _populateFromMetric(state.current!);
+          final currentMetric = state.current;
+          if (currentMetric != null) {
+            _populateFromMetric(currentMetric);
           } else {
             _populateEmptyMetricState();
           }
@@ -1216,7 +937,7 @@ class _MetricsViewState extends State<_MetricsView> {
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 20),
                   SizedBox(width: 8),
-                  Text(AppLocalizations.of(context)!.metricsSuccessMessage),
+                  Text(AppLocalizations.of(context).metricsSuccessMessage),
                 ],
               ),
               backgroundColor: semantic.success,
@@ -1250,7 +971,7 @@ class _MetricsViewState extends State<_MetricsView> {
               onPressed: () => context.pop(),
             ),
             title: Text(
-              AppLocalizations.of(context)!.metricsPageTitle,
+              AppLocalizations.of(context).metricsPageTitle,
               style: TextStyle(
                 color: palette.textPrimary,
                 fontSize: 18,
@@ -1270,7 +991,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     children: [
                       _SectionCard(
                         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        title: AppLocalizations.of(context)!.recordDateTitle,
+                        title: AppLocalizations.of(context).recordDateTitle,
                         icon: Icons.calendar_today_outlined,
                         color: palette.primary,
                         child: Column(
@@ -1280,7 +1001,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             Text(
                               AppLocalizations.of(
                                 context,
-                              )!.recordDateDescription,
+                              ).recordDateDescription,
                               style: TextStyle(
                                 color: palette.textSecondary,
                                 fontSize: 12,
@@ -1298,7 +1019,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ),
 
                       _SectionCard(
-                        title: AppLocalizations.of(context)!.heightSectionTitle,
+                        title: AppLocalizations.of(context).heightSectionTitle,
                         icon: Icons.height,
                         color: semantic.info,
                         child: Column(
@@ -1306,7 +1027,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           children: [
                             const SizedBox(height: 8),
                             Text(
-                              AppLocalizations.of(context)!.heightDescription,
+                              AppLocalizations.of(context).heightDescription,
                               style: TextStyle(
                                 color: palette.textSecondary,
                                 fontSize: 12,
@@ -1336,7 +1057,7 @@ class _MetricsViewState extends State<_MetricsView> {
 
                       // Weight section
                       _SectionCard(
-                        title: AppLocalizations.of(context)!.weightSectionTitle,
+                        title: AppLocalizations.of(context).weightSectionTitle,
                         icon: Icons.monitor_weight_outlined,
                         color: palette.primary,
                         child: Column(
@@ -1348,7 +1069,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                 Text(
                                   AppLocalizations.of(
                                     context,
-                                  )!.manualEntryToggle,
+                                  ).manualEntryToggle,
                                   style: TextStyle(
                                     color: palette.textSecondary,
                                     fontSize: 13,
@@ -1364,7 +1085,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              AppLocalizations.of(context)!.weightUpdateNote,
+                              AppLocalizations.of(context).weightUpdateNote,
                               style: TextStyle(
                                 color: palette.textDisabled,
                                 fontSize: 11,
@@ -1438,7 +1159,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       _SectionCard(
                         title: AppLocalizations.of(
                           context,
-                        )!.muscleMassSectionTitle,
+                        ).muscleMassSectionTitle,
                         icon: Icons.fitness_center,
                         color: semantic.calorie,
                         child: Column(
@@ -1448,7 +1169,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             Text(
                               AppLocalizations.of(
                                 context,
-                              )!.muscleMassDescription,
+                              ).muscleMassDescription,
                               style: TextStyle(
                                 color: palette.textSecondary,
                                 fontSize: 12,
@@ -1487,7 +1208,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   Text(
                                     AppLocalizations.of(
                                       context,
-                                    )!.seenCalculatorTitle,
+                                    ).seenCalculatorTitle,
                                     style: TextStyle(
                                       color: palette.textPrimary,
                                       fontSize: 13,
@@ -1498,7 +1219,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   Text(
                                     AppLocalizations.of(
                                       context,
-                                    )!.seenCalculatorDescription,
+                                    ).seenCalculatorDescription,
                                     style: TextStyle(
                                       color: palette.textSecondary,
                                       fontSize: 12,
@@ -1517,7 +1238,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                       label: Text(
                                         AppLocalizations.of(
                                           context,
-                                        )!.calculateEstimateButton,
+                                        ).calculateEstimateButton,
                                       ),
                                     ),
                                   ),
@@ -1532,7 +1253,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       _SectionCard(
                         title: AppLocalizations.of(
                           context,
-                        )!.sleepHoursSectionTitle,
+                        ).sleepHoursSectionTitle,
                         icon: Icons.bedtime_outlined,
                         color: semantic.sleep,
                         child: Column(
@@ -1542,7 +1263,7 @@ class _MetricsViewState extends State<_MetricsView> {
                             Text(
                               AppLocalizations.of(
                                 context,
-                              )!.sleepHoursDescription,
+                              ).sleepHoursDescription,
                               style: TextStyle(
                                 color: palette.textSecondary,
                                 fontSize: 12,
@@ -1600,7 +1321,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       _SectionCard(
                         title: AppLocalizations.of(
                           context,
-                        )!.bodyMeasurementsTitle,
+                        ).bodyMeasurementsTitle,
                         icon: Icons.straighten,
                         color: semantic.info,
                         trailing: GestureDetector(
@@ -1623,10 +1344,10 @@ class _MetricsViewState extends State<_MetricsView> {
                                 _bodyMapMode
                                     ? AppLocalizations.of(
                                         context,
-                                      )!.listViewToggle
+                                      ).listViewToggle
                                     : AppLocalizations.of(
                                         context,
-                                      )!.bodyViewToggle,
+                                      ).bodyViewToggle,
                                 style: TextStyle(
                                   color: semantic.info,
                                   fontSize: 12,
@@ -1700,7 +1421,7 @@ class _MetricsViewState extends State<_MetricsView> {
                               : Text(
                                   AppLocalizations.of(
                                     context,
-                                  )!.saveMetricsButton,
+                                  ).saveMetricsButton,
                                 ),
                         ),
                       ),
@@ -1750,7 +1471,7 @@ class _MeasureZoneConfig {
     required this.rightFieldKey,
   }) : fieldKey = null;
 
-  final String zone;
+  final BodyZone zone;
   final String? fieldKey;
   final String? leftFieldKey;
   final String? rightFieldKey;
@@ -1759,18 +1480,6 @@ class _MeasureZoneConfig {
 
   List<String> get fieldKeys =>
       isBilateral ? [leftFieldKey!, rightFieldKey!] : [fieldKey!];
-}
-
-class _BodyHotspotConfig {
-  const _BodyHotspotConfig({
-    required this.id,
-    required this.zone,
-    required this.position,
-  });
-
-  final String id;
-  final String zone;
-  final Offset position;
 }
 
 class _SectionCard extends StatelessWidget {

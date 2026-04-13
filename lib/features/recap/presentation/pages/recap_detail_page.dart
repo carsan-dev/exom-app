@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
@@ -248,6 +250,7 @@ class _RecapDetailContent extends StatelessWidget {
     final palette = context.exomPalette;
     final theme = Theme.of(context);
     final fmt = DateFormat('dd MMM yyyy');
+    final l10n = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -335,7 +338,9 @@ class _RecapDetailContent extends StatelessWidget {
               'Zonas con dolor',
               recap.musclePainZones.isEmpty
                   ? 'Sin zonas'
-                  : recap.musclePainZones.map(_opt).join(', '),
+                  : recap.musclePainZones
+                        .map((zone) => _formatZone(zone, l10n))
+                        .join(', '),
             ),
             _Item('Notas', recap.recoveryNotes ?? '—'),
           ],
@@ -401,6 +406,16 @@ class _RecapDetailContent extends StatelessWidget {
           RegExp(r'(^|\s)\S'),
           (m) => m.group(0)!.toUpperCase(),
         );
+  }
+
+  String _formatZone(String value, AppLocalizations l10n) {
+    for (final zone in BodyZone.values) {
+      if (zone.name == value) {
+        return zone.label(l10n);
+      }
+    }
+
+    return _opt(value);
   }
 }
 

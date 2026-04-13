@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/body_silhouette_painter.dart';
+import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
 String formatRecapOption(String value) {
   return value
@@ -65,6 +67,15 @@ String recapCopy(BuildContext context, String value) {
     'CUADRICEPS': ['Cuadriceps', 'Quads'],
     'ISQUIOS': ['Isquios', 'Hamstrings'],
     'GEMELOS': ['Gemelos', 'Calves'],
+    'neck': ['Cuello', 'Neck'],
+    'shoulders': ['Hombros', 'Shoulders'],
+    'chest': ['Pecho', 'Chest'],
+    'upperArm': ['Brazo', 'Upper arm'],
+    'forearm': ['Antebrazo', 'Forearm'],
+    'waist': ['Cintura', 'Waist'],
+    'hips': ['Caderas', 'Hips'],
+    'thigh': ['Muslo', 'Thigh'],
+    'calf': ['Pantorrilla', 'Calf'],
     'FRONTAL': ['Frontal', 'Front'],
     'POSTERIOR': ['Posterior', 'Back'],
   };
@@ -535,11 +546,11 @@ class RecapStarRatingField extends StatelessWidget {
 }
 
 // ── Modelo anatómico interactivo (frontal / posterior) ─────────────────────
-class RecapBodyMapField extends StatefulWidget {
+class RecapBodyMapField extends StatelessWidget {
   final String label;
   final String helperText;
-  final List<String> values;
-  final ValueChanged<List<String>> onChanged;
+  final Set<BodyZone> values;
+  final ValueChanged<Set<BodyZone>> onChanged;
 
   const RecapBodyMapField({
     super.key,
@@ -549,185 +560,18 @@ class RecapBodyMapField extends StatefulWidget {
     required this.onChanged,
   });
 
-  @override
-  State<RecapBodyMapField> createState() => _RecapBodyMapFieldState();
-}
-
-class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
-  bool _isFront = true;
-
-  static const _zoneLabels = <String, String>{
-    'CUELLO': 'CUELLO',
-    'HOMBROS': 'HOMBROS',
-    'ESPALDA': 'ESPALDA',
-    'LUMBAR': 'LUMBAR',
-    'GLUTEOS': 'GLUTEOS',
-    'CUADRICEPS': 'CUADRICEPS',
-    'ISQUIOS': 'ISQUIOS',
-    'GEMELOS': 'GEMELOS',
-  };
-
-  // ── Front view ──
-  static const _frontLeft = ['CUELLO', 'CUADRICEPS'];
-  static const _frontRight = ['HOMBROS', 'GEMELOS'];
-  static const _frontHotspots = <String, List<double>>{
-    'CUELLO': [0.50, 0.10],
-    'HOMBROS': [0.50, 0.18],
-    'CUADRICEPS': [0.50, 0.57],
-    'GEMELOS': [0.50, 0.78],
-  };
-  static const _frontLeftFlex = [2, 14, 15];
-  static const _frontRightFlex = [3, 13, 4];
-
-  // ── Back view ──
-  static const _backLeft = ['ESPALDA', 'GLUTEOS'];
-  static const _backRight = ['LUMBAR', 'ISQUIOS'];
-  static const _backHotspots = <String, List<double>>{
-    'ESPALDA': [0.50, 0.25],
-    'LUMBAR': [0.50, 0.37],
-    'GLUTEOS': [0.50, 0.46],
-    'ISQUIOS': [0.50, 0.60],
-  };
-  static const _backLeftFlex = [5, 3, 12];
-  static const _backRightFlex = [8, 4, 9];
-
-  void _toggleZone(String zone) {
-    final next = List<String>.from(widget.values);
+  void _toggleZone(BodyZone zone) {
+    final next = Set<BodyZone>.from(values);
     if (next.contains(zone)) {
       next.remove(zone);
     } else {
       next.add(zone);
     }
-    widget.onChanged(next);
+    onChanged(next);
   }
 
-  Widget _zoneButton(String id) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final isSelected = widget.values.contains(id);
-    return GestureDetector(
-      onTap: () => _toggleZone(id),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? semantic.accent.withValues(alpha: 0.9)
-              : palette.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? semantic.accent : palette.divider,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Text(
-          recapCopy(context, _zoneLabels[id] ?? id),
-          style: TextStyle(
-            color: isSelected ? Colors.white : palette.textSecondary,
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bodyHotspot(String zoneId, double relX, double relY) {
-    final isSelected = widget.values.contains(zoneId);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    const s = 26.0;
-    return Positioned(
-      left: relX * 90 - s / 2,
-      top: relY * 380 - s / 2,
-      child: GestureDetector(
-        onTap: () => _toggleZone(zoneId),
-        child: Container(
-          width: s,
-          height: s,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isSelected
-                ? semantic.accent.withValues(alpha: 0.3)
-                : palette.primary.withValues(alpha: 0.08),
-          ),
-          child: Center(
-            child: Container(
-              width: isSelected ? 10 : 5,
-              height: isSelected ? 10 : 5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected
-                    ? semantic.accent
-                    : palette.primary.withValues(alpha: 0.32),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildZoneColumn(
-    List<String> zones,
-    List<int> flex,
-    CrossAxisAlignment align,
-  ) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: align,
-        children: [
-          Spacer(flex: flex[0]),
-          _zoneButton(zones[0]),
-          Spacer(flex: flex[1]),
-          _zoneButton(zones[1]),
-          Spacer(flex: flex[2]),
-        ],
-      ),
-    );
-  }
-
-  Widget _viewTab(String label, bool isActive) {
-    final palette = context.exomPalette;
-    return GestureDetector(
-      onTap: () => setState(() => _isFront = label == 'FRONTAL'),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive
-              ? palette.primary.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? palette.primary : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isActive
-                  ? (label == 'FRONTAL'
-                        ? Icons.accessibility_new
-                        : Icons.accessibility)
-                  : Icons.circle,
-              size: isActive ? 16 : 6,
-              color: isActive ? palette.primary : palette.textDisabled,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? palette.primary : palette.textSecondary,
-                fontSize: 13,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _zoneLabel(BuildContext context, BodyZone zone) {
+    return zone.label(AppLocalizations.of(context));
   }
 
   @override
@@ -735,17 +579,15 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final leftZones = _isFront ? _frontLeft : _backLeft;
-    final rightZones = _isFront ? _frontRight : _backRight;
-    final leftFlex = _isFront ? _frontLeftFlex : _backLeftFlex;
-    final rightFlex = _isFront ? _frontRightFlex : _backRightFlex;
-    final hotspots = _isFront ? _frontHotspots : _backHotspots;
+    final selectedZones = BodyZone.values
+        .where(values.contains)
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          widget.label,
+          label,
           style: theme.textTheme.titleSmall?.copyWith(
             color: palette.textPrimary,
             fontSize: 14,
@@ -754,78 +596,30 @@ class _RecapBodyMapFieldState extends State<RecapBodyMapField> {
         ),
         const SizedBox(height: 4),
         Text(
-          widget.helperText,
+          helperText,
           style: theme.textTheme.bodySmall?.copyWith(
             color: palette.textDisabled,
             fontSize: 12,
           ),
         ),
         const SizedBox(height: 12),
-        // ── Toggle Frontal / Posterior ──
         Center(
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: palette.surfaceVariant,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _viewTab('FRONTAL', _isFront),
-                _viewTab('POSTERIOR', !_isFront),
-              ],
-            ),
+          child: AnatomySelector(
+            height: 440,
+            multiSelect: true,
+            selectedZones: values,
+            onZoneSelected: _toggleZone,
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 380,
-          child: Row(
-            children: [
-              _buildZoneColumn(leftZones, leftFlex, CrossAxisAlignment.end),
-              const SizedBox(width: 6),
-              // ── Body silhouette with tappable zones ──
-              SizedBox(
-                width: 90,
-                height: 380,
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      size: const Size(90, 380),
-                      painter: BodySilhouettePainter(
-                        isBack: !_isFront,
-                        fillColor: palette.textSecondary.withValues(
-                          alpha: 0.08,
-                        ),
-                        strokeColor: palette.textSecondary.withValues(
-                          alpha: 0.22,
-                        ),
-                        detailColor: palette.textSecondary.withValues(
-                          alpha: 0.16,
-                        ),
-                      ),
-                    ),
-                    ...hotspots.entries.map(
-                      (e) => _bodyHotspot(e.key, e.value[0], e.value[1]),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              _buildZoneColumn(rightZones, rightFlex, CrossAxisAlignment.start),
-            ],
-          ),
-        ),
-        if (widget.values.isNotEmpty) ...[
+        if (selectedZones.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: widget.values.map((zone) {
+            children: selectedZones.map((zone) {
               return Chip(
                 label: Text(
-                  recapCopy(context, _zoneLabels[zone] ?? zone),
+                  _zoneLabel(context, zone),
                   style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
                 backgroundColor: semantic.accent,

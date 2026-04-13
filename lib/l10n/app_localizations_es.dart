@@ -60,6 +60,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get continueWithApple => 'Continuar con Apple';
 
   @override
+  String get linkSocialTitle => 'Vincular acceso';
+
+  @override
+  String linkSocialDescription(Object email, Object provider) {
+    return 'Ya existe una cuenta EXOM para $email. Introduce tu contraseña actual para vincular también $provider y poder iniciar sesión con ambos métodos.';
+  }
+
+  @override
+  String get linkSocialConfirmButton => 'Vincular';
+
+  @override
   String get accountLockedTitle => 'Cuenta bloqueada';
 
   @override

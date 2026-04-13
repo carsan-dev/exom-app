@@ -17,6 +17,15 @@
   "continueWithDivider": "or continue with",
   "continueWithGoogle": "Continue with Google",
   "continueWithApple": "Continue with Apple",
+  "linkSocialTitle": "Link sign-in",
+  "linkSocialDescription": "An EXOM account already exists for {email}. Enter your current password to also link {provider} so you can sign in with both methods.",
+  "@linkSocialDescription": {
+    "placeholders": {
+      "email": {},
+      "provider": {}
+    }
+  },
+  "linkSocialConfirmButton": "Link",
   "accountLockedTitle": "Account locked",
   "accountLockedMessage": "Your account has been temporarily locked.\nContact your coach for more information.",
   "backToLoginButton": "Back to login",

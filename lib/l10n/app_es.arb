@@ -17,6 +17,15 @@
   "continueWithDivider": "o continúa con",
   "continueWithGoogle": "Continuar con Google",
   "continueWithApple": "Continuar con Apple",
+  "linkSocialTitle": "Vincular acceso",
+  "linkSocialDescription": "Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular también {provider} y poder iniciar sesión con ambos métodos.",
+  "@linkSocialDescription": {
+    "placeholders": {
+      "email": {},
+      "provider": {}
+    }
+  },
+  "linkSocialConfirmButton": "Vincular",
   "accountLockedTitle": "Cuenta bloqueada",
   "accountLockedMessage": "Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.",
   "backToLoginButton": "Volver al inicio de sesión",

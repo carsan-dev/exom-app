@@ -194,6 +194,24 @@ abstract class AppLocalizations {
   /// **'Continuar con Apple'**
   String get continueWithApple;
 
+  /// No description provided for @linkSocialTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Vincular acceso'**
+  String get linkSocialTitle;
+
+  /// No description provided for @linkSocialDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular también {provider} y poder iniciar sesión con ambos métodos.'**
+  String linkSocialDescription(Object email, Object provider);
+
+  /// No description provided for @linkSocialConfirmButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Vincular'**
+  String get linkSocialConfirmButton;
+
   /// No description provided for @accountLockedTitle.
   ///
   /// In es, this message translates to:

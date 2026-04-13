@@ -18,6 +18,10 @@ class FirebaseAuthService {
     return _auth.signInWithCustomToken(token);
   }
 
+  Future<UserCredential> signInWithCredential(AuthCredential credential) {
+    return _auth.signInWithCredential(credential);
+  }
+
   Future<void> _ensureGoogleSignInInitialized() async {
     if (_googleSignInInitialized) return;
 
@@ -28,19 +32,21 @@ class FirebaseAuthService {
     _googleSignInInitialized = true;
   }
 
-  Future<UserCredential> signInWithGoogle() async {
+  Future<OAuthCredential> createGoogleCredential() async {
     await _ensureGoogleSignInInitialized();
 
     final account = await _googleSignIn.authenticate();
 
     final googleAuth = account.authentication;
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-    );
-    return _auth.signInWithCredential(credential);
+    return GoogleAuthProvider.credential(idToken: googleAuth.idToken);
   }
 
-  Future<UserCredential> signInWithApple() async {
+  Future<UserCredential> signInWithGoogle() async {
+    final credential = await createGoogleCredential();
+    return signInWithCredential(credential);
+  }
+
+  Future<OAuthCredential> createAppleCredential() async {
     final appleCredential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
@@ -48,16 +54,33 @@ class FirebaseAuthService {
       ],
     );
 
-    final oauthCredential = OAuthProvider('apple.com').credential(
+    return OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,
       accessToken: appleCredential.authorizationCode,
     );
+  }
 
-    return _auth.signInWithCredential(oauthCredential);
+  Future<UserCredential> signInWithApple() async {
+    final credential = await createAppleCredential();
+    return signInWithCredential(credential);
   }
 
   Future<String?> getIdToken({bool forceRefresh = false}) async {
     return _auth.currentUser?.getIdToken(forceRefresh);
+  }
+
+  Future<UserCredential> linkCurrentUserWithCredential(
+    AuthCredential credential,
+  ) {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No hay ninguna sesión activa para vincular.',
+      );
+    }
+
+    return user.linkWithCredential(credential);
   }
 
   Future<void> signOut() async {

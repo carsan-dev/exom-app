@@ -52,6 +52,87 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _showLinkPasswordDialog(
+    BuildContext context, {
+    required String email,
+    required String provider,
+  }) async {
+    final controller = TextEditingController(text: _passwordController.text);
+    final formKey = GlobalKey<FormState>();
+    final l10n = AppLocalizations.of(context)!;
+
+    final password = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.linkSocialTitle),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.linkSocialDescription(email, provider)),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: controller,
+                  obscureText: true,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: l10n.passwordFieldLabel,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return l10n.passwordValidationEmpty;
+                    }
+                    if (value.length < 8) {
+                      return l10n.passwordValidationLength;
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) {
+                    if (formKey.currentState?.validate() ?? false) {
+                      Navigator.of(dialogContext).pop(controller.text);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(dialogContext).pop(controller.text);
+                }
+              },
+              child: Text(l10n.linkSocialConfirmButton),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+    if (!context.mounted) {
+      return;
+    }
+
+    if (password == null) {
+      context.read<AuthBloc>().add(const AuthLinkCancelled());
+      return;
+    }
+
+    _emailController.text = email;
+    _passwordController.text = password;
+    context.read<AuthBloc>().add(AuthLinkPasswordSubmitted(password: password));
+  }
+
   String _logoAsset(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
         ? 'assets/images/logo_dark.svg'
@@ -68,6 +149,12 @@ class _LoginPageState extends State<LoginPage> {
           context.go(AppRoutes.home);
         } else if (state is AuthAccountLocked) {
           context.go(AppRoutes.accountLocked);
+        } else if (state is AuthLinkPasswordRequired) {
+          _showLinkPasswordDialog(
+            context,
+            email: state.email,
+            provider: state.provider,
+          );
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

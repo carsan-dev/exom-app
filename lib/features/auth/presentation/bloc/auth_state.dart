@@ -38,6 +38,16 @@ class AuthError extends AuthState {
   List<Object?> get props => [message];
 }
 
+class AuthLinkPasswordRequired extends AuthState {
+  final String email;
+  final String provider;
+
+  const AuthLinkPasswordRequired({required this.email, required this.provider});
+
+  @override
+  List<Object?> get props => [email, provider];
+}
+
 class AuthAccountLocked extends AuthState {
   const AuthAccountLocked();
 }

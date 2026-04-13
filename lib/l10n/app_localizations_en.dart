@@ -59,6 +59,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithApple => 'Continue with Apple';
 
   @override
+  String get linkSocialTitle => 'Link sign-in';
+
+  @override
+  String linkSocialDescription(Object email, Object provider) {
+    return 'An EXOM account already exists for $email. Enter your current password to also link $provider so you can sign in with both methods.';
+  }
+
+  @override
+  String get linkSocialConfirmButton => 'Link';
+
+  @override
   String get accountLockedTitle => 'Account locked';
 
   @override

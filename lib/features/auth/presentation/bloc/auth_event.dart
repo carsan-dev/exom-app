@@ -29,6 +29,19 @@ class AuthAppleLoginRequested extends AuthEvent {
   const AuthAppleLoginRequested();
 }
 
+class AuthLinkPasswordSubmitted extends AuthEvent {
+  final String password;
+
+  const AuthLinkPasswordSubmitted({required this.password});
+
+  @override
+  List<Object?> get props => [password];
+}
+
+class AuthLinkCancelled extends AuthEvent {
+  const AuthLinkCancelled();
+}
+
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }

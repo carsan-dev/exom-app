@@ -8,12 +8,16 @@ class BodyMetricEntity {
   final double? neckCm;
   final double? shouldersCm;
   final double? chestCm;
-  final double? armCm;
-  final double? forearmCm;
+  final double? armLeftCm;
+  final double? armRightCm;
+  final double? forearmLeftCm;
+  final double? forearmRightCm;
   final double? waistCm;
   final double? hipsCm;
-  final double? thighCm;
-  final double? calfCm;
+  final double? thighLeftCm;
+  final double? thighRightCm;
+  final double? calfLeftCm;
+  final double? calfRightCm;
 
   const BodyMetricEntity({
     required this.id,
@@ -25,11 +29,15 @@ class BodyMetricEntity {
     this.neckCm,
     this.shouldersCm,
     this.chestCm,
-    this.armCm,
-    this.forearmCm,
+    this.armLeftCm,
+    this.armRightCm,
+    this.forearmLeftCm,
+    this.forearmRightCm,
     this.waistCm,
     this.hipsCm,
-    this.thighCm,
-    this.calfCm,
+    this.thighLeftCm,
+    this.thighRightCm,
+    this.calfLeftCm,
+    this.calfRightCm,
   });
 }

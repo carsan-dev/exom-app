@@ -3014,6 +3014,30 @@ abstract class AppLocalizations {
   /// **'Antebrazo'**
   String get measureForearm;
 
+  /// No description provided for @leftSideLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Izquierda'**
+  String get leftSideLabel;
+
+  /// No description provided for @rightSideLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Derecha'**
+  String get rightSideLabel;
+
+  /// No description provided for @leftSideShortLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Izq.'**
+  String get leftSideShortLabel;
+
+  /// No description provided for @rightSideShortLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Der.'**
+  String get rightSideShortLabel;
+
   /// No description provided for @measureWaist.
   ///
   /// In es, this message translates to:

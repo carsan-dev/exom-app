@@ -38,12 +38,16 @@ class MetricsRepositoryImpl implements MetricsRepository {
       neckCm: model.neckCm,
       shouldersCm: model.shouldersCm,
       chestCm: model.chestCm,
-      armCm: model.armCm,
-      forearmCm: model.forearmCm,
+      armLeftCm: model.armLeftCm,
+      armRightCm: model.armRightCm,
+      forearmLeftCm: model.forearmLeftCm,
+      forearmRightCm: model.forearmRightCm,
       waistCm: model.waistCm,
       hipsCm: model.hipsCm,
-      thighCm: model.thighCm,
-      calfCm: model.calfCm,
+      thighLeftCm: model.thighLeftCm,
+      thighRightCm: model.thighRightCm,
+      calfLeftCm: model.calfLeftCm,
+      calfRightCm: model.calfRightCm,
     );
   }
 }

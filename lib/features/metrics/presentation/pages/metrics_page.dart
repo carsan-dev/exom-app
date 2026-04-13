@@ -56,28 +56,37 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _bodyFront = true;
   String? _selectedMeasure;
 
-  final Map<String, TextEditingController> _measureControllers = {
-    'Cuello': TextEditingController(),
-    'Hombros': TextEditingController(),
-    'Pecho': TextEditingController(),
-    'Brazo': TextEditingController(),
-    'Antebrazo': TextEditingController(),
-    'Cintura': TextEditingController(),
-    'Caderas': TextEditingController(),
-    'Muslo': TextEditingController(),
-    'Pantorrilla': TextEditingController(),
-  };
+  static const _measureZones = <_MeasureZoneConfig>[
+    _MeasureZoneConfig.single(zone: 'Cuello', fieldKey: 'neck_cm'),
+    _MeasureZoneConfig.single(zone: 'Hombros', fieldKey: 'shoulders_cm'),
+    _MeasureZoneConfig.single(zone: 'Pecho', fieldKey: 'chest_cm'),
+    _MeasureZoneConfig.bilateral(
+      zone: 'Brazo',
+      leftFieldKey: 'arm_left_cm',
+      rightFieldKey: 'arm_right_cm',
+    ),
+    _MeasureZoneConfig.bilateral(
+      zone: 'Antebrazo',
+      leftFieldKey: 'forearm_left_cm',
+      rightFieldKey: 'forearm_right_cm',
+    ),
+    _MeasureZoneConfig.single(zone: 'Cintura', fieldKey: 'waist_cm'),
+    _MeasureZoneConfig.single(zone: 'Caderas', fieldKey: 'hips_cm'),
+    _MeasureZoneConfig.bilateral(
+      zone: 'Muslo',
+      leftFieldKey: 'thigh_left_cm',
+      rightFieldKey: 'thigh_right_cm',
+    ),
+    _MeasureZoneConfig.bilateral(
+      zone: 'Pantorrilla',
+      leftFieldKey: 'calf_left_cm',
+      rightFieldKey: 'calf_right_cm',
+    ),
+  ];
 
-  final Map<String, String> _measureKeys = {
-    'Cuello': 'neck_cm',
-    'Hombros': 'shoulders_cm',
-    'Pecho': 'chest_cm',
-    'Brazo': 'arm_cm',
-    'Antebrazo': 'forearm_cm',
-    'Cintura': 'waist_cm',
-    'Caderas': 'hips_cm',
-    'Muslo': 'thigh_cm',
-    'Pantorrilla': 'calf_cm',
+  late final Map<String, TextEditingController> _measureControllers = {
+    for (final zone in _measureZones)
+      for (final fieldKey in zone.fieldKeys) fieldKey: TextEditingController(),
   };
 
   @override
@@ -104,32 +113,158 @@ class _MetricsViewState extends State<_MetricsView> {
   }
 
   // Front view zones (left column, right column)
-  static const _frontLeftZones = ['Cuello', 'Pecho', 'Cintura'];
-  static const _frontRightZones = ['Brazo', 'Antebrazo'];
+  static const _frontLeftZones = [
+    'Cuello',
+    'Hombros',
+    'Pecho',
+    'Cintura',
+    'Caderas',
+  ];
+  static const _frontRightZones = [
+    'Brazo',
+    'Antebrazo',
+    'Muslo',
+    'Pantorrilla',
+  ];
   // Back view zones
-  static const _backLeftZones = ['Hombros', 'Caderas'];
-  static const _backRightZones = ['Muslo', 'Pantorrilla'];
+  static const _backLeftZones = ['Cuello', 'Hombros', 'Cintura', 'Caderas'];
+  static const _backRightZones = ['Brazo', 'Antebrazo', 'Muslo', 'Pantorrilla'];
 
-  // Hotspot positions (relative to body silhouette)
-  static const _frontHotspots = <String, Offset>{
-    'Cuello': Offset(0.50, 0.10),
-    'Pecho': Offset(0.50, 0.25),
-    'Brazo': Offset(0.82, 0.30),
-    'Antebrazo': Offset(0.85, 0.40),
-    'Cintura': Offset(0.50, 0.40),
-  };
-  static const _backHotspots = <String, Offset>{
-    'Hombros': Offset(0.50, 0.17),
-    'Caderas': Offset(0.50, 0.45),
-    'Muslo': Offset(0.62, 0.62),
-    'Pantorrilla': Offset(0.62, 0.80),
-  };
+  static const _frontHotspots = <_BodyHotspotConfig>[
+    _BodyHotspotConfig(
+      id: 'neck_center_front',
+      zone: 'Cuello',
+      position: Offset(0.50, 0.10),
+    ),
+    _BodyHotspotConfig(
+      id: 'shoulder_center_front',
+      zone: 'Hombros',
+      position: Offset(0.50, 0.18),
+    ),
+    _BodyHotspotConfig(
+      id: 'chest_center_front',
+      zone: 'Pecho',
+      position: Offset(0.50, 0.26),
+    ),
+    _BodyHotspotConfig(
+      id: 'upper_arm_left_front',
+      zone: 'Brazo',
+      position: Offset(0.22, 0.30),
+    ),
+    _BodyHotspotConfig(
+      id: 'upper_arm_right_front',
+      zone: 'Brazo',
+      position: Offset(0.78, 0.30),
+    ),
+    _BodyHotspotConfig(
+      id: 'forearm_left_front',
+      zone: 'Antebrazo',
+      position: Offset(0.18, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'forearm_right_front',
+      zone: 'Antebrazo',
+      position: Offset(0.82, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'waist_center_front',
+      zone: 'Cintura',
+      position: Offset(0.50, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'hips_center_front',
+      zone: 'Caderas',
+      position: Offset(0.50, 0.48),
+    ),
+    _BodyHotspotConfig(
+      id: 'thigh_left_front',
+      zone: 'Muslo',
+      position: Offset(0.40, 0.63),
+    ),
+    _BodyHotspotConfig(
+      id: 'thigh_right_front',
+      zone: 'Muslo',
+      position: Offset(0.60, 0.63),
+    ),
+    _BodyHotspotConfig(
+      id: 'calf_left_front',
+      zone: 'Pantorrilla',
+      position: Offset(0.38, 0.80),
+    ),
+    _BodyHotspotConfig(
+      id: 'calf_right_front',
+      zone: 'Pantorrilla',
+      position: Offset(0.62, 0.80),
+    ),
+  ];
+  static const _backHotspots = <_BodyHotspotConfig>[
+    _BodyHotspotConfig(
+      id: 'neck_center_back',
+      zone: 'Cuello',
+      position: Offset(0.50, 0.10),
+    ),
+    _BodyHotspotConfig(
+      id: 'shoulder_center_back',
+      zone: 'Hombros',
+      position: Offset(0.50, 0.18),
+    ),
+    _BodyHotspotConfig(
+      id: 'upper_arm_left_back',
+      zone: 'Brazo',
+      position: Offset(0.22, 0.30),
+    ),
+    _BodyHotspotConfig(
+      id: 'upper_arm_right_back',
+      zone: 'Brazo',
+      position: Offset(0.78, 0.30),
+    ),
+    _BodyHotspotConfig(
+      id: 'forearm_left_back',
+      zone: 'Antebrazo',
+      position: Offset(0.18, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'forearm_right_back',
+      zone: 'Antebrazo',
+      position: Offset(0.82, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'waist_center_back',
+      zone: 'Cintura',
+      position: Offset(0.50, 0.40),
+    ),
+    _BodyHotspotConfig(
+      id: 'hips_center_back',
+      zone: 'Caderas',
+      position: Offset(0.50, 0.48),
+    ),
+    _BodyHotspotConfig(
+      id: 'thigh_left_back',
+      zone: 'Muslo',
+      position: Offset(0.40, 0.63),
+    ),
+    _BodyHotspotConfig(
+      id: 'thigh_right_back',
+      zone: 'Muslo',
+      position: Offset(0.60, 0.63),
+    ),
+    _BodyHotspotConfig(
+      id: 'calf_left_back',
+      zone: 'Pantorrilla',
+      position: Offset(0.38, 0.80),
+    ),
+    _BodyHotspotConfig(
+      id: 'calf_right_back',
+      zone: 'Pantorrilla',
+      position: Offset(0.62, 0.80),
+    ),
+  ];
 
   // Flex values for label positioning on columns
-  static const _frontLeftFlex = [2, 5, 9];
-  static const _frontRightFlex = [6, 9];
-  static const _backLeftFlex = [3, 9];
-  static const _backRightFlex = [6, 9];
+  static const _frontLeftFlex = [1, 2, 4, 6, 8];
+  static const _frontRightFlex = [3, 4, 7, 9];
+  static const _backLeftFlex = [1, 2, 6, 8];
+  static const _backRightFlex = [3, 4, 7, 9];
 
   String _localizedZoneLabel(BuildContext context, String key) {
     final l10n = AppLocalizations.of(context)!;
@@ -155,6 +290,76 @@ class _MetricsViewState extends State<_MetricsView> {
       default:
         return key;
     }
+  }
+
+  _MeasureZoneConfig _measureZone(String zone) {
+    return _measureZones.firstWhere((config) => config.zone == zone);
+  }
+
+  String _zoneForFieldKey(String fieldKey) {
+    return _measureZones
+        .firstWhere((config) => config.fieldKeys.contains(fieldKey))
+        .zone;
+  }
+
+  TextEditingController _controllerForField(String fieldKey) {
+    return _measureControllers[fieldKey]!;
+  }
+
+  void _markMeasureTouched(String fieldKey) {
+    _touchedMeasures.add(fieldKey);
+  }
+
+  String _zoneValuePreview(String zone) {
+    final config = _measureZone(zone);
+    if (!config.isBilateral) {
+      return _controllerForField(config.fieldKey!).text.trim();
+    }
+
+    final left = _controllerForField(config.leftFieldKey!).text.trim();
+    final right = _controllerForField(config.rightFieldKey!).text.trim();
+    if (left.isEmpty && right.isEmpty) {
+      return '';
+    }
+
+    return '${left.isEmpty ? '-' : left} / ${right.isEmpty ? '-' : right}';
+  }
+
+  String _preferredSeenCalfText() {
+    final leftText = _controllerForField('calf_left_cm').text.trim();
+    final rightText = _controllerForField('calf_right_cm').text.trim();
+    final leftValue = _parseDouble(leftText);
+    final rightValue = _parseDouble(rightText);
+
+    if (leftValue == null) {
+      return rightText;
+    }
+    if (rightValue == null) {
+      return leftText;
+    }
+    return leftValue >= rightValue ? leftText : rightText;
+  }
+
+  Widget _buildMeasureEditor(BuildContext context, String zone) {
+    final config = _measureZone(zone);
+    if (!config.isBilateral) {
+      return _MeasureInput(
+        label: _localizedZoneLabel(context, zone),
+        controller: _controllerForField(config.fieldKey!),
+        onChanged: (_) => _markMeasureTouched(config.fieldKey!),
+      );
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    return _BilateralMeasureInput(
+      label: _localizedZoneLabel(context, zone),
+      leftLabel: l10n.leftSideShortLabel,
+      rightLabel: l10n.rightSideShortLabel,
+      leftController: _controllerForField(config.leftFieldKey!),
+      rightController: _controllerForField(config.rightFieldKey!),
+      onLeftChanged: (_) => _markMeasureTouched(config.leftFieldKey!),
+      onRightChanged: (_) => _markMeasureTouched(config.rightFieldKey!),
+    );
   }
 
   String _weightHint(UnitSystem unitSystem) {
@@ -352,26 +557,29 @@ class _MetricsViewState extends State<_MetricsView> {
                               ),
                             ),
                           ),
-                          ...zones.entries.map((e) {
-                            final dx = e.value.dx * bodyW;
-                            final dy = e.value.dy * bodyH;
+                          ...zones.map((hotspot) {
+                            final dx = hotspot.position.dx * bodyW;
+                            final dy = hotspot.position.dy * bodyH;
                             return Positioned(
                               left: dx - 8,
                               top: dy - 8,
                               child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _selectedMeasure = e.key),
+                                onTap: () => setState(
+                                  () => _selectedMeasure = hotspot.zone,
+                                ),
                                 child: Container(
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: _selectedMeasure == e.key
+                                    color: _selectedMeasure == hotspot.zone
                                         ? semantic.info
                                         : semantic.info.withValues(alpha: 0.3),
                                     border: Border.all(
                                       color: semantic.info,
-                                      width: _selectedMeasure == e.key ? 2 : 1,
+                                      width: _selectedMeasure == hotspot.zone
+                                          ? 2
+                                          : 1,
                                     ),
                                   ),
                                 ),
@@ -402,11 +610,7 @@ class _MetricsViewState extends State<_MetricsView> {
         // Input for selected zone
         if (_selectedMeasure != null) ...[
           const SizedBox(height: 16),
-          _MeasureInput(
-            label: _localizedZoneLabel(context, _selectedMeasure!),
-            controller: _measureControllers[_selectedMeasure]!,
-            onChanged: (_) => _touchedMeasures.add(_selectedMeasure!),
-          ),
+          _buildMeasureEditor(context, _selectedMeasure!),
         ],
       ],
     );
@@ -435,7 +639,7 @@ class _MetricsViewState extends State<_MetricsView> {
   Widget _zoneLabel(String zone, UnitSystem unitSystem) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final val = _measureControllers[zone]?.text ?? '';
+    final val = _zoneValuePreview(zone);
     final isSelected = _selectedMeasure == zone;
 
     return GestureDetector(
@@ -601,22 +805,26 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     final existingMeasures = <String, double?>{
-      'Cuello': currentMetric?.neckCm,
-      'Hombros': currentMetric?.shouldersCm,
-      'Pecho': currentMetric?.chestCm,
-      'Brazo': currentMetric?.armCm,
-      'Antebrazo': currentMetric?.forearmCm,
-      'Cintura': currentMetric?.waistCm,
-      'Caderas': currentMetric?.hipsCm,
-      'Muslo': currentMetric?.thighCm,
-      'Pantorrilla': currentMetric?.calfCm,
+      'neck_cm': currentMetric?.neckCm,
+      'shoulders_cm': currentMetric?.shouldersCm,
+      'chest_cm': currentMetric?.chestCm,
+      'arm_left_cm': currentMetric?.armLeftCm,
+      'arm_right_cm': currentMetric?.armRightCm,
+      'forearm_left_cm': currentMetric?.forearmLeftCm,
+      'forearm_right_cm': currentMetric?.forearmRightCm,
+      'waist_cm': currentMetric?.waistCm,
+      'hips_cm': currentMetric?.hipsCm,
+      'thigh_left_cm': currentMetric?.thighLeftCm,
+      'thigh_right_cm': currentMetric?.thighRightCm,
+      'calf_left_cm': currentMetric?.calfLeftCm,
+      'calf_right_cm': currentMetric?.calfRightCm,
     };
 
     for (final entry in _measureControllers.entries) {
       if (!_touchedMeasures.contains(entry.key)) {
         final existingValue = existingMeasures[entry.key];
         if (existingValue != null) {
-          data[_measureKeys[entry.key]!] = existingValue;
+          data[entry.key] = existingValue;
         }
         continue;
       }
@@ -630,13 +838,16 @@ class _MetricsViewState extends State<_MetricsView> {
       if (parsedValue == null) {
         _showValidationMessage(
           AppLocalizations.of(context)!.measurementReviewTemplate(
-            _localizedZoneLabel(context, entry.key).toLowerCase(),
+            _localizedZoneLabel(
+              context,
+              _zoneForFieldKey(entry.key),
+            ).toLowerCase(),
           ),
         );
         return;
       }
 
-      data[_measureKeys[entry.key]!] = UnitConverters.lengthFromDisplay(
+      data[entry.key] = UnitConverters.lengthFromDisplay(
         parsedValue,
         unitSystem,
       );
@@ -691,7 +902,7 @@ class _MetricsViewState extends State<_MetricsView> {
           : '',
     );
     final calfController = TextEditingController(
-      text: _measureControllers['Pantorrilla']?.text ?? '',
+      text: _preferredSeenCalfText(),
     );
     var selectedSex = parseSeenBiologicalSex(profile?['sex'] as String?);
     String? errorText;
@@ -866,7 +1077,9 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    _measureControllers['Pantorrilla']?.text =
+                    _controllerForField('calf_left_cm').text =
+                        formatLengthValue(calfCm, unitSystem);
+                    _controllerForField('calf_right_cm').text =
                         formatLengthValue(calfCm, unitSystem);
                     _heightController.text = formatLengthValue(
                       heightCm,
@@ -874,7 +1087,8 @@ class _MetricsViewState extends State<_MetricsView> {
                     );
                     _heightTouched = true;
                     _muscleMassTouched = true;
-                    _touchedMeasures.add('Pantorrilla');
+                    _markMeasureTouched('calf_left_cm');
+                    _markMeasureTouched('calf_right_cm');
                     Navigator.of(dialogContext).pop(result);
                   },
                   child: Text(
@@ -952,25 +1166,29 @@ class _MetricsViewState extends State<_MetricsView> {
     } else {
       _muscleMassController.clear();
     }
-    final map = {
-      'Cuello': metric.neckCm,
-      'Hombros': metric.shouldersCm,
-      'Pecho': metric.chestCm,
-      'Brazo': metric.armCm,
-      'Antebrazo': metric.forearmCm,
-      'Cintura': metric.waistCm,
-      'Caderas': metric.hipsCm,
-      'Muslo': metric.thighCm,
-      'Pantorrilla': metric.calfCm,
+    final map = <String, double?>{
+      'neck_cm': metric.neckCm,
+      'shoulders_cm': metric.shouldersCm,
+      'chest_cm': metric.chestCm,
+      'arm_left_cm': metric.armLeftCm,
+      'arm_right_cm': metric.armRightCm,
+      'forearm_left_cm': metric.forearmLeftCm,
+      'forearm_right_cm': metric.forearmRightCm,
+      'waist_cm': metric.waistCm,
+      'hips_cm': metric.hipsCm,
+      'thigh_left_cm': metric.thighLeftCm,
+      'thigh_right_cm': metric.thighRightCm,
+      'calf_left_cm': metric.calfLeftCm,
+      'calf_right_cm': metric.calfRightCm,
     };
     for (final entry in map.entries) {
       if (entry.value != null) {
-        _measureControllers[entry.key]?.text = formatLengthValue(
+        _controllerForField(entry.key).text = formatLengthValue(
           entry.value,
           unitSystem,
         );
       } else {
-        _measureControllers[entry.key]?.clear();
+        _controllerForField(entry.key).clear();
       }
     }
   }
@@ -1433,21 +1651,15 @@ class _MetricsViewState extends State<_MetricsView> {
                                           const SliverGridDelegateWithFixedCrossAxisCount(
                                             crossAxisCount: 2,
                                             crossAxisSpacing: 12,
-                                            mainAxisSpacing: 12,
-                                            childAspectRatio: 2.0,
+                                            mainAxisSpacing: 8,
+                                            mainAxisExtent: 104,
                                           ),
-                                      itemCount: _measureControllers.length,
+                                      itemCount: _measureZones.length,
                                       itemBuilder: (context, index) {
-                                        final key = _measureControllers.keys
-                                            .elementAt(index);
-                                        return _MeasureInput(
-                                          label: _localizedZoneLabel(
-                                            context,
-                                            key,
-                                          ),
-                                          controller: _measureControllers[key]!,
-                                          onChanged: (_) =>
-                                              _touchedMeasures.add(key),
+                                        final zone = _measureZones[index].zone;
+                                        return _buildMeasureEditor(
+                                          context,
+                                          zone,
                                         );
                                       },
                                     ),
@@ -1525,6 +1737,40 @@ BoxDecoration _metricsStickyBarDecoration(BuildContext context) {
       ),
     ],
   );
+}
+
+class _MeasureZoneConfig {
+  const _MeasureZoneConfig.single({required this.zone, required this.fieldKey})
+    : leftFieldKey = null,
+      rightFieldKey = null;
+
+  const _MeasureZoneConfig.bilateral({
+    required this.zone,
+    required this.leftFieldKey,
+    required this.rightFieldKey,
+  }) : fieldKey = null;
+
+  final String zone;
+  final String? fieldKey;
+  final String? leftFieldKey;
+  final String? rightFieldKey;
+
+  bool get isBilateral => leftFieldKey != null && rightFieldKey != null;
+
+  List<String> get fieldKeys =>
+      isBilateral ? [leftFieldKey!, rightFieldKey!] : [fieldKey!];
+}
+
+class _BodyHotspotConfig {
+  const _BodyHotspotConfig({
+    required this.id,
+    required this.zone,
+    required this.position,
+  });
+
+  final String id;
+  final String zone;
+  final Offset position;
 }
 
 class _SectionCard extends StatelessWidget {
@@ -1619,6 +1865,112 @@ class _MeasureInput extends StatelessWidget {
               vertical: 10,
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BilateralMeasureInput extends StatelessWidget {
+  final String label;
+  final String leftLabel;
+  final String rightLabel;
+  final TextEditingController leftController;
+  final TextEditingController rightController;
+  final ValueChanged<String>? onLeftChanged;
+  final ValueChanged<String>? onRightChanged;
+
+  const _BilateralMeasureInput({
+    required this.label,
+    required this.leftLabel,
+    required this.rightLabel,
+    required this.leftController,
+    required this.rightController,
+    this.onLeftChanged,
+    this.onRightChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
+
+    InputDecoration decoration() {
+      return InputDecoration(
+        hintText: unitSystem == UnitSystem.imperial ? '0.0' : '0',
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+      );
+    }
+
+    Widget buildSideField({
+      required String sideLabel,
+      required TextEditingController controller,
+      required ValueChanged<String>? onChanged,
+    }) {
+      return Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Text(
+                sideLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: palette.textDisabled,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            TextFormField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: TextStyle(color: palette.textPrimary, fontSize: 14),
+              onChanged: onChanged,
+              decoration: decoration(),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: palette.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            buildSideField(
+              sideLabel: leftLabel,
+              controller: leftController,
+              onChanged: onLeftChanged,
+            ),
+            const SizedBox(width: 8),
+            buildSideField(
+              sideLabel: rightLabel,
+              controller: rightController,
+              onChanged: onRightChanged,
+            ),
+          ],
         ),
       ],
     );

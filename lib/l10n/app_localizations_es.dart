@@ -1603,6 +1603,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get measureForearm => 'Antebrazo';
 
   @override
+  String get leftSideLabel => 'Izquierda';
+
+  @override
+  String get rightSideLabel => 'Derecha';
+
+  @override
+  String get leftSideShortLabel => 'Izq.';
+
+  @override
+  String get rightSideShortLabel => 'Der.';
+
+  @override
   String get measureWaist => 'Cintura';
 
   @override

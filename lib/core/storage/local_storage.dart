@@ -35,6 +35,10 @@ class LocalStorage {
 
   Future<void> clearAuth() => _auth.clear();
 
+  Future<void> clearSessionData() async {
+    await Future.wait([clearAuth(), clearCache()]);
+  }
+
   // Cache
   Future<void> cacheData(String key, dynamic value) => _cache.put(key, value);
 

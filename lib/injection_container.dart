@@ -159,6 +159,7 @@ Future<void> initDependencies() async {
     () => AuthRepositoryImpl(
       remoteDataSource: sl<AuthRemoteDataSource>(),
       firebaseAuthService: sl<FirebaseAuthService>(),
+      localStorage: sl<LocalStorage>(),
     ),
   );
 

@@ -1,3 +1,4 @@
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -6,14 +7,17 @@ import '../datasources/auth_remote_datasource.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
   final FirebaseAuthService _firebaseAuthService;
+  final LocalStorage _localStorage;
 
   UserEntity? _currentUser;
 
   AuthRepositoryImpl({
     required AuthRemoteDataSource remoteDataSource,
     required FirebaseAuthService firebaseAuthService,
+    required LocalStorage localStorage,
   }) : _remoteDataSource = remoteDataSource,
-       _firebaseAuthService = firebaseAuthService;
+       _firebaseAuthService = firebaseAuthService,
+       _localStorage = localStorage;
 
   @override
   Future<UserEntity> login(String email, String password) async {
@@ -42,8 +46,12 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (_) {
       // Best effort — always sign out of Firebase
     }
-    await _firebaseAuthService.signOut();
-    _currentUser = null;
+    try {
+      await _firebaseAuthService.signOut();
+    } finally {
+      await _localStorage.clearSessionData();
+      _currentUser = null;
+    }
   }
 
   @override

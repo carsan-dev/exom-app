@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -141,7 +142,13 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(const OnboardingSubmitting());
     try {
       await updateProfile(current.accumulatedData);
-      await localStorage.setOnboardingComplete();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await localStorage.setOnboardingCompleteFor(
+          uid: user.uid,
+          email: user.email,
+        );
+      }
       emit(const OnboardingCompleted());
     } catch (error) {
       final apiException = ApiException.maybeFrom(error);
@@ -159,7 +166,13 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     OnboardingSkipped event,
     Emitter<OnboardingState> emit,
   ) async {
-    await localStorage.setOnboardingComplete();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await localStorage.setOnboardingCompleteFor(
+        uid: user.uid,
+        email: user.email,
+      );
+    }
     emit(const OnboardingCompleted());
   }
 }

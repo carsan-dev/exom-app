@@ -123,7 +123,10 @@ class AppRouter {
 
       // Show onboarding to newly authenticated users who haven't seen it
       if (user != null && !isAuthRoute && loc != AppRoutes.onboarding) {
-        final done = sl<LocalStorage>().isOnboardingComplete;
+        final done = sl<LocalStorage>().isOnboardingCompleteFor(
+          uid: user.uid,
+          email: user.email,
+        );
         if (!done) return AppRoutes.onboarding;
       }
 

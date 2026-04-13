@@ -192,7 +192,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       context.go(AppRoutes.login);
       return;
     }
-    final onboardingDone = sl<LocalStorage>().isOnboardingComplete;
+    final onboardingDone = sl<LocalStorage>().isOnboardingCompleteFor(
+      uid: user.uid,
+      email: user.email,
+    );
     context.go(onboardingDone ? AppRoutes.home : AppRoutes.onboarding);
   }
 

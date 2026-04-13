@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -10,6 +12,8 @@ class LocalStorage {
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
+  static const _legacyOnboardingCompleteKey = 'onboarding_complete';
+  static const _onboardingIdentityKey = 'onboarding_complete_identity';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -110,10 +114,62 @@ class LocalStorage {
   String? get fcmToken => _auth.get('fcm_token');
   Future<void> saveFcmToken(String token) => _auth.put('fcm_token', token);
 
-  bool get isOnboardingComplete =>
-      _settings.get('onboarding_complete', defaultValue: false);
-  Future<void> setOnboardingComplete() =>
-      _settings.put('onboarding_complete', true);
+  String? resolveOnboardingIdentity({String? uid, String? email}) {
+    final normalizedEmail = email?.trim().toLowerCase();
+    if (normalizedEmail != null && normalizedEmail.isNotEmpty) {
+      return normalizedEmail;
+    }
+
+    final normalizedUid = uid?.trim();
+    if (normalizedUid != null && normalizedUid.isNotEmpty) {
+      return 'uid:$normalizedUid';
+    }
+
+    return null;
+  }
+
+  bool isOnboardingCompleteFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) {
+      return false;
+    }
+
+    final scopedKey = '$_legacyOnboardingCompleteKey::$identity';
+    final scopedValue = _settings.get(scopedKey);
+    if (scopedValue is bool) {
+      return scopedValue;
+    }
+
+    final legacyComplete =
+        _settings.get(_legacyOnboardingCompleteKey, defaultValue: false) ==
+        true;
+    if (!legacyComplete) {
+      return false;
+    }
+
+    final legacyIdentity = _settings.get(_onboardingIdentityKey) as String?;
+    if (legacyIdentity == null || legacyIdentity == identity) {
+      unawaited(_settings.put(_onboardingIdentityKey, identity));
+      unawaited(_settings.put(scopedKey, true));
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<void> setOnboardingCompleteFor({
+    required String uid,
+    String? email,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) {
+      return;
+    }
+
+    await _settings.put(_legacyOnboardingCompleteKey, true);
+    await _settings.put(_onboardingIdentityKey, identity);
+    await _settings.put('$_legacyOnboardingCompleteKey::$identity', true);
+  }
 
   dynamic _normalize(dynamic value) {
     if (value is Map) {

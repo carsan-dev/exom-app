@@ -889,38 +889,47 @@ class _StepBadge extends StatelessWidget {
     final color = isCompleted || isActive
         ? palette.primary
         : palette.textDisabled;
+    final invertedColor = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: isActive
-          ? GlassDecoration.accentCard(palette.primary, borderRadius: 16)
-          : GlassDecoration.card(borderRadius: 16),
+          ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
+          : GlassDecoration.card(borderRadius: 12),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 12,
+            radius: 10,
             backgroundColor: color,
-            child: isCompleted
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
-                : Text(
-                    '$index',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+            child: Transform.translate(
+              offset: const Offset(0, 0.5),
+              child: isCompleted
+                  ? Icon(Icons.check, size: 11, color: invertedColor)
+                  : Text(
+                      '$index',
+                      style: TextStyle(
+                        color: invertedColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
+          const SizedBox(width: 4),
+          Flexible(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: isActive ? palette.textPrimary : palette.textSecondary,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ),
@@ -945,13 +954,17 @@ class _StatusChip extends StatelessWidget {
       _ => semantic.warning,
     };
 
+    final invertedColor = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: GlassDecoration.accentCard(color, borderRadius: 999),
       child: Text(
         recapCopy(context, status),
         style: TextStyle(
-          color: color,
+          color: invertedColor,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),

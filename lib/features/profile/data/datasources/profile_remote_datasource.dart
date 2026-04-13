@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/utils/image_compressor.dart';
 import 'package:exom_app/features/profile/data/models/profile_model.dart';
 
 abstract class ProfileRemoteDataSource {
@@ -71,12 +72,13 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
 
   @override
   Future<ProfileModel> uploadAvatar(File file) async {
+    final compressed = await ImageCompressor.compressAvatar(file);
     final fileKey =
         'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
-        file.path,
+        compressed.path,
         filename: '${DateTime.now().millisecondsSinceEpoch}.jpg',
         contentType: DioMediaType('image', 'jpeg'),
       ),

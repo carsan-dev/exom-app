@@ -490,8 +490,6 @@ class _ProfileHeader extends StatelessWidget {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 512,
     );
     if (picked == null) return;
     if (!context.mounted) return;

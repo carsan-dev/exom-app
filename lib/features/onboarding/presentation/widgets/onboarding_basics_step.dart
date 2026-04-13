@@ -61,9 +61,6 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
     );
     if (picked != null) {
       setState(() => _localAvatarPath = picked.path);

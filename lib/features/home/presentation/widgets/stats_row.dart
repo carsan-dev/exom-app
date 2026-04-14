@@ -11,6 +11,7 @@ import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
+import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class StatsRow extends StatelessWidget {
   const StatsRow({super.key, required this.summary});
@@ -43,7 +44,12 @@ class StatsRow extends StatelessWidget {
                   ? DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!)
                   : null,
               color: AppColors.textSecondary,
-              onTap: () => context.push('/profile/metrics'),
+              onTap: () async {
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<HomeBloc>().add(const HomeLoadRequested());
+                }
+              },
             ),
           ),
           const SizedBox(width: ExomSpacing.md),
@@ -68,7 +74,12 @@ class StatsRow extends StatelessWidget {
               label: l10n.sleep,
               subtitle: _sleepQuality(context, summary.lastSleepHours),
               color: semantic.sleep,
-              onTap: () => context.push('/profile/metrics'),
+              onTap: () async {
+                await context.push('/profile/metrics');
+                if (context.mounted) {
+                  context.read<HomeBloc>().add(const HomeLoadRequested());
+                }
+              },
             ),
           ),
         ],

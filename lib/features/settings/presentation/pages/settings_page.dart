@@ -171,7 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
               surfaceTintColor: Colors.transparent,
             ),
             body: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 64),
               children: [
                 _SettingsGroup(
                   title: l10n.appearanceSettingsTitle,
@@ -374,21 +374,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(const AuthLogoutRequested());
-                  },
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: Text(l10n.logOutButton),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.error,
-                    side: BorderSide(
-                      color: palette.error.withValues(alpha: 0.35),
-                    ),
-                    backgroundColor: palette.glassBackground,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.read<AuthBloc>().add(const AuthLogoutRequested());
+                    },
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: Text(l10n.logOutButton),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.error,
+                      side: BorderSide(
+                        color: palette.error.withValues(alpha: 0.35),
+                      ),
+                      backgroundColor: palette.glassBackground,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                     ),
                   ),
                 ),
@@ -425,8 +429,23 @@ class _CreditsSheet extends StatelessWidget {
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        decoration: GlassDecoration.elevated(borderRadius: 28),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: palette.glassBorder,
+            width: 0.5,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 30,
+              offset: Offset(0, 8),
+              spreadRadius: -4,
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

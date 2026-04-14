@@ -278,7 +278,8 @@ class _ExomBackgroundPainter extends CustomPainter {
   }
 
   void _paintLightWaves(Canvas canvas, Size size, double phase) {
-    const warm = Color(0xFFE6D6BE);
+    const shadowWarm = Color(0xFFC4AD96);
+    final primaryTint = _mix(palette.primary, shadowWarm, 0.4);
 
     _paintRibbon(
       canvas,
@@ -291,8 +292,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 54,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.07),
-        warm.withValues(alpha: 0.028),
+        Colors.white.withValues(alpha: 0.4),
+        shadowWarm.withValues(alpha: 0.18),
         Colors.transparent,
       ],
       stops: const [0.0, 0.22, 0.58, 1.0],
@@ -308,13 +309,9 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 42,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.055),
-        _mix(
-          palette.primary,
-          Colors.white,
-          0.66,
-        ).withValues(alpha: 0.017 * intensity),
-        warm.withValues(alpha: 0.02),
+        Colors.white.withValues(alpha: 0.2),
+        primaryTint.withValues(alpha: 0.12 * intensity),
+        shadowWarm.withValues(alpha: 0.14),
         Colors.transparent,
       ],
       stops: const [0.0, 0.18, 0.48, 0.76, 1.0],
@@ -330,12 +327,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 34,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.04),
-        _mix(
-          palette.primary,
-          Colors.white,
-          0.58,
-        ).withValues(alpha: 0.024 * intensity),
+        Colors.white.withValues(alpha: 0.25),
+        primaryTint.withValues(alpha: 0.09 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.26, 0.6, 1.0],
@@ -351,12 +344,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 36,
       colors: [
         Colors.transparent,
-        warm.withValues(alpha: 0.035),
-        _mix(
-          palette.primary,
-          Colors.white,
-          0.68,
-        ).withValues(alpha: 0.018 * intensity),
+        shadowWarm.withValues(alpha: 0.15),
+        primaryTint.withValues(alpha: 0.1 * intensity),
         Colors.transparent,
       ],
       stops: const [0.0, 0.22, 0.62, 1.0],
@@ -372,8 +361,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 46,
       colors: [
         Colors.transparent,
-        Colors.white.withValues(alpha: 0.05),
-        warm.withValues(alpha: 0.028),
+        Colors.white.withValues(alpha: 0.2),
+        shadowWarm.withValues(alpha: 0.22),
         Colors.transparent,
       ],
       stops: const [0.0, 0.28, 0.64, 1.0],
@@ -389,8 +378,8 @@ class _ExomBackgroundPainter extends CustomPainter {
       blurSigma: 56,
       colors: [
         Colors.transparent,
-        warm.withValues(alpha: 0.03),
-        Colors.white.withValues(alpha: 0.04),
+        shadowWarm.withValues(alpha: 0.2),
+        Colors.white.withValues(alpha: 0.3),
         Colors.transparent,
       ],
       stops: const [0.0, 0.18, 0.58, 1.0],

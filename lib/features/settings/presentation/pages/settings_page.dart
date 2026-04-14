@@ -171,7 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
               surfaceTintColor: Colors.transparent,
             ),
             body: ListView(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 64),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 48),
               children: [
                 _SettingsGroup(
                   title: l10n.appearanceSettingsTitle,

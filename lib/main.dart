@@ -96,7 +96,10 @@ class _ExomAppView extends StatelessWidget {
             // Sync glass decoration brightness with the active theme so
             // static GlassDecoration.* factories pick the right tokens.
             GlassDecoration.brightness = Theme.of(context).brightness;
-            return child ?? const SizedBox.shrink();
+            return GestureDetector(
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: child ?? const SizedBox.shrink(),
+            );
           },
         );
       },

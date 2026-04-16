@@ -632,5 +632,7 @@
   "onboardingNextButton": "Siguiente",
   "onboardingSubmittingMessage": "Guardando tu perfil...",
   "onboardingSuccessMessage": "¡Perfil completado!",
-  "onboardingErrorMessage": "Error al guardar el perfil. Inténtalo de nuevo."
+  "onboardingErrorMessage": "Error al guardar el perfil. Inténtalo de nuevo.",
+  "continueDraftRecap": "Continuar borrador",
+  "recapAlreadySubmittedThisWeek": "Ya tienes un recap subido esta semana"
 }

@@ -57,6 +57,7 @@ class _RecapViewState extends State<_RecapView> {
         final palette = context.exomPalette;
         final semantic = context.exomSemantic;
         final l10n = AppLocalizations.of(context);
+
         if (state is RecapFormActive) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!_pageController.hasClients) return;
@@ -140,14 +141,52 @@ class _RecapViewState extends State<_RecapView> {
                     ],
             ),
             floatingActionButton: state is RecapListLoaded
-                ? FloatingActionButton.extended(
-                    onPressed: () => context.read<RecapBloc>().add(
-                      const RecapCreateRequested(),
-                    ),
-                    backgroundColor: palette.primary,
-                    foregroundColor: palette.onPrimary,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.newRecap),
+                ? Builder(
+                    builder: (context) {
+                      final currentWeekDraft = _findCurrentWeekDraft(
+                        state.recaps,
+                      );
+                      final hasSubmittedRecapThisWeek =
+                          _hasSubmittedRecapThisWeek(state.recaps);
+                      final isBlocked =
+                          hasSubmittedRecapThisWeek && currentWeekDraft == null;
+
+                      return FloatingActionButton.extended(
+                        onPressed: () {
+                          if (isBlocked) {
+                            _showWeeklyRecapAlreadySubmittedMessage(context);
+                            return;
+                          }
+
+                          if (currentWeekDraft != null) {
+                            _openDraftRecap(currentWeekDraft);
+                            return;
+                          }
+
+                          context.read<RecapBloc>().add(
+                            const RecapCreateRequested(),
+                          );
+                        },
+                        backgroundColor: isBlocked
+                            ? palette.surfaceVariant
+                            : palette.primary,
+                        foregroundColor: isBlocked
+                            ? palette.textSecondary
+                            : palette.onPrimary,
+                        icon: Icon(
+                          isBlocked
+                              ? Icons.block_rounded
+                              : currentWeekDraft != null
+                              ? Icons.edit_note_rounded
+                              : Icons.add,
+                        ),
+                        label: Text(
+                          currentWeekDraft != null
+                              ? l10n.continueDraftRecap
+                              : l10n.newRecap,
+                        ),
+                      );
+                    },
                   )
                 : null,
             body: AnimatedSwitcher(
@@ -258,6 +297,61 @@ class _RecapViewState extends State<_RecapView> {
     }
 
     return const SizedBox.shrink(key: ValueKey('recap-empty'));
+  }
+
+  RecapEntity? _findCurrentWeekDraft(List<RecapEntity> recaps) {
+    for (final recap in recaps) {
+      if (_isCurrentWeekRecap(recap) && recap.isDraft) {
+        return recap;
+      }
+    }
+    return null;
+  }
+
+  bool _hasSubmittedRecapThisWeek(List<RecapEntity> recaps) {
+    for (final recap in recaps) {
+      if (_isCurrentWeekRecap(recap) && !recap.isDraft) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isCurrentWeekRecap(RecapEntity recap) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+
+    return _isSameDate(recap.weekStartDate, weekStart) &&
+        _isSameDate(recap.weekEndDate, weekEnd);
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  void _openDraftRecap(RecapEntity draft) {
+    context.read<RecapBloc>().add(
+      RecapFormStarted(
+        recapId: draft.id,
+        initialData: _buildInitialData(draft),
+      ),
+    );
+  }
+
+  void _showWeeklyRecapAlreadySubmittedMessage(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.recapAlreadySubmittedThisWeek),
+        backgroundColor: palette.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   Map<String, dynamic> _buildInitialData(RecapEntity recap) {
@@ -439,6 +533,7 @@ class _RecapListView extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+
     if (recaps.isEmpty) {
       return Center(
         child: Padding(
@@ -512,7 +607,7 @@ class _RecapListView extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
                   l10n.trackYourWeeksReviewPreviousRecaps,
                   style: TextStyle(
@@ -681,7 +776,6 @@ class _RecapFormView extends StatelessWidget {
     required this.formatWeekRange,
   });
 
-  // step 0 = start view, steps 1-4 = core form, step 5 = improvement
   static const int _stepStart = 0;
   static const int _stepImprovement = 5;
 
@@ -697,7 +791,6 @@ class _RecapFormView extends StatelessWidget {
 
     return Column(
       children: [
-        // Header with badges — only for core steps 1-4
         if (_isCoreStep) ...[
           Container(
             width: double.infinity,
@@ -726,7 +819,6 @@ class _RecapFormView extends StatelessWidget {
                 const SizedBox(height: 18),
                 Row(
                   children: List.generate(stepTitles.length, (index) {
-                    // state.step 1-4 maps to badge index 0-3
                     final badgeStep = state.step - 1;
                     final isActive = index == badgeStep;
                     final isCompleted = index < badgeStep;
@@ -750,13 +842,11 @@ class _RecapFormView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        // Page content
         Expanded(
           child: PageView(
             controller: pageController,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              // step 0: start view
               RecapStartView(
                 formData: state.formData,
                 weekLabel: formatWeekRange(state.formData),
@@ -764,7 +854,6 @@ class _RecapFormView extends StatelessWidget {
                 onReviewAndSend: () => onStepChanged(5),
                 onCancel: onCancel,
               ),
-              // steps 1-4: core form
               RecapStepTraining(
                 formData: state.formData,
                 onChanged: onFieldChanged,
@@ -781,7 +870,6 @@ class _RecapFormView extends StatelessWidget {
                 formData: state.formData,
                 onChanged: onFieldChanged,
               ),
-              // step 5: improvement
               RecapStepImprovement(
                 formData: state.formData,
                 onChanged: onFieldChanged,
@@ -789,7 +877,6 @@ class _RecapFormView extends StatelessWidget {
             ],
           ),
         ),
-        // Bottom navigation — hidden on start view (it has its own buttons)
         if (!_isStartStep)
           Container(
             padding: EdgeInsets.fromLTRB(

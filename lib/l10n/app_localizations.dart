@@ -3277,6 +3277,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Error al guardar el perfil. Inténtalo de nuevo.'**
   String get onboardingErrorMessage;
+
+  /// No description provided for @continueDraftRecap.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar borrador'**
+  String get continueDraftRecap;
+
+  /// No description provided for @recapAlreadySubmittedThisWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes un recap subido esta semana'**
+  String get recapAlreadySubmittedThisWeek;
 }
 
 class _AppLocalizationsDelegate

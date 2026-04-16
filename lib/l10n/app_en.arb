@@ -597,5 +597,7 @@
   "onboardingNextButton": "Next",
   "onboardingSubmittingMessage": "Saving your profile...",
   "onboardingSuccessMessage": "Profile complete!",
-  "onboardingErrorMessage": "Error saving profile. Please try again."
+  "onboardingErrorMessage": "Error saving profile. Please try again.",
+  "continueDraftRecap": "Continue draft",
+  "recapAlreadySubmittedThisWeek": "You already have a recap submitted this week"
 }

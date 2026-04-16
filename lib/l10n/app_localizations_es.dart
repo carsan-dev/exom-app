@@ -1742,4 +1742,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get onboardingErrorMessage =>
       'Error al guardar el perfil. Inténtalo de nuevo.';
+
+  @override
+  String get continueDraftRecap => 'Continuar borrador';
+
+  @override
+  String get recapAlreadySubmittedThisWeek =>
+      'Ya tienes un recap subido esta semana';
 }

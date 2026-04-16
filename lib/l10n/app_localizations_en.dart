@@ -1720,4 +1720,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingErrorMessage =>
       'Error saving profile. Please try again.';
+
+  @override
+  String get continueDraftRecap => 'Continue draft';
+
+  @override
+  String get recapAlreadySubmittedThisWeek =>
+      'You already have a recap submitted this week';
 }

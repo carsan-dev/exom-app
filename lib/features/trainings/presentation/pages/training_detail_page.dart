@@ -1061,6 +1061,14 @@ class _ExerciseCard extends StatelessWidget {
 
     if (result == null || !context.mounted) return;
 
+    if (result.openFeedback) {
+      GoRouter.of(context).push(
+        AppRoutes.feedback,
+        extra: <String, String?>{'exerciseId': ex.id, 'exerciseName': ex.name},
+      );
+      return;
+    }
+
     onToggle(result.completed, weightUsed: result.weight);
 
     if (result.completed && nextExerciseName != null) {
@@ -1076,7 +1084,13 @@ class _ExerciseCard extends StatelessWidget {
 class _SheetCompletionResult {
   final bool completed;
   final double? weight;
-  const _SheetCompletionResult({required this.completed, this.weight});
+  final bool openFeedback;
+
+  const _SheetCompletionResult({
+    required this.completed,
+    this.weight,
+    this.openFeedback = false,
+  });
 }
 
 Future<double?> _showWeightSheet(
@@ -1304,15 +1318,9 @@ class _ExerciseDetailSheet extends StatelessWidget {
   }
 
   void _openFeedback(BuildContext context) {
-    final router = GoRouter.of(context);
-    Navigator.of(context).pop();
-    router.push(
-      AppRoutes.feedback,
-      extra: <String, String?>{
-        'exerciseId': exercise.id,
-        'exerciseName': exercise.name,
-      },
-    );
+    Navigator.of(
+      context,
+    ).pop(const _SheetCompletionResult(completed: false, openFeedback: true));
   }
 
   @override
@@ -1364,6 +1372,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 alignment: Alignment.topLeft,
                 child: _SheetHeaderAction(
                   icon: Icons.feedback_outlined,
+                  label: l10n.feedbackSendFromExercise,
                   onTap: () => _openFeedback(context),
                   tooltip: l10n.feedbackSendFromExercise,
                 ),
@@ -1618,12 +1627,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
 
 class _SheetHeaderAction extends StatelessWidget {
   final IconData icon;
+  final String? label;
   final VoidCallback onTap;
   final String tooltip;
   final bool highlighted;
 
   const _SheetHeaderAction({
     required this.icon,
+    this.label,
     required this.onTap,
     required this.tooltip,
     this.highlighted = false,
@@ -1632,28 +1643,52 @@ class _SheetHeaderAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final hasLabel = label != null && label!.trim().isNotEmpty;
 
     return Material(
       color: highlighted
           ? palette.surfaceVariant.withValues(alpha: 0.9)
           : palette.surface.withValues(alpha: 0.72),
-      shape: const CircleBorder(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       child: InkWell(
         onTap: onTap,
-        customBorder: const CircleBorder(),
+        customBorder: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
         child: Tooltip(
           message: tooltip,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Padding(
-                padding: const EdgeInsets.all(10),
-                child: Icon(
-                  icon,
-                  color: highlighted
-                      ? palette.textPrimary
-                      : palette.textSecondary,
-                  size: 18,
+                padding: EdgeInsets.symmetric(
+                  horizontal: hasLabel ? 12 : 10,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      color: highlighted
+                          ? palette.textPrimary
+                          : palette.textSecondary,
+                      size: 18,
+                    ),
+                    if (hasLabel) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        label!,
+                        style: TextStyle(
+                          color: highlighted
+                              ? palette.textPrimary
+                              : palette.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

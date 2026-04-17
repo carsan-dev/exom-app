@@ -663,5 +663,16 @@
   "tutorialFeedbackTitle": "Feedback",
   "tutorialFeedbackDesc": "También en el menú. Envía dudas, incidencias o feedback directamente a tu entrenador.",
   "tutorialNextButton": "Siguiente",
-  "tutorialDoneButton": "Listo"
+  "tutorialDoneButton": "Listo",
+  "deleteAccountOption": "Eliminar cuenta",
+  "deleteAccountDescription": "Elimina permanentemente tu cuenta y todos tus datos",
+  "deleteAccountDialogTitle": "¿Eliminar tu cuenta?",
+  "deleteAccountDialogBody": "Esta acción es permanente y no se puede deshacer. Se eliminarán tu perfil, métricas, progreso, planes, feedback y archivos subidos.",
+  "deleteAccountConfirmHint": "Escribe ELIMINAR para confirmar",
+  "deleteAccountConfirmWord": "ELIMINAR",
+  "deleteAccountConfirmButton": "Eliminar cuenta",
+  "deleteAccountCancelButton": "Cancelar",
+  "deleteAccountSuccessMessage": "Cuenta eliminada correctamente",
+  "deleteAccountErrorMessage": "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
+  "dangerZoneTitle": "Zona peligrosa"
 }

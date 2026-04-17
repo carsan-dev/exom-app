@@ -1822,4 +1822,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialDoneButton => 'Done';
+
+  @override
+  String get deleteAccountOption => 'Delete account';
+
+  @override
+  String get deleteAccountDescription =>
+      'Permanently delete your account and all your data';
+
+  @override
+  String get deleteAccountDialogTitle => 'Delete your account?';
+
+  @override
+  String get deleteAccountDialogBody =>
+      'This action is permanent and cannot be undone. Your profile, metrics, progress, plans, feedback, and uploaded files will be deleted.';
+
+  @override
+  String get deleteAccountConfirmHint => 'Type DELETE to confirm';
+
+  @override
+  String get deleteAccountConfirmWord => 'DELETE';
+
+  @override
+  String get deleteAccountConfirmButton => 'Delete account';
+
+  @override
+  String get deleteAccountCancelButton => 'Cancel';
+
+  @override
+  String get deleteAccountSuccessMessage => 'Account deleted successfully';
+
+  @override
+  String get deleteAccountErrorMessage =>
+      'Could not delete account. Please try again.';
+
+  @override
+  String get dangerZoneTitle => 'Danger zone';
 }

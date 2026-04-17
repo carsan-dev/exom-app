@@ -628,5 +628,16 @@
   "tutorialFeedbackTitle": "Feedback",
   "tutorialFeedbackDesc": "Also in the menu. Send questions, issues, or feedback directly to your coach.",
   "tutorialNextButton": "Next",
-  "tutorialDoneButton": "Done"
+  "tutorialDoneButton": "Done",
+  "deleteAccountOption": "Delete account",
+  "deleteAccountDescription": "Permanently delete your account and all your data",
+  "deleteAccountDialogTitle": "Delete your account?",
+  "deleteAccountDialogBody": "This action is permanent and cannot be undone. Your profile, metrics, progress, plans, feedback, and uploaded files will be deleted.",
+  "deleteAccountConfirmHint": "Type DELETE to confirm",
+  "deleteAccountConfirmWord": "DELETE",
+  "deleteAccountConfirmButton": "Delete account",
+  "deleteAccountCancelButton": "Cancel",
+  "deleteAccountSuccessMessage": "Account deleted successfully",
+  "deleteAccountErrorMessage": "Could not delete account. Please try again.",
+  "dangerZoneTitle": "Danger zone"
 }

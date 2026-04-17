@@ -3457,6 +3457,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Listo'**
   String get tutorialDoneButton;
+
+  /// No description provided for @deleteAccountOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar cuenta'**
+  String get deleteAccountOption;
+
+  /// No description provided for @deleteAccountDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Elimina permanentemente tu cuenta y todos tus datos'**
+  String get deleteAccountDescription;
+
+  /// No description provided for @deleteAccountDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar tu cuenta?'**
+  String get deleteAccountDialogTitle;
+
+  /// No description provided for @deleteAccountDialogBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta acción es permanente y no se puede deshacer. Se eliminarán tu perfil, métricas, progreso, planes, feedback y archivos subidos.'**
+  String get deleteAccountDialogBody;
+
+  /// No description provided for @deleteAccountConfirmHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe ELIMINAR para confirmar'**
+  String get deleteAccountConfirmHint;
+
+  /// No description provided for @deleteAccountConfirmWord.
+  ///
+  /// In es, this message translates to:
+  /// **'ELIMINAR'**
+  String get deleteAccountConfirmWord;
+
+  /// No description provided for @deleteAccountConfirmButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar cuenta'**
+  String get deleteAccountConfirmButton;
+
+  /// No description provided for @deleteAccountCancelButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get deleteAccountCancelButton;
+
+  /// No description provided for @deleteAccountSuccessMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta eliminada correctamente'**
+  String get deleteAccountSuccessMessage;
+
+  /// No description provided for @deleteAccountErrorMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo eliminar la cuenta. Inténtalo de nuevo.'**
+  String get deleteAccountErrorMessage;
+
+  /// No description provided for @dangerZoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Zona peligrosa'**
+  String get dangerZoneTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -1845,4 +1845,40 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tutorialDoneButton => 'Listo';
+
+  @override
+  String get deleteAccountOption => 'Eliminar cuenta';
+
+  @override
+  String get deleteAccountDescription =>
+      'Elimina permanentemente tu cuenta y todos tus datos';
+
+  @override
+  String get deleteAccountDialogTitle => '¿Eliminar tu cuenta?';
+
+  @override
+  String get deleteAccountDialogBody =>
+      'Esta acción es permanente y no se puede deshacer. Se eliminarán tu perfil, métricas, progreso, planes, feedback y archivos subidos.';
+
+  @override
+  String get deleteAccountConfirmHint => 'Escribe ELIMINAR para confirmar';
+
+  @override
+  String get deleteAccountConfirmWord => 'ELIMINAR';
+
+  @override
+  String get deleteAccountConfirmButton => 'Eliminar cuenta';
+
+  @override
+  String get deleteAccountCancelButton => 'Cancelar';
+
+  @override
+  String get deleteAccountSuccessMessage => 'Cuenta eliminada correctamente';
+
+  @override
+  String get deleteAccountErrorMessage =>
+      'No se pudo eliminar la cuenta. Inténtalo de nuevo.';
+
+  @override
+  String get dangerZoneTitle => 'Zona peligrosa';
 }

@@ -86,6 +86,20 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
     setState(() {});
   }
 
+  Future<void> _seekBy(Duration offset) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final currentPosition = controller.value.position;
+    final duration = controller.value.duration;
+    final targetMilliseconds = (currentPosition + offset).inMilliseconds.clamp(
+      0,
+      duration.inMilliseconds,
+    );
+
+    await controller.seekTo(Duration(milliseconds: targetMilliseconds));
+  }
+
   String _formatDuration(Duration duration) {
     final totalSeconds = duration.inSeconds;
     final hours = totalSeconds ~/ 3600;
@@ -158,6 +172,27 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
                           ),
                         ),
                       ),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () =>
+                                _seekBy(const Duration(seconds: -5)),
+                            child: const SizedBox(),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onDoubleTap: () =>
+                                _seekBy(const Duration(seconds: 5)),
+                            child: const SizedBox(),
+                          ),
+                        ),
+                      ],
                     ),
                     IgnorePointer(
                       child: DecoratedBox(

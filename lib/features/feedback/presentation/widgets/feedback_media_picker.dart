@@ -25,9 +25,7 @@ class FeedbackMediaPicker extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: source,
-    );
+    final picked = await picker.pickImage(source: source);
     if (picked != null) {
       onFileSelected(File(picked.path));
     }
@@ -195,7 +193,7 @@ class FeedbackMediaPicker extends StatelessWidget {
           },
           child: Container(
             height: 56,
-            decoration: GlassDecoration.card(borderRadius: 14),
+            decoration: GlassDecoration.elevated(borderRadius: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

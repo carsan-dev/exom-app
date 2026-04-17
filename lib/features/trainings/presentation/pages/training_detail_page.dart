@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -12,6 +11,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_timer_overlay.dart';
 import 'package:go_router/go_router.dart';
@@ -1307,14 +1307,19 @@ class _ExerciseDetailSheet extends StatelessWidget {
         .trim();
   }
 
-  Future<void> _openVideo() async {
+  Future<void> _openVideo(BuildContext context) async {
     final videoUrl = exercise.videoUrl?.trim();
     if (videoUrl == null || videoUrl.isEmpty) return;
 
     final uri = Uri.tryParse(videoUrl);
     if (uri == null) return;
 
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            ExerciseVideoPlayerPage(title: exercise.name, videoUri: uri),
+      ),
+    );
   }
 
   void _openFeedback(BuildContext context) {
@@ -1433,7 +1438,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: hasVideo ? _openVideo : null,
+            onTap: hasVideo ? () => _openVideo(context) : null,
             borderRadius: BorderRadius.circular(18),
             child: Ink(
               height: 196,

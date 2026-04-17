@@ -14,6 +14,7 @@ class LocalStorage {
   static const _unitSystemKey = 'unit_system';
   static const _legacyOnboardingCompleteKey = 'onboarding_complete';
   static const _onboardingIdentityKey = 'onboarding_complete_identity';
+  static const _tutorialCompleteKey = 'tutorial_complete';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -173,6 +174,24 @@ class LocalStorage {
     await _settings.put(_legacyOnboardingCompleteKey, true);
     await _settings.put(_onboardingIdentityKey, identity);
     await _settings.put('$_legacyOnboardingCompleteKey::$identity', true);
+  }
+
+  // Tutorial guide
+  bool isTutorialCompleteFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return false;
+    return _settings.get('$_tutorialCompleteKey::$identity',
+            defaultValue: false) ==
+        true;
+  }
+
+  Future<void> setTutorialCompleteFor({
+    required String uid,
+    String? email,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return;
+    await _settings.put('$_tutorialCompleteKey::$identity', true);
   }
 
   dynamic _normalize(dynamic value) {

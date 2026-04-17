@@ -1749,4 +1749,79 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get recapAlreadySubmittedThisWeek =>
       'Ya tienes un recap subido esta semana';
+
+  @override
+  String get tutorialPromptTitle => '¿Quieres un tour rápido?';
+
+  @override
+  String get tutorialPromptDescription =>
+      'Te enseñamos las secciones principales de la app en unos segundos.';
+
+  @override
+  String get tutorialStartButton => 'Empezar guía';
+
+  @override
+  String get tutorialSkipButton => 'Omitir';
+
+  @override
+  String get tutorialHomeTitle => 'Inicio';
+
+  @override
+  String get tutorialHomeDesc =>
+      'Tu panel diario. Consulta el entreno, dieta y estadísticas del día de un vistazo.';
+
+  @override
+  String get tutorialTrainingsTitle => 'Entrenamientos';
+
+  @override
+  String get tutorialTrainingsDesc =>
+      'Consulta y completa tus rutinas diarias. Marca cada ejercicio a medida que avanzas.';
+
+  @override
+  String get tutorialDietsTitle => 'Dietas';
+
+  @override
+  String get tutorialDietsDesc =>
+      'Sigue tu plan de comidas personalizado. Marca las comidas a lo largo del día.';
+
+  @override
+  String get tutorialCalendarTitle => 'Calendario';
+
+  @override
+  String get tutorialCalendarDesc =>
+      'Consulta tu agenda completa. Revisa entrenos y comidas pasados y próximos.';
+
+  @override
+  String get tutorialChallengesTitle => 'Retos';
+
+  @override
+  String get tutorialChallengesDesc =>
+      'Consigue logros y mantén tus rachas. Mantente motivado con objetivos.';
+
+  @override
+  String get tutorialProfileTitle => 'Perfil';
+
+  @override
+  String get tutorialProfileDesc =>
+      'Pulsa el icono de persona en la barra superior para ver tu perfil, estadísticas y métricas corporales.';
+
+  @override
+  String get tutorialRecapTitle => 'Recap semanal';
+
+  @override
+  String get tutorialRecapDesc =>
+      'Abre el menú (arriba a la derecha) para encontrar el recap semanal. Resume tu semana para tu entrenador.';
+
+  @override
+  String get tutorialFeedbackTitle => 'Feedback';
+
+  @override
+  String get tutorialFeedbackDesc =>
+      'También en el menú. Envía dudas, incidencias o feedback directamente a tu entrenador.';
+
+  @override
+  String get tutorialNextButton => 'Siguiente';
+
+  @override
+  String get tutorialDoneButton => 'Listo';
 }

@@ -1727,4 +1727,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recapAlreadySubmittedThisWeek =>
       'You already have a recap submitted this week';
+
+  @override
+  String get tutorialPromptTitle => 'Want a quick tour?';
+
+  @override
+  String get tutorialPromptDescription =>
+      'We\'ll show you around the main sections of the app in just a few seconds.';
+
+  @override
+  String get tutorialStartButton => 'Start guide';
+
+  @override
+  String get tutorialSkipButton => 'Skip';
+
+  @override
+  String get tutorialHomeTitle => 'Home';
+
+  @override
+  String get tutorialHomeDesc =>
+      'Your daily dashboard. See today\'s training, diet plan, and progress stats at a glance.';
+
+  @override
+  String get tutorialTrainingsTitle => 'Trainings';
+
+  @override
+  String get tutorialTrainingsDesc =>
+      'View and complete your daily workouts. Track each exercise as you go.';
+
+  @override
+  String get tutorialDietsTitle => 'Diets';
+
+  @override
+  String get tutorialDietsDesc =>
+      'Follow your personalized meal plan. Check off meals throughout the day.';
+
+  @override
+  String get tutorialCalendarTitle => 'Calendar';
+
+  @override
+  String get tutorialCalendarDesc =>
+      'See your full schedule. Review past and upcoming trainings and meals.';
+
+  @override
+  String get tutorialChallengesTitle => 'Challenges';
+
+  @override
+  String get tutorialChallengesDesc =>
+      'Earn achievements and track your streaks. Stay motivated with goals.';
+
+  @override
+  String get tutorialProfileTitle => 'Profile';
+
+  @override
+  String get tutorialProfileDesc =>
+      'Tap the person icon in the top bar to view your profile, stats, and body metrics.';
+
+  @override
+  String get tutorialRecapTitle => 'Weekly Recap';
+
+  @override
+  String get tutorialRecapDesc =>
+      'Open the menu (top-right) to find the weekly recap. Summarize your week for your coach.';
+
+  @override
+  String get tutorialFeedbackTitle => 'Feedback';
+
+  @override
+  String get tutorialFeedbackDesc =>
+      'Also in the menu. Send questions, issues, or feedback directly to your coach.';
+
+  @override
+  String get tutorialNextButton => 'Next';
+
+  @override
+  String get tutorialDoneButton => 'Done';
 }

@@ -3289,6 +3289,138 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ya tienes un recap subido esta semana'**
   String get recapAlreadySubmittedThisWeek;
+
+  /// No description provided for @tutorialPromptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quieres un tour rápido?'**
+  String get tutorialPromptTitle;
+
+  /// No description provided for @tutorialPromptDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Te enseñamos las secciones principales de la app en unos segundos.'**
+  String get tutorialPromptDescription;
+
+  /// No description provided for @tutorialStartButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar guía'**
+  String get tutorialStartButton;
+
+  /// No description provided for @tutorialSkipButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Omitir'**
+  String get tutorialSkipButton;
+
+  /// No description provided for @tutorialHomeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get tutorialHomeTitle;
+
+  /// No description provided for @tutorialHomeDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu panel diario. Consulta el entreno, dieta y estadísticas del día de un vistazo.'**
+  String get tutorialHomeDesc;
+
+  /// No description provided for @tutorialTrainingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamientos'**
+  String get tutorialTrainingsTitle;
+
+  /// No description provided for @tutorialTrainingsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Consulta y completa tus rutinas diarias. Marca cada ejercicio a medida que avanzas.'**
+  String get tutorialTrainingsDesc;
+
+  /// No description provided for @tutorialDietsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Dietas'**
+  String get tutorialDietsTitle;
+
+  /// No description provided for @tutorialDietsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue tu plan de comidas personalizado. Marca las comidas a lo largo del día.'**
+  String get tutorialDietsDesc;
+
+  /// No description provided for @tutorialCalendarTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Calendario'**
+  String get tutorialCalendarTitle;
+
+  /// No description provided for @tutorialCalendarDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Consulta tu agenda completa. Revisa entrenos y comidas pasados y próximos.'**
+  String get tutorialCalendarDesc;
+
+  /// No description provided for @tutorialChallengesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Retos'**
+  String get tutorialChallengesTitle;
+
+  /// No description provided for @tutorialChallengesDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Consigue logros y mantén tus rachas. Mantente motivado con objetivos.'**
+  String get tutorialChallengesDesc;
+
+  /// No description provided for @tutorialProfileTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil'**
+  String get tutorialProfileTitle;
+
+  /// No description provided for @tutorialProfileDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Pulsa el icono de persona en la barra superior para ver tu perfil, estadísticas y métricas corporales.'**
+  String get tutorialProfileDesc;
+
+  /// No description provided for @tutorialRecapTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Recap semanal'**
+  String get tutorialRecapTitle;
+
+  /// No description provided for @tutorialRecapDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre el menú (arriba a la derecha) para encontrar el recap semanal. Resume tu semana para tu entrenador.'**
+  String get tutorialRecapDesc;
+
+  /// No description provided for @tutorialFeedbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Feedback'**
+  String get tutorialFeedbackTitle;
+
+  /// No description provided for @tutorialFeedbackDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'También en el menú. Envía dudas, incidencias o feedback directamente a tu entrenador.'**
+  String get tutorialFeedbackDesc;
+
+  /// No description provided for @tutorialNextButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get tutorialNextButton;
+
+  /// No description provided for @tutorialDoneButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Listo'**
+  String get tutorialDoneButton;
 }
 
 class _AppLocalizationsDelegate

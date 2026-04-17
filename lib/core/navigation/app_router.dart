@@ -12,6 +12,8 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/tutorial_prompt_dialog.dart';
+import 'package:exom_app/core/widgets/tutorial_overlay.dart';
 
 // Auth pages
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -311,15 +313,9 @@ class AppRouter {
 
 // ─── Main Shell ────────────────────────────────────────────────────────────────
 
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
-
-  String _brandLogo(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
-        ? 'assets/images/logo_dark.svg'
-        : 'assets/images/logo.svg';
-  }
 
   // Tab order: Challenges, Trainings, Home (center), Diets, Calendar
   static const _tabs = [
@@ -330,6 +326,23 @@ class MainShell extends StatelessWidget {
     AppRoutes.calendar,
   ];
 
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _drawerItemKeys = List.generate(7, (_) => GlobalKey());
+  bool _showPrompt = false;
+  bool _showTutorial = false;
+  bool _tutorialChecked = false;
+
+  String _brandLogo(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? 'assets/images/logo_dark.svg'
+        : 'assets/images/logo.svg';
+  }
+
   int _currentIndex(String location) {
     if (location == '/') return 2; // Home is center
     if (location.startsWith('/challenges')) return 0;
@@ -339,8 +352,70 @@ class MainShell extends StatelessWidget {
     return 2;
   }
 
+  void _checkTutorial() {
+    if (_tutorialChecked) return;
+    _tutorialChecked = true;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final storage = sl<LocalStorage>();
+    final done = storage.isTutorialCompleteFor(
+      uid: user.uid,
+      email: user.email,
+    );
+
+    if (!done) {
+      setState(() => _showPrompt = true);
+    }
+  }
+
+  void _startTutorial() {
+    setState(() {
+      _showPrompt = false;
+      _showTutorial = true;
+    });
+  }
+
+  void _skipTutorial() {
+    _markTutorialComplete();
+    setState(() {
+      _showPrompt = false;
+      _showTutorial = false;
+    });
+  }
+
+  void _completeTutorial() {
+    // Close drawer if open
+    if (_scaffoldKey.currentState?.isEndDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+    }
+    _markTutorialComplete();
+    setState(() => _showTutorial = false);
+    context.go(AppRoutes.home);
+  }
+
+  void _markTutorialComplete() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    sl<LocalStorage>().setTutorialCompleteFor(uid: user.uid, email: user.email);
+  }
+
+  void _onTutorialOpenDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  void _onTutorialCloseDrawer() {
+    if (_scaffoldKey.currentState?.isEndDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Check tutorial on first build (after frame)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkTutorial());
+
     final location = GoRouterState.of(context).matchedLocation;
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
@@ -348,51 +423,67 @@ class MainShell extends StatelessWidget {
     final topInset = mediaQuery.padding.top + kToolbarHeight;
     final bottomInset = mediaQuery.padding.bottom + GlassBottomNav.totalHeight;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: GlassAppBar(
-        title: SvgPicture.asset(_brandLogo(context), height: 28),
-        actions: [
-          IconButton(
-            onPressed: () => context.push(AppRoutes.profile),
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: palette.glassBackground,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: palette.glassBorder.withValues(alpha: 0.15),
-                  width: 0.5,
+    // Scaffold wrapped in Stack so overlay renders ABOVE drawer
+    return Stack(
+      children: [
+        Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
+          extendBody: true,
+          appBar: GlassAppBar(
+            title: SvgPicture.asset(_brandLogo(context), height: 28),
+            actions: [
+              IconButton(
+                onPressed: () => context.push(AppRoutes.profile),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: palette.glassBackground,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: palette.glassBorder.withValues(alpha: 0.15),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.person_outline,
+                    color: palette.textPrimary,
+                    size: 18,
+                  ),
                 ),
               ),
-              child: Icon(
-                Icons.person_outline,
-                color: palette.textPrimary,
-                size: 18,
+              Builder(
+                builder: (ctx) => IconButton(
+                  onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                  icon: Icon(Icons.menu, color: palette.textPrimary, size: 26),
+                ),
               ),
+            ],
+          ),
+          endDrawer: _AppDrawer(drawerItemKeys: _drawerItemKeys),
+          body: ExomStaticBackground(
+            child: Padding(
+              padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
+              child: SizedBox.expand(child: widget.child),
             ),
           ),
-          Builder(
-            builder: (ctx) => IconButton(
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-              icon: Icon(Icons.menu, color: palette.textPrimary, size: 26),
-            ),
+          bottomNavigationBar: GlassBottomNav(
+            selectedIndex: selected,
+            onTap: (i) => context.go(MainShell._tabs[i]),
           ),
-        ],
-      ),
-      endDrawer: const _AppDrawer(),
-      body: ExomStaticBackground(
-        child: Padding(
-          padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
-          child: SizedBox.expand(child: child),
         ),
-      ),
-      bottomNavigationBar: GlassBottomNav(
-        selectedIndex: selected,
-        onTap: (i) => context.go(_tabs[i]),
-      ),
+        if (_showPrompt)
+          TutorialPromptDialog(onStart: _startTutorial, onSkip: _skipTutorial),
+        if (_showTutorial)
+          TutorialOverlay(
+            onNavigate: (route) => context.go(route),
+            onOpenDrawer: _onTutorialOpenDrawer,
+            onCloseDrawer: _onTutorialCloseDrawer,
+            onComplete: _completeTutorial,
+            drawerItemKeys: _drawerItemKeys,
+          ),
+      ],
     );
   }
 }
@@ -400,7 +491,9 @@ class MainShell extends StatelessWidget {
 // ─── App Drawer ────────────────────────────────────────────────────────────────
 
 class _AppDrawer extends StatelessWidget {
-  const _AppDrawer();
+  final List<GlobalKey> drawerItemKeys;
+
+  const _AppDrawer({required this.drawerItemKeys});
 
   @override
   Widget build(BuildContext context) {
@@ -480,6 +573,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.person_outline,
                       label: l10n.profileMenuItem,
+                      labelKey: drawerItemKeys[0],
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.profile);
@@ -488,6 +582,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.emoji_events_outlined,
                       label: l10n.challengesMenuItem,
+                      labelKey: drawerItemKeys[1],
                       onTap: () {
                         Navigator.pop(context);
                         context.go(AppRoutes.challenges);
@@ -496,6 +591,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.bar_chart_outlined,
                       label: l10n.weeklyRecapMenuItem,
+                      labelKey: drawerItemKeys[2],
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.recap);
@@ -504,6 +600,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.feedback_outlined,
                       label: l10n.feedbackMenuItem,
+                      labelKey: drawerItemKeys[3],
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.feedback);
@@ -512,6 +609,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.settings_outlined,
                       label: l10n.settingsMenuItem,
+                      labelKey: drawerItemKeys[4],
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.settings);
@@ -520,6 +618,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.help_outline,
                       label: l10n.helpMenuItem,
+                      labelKey: drawerItemKeys[5],
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.help);
@@ -529,6 +628,7 @@ class _AppDrawer extends StatelessWidget {
                     _DrawerItem(
                       icon: Icons.logout,
                       label: l10n.logOutMenuItem,
+                      labelKey: drawerItemKeys[6],
                       color: AppColors.error,
                       onTap: () {
                         Navigator.pop(context);
@@ -553,12 +653,14 @@ class _DrawerItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color? color;
+  final GlobalKey? labelKey;
 
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.color,
+    this.labelKey,
   });
 
   @override
@@ -567,6 +669,7 @@ class _DrawerItem extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: itemColor, size: 22),
       title: Text(
+        key: labelKey,
         label,
         style: TextStyle(
           color: itemColor,

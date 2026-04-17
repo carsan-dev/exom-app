@@ -1,11 +1,12 @@
 class FeedbackEntity {
   final String id;
   final String mediaType; // IMAGE or VIDEO
-  final String mediaUrl;
+  final String? mediaUrl;
   final String? notes;
   final String? adminResponse;
   final String status; // PENDING or REVIEWED
   final DateTime? reviewedAt;
+  final DateTime? mediaDeletedAt;
   final DateTime createdAt;
   final String? exerciseName;
 
@@ -17,6 +18,7 @@ class FeedbackEntity {
     this.adminResponse,
     required this.status,
     this.reviewedAt,
+    this.mediaDeletedAt,
     required this.createdAt,
     this.exerciseName,
   });

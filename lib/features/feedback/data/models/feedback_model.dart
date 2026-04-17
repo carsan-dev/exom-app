@@ -9,6 +9,7 @@ class FeedbackModel extends FeedbackEntity {
     super.adminResponse,
     required super.status,
     super.reviewedAt,
+    super.mediaDeletedAt,
     required super.createdAt,
     super.exerciseName,
   });
@@ -18,12 +19,15 @@ class FeedbackModel extends FeedbackEntity {
     return FeedbackModel(
       id: json['id'] as String,
       mediaType: json['media_type'] as String? ?? 'IMAGE',
-      mediaUrl: json['media_url'] as String? ?? '',
+      mediaUrl: json['media_url'] as String?,
       notes: json['notes'] as String?,
       adminResponse: json['admin_response'] as String?,
       status: json['status'] as String? ?? 'PENDING',
       reviewedAt: json['reviewed_at'] != null
           ? DateTime.parse(json['reviewed_at'] as String)
+          : null,
+      mediaDeletedAt: json['media_deleted_at'] != null
+          ? DateTime.parse(json['media_deleted_at'] as String)
           : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       exerciseName: exercise?['name'] as String?,

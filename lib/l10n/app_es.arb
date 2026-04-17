@@ -180,6 +180,8 @@
   "noActiveChallenges": "Sin retos activos",
   "noActiveChallengesMessage": "Tu entrenador aún no te ha asignado retos. Empieza completando tus entrenamientos y comidas para desbloquear retos automáticos.",
   "lockedAchievementsHint": "Completa retos para desbloquear medallas",
+  "noUnlockedAchievementsTitle": "Aún no tienes logros desbloqueados",
+  "noUnlockedAchievementsMessage": "Completa retos para desbloquear medallas. Puedes ver todos los logros disponibles.",
   "pendingChallengeLabel": "Reto pendiente",
   "challengeDeadlineLabel": "Fecha límite",
   "challengeUntilLabel": "Hasta",

@@ -165,6 +165,8 @@
   "noActiveChallenges": "No active challenges",
   "noActiveChallengesMessage": "Your coach has not assigned any challenges yet. Start completing your workouts and meals to unlock automatic challenges.",
   "lockedAchievementsHint": "Complete challenges to unlock medals",
+  "noUnlockedAchievementsTitle": "No achievements unlocked yet",
+  "noUnlockedAchievementsMessage": "Complete challenges to unlock medals. You can view every available achievement.",
   "pendingChallengeLabel": "Pending challenge",
   "challengeDeadlineLabel": "Deadline",
   "challengeUntilLabel": "Until",

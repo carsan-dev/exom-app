@@ -932,6 +932,18 @@ abstract class AppLocalizations {
   /// **'Completa retos para desbloquear medallas'**
   String get lockedAchievementsHint;
 
+  /// No description provided for @noUnlockedAchievementsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no tienes logros desbloqueados'**
+  String get noUnlockedAchievementsTitle;
+
+  /// No description provided for @noUnlockedAchievementsMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa retos para desbloquear medallas. Puedes ver todos los logros disponibles.'**
+  String get noUnlockedAchievementsMessage;
+
   /// No description provided for @pendingChallengeLabel.
   ///
   /// In es, this message translates to:

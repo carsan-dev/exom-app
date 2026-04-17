@@ -446,6 +446,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockedAchievementsHint => 'Complete challenges to unlock medals';
 
   @override
+  String get noUnlockedAchievementsTitle => 'No achievements unlocked yet';
+
+  @override
+  String get noUnlockedAchievementsMessage =>
+      'Complete challenges to unlock medals. You can view every available achievement.';
+
+  @override
   String get pendingChallengeLabel => 'Pending challenge';
 
   @override

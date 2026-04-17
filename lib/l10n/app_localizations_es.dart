@@ -450,6 +450,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Completa retos para desbloquear medallas';
 
   @override
+  String get noUnlockedAchievementsTitle =>
+      'Aún no tienes logros desbloqueados';
+
+  @override
+  String get noUnlockedAchievementsMessage =>
+      'Completa retos para desbloquear medallas. Puedes ver todos los logros disponibles.';
+
+  @override
   String get pendingChallengeLabel => 'Reto pendiente';
 
   @override

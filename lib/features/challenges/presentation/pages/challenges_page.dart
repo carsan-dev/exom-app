@@ -239,7 +239,7 @@ class _ChallengesContent extends StatelessWidget {
             _SectionTitle(title: l10n.weeklyChallengesSection),
             ...state.weeklyChallenges.map((c) => _ChallengeCard(challenge: c)),
           ],
-          if (state.achievements.isNotEmpty) ...[
+          if (state.achievements.isNotEmpty || showCatalogButton) ...[
             _SectionTitle(
               title: l10n.unlockedAchievementsSection,
               actionLabel: showCatalogButton ? l10n.viewAllButton : null,
@@ -251,7 +251,10 @@ class _ChallengesContent extends StatelessWidget {
                     )
                   : null,
             ),
-            _AchievementsCarousel(achievements: state.achievements),
+            if (state.achievements.isNotEmpty)
+              _AchievementsCarousel(achievements: state.achievements)
+            else
+              const _EmptyAchievementsCard(),
           ],
         ],
       ),
@@ -743,11 +746,22 @@ class _EmptyAchievementsCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            l10n.lockedAchievementsHint,
+            l10n.noUnlockedAchievementsTitle,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.noUnlockedAchievementsMessage,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: palette.textSecondary,
               fontSize: 14,
+              height: 1.35,
             ),
           ),
         ],

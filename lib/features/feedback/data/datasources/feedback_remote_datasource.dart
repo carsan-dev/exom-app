@@ -86,7 +86,11 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     }
     final ext = uploadFile.path.split('.').last.toLowerCase();
     final fileKey = 'feedback/${DateTime.now().millisecondsSinceEpoch}.$ext';
-    final uploadContentType = isImage ? 'image/jpeg' : contentType;
+    final uploadContentType = isImage
+        ? 'image/jpeg'
+        : isVideo
+        ? 'video/mp4'
+        : contentType;
 
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
@@ -108,8 +112,9 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       if (payload is! Map<String, dynamic>) {
         throw Exception('Invalid upload response');
       }
-      return ((payload['data'] as Map<String, dynamic>)['file_url'] as String?)
-          ?? (payload['file_url'] as String);
+      return ((payload['data'] as Map<String, dynamic>)['file_url']
+              as String?) ??
+          (payload['file_url'] as String);
     } on DioException catch (error) {
       final statusCode = error.response?.statusCode;
       final message = statusCode == null

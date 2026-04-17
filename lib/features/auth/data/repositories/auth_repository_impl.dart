@@ -63,4 +63,19 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   UserEntity? getCurrentUser() => _currentUser;
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await _remoteDataSource.deleteAccount();
+    } finally {
+      try {
+        await _firebaseAuthService.signOut();
+      } catch (_) {
+        // Firebase user may already be gone after backend delete
+      }
+      await _localStorage.clearSessionData();
+      _currentUser = null;
+    }
+  }
 }

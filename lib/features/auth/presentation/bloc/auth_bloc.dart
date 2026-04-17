@@ -7,6 +7,7 @@ import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -15,6 +16,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SocialLoginUseCase _socialLoginUseCase;
   final LogoutUseCase _logoutUseCase;
   final GetMeUseCase _getMeUseCase;
+  final DeleteAccountUseCase _deleteAccountUseCase;
   final FirebaseAuthService _firebaseAuthService;
   AuthCredential? _pendingLinkCredential;
   String? _pendingLinkEmail;
@@ -25,11 +27,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SocialLoginUseCase socialLoginUseCase,
     required LogoutUseCase logoutUseCase,
     required GetMeUseCase getMeUseCase,
+    required DeleteAccountUseCase deleteAccountUseCase,
     required FirebaseAuthService firebaseAuthService,
   }) : _loginUseCase = loginUseCase,
        _socialLoginUseCase = socialLoginUseCase,
        _logoutUseCase = logoutUseCase,
        _getMeUseCase = getMeUseCase,
+       _deleteAccountUseCase = deleteAccountUseCase,
        _firebaseAuthService = firebaseAuthService,
        super(const AuthInitial()) {
     on<AuthCheckStatusRequested>(_onCheckStatus);
@@ -39,6 +43,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLinkPasswordSubmitted>(_onLinkPasswordSubmitted);
     on<AuthLinkCancelled>(_onLinkCancelled);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthAccountDeletionRequested>(_onAccountDeletionRequested);
   }
 
   void _clearPendingLink() {
@@ -311,5 +316,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Best effort logout
     }
     emit(const AuthUnauthenticated());
+  }
+
+  Future<void> _onAccountDeletionRequested(
+    AuthAccountDeletionRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    _clearPendingLink();
+    emit(const AuthLoading());
+    try {
+      await _deleteAccountUseCase();
+      emit(const AuthAccountDeleted());
+      emit(const AuthUnauthenticated());
+    } on ApiException catch (e) {
+      emit(AuthError(e.message));
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
   }
 }

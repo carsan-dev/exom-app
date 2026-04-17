@@ -6,4 +6,5 @@ abstract class AuthRepository {
   Future<void> logout();
   Future<UserEntity> getMe();
   UserEntity? getCurrentUser();
+  Future<void> deleteAccount();
 }

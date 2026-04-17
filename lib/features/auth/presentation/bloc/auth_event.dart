@@ -45,3 +45,7 @@ class AuthLinkCancelled extends AuthEvent {
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
+
+class AuthAccountDeletionRequested extends AuthEvent {
+  const AuthAccountDeletionRequested();
+}

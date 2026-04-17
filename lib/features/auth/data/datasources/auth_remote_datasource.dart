@@ -8,6 +8,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> getMe();
   Future<void> logout();
   Future<void> forgotPassword(String email);
+  Future<void> deleteAccount();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -69,6 +70,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         '/auth/forgot-password',
         data: {'email': email},
       );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await _apiClient.delete('/profile/me');
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

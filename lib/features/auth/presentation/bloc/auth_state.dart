@@ -51,3 +51,7 @@ class AuthLinkPasswordRequired extends AuthState {
 class AuthAccountLocked extends AuthState {
   const AuthAccountLocked();
 }
+
+class AuthAccountDeleted extends AuthState {
+  const AuthAccountDeleted();
+}

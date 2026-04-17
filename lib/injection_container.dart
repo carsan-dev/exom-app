@@ -16,6 +16,7 @@ import 'package:exom_app/features/auth/domain/repositories/auth_repository.dart'
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:exom_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -167,6 +168,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => SocialLoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => GetMeUseCase(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => DeleteAccountUseCase(sl<AuthRepository>()));
 
   sl.registerFactory(
     () => AuthBloc(
@@ -174,6 +176,7 @@ Future<void> initDependencies() async {
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
       getMeUseCase: sl<GetMeUseCase>(),
+      deleteAccountUseCase: sl<DeleteAccountUseCase>(),
       firebaseAuthService: sl<FirebaseAuthService>(),
     ),
   );

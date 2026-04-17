@@ -292,10 +292,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     _SettingsTile(
                       icon: Icons.alternate_email,
-                      title: l10n.emailSupportOption,
-                      subtitle: l10n.emailSupportOptionDescription,
+                      title: l10n.serviceSupportEmailOption,
+                      subtitle: l10n.serviceSupportEmailDescription,
                       onTap: () => _openExternalLink(
-                        ExternalLinks.supportEmail,
+                        ExternalLinks.serviceSupportEmail,
+                        l10n.mailAppNotOpenedError,
+                      ),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.build_circle_outlined,
+                      title: l10n.technicalSupportEmailOption,
+                      subtitle: l10n.technicalSupportEmailDescription,
+                      onTap: () => _openExternalLink(
+                        ExternalLinks.technicalSupportEmail,
                         l10n.mailAppNotOpenedError,
                       ),
                     ),

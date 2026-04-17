@@ -1218,15 +1218,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportContactOption => 'Support and contact';
 
   @override
-  String get supportContactDescription =>
-      'Open the support page or email soporte@exom.app.';
+  String get supportContactDescription => 'Open the EXOM support page.';
 
   @override
   String get emailSupportOption => 'Email support';
 
   @override
   String get emailSupportOptionDescription =>
-      'Prepare an external email for technical support.';
+      'Prepare an external email for support.';
+
+  @override
+  String get serviceSupportEmailOption => 'Service questions';
+
+  @override
+  String get serviceSupportEmailDescription =>
+      'Email exom.method@gmail.com for account access, service and EXOM Method questions.';
+
+  @override
+  String get technicalSupportEmailOption => 'Technical questions';
+
+  @override
+  String get technicalSupportEmailDescription =>
+      'Email csroman.dev@gmail.com for app errors, installation or technical issues.';
 
   @override
   String get notificationsSettingsTitle => 'Notifications';

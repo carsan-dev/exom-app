@@ -2333,7 +2333,7 @@ abstract class AppLocalizations {
   /// No description provided for @supportContactDescription.
   ///
   /// In es, this message translates to:
-  /// **'Abre la página de soporte o escribe a soporte@exom.app.'**
+  /// **'Abre la página de soporte de EXOM.'**
   String get supportContactDescription;
 
   /// No description provided for @emailSupportOption.
@@ -2345,8 +2345,32 @@ abstract class AppLocalizations {
   /// No description provided for @emailSupportOptionDescription.
   ///
   /// In es, this message translates to:
-  /// **'Prepara un email externo para soporte técnico.'**
+  /// **'Prepara un email externo para soporte.'**
   String get emailSupportOptionDescription;
+
+  /// No description provided for @serviceSupportEmailOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Dudas del servicio'**
+  String get serviceSupportEmailOption;
+
+  /// No description provided for @serviceSupportEmailDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe a exom.method@gmail.com para altas, acceso y dudas de EXOM Method.'**
+  String get serviceSupportEmailDescription;
+
+  /// No description provided for @technicalSupportEmailOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Dudas técnicas'**
+  String get technicalSupportEmailOption;
+
+  /// No description provided for @technicalSupportEmailDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe a csroman.dev@gmail.com para errores de app, instalación o incidencias técnicas.'**
+  String get technicalSupportEmailDescription;
 
   /// No description provided for @notificationsSettingsTitle.
   ///

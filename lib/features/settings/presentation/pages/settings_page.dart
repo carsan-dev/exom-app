@@ -16,6 +16,7 @@ import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/injection_container.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -151,6 +152,68 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: Colors.transparent,
       builder: (_) => const _CreditsSheet(),
     );
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final l10n = AppLocalizations.of(context)!;
+    final palette = context.exomPalette;
+    final confirmWord = l10n.deleteAccountConfirmWord;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final controller = TextEditingController();
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            final canConfirm =
+                controller.text.trim().toUpperCase() == confirmWord;
+            return AlertDialog(
+              title: Text(l10n.deleteAccountDialogTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.deleteAccountDialogBody),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      labelText: l10n.deleteAccountConfirmHint,
+                      hintText: confirmWord,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setLocal(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(l10n.deleteAccountCancelButton),
+                ),
+                FilledButton(
+                  onPressed: canConfirm
+                      ? () => Navigator.of(dialogContext).pop(true)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: palette.error,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(l10n.deleteAccountConfirmButton),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      context.read<AuthBloc>().add(const AuthAccountDeletionRequested());
+    }
   }
 
   @override
@@ -405,11 +468,102 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                BlocListener<AuthBloc, AuthState>(
+                  listenWhen: (previous, current) =>
+                      current is AuthAccountDeleted ||
+                      (current is AuthError && previous is AuthLoading),
+                  listener: (context, state) {
+                    if (state is AuthAccountDeleted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.deleteAccountSuccessMessage),
+                          backgroundColor: palette.error,
+                        ),
+                      );
+                    } else if (state is AuthError) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.deleteAccountErrorMessage),
+                          backgroundColor: palette.error,
+                        ),
+                      );
+                    }
+                  },
+                  child: _SettingsGroup(
+                    title: l10n.dangerZoneTitle,
+                    children: [
+                      _DangerTile(
+                        icon: Icons.delete_forever_outlined,
+                        title: l10n.deleteAccountOption,
+                        subtitle: l10n.deleteAccountDescription,
+                        onTap: _confirmDeleteAccount,
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _DangerTile extends StatelessWidget {
+  const _DangerTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: palette.error.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: palette.error.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
+        child: Icon(icon, color: palette.error, size: 20),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: palette.error,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: palette.textDisabled,
+          fontSize: 12,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: palette.error.withValues(alpha: 0.6),
+        size: 18,
+      ),
     );
   }
 }

@@ -13,6 +13,16 @@
   "emailFirstPrompt": "Introduce tu email primero",
   "passwordResetEmailSent": "Email de recuperación enviado. Revisa tu bandeja de entrada.",
   "passwordResetEmailFailed": "No se pudo enviar el email. Verifica la dirección.",
+  "forgotPasswordTitle": "Recupera tu contraseña",
+  "forgotPasswordSubtitle": "Introduce el correo asociado a tu cuenta y te enviaremos un enlace para restablecerla.",
+  "sendResetEmailButton": "Enviar enlace de recuperación",
+  "resetEmailSentTitle": "¡Email enviado!",
+  "resetEmailSentSubtitle": "Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de spam.",
+  "@resetEmailSentSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
   "loginButton": "Iniciar sesión",
   "continueWithDivider": "o continúa con",
   "continueWithGoogle": "Continuar con Google",

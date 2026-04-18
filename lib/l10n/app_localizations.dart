@@ -170,6 +170,36 @@ abstract class AppLocalizations {
   /// **'No se pudo enviar el email. Verifica la dirección.'**
   String get passwordResetEmailFailed;
 
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Recupera tu contraseña'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce el correo asociado a tu cuenta y te enviaremos un enlace para restablecerla.'**
+  String get forgotPasswordSubtitle;
+
+  /// No description provided for @sendResetEmailButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar enlace de recuperación'**
+  String get sendResetEmailButton;
+
+  /// No description provided for @resetEmailSentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Email enviado!'**
+  String get resetEmailSentTitle;
+
+  /// No description provided for @resetEmailSentSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de spam.'**
+  String resetEmailSentSubtitle(Object email);
+
   /// No description provided for @loginButton.
   ///
   /// In es, this message translates to:

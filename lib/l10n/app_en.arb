@@ -13,6 +13,16 @@
   "emailFirstPrompt": "Enter your email first",
   "passwordResetEmailSent": "Recovery email sent. Check your inbox.",
   "passwordResetEmailFailed": "Could not send the email. Check the address.",
+  "forgotPasswordTitle": "Recover your password",
+  "forgotPasswordSubtitle": "Enter the email associated with your account and we'll send you a link to reset it.",
+  "sendResetEmailButton": "Send recovery link",
+  "resetEmailSentTitle": "Email sent!",
+  "resetEmailSentSubtitle": "We've sent a link to {email}. Check your inbox and spam folder.",
+  "@resetEmailSentSubtitle": {
+    "placeholders": {
+      "email": {}
+    }
+  },
   "loginButton": "Log in",
   "continueWithDivider": "or continue with",
   "continueWithGoogle": "Continue with Google",

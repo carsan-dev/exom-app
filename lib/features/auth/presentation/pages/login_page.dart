@@ -5,12 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/injection_container.dart';
 
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -335,36 +333,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _onForgotPassword(BuildContext context) async {
+  void _onForgotPassword(BuildContext context) {
     final email = _emailController.text.trim();
-    final l10n = AppLocalizations.of(context)!;
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.emailFirstPrompt)));
-      return;
-    }
-
-    try {
-      await sl<FirebaseAuthService>().sendPasswordResetEmail(email);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.passwordResetEmailSent),
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.passwordResetEmailFailed,
-            ),
-          ),
-        );
-      }
-    }
+    final uri = Uri(
+      path: AppRoutes.forgotPassword,
+      queryParameters: email.isEmpty ? null : {'email': email},
+    );
+    context.push(uri.toString());
   }
 
   Widget _buildLoginButton() {

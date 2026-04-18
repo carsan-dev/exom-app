@@ -65,6 +65,11 @@ class AuthRepositoryImpl implements AuthRepository {
   UserEntity? getCurrentUser() => _currentUser;
 
   @override
+  Future<void> forgotPassword(String email) async {
+    await _remoteDataSource.forgotPassword(email);
+  }
+
+  @override
   Future<void> deleteAccount() async {
     try {
       await _remoteDataSource.deleteAccount();

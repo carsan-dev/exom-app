@@ -17,6 +17,7 @@ import 'package:exom_app/core/widgets/tutorial_overlay.dart';
 
 // Auth pages
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/account_locked_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_event.dart';
@@ -69,6 +70,7 @@ import '../../injection_container.dart';
 class AppRoutes {
   static const splash = '/splash';
   static const login = '/login';
+  static const forgotPassword = '/forgot-password';
   static const accountLocked = '/account-locked';
   static const onboarding = '/onboarding';
   static const home = '/';
@@ -117,8 +119,9 @@ class AppRouter {
       if (loc == AppRoutes.splash) return null;
 
       final user = FirebaseAuth.instance.currentUser;
-      final isAuthRoute =
-          loc == AppRoutes.login || loc == AppRoutes.accountLocked;
+      final isAuthRoute = loc == AppRoutes.login ||
+          loc == AppRoutes.forgotPassword ||
+          loc == AppRoutes.accountLocked;
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
       if (user != null && loc == AppRoutes.login) return AppRoutes.home;
@@ -157,6 +160,25 @@ class AppRouter {
                 child: child,
               ),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        pageBuilder: (context, state) {
+          final initialEmail = state.uri.queryParameters['email'];
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: ForgotPasswordPage(initialEmail: initialEmail),
+            transitionDuration: const Duration(milliseconds: 320),
+            transitionsBuilder: (ctx, animation, secondary, child) =>
+                FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeInOut,
+                  ),
+                  child: child,
+                ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.accountLocked,

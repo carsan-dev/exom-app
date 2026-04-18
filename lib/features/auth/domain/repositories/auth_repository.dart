@@ -7,4 +7,5 @@ abstract class AuthRepository {
   Future<UserEntity> getMe();
   UserEntity? getCurrentUser();
   Future<void> deleteAccount();
+  Future<void> forgotPassword(String email);
 }

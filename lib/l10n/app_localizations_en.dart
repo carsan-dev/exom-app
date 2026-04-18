@@ -47,6 +47,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not send the email. Check the address.';
 
   @override
+  String get forgotPasswordTitle => 'Recover your password';
+
+  @override
+  String get forgotPasswordSubtitle =>
+      'Enter the email associated with your account and we\'ll send you a link to reset it.';
+
+  @override
+  String get sendResetEmailButton => 'Send recovery link';
+
+  @override
+  String get resetEmailSentTitle => 'Email sent!';
+
+  @override
+  String resetEmailSentSubtitle(Object email) {
+    return 'We\'ve sent a link to $email. Check your inbox and spam folder.';
+  }
+
+  @override
   String get loginButton => 'Log in';
 
   @override

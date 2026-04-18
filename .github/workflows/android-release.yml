@@ -52,6 +52,12 @@ jobs:
           storeFile=exom-release-key.jks
           EOF
 
+      - name: Write google-services.json
+        run: |
+          cat > android/app/google-services.json <<'EOF'
+          ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EOF
+
       - name: Flutter pub get
         run: flutter pub get
 

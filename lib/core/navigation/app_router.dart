@@ -445,10 +445,16 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Check tutorial on first build (after frame)
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkTutorial());
-
     final location = GoRouterState.of(context).matchedLocation;
+    // Only check tutorial on /home, and only after onboarding is complete.
+    // Avoids races during redirects (e.g. login→home→onboarding).
+    if (location == AppRoutes.home) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _checkTutorial();
+      });
+    }
+
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
     final mediaQuery = MediaQuery.of(context);

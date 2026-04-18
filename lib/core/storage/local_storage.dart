@@ -153,10 +153,16 @@ class LocalStorage {
     }
 
     final legacyIdentity = _settings.get(_onboardingIdentityKey) as String?;
-    if (legacyIdentity == null || legacyIdentity == identity) {
-      unawaited(_settings.put(_onboardingIdentityKey, identity));
+    // Strict: only migrate if legacyIdentity matches exactly.
+    // Null legacyIdentity = unsafe (stale global flag from prior install/user), reject.
+    if (legacyIdentity != null && legacyIdentity == identity) {
       unawaited(_settings.put(scopedKey, true));
       return true;
+    }
+
+    // Clear orphan legacy flag (no identity) so it stops auto-migrating future users.
+    if (legacyIdentity == null) {
+      unawaited(_settings.delete(_legacyOnboardingCompleteKey));
     }
 
     return false;

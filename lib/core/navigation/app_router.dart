@@ -124,7 +124,13 @@ class AppRouter {
           loc == AppRoutes.accountLocked;
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
-      if (user != null && loc == AppRoutes.login) return AppRoutes.home;
+      if (user != null && loc == AppRoutes.login) {
+        final done = sl<LocalStorage>().isOnboardingCompleteFor(
+          uid: user.uid,
+          email: user.email,
+        );
+        return done ? AppRoutes.home : AppRoutes.onboarding;
+      }
 
       // Show onboarding to newly authenticated users who haven't seen it
       if (user != null && !isAuthRoute && loc != AppRoutes.onboarding) {
@@ -382,6 +388,10 @@ class _MainShellState extends State<MainShell> {
     if (user == null) return;
 
     final storage = sl<LocalStorage>();
+    if (!storage.isOnboardingCompleteFor(uid: user.uid, email: user.email)) {
+      _tutorialChecked = false;
+      return;
+    }
     final done = storage.isTutorialCompleteFor(
       uid: user.uid,
       email: user.email,

@@ -3553,6 +3553,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Zona peligrosa'**
   String get dangerZoneTitle;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes notificaciones'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsMarkAllRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar todas'**
+  String get notificationsMarkAllRead;
 }
 
 class _AppLocalizationsDelegate

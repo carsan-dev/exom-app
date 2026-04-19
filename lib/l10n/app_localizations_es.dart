@@ -1899,4 +1899,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dangerZoneTitle => 'Zona peligrosa';
+
+  @override
+  String get notificationsTitle => 'Notificaciones';
+
+  @override
+  String get notificationsEmpty => 'No tienes notificaciones';
+
+  @override
+  String get notificationsMarkAllRead => 'Marcar todas';
 }

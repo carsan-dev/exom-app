@@ -18,6 +18,13 @@ class FcmService {
   StreamSubscription<RemoteMessage>? _openAppSubscription;
   bool _initialized = false;
 
+  final StreamController<RemoteMessage> _incomingController =
+      StreamController<RemoteMessage>.broadcast();
+
+  /// Stream fired when a push arrives (foreground or opened from background).
+  /// Listeners can refresh UI state like the unread-count badge.
+  Stream<RemoteMessage> get onIncomingMessage => _incomingController.stream;
+
   FcmService(
     this._apiClient,
     this._localStorage,
@@ -154,9 +161,11 @@ class FcmService {
     );
 
     _localNotificationService.showRemoteMessage(message, route: route);
+    _emitIncoming(message);
   }
 
   void _handleNotificationOpen(RemoteMessage message) {
+    _emitIncoming(message);
     final route = _resolveRoute(message);
     if (route == null) {
       return;
@@ -164,6 +173,11 @@ class FcmService {
 
     debugPrint('[FCM] Open notification route: $route');
     _goToRoute(route);
+  }
+
+  void _emitIncoming(RemoteMessage message) {
+    if (_incomingController.isClosed) return;
+    _incomingController.add(message);
   }
 
   String? _resolveRoute(RemoteMessage message) {

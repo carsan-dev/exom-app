@@ -110,6 +110,16 @@ import 'package:exom_app/features/metrics/domain/repositories/metrics_repository
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 
+// Notifications
+import 'package:exom_app/features/notifications/data/datasources/notifications_remote_datasource.dart';
+import 'package:exom_app/features/notifications/data/repositories/notifications_repository_impl.dart';
+import 'package:exom_app/features/notifications/domain/repositories/notifications_repository.dart';
+import 'package:exom_app/features/notifications/domain/usecases/get_my_notifications_usecase.dart';
+import 'package:exom_app/features/notifications/domain/usecases/get_unread_count_usecase.dart';
+import 'package:exom_app/features/notifications/domain/usecases/mark_all_notifications_as_read_usecase.dart';
+import 'package:exom_app/features/notifications/domain/usecases/mark_notification_as_read_usecase.dart';
+import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc.dart';
+
 // Onboarding
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 
@@ -427,6 +437,37 @@ Future<void> initDependencies() async {
       saveMetricUseCase: sl<SaveMetricUseCase>(),
       metricsRepository: sl<MetricsRepository>(),
       updateProfileUseCase: sl<UpdateProfileUseCase>(),
+    ),
+  );
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  sl.registerLazySingleton<NotificationsRemoteDataSource>(
+    () => NotificationsRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+
+  sl.registerLazySingleton<NotificationsRepository>(
+    () => NotificationsRepositoryImpl(sl<NotificationsRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(
+    () => GetMyNotificationsUseCase(sl<NotificationsRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetUnreadCountUseCase(sl<NotificationsRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => MarkNotificationAsReadUseCase(sl<NotificationsRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => MarkAllNotificationsAsReadUseCase(sl<NotificationsRepository>()),
+  );
+
+  sl.registerFactory(
+    () => NotificationsBloc(
+      getMyNotifications: sl<GetMyNotificationsUseCase>(),
+      getUnreadCount: sl<GetUnreadCountUseCase>(),
+      markAsRead: sl<MarkNotificationAsReadUseCase>(),
+      markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
     ),
   );
 

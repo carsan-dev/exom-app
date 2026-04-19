@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -51,6 +53,10 @@ import '../../features/recap/presentation/pages/recap_detail_page.dart';
 // Feedback pages
 import '../../features/feedback/presentation/pages/feedback_page.dart';
 
+// Notifications pages
+import '../../features/notifications/presentation/bloc/notifications_bloc.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
+
 // Settings pages
 import '../../features/settings/presentation/pages/settings_page.dart';
 
@@ -64,6 +70,7 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 
 // Storage
+import '../../core/services/fcm_service.dart';
 import '../../core/storage/local_storage.dart';
 import '../../injection_container.dart';
 
@@ -84,6 +91,7 @@ class AppRoutes {
   static const recap = '/recap';
   static const recapDetailBase = '/recap';
   static const feedback = '/feedback';
+  static const notifications = '/notifications';
 
   static String recapDetail(String id) => '/recap/$id';
   static const settings = '/settings';
@@ -311,6 +319,14 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: AppRoutes.notifications,
+        pageBuilder: (_, state) => _platformPage(
+          key: state.pageKey,
+          name: state.name,
+          child: const NotificationsPage(),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.settings,
         pageBuilder: (_, state) => _platformPage(
           key: state.pageKey,
@@ -364,6 +380,27 @@ class _MainShellState extends State<MainShell> {
   bool _showPrompt = false;
   bool _showTutorial = false;
   bool _tutorialChecked = false;
+  late final NotificationsBloc _notificationsBloc;
+  StreamSubscription<RemoteMessage>? _fcmSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationsBloc = sl<NotificationsBloc>()
+      ..add(const NotificationsUnreadCountRefreshRequested());
+    _fcmSubscription = sl<FcmService>().onIncomingMessage.listen((_) {
+      _notificationsBloc.add(
+        const NotificationsUnreadCountRefreshRequested(),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _fcmSubscription?.cancel();
+    _notificationsBloc.close();
+    super.dispose();
+  }
 
   String _brandLogo(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
@@ -462,7 +499,9 @@ class _MainShellState extends State<MainShell> {
     final bottomInset = mediaQuery.padding.bottom + GlassBottomNav.totalHeight;
 
     // Scaffold wrapped in Stack so overlay renders ABOVE drawer
-    return Stack(
+    return BlocProvider<NotificationsBloc>.value(
+      value: _notificationsBloc,
+      child: Stack(
       children: [
         Scaffold(
           key: _scaffoldKey,
@@ -472,6 +511,74 @@ class _MainShellState extends State<MainShell> {
           appBar: GlassAppBar(
             title: SvgPicture.asset(_brandLogo(context), height: 28),
             actions: [
+              BlocBuilder<NotificationsBloc, NotificationsState>(
+                builder: (context, state) {
+                  final unread = state.unreadCount;
+                  return IconButton(
+                    onPressed: () async {
+                      await context.push(AppRoutes.notifications);
+                      if (!mounted) return;
+                      _notificationsBloc.add(
+                        const NotificationsUnreadCountRefreshRequested(),
+                      );
+                    },
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: palette.glassBackground,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: palette.glassBorder.withValues(alpha: 0.15),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.notifications_outlined,
+                            color: palette.textPrimary,
+                            size: 18,
+                          ),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: palette.primary,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: palette.glassBackground,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Text(
+                                unread > 99 ? '99+' : '$unread',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               IconButton(
                 onPressed: () => context.push(AppRoutes.profile),
                 icon: Container(
@@ -522,6 +629,7 @@ class _MainShellState extends State<MainShell> {
             drawerItemKeys: _drawerItemKeys,
           ),
       ],
+      ),
     );
   }
 }

@@ -684,5 +684,8 @@
   "deleteAccountCancelButton": "Cancelar",
   "deleteAccountSuccessMessage": "Cuenta eliminada correctamente",
   "deleteAccountErrorMessage": "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
-  "dangerZoneTitle": "Zona peligrosa"
+  "dangerZoneTitle": "Zona peligrosa",
+  "notificationsTitle": "Notificaciones",
+  "notificationsEmpty": "No tienes notificaciones",
+  "notificationsMarkAllRead": "Marcar todas"
 }

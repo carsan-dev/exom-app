@@ -462,7 +462,7 @@ Future<void> initDependencies() async {
     () => MarkAllNotificationsAsReadUseCase(sl<NotificationsRepository>()),
   );
 
-  sl.registerFactory(
+  sl.registerLazySingleton(
     () => NotificationsBloc(
       getMyNotifications: sl<GetMyNotificationsUseCase>(),
       getUnreadCount: sl<GetUnreadCountUseCase>(),

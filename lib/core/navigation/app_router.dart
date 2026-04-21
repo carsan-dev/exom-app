@@ -398,7 +398,6 @@ class _MainShellState extends State<MainShell> {
   @override
   void dispose() {
     _fcmSubscription?.cancel();
-    _notificationsBloc.close();
     super.dispose();
   }
 

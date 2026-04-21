@@ -15,9 +15,8 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          sl<NotificationsBloc>()..add(const NotificationsRequested()),
+    return BlocProvider<NotificationsBloc>.value(
+      value: sl<NotificationsBloc>()..add(const NotificationsRequested()),
       child: const _NotificationsView(),
     );
   }

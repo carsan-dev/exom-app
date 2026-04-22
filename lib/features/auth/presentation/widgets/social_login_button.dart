@@ -6,13 +6,13 @@ class SocialLoginButton extends StatelessWidget {
   const SocialLoginButton({
     super.key,
     required this.icon,
-    required this.label,
+    this.label,
     this.onPressed,
     this.isLoading = false,
   });
 
   final Widget icon;
-  final String label;
+  final String? label;
   final VoidCallback? onPressed;
   final bool isLoading;
 
@@ -49,15 +49,17 @@ class SocialLoginButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     icon,
-                    const SizedBox(width: 12),
-                    Text(
-                      label,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: palette.textPrimary,
+                    if (label != null) ...[
+                      const SizedBox(width: 12),
+                      Text(
+                        label!,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: palette.textPrimary,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
         ),

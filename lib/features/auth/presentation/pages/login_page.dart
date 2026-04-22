@@ -388,7 +388,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildSocialButtons(BuildContext context) {
-    final supportsGoogle = Platform.isAndroid || Platform.isIOS;
     final isIOS = Platform.isIOS;
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
@@ -396,32 +395,35 @@ class _LoginPageState extends State<LoginPage> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthLoading;
-        return Column(
+
+        final googleButton = SocialLoginButton(
+          icon: Icon(
+            Icons.g_mobiledata,
+            size: 26,
+            color: palette.textPrimary,
+          ),
+          label: isIOS ? null : l10n.continueWithGoogle,
+          isLoading: isLoading,
+          onPressed: () =>
+              context.read<AuthBloc>().add(const AuthGoogleLoginRequested()),
+        );
+
+        if (!isIOS) {
+          return googleButton;
+        }
+
+        final appleButton = SocialLoginButton(
+          icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
+          isLoading: isLoading,
+          onPressed: () =>
+              context.read<AuthBloc>().add(const AuthAppleLoginRequested()),
+        );
+
+        return Row(
           children: [
-            if (supportsGoogle)
-              SocialLoginButton(
-                icon: Icon(
-                  Icons.g_mobiledata,
-                  size: 26,
-                  color: palette.textPrimary,
-                ),
-                label: l10n.continueWithGoogle,
-                isLoading: isLoading,
-                onPressed: () => context.read<AuthBloc>().add(
-                  const AuthGoogleLoginRequested(),
-                ),
-              ),
-            if (isIOS) ...[
-              if (supportsGoogle) const SizedBox(height: 12),
-              SocialLoginButton(
-                icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
-                label: l10n.continueWithApple,
-                isLoading: isLoading,
-                onPressed: () => context.read<AuthBloc>().add(
-                  const AuthAppleLoginRequested(),
-                ),
-              ),
-            ],
+            Expanded(child: googleButton),
+            const SizedBox(width: 12),
+            Expanded(child: appleButton),
           ],
         );
       },

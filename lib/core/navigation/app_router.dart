@@ -23,6 +23,7 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/account_locked_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_event.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
 
 // Home pages
 import '../../features/home/presentation/pages/home_page.dart';
@@ -130,8 +131,12 @@ class AppRouter {
       final isAuthRoute = loc == AppRoutes.login ||
           loc == AppRoutes.forgotPassword ||
           loc == AppRoutes.accountLocked;
+      final isCompletingAuth = _isCompletingAuth(context);
 
       if (user == null && !isAuthRoute) return AppRoutes.login;
+      if (user != null && loc == AppRoutes.login && isCompletingAuth) {
+        return null;
+      }
       if (user != null && loc == AppRoutes.login) {
         final done = sl<LocalStorage>().isOnboardingCompleteFor(
           uid: user.uid,
@@ -356,6 +361,14 @@ class AppRouter {
 }
 
 // ─── Main Shell ────────────────────────────────────────────────────────────────
+
+bool _isCompletingAuth(BuildContext context) {
+  try {
+    return context.read<AuthBloc>().state is AuthLoading;
+  } catch (_) {
+    return false;
+  }
+}
 
 class MainShell extends StatefulWidget {
   final Widget child;

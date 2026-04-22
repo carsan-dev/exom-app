@@ -388,7 +388,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildSocialButtons(BuildContext context) {
-    final isAndroid = Platform.isAndroid;
+    final supportsGoogle = Platform.isAndroid || Platform.isIOS;
     final isIOS = Platform.isIOS;
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context)!;
@@ -398,7 +398,7 @@ class _LoginPageState extends State<LoginPage> {
         final isLoading = state is AuthLoading;
         return Column(
           children: [
-            if (isAndroid)
+            if (supportsGoogle)
               SocialLoginButton(
                 icon: Icon(
                   Icons.g_mobiledata,
@@ -412,7 +412,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             if (isIOS) ...[
-              if (isAndroid) const SizedBox(height: 12),
+              if (supportsGoogle) const SizedBox(height: 12),
               SocialLoginButton(
                 icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
                 label: l10n.continueWithApple,

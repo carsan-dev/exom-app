@@ -61,6 +61,13 @@ class FirebaseAuthService {
       nonce: nonce,
     );
 
+    // TEMP DEBUG
+    // ignore: avoid_print
+    print('[AppleSIWA] idToken=${appleCredential.identityToken != null ? "len=${appleCredential.identityToken!.length}" : "NULL"} '
+        'userId=${appleCredential.userIdentifier} '
+        'email=${appleCredential.email} '
+        'authCode=${appleCredential.authorizationCode.length}');
+
     return OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,
       rawNonce: rawNonce,

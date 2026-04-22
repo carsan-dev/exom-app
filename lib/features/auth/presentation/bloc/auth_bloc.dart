@@ -142,6 +142,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       _clearPendingLink();
       emit(AuthAuthenticated(user));
     } on FirebaseAuthException catch (e) {
+      // TEMP DEBUG
+      // ignore: avoid_print
+      print('[Social $provider] FirebaseAuthException code=${e.code} msg=${e.message} email=${e.email}');
       if (e.code == 'account-exists-with-different-credential') {
         await _preparePasswordLinkFlow(
           credential: credential,
@@ -152,7 +155,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      emit(AuthError(_firebaseAuthMessage(e)));
+      // TEMP: expose raw error for diagnostics
+      emit(AuthError('[${e.code}] ${e.message ?? "no msg"}'));
     } on ApiException catch (e) {
       if (e.isLocked) {
         emit(const AuthAccountLocked());

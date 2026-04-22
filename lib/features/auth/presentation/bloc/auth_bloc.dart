@@ -155,8 +155,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      // TEMP: expose raw error for diagnostics
-      emit(AuthError('[${e.code}] ${e.message ?? "no msg"}'));
+      // TEMP: expose raw error + Apple JWT details for diagnostics
+      final aud = FirebaseAuthService.lastAppleJwtAud;
+      final iss = FirebaseAuthService.lastAppleJwtIss;
+      final jwtNonce = FirebaseAuthService.lastAppleJwtNonce;
+      final hashedNonce = FirebaseAuthService.lastAppleHashedNonce;
+      final nonceMatch = jwtNonce != null && jwtNonce == hashedNonce;
+      emit(AuthError(
+        '[${e.code}] ${e.message ?? "no msg"}\n'
+        'aud=$aud\niss=$iss\nnonceMatch=$nonceMatch',
+      ));
     } on ApiException catch (e) {
       if (e.isLocked) {
         emit(const AuthAccountLocked());

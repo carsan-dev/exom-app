@@ -7,6 +7,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class FirebaseAuthService {
+  // TEMP DEBUG
+  static String? lastAppleJwtAud;
+  static String? lastAppleJwtIss;
+  static String? lastAppleJwtNonce;
+  static String? lastAppleRawNonce;
+  static String? lastAppleHashedNonce;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   bool _googleSignInInitialized = false;
@@ -61,12 +68,39 @@ class FirebaseAuthService {
       nonce: nonce,
     );
 
-    // TEMP DEBUG
+    // TEMP DEBUG: decode JWT payload to inspect aud / iss / nonce
+    final idToken = appleCredential.identityToken;
+    String? payloadJson;
+    if (idToken != null) {
+      final parts = idToken.split('.');
+      if (parts.length >= 2) {
+        var payload = parts[1];
+        switch (payload.length % 4) {
+          case 2:
+            payload += '==';
+            break;
+          case 3:
+            payload += '=';
+            break;
+        }
+        try {
+          payloadJson = utf8.decode(base64Url.decode(payload));
+          final map = jsonDecode(payloadJson) as Map<String, dynamic>;
+          lastAppleJwtAud = map['aud']?.toString();
+          lastAppleJwtIss = map['iss']?.toString();
+          lastAppleJwtNonce = map['nonce']?.toString();
+        } catch (_) {}
+      }
+    }
+    lastAppleRawNonce = rawNonce;
+    lastAppleHashedNonce = nonce;
     // ignore: avoid_print
-    print('[AppleSIWA] idToken=${appleCredential.identityToken != null ? "len=${appleCredential.identityToken!.length}" : "NULL"} '
+    print('[AppleSIWA] idTokenLen=${idToken?.length} '
         'userId=${appleCredential.userIdentifier} '
         'email=${appleCredential.email} '
-        'authCode=${appleCredential.authorizationCode.length}');
+        'authCodeLen=${appleCredential.authorizationCode.length} '
+        'rawNonce=$rawNonce hashedNonce=$nonce '
+        'JWT_PAYLOAD=$payloadJson');
 
     return OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,

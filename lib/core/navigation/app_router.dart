@@ -495,7 +495,7 @@ class _MainShellState extends State<MainShell> {
     final palette = context.exomPalette;
     final mediaQuery = MediaQuery.of(context);
     final topInset = mediaQuery.padding.top + kToolbarHeight;
-    final bottomInset = mediaQuery.padding.bottom + GlassBottomNav.totalHeight;
+    final bottomInset = GlassBottomNav.reservedHeight(context);
 
     // Scaffold wrapped in Stack so overlay renders ABOVE drawer
     return BlocProvider<NotificationsBloc>.value(

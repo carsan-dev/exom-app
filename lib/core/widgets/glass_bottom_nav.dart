@@ -1,4 +1,6 @@
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -32,15 +34,25 @@ class GlassBottomNav extends StatelessWidget {
   static const _circleOverlap = 10.0;
   static const totalHeight = _barHeight + _circleOverlap;
 
+  static double reservedHeight(BuildContext context) =>
+      totalHeight + platformBottomInset(context);
+
+  static double platformBottomInset(BuildContext context) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return 0;
+    }
+    return MediaQuery.viewPaddingOf(context).bottom;
+  }
+
   @override
   Widget build(BuildContext context) {
     final targetX = _slotCenterX(context, selectedIndex);
     final palette = context.exomPalette;
     final inactiveColor = palette.textDisabled;
-    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final bottomInset = platformBottomInset(context);
 
     return SizedBox(
-      height: totalHeight + bottomInset,
+      height: reservedHeight(context),
       child: TweenAnimationBuilder<double>(
         tween: Tween(end: targetX),
         duration: const Duration(milliseconds: 300),

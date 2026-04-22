@@ -111,7 +111,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   }
 
   Future<bool> _handlePendingUpdate() async {
-    final decision = await _updateDecisionFuture;
+    final AppUpdateDecision decision;
+    try {
+      decision = await _updateDecisionFuture.timeout(
+        const Duration(seconds: 6),
+      );
+    } catch (error) {
+      debugPrint('[SPLASH] Skipping update gate: $error');
+      return mounted;
+    }
+
     if (!mounted || !decision.shouldPrompt) {
       return mounted;
     }

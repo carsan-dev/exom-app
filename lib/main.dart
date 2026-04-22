@@ -27,18 +27,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es');
-  await initializeDateFormatting('es_ES');
-  await initializeDateFormatting('en');
-  await initializeDateFormatting('en_US');
+  runApp(const ExomBootstrapApp());
+
+  try {
+    await _bootstrap().timeout(const Duration(seconds: 20));
+    runApp(const ExomApp());
+    unawaited(_initializeFcm());
+    unawaited(_initializeOfflineSync());
+  } catch (error, stackTrace) {
+    debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    runApp(ExomBootstrapErrorApp(error: error.toString()));
+  }
+}
+
+Future<void> _bootstrap() async {
+  await Future.wait([
+    initializeDateFormatting('es'),
+    initializeDateFormatting('es_ES'),
+    initializeDateFormatting('en'),
+    initializeDateFormatting('en_US'),
+  ]);
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await LocalStorage.init();
   await FlavorConfig.init(FlavorConfig.initialFlavor);
   await initDependencies();
-  runApp(const ExomApp());
-  unawaited(_initializeFcm());
-  unawaited(_initializeOfflineSync());
 }
 
 Future<void> _initializeFcm() async {
@@ -54,6 +68,106 @@ Future<void> _initializeOfflineSync() async {
     await sl<OfflineSyncService>().init();
   } catch (error) {
     debugPrint('[SYNC] Initialization failed: $error');
+  }
+}
+
+class ExomBootstrapApp extends StatelessWidget {
+  const ExomBootstrapApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _BootstrapScaffold(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'EXOM',
+              style: TextStyle(
+                color: Color(0xFFD7F58A),
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 8,
+              ),
+            ),
+            SizedBox(height: 18),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFD7F58A),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ExomBootstrapErrorApp extends StatelessWidget {
+  const ExomBootstrapErrorApp({super.key, required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _BootstrapScaffold(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'EXOM',
+                style: TextStyle(
+                  color: Color(0xFFD7F58A),
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 8,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'No se pudo iniciar la app.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFFB8AE9F), fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BootstrapScaffold extends StatelessWidget {
+  const _BootstrapScaffold({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF241209),
+      body: Center(child: child),
+    );
   }
 }
 

@@ -13,6 +13,10 @@ on:
         type: choice
         options:
           - testflight
+      build_number:
+        description: "Optional iOS build number override. Must be higher than TestFlight."
+        required: false
+        type: string
 
 jobs:
   build:
@@ -70,6 +74,38 @@ jobs:
         run: |
           echo "${{ secrets.GOOGLE_SERVICES_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
 
+      - name: Set iOS build version
+        env:
+          BUILD_NUMBER_INPUT: ${{ github.event.inputs.build_number }}
+        run: |
+          VERSION_LINE=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          BUILD_NAME="${VERSION_LINE%%+*}"
+          BASE_BUILD_NUMBER="${VERSION_LINE##*+}"
+
+          if [ "$BASE_BUILD_NUMBER" = "$VERSION_LINE" ]; then
+            BASE_BUILD_NUMBER=0
+          fi
+
+          if [ -n "$BUILD_NUMBER_INPUT" ]; then
+            BUILD_NUMBER="$BUILD_NUMBER_INPUT"
+          else
+            BUILD_NUMBER=$((BASE_BUILD_NUMBER + GITHUB_RUN_NUMBER))
+          fi
+
+          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid build number: $BUILD_NUMBER"
+            exit 1
+          fi
+
+          if [ "$BUILD_NUMBER" -le "$BASE_BUILD_NUMBER" ]; then
+            echo "Build number $BUILD_NUMBER must be higher than base pubspec build $BASE_BUILD_NUMBER"
+            exit 1
+          fi
+
+          echo "IOS_BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
+          echo "IOS_BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Using iOS build $BUILD_NAME ($BUILD_NUMBER)"
+
       - name: Flutter pub get
         run: flutter pub get
 
@@ -117,7 +153,7 @@ jobs:
           EOF
 
       - name: Build Flutter iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --build-name "$IOS_BUILD_NAME" --build-number "$IOS_BUILD_NUMBER"
 
       - name: Configure Runner signing
         env:

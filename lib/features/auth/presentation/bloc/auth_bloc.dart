@@ -142,9 +142,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       _clearPendingLink();
       emit(AuthAuthenticated(user));
     } on FirebaseAuthException catch (e) {
-      // TEMP DEBUG
-      // ignore: avoid_print
-      print('[Social $provider] FirebaseAuthException code=${e.code} msg=${e.message} email=${e.email}');
       if (e.code == 'account-exists-with-different-credential') {
         await _preparePasswordLinkFlow(
           credential: credential,
@@ -155,16 +152,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      // TEMP: expose raw error + Apple JWT details for diagnostics
-      final aud = FirebaseAuthService.lastAppleJwtAud;
-      final iss = FirebaseAuthService.lastAppleJwtIss;
-      final jwtNonce = FirebaseAuthService.lastAppleJwtNonce;
-      final hashedNonce = FirebaseAuthService.lastAppleHashedNonce;
-      final nonceMatch = jwtNonce != null && jwtNonce == hashedNonce;
-      emit(AuthError(
-        '[${e.code}] ${e.message ?? "no msg"}\n'
-        'aud=$aud\niss=$iss\nnonceMatch=$nonceMatch',
-      ));
+      emit(AuthError(_firebaseAuthMessage(e)));
     } on ApiException catch (e) {
       if (e.isLocked) {
         emit(const AuthAccountLocked());

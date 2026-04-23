@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
   }) async {
     final controller = TextEditingController(text: _passwordController.text);
     final formKey = GlobalKey<FormState>();
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     final password = await showDialog<String>(
       context: context,
@@ -222,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildBranding(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       children: [
@@ -262,7 +262,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildEmailField(BuildContext context) {
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return TextFormField(
       controller: _emailController,
@@ -289,7 +289,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildPasswordField(BuildContext context) {
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return TextFormField(
       controller: _passwordController,
@@ -324,7 +324,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildForgotPassword(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
@@ -347,7 +347,7 @@ class _LoginPageState extends State<LoginPage> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthLoading;
-        final l10n = AppLocalizations.of(context)!;
+        final l10n = AppLocalizations.of(context);
         return ElevatedButton(
           onPressed: isLoading ? null : _onLoginPressed,
           child: isLoading
@@ -368,7 +368,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildDivider(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Row(
       children: [
@@ -391,7 +391,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildSocialButtons(BuildContext context) {
     final isIOS = Platform.isIOS;
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
@@ -431,3 +431,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

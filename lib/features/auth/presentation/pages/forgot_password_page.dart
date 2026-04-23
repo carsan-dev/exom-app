@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -56,7 +56,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      final l10n = AppLocalizations.of(context)!;
+      final l10n = AppLocalizations.of(context);
       final palette = context.exomPalette;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -130,7 +130,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget _buildForm(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Form(
       key: _formKey,
@@ -209,7 +209,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget _buildSuccess(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -245,3 +245,4 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 }
+

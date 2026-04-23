@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -25,7 +25,7 @@ class StatsRow extends StatelessWidget {
     );
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: ExomSpacing.lg,
@@ -88,7 +88,7 @@ class StatsRow extends StatelessWidget {
   }
 
   String? _sleepQuality(BuildContext context, double? hours) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     if (hours == null) return null;
     if (hours >= 8) return l10n.sleepQualityGood;
     if (hours >= 6) return l10n.sleepQualityFair;
@@ -181,3 +181,4 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
+

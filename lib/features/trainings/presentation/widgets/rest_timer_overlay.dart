@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -78,7 +78,7 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return ClipRRect(
@@ -177,3 +177,4 @@ class _RestTimerOverlayState extends State<RestTimerOverlay>
     );
   }
 }
+

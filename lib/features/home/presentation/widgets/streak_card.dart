@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -9,12 +9,12 @@ class StreakCard extends StatelessWidget {
   const StreakCard({super.key, required this.summary});
 
   String _motivationalMessage(int days) {
-    if (days == 0) return '¡Empieza tu racha hoy!';
-    if (days == 1) return '¡Primer día completado! Sigue así';
-    if (days < 7) return '¡Vas muy bien! No lo detengas';
-    if (days < 14) return '¡Una semana seguida! Increíble';
-    if (days < 30) return '¡Eres una máquina! Más de ${days} días';
-    return '¡Leyenda viva! $days días de racha';
+    if (days == 0) return 'Â¡Empieza tu racha hoy!';
+    if (days == 1) return 'Â¡Primer dÃ­a completado! Sigue asÃ­';
+    if (days < 7) return 'Â¡Vas muy bien! No lo detengas';
+    if (days < 14) return 'Â¡Una semana seguida! IncreÃ­ble';
+    if (days < 30) return 'Â¡Eres una mÃ¡quina! MÃ¡s de $days dÃ­as';
+    return 'Â¡Leyenda viva! $days dÃ­as de racha';
   }
 
   @override
@@ -43,7 +43,7 @@ class StreakCard extends StatelessWidget {
               ],
             ),
             child: const Center(
-              child: Text('🔥', style: TextStyle(fontSize: 28)),
+              child: Text('ðŸ”¥', style: TextStyle(fontSize: 28)),
             ),
           ),
           const SizedBox(width: 16),
@@ -67,7 +67,7 @@ class StreakCard extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 4),
                       child: Text(
-                        'días de racha',
+                        'dÃ­as de racha',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 14,
@@ -93,3 +93,4 @@ class StreakCard extends StatelessWidget {
     );
   }
 }
+

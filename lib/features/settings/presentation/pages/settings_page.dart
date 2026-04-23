@@ -1,4 +1,4 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+﻿import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -63,7 +63,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _notificationsEnabled = enabled;
       _busy = false;
@@ -84,14 +84,14 @@ class _SettingsPageState extends State<SettingsPage> {
     await sl<LocalStorage>().clearCache();
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(l10n.cacheDeletedMessage)));
   }
 
   Future<void> _setThemeMode(ThemeMode themeMode) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setThemeMode(themeMode);
 
@@ -107,7 +107,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _setUnitSystem(UnitSystem unitSystem) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setUnitSystem(unitSystem);
 
@@ -122,13 +122,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _setLocale(Locale? locale) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AppPreferencesCubit>().setLocale(locale);
 
     final languageLabel = switch (locale?.languageCode) {
       'en' => 'English',
-      'es' => 'Español',
+      'es' => 'EspaÃ±ol',
       _ => l10n.systemLanguageOption,
     };
 
@@ -155,7 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _confirmDeleteAccount() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
     final confirmWord = l10n.deleteAccountConfirmWord;
 
@@ -222,7 +222,7 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context, preferences) {
         final theme = Theme.of(context);
         final palette = context.exomPalette;
-        final l10n = AppLocalizations.of(context)!;
+        final l10n = AppLocalizations.of(context);
         final appVersionLabel = sl<AppUpdateService>().currentVersionLabel;
 
         return ExomStaticBackground(
@@ -313,7 +313,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     _ThemeModeTile(
                       icon: Icons.language,
-                      title: 'Español',
+                      title: 'EspaÃ±ol',
                       subtitle: l10n.spanishLanguageDescription,
                       selected:
                           !preferences.isSystemLocale &&
@@ -614,7 +614,7 @@ class _CreditsSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Créditos',
+              'CrÃ©ditos',
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -622,7 +622,7 @@ class _CreditsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'EXOM es un producto de valor añadido para clientes, desarrollado por Carlos Sánchez Román con app móvil en Flutter y backend en NestJS.',
+              'EXOM es un producto de valor aÃ±adido para clientes, desarrollado por Carlos SÃ¡nchez RomÃ¡n con app mÃ³vil en Flutter y backend en NestJS.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
                 height: 1.5,
@@ -638,7 +638,7 @@ class _CreditsSheet extends StatelessWidget {
                 child: Icon(Icons.code, color: palette.primary, size: 20),
               ),
               title: Text(
-                'Carlos Sánchez Román',
+                'Carlos SÃ¡nchez RomÃ¡n',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -813,3 +813,4 @@ class _ThemeModeTile extends StatelessWidget {
     );
   }
 }
+

@@ -15,7 +15,7 @@ class TappableScale extends StatefulWidget {
     this.onLongPress,
     this.scale = 0.97,
     this.duration = const Duration(milliseconds: 120),
-    this.haptic = _HapticKind.selection,
+    this.haptic = TappableScaleHapticKind.selection,
     this.behavior = HitTestBehavior.opaque,
     this.enabled = true,
   });
@@ -34,7 +34,7 @@ class TappableScale extends StatefulWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           scale: scale,
-          haptic: _HapticKind.light,
+          haptic: TappableScaleHapticKind.light,
           behavior: behavior,
           enabled: enabled,
         );
@@ -53,7 +53,7 @@ class TappableScale extends StatefulWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           scale: scale,
-          haptic: _HapticKind.medium,
+          haptic: TappableScaleHapticKind.medium,
           behavior: behavior,
           enabled: enabled,
         );
@@ -63,7 +63,7 @@ class TappableScale extends StatefulWidget {
   final VoidCallback? onLongPress;
   final double scale;
   final Duration duration;
-  final _HapticKind haptic;
+  final TappableScaleHapticKind haptic;
   final HitTestBehavior behavior;
   final bool enabled;
 
@@ -84,11 +84,11 @@ class _TappableScaleState extends State<TappableScale> {
 
   void _fireHaptic() {
     switch (widget.haptic) {
-      case _HapticKind.selection:
+      case TappableScaleHapticKind.selection:
         HapticFeedback.selectionClick();
-      case _HapticKind.light:
+      case TappableScaleHapticKind.light:
         HapticFeedback.lightImpact();
-      case _HapticKind.medium:
+      case TappableScaleHapticKind.medium:
         HapticFeedback.mediumImpact();
     }
   }
@@ -119,4 +119,4 @@ class _TappableScaleState extends State<TappableScale> {
   }
 }
 
-enum _HapticKind { selection, light, medium }
+enum TappableScaleHapticKind { selection, light, medium }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,7 +14,7 @@ class HelpPage extends StatelessWidget {
   const HelpPage({super.key});
 
   List<_Faq> _faqs(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     return [
       _Faq(
         question: l10n.registerWeightMuscleAndMeasurements,
@@ -54,7 +54,7 @@ class HelpPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return ExomStaticBackground(
       child: Scaffold(
@@ -233,7 +233,7 @@ class HelpPage extends StatelessWidget {
                   _HelpLinkTile(
                     icon: Icons.code,
                     title: l10n.developer,
-                    subtitle: 'Carlos Sanchez Roman · github.com/carsan-dev',
+                    subtitle: 'Carlos Sanchez Roman Â· github.com/carsan-dev',
                     onTap: () => _openExternalLink(
                       context,
                       ExternalLinks.developerGithub,
@@ -437,3 +437,4 @@ class _FaqTileState extends State<_FaqTile> {
     );
   }
 }
+

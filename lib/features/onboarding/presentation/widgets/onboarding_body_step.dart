@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -66,7 +66,7 @@ class _OnboardingBodyStepState extends State<OnboardingBodyStep> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -232,7 +232,7 @@ class _StepButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
 
     return Column(
@@ -259,3 +259,4 @@ class _StepButtons extends StatelessWidget {
     );
   }
 }
+

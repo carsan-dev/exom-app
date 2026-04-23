@@ -246,8 +246,11 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.calendar,
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: CalendarPage()),
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: CalendarPage(
+                initialDate: state.uri.queryParameters['date'],
+              ),
+            ),
           ),
           GoRoute(
             path: AppRoutes.challenges,

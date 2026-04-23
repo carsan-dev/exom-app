@@ -17,15 +17,24 @@ import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart'
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 
 class CalendarPage extends StatelessWidget {
-  const CalendarPage({super.key});
+  const CalendarPage({super.key, this.initialDate});
+
+  final String? initialDate;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final parsed = initialDate != null ? DateTime.tryParse(initialDate!) : null;
+    final target = parsed ?? now;
+    final selected = DateTime(target.year, target.month, target.day);
     return BlocProvider(
       create: (_) =>
           GetIt.I<CalendarBloc>()
-            ..add(CalendarMonthLoadRequested(year: now.year, month: now.month)),
+            ..add(CalendarMonthLoadRequested(
+              year: target.year,
+              month: target.month,
+              selectedDate: selected,
+            )),
       child: const _CalendarView(),
     );
   }
@@ -306,9 +315,21 @@ class _CalendarViewState extends State<_CalendarView> {
   }
 
   DateTime? _challengeMarkerDate(ChallengeEntity challenge) {
-    final markerDate = challenge.completedAt ?? challenge.deadline;
-    if (markerDate == null) return null;
+    final markerDate =
+        challenge.completedAt ?? challenge.deadline ?? challenge.assignedAt;
     return _normalizeDay(markerDate);
+  }
+
+  DateTime _resolveFocusedDay(CalendarLoaded state) {
+    final selected = state.selectedDate;
+    if (selected.year == state.year && selected.month == state.month) {
+      return selected;
+    }
+    final now = DateTime.now();
+    if (state.year == now.year && state.month == now.month) {
+      return DateTime(now.year, now.month, now.day);
+    }
+    return DateTime(state.year, state.month, 1);
   }
 
   @override
@@ -498,7 +519,7 @@ class _CalendarViewState extends State<_CalendarView> {
       child: TableCalendar<CalendarDayEntity>(
         firstDay: DateTime(2024),
         lastDay: DateTime(2030),
-        focusedDay: DateTime(state.year, state.month),
+        focusedDay: _resolveFocusedDay(state),
         selectedDayPredicate: (day) => isSameDay(day, state.selectedDate),
         startingDayOfWeek: StartingDayOfWeek.monday,
         locale: locale,
@@ -658,33 +679,34 @@ class _CalendarViewState extends State<_CalendarView> {
         ),
         child: Stack(
           children: [
-            Align(
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      color: isToday ? palette.primary : palette.textPrimary,
-                      fontSize: 14,
-                      fontWeight: hasActivity || isSelected || isToday
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Container(
+            Center(
+              child: Text(
+                '${date.day}',
+                style: TextStyle(
+                  color: isToday ? palette.primary : palette.textPrimary,
+                  fontSize: 14,
+                  fontWeight: hasActivity || isSelected || isToday
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (hasActivity)
+              Positioned(
+                bottom: 6,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
                     width: 5,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: hasActivity ? accent : Colors.transparent,
+                      color: accent,
                       shape: BoxShape.circle,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
             if (hasChallengeMarker)
               Positioned(
                 top: 4,

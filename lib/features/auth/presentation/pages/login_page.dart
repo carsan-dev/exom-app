@@ -23,6 +23,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  static const _googleLogoAsset = 'assets/images/google_logo.svg';
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -397,10 +398,10 @@ class _LoginPageState extends State<LoginPage> {
         final isLoading = state is AuthLoading;
 
         final googleButton = SocialLoginButton(
-          icon: Icon(
-            Icons.g_mobiledata,
-            size: 26,
-            color: palette.textPrimary,
+          icon: SvgPicture.asset(
+            _googleLogoAsset,
+            width: 20,
+            height: 20,
           ),
           label: isIOS ? null : l10n.continueWithGoogle,
           isLoading: isLoading,

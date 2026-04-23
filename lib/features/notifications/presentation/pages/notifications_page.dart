@@ -167,7 +167,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
                             .add(NotificationsMarkReadRequested(n.id));
                         final route = _resolveRoute(n);
                         if (route != null && route.isNotEmpty) {
-                          context.push(route);
+                          _openRoute(context, route);
                         }
                       },
                     );
@@ -206,6 +206,24 @@ String? _resolveRoute(NotificationEntity n) {
   return uri.replace(
     queryParameters: {...uri.queryParameters, 'date': '$y-$m-$d'},
   ).toString();
+}
+
+void _openRoute(BuildContext context, String route) {
+  if (_shouldPush(route)) {
+    context.push(route);
+    return;
+  }
+
+  context.go(route);
+}
+
+bool _shouldPush(String route) {
+  return route == '/recap' ||
+      route.startsWith('/recap/') ||
+      route == '/profile' ||
+      route == '/feedback' ||
+      route == '/settings' ||
+      route == '/help';
 }
 
 class _ErrorView extends StatelessWidget {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
 import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:exom_app/features/notifications/presentation/widgets/notification_tile.dart';
 import 'package:exom_app/injection_container.dart';
@@ -164,7 +165,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
                         context
                             .read<NotificationsBloc>()
                             .add(NotificationsMarkReadRequested(n.id));
-                        final route = n.route;
+                        final route = _resolveRoute(n);
                         if (route != null && route.isNotEmpty) {
                           context.push(route);
                         }
@@ -181,6 +182,30 @@ class _NotificationsViewState extends State<_NotificationsView> {
       ),
     );
   }
+}
+
+String? _resolveRoute(NotificationEntity n) {
+  final route = n.route;
+  if (route == null || route.isEmpty) return null;
+
+  final dateAware = {'/trainings', '/diets', '/calendar'};
+  final uri = Uri.parse(route);
+  if (!dateAware.contains(uri.path)) return route;
+  if (uri.queryParameters.containsKey('date')) return route;
+
+  final created = n.createdAt.toLocal();
+  final today = DateTime.now();
+  final isToday = created.year == today.year &&
+      created.month == today.month &&
+      created.day == today.day;
+  if (isToday) return route;
+
+  final y = created.year.toString().padLeft(4, '0');
+  final m = created.month.toString().padLeft(2, '0');
+  final d = created.day.toString().padLeft(2, '0');
+  return uri.replace(
+    queryParameters: {...uri.queryParameters, 'date': '$y-$m-$d'},
+  ).toString();
 }
 
 class _ErrorView extends StatelessWidget {

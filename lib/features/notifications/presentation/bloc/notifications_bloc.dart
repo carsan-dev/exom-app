@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
+import 'package:exom_app/features/notifications/domain/usecases/delete_read_notifications_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/get_my_notifications_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/get_unread_count_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/mark_all_notifications_as_read_usecase.dart';
@@ -15,6 +16,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   final GetUnreadCountUseCase _getUnreadCount;
   final MarkNotificationAsReadUseCase _markAsRead;
   final MarkAllNotificationsAsReadUseCase _markAllAsRead;
+  final DeleteReadNotificationsUseCase _deleteRead;
 
   static const int _pageSize = 20;
 
@@ -23,16 +25,30 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     required GetUnreadCountUseCase getUnreadCount,
     required MarkNotificationAsReadUseCase markAsRead,
     required MarkAllNotificationsAsReadUseCase markAllAsRead,
+    required DeleteReadNotificationsUseCase deleteRead,
   })  : _getMyNotifications = getMyNotifications,
         _getUnreadCount = getUnreadCount,
         _markAsRead = markAsRead,
         _markAllAsRead = markAllAsRead,
+        _deleteRead = deleteRead,
         super(const NotificationsInitial()) {
     on<NotificationsRequested>(_onRequested);
     on<NotificationsLoadMoreRequested>(_onLoadMore);
     on<NotificationsMarkReadRequested>(_onMarkRead);
     on<NotificationsMarkAllReadRequested>(_onMarkAllRead);
+    on<NotificationsDeleteReadRequested>(_onDeleteRead);
     on<NotificationsUnreadCountRefreshRequested>(_onUnreadCountRefresh);
+  }
+
+  Future<NotificationsLoaded> _loadFirstPage() async {
+    final page = await _getMyNotifications(limit: _pageSize);
+    final unread = await _getUnreadCount();
+    return NotificationsLoaded(
+      items: page.items,
+      page: page.page,
+      hasMore: page.hasMore,
+      unreadCount: unread,
+    );
   }
 
   Future<void> _onRequested(
@@ -41,16 +57,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   ) async {
     emit(const NotificationsLoading());
     try {
-      final page = await _getMyNotifications(limit: _pageSize);
-      final unread = await _getUnreadCount();
-      emit(
-        NotificationsLoaded(
-          items: page.items,
-          page: page.page,
-          hasMore: page.hasMore,
-          unreadCount: unread,
-        ),
-      );
+      emit(await _loadFirstPage());
     } catch (error) {
       emit(
         NotificationsError(
@@ -152,6 +159,27 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
       }
     } catch (_) {
       // silent
+    }
+  }
+
+  Future<void> _onDeleteRead(
+    NotificationsDeleteReadRequested event,
+    Emitter<NotificationsState> emit,
+  ) async {
+    final current = state;
+    if (current is! NotificationsLoaded ||
+        current.deletingRead ||
+        !current.items.any((notification) => !notification.isUnread)) {
+      return;
+    }
+
+    emit(current.copyWith(deletingRead: true));
+
+    try {
+      await _deleteRead();
+      emit(await _loadFirstPage());
+    } catch (_) {
+      emit(current);
     }
   }
 

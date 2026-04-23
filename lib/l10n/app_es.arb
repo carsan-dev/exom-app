@@ -687,5 +687,9 @@
   "dangerZoneTitle": "Zona peligrosa",
   "notificationsTitle": "Notificaciones",
   "notificationsEmpty": "No tienes notificaciones",
-  "notificationsMarkAllRead": "Marcar todas"
+  "notificationsMarkAllRead": "Marcar todas",
+  "notificationsDeleteRead": "Eliminar leídas",
+  "notificationsDeleteReadDialogTitle": "¿Eliminar notificaciones leídas?",
+  "notificationsDeleteReadDialogBody": "Se eliminarán de forma permanente todas las notificaciones que ya has leído.",
+  "notificationsDeleteReadConfirm": "Eliminar"
 }

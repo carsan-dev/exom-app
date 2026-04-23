@@ -11,6 +11,7 @@ abstract class NotificationsRemoteDataSource {
   Future<int> getUnreadCount();
   Future<void> markAsRead(String id);
   Future<int> markAllAsRead();
+  Future<int> deleteRead();
 }
 
 class NotificationsRemoteDataSourceImpl
@@ -96,6 +97,21 @@ class NotificationsRemoteDataSourceImpl
       final data = payload['data'];
       if (data is Map<String, dynamic>) {
         return (data['updated'] as num?)?.toInt() ?? 0;
+      }
+    }
+    return 0;
+  }
+
+  @override
+  Future<int> deleteRead() async {
+    final response = await _apiClient.dio.delete<dynamic>(
+      '/notifications/me/read',
+    );
+    final payload = response.data;
+    if (payload is Map<String, dynamic>) {
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        return (data['deleted'] as num?)?.toInt() ?? 0;
       }
     }
     return 0;

@@ -28,4 +28,7 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
 
   @override
   Future<int> markAllAsRead() => _remoteDataSource.markAllAsRead();
+
+  @override
+  Future<int> deleteRead() => _remoteDataSource.deleteRead();
 }

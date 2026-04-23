@@ -652,5 +652,9 @@
   "dangerZoneTitle": "Danger zone",
   "notificationsTitle": "Notifications",
   "notificationsEmpty": "No notifications yet",
-  "notificationsMarkAllRead": "Mark all"
+  "notificationsMarkAllRead": "Mark all",
+  "notificationsDeleteRead": "Delete read",
+  "notificationsDeleteReadDialogTitle": "Delete read notifications?",
+  "notificationsDeleteReadDialogBody": "All notifications you have already read will be permanently deleted.",
+  "notificationsDeleteReadConfirm": "Delete"
 }

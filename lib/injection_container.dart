@@ -114,6 +114,7 @@ import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/notifications/data/datasources/notifications_remote_datasource.dart';
 import 'package:exom_app/features/notifications/data/repositories/notifications_repository_impl.dart';
 import 'package:exom_app/features/notifications/domain/repositories/notifications_repository.dart';
+import 'package:exom_app/features/notifications/domain/usecases/delete_read_notifications_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/get_my_notifications_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/get_unread_count_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/mark_all_notifications_as_read_usecase.dart';
@@ -461,6 +462,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => MarkAllNotificationsAsReadUseCase(sl<NotificationsRepository>()),
   );
+  sl.registerLazySingleton(
+    () => DeleteReadNotificationsUseCase(sl<NotificationsRepository>()),
+  );
 
   sl.registerLazySingleton(
     () => NotificationsBloc(
@@ -468,6 +472,7 @@ Future<void> initDependencies() async {
       getUnreadCount: sl<GetUnreadCountUseCase>(),
       markAsRead: sl<MarkNotificationAsReadUseCase>(),
       markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
+      deleteRead: sl<DeleteReadNotificationsUseCase>(),
     ),
   );
 

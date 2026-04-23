@@ -9,4 +9,5 @@ abstract class NotificationsRepository {
   Future<int> getUnreadCount();
   Future<void> markAsRead(String id);
   Future<int> markAllAsRead();
+  Future<int> deleteRead();
 }

@@ -22,6 +22,7 @@ class NotificationsLoaded extends NotificationsState {
   final int page;
   final bool hasMore;
   final bool loadingMore;
+  final bool deletingRead;
   @override
   final int unreadCount;
 
@@ -31,6 +32,7 @@ class NotificationsLoaded extends NotificationsState {
     required this.hasMore,
     required this.unreadCount,
     this.loadingMore = false,
+    this.deletingRead = false,
   });
 
   NotificationsLoaded copyWith({
@@ -38,6 +40,7 @@ class NotificationsLoaded extends NotificationsState {
     int? page,
     bool? hasMore,
     bool? loadingMore,
+    bool? deletingRead,
     int? unreadCount,
   }) {
     return NotificationsLoaded(
@@ -45,12 +48,20 @@ class NotificationsLoaded extends NotificationsState {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       loadingMore: loadingMore ?? this.loadingMore,
+      deletingRead: deletingRead ?? this.deletingRead,
       unreadCount: unreadCount ?? this.unreadCount,
     );
   }
 
   @override
-  List<Object?> get props => [items, page, hasMore, loadingMore, unreadCount];
+  List<Object?> get props => [
+    items,
+    page,
+    hasMore,
+    loadingMore,
+    deletingRead,
+    unreadCount,
+  ];
 }
 
 class NotificationsUnreadOnly extends NotificationsState {

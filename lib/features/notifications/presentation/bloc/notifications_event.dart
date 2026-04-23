@@ -27,6 +27,10 @@ class NotificationsMarkAllReadRequested extends NotificationsEvent {
   const NotificationsMarkAllReadRequested();
 }
 
+class NotificationsDeleteReadRequested extends NotificationsEvent {
+  const NotificationsDeleteReadRequested();
+}
+
 class NotificationsUnreadCountRefreshRequested extends NotificationsEvent {
   const NotificationsUnreadCountRefreshRequested();
 }

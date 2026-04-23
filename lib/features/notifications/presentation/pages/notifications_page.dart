@@ -11,13 +11,26 @@ import 'package:exom_app/features/notifications/presentation/widgets/notificatio
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  late final NotificationsBloc _bloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = sl<NotificationsBloc>()..add(const NotificationsRequested());
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<NotificationsBloc>.value(
-      value: sl<NotificationsBloc>()..add(const NotificationsRequested()),
+      value: _bloc,
       child: const _NotificationsView(),
     );
   }
@@ -60,6 +73,47 @@ class _NotificationsViewState extends State<_NotificationsView> {
     context.read<NotificationsBloc>().add(const NotificationsRequested());
   }
 
+  Future<void> _onNotificationTap(NotificationEntity notification) async {
+    final bloc = context.read<NotificationsBloc>();
+    if (notification.isUnread) {
+      bloc.add(NotificationsMarkReadRequested(notification.id));
+    }
+
+    final route = _resolveRoute(notification);
+    if (route != null && route.isNotEmpty) {
+      _openRoute(context, route);
+    }
+  }
+
+  Future<void> _confirmDeleteRead() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.notificationsDeleteReadDialogTitle),
+          content: Text(l10n.notificationsDeleteReadDialogBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.notificationsDeleteReadConfirm),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      context
+          .read<NotificationsBloc>()
+          .add(const NotificationsDeleteReadRequested());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -81,17 +135,48 @@ class _NotificationsViewState extends State<_NotificationsView> {
           actions: [
             BlocBuilder<NotificationsBloc, NotificationsState>(
               builder: (context, state) {
-                if (state is! NotificationsLoaded || state.unreadCount == 0) {
+                if (state is! NotificationsLoaded) {
                   return const SizedBox.shrink();
                 }
-                return TextButton(
-                  onPressed: () => context
-                      .read<NotificationsBloc>()
-                      .add(const NotificationsMarkAllReadRequested()),
-                  child: Text(
-                    l10n.notificationsMarkAllRead,
-                    style: TextStyle(color: palette.primary, fontSize: 13),
-                  ),
+
+                final hasUnread = state.unreadCount > 0;
+                final hasRead = state.items.any((notification) => !notification.isUnread);
+                if (!hasUnread && !hasRead) {
+                  return const SizedBox.shrink();
+                }
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasUnread)
+                      TextButton(
+                        onPressed: () => context
+                            .read<NotificationsBloc>()
+                            .add(const NotificationsMarkAllReadRequested()),
+                        child: Text(
+                          l10n.notificationsMarkAllRead,
+                          style: TextStyle(color: palette.primary, fontSize: 13),
+                        ),
+                      ),
+                    if (hasRead)
+                      IconButton(
+                        onPressed: state.deletingRead ? null : _confirmDeleteRead,
+                        tooltip: l10n.notificationsDeleteRead,
+                        icon: state.deletingRead
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: palette.primary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.delete_sweep_outlined,
+                                color: palette.primary,
+                              ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -161,15 +246,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
                     final n = state.items[index];
                     return NotificationTile(
                       notification: n,
-                      onTap: () {
-                        context
-                            .read<NotificationsBloc>()
-                            .add(NotificationsMarkReadRequested(n.id));
-                        final route = _resolveRoute(n);
-                        if (route != null && route.isNotEmpty) {
-                          _openRoute(context, route);
-                        }
-                      },
+                      onTap: () => _onNotificationTap(n),
                     );
                   },
                 ),

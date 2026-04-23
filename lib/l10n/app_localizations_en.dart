@@ -1885,4 +1885,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Mark all';
+
+  @override
+  String get notificationsDeleteRead => 'Delete read';
+
+  @override
+  String get notificationsDeleteReadDialogTitle => 'Delete read notifications?';
+
+  @override
+  String get notificationsDeleteReadDialogBody =>
+      'All notifications you have already read will be permanently deleted.';
+
+  @override
+  String get notificationsDeleteReadConfirm => 'Delete';
 }

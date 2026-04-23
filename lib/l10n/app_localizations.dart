@@ -3571,6 +3571,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Marcar todas'**
   String get notificationsMarkAllRead;
+
+  /// No description provided for @notificationsDeleteRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar leídas'**
+  String get notificationsDeleteRead;
+
+  /// No description provided for @notificationsDeleteReadDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar notificaciones leídas?'**
+  String get notificationsDeleteReadDialogTitle;
+
+  /// No description provided for @notificationsDeleteReadDialogBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se eliminarán de forma permanente todas las notificaciones que ya has leído.'**
+  String get notificationsDeleteReadDialogBody;
+
+  /// No description provided for @notificationsDeleteReadConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get notificationsDeleteReadConfirm;
 }
 
 class _AppLocalizationsDelegate

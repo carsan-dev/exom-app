@@ -16,6 +16,10 @@ on:
           - alpha
           - beta
           - production
+      build_number:
+        description: "Optional Android build number override. Must be higher than pubspec base build."
+        required: false
+        type: string
 
 jobs:
   build:
@@ -56,6 +60,38 @@ jobs:
         run: |
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > android/app/google-services.json
 
+      - name: Set Android build version
+        env:
+          BUILD_NUMBER_INPUT: ${{ github.event.inputs.build_number }}
+        run: |
+          VERSION_LINE=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          BUILD_NAME="${VERSION_LINE%%+*}"
+          BASE_BUILD_NUMBER="${VERSION_LINE##*+}"
+
+          if [ "$BASE_BUILD_NUMBER" = "$VERSION_LINE" ]; then
+            BASE_BUILD_NUMBER=0
+          fi
+
+          if [ -n "$BUILD_NUMBER_INPUT" ]; then
+            BUILD_NUMBER="$BUILD_NUMBER_INPUT"
+          else
+            BUILD_NUMBER=$((BASE_BUILD_NUMBER + GITHUB_RUN_NUMBER))
+          fi
+
+          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid build number: $BUILD_NUMBER"
+            exit 1
+          fi
+
+          if [ "$BUILD_NUMBER" -le "$BASE_BUILD_NUMBER" ]; then
+            echo "Build number $BUILD_NUMBER must be higher than base pubspec build $BASE_BUILD_NUMBER"
+            exit 1
+          fi
+
+          echo "ANDROID_BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
+          echo "ANDROID_BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Using Android build $BUILD_NAME ($BUILD_NUMBER)"
+
       - name: Flutter pub get
         run: flutter pub get
 
@@ -66,7 +102,7 @@ jobs:
         run: dart run flutter_native_splash:create
 
       - name: Build AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-name "$ANDROID_BUILD_NAME" --build-number "$ANDROID_BUILD_NUMBER"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4

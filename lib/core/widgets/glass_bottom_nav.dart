@@ -33,6 +33,8 @@ class GlassBottomNav extends StatelessWidget {
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0;
   static const _iosHorizontalInset = 16.0;
+  static const _iosBottomInsetReduction = 10.0;
+  static const _iosBottomInsetReductionThreshold = 28.0;
   static const totalHeight = _barHeight + _circleOverlap;
 
   static double reservedHeight(BuildContext context) =>
@@ -42,10 +44,15 @@ class GlassBottomNav extends StatelessWidget {
     if (kIsWeb) {
       return 0;
     }
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
+        return bottomInset;
       case TargetPlatform.iOS:
-        return MediaQuery.viewPaddingOf(context).bottom;
+        if (bottomInset > _iosBottomInsetReductionThreshold) {
+          return bottomInset - _iosBottomInsetReduction;
+        }
+        return bottomInset;
       default:
         return 0;
     }

@@ -32,6 +32,7 @@ class GlassBottomNav extends StatelessWidget {
   static const _circleSize = 64.0;
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0;
+  static const _iosHorizontalInset = 16.0;
   static const totalHeight = _barHeight + _circleOverlap;
 
   static double reservedHeight(BuildContext context) =>
@@ -50,12 +51,27 @@ class GlassBottomNav extends StatelessWidget {
     }
   }
 
+  static double horizontalContentInset(BuildContext context) {
+    if (kIsWeb) {
+      return 0;
+    }
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final safeInset = viewPadding.left > viewPadding.right
+        ? viewPadding.left
+        : viewPadding.right;
+    if (defaultTargetPlatform == TargetPlatform.iOS && safeInset == 0) {
+      return _iosHorizontalInset;
+    }
+    return safeInset;
+  }
+
   @override
   Widget build(BuildContext context) {
     final targetX = _slotCenterX(context, selectedIndex);
     final palette = context.exomPalette;
     final inactiveColor = palette.textDisabled;
     final bottomInset = platformBottomInset(context);
+    final horizontalInset = horizontalContentInset(context);
 
     return SizedBox(
       height: reservedHeight(context),
@@ -113,8 +129,8 @@ class GlassBottomNav extends StatelessWidget {
 
               // Icon row (active slot hidden — rendered inside circle)
               Positioned(
-                left: 0,
-                right: 0,
+                left: horizontalInset,
+                right: horizontalInset,
                 bottom: bottomInset,
                 height: _barHeight,
                 child: Row(
@@ -180,8 +196,9 @@ class GlassBottomNav extends StatelessWidget {
 
   double _slotCenterX(BuildContext context, int index) {
     final w = MediaQuery.of(context).size.width;
-    final slot = w / 5;
-    return slot * index + slot / 2;
+    final horizontalInset = horizontalContentInset(context);
+    final slot = (w - (horizontalInset * 2)) / 5;
+    return horizontalInset + (slot * index) + (slot / 2);
   }
 
   String _a11yLabel(int index) {

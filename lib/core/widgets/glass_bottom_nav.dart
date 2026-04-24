@@ -38,10 +38,16 @@ class GlassBottomNav extends StatelessWidget {
       totalHeight + platformBottomInset(context);
 
   static double platformBottomInset(BuildContext context) {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+    if (kIsWeb) {
       return 0;
     }
-    return MediaQuery.viewPaddingOf(context).bottom;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+        return MediaQuery.viewPaddingOf(context).bottom;
+      default:
+        return 0;
+    }
   }
 
   @override

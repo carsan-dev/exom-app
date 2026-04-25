@@ -556,10 +556,21 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                             .read<ActiveExerciseBloc>()
                             .add(const SkipRest()),
                       ),
-                      ActiveExerciseStatus.done => const SizedBox(
-                        key: ValueKey('footer-done'),
-                        height: 56,
-                        child: Center(child: LoadingWidget()),
+                      ActiveExerciseStatus.done => Container(
+                        key: const ValueKey('footer-done'),
+                        decoration: GlassDecoration.card(borderRadius: 22),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.6,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              palette.primary,
+                            ),
+                          ),
+                        ),
                       ),
                     },
                   ),

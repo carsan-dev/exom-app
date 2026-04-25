@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/navigation/notification_route_utils.dart';
 
 typedef LocalNotificationTapHandler = void Function(
   String? notificationId,
@@ -135,21 +136,18 @@ class LocalNotificationService {
   }
 
   void goToRoute(String route) {
+    final normalizedRoute = normalizeNotificationRoute(
+      route,
+      fallbackToNotifications: true,
+    );
+    if (normalizedRoute == null) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_shouldPush(route)) {
-        AppRouter.router.push(route);
+      if (shouldPushNotificationRoute(normalizedRoute)) {
+        AppRouter.router.push(normalizedRoute);
       } else {
-        AppRouter.router.go(route);
+        AppRouter.router.go(normalizedRoute);
       }
     });
-  }
-
-  bool _shouldPush(String route) {
-    return route == AppRoutes.recap ||
-        route.startsWith('${AppRoutes.recap}/') ||
-        route == AppRoutes.profile ||
-        route == AppRoutes.feedback ||
-        route == AppRoutes.settings ||
-        route == AppRoutes.help;
   }
 }

@@ -89,7 +89,7 @@ class AppRoutes {
   static const diets = '/diets';
   static const calendar = '/calendar';
   static const profile = '/profile';
-  static const metrics = '/metrics';
+  static const metrics = '/profile/metrics';
   static const challenges = '/challenges';
   static const recap = '/recap';
   static const recapDetailBase = '/recap';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:exom_app/core/navigation/notification_route_utils.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -79,7 +80,10 @@ class _NotificationsViewState extends State<_NotificationsView> {
       bloc.add(NotificationsMarkReadRequested(notification.id));
     }
 
-    final route = _resolveRoute(notification);
+    final route = normalizeNotificationRoute(
+      notification.route,
+      createdAt: notification.createdAt,
+    );
     if (route != null && route.isNotEmpty) {
       _openRoute(context, route);
     }
@@ -261,46 +265,13 @@ class _NotificationsViewState extends State<_NotificationsView> {
   }
 }
 
-String? _resolveRoute(NotificationEntity n) {
-  final route = n.route;
-  if (route == null || route.isEmpty) return null;
-
-  final dateAware = {'/trainings', '/diets', '/calendar'};
-  final uri = Uri.parse(route);
-  if (!dateAware.contains(uri.path)) return route;
-  if (uri.queryParameters.containsKey('date')) return route;
-
-  final created = n.createdAt.toLocal();
-  final today = DateTime.now();
-  final isToday = created.year == today.year &&
-      created.month == today.month &&
-      created.day == today.day;
-  if (isToday) return route;
-
-  final y = created.year.toString().padLeft(4, '0');
-  final m = created.month.toString().padLeft(2, '0');
-  final d = created.day.toString().padLeft(2, '0');
-  return uri.replace(
-    queryParameters: {...uri.queryParameters, 'date': '$y-$m-$d'},
-  ).toString();
-}
-
 void _openRoute(BuildContext context, String route) {
-  if (_shouldPush(route)) {
+  if (shouldPushNotificationRoute(route)) {
     context.push(route);
     return;
   }
 
   context.go(route);
-}
-
-bool _shouldPush(String route) {
-  return route == '/recap' ||
-      route.startsWith('/recap/') ||
-      route == '/profile' ||
-      route == '/feedback' ||
-      route == '/settings' ||
-      route == '/help';
 }
 
 class _ErrorView extends StatelessWidget {

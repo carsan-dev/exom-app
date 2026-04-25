@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/navigation/notification_route_utils.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 
@@ -225,37 +226,53 @@ class FcmService {
   String? _resolveRoute(RemoteMessage message) {
     final directRoute = message.data['route'];
     if (directRoute is String && directRoute.startsWith('/')) {
-      return directRoute;
+      final normalized = normalizeNotificationRoute(directRoute);
+      if (normalized != null) {
+        return normalized;
+      }
     }
 
     final type = message.data['type']?.toLowerCase();
+    String? fallbackRoute;
     switch (type) {
       case 'recap_feedback':
-        // Route may carry a specific recap id, e.g. '/recap/<id>'
-        // The direct route path is preferred — already handled above via directRoute check.
-        return '/recap';
       case 'recap_reminder':
       case 'recap':
-        return '/recap';
+        // Route may carry a specific recap id, e.g. '/recap/<id>'
+        // The direct route path is preferred — already handled above via directRoute check.
+        fallbackRoute = '/recap';
+        break;
       case 'training':
       case 'training_reminder':
-        return '/trainings';
+        fallbackRoute = '/trainings';
+        break;
       case 'meal':
       case 'diet':
       case 'diet_reminder':
-        return '/diets';
+        fallbackRoute = '/diets';
+        break;
       case 'challenge':
       case 'challenge_update':
-        return '/challenges';
+        fallbackRoute = '/challenges';
+        break;
       case 'profile':
-        return '/profile';
+        fallbackRoute = '/profile';
+        break;
       case 'calendar':
-        return '/calendar';
+        fallbackRoute = '/calendar';
+        break;
       case 'home':
-        return '/';
+        fallbackRoute = '/';
+        break;
       default:
-        return null;
+        fallbackRoute = null;
     }
+
+    return normalizeNotificationRoute(
+      fallbackRoute,
+      fallbackToNotifications:
+          directRoute is String && directRoute.startsWith('/'),
+    );
   }
 
   void _goToRoute(String route) {

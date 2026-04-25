@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+
+typedef LocalNotificationTapHandler = void Function(
+  String? notificationId,
+  String? route,
+);
 
 class LocalNotificationService {
   static const channelId = 'exom_high_importance';
@@ -17,6 +24,9 @@ class LocalNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  LocalNotificationTapHandler? _tapHandler;
+
+  set onTap(LocalNotificationTapHandler? handler) => _tapHandler = handler;
 
   Future<void> init() async {
     if (_initialized) {
@@ -31,10 +41,7 @@ class LocalNotificationService {
     await _plugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (response) {
-        final route = response.payload;
-        if (route != null && route.isNotEmpty) {
-          goToRoute(route);
-        }
+        _handlePayload(response.payload);
       },
     );
 
@@ -45,15 +52,50 @@ class LocalNotificationService {
         ?.createNotificationChannel(_channel);
 
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
-    final launchRoute = launchDetails?.notificationResponse?.payload;
-    if (launchRoute != null && launchRoute.isNotEmpty) {
-      goToRoute(launchRoute);
+    final launchPayload = launchDetails?.notificationResponse?.payload;
+    if (launchPayload != null && launchPayload.isNotEmpty) {
+      _handlePayload(launchPayload);
     }
 
     _initialized = true;
   }
 
-  Future<void> showRemoteMessage(RemoteMessage message, {String? route}) async {
+  void _handlePayload(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+
+    String? notificationId;
+    String? route;
+
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) {
+        final id = decoded['notification_id'];
+        final r = decoded['route'];
+        notificationId = id is String && id.isNotEmpty ? id : null;
+        route = r is String && r.isNotEmpty ? r : null;
+      } else {
+        route = payload;
+      }
+    } catch (_) {
+      route = payload;
+    }
+
+    final handler = _tapHandler;
+    if (handler != null) {
+      handler(notificationId, route);
+      return;
+    }
+
+    if (route != null) {
+      goToRoute(route);
+    }
+  }
+
+  Future<void> showRemoteMessage(
+    RemoteMessage message, {
+    String? route,
+    String? notificationId,
+  }) async {
     await init();
 
     final title = message.notification?.title?.trim();
@@ -62,6 +104,12 @@ class LocalNotificationService {
     if ((title == null || title.isEmpty) && (body == null || body.isEmpty)) {
       return;
     }
+
+    final payload = jsonEncode({
+      if (notificationId != null && notificationId.isNotEmpty)
+        'notification_id': notificationId,
+      if (route != null && route.isNotEmpty) 'route': route,
+    });
 
     await _plugin.show(
       message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
@@ -82,7 +130,7 @@ class LocalNotificationService {
           presentSound: true,
         ),
       ),
-      payload: route,
+      payload: payload,
     );
   }
 

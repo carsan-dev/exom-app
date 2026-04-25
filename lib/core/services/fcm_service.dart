@@ -32,6 +32,7 @@ class FcmService {
   );
 
   Future<void> init() async {
+    _localNotificationService.onTap = _handleLocalTap;
     await _localNotificationService.init();
 
     final notificationsEnabled =
@@ -155,17 +156,32 @@ class FcmService {
 
   void _handleForegroundMessage(RemoteMessage message) {
     final route = _resolveRoute(message);
+    final rawId = message.data['notification_id'];
+    final notificationId =
+        rawId is String && rawId.isNotEmpty ? rawId : null;
 
     debugPrint(
       '[FCM] Foreground message: ${message.notification?.title} — ${message.notification?.body}',
     );
 
-    _localNotificationService.showRemoteMessage(message, route: route);
+    _localNotificationService.showRemoteMessage(
+      message,
+      route: route,
+      notificationId: notificationId,
+    );
     _emitIncoming(message);
   }
 
   void _handleNotificationOpen(RemoteMessage message) {
-    _emitIncoming(message);
+    final rawId = message.data['notification_id'];
+    final notificationId =
+        rawId is String && rawId.isNotEmpty ? rawId : null;
+    if (notificationId != null) {
+      unawaited(_markNotificationRead(notificationId));
+    } else {
+      _emitIncoming(message);
+    }
+
     final route = _resolveRoute(message);
     if (route == null) {
       return;
@@ -173,6 +189,32 @@ class FcmService {
 
     debugPrint('[FCM] Open notification route: $route');
     _goToRoute(route);
+  }
+
+  void _handleLocalTap(String? notificationId, String? route) {
+    if (notificationId != null && notificationId.isNotEmpty) {
+      unawaited(_markNotificationRead(notificationId));
+    }
+
+    if (route != null && route.isNotEmpty) {
+      debugPrint('[FCM] Local notification tap route: $route');
+      _localNotificationService.goToRoute(route);
+    }
+  }
+
+  Future<void> _markNotificationRead(String id) async {
+    try {
+      await _apiClient.dio.put<dynamic>('/notifications/$id/read');
+      debugPrint('[FCM] Notification $id marked as read');
+    } catch (e) {
+      debugPrint('[FCM] Failed to mark notification $id as read: $e');
+    } finally {
+      if (!_incomingController.isClosed) {
+        _incomingController.add(
+          RemoteMessage(data: const {'__internal_read_refresh': '1'}),
+        );
+      }
+    }
   }
 
   void _emitIncoming(RemoteMessage message) {

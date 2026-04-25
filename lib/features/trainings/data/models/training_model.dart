@@ -1,3 +1,21 @@
+import 'package:exom_app/core/utils/training_type_utils.dart';
+
+List<String> _resolveTrainingTypesFromJson(Map<String, dynamic> json) {
+  final rawTypes =
+      (json['types'] as List<dynamic>?)?.map((item) => item.toString()).toList(
+            growable: false,
+          ) ??
+      const <String>[];
+  final legacyType = json['type'] as String?;
+
+  return resolveTrainingTypes(types: rawTypes, legacyType: legacyType);
+}
+
+String? _resolveAccentColorFromJson(Map<String, dynamic> json) {
+  final rawValue = json['accentColor'] as String?;
+  return normalizeTrainingAccentHex(rawValue);
+}
+
 class ExerciseModel {
   final String id;
   final String name;
@@ -71,7 +89,8 @@ class TrainingExerciseModel {
 class TrainingHistoryModel {
   final String id;
   final String name;
-  final String type;
+  final List<String> types;
+  final String? accentColor;
   final String level;
   final int? estimatedDurationMin;
   final int? estimatedCalories;
@@ -81,7 +100,8 @@ class TrainingHistoryModel {
   const TrainingHistoryModel({
     required this.id,
     required this.name,
-    required this.type,
+    required this.types,
+    this.accentColor,
     required this.level,
     this.estimatedDurationMin,
     this.estimatedCalories,
@@ -98,7 +118,8 @@ class TrainingHistoryModel {
     return TrainingHistoryModel(
       id: training['id'] as String? ?? '',
       name: training['name'] as String? ?? '',
-      type: training['type'] as String? ?? '',
+      types: _resolveTrainingTypesFromJson(training),
+      accentColor: _resolveAccentColorFromJson(training),
       level: training['level'] as String? ?? '',
       estimatedDurationMin: (training['estimated_duration_min'] as num?)
           ?.toInt(),
@@ -114,7 +135,8 @@ class TrainingHistoryModel {
 class TrainingModel {
   final String id;
   final String name;
-  final String type;
+  final List<String> types;
+  final String? accentColor;
   final String level;
   final int? estimatedDurationMin;
   final int? estimatedCalories;
@@ -126,7 +148,8 @@ class TrainingModel {
   const TrainingModel({
     required this.id,
     required this.name,
-    required this.type,
+    required this.types,
+    this.accentColor,
     required this.level,
     this.estimatedDurationMin,
     this.estimatedCalories,
@@ -140,7 +163,8 @@ class TrainingModel {
     return TrainingModel(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      type: json['type'] as String? ?? '',
+      types: _resolveTrainingTypesFromJson(json),
+      accentColor: _resolveAccentColorFromJson(json),
       level: json['level'] as String? ?? '',
       estimatedDurationMin: json['estimated_duration_min'] as int?,
       estimatedCalories: json['estimated_calories'] as int?,

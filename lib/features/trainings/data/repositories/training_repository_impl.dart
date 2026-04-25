@@ -60,7 +60,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
     return TrainingEntity(
       id: model.id,
       name: model.name,
-      type: model.type,
+      types: model.types,
+      accentColor: model.accentColor,
       level: model.level,
       estimatedDurationMin: model.estimatedDurationMin,
       estimatedCalories: model.estimatedCalories,
@@ -95,7 +96,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
     return TrainingHistoryEntity(
       id: model.id,
       name: model.name,
-      type: model.type,
+      types: model.types,
+      accentColor: model.accentColor,
       level: model.level,
       estimatedDurationMin: model.estimatedDurationMin,
       estimatedCalories: model.estimatedCalories,

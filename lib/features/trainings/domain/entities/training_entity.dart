@@ -41,7 +41,8 @@ class TrainingExerciseEntity {
 class TrainingHistoryEntity {
   final String id;
   final String name;
-  final String type;
+  final List<String> types;
+  final String? accentColor;
   final String level;
   final int? estimatedDurationMin;
   final int? estimatedCalories;
@@ -51,7 +52,8 @@ class TrainingHistoryEntity {
   const TrainingHistoryEntity({
     required this.id,
     required this.name,
-    required this.type,
+    required this.types,
+    this.accentColor,
     required this.level,
     this.estimatedDurationMin,
     this.estimatedCalories,
@@ -63,7 +65,8 @@ class TrainingHistoryEntity {
 class TrainingEntity {
   final String id;
   final String name;
-  final String type;
+  final List<String> types;
+  final String? accentColor;
   final String level;
   final int? estimatedDurationMin;
   final int? estimatedCalories;
@@ -75,7 +78,8 @@ class TrainingEntity {
   const TrainingEntity({
     required this.id,
     required this.name,
-    required this.type,
+    required this.types,
+    this.accentColor,
     required this.level,
     this.estimatedDurationMin,
     this.estimatedCalories,

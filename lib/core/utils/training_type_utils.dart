@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+const _trainingAccentColorRegex = r'^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$';
+
 String normalizeTrainingTypeLabel(String? type) {
   return (type ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
 }
@@ -37,6 +39,81 @@ String trainingTypeKey(String? type) {
       .trim();
 }
 
+List<String> resolveTrainingTypes({
+  List<String>? types,
+  String? legacyType,
+}) {
+  final uniqueTypes = <String, String>{};
+  final rawTypes = <String>[...?types];
+
+  if (legacyType != null) {
+    rawTypes.add(legacyType);
+  }
+
+  for (final rawType in rawTypes) {
+    final normalizedType = normalizeTrainingTypeLabel(rawType);
+
+    if (normalizedType.isEmpty) {
+      continue;
+    }
+
+    uniqueTypes.putIfAbsent(
+      trainingTypeKey(normalizedType),
+      () => normalizedType,
+    );
+  }
+
+  return uniqueTypes.values.toList(growable: false);
+}
+
+List<String> trainingTypeLabels(
+  BuildContext context,
+  List<String>? types, {
+  String? legacyType,
+}) {
+  return resolveTrainingTypes(types: types, legacyType: legacyType)
+      .map((type) => trainingTypeLabel(context, type))
+      .toList(growable: false);
+}
+
+String primaryTrainingType(
+  List<String>? types, {
+  String? legacyType,
+}) {
+  final resolvedTypes = resolveTrainingTypes(
+    types: types,
+    legacyType: legacyType,
+  );
+  return resolvedTypes.isNotEmpty
+      ? resolvedTypes.first
+      : normalizeTrainingTypeLabel(legacyType);
+}
+
+String trainingTypesSummaryLabel(
+  BuildContext context,
+  List<String>? types, {
+  String? legacyType,
+  int maxVisible = 2,
+}) {
+  final labels = trainingTypeLabels(
+    context,
+    types,
+    legacyType: legacyType,
+  );
+
+  if (labels.isEmpty) {
+    return trainingTypeLabel(context, legacyType);
+  }
+
+  final visibleLabels = labels.take(maxVisible).toList(growable: true);
+
+  if (labels.length > maxVisible) {
+    visibleLabels.add('+${labels.length - maxVisible}');
+  }
+
+  return visibleLabels.join(' · ');
+}
+
 String trainingTypeLabel(BuildContext context, String? type) {
   final l10n = AppLocalizations.of(context);
   final normalized = normalizeTrainingTypeLabel(type);
@@ -52,7 +129,10 @@ String trainingTypeLabel(BuildContext context, String? type) {
   if (_matchesAnyExact(key, const ['hiit'])) {
     return 'HIIT';
   }
-  if (_matchesAnyExact(key, const ['flexibilidad', 'movilidad', 'mobility'])) {
+  if (_matchesAnyExact(
+    key,
+    const ['flexibilidad', 'movilidad', 'mobility'],
+  )) {
     return l10n.trainingMobility;
   }
 
@@ -180,6 +260,52 @@ Color trainingTypeColor(BuildContext context, String? type) {
   ];
 
   return fallbackColors[_stableIndex(key, fallbackColors.length)];
+}
+
+String? normalizeTrainingAccentHex(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final normalizedValue = value.trim();
+  if (normalizedValue.isEmpty) {
+    return null;
+  }
+
+  if (!RegExp(_trainingAccentColorRegex).hasMatch(normalizedValue)) {
+    return null;
+  }
+
+  return '#${normalizedValue.replaceFirst(RegExp('^#'), '').toUpperCase()}';
+}
+
+Color? tryParseTrainingAccentColor(String? value) {
+  final normalizedValue = normalizeTrainingAccentHex(value);
+
+  if (normalizedValue == null) {
+    return null;
+  }
+
+  final hex = normalizedValue.substring(1);
+  final argbHex =
+      hex.length == 6
+          ? 'FF$hex'
+          : '${hex.substring(6, 8)}${hex.substring(0, 6)}';
+
+  return Color(int.parse(argbHex, radix: 16));
+}
+
+Color trainingAccentColor(
+  BuildContext context, {
+  String? accentColor,
+  List<String>? types,
+  String? legacyType,
+}) {
+  return tryParseTrainingAccentColor(accentColor) ??
+      trainingTypeColor(
+        context,
+        primaryTrainingType(types, legacyType: legacyType),
+      );
 }
 
 bool _matchesAnyExact(String key, List<String> options) {

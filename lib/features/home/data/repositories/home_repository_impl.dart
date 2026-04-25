@@ -13,7 +13,8 @@ class HomeRepositoryImpl implements HomeRepository {
     return HomeSummaryEntity(
       trainingId: model.trainingId,
       trainingName: model.trainingName,
-      trainingType: model.trainingType,
+      trainingTypes: model.trainingTypes,
+      trainingAccentColor: model.trainingAccentColor,
       trainingDurationMin: model.trainingDurationMin,
       trainingCompleted: model.trainingCompleted,
       exercisesCompleted: model.exercisesCompleted,

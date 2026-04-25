@@ -1,6 +1,9 @@
+import 'package:exom_app/core/utils/training_type_utils.dart';
+
 class HomeSummaryModel {
   final String? trainingName;
-  final String? trainingType;
+  final List<String> trainingTypes;
+  final String? trainingAccentColor;
   final int? trainingDurationMin;
   final bool trainingCompleted;
   final String? trainingId;
@@ -23,7 +26,8 @@ class HomeSummaryModel {
 
   const HomeSummaryModel({
     this.trainingName,
-    this.trainingType,
+    this.trainingTypes = const [],
+    this.trainingAccentColor,
     this.trainingDurationMin,
     this.trainingCompleted = false,
     this.trainingId,
@@ -65,7 +69,6 @@ class HomeSummaryModel {
       weightDate = DateTime.tryParse(latestMetric!['date'] as String);
     }
 
-    // Exercise progress
     final trainingExercises =
         (training?['exercises'] as List?) ??
         (training?['training_exercises'] as List?) ??
@@ -79,7 +82,6 @@ class HomeSummaryModel {
         (progress?['training_completed'] as bool?) ??
         (totalExercises > 0 && exercisesCompleted >= totalExercises);
 
-    // Meal progress
     final dietMeals = diet?['meals'] as List? ?? [];
     final totalMeals = dietMeals.length;
     final completedMealIds = (progress?['meals_completed'] as List? ?? [])
@@ -95,10 +97,21 @@ class HomeSummaryModel {
       orElse: () => normalizedMeals.isNotEmpty ? normalizedMeals.first : null,
     );
 
+    final trainingTypes = resolveTrainingTypes(
+      types:
+          (training?['types'] as List<dynamic>?)
+              ?.map((item) => item.toString())
+              .toList(growable: false),
+      legacyType: training?['type'] as String?,
+    );
+
     return HomeSummaryModel(
       trainingId: training?['id'] as String?,
       trainingName: training?['name'] as String?,
-      trainingType: training?['type'] as String?,
+      trainingTypes: trainingTypes,
+      trainingAccentColor: normalizeTrainingAccentHex(
+        training?['accentColor'] as String?,
+      ),
       trainingDurationMin: training?['estimated_duration_min'] as int?,
       trainingCompleted: trainingCompleted,
       exercisesCompleted: exercisesCompleted,

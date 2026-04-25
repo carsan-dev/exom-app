@@ -1,7 +1,8 @@
 class HomeSummaryEntity {
   final String? trainingId;
   final String? trainingName;
-  final String? trainingType;
+  final List<String> trainingTypes;
+  final String? trainingAccentColor;
   final int? trainingDurationMin;
   final bool trainingCompleted;
   final int exercisesCompleted;
@@ -24,7 +25,8 @@ class HomeSummaryEntity {
   const HomeSummaryEntity({
     this.trainingId,
     this.trainingName,
-    this.trainingType,
+    this.trainingTypes = const [],
+    this.trainingAccentColor,
     this.trainingDurationMin,
     this.trainingCompleted = false,
     this.exercisesCompleted = 0,

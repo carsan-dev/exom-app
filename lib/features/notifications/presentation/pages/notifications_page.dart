@@ -86,7 +86,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
         ),
       );
       try {
-        await completer.future;
+        await completer.future.timeout(const Duration(milliseconds: 1200));
       } catch (_) {
         // Navigation still proceeds even if mark-as-read fails.
       }

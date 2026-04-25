@@ -100,13 +100,23 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     Emitter<NotificationsState> emit,
   ) async {
     final current = state;
-    if (current is! NotificationsLoaded) return;
+    if (current is! NotificationsLoaded) {
+      if (!(event.completer?.isCompleted ?? true)) {
+        event.completer?.complete();
+      }
+      return;
+    }
 
     final target = current.items.firstWhere(
       (n) => n.id == event.id,
       orElse: () => _nullNotification,
     );
-    if (target.id.isEmpty || !target.isUnread) return;
+    if (target.id.isEmpty || !target.isUnread) {
+      if (!(event.completer?.isCompleted ?? true)) {
+        event.completer?.complete();
+      }
+      return;
+    }
 
     // Optimistic
     final updated = current.items

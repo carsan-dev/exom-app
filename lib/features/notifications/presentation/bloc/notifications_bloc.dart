@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
@@ -141,8 +142,11 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     try {
       await _markAsRead(event.id);
       _pendingReadIds.remove(event.id);
-    } catch (_) {
+      debugPrint('[Notifications] markAsRead OK id=${event.id}');
+    } catch (error, stack) {
       _pendingReadIds.remove(event.id);
+      debugPrint('[Notifications] markAsRead FAILED id=${event.id} error=$error');
+      debugPrintStack(stackTrace: stack, label: 'markAsRead');
       // Revert on failure
       emit(current);
     }

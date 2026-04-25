@@ -33,7 +33,7 @@ class GlassBottomNav extends StatelessWidget {
   static const _barHeight = 64.0;
   static const _circleOverlap = 10.0;
   static const _iosHorizontalInset = 16.0;
-  static const _iosBottomInsetReduction = 18.0;
+  static const _iosBottomInsetReduction = 22.0;
   static const _iosBottomInsetReductionThreshold = 28.0;
   static const totalHeight = _barHeight + _circleOverlap;
 

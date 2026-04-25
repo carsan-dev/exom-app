@@ -12,7 +12,7 @@ void main() {
     const summary = HomeSummaryEntity(
       trainingId: 'training-1',
       trainingName: 'Full Body',
-      trainingType: 'FUERZA',
+      trainingTypes: ['FUERZA'],
       trainingDurationMin: 45,
       exercisesCompleted: 0,
       totalExercises: 4,

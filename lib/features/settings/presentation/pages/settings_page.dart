@@ -128,7 +128,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final languageLabel = switch (locale?.languageCode) {
       'en' => 'English',
-      'es' => 'EspaÃ±ol',
+      'es' => 'Español',
       _ => l10n.systemLanguageOption,
     };
 
@@ -313,7 +313,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     _ThemeModeTile(
                       icon: Icons.language,
-                      title: 'EspaÃ±ol',
+                      title: 'Español',
                       subtitle: l10n.spanishLanguageDescription,
                       selected:
                           !preferences.isSystemLocale &&
@@ -614,7 +614,7 @@ class _CreditsSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'CrÃ©ditos',
+              'Créditos',
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -622,7 +622,7 @@ class _CreditsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'EXOM es un producto de valor aÃ±adido para clientes, desarrollado por Carlos SÃ¡nchez RomÃ¡n con app mÃ³vil en Flutter y backend en NestJS.',
+              'EXOM es un producto de valor añadido para clientes, desarrollado por Carlos Sánchez Román con app móvil en Flutter y backend en NestJS.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
                 height: 1.5,
@@ -638,7 +638,7 @@ class _CreditsSheet extends StatelessWidget {
                 child: Icon(Icons.code, color: palette.primary, size: 20),
               ),
               title: Text(
-                'Carlos SÃ¡nchez RomÃ¡n',
+                'Carlos Sánchez Román',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w700,

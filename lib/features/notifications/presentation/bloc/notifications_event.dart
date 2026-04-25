@@ -17,9 +17,8 @@ class NotificationsLoadMoreRequested extends NotificationsEvent {
 
 class NotificationsMarkReadRequested extends NotificationsEvent {
   final String id;
-  final Completer<void>? completer;
 
-  const NotificationsMarkReadRequested(this.id, {this.completer});
+  const NotificationsMarkReadRequested(this.id);
 
   @override
   List<Object?> get props => [id];

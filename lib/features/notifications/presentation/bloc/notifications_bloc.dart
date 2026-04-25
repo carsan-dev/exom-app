@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -19,6 +17,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   final MarkNotificationAsReadUseCase _markAsRead;
   final MarkAllNotificationsAsReadUseCase _markAllAsRead;
   final DeleteReadNotificationsUseCase _deleteRead;
+  final Set<String> _pendingReadIds = <String>{};
 
   static const int _pageSize = 20;
 
@@ -46,11 +45,30 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     final page = await _getMyNotifications(limit: _pageSize);
     final unread = await _getUnreadCount();
     return NotificationsLoaded(
-      items: page.items,
+      items: _applyPendingReads(page.items),
       page: page.page,
       hasMore: page.hasMore,
-      unreadCount: unread,
+      unreadCount: _applyPendingUnreadCount(unread),
     );
+  }
+
+  List<NotificationEntity> _applyPendingReads(List<NotificationEntity> items) {
+    if (_pendingReadIds.isEmpty) return items;
+
+    final now = DateTime.now();
+    return items
+        .map(
+          (notification) => _pendingReadIds.contains(notification.id) &&
+                  notification.isUnread
+              ? notification.copyWith(readAt: now)
+              : notification,
+        )
+        .toList();
+  }
+
+  int _applyPendingUnreadCount(int unreadCount) {
+    final adjusted = unreadCount - _pendingReadIds.length;
+    return adjusted < 0 ? 0 : adjusted;
   }
 
   Future<void> _onRequested(
@@ -84,7 +102,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
       final page = await _getMyNotifications(page: nextPage, limit: _pageSize);
       emit(
         current.copyWith(
-          items: [...current.items, ...page.items],
+          items: [...current.items, ..._applyPendingReads(page.items)],
           page: page.page,
           hasMore: page.hasMore,
           loadingMore: false,
@@ -100,44 +118,31 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     Emitter<NotificationsState> emit,
   ) async {
     final current = state;
-    if (current is! NotificationsLoaded) {
-      if (!(event.completer?.isCompleted ?? true)) {
-        event.completer?.complete();
-      }
-      return;
-    }
+    if (current is! NotificationsLoaded) return;
 
     final target = current.items.firstWhere(
       (n) => n.id == event.id,
       orElse: () => _nullNotification,
     );
-    if (target.id.isEmpty || !target.isUnread) {
-      if (!(event.completer?.isCompleted ?? true)) {
-        event.completer?.complete();
-      }
-      return;
-    }
+    if (target.id.isEmpty || !target.isUnread) return;
 
     // Optimistic
+    _pendingReadIds.add(event.id);
     final updated = current.items
         .map((n) => n.id == event.id ? n.copyWith(readAt: DateTime.now()) : n)
         .toList();
     emit(
       current.copyWith(
         items: updated,
-        unreadCount: (current.unreadCount - 1).clamp(0, 1 << 30),
+        unreadCount: current.unreadCount > 0 ? current.unreadCount - 1 : 0,
       ),
     );
 
     try {
       await _markAsRead(event.id);
-      if (!(event.completer?.isCompleted ?? true)) {
-        event.completer?.complete();
-      }
-    } catch (error, stackTrace) {
-      if (!(event.completer?.isCompleted ?? true)) {
-        event.completer?.completeError(error, stackTrace);
-      }
+      _pendingReadIds.remove(event.id);
+    } catch (_) {
+      _pendingReadIds.remove(event.id);
       // Revert on failure
       emit(current);
     }
@@ -150,6 +155,11 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     final current = state;
     if (current is! NotificationsLoaded || current.unreadCount == 0) return;
 
+    final idsToMark = current.items
+        .where((notification) => notification.isUnread)
+        .map((notification) => notification.id)
+        .toSet();
+    _pendingReadIds.addAll(idsToMark);
     final now = DateTime.now();
     final updated = current.items
         .map((n) => n.isUnread ? n.copyWith(readAt: now) : n)
@@ -158,7 +168,9 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
 
     try {
       await _markAllAsRead();
+      _pendingReadIds.removeAll(idsToMark);
     } catch (_) {
+      _pendingReadIds.removeAll(idsToMark);
       emit(current);
     }
   }
@@ -169,9 +181,14 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   ) async {
     final current = state;
     try {
-      final unread = await _getUnreadCount();
+      final unread = _applyPendingUnreadCount(await _getUnreadCount());
       if (current is NotificationsLoaded) {
-        emit(current.copyWith(unreadCount: unread));
+        emit(
+          current.copyWith(
+            items: _applyPendingReads(current.items),
+            unreadCount: unread,
+          ),
+        );
       } else {
         emit(NotificationsUnreadOnly(unreadCount: unread));
       }

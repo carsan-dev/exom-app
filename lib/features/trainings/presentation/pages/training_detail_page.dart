@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
@@ -11,9 +12,9 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
-import 'package:exom_app/features/trainings/presentation/widgets/rest_timer_overlay.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 
@@ -503,33 +504,72 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     color: color,
                     trailing: '$total ${l10n.exercises}',
                   ),
+                  ValueListenableBuilder(
+                    valueListenable: sl<LocalStorage>().watchActiveWorkouts(),
+                    builder: (context, box, _) {
+                      return Column(
+                        children: List.generate(training.exercises.length, (
+                          index,
+                        ) {
+                          final ex = training.exercises[index];
+                          final isCompleted = widget.state.completedExerciseIds
+                              .contains(ex.exercise.id);
+                          final activeWorkout = box.get(ex.exercise.id);
+                          final partialProgress =
+                              activeWorkout?.trainingId == training.id
+                              ? activeWorkout
+                              : null;
+                          final effectiveWeight =
+                              widget.state.exerciseWeights[ex.exercise.id] ??
+                              partialProgress?.lastWeightKg;
+                          final partialProgressLabel =
+                              !isCompleted &&
+                                  partialProgress != null &&
+                                  partialProgress.completedSets > 0
+                              ? l10n.exerciseSeriesProgress(
+                                  partialProgress.completedSets,
+                                  ex.sets,
+                                )
+                              : null;
 
-                  ...List.generate(training.exercises.length, (index) {
-                    final ex = training.exercises[index];
-                    final nextEx = index + 1 < training.exercises.length
-                        ? training.exercises[index + 1].exercise.name
-                        : null;
-                    return _ExerciseCard(
-                      trainingExercise: ex,
-                      trainingType: training.type,
-                      trainingLevel: training.level,
-                      isCompleted: widget.state.completedExerciseIds.contains(
-                        ex.exercise.id,
-                      ),
-                      weightUsed: widget.state.exerciseWeights[ex.exercise.id],
-                      nextExerciseName: nextEx,
-                      onToggle: (val, {double? weightUsed}) {
-                        context.read<TrainingBloc>().add(
-                          MarkExerciseCompleted(
-                            trainingExerciseId: ex.id,
-                            exerciseId: ex.exercise.id,
-                            completed: val,
-                            weightUsed: weightUsed,
-                          ),
-                        );
-                      },
-                    );
-                  }),
+                          return _ExerciseCard(
+                            trainingExercise: ex,
+                            trainingType: training.type,
+                            trainingLevel: training.level,
+                            isCompleted: isCompleted,
+                            weightUsed: effectiveWeight,
+                            partialProgressLabel: partialProgressLabel,
+                            onOpenActive: () {
+                              context.push(
+                                AppRoutes.activeExercisePath(
+                                  training.id,
+                                  ex.exercise.id,
+                                ),
+                                extra: ActiveExercisePageArgs(
+                                  trainingBloc: context.read<TrainingBloc>(),
+                                  trainingExercise: ex,
+                                  trainingName: training.name,
+                                  trainingType: training.type,
+                                  trainingLevel: training.level,
+                                  initialWeightKg: effectiveWeight,
+                                ),
+                              );
+                            },
+                            onToggle: (val, {double? weightUsed}) {
+                              context.read<TrainingBloc>().add(
+                                MarkExerciseCompleted(
+                                  trainingExerciseId: ex.id,
+                                  exerciseId: ex.exercise.id,
+                                  completed: val,
+                                  weightUsed: weightUsed,
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                      );
+                    },
+                  ),
 
                   // Cooldown
                   if (training.cooldownDescription != null) ...[
@@ -813,7 +853,8 @@ class _ExerciseCard extends StatelessWidget {
   final String trainingLevel;
   final bool isCompleted;
   final double? weightUsed;
-  final String? nextExerciseName;
+  final String? partialProgressLabel;
+  final VoidCallback onOpenActive;
   final void Function(bool completed, {double? weightUsed}) onToggle;
 
   const _ExerciseCard({
@@ -821,9 +862,10 @@ class _ExerciseCard extends StatelessWidget {
     required this.trainingType,
     required this.trainingLevel,
     required this.isCompleted,
+    required this.onOpenActive,
     required this.onToggle,
     this.weightUsed,
-    this.nextExerciseName,
+    this.partialProgressLabel,
   });
 
   @override
@@ -834,7 +876,7 @@ class _ExerciseCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return GestureDetector(
-      onTap: () => _showExerciseDetail(context),
+      onTap: isCompleted ? () => _showExerciseDetail(context) : onOpenActive,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -924,6 +966,11 @@ class _ExerciseCard extends StatelessWidget {
                         icon: Icons.timer_outlined,
                         label: '${trainingExercise.restSeconds}s ${l10n.rest}',
                       ),
+                      if (partialProgressLabel != null)
+                        _MiniStat(
+                          icon: Icons.stacked_bar_chart_rounded,
+                          label: partialProgressLabel!,
+                        ),
                       if (weightUsed != null) ...[
                         _MiniStat(
                           icon: Icons.fitness_center,
@@ -942,30 +989,31 @@ class _ExerciseCard extends StatelessWidget {
             const SizedBox(width: 8),
             Column(
               children: [
-                Icon(Icons.info_outline, color: palette.textDisabled, size: 16),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showExerciseDetail(context),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.info_outline,
+                        color: palette.textDisabled,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () async {
-                      if (!isCompleted) {
-                        final weight = await _showWeightSheet(
-                          context,
-                          l10n,
-                          previousWeight: weightUsed,
-                        );
-                        if (!context.mounted) return;
-                        onToggle(true, weightUsed: weight);
-                        if (nextExerciseName != null) {
-                          await RestTimerOverlay.show(
-                            context,
-                            restSeconds: trainingExercise.restSeconds,
-                            nextExerciseName: nextExerciseName,
-                          );
-                        }
-                      } else {
+                    onTap: () {
+                      if (isCompleted) {
                         onToggle(false);
+                        return;
                       }
+                      onOpenActive();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
@@ -1069,122 +1117,20 @@ class _ExerciseCard extends StatelessWidget {
       return;
     }
 
-    onToggle(result.completed, weightUsed: result.weight);
-
-    if (result.completed && nextExerciseName != null) {
-      await RestTimerOverlay.show(
-        context,
-        restSeconds: trainingExercise.restSeconds,
-        nextExerciseName: nextExerciseName,
-      );
+    if (result.openActiveExercise) {
+      onOpenActive();
     }
   }
 }
 
 class _SheetCompletionResult {
-  final bool completed;
-  final double? weight;
   final bool openFeedback;
+  final bool openActiveExercise;
 
   const _SheetCompletionResult({
-    required this.completed,
-    this.weight,
     this.openFeedback = false,
+    this.openActiveExercise = false,
   });
-}
-
-Future<double?> _showWeightSheet(
-  BuildContext context,
-  AppLocalizations l10n, {
-  double? previousWeight,
-}) async {
-  final palette = context.exomPalette;
-  final controller = TextEditingController(
-    text: previousWeight != null
-        ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
-        : '',
-  );
-  double? result;
-
-  await showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: palette.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.weightInputTitle,
-              style: TextStyle(
-                color: palette.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              autofocus: true,
-              style: TextStyle(color: palette.textPrimary, fontSize: 15),
-              decoration: InputDecoration(
-                hintText: l10n.weightInputHint,
-                hintStyle: TextStyle(color: palette.textDisabled),
-                suffixText: 'kg',
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text(l10n.weightInputSkip),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final val = double.tryParse(
-                        controller.text.trim().replaceAll(',', '.'),
-                      );
-                      result = val;
-                      Navigator.of(ctx).pop();
-                    },
-                    child: Text(l10n.weightInputSave),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  return result;
 }
 
 class _ExercisePlaceholder extends StatelessWidget {
@@ -1325,7 +1271,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   void _openFeedback(BuildContext context) {
     Navigator.of(
       context,
-    ).pop(const _SheetCompletionResult(completed: false, openFeedback: true));
+    ).pop(const _SheetCompletionResult(openFeedback: true));
   }
 
   @override
@@ -1587,43 +1533,26 @@ class _ExerciseDetailSheet extends StatelessWidget {
             bulletItems: _extractBulletItems(exercise.explanationText!),
           ),
         ],
-        const SizedBox(height: 28),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              if (!isCompleted) {
-                final weight = await _showWeightSheet(
-                  context,
-                  l10n,
-                  previousWeight: weightUsed,
-                );
-                if (!context.mounted) return;
+        if (!isCompleted) ...[
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
                 Navigator.of(
                   context,
-                ).pop(_SheetCompletionResult(completed: true, weight: weight));
-              } else {
-                Navigator.of(
-                  context,
-                ).pop(const _SheetCompletionResult(completed: false));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? semantic.success : typeColor,
-              foregroundColor: palette.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            icon: Icon(
-              isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-              size: 20,
-            ),
-            label: Text(
-              isCompleted
-                  ? l10n.exerciseCompletedButton
-                  : l10n.markExerciseCompletedButton,
+                ).pop(const _SheetCompletionResult(openActiveExercise: true));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: typeColor,
+                foregroundColor: palette.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
+              label: Text(l10n.continueButton),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 32),
       ],
     );

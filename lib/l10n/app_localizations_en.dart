@@ -1522,6 +1522,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restTimerSkip => 'Skip';
 
   @override
+  String get completeSetButton => 'Complete set';
+
+  @override
+  String exerciseSetProgress(int current, int total) {
+    return 'Set $current / $total';
+  }
+
+  @override
+  String exerciseSeriesProgress(int completed, int total) {
+    return '$completed/$total sets';
+  }
+
+  @override
+  String get activeExerciseExecuting => 'Executing';
+
+  @override
+  String get activeExerciseResting => 'Resting';
+
+  @override
+  String activeExerciseLastWeight(String weight) {
+    return 'Last weight: $weight kg';
+  }
+
+  @override
+  String get activeExerciseCloseTitle => 'Leave exercise';
+
+  @override
+  String activeExerciseCloseMessage(int completed, int total) {
+    return 'You have completed $completed of $total sets. You can resume later.';
+  }
+
+  @override
+  String get activeExerciseDiscardTitle => 'Discard previous progress';
+
+  @override
+  String get activeExerciseDiscardMessage =>
+      'There is saved progress from another workout. If you continue, that local progress will be discarded.';
+
+  @override
+  String get activeExerciseDiscardAction => 'Discard and continue';
+
+  @override
+  String get activeExerciseNoVideo => 'Video unavailable';
+
+  @override
   String get weightInputTitle => 'Weight used?';
 
   @override

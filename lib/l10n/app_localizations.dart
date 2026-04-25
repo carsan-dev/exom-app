@@ -2888,6 +2888,78 @@ abstract class AppLocalizations {
   /// **'Saltar'**
   String get restTimerSkip;
 
+  /// No description provided for @completeSetButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar serie'**
+  String get completeSetButton;
+
+  /// No description provided for @exerciseSetProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {current} / {total}'**
+  String exerciseSetProgress(int current, int total);
+
+  /// No description provided for @exerciseSeriesProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{completed}/{total} series'**
+  String exerciseSeriesProgress(int completed, int total);
+
+  /// No description provided for @activeExerciseExecuting.
+  ///
+  /// In es, this message translates to:
+  /// **'En ejecución'**
+  String get activeExerciseExecuting;
+
+  /// No description provided for @activeExerciseResting.
+  ///
+  /// In es, this message translates to:
+  /// **'Descansando'**
+  String get activeExerciseResting;
+
+  /// No description provided for @activeExerciseLastWeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Último peso: {weight} kg'**
+  String activeExerciseLastWeight(String weight);
+
+  /// No description provided for @activeExerciseCloseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir del ejercicio'**
+  String get activeExerciseCloseTitle;
+
+  /// No description provided for @activeExerciseCloseMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Has completado {completed} de {total} series. Podrás retomarlo después.'**
+  String activeExerciseCloseMessage(int completed, int total);
+
+  /// No description provided for @activeExerciseDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar progreso anterior'**
+  String get activeExerciseDiscardTitle;
+
+  /// No description provided for @activeExerciseDiscardMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay un ejercicio activo guardado de otro entrenamiento. Si continúas, se descartará ese progreso local.'**
+  String get activeExerciseDiscardMessage;
+
+  /// No description provided for @activeExerciseDiscardAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar y continuar'**
+  String get activeExerciseDiscardAction;
+
+  /// No description provided for @activeExerciseNoVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo no disponible'**
+  String get activeExerciseNoVideo;
+
   /// No description provided for @weightInputTitle.
   ///
   /// In es, this message translates to:

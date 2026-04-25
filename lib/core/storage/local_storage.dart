@@ -1,13 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 
-class LocalStorage {
+class LocalStorage implements ActiveWorkoutLocalStore {
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
   static const _settingsBox = 'settings_box';
+  static const _activeWorkoutBox = 'active_workout_box';
   static const _pendingSyncKey = 'offline_sync_actions';
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
@@ -18,10 +21,14 @@ class LocalStorage {
 
   static Future<void> init() async {
     await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(ActiveWorkoutHiveModel.typeId)) {
+      Hive.registerAdapter(ActiveWorkoutHiveModelAdapter());
+    }
     await Future.wait([
       Hive.openBox(_authBox),
       Hive.openBox(_cacheBox),
       Hive.openBox(_settingsBox),
+      Hive.openBox<ActiveWorkoutHiveModel>(_activeWorkoutBox),
     ]);
   }
 
@@ -29,6 +36,8 @@ class LocalStorage {
   static Box get _auth => Hive.box(_authBox);
   static Box get _cache => Hive.box(_cacheBox);
   static Box get _settings => Hive.box(_settingsBox);
+  static Box<ActiveWorkoutHiveModel> get _activeWorkouts =>
+      Hive.box<ActiveWorkoutHiveModel>(_activeWorkoutBox);
 
   Future<void> saveAuthToken(String token) => _auth.put('token', token);
 
@@ -89,6 +98,40 @@ class LocalStorage {
       _cache.put(_pendingSyncKey, actions);
 
   Future<void> clearPendingSyncActions() => _cache.delete(_pendingSyncKey);
+
+  // Active workout
+  ValueListenable<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
+      _activeWorkouts.listenable();
+
+  @override
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
+      _activeWorkouts.get(exerciseId);
+
+  List<ActiveWorkoutHiveModel> getActiveWorkouts() =>
+      _activeWorkouts.values.toList(growable: false);
+
+  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) {
+    return getActiveWorkouts()
+        .where((entry) => entry.trainingId != trainingId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) =>
+      _activeWorkouts.put(workout.exerciseId, workout);
+
+  @override
+  Future<void> removeActiveWorkout(String exerciseId) =>
+      _activeWorkouts.delete(exerciseId);
+
+  Future<void> clearForeignActiveWorkouts(String trainingId) async {
+    final keys = _activeWorkouts.values
+        .where((entry) => entry.trainingId != trainingId)
+        .map((entry) => entry.exerciseId)
+        .toList(growable: false);
+    if (keys.isEmpty) return;
+    await _activeWorkouts.deleteAll(keys);
+  }
 
   // Settings
   Future<void> saveSetting(String key, dynamic value) =>

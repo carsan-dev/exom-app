@@ -515,6 +515,41 @@
     }
   },
   "restTimerSkip": "Skip",
+  "completeSetButton": "Complete set",
+  "exerciseSetProgress": "Set {current} / {total}",
+  "@exerciseSetProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "exerciseSeriesProgress": "{completed}/{total} sets",
+  "@exerciseSeriesProgress": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "activeExerciseExecuting": "Executing",
+  "activeExerciseResting": "Resting",
+  "activeExerciseLastWeight": "Last weight: {weight} kg",
+  "@activeExerciseLastWeight": {
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+  "activeExerciseCloseTitle": "Leave exercise",
+  "activeExerciseCloseMessage": "You have completed {completed} of {total} sets. You can resume later.",
+  "@activeExerciseCloseMessage": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "activeExerciseDiscardTitle": "Discard previous progress",
+  "activeExerciseDiscardMessage": "There is saved progress from another workout. If you continue, that local progress will be discarded.",
+  "activeExerciseDiscardAction": "Discard and continue",
+  "activeExerciseNoVideo": "Video unavailable",
 
   "weightInputTitle": "Weight used?",
   "weightInputHint": "e.g. 20 (optional)",

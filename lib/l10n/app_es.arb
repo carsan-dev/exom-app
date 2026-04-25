@@ -550,6 +550,41 @@
     }
   },
   "restTimerSkip": "Saltar",
+  "completeSetButton": "Completar serie",
+  "exerciseSetProgress": "Serie {current} / {total}",
+  "@exerciseSetProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "exerciseSeriesProgress": "{completed}/{total} series",
+  "@exerciseSeriesProgress": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "activeExerciseExecuting": "En ejecución",
+  "activeExerciseResting": "Descansando",
+  "activeExerciseLastWeight": "Último peso: {weight} kg",
+  "@activeExerciseLastWeight": {
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+  "activeExerciseCloseTitle": "Salir del ejercicio",
+  "activeExerciseCloseMessage": "Has completado {completed} de {total} series. Podrás retomarlo después.",
+  "@activeExerciseCloseMessage": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "activeExerciseDiscardTitle": "Descartar progreso anterior",
+  "activeExerciseDiscardMessage": "Hay un ejercicio activo guardado de otro entrenamiento. Si continúas, se descartará ese progreso local.",
+  "activeExerciseDiscardAction": "Descartar y continuar",
+  "activeExerciseNoVideo": "Vídeo no disponible",
 
   "weightInputTitle": "¿Peso utilizado?",
   "weightInputHint": "ej. 20 (opcional)",

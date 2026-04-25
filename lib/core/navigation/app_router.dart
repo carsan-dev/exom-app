@@ -31,6 +31,7 @@ import '../../features/home/presentation/pages/home_page.dart';
 // Training pages
 import '../../features/trainings/presentation/pages/trainings_page.dart';
 import '../../features/trainings/presentation/pages/training_detail_page.dart';
+import '../../features/trainings/presentation/pages/active_exercise_page.dart';
 
 // Diet pages
 import '../../features/diets/presentation/pages/diets_page.dart';
@@ -84,6 +85,7 @@ class AppRoutes {
   static const home = '/';
   static const trainings = '/trainings';
   static const trainingDetail = '/trainings/:id';
+  static const activeExercise = '/trainings/:id/exercises/:exerciseId';
   static const diets = '/diets';
   static const calendar = '/calendar';
   static const profile = '/profile';
@@ -95,6 +97,8 @@ class AppRoutes {
   static const notifications = '/notifications';
 
   static String recapDetail(String id) => '/recap/$id';
+  static String activeExercisePath(String trainingId, String exerciseId) =>
+      '/trainings/$trainingId/exercises/$exerciseId';
   static const settings = '/settings';
   static const help = '/help';
 }
@@ -271,6 +275,20 @@ class AppRouter {
             selectedDate: state.uri.queryParameters['date'],
           ),
         ),
+        routes: [
+          GoRoute(
+            path: 'exercises/:exerciseId',
+            pageBuilder: (_, state) => _platformPage(
+              key: state.pageKey,
+              name: state.name,
+              child: ActiveExercisePage(
+                trainingId: state.pathParameters['id']!,
+                exerciseId: state.pathParameters['exerciseId']!,
+                args: state.extra as ActiveExercisePageArgs?,
+              ),
+            ),
+          ),
+        ],
       ),
 
       // Profile (no shell nav bar — accessible from drawer)

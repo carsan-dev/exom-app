@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -76,8 +78,20 @@ class _NotificationsViewState extends State<_NotificationsView> {
   Future<void> _onNotificationTap(NotificationEntity notification) async {
     final bloc = context.read<NotificationsBloc>();
     if (notification.isUnread) {
-      bloc.add(NotificationsMarkReadRequested(notification.id));
+      final completer = Completer<void>();
+      bloc.add(
+        NotificationsMarkReadRequested(
+          notification.id,
+          completer: completer,
+        ),
+      );
+      try {
+        await completer.future;
+      } catch (_) {
+        // Navigation still proceeds even if mark-as-read fails.
+      }
     }
+    if (!mounted) return;
 
     final route = _resolveRoute(notification);
     if (route != null && route.isNotEmpty) {

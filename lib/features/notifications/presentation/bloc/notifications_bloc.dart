@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -119,7 +121,13 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
 
     try {
       await _markAsRead(event.id);
-    } catch (_) {
+      if (!(event.completer?.isCompleted ?? true)) {
+        event.completer?.complete();
+      }
+    } catch (error, stackTrace) {
+      if (!(event.completer?.isCompleted ?? true)) {
+        event.completer?.completeError(error, stackTrace);
+      }
       // Revert on failure
       emit(current);
     }

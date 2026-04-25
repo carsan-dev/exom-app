@@ -6,6 +6,7 @@ import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -353,21 +354,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   }
 
   Color _typeColor(BuildContext context, String type) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
-    switch (type.toUpperCase()) {
-      case 'FUERZA':
-        return context.trainingAccent;
-      case 'CARDIO':
-        return semantic.info;
-      case 'HIIT':
-        return semantic.accent;
-      case 'FLEXIBILIDAD':
-        return semantic.warning;
-      default:
-        return palette.textDisabled;
-    }
+    return trainingTypeColor(context, type);
   }
 
   @override
@@ -437,7 +424,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           spacing: 8,
                           runSpacing: 6,
                           children: [
-                            _Badge(label: training.type, color: color),
+                            _Badge(
+                              label: trainingTypeLabel(context, training.type),
+                              color: color,
+                            ),
                             _Badge(
                               label: training.level,
                               color: palette.textSecondary,
@@ -1135,20 +1125,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   });
 
   Color _typeColor(BuildContext context) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    switch (trainingType.toUpperCase()) {
-      case 'FUERZA':
-        return context.trainingAccent;
-      case 'CARDIO':
-        return semantic.info;
-      case 'HIIT':
-        return semantic.accent;
-      case 'FLEXIBILIDAD':
-        return semantic.warning;
-      default:
-        return palette.textDisabled;
-    }
+    return trainingTypeColor(context, trainingType);
   }
 
   String _buildMetadata(AppLocalizations l10n) {

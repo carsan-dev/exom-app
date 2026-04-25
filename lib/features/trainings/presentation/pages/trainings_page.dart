@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
@@ -367,21 +368,7 @@ class _TrainingHistorySkeletonCard extends StatelessWidget {
 }
 
 Color _trainingTypeColor(BuildContext context, String type) {
-  final palette = context.exomPalette;
-  final semantic = context.exomSemantic;
-
-  switch (type.toUpperCase()) {
-    case 'FUERZA':
-      return context.trainingAccent;
-    case 'CARDIO':
-      return semantic.info;
-    case 'HIIT':
-      return semantic.accent;
-    case 'FLEXIBILIDAD':
-      return semantic.warning;
-    default:
-      return palette.textDisabled;
-  }
+  return trainingTypeColor(context, type);
 }
 
 String _historyDateLabel(BuildContext context, DateTime date) {
@@ -580,7 +567,7 @@ class _TodayTrainingBanner extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          training.type,
+                          trainingTypeLabel(context, training.type),
                           style: TextStyle(
                             color: color,
                             fontSize: 11,
@@ -858,7 +845,7 @@ class _TrainingHistoryListItem extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              entry.type,
+                              trainingTypeLabel(context, entry.type),
                               style: TextStyle(
                                 color: color,
                                 fontSize: 10,

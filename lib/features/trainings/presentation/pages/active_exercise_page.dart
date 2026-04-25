@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -109,21 +110,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   }
 
   Color _typeColor(BuildContext context, String type) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
-    switch (type.toUpperCase()) {
-      case 'FUERZA':
-        return context.trainingAccent;
-      case 'CARDIO':
-        return semantic.info;
-      case 'HIIT':
-        return semantic.accent;
-      case 'FLEXIBILIDAD':
-        return semantic.warning;
-      default:
-        return palette.textDisabled;
-    }
+    return trainingTypeColor(context, type);
   }
 
   Future<void> _bootstrap() async {

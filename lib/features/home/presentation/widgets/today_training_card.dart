@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
@@ -14,37 +15,11 @@ class TodayTrainingCard extends StatelessWidget {
   final HomeSummaryEntity summary;
 
   Color _typeColor(BuildContext context, String? type) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
-    switch (type?.toUpperCase()) {
-      case 'FUERZA':
-        return context.trainingAccent;
-      case 'CARDIO':
-        return semantic.info;
-      case 'HIIT':
-        return semantic.accent;
-      case 'FLEXIBILIDAD':
-        return semantic.warning;
-      default:
-        return palette.textDisabled;
-    }
+    return trainingTypeColor(context, type);
   }
 
   String _typeLabel(BuildContext context, String? type) {
-    final l10n = AppLocalizations.of(context);
-    switch (type?.toUpperCase()) {
-      case 'FUERZA':
-        return l10n.trainingStrength;
-      case 'CARDIO':
-        return 'Cardio';
-      case 'HIIT':
-        return 'HIIT';
-      case 'FLEXIBILIDAD':
-        return l10n.trainingMobility;
-      default:
-        return type ?? l10n.training;
-    }
+    return trainingTypeLabel(context, type);
   }
 
   @override

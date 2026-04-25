@@ -353,8 +353,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     super.dispose();
   }
 
-  Color _typeColor(BuildContext context, String type) {
-    return trainingTypeColor(context, type);
+  Color _trainingColor(BuildContext context, TrainingEntity training) {
+    return trainingAccentColor(
+      context,
+      accentColor: training.accentColor,
+      types: training.types,
+    );
   }
 
   @override
@@ -363,7 +367,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final color = _typeColor(context, training.type);
+    final color = _trainingColor(context, training);
+    final typeLabels = trainingTypeLabels(context, training.types);
     final completed = widget.state.completedExerciseIds.length;
     final total = training.exercises.length;
     final progress = total > 0 ? completed / total : 0.0;
@@ -424,9 +429,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           spacing: 8,
                           runSpacing: 6,
                           children: [
-                            _Badge(
-                              label: trainingTypeLabel(context, training.type),
-                              color: color,
+                            ...typeLabels.map(
+                              (label) => _Badge(
+                                label: label,
+                                color: color,
+                              ),
                             ),
                             _Badge(
                               label: training.level,
@@ -524,7 +531,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
                           return _ExerciseCard(
                             trainingExercise: ex,
-                            trainingType: training.type,
+                            trainingTypes: training.types,
+                            accentColorHex: training.accentColor,
                             trainingLevel: training.level,
                             isCompleted: isCompleted,
                             weightUsed: effectiveWeight,
@@ -539,7 +547,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   trainingBloc: context.read<TrainingBloc>(),
                                   trainingExercise: ex,
                                   trainingName: training.name,
-                                  trainingType: training.type,
+                                  trainingTypes: training.types,
+                                  accentColorHex: training.accentColor,
                                   trainingLevel: training.level,
                                   initialWeightKg: effectiveWeight,
                                 ),
@@ -839,7 +848,8 @@ class _DescriptionCard extends StatelessWidget {
 
 class _ExerciseCard extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
-  final String trainingType;
+  final List<String> trainingTypes;
+  final String? accentColorHex;
   final String trainingLevel;
   final bool isCompleted;
   final double? weightUsed;
@@ -849,7 +859,8 @@ class _ExerciseCard extends StatelessWidget {
 
   const _ExerciseCard({
     required this.trainingExercise,
-    required this.trainingType,
+    required this.trainingTypes,
+    required this.accentColorHex,
     required this.trainingLevel,
     required this.isCompleted,
     required this.onOpenActive,
@@ -1027,7 +1038,8 @@ class _ExerciseCard extends StatelessWidget {
           scrollController: scrollController,
           isCompleted: isCompleted,
           weightUsed: weightUsed,
-          trainingType: trainingType,
+          trainingTypes: trainingTypes,
+          accentColorHex: accentColorHex,
           trainingLevel: trainingLevel,
           hasPartialProgress: partialProgressLabel != null,
         ),
@@ -1109,7 +1121,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final ScrollController scrollController;
   final bool isCompleted;
   final double? weightUsed;
-  final String trainingType;
+  final List<String> trainingTypes;
+  final String? accentColorHex;
   final String trainingLevel;
   final bool hasPartialProgress;
 
@@ -1118,14 +1131,19 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.trainingExercise,
     required this.scrollController,
     required this.isCompleted,
-    required this.trainingType,
+    required this.trainingTypes,
+    required this.accentColorHex,
     required this.trainingLevel,
     this.weightUsed,
     this.hasPartialProgress = false,
   });
 
   Color _typeColor(BuildContext context) {
-    return trainingTypeColor(context, trainingType);
+    return trainingAccentColor(
+      context,
+      accentColor: accentColorHex,
+      types: trainingTypes,
+    );
   }
 
   String _buildMetadata(AppLocalizations l10n) {

@@ -367,8 +367,16 @@ class _TrainingHistorySkeletonCard extends StatelessWidget {
   }
 }
 
-Color _trainingTypeColor(BuildContext context, String type) {
-  return trainingTypeColor(context, type);
+Color _trainingColor(
+  BuildContext context, {
+  required List<String> types,
+  required String? accentColor,
+}) {
+  return trainingAccentColor(
+    context,
+    accentColor: accentColor,
+    types: types,
+  );
 }
 
 String _historyDateLabel(BuildContext context, DateTime date) {
@@ -521,7 +529,12 @@ class _TodayTrainingBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final color = _trainingTypeColor(context, training.type);
+    final color = _trainingColor(
+      context,
+      types: training.types,
+      accentColor: training.accentColor,
+    );
+    final typeLabels = trainingTypeLabels(context, training.types);
 
     return TappableScale(
       onTap: () async {
@@ -555,32 +568,59 @@ class _TodayTrainingBanner extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          trainingTypeLabel(context, training.type),
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                      ...typeLabels.take(2).map(
+                        (label) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
+                      if (typeLabels.length > 2)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '+${typeLabels.length - 2}',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       const SizedBox(width: 8),
-                      Text(
-                        training.level,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textDisabled,
-                          fontSize: 11,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          training.level,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textDisabled,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -738,9 +778,14 @@ class _TrainingHistoryListItem extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final color = _trainingTypeColor(context, entry.type);
+    final color = _trainingColor(
+      context,
+      types: entry.types,
+      accentColor: entry.accentColor,
+    );
     final statusColor = entry.isCompleted ? semantic.success : semantic.warning;
     final entryDate = _storageDate(entry.date);
+    final typeLabels = trainingTypeLabels(context, entry.types);
 
     return TappableScale(
       onTap: () async {
@@ -833,27 +878,40 @@ class _TrainingHistoryListItem extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              trainingTypeLabel(context, entry.type),
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                          ...typeLabels.take(2).map(
+                            (label) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          if (typeLabels.length > 2)
+                            Text(
+                              '+${typeLabels.length - 2}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: color,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           Icon(
                             Icons.timer_outlined,
                             color: palette.textDisabled,
@@ -874,14 +932,12 @@ class _TrainingHistoryListItem extends StatelessWidget {
                             size: 12,
                           ),
                           const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              entry.level,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: palette.textDisabled,
-                                fontSize: 11,
-                              ),
+                          Text(
+                            entry.level,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDisabled,
+                              fontSize: 11,
                             ),
                           ),
                         ],

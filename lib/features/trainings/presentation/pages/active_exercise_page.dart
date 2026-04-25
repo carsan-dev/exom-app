@@ -21,7 +21,8 @@ class ActiveExercisePageArgs {
   final TrainingBloc trainingBloc;
   final TrainingExerciseEntity trainingExercise;
   final String trainingName;
-  final String trainingType;
+  final List<String> trainingTypes;
+  final String? accentColorHex;
   final String trainingLevel;
   final double? initialWeightKg;
 
@@ -29,7 +30,8 @@ class ActiveExercisePageArgs {
     required this.trainingBloc,
     required this.trainingExercise,
     required this.trainingName,
-    required this.trainingType,
+    required this.trainingTypes,
+    required this.accentColorHex,
     required this.trainingLevel,
     this.initialWeightKg,
   });
@@ -109,8 +111,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
-  Color _typeColor(BuildContext context, String type) {
-    return trainingTypeColor(context, type);
+  Color _typeColor(BuildContext context) {
+    return trainingAccentColor(
+      context,
+      accentColor: widget.args.accentColorHex,
+      types: widget.args.trainingTypes,
+    );
   }
 
   Future<void> _bootstrap() async {
@@ -245,7 +251,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final exercise = widget.args.trainingExercise.exercise;
-    final typeColor = _typeColor(context, widget.args.trainingType);
+    final typeColor = _typeColor(context);
 
     if (!_bootstrapped) {
       return ExomStaticBackground(

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/notifications/data/models/notification_model.dart';
 import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
@@ -85,12 +84,7 @@ class NotificationsRemoteDataSourceImpl
 
   @override
   Future<void> markAsRead(String id) async {
-    final response = await _apiClient.dio.put<dynamic>(
-      '/notifications/$id/read',
-    );
-    debugPrint(
-      '[Notifications] PUT /notifications/$id/read -> ${response.statusCode}',
-    );
+    await _apiClient.dio.put<dynamic>('/notifications/$id/read');
   }
 
   @override

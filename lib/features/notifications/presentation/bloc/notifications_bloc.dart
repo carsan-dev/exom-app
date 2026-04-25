@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
@@ -121,11 +120,14 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     final current = state;
     if (current is! NotificationsLoaded) return;
 
-    final target = current.items.firstWhere(
-      (n) => n.id == event.id,
-      orElse: () => _nullNotification,
-    );
-    if (target.id.isEmpty || !target.isUnread) return;
+    NotificationEntity? target;
+    for (final n in current.items) {
+      if (n.id == event.id) {
+        target = n;
+        break;
+      }
+    }
+    if (target == null || !target.isUnread) return;
 
     // Optimistic
     _pendingReadIds.add(event.id);
@@ -142,11 +144,8 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     try {
       await _markAsRead(event.id);
       _pendingReadIds.remove(event.id);
-      debugPrint('[Notifications] markAsRead OK id=${event.id}');
-    } catch (error, stack) {
+    } catch (_) {
       _pendingReadIds.remove(event.id);
-      debugPrint('[Notifications] markAsRead FAILED id=${event.id} error=$error');
-      debugPrintStack(stackTrace: stack, label: 'markAsRead');
       // Revert on failure
       emit(current);
     }
@@ -222,11 +221,4 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     }
   }
 
-  static final NotificationEntity _nullNotification = NotificationEntity(
-    id: '',
-    title: '',
-    body: '',
-    status: '',
-    createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-  );
 }

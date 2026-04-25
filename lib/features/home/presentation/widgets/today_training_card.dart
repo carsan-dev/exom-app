@@ -14,12 +14,16 @@ class TodayTrainingCard extends StatelessWidget {
 
   final HomeSummaryEntity summary;
 
-  Color _typeColor(BuildContext context, String? type) {
-    return trainingTypeColor(context, type);
+  Color _trainingColor(BuildContext context) {
+    return trainingAccentColor(
+      context,
+      accentColor: summary.trainingAccentColor,
+      types: summary.trainingTypes,
+    );
   }
 
-  String _typeLabel(BuildContext context, String? type) {
-    return trainingTypeLabel(context, type);
+  String _typesLabel(BuildContext context) {
+    return trainingTypesSummaryLabel(context, summary.trainingTypes);
   }
 
   @override
@@ -28,7 +32,7 @@ class TodayTrainingCard extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final color = _typeColor(context, summary.trainingType);
+    final color = _trainingColor(context);
 
     return Semantics(
       label: '${l10n.todaysTrainingTitle}: ${summary.trainingName ?? l10n.trainingUntitledLabel}',
@@ -102,7 +106,7 @@ class TodayTrainingCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _typeLabel(context, summary.trainingType),
+                    _typesLabel(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: color,
                       fontSize: 12,

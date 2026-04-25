@@ -876,7 +876,7 @@ class _ExerciseCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return GestureDetector(
-      onTap: isCompleted ? () => _showExerciseDetail(context) : onOpenActive,
+      onTap: () => _showExerciseDetail(context),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -986,94 +986,30 @@ class _ExerciseCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showExerciseDetail(context),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.info_outline,
-                        color: palette.textDisabled,
-                        size: 16,
-                      ),
-                    ),
-                  ),
+            const SizedBox(width: 12),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? semantic.success
+                    : palette.surfaceVariant.withValues(alpha: 0.9),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isCompleted
+                      ? semantic.success
+                      : palette.textDisabled.withValues(alpha: 0.32),
+                  width: 1.5,
                 ),
-                const SizedBox(height: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      if (isCompleted) {
-                        onToggle(false);
-                        return;
-                      }
-                      onOpenActive();
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      child: Column(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: isCompleted
-                                  ? semantic.success
-                                  : palette.surfaceVariant,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isCompleted
-                                    ? semantic.success
-                                    : palette.textDisabled,
-                                width: 2,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.check_rounded,
-                              color: isCompleted
-                                  ? Colors.white
-                                  : palette.textDisabled,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          SizedBox(
-                            width: 52,
-                            child: Text(
-                              isCompleted
-                                  ? l10n.completed
-                                  : l10n.completeButton,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: isCompleted
-                                        ? semantic.success
-                                        : palette.textSecondary,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.1,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              child: Icon(
+                isCompleted
+                    ? Icons.check_rounded
+                    : Icons.chevron_right_rounded,
+                color: isCompleted ? Colors.white : palette.textDisabled,
+                size: 20,
+              ),
             ),
           ],
         ),
@@ -1103,6 +1039,7 @@ class _ExerciseCard extends StatelessWidget {
           weightUsed: weightUsed,
           trainingType: trainingType,
           trainingLevel: trainingLevel,
+          hasPartialProgress: partialProgressLabel != null,
         ),
       ),
     );
@@ -1117,6 +1054,11 @@ class _ExerciseCard extends StatelessWidget {
       return;
     }
 
+    if (result.markPending) {
+      onToggle(false);
+      return;
+    }
+
     if (result.openActiveExercise) {
       onOpenActive();
     }
@@ -1125,10 +1067,12 @@ class _ExerciseCard extends StatelessWidget {
 
 class _SheetCompletionResult {
   final bool openFeedback;
+  final bool markPending;
   final bool openActiveExercise;
 
   const _SheetCompletionResult({
     this.openFeedback = false,
+    this.markPending = false,
     this.openActiveExercise = false,
   });
 }
@@ -1177,6 +1121,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final double? weightUsed;
   final String trainingType;
   final String trainingLevel;
+  final bool hasPartialProgress;
 
   const _ExerciseDetailSheet({
     required this.exercise,
@@ -1186,6 +1131,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.trainingType,
     required this.trainingLevel,
     this.weightUsed,
+    this.hasPartialProgress = false,
   });
 
   Color _typeColor(BuildContext context) {
@@ -1533,7 +1479,26 @@ class _ExerciseDetailSheet extends StatelessWidget {
             bulletItems: _extractBulletItems(exercise.explanationText!),
           ),
         ],
-        if (!isCompleted) ...[
+        if (isCompleted) ...[
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pop(const _SheetCompletionResult(markPending: true));
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: palette.textPrimary,
+                side: BorderSide(color: palette.divider),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.radio_button_unchecked_rounded, size: 18),
+              label: Text(l10n.markExercisePendingButton),
+            ),
+          ),
+        ] else ...[
           const SizedBox(height: 28),
           SizedBox(
             width: double.infinity,
@@ -1549,7 +1514,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: Text(l10n.continueButton),
+              label: Text(
+                hasPartialProgress
+                    ? l10n.resumeExerciseButton
+                    : l10n.startExerciseButton,
+              ),
             ),
           ),
         ],

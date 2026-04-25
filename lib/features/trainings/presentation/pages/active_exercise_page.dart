@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -12,7 +13,6 @@ import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bl
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
-import 'package:exom_app/features/trainings/presentation/widgets/rest_timer_inline.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -247,34 +247,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     );
   }
 
-  Future<void> _openInfoSheet(ActiveExerciseState state) async {
-    await showPageAwareModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.exomPalette.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.62,
-        minChildSize: 0.38,
-        maxChildSize: 0.9,
-        builder: (_, scrollController) => _ExerciseInfoSheet(
-          scrollController: scrollController,
-          exercise: widget.args.trainingExercise.exercise,
-          trainingLevel: widget.args.trainingLevel,
-          trainingExercise: widget.args.trainingExercise,
-          weightKg: state.weightKg,
-          trainingType: widget.args.trainingType,
-        ),
-      ),
-    );
-  }
-
   String _formatWeight(double weight) {
     return weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1);
   }
+
+  bool _hasContent(String? value) =>
+      value != null && value.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -336,11 +314,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                 backgroundColor: Colors.transparent,
                 body: SafeArea(
                   bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    child: Column(
-                      children: [
-                        Row(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Row(
                           children: [
                             _CircleIconButton(
                               icon: Icons.close_rounded,
@@ -372,26 +350,25 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: palette.textPrimary,
-                                      fontSize: 20,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            _CircleIconButton(
-                              icon: Icons.info_outline_rounded,
-                              onTap: () => _openInfoSheet(state),
-                            ),
+                            const SizedBox(width: 56),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        Expanded(
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                flex: 5,
+                              SizedBox(
+                                height: 200,
                                 child: ExerciseVideoPreview(
                                   title: exercise.name,
                                   videoUrl: exercise.videoUrl,
@@ -399,212 +376,192 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                   onTap: _openVideoPlayer,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                flex: 4,
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: GlassDecoration.card(
-                                    borderRadius: 28,
-                                  ),
-                                  padding: const EdgeInsets.all(22),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: typeColor.withValues(
-                                                alpha: 0.14,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: Text(
-                                              state.isResting
-                                                  ? l10n.activeExerciseResting
-                                                  : l10n.activeExerciseExecuting,
-                                              style: TextStyle(
-                                                color: typeColor,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                          const Spacer(),
-                                          Text(
-                                            widget.args.trainingLevel,
-                                            style: TextStyle(
-                                              color: palette.textDisabled,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        l10n.exerciseSetProgress(
-                                          state.currentSet,
-                                          state.totalSets,
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textPrimary,
-                                          fontSize: 34,
-                                          fontWeight: FontWeight.w900,
-                                          height: 1,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        prescriptionLabel,
-                                        style: TextStyle(
-                                          color: palette.textSecondary,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      LinearProgressIndicator(
-                                        value: state.totalSets == 0
-                                            ? 0
-                                            : state.completedSets /
-                                                  state.totalSets,
-                                        minHeight: 8,
-                                        backgroundColor: palette.surfaceVariant,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              state.isDone
-                                                  ? semantic.success
-                                                  : typeColor,
-                                            ),
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        l10n.exerciseSeriesProgress(
-                                          state.completedSets,
-                                          state.totalSets,
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textSecondary,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                              const SizedBox(height: 14),
+                              Container(
+                                decoration: GlassDecoration.card(
+                                  borderRadius: 24,
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                flex: 4,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 220),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeInCubic,
-                                  child: switch (state.status) {
-                                    ActiveExerciseStatus.executing => Container(
-                                      key: const ValueKey('executing'),
-                                      width: double.infinity,
-                                      decoration: GlassDecoration.card(
-                                        borderRadius: 28,
-                                      ),
-                                      padding: const EdgeInsets.all(20),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          if (state.weightKg != null) ...[
-                                            Text(
-                                              l10n.activeExerciseLastWeight(
-                                                _formatWeight(state.weightKg!),
-                                              ),
-                                              style: TextStyle(
-                                                color: palette.textSecondary,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: typeColor.withValues(
+                                              alpha: 0.14,
                                             ),
-                                            const SizedBox(height: 16),
-                                          ],
-                                          const Spacer(),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton(
-                                              onPressed: () => _onCompleteSetPressed(
-                                                state,
-                                                l10n,
-                                              ),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: state
-                                                            .currentSet ==
-                                                        state.totalSets
-                                                    ? semantic.success
-                                                    : typeColor,
-                                                foregroundColor:
-                                                    palette.onPrimary,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 18,
-                                                    ),
-                                                textStyle: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.2,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                l10n.completeSetButton
-                                                    .toUpperCase(),
-                                              ),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            state.isResting
+                                                ? l10n.activeExerciseResting
+                                                : l10n.activeExerciseExecuting,
+                                            style: TextStyle(
+                                              color: typeColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          widget.args.trainingLevel,
+                                          style: TextStyle(
+                                            color: palette.textDisabled,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    ActiveExerciseStatus.resting => RestTimerInline(
-                                      key: ValueKey(
-                                        state.restEndsAt?.millisecondsSinceEpoch,
-                                      ),
-                                      totalSeconds: state.restSeconds,
-                                      restEndsAt: state.restEndsAt!,
-                                      subtitle: l10n.exerciseSetProgress(
+                                    const SizedBox(height: 18),
+                                    Text(
+                                      l10n.exerciseSetProgress(
                                         state.currentSet,
                                         state.totalSets,
                                       ),
-                                      onSkip: () => context
-                                          .read<ActiveExerciseBloc>()
-                                          .add(const SkipRest()),
-                                      onFinished: () => context
-                                          .read<ActiveExerciseBloc>()
-                                          .add(const SkipRest()),
-                                    ),
-                                    ActiveExerciseStatus.done => Container(
-                                      key: const ValueKey('done'),
-                                      width: double.infinity,
-                                      decoration: GlassDecoration.card(
-                                        borderRadius: 28,
+                                      style: TextStyle(
+                                        color: palette.textPrimary,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1,
                                       ),
-                                      alignment: Alignment.center,
-                                      child: const LoadingWidget(),
                                     ),
-                                  },
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      prescriptionLabel,
+                                      style: TextStyle(
+                                        color: palette.textSecondary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (state.weightKg != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        l10n.activeExerciseLastWeight(
+                                          _formatWeight(state.weightKg!),
+                                        ),
+                                        style: TextStyle(
+                                          color: palette.textDisabled,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    LinearProgressIndicator(
+                                      value: state.totalSets == 0
+                                          ? 0
+                                          : state.completedSets /
+                                                state.totalSets,
+                                      minHeight: 8,
+                                      backgroundColor: palette.surfaceVariant,
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                            state.isDone
+                                                ? semantic.success
+                                                : typeColor,
+                                          ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      l10n.exerciseSeriesProgress(
+                                        state.completedSets,
+                                        state.totalSets,
+                                      ),
+                                      style: TextStyle(
+                                        color: palette.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              if (_hasContent(exercise.techniqueText)) ...[
+                                const SizedBox(height: 14),
+                                _DetailSection(
+                                  title: l10n.technique,
+                                  text: exercise.techniqueText!,
+                                ),
+                              ],
+                              if (_hasContent(exercise.commonErrorsText)) ...[
+                                const SizedBox(height: 14),
+                                _DetailSection(
+                                  title: l10n.commonMistakes,
+                                  text: exercise.commonErrorsText!,
+                                ),
+                              ],
+                              if (_hasContent(exercise.explanationText)) ...[
+                                const SizedBox(height: 14),
+                                _DetailSection(
+                                  title: l10n.explanation,
+                                  text: exercise.explanationText!,
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                ),
+                bottomNavigationBar: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: switch (state.status) {
+                      ActiveExerciseStatus.executing => SizedBox(
+                        key: const ValueKey('footer-executing'),
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              _onCompleteSetPressed(state, l10n),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                state.currentSet == state.totalSets
+                                ? semantic.success
+                                : typeColor,
+                            foregroundColor: palette.onPrimary,
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 18),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          child: Text(l10n.completeSetButton.toUpperCase()),
+                        ),
+                      ),
+                      ActiveExerciseStatus.resting => _RestingFooter(
+                        key: ValueKey(
+                          'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
+                        ),
+                        totalSeconds: state.restSeconds,
+                        restEndsAt: state.restEndsAt!,
+                        onSkip: () => context
+                            .read<ActiveExerciseBloc>()
+                            .add(const SkipRest()),
+                      ),
+                      ActiveExerciseStatus.done => const SizedBox(
+                        key: ValueKey('footer-done'),
+                        height: 56,
+                        child: Center(child: LoadingWidget()),
+                      ),
+                    },
                   ),
                 ),
               ),
@@ -645,160 +602,11 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
-class _ExerciseInfoSheet extends StatelessWidget {
-  final ScrollController scrollController;
-  final ExerciseEntity exercise;
-  final TrainingExerciseEntity trainingExercise;
-  final String trainingLevel;
-  final String trainingType;
-  final double? weightKg;
-
-  const _ExerciseInfoSheet({
-    required this.scrollController,
-    required this.exercise,
-    required this.trainingExercise,
-    required this.trainingLevel,
-    required this.trainingType,
-    this.weightKg,
-  });
-
-  Color _typeColor(BuildContext context) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
-    switch (trainingType.toUpperCase()) {
-      case 'FUERZA':
-        return context.trainingAccent;
-      case 'CARDIO':
-        return semantic.info;
-      case 'HIIT':
-        return semantic.accent;
-      case 'FLEXIBILIDAD':
-        return semantic.warning;
-      default:
-        return palette.textDisabled;
-    }
-  }
-
-  bool _hasContent(String? value) {
-    return value != null && value.trim().isNotEmpty;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-    final typeColor = _typeColor(context);
-    final weightLabel = weightKg == null
-        ? null
-        : l10n.activeExerciseLastWeight(
-            weightKg!.toStringAsFixed(weightKg! % 1 == 0 ? 0 : 1),
-          );
-
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
-      children: [
-        Center(
-          child: Container(
-            width: 46,
-            height: 5,
-            decoration: BoxDecoration(
-              color: palette.divider,
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          exercise.name,
-          style: TextStyle(
-            color: palette.textPrimary,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _InfoChip(
-              label: l10n.exerciseMetadata(
-                trainingExercise.sets,
-                trainingExercise.repsOrDuration,
-                trainingExercise.restSeconds,
-              ),
-              color: typeColor,
-            ),
-            _InfoChip(label: trainingLevel, color: palette.textSecondary),
-            if (weightLabel != null)
-              _InfoChip(label: weightLabel, color: palette.textSecondary),
-          ],
-        ),
-        if (_hasContent(exercise.techniqueText)) ...[
-          const SizedBox(height: 24),
-          _InfoSection(
-            title: l10n.technique,
-            text: exercise.techniqueText!,
-          ),
-        ],
-        if (_hasContent(exercise.commonErrorsText)) ...[
-          const SizedBox(height: 18),
-          _InfoSection(
-            title: l10n.commonMistakes,
-            text: exercise.commonErrorsText!,
-          ),
-        ],
-        if (_hasContent(exercise.explanationText)) ...[
-          const SizedBox(height: 18),
-          _InfoSection(
-            title: l10n.explanation,
-            text: exercise.explanationText!,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _InfoChip({
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoSection extends StatelessWidget {
+class _DetailSection extends StatelessWidget {
   final String title;
   final String text;
 
-  const _InfoSection({
-    required this.title,
-    required this.text,
-  });
+  const _DetailSection({required this.title, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -806,10 +614,7 @@ class _InfoSection extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: palette.surfaceVariant.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: GlassDecoration.card(borderRadius: 20),
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,6 +635,150 @@ class _InfoSection extends StatelessWidget {
               fontSize: 14,
               height: 1.45,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RestingFooter extends StatefulWidget {
+  final int totalSeconds;
+  final DateTime restEndsAt;
+  final VoidCallback onSkip;
+
+  const _RestingFooter({
+    super.key,
+    required this.totalSeconds,
+    required this.restEndsAt,
+    required this.onSkip,
+  });
+
+  @override
+  State<_RestingFooter> createState() => _RestingFooterState();
+}
+
+class _RestingFooterState extends State<_RestingFooter> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  int get _remainingSeconds {
+    final remainingMs =
+        widget.restEndsAt.difference(DateTime.now()).inMilliseconds;
+    if (remainingMs <= 0) return 0;
+    return (remainingMs / 1000).ceil();
+  }
+
+  double get _progressValue {
+    if (widget.totalSeconds <= 0) return 0;
+    return _remainingSeconds.clamp(0, widget.totalSeconds) /
+        widget.totalSeconds;
+  }
+
+  String _formatTime(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    if (minutes == 0) {
+      return '${seconds}s';
+    }
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final remaining = _remainingSeconds;
+
+    return Container(
+      decoration: GlassDecoration.card(borderRadius: 22),
+      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 46,
+            height: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: _progressValue,
+                    strokeWidth: 4,
+                    backgroundColor: palette.surfaceVariant,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(palette.primary),
+                  ),
+                ),
+                Text(
+                  '$remaining',
+                  style: TextStyle(
+                    color: palette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.restTimerTitle,
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatTime(remaining),
+                  style: TextStyle(
+                    color: palette.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: widget.onSkip,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: palette.primary,
+              foregroundColor: palette.onPrimary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 14,
+              ),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+            ),
+            child: Text(l10n.restTimerSkip.toUpperCase()),
           ),
         ],
       ),

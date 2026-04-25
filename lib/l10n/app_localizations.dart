@@ -2960,6 +2960,24 @@ abstract class AppLocalizations {
   /// **'Vídeo no disponible'**
   String get activeExerciseNoVideo;
 
+  /// No description provided for @startExerciseButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar ejercicio'**
+  String get startExerciseButton;
+
+  /// No description provided for @resumeExerciseButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar ejercicio'**
+  String get resumeExerciseButton;
+
+  /// No description provided for @markExercisePendingButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar como pendiente'**
+  String get markExercisePendingButton;
+
   /// No description provided for @weightInputTitle.
   ///
   /// In es, this message translates to:

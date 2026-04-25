@@ -585,6 +585,9 @@
   "activeExerciseDiscardMessage": "Hay un ejercicio activo guardado de otro entrenamiento. Si continúas, se descartará ese progreso local.",
   "activeExerciseDiscardAction": "Descartar y continuar",
   "activeExerciseNoVideo": "Vídeo no disponible",
+  "startExerciseButton": "Empezar ejercicio",
+  "resumeExerciseButton": "Continuar ejercicio",
+  "markExercisePendingButton": "Marcar como pendiente",
 
   "weightInputTitle": "¿Peso utilizado?",
   "weightInputHint": "ej. 20 (opcional)",

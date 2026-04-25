@@ -550,6 +550,9 @@
   "activeExerciseDiscardMessage": "There is saved progress from another workout. If you continue, that local progress will be discarded.",
   "activeExerciseDiscardAction": "Discard and continue",
   "activeExerciseNoVideo": "Video unavailable",
+  "startExerciseButton": "Start exercise",
+  "resumeExerciseButton": "Resume exercise",
+  "markExercisePendingButton": "Mark as pending",
 
   "weightInputTitle": "Weight used?",
   "weightInputHint": "e.g. 20 (optional)",

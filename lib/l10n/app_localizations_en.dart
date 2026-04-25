@@ -1567,6 +1567,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeExerciseNoVideo => 'Video unavailable';
 
   @override
+  String get startExerciseButton => 'Start exercise';
+
+  @override
+  String get resumeExerciseButton => 'Resume exercise';
+
+  @override
+  String get markExercisePendingButton => 'Mark as pending';
+
+  @override
   String get weightInputTitle => 'Weight used?';
 
   @override

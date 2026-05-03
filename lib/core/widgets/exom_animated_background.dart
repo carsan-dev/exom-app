@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -79,6 +80,13 @@ class _ExomAnimatedBackgroundState extends State<ExomAnimatedBackground>
 
   @override
   Widget build(BuildContext context) {
+    if (PerformanceProfile.prefersReducedEffects(context)) {
+      return ExomStaticBackground(
+        intensity: widget.intensity,
+        child: widget.child,
+      );
+    }
+
     final palette = context.exomPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final intensity = widget.intensity.clamp(0.25, 1.25).toDouble();

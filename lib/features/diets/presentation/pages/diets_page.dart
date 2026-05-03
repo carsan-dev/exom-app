@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -280,7 +281,7 @@ class _DietContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final diet = state.diet;
-    final meals = diet.meals;
+    final meals = _sortedMeals(diet.meals);
     final completedCount = state.completedMealIds.length;
 
     return RefreshIndicator(
@@ -289,31 +290,35 @@ class _DietContent extends StatelessWidget {
       onRefresh: () async {
         context.read<DietBloc>().add(DietLoadRequested(date: selectedDate));
       },
-      child: ListView(
+      child: ListView.builder(
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
+        cacheExtent: PerformanceProfile.scrollCacheExtent(context),
         padding: const EdgeInsets.only(bottom: 32),
-        children: [
-          _DietHeader(
-            diet: diet,
-            completedCount: completedCount,
-            dateLabel: dateLabel,
-          ),
-          const _MealsSectionTitle(),
-          ..._sortedMeals(meals).map(
-            (meal) => _MealCard(
-              meal: meal,
-              isCompleted: state.completedMealIds.contains(meal.id),
-              selectedDate: selectedDate,
-              onToggle: (val) {
-                context.read<DietBloc>().add(
-                  MarkMealCompleted(mealId: meal.id, completed: val),
-                );
-              },
-            ),
-          ),
-        ],
+        itemCount: meals.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _DietHeader(
+              diet: diet,
+              completedCount: completedCount,
+              dateLabel: dateLabel,
+            );
+          }
+          if (index == 1) return const _MealsSectionTitle();
+
+          final meal = meals[index - 2];
+          return _MealCard(
+            meal: meal,
+            isCompleted: state.completedMealIds.contains(meal.id),
+            selectedDate: selectedDate,
+            onToggle: (val) {
+              context.read<DietBloc>().add(
+                MarkMealCompleted(mealId: meal.id, completed: val),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -613,6 +618,10 @@ class _MealCard extends StatelessWidget {
                       width: 70,
                       height: 70,
                       fit: BoxFit.cover,
+                      memCacheWidth: PerformanceProfile.imageCacheWidth(
+                        context,
+                        70,
+                      ),
                       placeholder: (context, url) => _MealIconFallback(
                         icon: _mealIcon(meal.type),
                         color: color,

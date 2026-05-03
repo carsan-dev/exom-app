@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
@@ -27,55 +28,57 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.headerGlass
-                : AppColors.headerGlassLightTheme,
-            border: Border(
-              bottom: BorderSide(
-                color: palette.glassBorder.withValues(
-                  alpha: isDark ? 0.15 : 0.10,
-                ),
-                width: 0.5,
-              ),
-            ),
+    final blurSigma = PerformanceProfile.blurSigma(context, 20);
+    final content = Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.headerGlass : AppColors.headerGlassLightTheme,
+        border: Border(
+          bottom: BorderSide(
+            color: palette.glassBorder.withValues(alpha: isDark ? 0.15 : 0.10),
+            width: 0.5,
           ),
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: height,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    ?leading,
-                    if (leading != null) const SizedBox(width: 12),
-                    if (title != null)
-                      Expanded(
-                        child: DefaultTextStyle(
-                          style: TextStyle(
-                            color: palette.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: title!,
-                          ),
-                        ),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                ?leading,
+                if (leading != null) const SizedBox(width: 12),
+                if (title != null)
+                  Expanded(
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        color: palette.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
-                    if (actions != null) ...actions!,
-                  ],
-                ),
-              ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: title!,
+                      ),
+                    ),
+                  ),
+                if (actions != null) ...actions!,
+              ],
             ),
           ),
         ),
+      ),
+    );
+
+    if (blurSigma == 0) {
+      return content;
+    }
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: content,
       ),
     );
   }

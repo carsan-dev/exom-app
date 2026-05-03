@@ -27,6 +27,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _configureImageCache();
   runApp(const ExomBootstrapApp());
 
   try {
@@ -39,6 +40,12 @@ Future<void> main() async {
     debugPrintStack(stackTrace: stackTrace);
     runApp(ExomBootstrapErrorApp(error: error.toString()));
   }
+}
+
+void _configureImageCache() {
+  final imageCache = PaintingBinding.instance.imageCache;
+  imageCache.maximumSize = 120;
+  imageCache.maximumSizeBytes = 80 << 20;
 }
 
 Future<void> _bootstrap() async {

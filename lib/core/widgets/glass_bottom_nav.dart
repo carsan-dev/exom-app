@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 
@@ -79,12 +80,16 @@ class GlassBottomNav extends StatelessWidget {
     final inactiveColor = palette.textDisabled;
     final bottomInset = platformBottomInset(context);
     final horizontalInset = horizontalContentInset(context);
+    final blurSigma = PerformanceProfile.blurSigma(context, 25);
 
     return SizedBox(
       height: reservedHeight(context),
       child: TweenAnimationBuilder<double>(
         tween: Tween(end: targetX),
-        duration: const Duration(milliseconds: 300),
+        duration: PerformanceProfile.animationDuration(
+          context,
+          const Duration(milliseconds: 300),
+        ),
         curve: Curves.easeInOut,
         builder: (context, centerX, _) {
           return Stack(
@@ -97,12 +102,17 @@ class GlassBottomNav extends StatelessWidget {
                 right: 0,
                 bottom: 0,
                 height: totalHeight + bottomInset,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                    child: Container(decoration: GlassDecoration.navBar()),
-                  ),
-                ),
+                child: blurSigma == 0
+                    ? Container(decoration: GlassDecoration.navBar())
+                    : ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(
+                            sigmaX: blurSigma,
+                            sigmaY: blurSigma,
+                          ),
+                          child: Container(decoration: GlassDecoration.navBar()),
+                        ),
+                      ),
               ),
 
               // Green circle with glow

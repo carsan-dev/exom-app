@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -903,6 +904,10 @@ class _ExerciseCard extends StatelessWidget {
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
+                      memCacheWidth: PerformanceProfile.imageCacheWidth(
+                        context,
+                        60,
+                      ),
                       placeholder: (context, imageUrl) =>
                           _ExercisePlaceholder(),
                       errorWidget: (context, imageUrl, error) =>
@@ -1348,6 +1353,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
                           ? CachedNetworkImage(
                               imageUrl: thumbnailUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth:
+                                  PerformanceProfile.imageCacheWidth(
+                                context,
+                                MediaQuery.sizeOf(context).width,
+                              ),
                               placeholder: (context, imageUrl) =>
                                   Container(color: palette.surfaceVariant),
                               errorWidget: (context, imageUrl, error) =>

@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -16,17 +15,13 @@ import 'package:exom_app/features/home/presentation/widgets/stats_row.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
-import 'package:exom_app/injection_container.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<HomeBloc>()..add(const HomeLoadRequested()),
-      child: const _HomeView(),
-    );
+    return const _HomeView();
   }
 }
 
@@ -603,6 +598,10 @@ class _HomeHeroAccent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = context.exomPalette;
+    final primary = palette.primary.withValues(alpha: isDark ? 0.16 : 0.12);
+    final warm = (isDark ? const Color(0xFF7A3B19) : const Color(0xFFC4AD96))
+        .withValues(alpha: isDark ? 0.18 : 0.20);
 
     return IgnorePointer(
       child: Transform.translate(
@@ -622,10 +621,19 @@ class _HomeHeroAccent extends StatelessWidget {
             blendMode: BlendMode.dstIn,
             child: Opacity(
               opacity: isDark ? 0.82 : 0.68,
-              child: ExomAnimatedBackground(
-                intensity: isDark ? 0.5 : 0.42,
-                showBase: false,
-                showVeil: false,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: const Alignment(-0.9, -1),
+                    end: const Alignment(0.8, 1),
+                    colors: [
+                      warm,
+                      primary,
+                      palette.background.withValues(alpha: 0),
+                    ],
+                    stops: const [0.0, 0.46, 1.0],
+                  ),
+                ),
                 child: const SizedBox.expand(),
               ),
             ),

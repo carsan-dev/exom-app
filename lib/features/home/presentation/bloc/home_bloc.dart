@@ -32,7 +32,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   Future<void> _loadForDate(DateTime date, Emitter<HomeState> emit) async {
-    emit(const HomeLoading());
+    final previousState = state;
+    final hasContent =
+        previousState is HomeLoaded || previousState is HomeRestDay;
+    if (!hasContent) {
+      emit(const HomeLoading());
+    }
+
     try {
       final summary = await _getHomeSummaryUseCase(date: date);
       final normalizedDate = DateTime(date.year, date.month, date.day);
@@ -42,7 +48,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         emit(HomeLoaded(summary, selectedDate: normalizedDate));
       }
     } catch (e) {
-      emit(HomeError(e.toString()));
+      if (!hasContent) {
+        emit(HomeError(e.toString()));
+      }
     }
   }
 }

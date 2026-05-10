@@ -27,6 +27,7 @@ import '../../features/auth/presentation/bloc/auth_state.dart';
 
 // Home pages
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/home/presentation/bloc/home_bloc.dart';
 
 // Training pages
 import '../../features/trainings/presentation/pages/trainings_page.dart';
@@ -132,7 +133,8 @@ class AppRouter {
       if (loc == AppRoutes.splash) return null;
 
       final user = FirebaseAuth.instance.currentUser;
-      final isAuthRoute = loc == AppRoutes.login ||
+      final isAuthRoute =
+          loc == AppRoutes.login ||
           loc == AppRoutes.forgotPassword ||
           loc == AppRoutes.accountLocked;
       final isCompletingAuth = _isCompletingAuth(context);
@@ -218,21 +220,8 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (context, state) => CustomTransitionPage(
-              key: state.pageKey,
-              child: const HomePage(),
-              transitionDuration: const Duration(milliseconds: 420),
-              reverseTransitionDuration: const Duration(milliseconds: 240),
-              transitionsBuilder: (ctx, animation, secondary, child) {
-                return FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                  child: child,
-                );
-              },
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
           ),
           GoRoute(
             path: AppRoutes.trainings,
@@ -415,23 +404,24 @@ class _MainShellState extends State<MainShell> {
   bool _showTutorial = false;
   bool _tutorialChecked = false;
   late final NotificationsBloc _notificationsBloc;
+  late final HomeBloc _homeBloc;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   @override
   void initState() {
     super.initState();
+    _homeBloc = sl<HomeBloc>()..add(const HomeLoadRequested());
     _notificationsBloc = sl<NotificationsBloc>()
       ..add(const NotificationsUnreadCountRefreshRequested());
     _fcmSubscription = sl<FcmService>().onIncomingMessage.listen((_) {
-      _notificationsBloc.add(
-        const NotificationsUnreadCountRefreshRequested(),
-      );
+      _notificationsBloc.add(const NotificationsUnreadCountRefreshRequested());
     });
   }
 
   @override
   void dispose() {
     _fcmSubscription?.cancel();
+    _homeBloc.close();
     super.dispose();
   }
 
@@ -532,136 +522,148 @@ class _MainShellState extends State<MainShell> {
     final bottomInset = GlassBottomNav.reservedHeight(context);
 
     // Scaffold wrapped in Stack so overlay renders ABOVE drawer
-    return BlocProvider<NotificationsBloc>.value(
-      value: _notificationsBloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<HomeBloc>.value(value: _homeBloc),
+        BlocProvider<NotificationsBloc>.value(value: _notificationsBloc),
+      ],
       child: Stack(
-      children: [
-        Scaffold(
-          key: _scaffoldKey,
-          backgroundColor: Colors.transparent,
-          extendBodyBehindAppBar: true,
-          extendBody: true,
-          appBar: GlassAppBar(
-            title: SvgPicture.asset(_brandLogo(context), height: 28),
-            actions: [
-              BlocBuilder<NotificationsBloc, NotificationsState>(
-                builder: (context, state) {
-                  final unread = state.unreadCount;
-                  return IconButton(
-                    onPressed: () async {
-                      await context.push(AppRoutes.notifications);
-                      if (!mounted) return;
-                      _notificationsBloc.add(
-                        const NotificationsUnreadCountRefreshRequested(),
-                      );
-                    },
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: palette.glassBackground,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: palette.glassBorder.withValues(alpha: 0.15),
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.notifications_outlined,
-                            color: palette.textPrimary,
-                            size: 18,
-                          ),
-                        ),
-                        if (unread > 0)
-                          Positioned(
-                            right: -2,
-                            top: -2,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                color: palette.primary,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: palette.glassBackground,
-                                  width: 1.5,
+        children: [
+          Scaffold(
+            key: _scaffoldKey,
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
+            extendBody: true,
+            appBar: GlassAppBar(
+              title: SvgPicture.asset(_brandLogo(context), height: 28),
+              actions: [
+                BlocBuilder<NotificationsBloc, NotificationsState>(
+                  builder: (context, state) {
+                    final unread = state.unreadCount;
+                    return IconButton(
+                      onPressed: () async {
+                        await context.push(AppRoutes.notifications);
+                        if (!mounted) return;
+                        _notificationsBloc.add(
+                          const NotificationsUnreadCountRefreshRequested(),
+                        );
+                      },
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: palette.glassBackground,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: palette.glassBorder.withValues(
+                                  alpha: 0.15,
                                 ),
-                              ),
-                              child: Text(
-                                unread > 99 ? '99+' : '$unread',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.2,
-                                ),
+                                width: 0.5,
                               ),
                             ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: palette.textPrimary,
+                              size: 18,
+                            ),
                           ),
-                      ],
+                          if (unread > 0)
+                            Positioned(
+                              right: -2,
+                              top: -2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: palette.glassBackground,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  onPressed: () => context.push(AppRoutes.profile),
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: palette.glassBackground,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: palette.glassBorder.withValues(alpha: 0.15),
+                        width: 0.5,
+                      ),
                     ),
-                  );
-                },
-              ),
-              IconButton(
-                onPressed: () => context.push(AppRoutes.profile),
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: palette.glassBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: palette.glassBorder.withValues(alpha: 0.15),
-                      width: 0.5,
+                    child: Icon(
+                      Icons.person_outline,
+                      color: palette.textPrimary,
+                      size: 18,
                     ),
                   ),
-                  child: Icon(
-                    Icons.person_outline,
-                    color: palette.textPrimary,
-                    size: 18,
+                ),
+                Builder(
+                  builder: (ctx) => IconButton(
+                    onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                    icon: Icon(
+                      Icons.menu,
+                      color: palette.textPrimary,
+                      size: 26,
+                    ),
                   ),
                 ),
+              ],
+            ),
+            endDrawer: _AppDrawer(drawerItemKeys: _drawerItemKeys),
+            body: ExomStaticBackground(
+              child: Padding(
+                padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
+                child: SizedBox.expand(child: widget.child),
               ),
-              Builder(
-                builder: (ctx) => IconButton(
-                  onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                  icon: Icon(Icons.menu, color: palette.textPrimary, size: 26),
-                ),
-              ),
-            ],
-          ),
-          endDrawer: _AppDrawer(drawerItemKeys: _drawerItemKeys),
-          body: ExomStaticBackground(
-            child: Padding(
-              padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
-              child: SizedBox.expand(child: widget.child),
+            ),
+            bottomNavigationBar: GlassBottomNav(
+              selectedIndex: selected,
+              onTap: (i) => context.go(MainShell._tabs[i]),
             ),
           ),
-          bottomNavigationBar: GlassBottomNav(
-            selectedIndex: selected,
-            onTap: (i) => context.go(MainShell._tabs[i]),
-          ),
-        ),
-        if (_showPrompt)
-          TutorialPromptDialog(onStart: _startTutorial, onSkip: _skipTutorial),
-        if (_showTutorial)
-          TutorialOverlay(
-            onNavigate: (route) => context.go(route),
-            onOpenDrawer: _onTutorialOpenDrawer,
-            onCloseDrawer: _onTutorialCloseDrawer,
-            onComplete: _completeTutorial,
-            drawerItemKeys: _drawerItemKeys,
-          ),
-      ],
+          if (_showPrompt)
+            TutorialPromptDialog(
+              onStart: _startTutorial,
+              onSkip: _skipTutorial,
+            ),
+          if (_showTutorial)
+            TutorialOverlay(
+              onNavigate: (route) => context.go(route),
+              onOpenDrawer: _onTutorialOpenDrawer,
+              onCloseDrawer: _onTutorialCloseDrawer,
+              onComplete: _completeTutorial,
+              drawerItemKeys: _drawerItemKeys,
+            ),
+        ],
       ),
     );
   }

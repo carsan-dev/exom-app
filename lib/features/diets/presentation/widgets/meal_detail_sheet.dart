@@ -854,6 +854,23 @@ class _IngredientsSection extends StatelessWidget {
     }
   }
 
+  String _ingredientAmountLabel(MealIngredientEntity ingredient) {
+    final unit = _unitLabel(ingredient.unit);
+
+    if (ingredient.unit == 'to_taste') {
+      return unit;
+    }
+
+    final base = '${_formatQuantity(ingredient.quantity)} $unit';
+    final grams = ingredient.gramsEquivalent;
+
+    if (ingredient.unit == 'g' || grams == null || grams <= 0) {
+      return base;
+    }
+
+    return '$base (${_formatQuantity(grams)} g)';
+  }
+
   IconData _fallbackIcon(String ingredientName) {
     final normalized = ingredientName.toLowerCase();
 
@@ -950,9 +967,7 @@ class _IngredientsSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  ingredient.unit == 'to_taste'
-                      ? _unitLabel(ingredient.unit)
-                      : '${_formatQuantity(ingredient.quantity)} ${_unitLabel(ingredient.unit)}',
+                  _ingredientAmountLabel(ingredient),
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: 13,

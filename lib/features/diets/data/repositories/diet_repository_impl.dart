@@ -65,6 +65,7 @@ class DietRepositoryImpl implements DietRepository {
               name: i.name,
               quantity: i.quantity,
               unit: i.unit,
+              gramsEquivalent: i.gramsEquivalent,
               icon: i.icon,
             ),
           )

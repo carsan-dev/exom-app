@@ -2,12 +2,14 @@ class MealIngredientEntity {
   final String name;
   final double quantity;
   final String unit;
+  final double? gramsEquivalent;
   final String? icon;
 
   const MealIngredientEntity({
     required this.name,
     required this.quantity,
     required this.unit,
+    this.gramsEquivalent,
     this.icon,
   });
 }

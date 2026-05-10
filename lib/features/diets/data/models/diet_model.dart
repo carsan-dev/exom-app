@@ -2,12 +2,14 @@ class MealIngredientModel {
   final String name;
   final double quantity;
   final String unit;
+  final double? gramsEquivalent;
   final String? icon;
 
   const MealIngredientModel({
     required this.name,
     required this.quantity,
     required this.unit,
+    this.gramsEquivalent,
     this.icon,
   });
 
@@ -18,6 +20,7 @@ class MealIngredientModel {
       name: ingredient?['name'] as String? ?? json['name'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       unit: json['unit'] as String? ?? '',
+      gramsEquivalent: (json['grams_equivalent'] as num?)?.toDouble(),
       icon: ingredient?['icon'] as String? ?? json['icon'] as String?,
     );
   }

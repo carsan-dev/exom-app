@@ -34,6 +34,7 @@ class MealModel {
   final double? fatG;
   final List<String> nutritionalBadges;
   final List<MealIngredientModel> ingredients;
+  final List<MealModel> variants;
 
   const MealModel({
     required this.id,
@@ -46,6 +47,7 @@ class MealModel {
     this.fatG,
     required this.nutritionalBadges,
     required this.ingredients,
+    required this.variants,
   });
 
   factory MealModel.fromJson(Map<String, dynamic> json) {
@@ -68,6 +70,11 @@ class MealModel {
               ?.map(
                 (e) => MealIngredientModel.fromJson(e as Map<String, dynamic>),
               )
+              .toList() ??
+          [],
+      variants:
+          (json['variants'] as List<dynamic>?)
+              ?.map((e) => MealModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
     );

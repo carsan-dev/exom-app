@@ -45,22 +45,26 @@ class DietNoContent extends DietState {
 class MealDetailLoaded extends DietState {
   final MealEntity meal;
   final bool isCompleted;
+  final Set<String> completedMealIds;
   final String selectedDate;
 
   const MealDetailLoaded(
     this.meal, {
     this.isCompleted = false,
+    this.completedMealIds = const {},
     required this.selectedDate,
   });
 
   MealDetailLoaded copyWith({
     MealEntity? meal,
     bool? isCompleted,
+    Set<String>? completedMealIds,
     String? selectedDate,
   }) {
     return MealDetailLoaded(
       meal ?? this.meal,
       isCompleted: isCompleted ?? this.isCompleted,
+      completedMealIds: completedMealIds ?? this.completedMealIds,
       selectedDate: selectedDate ?? this.selectedDate,
     );
   }

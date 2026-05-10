@@ -308,13 +308,15 @@ class _DietContent extends StatelessWidget {
           if (index == 1) return const _MealsSectionTitle();
 
           final meal = meals[index - 2];
+          final completedMealId = _completedMealId(meal, state.completedMealIds);
           return _MealCard(
             meal: meal,
-            isCompleted: state.completedMealIds.contains(meal.id),
+            isCompleted: completedMealId != null,
             selectedDate: selectedDate,
-            onToggle: (val) {
+            completedMealId: completedMealId,
+            onToggle: (val, mealId) {
               context.read<DietBloc>().add(
-                MarkMealCompleted(mealId: meal.id, completed: val),
+                MarkMealCompleted(mealId: mealId, completed: val),
               );
             },
           );
@@ -332,6 +334,13 @@ class _DietContent extends StatelessWidget {
       return (ai == -1 ? 99 : ai).compareTo(bi == -1 ? 99 : bi);
     });
     return sorted;
+  }
+
+  String? _completedMealId(MealEntity meal, Set<String> completedMealIds) {
+    for (final mealId in [meal.id, ...meal.variants.map((variant) => variant.id)]) {
+      if (completedMealIds.contains(mealId)) return mealId;
+    }
+    return null;
   }
 }
 
@@ -520,13 +529,15 @@ class _MealCard extends StatelessWidget {
     required this.meal,
     required this.isCompleted,
     required this.selectedDate,
+    required this.completedMealId,
     required this.onToggle,
   });
 
   final MealEntity meal;
   final bool isCompleted;
   final String? selectedDate;
-  final ValueChanged<bool> onToggle;
+  final String? completedMealId;
+  final void Function(bool completed, String mealId) onToggle;
 
   IconData _mealIcon(String type) {
     switch (type.toUpperCase()) {
@@ -750,11 +761,34 @@ class _MealCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                  if (meal.nutritionalBadges.isNotEmpty) ...[
+                  if (meal.nutritionalBadges.isNotEmpty || meal.variants.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Wrap(
                       spacing: 4,
-                      children: meal.nutritionalBadges.take(3).map((b) {
+                      children: [
+                        if (meal.variants.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.18),
+                              ),
+                            ),
+                            child: Text(
+                              '${meal.variants.length + 1} opciones',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: color,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ...meal.nutritionalBadges.take(3).map((b) {
                         return Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -777,7 +811,8 @@ class _MealCard extends StatelessWidget {
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
+                      ],
                     ),
                   ],
                 ],
@@ -790,7 +825,10 @@ class _MealCard extends StatelessWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => onToggle(!isCompleted),
+                    onTap: () => onToggle(
+                      !isCompleted,
+                      isCompleted ? completedMealId ?? meal.id : meal.id,
+                    ),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

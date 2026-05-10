@@ -227,7 +227,7 @@ class _MealDetailError extends StatelessWidget {
   }
 }
 
-class _MealSheetBody extends StatelessWidget {
+class _MealSheetBody extends StatefulWidget {
   const _MealSheetBody({
     required this.meal,
     required this.isCompleted,
@@ -238,9 +238,26 @@ class _MealSheetBody extends StatelessWidget {
   final bool isCompleted;
   final ScrollController scrollController;
 
+  @override
+  State<_MealSheetBody> createState() => _MealSheetBodyState();
+}
+
+class _MealSheetBodyState extends State<_MealSheetBody> {
+  late MealEntity _selectedMeal = widget.meal;
+  bool _selectionTouched = false;
+
+  @override
+  void didUpdateWidget(covariant _MealSheetBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.meal.id != widget.meal.id) {
+      _selectedMeal = widget.meal;
+      _selectionTouched = false;
+    }
+  }
+
   Future<void> _launchRecipe(BuildContext context) async {
     final url = Uri.https('www.google.com', '/search', {
-      'q': '${meal.name} receta',
+      'q': '${_selectedMeal.name} receta',
     });
 
     final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -264,37 +281,40 @@ class _MealSheetBody extends StatelessWidget {
     final semantic = context.exomSemantic;
     final items = <_MacroChipData>[];
 
-    if (meal.calories != null) {
+    if (_selectedMeal.calories != null) {
       items.add(
-        _MacroChipData(label: '${meal.calories} kcal', color: semantic.calorie),
+        _MacroChipData(
+          label: '${_selectedMeal.calories} kcal',
+          color: semantic.calorie,
+        ),
       );
     }
 
-    if (meal.proteinG != null) {
+    if (_selectedMeal.proteinG != null) {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.proteinLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.proteinG!)} g',
+              '${l10n.proteinLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.proteinG!)} g',
           color: semantic.accent,
         ),
       );
     }
 
-    if (meal.carbsG != null) {
+    if (_selectedMeal.carbsG != null) {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.carbsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.carbsG!)} g',
+              '${l10n.carbsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.carbsG!)} g',
           color: semantic.warning,
         ),
       );
     }
 
-    if (meal.fatG != null) {
+    if (_selectedMeal.fatG != null) {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.fatsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(meal.fatG!)} g',
+              '${l10n.fatsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.fatG!)} g',
           color: palette.primary,
         ),
       );
@@ -326,29 +346,42 @@ class _MealSheetBody extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final dietState = context.watch<DietBloc>().state;
     final macroChips = _buildMacroChips(context);
-    final badges = meal.nutritionalBadges
+    final badges = _selectedMeal.nutritionalBadges
         .map((badge) => badge.trim())
         .where((badge) => badge.isNotEmpty)
         .toList();
-    final resolvedCompleted = dietState is MealDetailLoaded
-        ? dietState.isCompleted
-        : isCompleted;
+    final mealOptions = [widget.meal, ...widget.meal.variants];
+    final completedMealIds = dietState is MealDetailLoaded
+        ? dietState.completedMealIds
+        : widget.isCompleted
+            ? {widget.meal.id}
+            : <String>{};
+    if (!_selectionTouched &&
+        !completedMealIds.contains(_selectedMeal.id)) {
+      for (final option in mealOptions) {
+        if (completedMealIds.contains(option.id)) {
+          _selectedMeal = option;
+          break;
+        }
+      }
+    }
+    final resolvedCompleted = completedMealIds.contains(_selectedMeal.id);
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return ListView(
-      controller: scrollController,
+      controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + bottomInset),
       children: [
         _SheetTopBar(handleColor: context.dietAccent),
         const SizedBox(height: 8),
         Hero(
-          tag: 'meal-${meal.id}-title',
+          tag: 'meal-${widget.meal.id}-title',
           flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
             return Material(
               color: Colors.transparent,
               child: Text(
-                meal.name,
+                _selectedMeal.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -363,7 +396,7 @@ class _MealSheetBody extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: Text(
-              meal.name,
+              _selectedMeal.name,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: palette.textPrimary,
                 fontSize: 22,
@@ -401,15 +434,26 @@ class _MealSheetBody extends StatelessWidget {
         ],
         const SizedBox(height: 14),
         Divider(color: palette.divider, height: 1),
+        if (mealOptions.length > 1) ...[
+          const SizedBox(height: 16),
+          _VariantSelector(
+            meals: mealOptions,
+            selectedMealId: _selectedMeal.id,
+            onChanged: (meal) => setState(() {
+              _selectionTouched = true;
+              _selectedMeal = meal;
+            }),
+          ),
+        ],
         const SizedBox(height: 16),
-        _MealHeroImage(meal: meal),
+        _MealHeroImage(meal: _selectedMeal),
         if (macroChips.isNotEmpty) ...[
           const SizedBox(height: 14),
           _MacroChipsRow(items: macroChips),
         ],
-        if (meal.ingredients.isNotEmpty) ...[
+        if (_selectedMeal.ingredients.isNotEmpty) ...[
           const SizedBox(height: 24),
-          _IngredientsSection(ingredients: meal.ingredients),
+          _IngredientsSection(ingredients: _selectedMeal.ingredients),
         ],
         const SizedBox(height: 28),
         Row(
@@ -419,7 +463,7 @@ class _MealSheetBody extends StatelessWidget {
                 onPressed: () {
                   context.read<DietBloc>().add(
                     MarkMealCompleted(
-                      mealId: meal.id,
+                      mealId: _selectedMeal.id,
                       completed: !resolvedCompleted,
                     ),
                   );
@@ -464,6 +508,85 @@ class _MealSheetBody extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+class _VariantSelector extends StatelessWidget {
+  const _VariantSelector({
+    required this.meals,
+    required this.selectedMealId,
+    required this.onChanged,
+  });
+
+  final List<MealEntity> meals;
+  final String selectedMealId;
+  final ValueChanged<MealEntity> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final selected = meals.firstWhere(
+      (meal) => meal.id == selectedMealId,
+      orElse: () => meals.first,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Elige una opción',
+          style: TextStyle(
+            color: palette.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          key: ValueKey(selected.id),
+          initialValue: selected.id,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: palette.surfaceVariant.withValues(alpha: 0.6),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: palette.divider),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: palette.divider),
+            ),
+          ),
+          dropdownColor: palette.surface,
+          iconEnabledColor: palette.textSecondary,
+          style: TextStyle(
+            color: palette.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          items: meals
+              .map(
+                (meal) => DropdownMenuItem<String>(
+                  value: meal.id,
+                  child: Text(
+                    meal.id == meals.first.id ? '${meal.name} (principal)' : meal.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            final next = meals.firstWhere((meal) => meal.id == value);
+            onChanged(next);
+          },
         ),
       ],
     );
@@ -702,6 +825,35 @@ class _IngredientsSection extends StatelessWidget {
         .replaceFirst(RegExp(r'\.$'), '');
   }
 
+  String _unitLabel(String unit) {
+    switch (unit) {
+      case 'g':
+        return 'g';
+      case 'ml':
+        return 'ml';
+      case 'piece':
+        return 'unidad';
+      case 'tablespoon':
+        return 'cucharada';
+      case 'teaspoon':
+        return 'cucharadita';
+      case 'handful':
+        return 'puñado';
+      case 'glass':
+        return 'vaso';
+      case 'cup':
+        return 'taza';
+      case 'pinch':
+        return 'pizca';
+      case 'serving':
+        return 'ración';
+      case 'to_taste':
+        return 'al gusto';
+      default:
+        return unit;
+    }
+  }
+
   IconData _fallbackIcon(String ingredientName) {
     final normalized = ingredientName.toLowerCase();
 
@@ -798,7 +950,9 @@ class _IngredientsSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${_formatQuantity(ingredient.quantity)} ${ingredient.unit}',
+                  ingredient.unit == 'to_taste'
+                      ? _unitLabel(ingredient.unit)
+                      : '${_formatQuantity(ingredient.quantity)} ${_unitLabel(ingredient.unit)}',
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: 13,

@@ -23,6 +23,7 @@ class MealEntity {
   final double? fatG;
   final List<String> nutritionalBadges;
   final List<MealIngredientEntity> ingredients;
+  final List<MealEntity> variants;
 
   const MealEntity({
     required this.id,
@@ -35,6 +36,7 @@ class MealEntity {
     this.fatG,
     required this.nutritionalBadges,
     required this.ingredients,
+    required this.variants,
   });
 }
 

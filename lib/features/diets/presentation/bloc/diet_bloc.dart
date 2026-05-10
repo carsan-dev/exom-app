@@ -40,6 +40,31 @@ class DietBloc extends Bloc<DietEvent, DietState> {
 
   String _resolvedDate(String? date) => date ?? _todayDate();
 
+  Set<String> _mealGroupIds(MealEntity meal) {
+    return {meal.id, ...meal.variants.map((variant) => variant.id)};
+  }
+
+  Set<String> _completedMealsForToggle({
+    required Set<String> currentIds,
+    required String mealId,
+    required bool completed,
+    required Iterable<MealEntity> meals,
+  }) {
+    final updated = Set<String>.from(currentIds);
+    final group = meals
+        .map(_mealGroupIds)
+        .firstWhere((ids) => ids.contains(mealId), orElse: () => {mealId});
+
+    if (completed) {
+      updated.removeAll(group);
+      updated.add(mealId);
+    } else {
+      updated.remove(mealId);
+    }
+
+    return updated;
+  }
+
   Future<void> _onDietLoad(
     DietLoadRequested event,
     Emitter<DietState> emit,
@@ -85,6 +110,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
         MealDetailLoaded(
           meal,
           isCompleted: completedMealIds.contains(event.mealId),
+          completedMealIds: completedMealIds,
           selectedDate: targetDate,
         ),
       );
@@ -102,12 +128,12 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     if (current is DietLoaded) {
       final date = current.selectedDate;
       final previous = Set<String>.from(current.completedMealIds);
-      final updated = Set<String>.from(current.completedMealIds);
-      if (event.completed) {
-        updated.add(event.mealId);
-      } else {
-        updated.remove(event.mealId);
-      }
+      final updated = _completedMealsForToggle(
+        currentIds: current.completedMealIds,
+        mealId: event.mealId,
+        completed: event.completed,
+        meals: current.diet.meals,
+      );
       emit(current.copyWith(completedMealIds: updated));
 
       try {
@@ -125,7 +151,19 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     if (current is MealDetailLoaded) {
       final date = current.selectedDate;
       final previous = current.isCompleted;
-      emit(current.copyWith(isCompleted: event.completed));
+      final previousCompletedIds = Set<String>.from(current.completedMealIds);
+      final updatedCompletedIds = _completedMealsForToggle(
+        currentIds: current.completedMealIds,
+        mealId: event.mealId,
+        completed: event.completed,
+        meals: [current.meal],
+      );
+      emit(
+        current.copyWith(
+          isCompleted: event.completed,
+          completedMealIds: updatedCompletedIds,
+        ),
+      );
 
       try {
         if (event.completed) {
@@ -134,7 +172,12 @@ class DietBloc extends Bloc<DietEvent, DietState> {
           await _unmarkMealCompletedUseCase(event.mealId, date);
         }
       } catch (_) {
-        emit(current.copyWith(isCompleted: previous));
+        emit(
+          current.copyWith(
+            isCompleted: previous,
+            completedMealIds: previousCompletedIds,
+          ),
+        );
       }
     }
   }

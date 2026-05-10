@@ -69,6 +69,7 @@ class DietRepositoryImpl implements DietRepository {
             ),
           )
           .toList(),
+      variants: model.variants.map(_mapMealToEntity).toList(),
     );
   }
 }

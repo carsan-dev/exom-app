@@ -233,7 +233,7 @@ class HelpPage extends StatelessWidget {
                   _HelpLinkTile(
                     icon: Icons.code,
                     title: l10n.developer,
-                    subtitle: 'Carlos Sanchez Roman Â· github.com/carsan-dev',
+                    subtitle: 'Carlos Sanchez Roman · github.com/carsan-dev',
                     onTap: () => _openExternalLink(
                       context,
                       ExternalLinks.developerGithub,

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -599,15 +600,12 @@ class _HomeHeroAccent extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = context.exomPalette;
-    final primary = palette.primary.withValues(alpha: isDark ? 0.16 : 0.12);
-    final warm = (isDark ? const Color(0xFF7A3B19) : const Color(0xFFC4AD96))
-        .withValues(alpha: isDark ? 0.18 : 0.20);
 
     return IgnorePointer(
       child: Transform.translate(
         offset: const Offset(0, -48),
         child: SizedBox(
-          height: isDark ? 420 : 380,
+          height: isDark ? 440 : 400,
           width: double.infinity,
           child: ShaderMask(
             shaderCallback: (bounds) {
@@ -615,24 +613,16 @@ class _HomeHeroAccent extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [Colors.white, Colors.white, Colors.transparent],
-                stops: [0, 0.72, 1],
+                stops: [0, 0.66, 1],
               ).createShader(bounds);
             },
             blendMode: BlendMode.dstIn,
             child: Opacity(
-              opacity: isDark ? 0.82 : 0.68,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: const Alignment(-0.9, -1),
-                    end: const Alignment(0.8, 1),
-                    colors: [
-                      warm,
-                      primary,
-                      palette.background.withValues(alpha: 0),
-                    ],
-                    stops: const [0.0, 0.46, 1.0],
-                  ),
+              opacity: isDark ? 0.86 : 0.72,
+              child: CustomPaint(
+                painter: _HomeHeroAccentPainter(
+                  palette: palette,
+                  isDark: isDark,
                 ),
                 child: const SizedBox.expand(),
               ),
@@ -641,5 +631,279 @@ class _HomeHeroAccent extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _HomeHeroAccentPainter extends CustomPainter {
+  const _HomeHeroAccentPainter({required this.palette, required this.isDark});
+
+  final ExomThemePalette palette;
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) {
+      return;
+    }
+
+    final rect = Offset.zero & size;
+    final warm = isDark ? const Color(0xFF7A3B19) : const Color(0xFFC4AD96);
+    final primaryTint = Color.lerp(
+      palette.primary,
+      warm,
+      isDark ? 0.26 : 0.42,
+    )!;
+
+    final basePaint = Paint()
+      ..shader = LinearGradient(
+        begin: const Alignment(-0.9, -1),
+        end: const Alignment(0.85, 1),
+        colors: isDark
+            ? [
+                warm.withValues(alpha: 0.055),
+                palette.primary.withValues(alpha: 0.045),
+                palette.background.withValues(alpha: 0),
+              ]
+            : [
+                Colors.white.withValues(alpha: 0.32),
+                warm.withValues(alpha: 0.16),
+                palette.primary.withValues(alpha: 0.05),
+                palette.background.withValues(alpha: 0),
+              ],
+        stops: isDark ? const [0, 0.5, 1] : const [0, 0.32, 0.62, 1],
+      ).createShader(rect);
+    canvas.drawRect(rect, basePaint);
+
+    if (isDark) {
+      _paintRibbon(
+        canvas,
+        size,
+        centerY: 0.02,
+        amplitude: 0.032,
+        thickness: size.height * 0.28,
+        phase: 0.75,
+        drift: 0.6,
+        colors: [
+          Colors.transparent,
+          warm.withValues(alpha: 0.07),
+          palette.primary.withValues(alpha: 0.032),
+          Colors.transparent,
+        ],
+        stops: const [0, 0.24, 0.58, 1],
+      );
+      _paintRibbon(
+        canvas,
+        size,
+        centerY: 0.28,
+        amplitude: 0.046,
+        thickness: size.height * 0.22,
+        phase: 2.35,
+        drift: 1.3,
+        colors: [
+          Colors.transparent,
+          Colors.white.withValues(alpha: 0.012),
+          primaryTint.withValues(alpha: 0.06),
+          warm.withValues(alpha: 0.045),
+          Colors.transparent,
+        ],
+        stops: const [0, 0.18, 0.46, 0.76, 1],
+        blendMode: BlendMode.plus,
+      );
+      _paintRibbon(
+        canvas,
+        size,
+        centerY: 0.54,
+        amplitude: 0.054,
+        thickness: size.height * 0.2,
+        phase: 4.1,
+        drift: 2.1,
+        colors: [
+          Colors.transparent,
+          warm.withValues(alpha: 0.038),
+          palette.primary.withValues(alpha: 0.052),
+          Colors.transparent,
+        ],
+        stops: const [0, 0.2, 0.62, 1],
+        blendMode: BlendMode.plus,
+      );
+      return;
+    }
+
+    _paintRibbon(
+      canvas,
+      size,
+      centerY: 0.0,
+      amplitude: 0.028,
+      thickness: size.height * 0.26,
+      phase: 0.9,
+      drift: 0.55,
+      colors: [
+        Colors.transparent,
+        Colors.white.withValues(alpha: 0.34),
+        warm.withValues(alpha: 0.16),
+        Colors.transparent,
+      ],
+      stops: const [0, 0.22, 0.58, 1],
+    );
+    _paintRibbon(
+      canvas,
+      size,
+      centerY: 0.24,
+      amplitude: 0.036,
+      thickness: size.height * 0.2,
+      phase: 2.2,
+      drift: 1.2,
+      colors: [
+        Colors.transparent,
+        Colors.white.withValues(alpha: 0.2),
+        primaryTint.withValues(alpha: 0.12),
+        warm.withValues(alpha: 0.13),
+        Colors.transparent,
+      ],
+      stops: const [0, 0.18, 0.48, 0.76, 1],
+    );
+    _paintRibbon(
+      canvas,
+      size,
+      centerY: 0.5,
+      amplitude: 0.04,
+      thickness: size.height * 0.18,
+      phase: 4.65,
+      drift: 2.0,
+      colors: [
+        Colors.transparent,
+        primaryTint.withValues(alpha: 0.1),
+        Colors.white.withValues(alpha: 0.18),
+        Colors.transparent,
+      ],
+      stops: const [0, 0.28, 0.62, 1],
+    );
+  }
+
+  void _paintRibbon(
+    Canvas canvas,
+    Size size, {
+    required double centerY,
+    required double amplitude,
+    required double thickness,
+    required double phase,
+    required double drift,
+    required List<Color> colors,
+    required List<double> stops,
+    BlendMode blendMode = BlendMode.srcOver,
+  }) {
+    final path = _waveRibbon(
+      size,
+      centerY: centerY,
+      amplitude: amplitude,
+      thickness: thickness,
+      phase: phase,
+      drift: drift,
+    );
+    final bounds = path.getBounds().inflate(36);
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: colors,
+        stops: stops,
+      ).createShader(bounds)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 34)
+      ..blendMode = blendMode;
+
+    canvas.drawPath(path, paint);
+  }
+
+  Path _waveRibbon(
+    Size size, {
+    required double centerY,
+    required double amplitude,
+    required double thickness,
+    required double phase,
+    required double drift,
+  }) {
+    const sampleCount = 22;
+    final startX = -size.width * 0.25;
+    final endX = size.width * 1.25;
+    final upper = <Offset>[];
+    final lower = <Offset>[];
+
+    for (var i = 0; i <= sampleCount; i++) {
+      final t = i / sampleCount;
+      final x = startX + ((endX - startX) * t);
+      final y = _waveY(
+        size,
+        x,
+        centerY: centerY,
+        amplitude: amplitude,
+        phase: phase,
+        drift: drift,
+      );
+      upper.add(Offset(x, y - (thickness / 2)));
+      lower.add(Offset(x, y + (thickness / 2)));
+    }
+
+    final path = Path();
+    _addSmoothSegment(path, upper, moveToFirst: true);
+    _addSmoothSegment(path, lower.reversed.toList());
+    path.close();
+    return path;
+  }
+
+  void _addSmoothSegment(
+    Path path,
+    List<Offset> points, {
+    bool moveToFirst = false,
+  }) {
+    if (moveToFirst) {
+      path.moveTo(points.first.dx, points.first.dy);
+    } else {
+      path.lineTo(points.first.dx, points.first.dy);
+    }
+
+    for (var i = 1; i < points.length - 1; i++) {
+      final current = points[i];
+      final next = points[i + 1];
+      final midpoint = Offset(
+        (current.dx + next.dx) / 2,
+        (current.dy + next.dy) / 2,
+      );
+      path.quadraticBezierTo(current.dx, current.dy, midpoint.dx, midpoint.dy);
+    }
+
+    path.lineTo(points.last.dx, points.last.dy);
+  }
+
+  double _waveY(
+    Size size,
+    double x, {
+    required double centerY,
+    required double amplitude,
+    required double phase,
+    required double drift,
+  }) {
+    final normalizedX = x / size.width;
+    final baseY = size.height * centerY;
+    final primary =
+        math.sin((normalizedX * math.pi * 1.75) + phase) *
+        size.height *
+        amplitude;
+    final secondary =
+        math.cos((normalizedX * math.pi * 3.4) - (phase * 1.8) + drift) *
+        size.height *
+        (amplitude * 0.34);
+    final tertiary =
+        math.sin((normalizedX * math.pi * 6.8) + (phase * 2.4) + drift) *
+        size.height *
+        (amplitude * 0.08);
+
+    return baseY + primary + secondary + tertiary;
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeHeroAccentPainter oldDelegate) {
+    return oldDelegate.isDark != isDark ||
+        oldDelegate.palette.background != palette.background ||
+        oldDelegate.palette.primary != palette.primary;
   }
 }

@@ -1035,6 +1035,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = switch (status) {
       'REVIEWED' => semantic.success,
       'SUBMITTED' => palette.primary,
@@ -1047,7 +1048,24 @@ class _StatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: GlassDecoration.accentCard(color, borderRadius: 999),
+      decoration: isDark
+          ? BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 0.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                  spreadRadius: -4,
+                ),
+              ],
+            )
+          : GlassDecoration.accentCard(color, borderRadius: 999),
       child: Text(
         recapCopy(context, status),
         style: TextStyle(

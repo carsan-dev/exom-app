@@ -17,7 +17,7 @@ class RecapStepGeneral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stressEnabled = formData['stress_enabled'] as bool? ?? false;
-    final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 2;
+    final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 3;
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
@@ -72,8 +72,8 @@ class RecapStepGeneral extends StatelessWidget {
                   RecapEmojiRatingField(
                     label: l10n.perceivedStress,
                     helperText: l10n.howMuchStressDidYouFeelThisWeek,
-                    value: stressLevel.clamp(0, 4),
-                    onChanged: (value) => onChanged('stress_level', value),
+                    value: (stressLevel - 1).clamp(0, 4),
+                    onChanged: (value) => onChanged('stress_level', value + 1),
                   ),
                 ],
                 const SizedBox(height: 20),

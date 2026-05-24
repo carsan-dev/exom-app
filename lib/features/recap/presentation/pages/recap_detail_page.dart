@@ -512,6 +512,9 @@ class _StatusChip extends StatelessWidget {
       'SUBMITTED' => 'Enviado',
       _ => 'Borrador',
     };
+    final invertedColor = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -519,7 +522,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: invertedColor,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
@@ -21,9 +20,6 @@ class RecapStepRecovery extends StatelessWidget {
             ?.map((item) => item.toString())
             .toList() ??
         const <String>[];
-    final musclePainZones = BodyZone.values
-        .where((zone) => rawMusclePainZones.contains(zone.name))
-        .toSet();
     final l10n = AppLocalizations.of(context);
 
     return SingleChildScrollView(
@@ -63,11 +59,8 @@ class RecapStepRecovery extends StatelessWidget {
                 RecapBodyMapField(
                   label: l10n.areasWithPainOrTension,
                   helperText: l10n.tapTheAffectedBodyAreas,
-                  values: musclePainZones,
-                  onChanged: (value) => onChanged(
-                    'muscle_pain_zones',
-                    value.map((zone) => zone.name).toList(growable: false),
-                  ),
+                  values: rawMusclePainZones,
+                  onChanged: (value) => onChanged('muscle_pain_zones', value),
                 ),
                 if (rawMusclePainZones.isNotEmpty) ...[
                   const SizedBox(height: 20),

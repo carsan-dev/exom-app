@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 
 String formatRecapOption(String value) {
   return value
@@ -549,8 +547,8 @@ class RecapStarRatingField extends StatelessWidget {
 class RecapBodyMapField extends StatelessWidget {
   final String label;
   final String helperText;
-  final Set<BodyZone> values;
-  final ValueChanged<Set<BodyZone>> onChanged;
+  final List<String> values;
+  final ValueChanged<List<String>> onChanged;
 
   const RecapBodyMapField({
     super.key,
@@ -560,18 +558,19 @@ class RecapBodyMapField extends StatelessWidget {
     required this.onChanged,
   });
 
-  void _toggleZone(BodyZone zone) {
-    final next = Set<BodyZone>.from(values);
-    if (next.contains(zone)) {
-      next.remove(zone);
+  void _toggleZone(String zoneId) {
+    final next = List<String>.from(values);
+    if (next.contains(zoneId)) {
+      next.remove(zoneId);
     } else {
-      next.add(zone);
+      next.add(zoneId);
     }
     onChanged(next);
   }
 
-  String _zoneLabel(BuildContext context, BodyZone zone) {
-    return zone.label(AppLocalizations.of(context));
+  String _zoneLabel(BuildContext context, String value) {
+    return RecapAnatomyZone.fromId(value)?.label(context) ??
+        recapCopy(context, value);
   }
 
   @override
@@ -579,9 +578,9 @@ class RecapBodyMapField extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
-    final selectedZones = BodyZone.values
-        .where(values.contains)
-        .toList(growable: false);
+    final selectedZoneIds = values
+        .where((value) => RecapAnatomyZone.fromId(value) != null)
+        .toSet();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,19 +603,18 @@ class RecapBodyMapField extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Center(
-          child: AnatomySelector(
+          child: RecapAnatomySelector(
             height: 440,
-            multiSelect: true,
-            selectedZones: values,
+            selectedZoneIds: selectedZoneIds,
             onZoneSelected: _toggleZone,
           ),
         ),
-        if (selectedZones.isNotEmpty) ...[
+        if (values.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: selectedZones.map((zone) {
+            children: values.map((zone) {
               return Chip(
                 label: Text(
                   _zoneLabel(context, zone),

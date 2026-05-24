@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
@@ -10,6 +9,7 @@ import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
 import 'package:exom_app/injection_container.dart';
 
@@ -409,14 +409,41 @@ class _RecapDetailContent extends StatelessWidget {
   }
 
   String _formatZone(String value, AppLocalizations l10n) {
-    for (final zone in BodyZone.values) {
-      if (zone.name == value) {
-        return zone.label(l10n);
-      }
+    final zone = RecapAnatomyZone.fromId(value);
+    if (zone != null) {
+      final isEnglish = l10n.localeName.startsWith('en');
+      return isEnglish ? zone.englishLabel : zone.spanishLabel;
     }
 
-    return _opt(value);
+    return recapCopyFromLocale(value, l10n);
   }
+}
+
+String recapCopyFromLocale(String value, AppLocalizations l10n) {
+  const legacyLabels = <String, List<String>>{
+    'neck': ['Cuello', 'Neck'],
+    'shoulders': ['Hombros', 'Shoulders'],
+    'chest': ['Pecho', 'Chest'],
+    'upperArm': ['Brazo', 'Upper arm'],
+    'forearm': ['Antebrazo', 'Forearm'],
+    'waist': ['Cintura', 'Waist'],
+    'hips': ['Caderas', 'Hips'],
+    'thigh': ['Muslo', 'Thigh'],
+    'calf': ['Pantorrilla', 'Calf'],
+  };
+
+  final label = legacyLabels[value];
+  if (label != null) {
+    return l10n.localeName.startsWith('en') ? label[1] : label[0];
+  }
+
+  return value
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replaceAllMapped(
+        RegExp(r'(^|\s)\S'),
+        (match) => match.group(0)!.toUpperCase(),
+      );
 }
 
 class _SectionCard extends StatelessWidget {

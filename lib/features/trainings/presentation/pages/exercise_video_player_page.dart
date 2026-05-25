@@ -46,7 +46,10 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
 
     await previousController?.dispose();
 
-    final controller = VideoPlayerController.networkUrl(widget.videoUri);
+    final controller = VideoPlayerController.networkUrl(
+      widget.videoUri,
+      viewType: VideoViewType.platformView,
+    );
 
     try {
       await controller.initialize();

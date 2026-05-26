@@ -734,7 +734,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seenCalculatorDescription =>
-      'If you do not have a direct measurement, you can use an estimate based on age, height, sex, and calf circumference.';
+      'If you do not have a direct measurement, you can use an estimate based on age, height, sex, and calf circumference. Source: SEEN calculator, based on Santos et al., JPEN 2019.';
+
+  @override
+  String get seenSourceLink => 'Source: SEEN calculator and reference article';
 
   @override
   String get calculateEstimateButton => 'Calculate estimate';
@@ -781,7 +784,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seenFormulaDescription =>
-      'Use the SEEN formula to estimate skeletal muscle mass from age, height, sex, and calf circumference.';
+      'Use the SEEN formula to estimate appendicular skeletal muscle mass from age, height, sex, and calf circumference. Source: Santos et al., JPEN 2019, referenced by SEEN.';
 
   @override
   String get ageLabel => 'Age';

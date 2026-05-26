@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
@@ -39,6 +40,10 @@ class _MetricsView extends StatefulWidget {
 }
 
 class _MetricsViewState extends State<_MetricsView> {
+  static final Uri _seenSourceUri = Uri.parse(
+    'https://www.seen.es/calculadoras/calculadora-masa-muscular-esqueletica',
+  );
+
   double _weight = 75.0;
   bool _useManualWeight = false;
   final _sleepController = TextEditingController();
@@ -598,6 +603,16 @@ class _MetricsViewState extends State<_MetricsView> {
     return sl<LocalStorage>().getCachedMap('profile_me');
   }
 
+  Future<void> _openSeenSource() async {
+    final launched = await launchUrl(
+      _seenSourceUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      await launchUrl(_seenSourceUri, mode: LaunchMode.platformDefault);
+    }
+  }
+
   Future<void> _openSeenEstimateCalculator(BuildContext context) async {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final profile = _getCachedProfile();
@@ -649,6 +664,11 @@ class _MetricsViewState extends State<_MetricsView> {
                         fontSize: 12,
                         height: 1.4,
                       ),
+                    ),
+                    const SizedBox(height: 10),
+                    _SeenSourceLink(
+                      text: AppLocalizations.of(context).seenSourceLink,
+                      onTap: _openSeenSource,
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -1227,6 +1247,13 @@ class _MetricsViewState extends State<_MetricsView> {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
+                                  _SeenSourceLink(
+                                    text: AppLocalizations.of(
+                                      context,
+                                    ).seenSourceLink,
+                                    onTap: _openSeenSource,
+                                  ),
+                                  const SizedBox(height: 10),
                                   Align(
                                     alignment: Alignment.centerLeft,
                                     child: OutlinedButton.icon(
@@ -1480,6 +1507,31 @@ class _MeasureZoneConfig {
 
   List<String> get fieldKeys =>
       isBilateral ? [leftFieldKey!, rightFieldKey!] : [fieldKey!];
+}
+
+class _SeenSourceLink extends StatelessWidget {
+  const _SeenSourceLink({required this.text, required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.open_in_new, size: 16),
+      label: Text(text),
+      style: TextButton.styleFrom(
+        foregroundColor: palette.primary,
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        alignment: Alignment.centerLeft,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
 }
 
 class _SectionCard extends StatelessWidget {

@@ -747,7 +747,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get seenCalculatorDescription =>
-      'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla.';
+      'Si no tienes una medición directa, puedes usar una estimación basada en edad, altura, sexo y circunferencia de pantorrilla. Fuente: calculadora SEEN, basada en Santos et al., JPEN 2019.';
+
+  @override
+  String get seenSourceLink =>
+      'Fuente: calculadora SEEN y artículo de referencia';
 
   @override
   String get calculateEstimateButton => 'Calcular estimación';
@@ -794,7 +798,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get seenFormulaDescription =>
-      'Usa la fórmula de la SEEN para estimar masa muscular esquelética a partir de edad, altura, sexo y pantorrilla.';
+      'Usa la fórmula de la SEEN para estimar masa muscular esquelética apendicular a partir de edad, altura, sexo y pantorrilla. Fuente: Santos et al., JPEN 2019, referenciado por SEEN.';
 
   @override
   String get ageLabel => 'Edad';

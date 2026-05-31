@@ -839,6 +839,16 @@ class _IngredientsSection extends StatelessWidget {
         return 'cucharadita';
       case 'handful':
         return 'puñado';
+      case 'slice':
+        return 'rebanada';
+      case 'palm':
+        return 'palma';
+      case 'fist':
+        return 'puño';
+      case 'ladle':
+        return 'cucharón';
+      case 'cold_cut_slice':
+        return 'loncha';
       case 'glass':
         return 'vaso';
       case 'cup':

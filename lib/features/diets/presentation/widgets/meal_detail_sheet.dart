@@ -354,10 +354,9 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
     final completedMealIds = dietState is MealDetailLoaded
         ? dietState.completedMealIds
         : widget.isCompleted
-            ? {widget.meal.id}
-            : <String>{};
-    if (!_selectionTouched &&
-        !completedMealIds.contains(_selectedMeal.id)) {
+        ? {widget.meal.id}
+        : <String>{};
+    if (!_selectionTouched && !completedMealIds.contains(_selectedMeal.id)) {
       for (final option in mealOptions) {
         if (completedMealIds.contains(option.id)) {
           _selectedMeal = option;
@@ -576,7 +575,9 @@ class _VariantSelector extends StatelessWidget {
                 (meal) => DropdownMenuItem<String>(
                   value: meal.id,
                   child: Text(
-                    meal.id == meals.first.id ? '${meal.name} (principal)' : meal.name,
+                    meal.id == meals.first.id
+                        ? '${meal.name} (principal)'
+                        : meal.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -853,6 +854,10 @@ class _IngredientsSection extends StatelessWidget {
         return 'vaso';
       case 'cup':
         return 'taza';
+      case 'bowl':
+        return 'bol';
+      case 'finger':
+        return 'dedo';
       case 'pinch':
         return 'pizca';
       case 'serving':

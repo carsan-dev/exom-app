@@ -1,3 +1,4 @@
-- Corregido el selector corporal del recap semanal para marcar zonas
-  musculares concretas con más precision y mantener visibles las zonas
-  de dolor guardadas previamente.
+- Añadidos circuitos en entrenamientos: ahora verás bloques con rondas y descansos entre rondas dentro de la rutina.
+- El progreso de ejercicios se guarda por instancia, así repetir el mismo ejercicio en una rutina ya no marca todas sus apariciones a la vez.
+- Mejorado el progreso offline para restaurar correctamente ejercicios repetidos o incluidos en circuitos.
+- Corregido el selector corporal del recap semanal para marcar zonas musculares concretas con más precisión y mantener visibles las zonas de dolor guardadas previamente.

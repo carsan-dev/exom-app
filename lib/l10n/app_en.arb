@@ -517,14 +517,32 @@
   },
   "restTimerSkip": "Skip",
   "completeSetButton": "Complete set",
-  "exerciseSetProgress": "Set {current} / {total}",
-  "@exerciseSetProgress": {
-    "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
-    }
-  },
-  "exerciseSeriesProgress": "{completed}/{total} sets",
+    "exerciseSetProgress": "Set {current} / {total}",
+    "@exerciseSetProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "startCircuitButton": "Start circuit",
+    "completeCircuitButton": "Circuit complete",
+    "markCircuitPendingButton": "Mark circuit pending",
+    "circuitRoundRestTitle": "Round rest",
+    "circuitRoundProgress": "Round {current} / {total}",
+    "@circuitRoundProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "circuitExerciseProgress": "Exercise {current} / {total}",
+    "@circuitExerciseProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "exerciseSeriesProgress": "{completed}/{total} sets",
   "@exerciseSeriesProgress": {
     "placeholders": {
       "completed": { "type": "int" },

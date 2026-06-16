@@ -14,6 +14,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
@@ -510,18 +511,85 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         index++
                       ) {
                         final ex = training.exercises[index];
-                        if (ex.blockId != null &&
-                            ex.blockId != currentBlockId) {
+                        if (ex.blockId != null) {
+                          if (ex.blockId == currentBlockId) {
+                            continue;
+                          }
                           currentBlockId = ex.blockId;
+                          final blockExercises =
+                              training.exercises
+                                  .where(
+                                    (candidate) =>
+                                        candidate.blockId == ex.blockId,
+                                  )
+                                  .toList()
+                                ..sort(
+                                  (left, right) =>
+                                      (left.positionInBlock ?? left.order)
+                                          .compareTo(
+                                            right.positionInBlock ??
+                                                right.order,
+                                          ),
+                                );
+                          final completedCount = blockExercises
+                              .where(
+                                (blockExercise) => widget
+                                    .state
+                                    .completedExerciseIds
+                                    .contains(blockExercise.id),
+                              )
+                              .length;
+                          final blockId = ex.blockId!;
                           cards.add(
-                            _CircuitHeader(
+                            _CircuitCard(
                               name: ex.blockName ?? 'Circuito',
                               rounds: ex.blockRounds ?? 1,
                               restBetweenRoundsSeconds:
                                   ex.restBetweenRoundsSeconds ?? 60,
+                              exerciseCount: blockExercises.length,
+                              completedCount: completedCount,
                               color: color,
+                              onStart: () {
+                                context.push(
+                                  AppRoutes.activeCircuitPath(
+                                    training.id,
+                                    blockId,
+                                  ),
+                                  extra: ActiveCircuitPageArgs(
+                                    trainingBloc: context.read<TrainingBloc>(),
+                                    trainingName: training.name,
+                                    trainingTypes: training.types,
+                                    accentColorHex: training.accentColor,
+                                    trainingLevel: training.level,
+                                    blockId: blockId,
+                                    blockName: ex.blockName ?? 'Circuito',
+                                    rounds: ex.blockRounds ?? 1,
+                                    restBetweenRoundsSeconds:
+                                        ex.restBetweenRoundsSeconds ?? 60,
+                                    exercises: blockExercises,
+                                  ),
+                                );
+                              },
+                              onMarkPending:
+                                  completedCount == blockExercises.length
+                                  ? () {
+                                      for (final blockExercise
+                                          in blockExercises) {
+                                        context.read<TrainingBloc>().add(
+                                          MarkExerciseCompleted(
+                                            trainingExerciseId:
+                                                blockExercise.id,
+                                            exerciseId:
+                                                blockExercise.exercise.id,
+                                            completed: false,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  : null,
                             ),
                           );
+                          continue;
                         }
                         final isCompleted = widget.state.completedExerciseIds
                             .contains(ex.id);
@@ -863,50 +931,138 @@ class _DescriptionCard extends StatelessWidget {
   }
 }
 
-class _CircuitHeader extends StatelessWidget {
+class _CircuitCard extends StatelessWidget {
   final String name;
   final int rounds;
   final int restBetweenRoundsSeconds;
+  final int exerciseCount;
+  final int completedCount;
   final Color color;
+  final VoidCallback onStart;
+  final VoidCallback? onMarkPending;
 
-  const _CircuitHeader({
+  const _CircuitCard({
     required this.name,
     required this.rounds,
     required this.restBetweenRoundsSeconds,
+    required this.exerciseCount,
+    required this.completedCount,
     required this.color,
+    required this.onStart,
+    required this.onMarkPending,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final semantic = context.exomSemantic;
+    final l10n = AppLocalizations.of(context);
+    final isCompleted = exerciseCount > 0 && completedCount == exerciseCount;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: GlassDecoration.card(borderRadius: 18),
-      child: Row(
-        children: [
-          Icon(Icons.repeat_rounded, color: color, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$name · $rounds rondas',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: palette.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: isCompleted
+          ? BoxDecoration(
+              color: semantic.success.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: semantic.success.withValues(alpha: 0.35),
               ),
-            ),
+            )
+          : GlassDecoration.card(borderRadius: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.repeat_rounded, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isCompleted
+                            ? semantic.success
+                            : palette.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$rounds rondas · $exerciseCount ${l10n.exercises}',
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isCompleted)
+                Icon(Icons.check_circle_rounded, color: semantic.success)
+              else
+                Icon(Icons.play_circle_fill_rounded, color: color),
+            ],
           ),
-          Text(
-            '${restBetweenRoundsSeconds}s',
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              _MiniStat(
+                icon: Icons.stacked_bar_chart_rounded,
+                label: '$completedCount/$exerciseCount',
+              ),
+              _MiniStat(
+                icon: Icons.timer_outlined,
+                label: '${restBetweenRoundsSeconds}s ${l10n.rest}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onStart,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isCompleted ? semantic.success : color,
+                    foregroundColor: palette.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: Text(
+                    isCompleted
+                        ? l10n.completeCircuitButton
+                        : l10n.startCircuitButton,
+                  ),
+                ),
+              ),
+              if (onMarkPending != null) ...[
+                const SizedBox(width: 10),
+                IconButton.filledTonal(
+                  onPressed: onMarkPending,
+                  icon: const Icon(Icons.radio_button_unchecked_rounded),
+                  tooltip: l10n.markCircuitPendingButton,
+                ),
+              ],
+            ],
           ),
         ],
       ),

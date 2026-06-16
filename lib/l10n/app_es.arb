@@ -552,14 +552,32 @@
   },
   "restTimerSkip": "Saltar",
   "completeSetButton": "Completar serie",
-  "exerciseSetProgress": "Serie {current} / {total}",
-  "@exerciseSetProgress": {
-    "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
-    }
-  },
-  "exerciseSeriesProgress": "{completed}/{total} series",
+    "exerciseSetProgress": "Serie {current} / {total}",
+    "@exerciseSetProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "startCircuitButton": "Comenzar circuito",
+    "completeCircuitButton": "Circuito completado",
+    "markCircuitPendingButton": "Marcar circuito pendiente",
+    "circuitRoundRestTitle": "Descanso de ronda",
+    "circuitRoundProgress": "Ronda {current} / {total}",
+    "@circuitRoundProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "circuitExerciseProgress": "Ejercicio {current} / {total}",
+    "@circuitExerciseProgress": {
+      "placeholders": {
+        "current": { "type": "int" },
+        "total": { "type": "int" }
+      }
+    },
+    "exerciseSeriesProgress": "{completed}/{total} series",
   "@exerciseSeriesProgress": {
     "placeholders": {
       "completed": { "type": "int" },

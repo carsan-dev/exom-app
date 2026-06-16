@@ -33,6 +33,7 @@ import '../../features/home/presentation/bloc/home_bloc.dart';
 import '../../features/trainings/presentation/pages/trainings_page.dart';
 import '../../features/trainings/presentation/pages/training_detail_page.dart';
 import '../../features/trainings/presentation/pages/active_exercise_page.dart';
+import '../../features/trainings/presentation/pages/active_circuit_page.dart';
 
 // Diet pages
 import '../../features/diets/presentation/pages/diets_page.dart';
@@ -87,6 +88,7 @@ class AppRoutes {
   static const trainings = '/trainings';
   static const trainingDetail = '/trainings/:id';
   static const activeExercise = '/trainings/:id/exercises/:exerciseId';
+  static const activeCircuit = '/trainings/:id/circuits/:blockId';
   static const diets = '/diets';
   static const calendar = '/calendar';
   static const profile = '/profile';
@@ -100,6 +102,8 @@ class AppRoutes {
   static String recapDetail(String id) => '/recap/$id';
   static String activeExercisePath(String trainingId, String exerciseId) =>
       '/trainings/$trainingId/exercises/$exerciseId';
+  static String activeCircuitPath(String trainingId, String blockId) =>
+      '/trainings/$trainingId/circuits/$blockId';
   static const settings = '/settings';
   static const help = '/help';
 }
@@ -274,6 +278,18 @@ class AppRouter {
                 trainingId: state.pathParameters['id']!,
                 exerciseId: state.pathParameters['exerciseId']!,
                 args: state.extra as ActiveExercisePageArgs?,
+              ),
+            ),
+          ),
+          GoRoute(
+            path: 'circuits/:blockId',
+            pageBuilder: (_, state) => _platformPage(
+              key: state.pageKey,
+              name: state.name,
+              child: ActiveCircuitPage(
+                trainingId: state.pathParameters['id']!,
+                blockId: state.pathParameters['blockId']!,
+                args: state.extra as ActiveCircuitPageArgs?,
               ),
             ),
           ),

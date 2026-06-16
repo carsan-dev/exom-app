@@ -2906,6 +2906,42 @@ abstract class AppLocalizations {
   /// **'Serie {current} / {total}'**
   String exerciseSetProgress(int current, int total);
 
+  /// No description provided for @startCircuitButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Comenzar circuito'**
+  String get startCircuitButton;
+
+  /// No description provided for @completeCircuitButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Circuito completado'**
+  String get completeCircuitButton;
+
+  /// No description provided for @markCircuitPendingButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar circuito pendiente'**
+  String get markCircuitPendingButton;
+
+  /// No description provided for @circuitRoundRestTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso de ronda'**
+  String get circuitRoundRestTitle;
+
+  /// No description provided for @circuitRoundProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Ronda {current} / {total}'**
+  String circuitRoundProgress(int current, int total);
+
+  /// No description provided for @circuitExerciseProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio {current} / {total}'**
+  String circuitExerciseProgress(int current, int total);
+
   /// No description provided for @exerciseSeriesProgress.
   ///
   /// In es, this message translates to:

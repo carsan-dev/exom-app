@@ -1553,6 +1553,28 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get startCircuitButton => 'Comenzar circuito';
+
+  @override
+  String get completeCircuitButton => 'Circuito completado';
+
+  @override
+  String get markCircuitPendingButton => 'Marcar circuito pendiente';
+
+  @override
+  String get circuitRoundRestTitle => 'Descanso de ronda';
+
+  @override
+  String circuitRoundProgress(int current, int total) {
+    return 'Ronda $current / $total';
+  }
+
+  @override
+  String circuitExerciseProgress(int current, int total) {
+    return 'Ejercicio $current / $total';
+  }
+
+  @override
   String exerciseSeriesProgress(int completed, int total) {
     return '$completed/$total series';
   }

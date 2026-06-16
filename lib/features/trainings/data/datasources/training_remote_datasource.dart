@@ -10,11 +10,12 @@ abstract class TrainingRemoteDataSource {
   Future<List<TrainingHistoryModel>> getTrainings({String? date});
   Future<TrainingModel> getTraining(String id);
   Future<void> markExerciseCompleted(
+    String trainingExerciseId,
     String exerciseId,
     String date, {
     double? weightUsed,
   });
-  Future<void> unmarkExerciseCompleted(String exerciseId, String date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
   Future<({Set<String> ids, Map<String, double> weights})>
   getCompletedExerciseIds({String? date});
@@ -179,7 +180,9 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         (inner['exercises_completed'] as List? ?? [])
             .map(
               (entry) =>
-                  (entry as Map<String, dynamic>)['exercise_id'] as String,
+                  ((entry as Map<String, dynamic>)['training_exercise_id'] ??
+                          entry['exercise_id'])
+                      as String,
             )
             .toList(growable: false),
       );
@@ -301,6 +304,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
 
   @override
   Future<void> markExerciseCompleted(
+    String trainingExerciseId,
     String exerciseId,
     String date, {
     double? weightUsed,
@@ -308,6 +312,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     try {
       final payload = <String, dynamic>{
         'exercise_id': exerciseId,
+        'training_exercise_id': trainingExerciseId,
         'date': date,
       };
       if (weightUsed != null) {
@@ -325,18 +330,22 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       }
 
       await _offlineSyncService.queueExerciseCompletion(
-        exerciseId,
+        trainingExerciseId,
         date,
         completed: true,
+        exerciseId: exerciseId,
       );
     }
   }
 
   @override
-  Future<void> unmarkExerciseCompleted(String exerciseId, String date) async {
+  Future<void> unmarkExerciseCompleted(
+    String trainingExerciseId,
+    String date,
+  ) async {
     try {
       final response = await _apiClient.dio.delete<dynamic>(
-        '/progress/exercises/$exerciseId',
+        '/progress/exercises/$trainingExerciseId',
         queryParameters: {'date': date},
       );
       await _cacheProgressResponse(response, date);
@@ -346,7 +355,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       }
 
       await _offlineSyncService.queueExerciseCompletion(
-        exerciseId,
+        trainingExerciseId,
         date,
         completed: false,
       );
@@ -392,7 +401,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         final weights = <String, double>{};
         for (final entry in list) {
           final map = entry as Map<String, dynamic>;
-          final id = map['exercise_id'] as String;
+          final id =
+              (map['training_exercise_id'] ?? map['exercise_id']) as String;
           ids.add(id);
           final w = map['weight_used'];
           if (w != null) {

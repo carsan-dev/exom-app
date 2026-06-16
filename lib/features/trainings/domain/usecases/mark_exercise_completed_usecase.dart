@@ -5,7 +5,15 @@ class MarkExerciseCompletedUseCase {
 
   const MarkExerciseCompletedUseCase(this._repository);
 
-  Future<void> call(String exerciseId, String date, {double? weightUsed}) =>
-      _repository.markExerciseCompleted(exerciseId, date,
-          weightUsed: weightUsed);
+  Future<void> call(
+    String trainingExerciseId,
+    String exerciseId,
+    String date, {
+    double? weightUsed,
+  }) => _repository.markExerciseCompleted(
+    trainingExerciseId,
+    exerciseId,
+    date,
+    weightUsed: weightUsed,
+  );
 }

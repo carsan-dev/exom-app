@@ -431,10 +431,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           runSpacing: 6,
                           children: [
                             ...typeLabels.map(
-                              (label) => _Badge(
-                                label: label,
-                                color: color,
-                              ),
+                              (label) => _Badge(label: label, color: color),
                             ),
                             _Badge(
                               label: training.level,
@@ -505,32 +502,49 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   ValueListenableBuilder(
                     valueListenable: sl<LocalStorage>().watchActiveWorkouts(),
                     builder: (context, box, _) {
-                      return Column(
-                        children: List.generate(training.exercises.length, (
-                          index,
-                        ) {
-                          final ex = training.exercises[index];
-                          final isCompleted = widget.state.completedExerciseIds
-                              .contains(ex.exercise.id);
-                          final activeWorkout = box.get(ex.exercise.id);
-                          final partialProgress =
-                              activeWorkout?.trainingId == training.id
-                              ? activeWorkout
-                              : null;
-                          final effectiveWeight =
-                              widget.state.exerciseWeights[ex.exercise.id] ??
-                              partialProgress?.lastWeightKg;
-                          final partialProgressLabel =
-                              !isCompleted &&
-                                  partialProgress != null &&
-                                  partialProgress.completedSets > 0
-                              ? l10n.exerciseSeriesProgress(
-                                  partialProgress.completedSets,
-                                  ex.sets,
-                                )
-                              : null;
+                      final cards = <Widget>[];
+                      String? currentBlockId;
+                      for (
+                        var index = 0;
+                        index < training.exercises.length;
+                        index++
+                      ) {
+                        final ex = training.exercises[index];
+                        if (ex.blockId != null &&
+                            ex.blockId != currentBlockId) {
+                          currentBlockId = ex.blockId;
+                          cards.add(
+                            _CircuitHeader(
+                              name: ex.blockName ?? 'Circuito',
+                              rounds: ex.blockRounds ?? 1,
+                              restBetweenRoundsSeconds:
+                                  ex.restBetweenRoundsSeconds ?? 60,
+                              color: color,
+                            ),
+                          );
+                        }
+                        final isCompleted = widget.state.completedExerciseIds
+                            .contains(ex.id);
+                        final activeWorkout = box.get(ex.id);
+                        final partialProgress =
+                            activeWorkout?.trainingId == training.id
+                            ? activeWorkout
+                            : null;
+                        final effectiveWeight =
+                            widget.state.exerciseWeights[ex.id] ??
+                            partialProgress?.lastWeightKg;
+                        final partialProgressLabel =
+                            !isCompleted &&
+                                partialProgress != null &&
+                                partialProgress.completedSets > 0
+                            ? l10n.exerciseSeriesProgress(
+                                partialProgress.completedSets,
+                                ex.sets,
+                              )
+                            : null;
 
-                          return _ExerciseCard(
+                        cards.add(
+                          _ExerciseCard(
                             trainingExercise: ex,
                             trainingTypes: training.types,
                             accentColorHex: training.accentColor,
@@ -542,7 +556,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               context.push(
                                 AppRoutes.activeExercisePath(
                                   training.id,
-                                  ex.exercise.id,
+                                  ex.id,
                                 ),
                                 extra: ActiveExercisePageArgs(
                                   trainingBloc: context.read<TrainingBloc>(),
@@ -565,9 +579,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                 ),
                               );
                             },
-                          );
-                        }),
-                      );
+                          ),
+                        );
+                      }
+
+                      return Column(children: cards);
                     },
                   ),
 
@@ -847,6 +863,57 @@ class _DescriptionCard extends StatelessWidget {
   }
 }
 
+class _CircuitHeader extends StatelessWidget {
+  final String name;
+  final int rounds;
+  final int restBetweenRoundsSeconds;
+  final Color color;
+
+  const _CircuitHeader({
+    required this.name,
+    required this.rounds,
+    required this.restBetweenRoundsSeconds,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: GlassDecoration.card(borderRadius: 18),
+      child: Row(
+        children: [
+          Icon(Icons.repeat_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$name · $rounds rondas',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            '${restBetweenRoundsSeconds}s',
+            style: TextStyle(
+              color: palette.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExerciseCard extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
   final List<String> trainingTypes;
@@ -1010,9 +1077,7 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ),
               child: Icon(
-                isCompleted
-                    ? Icons.check_rounded
-                    : Icons.chevron_right_rounded,
+                isCompleted ? Icons.check_rounded : Icons.chevron_right_rounded,
                 color: isCompleted ? Colors.white : palette.textDisabled,
                 size: 20,
               ),
@@ -1215,9 +1280,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   }
 
   void _openFeedback(BuildContext context) {
-    Navigator.of(
-      context,
-    ).pop(const _SheetCompletionResult(openFeedback: true));
+    Navigator.of(context).pop(const _SheetCompletionResult(openFeedback: true));
   }
 
   @override
@@ -1353,8 +1416,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                           ? CachedNetworkImage(
                               imageUrl: thumbnailUrl,
                               fit: BoxFit.cover,
-                              memCacheWidth:
-                                  PerformanceProfile.imageCacheWidth(
+                              memCacheWidth: PerformanceProfile.imageCacheWidth(
                                 context,
                                 MediaQuery.sizeOf(context).width,
                               ),

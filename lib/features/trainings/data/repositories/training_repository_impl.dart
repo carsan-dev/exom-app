@@ -29,11 +29,13 @@ class TrainingRepositoryImpl implements TrainingRepository {
 
   @override
   Future<void> markExerciseCompleted(
+    String trainingExerciseId,
     String exerciseId,
     String date, {
     double? weightUsed,
   }) {
     return _remoteDataSource.markExerciseCompleted(
+      trainingExerciseId,
       exerciseId,
       date,
       weightUsed: weightUsed,
@@ -41,8 +43,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<void> unmarkExerciseCompleted(String exerciseId, String date) {
-    return _remoteDataSource.unmarkExerciseCompleted(exerciseId, date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date) {
+    return _remoteDataSource.unmarkExerciseCompleted(trainingExerciseId, date);
   }
 
   @override
@@ -79,6 +81,12 @@ class TrainingRepositoryImpl implements TrainingRepository {
       sets: model.sets,
       repsOrDuration: model.repsOrDuration,
       restSeconds: model.restSeconds,
+      blockId: model.blockId,
+      positionInBlock: model.positionInBlock,
+      blockName: model.blockName,
+      blockOrder: model.blockOrder,
+      blockRounds: model.blockRounds,
+      restBetweenRoundsSeconds: model.restBetweenRoundsSeconds,
       exercise: ExerciseEntity(
         id: model.exercise.id,
         name: model.exercise.name,

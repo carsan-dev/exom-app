@@ -26,6 +26,12 @@ class TrainingExerciseEntity {
   final int sets;
   final String repsOrDuration;
   final int restSeconds;
+  final String? blockId;
+  final int? positionInBlock;
+  final String? blockName;
+  final int? blockOrder;
+  final int? blockRounds;
+  final int? restBetweenRoundsSeconds;
   final ExerciseEntity exercise;
 
   const TrainingExerciseEntity({
@@ -34,6 +40,12 @@ class TrainingExerciseEntity {
     required this.sets,
     required this.repsOrDuration,
     required this.restSeconds,
+    this.blockId,
+    this.positionInBlock,
+    this.blockName,
+    this.blockOrder,
+    this.blockRounds,
+    this.restBetweenRoundsSeconds,
     required this.exercise,
   });
 }

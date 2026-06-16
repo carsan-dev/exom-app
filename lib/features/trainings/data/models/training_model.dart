@@ -2,9 +2,9 @@ import 'package:exom_app/core/utils/training_type_utils.dart';
 
 List<String> _resolveTrainingTypesFromJson(Map<String, dynamic> json) {
   final rawTypes =
-      (json['types'] as List<dynamic>?)?.map((item) => item.toString()).toList(
-            growable: false,
-          ) ??
+      (json['types'] as List<dynamic>?)
+          ?.map((item) => item.toString())
+          .toList(growable: false) ??
       const <String>[];
   final legacyType = json['type'] as String?;
 
@@ -61,6 +61,12 @@ class TrainingExerciseModel {
   final int sets;
   final String repsOrDuration;
   final int restSeconds;
+  final String? blockId;
+  final int? positionInBlock;
+  final String? blockName;
+  final int? blockOrder;
+  final int? blockRounds;
+  final int? restBetweenRoundsSeconds;
   final ExerciseModel exercise;
 
   const TrainingExerciseModel({
@@ -69,16 +75,29 @@ class TrainingExerciseModel {
     required this.sets,
     required this.repsOrDuration,
     required this.restSeconds,
+    this.blockId,
+    this.positionInBlock,
+    this.blockName,
+    this.blockOrder,
+    this.blockRounds,
+    this.restBetweenRoundsSeconds,
     required this.exercise,
   });
 
   factory TrainingExerciseModel.fromJson(Map<String, dynamic> json) {
+    final block = json['block'] as Map<String, dynamic>?;
     return TrainingExerciseModel(
       id: json['id'] as String? ?? '',
       order: json['order'] as int? ?? 0,
       sets: json['sets'] as int? ?? 0,
       repsOrDuration: json['reps_or_duration'] as String? ?? '',
       restSeconds: json['rest_seconds'] as int? ?? 60,
+      blockId: json['block_id'] as String?,
+      positionInBlock: json['position_in_block'] as int?,
+      blockName: block?['name'] as String?,
+      blockOrder: block?['order'] as int?,
+      blockRounds: block?['rounds'] as int?,
+      restBetweenRoundsSeconds: block?['rest_between_rounds_seconds'] as int?,
       exercise: ExerciseModel.fromJson(
         (json['exercise'] as Map<String, dynamic>?) ?? {},
       ),

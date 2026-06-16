@@ -47,14 +47,21 @@ class OfflineSyncService {
   }
 
   Future<void> queueExerciseCompletion(
-    String exerciseId,
+    String trainingExerciseId,
     String date, {
     required bool completed,
+    String? exerciseId,
   }) async {
-    await _updateExerciseProgressCache(exerciseId, date, completed: completed);
+    await _updateExerciseProgressCache(
+      trainingExerciseId,
+      date,
+      completed: completed,
+      exerciseId: exerciseId,
+    );
     await _enqueueAction({
       'type': completed ? _markExerciseCompleted : _unmarkExerciseCompleted,
-      'exercise_id': exerciseId,
+      'training_exercise_id': trainingExerciseId,
+      'exercise_id': ?exerciseId,
       'date': date,
     });
   }
@@ -130,7 +137,10 @@ class OfflineSyncService {
 
   Future<void> _enqueueAction(Map<String, dynamic> action) async {
     final queue = _localStorage.getPendingSyncActions();
-    queue.add({...action, 'queued_at': DateTime.now().toUtc().toIso8601String()});
+    queue.add({
+      ...action,
+      'queued_at': DateTime.now().toUtc().toIso8601String(),
+    });
     await _persistQueue(queue);
   }
 
@@ -154,22 +164,32 @@ class OfflineSyncService {
     switch (type) {
       case _markExerciseCompleted:
         final exerciseId = action['exercise_id'] as String?;
-        if (exerciseId == null) {
-          throw StateError('Pending sync action is missing exercise_id');
+        final trainingExerciseId =
+            action['training_exercise_id'] as String? ?? exerciseId;
+        if (trainingExerciseId == null || exerciseId == null) {
+          throw StateError('Pending sync action is missing exercise ids');
         }
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/exercises/complete',
-          data: {'exercise_id': exerciseId, 'date': date},
+          data: {
+            'exercise_id': exerciseId,
+            'training_exercise_id': trainingExerciseId,
+            'date': date,
+          },
         );
         await _cacheProgressResponse(response, date);
         return;
       case _unmarkExerciseCompleted:
-        final exerciseId = action['exercise_id'] as String?;
-        if (exerciseId == null) {
-          throw StateError('Pending sync action is missing exercise_id');
+        final trainingExerciseId =
+            action['training_exercise_id'] as String? ??
+            action['exercise_id'] as String?;
+        if (trainingExerciseId == null) {
+          throw StateError(
+            'Pending sync action is missing training_exercise_id',
+          );
         }
         final response = await _apiClient.dio.delete<dynamic>(
-          '/progress/exercises/$exerciseId',
+          '/progress/exercises/$trainingExerciseId',
           queryParameters: {'date': date},
         );
         await _cacheProgressResponse(response, date);
@@ -212,24 +232,30 @@ class OfflineSyncService {
   }
 
   Future<void> _updateExerciseProgressCache(
-    String exerciseId,
+    String trainingExerciseId,
     String date, {
     required bool completed,
+    String? exerciseId,
   }) async {
     final progress = _getProgressCache(date);
     final currentExercises = _getExerciseEntries(progress);
 
-    currentExercises.removeWhere((entry) => entry['exercise_id'] == exerciseId);
+    currentExercises.removeWhere(
+      (entry) =>
+          entry['training_exercise_id'] == trainingExerciseId ||
+          entry['exercise_id'] == trainingExerciseId,
+    );
 
     if (completed) {
       currentExercises.add({
-        'exercise_id': exerciseId,
+        'training_exercise_id': trainingExerciseId,
+        'exercise_id': exerciseId ?? trainingExerciseId,
         'completed_at': DateTime.now().toIso8601String(),
       });
     }
 
     final completedIds = currentExercises
-        .map((entry) => entry['exercise_id'])
+        .map((entry) => entry['training_exercise_id'] ?? entry['exercise_id'])
         .whereType<String>()
         .toSet();
     final assignedIds = _getAssignedExerciseIds(date);
@@ -251,7 +277,8 @@ class OfflineSyncService {
     final currentById = <String, Map<String, dynamic>>{
       for (final entry in currentExercises)
         if (entry['exercise_id'] is String)
-          entry['exercise_id'] as String: entry,
+          (entry['training_exercise_id'] ?? entry['exercise_id']) as String:
+              entry,
     };
 
     final assignedIds = _getAssignedExerciseIds(date);
@@ -262,6 +289,7 @@ class OfflineSyncService {
                 currentById[exerciseId] ??
                 {
                   'exercise_id': exerciseId,
+                  'training_exercise_id': exerciseId,
                   'completed_at': DateTime.now().toIso8601String(),
                 },
           )
@@ -326,7 +354,7 @@ class OfflineSyncService {
     await _localStorage.cacheData(
       'completed_exercises_$date',
       normalizedExercises
-          .map((entry) => entry['exercise_id'])
+          .map((entry) => entry['training_exercise_id'] ?? entry['exercise_id'])
           .whereType<String>()
           .toList(growable: false),
     );
@@ -350,7 +378,7 @@ class OfflineSyncService {
         .whereType<Map>()
         .map(Map<String, dynamic>.from)
         .map((entry) {
-          final directId = entry['exercise_id'];
+          final directId = entry['id'] ?? entry['training_exercise_id'];
           if (directId is String) {
             return directId;
           }

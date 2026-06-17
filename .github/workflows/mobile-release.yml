@@ -1,0 +1,416 @@
+name: Mobile Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      android_track:
+        description: "Play Store track"
+        required: true
+        default: "internal"
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      update_policy:
+        description: "Mobile update prompt policy"
+        required: true
+        default: "recommended"
+        type: choice
+        options:
+          - none
+          - recommended
+          - blocking
+      build_number_override:
+        description: "Emergency build number override. Must be higher than MOBILE_BUILD_NUMBER."
+        required: false
+        type: string
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  prepare:
+    name: Resolve mobile version
+    runs-on: ubuntu-latest
+    outputs:
+      build_name: ${{ steps.version.outputs.build_name }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      android_track: ${{ steps.version.outputs.android_track }}
+      update_policy: ${{ steps.version.outputs.update_policy }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set mobile build version
+        id: version
+        env:
+          CURRENT_BUILD_INPUT: ${{ vars.MOBILE_BUILD_NUMBER }}
+          BUILD_NUMBER_OVERRIDE: ${{ github.event.inputs.build_number_override }}
+          ANDROID_TRACK_INPUT: ${{ github.event.inputs.android_track }}
+          UPDATE_POLICY_INPUT: ${{ github.event.inputs.update_policy }}
+        run: |
+          : "${CURRENT_BUILD_INPUT:?MOBILE_BUILD_NUMBER repository variable is required}"
+
+          VERSION_LINE=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          BUILD_NAME="${VERSION_LINE%%+*}"
+          CURRENT_BUILD="$CURRENT_BUILD_INPUT"
+
+          if ! [[ "$CURRENT_BUILD" =~ ^[0-9]+$ ]]; then
+            echo "Invalid MOBILE_BUILD_NUMBER: $CURRENT_BUILD"
+            exit 1
+          fi
+
+          if [ -n "$BUILD_NUMBER_OVERRIDE" ]; then
+            if ! [[ "$BUILD_NUMBER_OVERRIDE" =~ ^[0-9]+$ ]]; then
+              echo "Invalid build number override: $BUILD_NUMBER_OVERRIDE"
+              exit 1
+            fi
+
+            if [ "$BUILD_NUMBER_OVERRIDE" -le "$CURRENT_BUILD" ]; then
+              echo "Build number override $BUILD_NUMBER_OVERRIDE must be higher than MOBILE_BUILD_NUMBER $CURRENT_BUILD"
+              exit 1
+            fi
+
+            NEXT_BUILD="$BUILD_NUMBER_OVERRIDE"
+          else
+            NEXT_BUILD=$((CURRENT_BUILD + 1))
+          fi
+
+          ANDROID_TRACK="${ANDROID_TRACK_INPUT:-internal}"
+          UPDATE_POLICY="${UPDATE_POLICY_INPUT:-recommended}"
+
+          echo "build_name=$BUILD_NAME" >> "$GITHUB_OUTPUT"
+          echo "build_number=$NEXT_BUILD" >> "$GITHUB_OUTPUT"
+          echo "android_track=$ANDROID_TRACK" >> "$GITHUB_OUTPUT"
+          echo "update_policy=$UPDATE_POLICY" >> "$GITHUB_OUTPUT"
+          echo "Using mobile build $BUILD_NAME ($NEXT_BUILD)"
+          echo "Android track: $ANDROID_TRACK"
+          echo "Update policy: $UPDATE_POLICY"
+
+  android:
+    name: Build and upload Android
+    runs-on: ubuntu-latest
+    needs: prepare
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.5"
+          channel: "stable"
+          cache: true
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/exom-release-key.jks
+
+      - name: Write key.properties
+        run: |
+          cat > android/app/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=exom-release-key.jks
+          EOF
+
+      - name: Write google-services.json
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > android/app/google-services.json
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons
+
+      - name: Generate splash
+        run: dart run flutter_native_splash:create
+
+      - name: Build AAB
+        run: flutter build appbundle --release --build-name "${{ needs.prepare.outputs.build_name }}" --build-number "${{ needs.prepare.outputs.build_number }}"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.exommethod.exom
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          tracks: ${{ needs.prepare.outputs.android_track }}
+          status: completed
+          whatsNewDirectory: distribution/whatsnew
+
+  ios:
+    name: Build and upload iOS
+    runs-on: macos-26
+    needs: prepare
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.5"
+          channel: "stable"
+          cache: true
+
+      - name: Select Xcode 26
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Install Apple certificate
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$P12_BASE64" | base64 --decode > $CERT_PATH
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security import $CERT_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo -n "$PROFILE_BASE64" | base64 --decode > $PROFILE_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          PROFILE_PLIST=$(security cms -D -i $PROFILE_PATH)
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$PROFILE_PLIST")
+          NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin <<< "$PROFILE_PLIST")
+          cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          echo "PROFILE_NAME=$NAME" >> $GITHUB_ENV
+
+      - name: Write GoogleService-Info.plist
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons
+
+      - name: Generate splash
+        run: dart run flutter_native_splash:create
+
+      - name: Pod install
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Create ExportOptions.plist
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          cat > ios/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key>
+              <string>${PROFILE_NAME}</string>
+            </dict>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>destination</key>
+            <string>export</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build Flutter iOS (no codesign)
+        run: flutter build ios --release --no-codesign --build-name "${{ needs.prepare.outputs.build_name }}" --build-number "${{ needs.prepare.outputs.build_number }}"
+
+      - name: Configure Runner signing
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          ruby <<'RUBY'
+          require 'xcodeproj'
+
+          project = Xcodeproj::Project.open('ios/Runner.xcodeproj')
+          runner = project.targets.find { |target| target.name == 'Runner' }
+          abort 'Runner target not found' unless runner
+
+          team_id = ENV.fetch('TEAM_ID')
+          bundle_id = ENV.fetch('BUNDLE_ID')
+          profile_name = ENV.fetch('PROFILE_NAME')
+
+          runner.build_configurations.each do |config|
+            config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+            config.build_settings['DEVELOPMENT_TEAM'] = team_id
+            config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = bundle_id
+            config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile_name
+            config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+            config.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = 'Apple Distribution'
+          end
+
+          project.save
+          RUBY
+
+      - name: Archive with xcodebuild
+        run: |
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/Runner.xcarchive \
+            -destination "generic/platform=iOS" \
+            archive
+
+      - name: Export IPA
+        run: |
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive \
+            -archivePath build/ios/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/ExportOptions.plist
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exom-ios-ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      - name: Upload to TestFlight
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "$API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${API_KEY_ID}.p8
+          IPA_PATH=$(ls build/ios/ipa/*.ipa | head -n1)
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER_ID"
+
+      - name: Cleanup keychain
+        if: ${{ always() }}
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          rm -f ~/private_keys/AuthKey_*.p8 || true
+
+  finalize:
+    name: Publish release metadata
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - android
+      - ios
+
+    steps:
+      - name: Update MOBILE_BUILD_NUMBER repository variable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT_BUILD: ${{ needs.prepare.outputs.build_number }}
+        run: |
+          curl --fail --show-error --silent \
+            --request PATCH \
+            --url "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/MOBILE_BUILD_NUMBER" \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "{
+              \"name\": \"MOBILE_BUILD_NUMBER\",
+              \"value\": \"$NEXT_BUILD\"
+            }"
+
+      - name: Update Android mobile config
+        env:
+          MOBILE_CONFIG_API_URL: ${{ secrets.MOBILE_CONFIG_API_URL }}
+          MOBILE_CONFIG_UPDATE_TOKEN: ${{ secrets.MOBILE_CONFIG_UPDATE_TOKEN }}
+          BUILD_NAME: ${{ needs.prepare.outputs.build_name }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+          UPDATE_POLICY: ${{ needs.prepare.outputs.update_policy }}
+        run: |
+          : "${MOBILE_CONFIG_API_URL:?MOBILE_CONFIG_API_URL secret is required}"
+          : "${MOBILE_CONFIG_UPDATE_TOKEN:?MOBILE_CONFIG_UPDATE_TOKEN secret is required}"
+
+          curl --fail --show-error --silent \
+            --request PATCH \
+            --url "${MOBILE_CONFIG_API_URL%/}/public/mobile-config/release" \
+            --header "Content-Type: application/json" \
+            --header "x-mobile-config-token: $MOBILE_CONFIG_UPDATE_TOKEN" \
+            --data "{
+              \"platform\": \"android\",
+              \"version\": \"$BUILD_NAME\",
+              \"build\": $BUILD_NUMBER,
+              \"policy\": \"$UPDATE_POLICY\"
+            }"
+
+      - name: Update iOS mobile config
+        env:
+          MOBILE_CONFIG_API_URL: ${{ secrets.MOBILE_CONFIG_API_URL }}
+          MOBILE_CONFIG_UPDATE_TOKEN: ${{ secrets.MOBILE_CONFIG_UPDATE_TOKEN }}
+          BUILD_NAME: ${{ needs.prepare.outputs.build_name }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+          UPDATE_POLICY: ${{ needs.prepare.outputs.update_policy }}
+        run: |
+          : "${MOBILE_CONFIG_API_URL:?MOBILE_CONFIG_API_URL secret is required}"
+          : "${MOBILE_CONFIG_UPDATE_TOKEN:?MOBILE_CONFIG_UPDATE_TOKEN secret is required}"
+
+          curl --fail --show-error --silent \
+            --request PATCH \
+            --url "${MOBILE_CONFIG_API_URL%/}/public/mobile-config/release" \
+            --header "Content-Type: application/json" \
+            --header "x-mobile-config-token: $MOBILE_CONFIG_UPDATE_TOKEN" \
+            --data "{
+              \"platform\": \"ios\",
+              \"version\": \"$BUILD_NAME\",
+              \"build\": $BUILD_NUMBER,
+              \"policy\": \"$UPDATE_POLICY\"
+            }"

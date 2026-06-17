@@ -6,6 +6,7 @@ import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +99,38 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
 
   TrainingExerciseEntity get _currentExercise =>
       widget.args.exercises[_currentExerciseIndex];
+
+  Future<void> _openVideoPlayer() async {
+    final exercise = _currentExercise.exercise;
+    final videoUrl = exercise.videoUrl?.trim();
+    if (videoUrl == null || videoUrl.isEmpty) return;
+
+    final uri = Uri.tryParse(videoUrl);
+    if (uri == null || !mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            ExerciseVideoPlayerPage(title: exercise.name, videoUri: uri),
+      ),
+    );
+  }
+
+  String _formatPrescription(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+
+    final lower = trimmed.toLowerCase();
+    final hasUnit = RegExp(
+      r'(rep|repet|seg|sec|min|s\b|kg|kilo|lb|libra|cada|c/l|max|amrap|rm)',
+    ).hasMatch(lower);
+    if (hasUnit) return trimmed;
+
+    final looksLikeReps = RegExp(
+      r'^\d+([-,/]\d+)?$',
+    ).hasMatch(trimmed.replaceAll(' ', ''));
+    return looksLikeReps ? '$trimmed reps' : trimmed;
+  }
 
   Future<bool> _confirmExit() async {
     if (_status == _CircuitStatus.done) return true;
@@ -273,7 +306,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                             title: exercise.name,
                             videoUrl: exercise.videoUrl,
                             thumbnailUrl: exercise.thumbnailUrl,
-                            onTap: null,
+                            onTap: _openVideoPlayer,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -342,7 +375,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                _currentExercise.repsOrDuration,
+                                _formatPrescription(
+                                  _currentExercise.repsOrDuration,
+                                ),
                                 style: TextStyle(
                                   color: palette.textSecondary,
                                   fontSize: 16,

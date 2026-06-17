@@ -16,6 +16,23 @@ String? _resolveAccentColorFromJson(Map<String, dynamic> json) {
   return normalizeTrainingAccentHex(rawValue);
 }
 
+T? _readJson<T>(Map<String, dynamic> json, String snakeKey, String camelKey) {
+  final value = json[snakeKey] ?? json[camelKey];
+  return value is T ? value : null;
+}
+
+List<String> _readStringList(
+  Map<String, dynamic> json,
+  String snakeKey,
+  String camelKey,
+) {
+  final value = json[snakeKey] ?? json[camelKey];
+  return switch (value) {
+    List<dynamic> items => items.map((e) => e.toString()).toList(),
+    _ => const <String>[],
+  };
+}
+
 class ExerciseModel {
   final String id;
   final String name;
@@ -41,16 +58,20 @@ class ExerciseModel {
     return ExerciseModel(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      muscleGroups:
-          (json['muscle_groups'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-      videoUrl: json['video_url'] as String?,
-      thumbnailUrl: json['thumbnail_url'] as String?,
-      techniqueText: json['technique_text'] as String?,
-      commonErrorsText: json['common_errors_text'] as String?,
-      explanationText: json['explanation_text'] as String?,
+      muscleGroups: _readStringList(json, 'muscle_groups', 'muscleGroups'),
+      videoUrl: _readJson<String>(json, 'video_url', 'videoUrl'),
+      thumbnailUrl: _readJson<String>(json, 'thumbnail_url', 'thumbnailUrl'),
+      techniqueText: _readJson<String>(json, 'technique_text', 'techniqueText'),
+      commonErrorsText: _readJson<String>(
+        json,
+        'common_errors_text',
+        'commonErrorsText',
+      ),
+      explanationText: _readJson<String>(
+        json,
+        'explanation_text',
+        'explanationText',
+      ),
     );
   }
 }
@@ -90,14 +111,23 @@ class TrainingExerciseModel {
       id: json['id'] as String? ?? '',
       order: json['order'] as int? ?? 0,
       sets: json['sets'] as int? ?? 0,
-      repsOrDuration: json['reps_or_duration'] as String? ?? '',
-      restSeconds: json['rest_seconds'] as int? ?? 60,
-      blockId: json['block_id'] as String?,
-      positionInBlock: json['position_in_block'] as int?,
+      repsOrDuration:
+          _readJson<String>(json, 'reps_or_duration', 'repsOrDuration') ?? '',
+      restSeconds: _readJson<int>(json, 'rest_seconds', 'restSeconds') ?? 60,
+      blockId: _readJson<String>(json, 'block_id', 'blockId'),
+      positionInBlock: _readJson<int>(
+        json,
+        'position_in_block',
+        'positionInBlock',
+      ),
       blockName: block?['name'] as String?,
       blockOrder: block?['order'] as int?,
       blockRounds: block?['rounds'] as int?,
-      restBetweenRoundsSeconds: block?['rest_between_rounds_seconds'] as int?,
+      restBetweenRoundsSeconds: _readJson<int>(
+        block ?? const <String, dynamic>{},
+        'rest_between_rounds_seconds',
+        'restBetweenRoundsSeconds',
+      ),
       exercise: ExerciseModel.fromJson(
         (json['exercise'] as Map<String, dynamic>?) ?? {},
       ),

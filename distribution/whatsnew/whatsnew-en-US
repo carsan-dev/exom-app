@@ -1,4 +1,3 @@
-- Added training circuits: routines can now show blocks with rounds and rest between rounds.
-- Exercise progress is now tracked per routine instance, so repeated exercises no longer all complete at once.
-- Improved offline progress restore for repeated exercises and circuit blocks.
-- Fixed the weekly recap body selector so you can mark specific muscle areas more accurately while keeping previously saved pain zones visible.
+- You can now export your weekly diet as a PDF from Calendar > Diets.
+- Print or share your complete plan, including meals, ingredients, and alternatives.
+- Stability and performance improvements.

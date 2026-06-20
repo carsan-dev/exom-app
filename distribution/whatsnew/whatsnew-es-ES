@@ -1,4 +1,3 @@
-- Añadidos circuitos en entrenamientos, con rondas y descansos entre rondas.
-- El progreso se guarda por instancia: repetir un ejercicio ya no marca todas sus apariciones.
-- Mejorado el progreso offline para ejercicios repetidos y circuitos.
-- Corregido el selector corporal del recap semanal para marcar zonas musculares con más precisión y conservar zonas de dolor previas.
+- Ya puedes exportar tu dieta semanal en PDF desde Calendario > Dietas.
+- Imprime o comparte tu planificación completa, con comidas, ingredientes y alternativas.
+- Mejoras de estabilidad y rendimiento.

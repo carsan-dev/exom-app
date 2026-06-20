@@ -45,11 +45,13 @@ import 'package:exom_app/features/diets/data/datasources/diet_remote_datasource.
 import 'package:exom_app/features/diets/data/repositories/diet_repository_impl.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/get_weekly_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/unmark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
+import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
 
 // Profile
 import 'package:exom_app/features/profile/data/datasources/profile_remote_datasource.dart';
@@ -264,6 +266,8 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton(() => GetTodayDietUseCase(sl<DietRepository>()));
+  sl.registerLazySingleton(() => GetWeeklyDietUseCase(sl<DietRepository>()));
+  sl.registerLazySingleton(() => const WeeklyDietPdfService());
   sl.registerLazySingleton(() => GetMealUseCase(sl<DietRepository>()));
   sl.registerLazySingleton(
     () => MarkMealCompletedUseCase(sl<DietRepository>()),

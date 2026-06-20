@@ -3727,6 +3727,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Eliminar'**
   String get notificationsDeleteReadConfirm;
+
+  /// No description provided for @exportWeeklyDietButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar dieta semanal'**
+  String get exportWeeklyDietButton;
+
+  /// No description provided for @weeklyDietPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Dieta semanal'**
+  String get weeklyDietPdfTitle;
+
+  /// No description provided for @weeklyDietNoDiet.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin dieta asignada'**
+  String get weeklyDietNoDiet;
+
+  /// No description provided for @weeklyDietIngredients.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingredientes'**
+  String get weeklyDietIngredients;
+
+  /// No description provided for @weeklyDietAlternatives.
+  ///
+  /// In es, this message translates to:
+  /// **'Alternativa'**
+  String get weeklyDietAlternatives;
+
+  /// No description provided for @weeklyDietPreparing.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando PDF…'**
+  String get weeklyDietPreparing;
+
+  /// No description provided for @weeklyDietEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay dietas asignadas esta semana'**
+  String get weeklyDietEmpty;
+
+  /// No description provided for @weeklyDietExportError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo generar el PDF. Inténtalo de nuevo.'**
+  String get weeklyDietExportError;
+
+  /// No description provided for @weeklyDietPrint.
+  ///
+  /// In es, this message translates to:
+  /// **'Imprimir'**
+  String get weeklyDietPrint;
+
+  /// No description provided for @weeklyDietShare.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir'**
+  String get weeklyDietShare;
 }
 
 class _AppLocalizationsDelegate

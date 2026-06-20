@@ -713,5 +713,15 @@
   "notificationsDeleteRead": "Delete read",
   "notificationsDeleteReadDialogTitle": "Delete read notifications?",
   "notificationsDeleteReadDialogBody": "All notifications you have already read will be permanently deleted.",
-  "notificationsDeleteReadConfirm": "Delete"
+  "notificationsDeleteReadConfirm": "Delete",
+  "exportWeeklyDietButton": "Export weekly diet",
+  "weeklyDietPdfTitle": "Weekly diet",
+  "weeklyDietNoDiet": "No diet assigned",
+  "weeklyDietIngredients": "Ingredients",
+  "weeklyDietAlternatives": "Alternative",
+  "weeklyDietPreparing": "Preparing PDF…",
+  "weeklyDietEmpty": "No diets are assigned this week",
+  "weeklyDietExportError": "Could not generate the PDF. Please try again.",
+  "weeklyDietPrint": "Print",
+  "weeklyDietShare": "Share"
 }

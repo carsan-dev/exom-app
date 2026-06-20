@@ -748,5 +748,15 @@
   "notificationsDeleteRead": "Eliminar leídas",
   "notificationsDeleteReadDialogTitle": "¿Eliminar notificaciones leídas?",
   "notificationsDeleteReadDialogBody": "Se eliminarán de forma permanente todas las notificaciones que ya has leído.",
-  "notificationsDeleteReadConfirm": "Eliminar"
+  "notificationsDeleteReadConfirm": "Eliminar",
+  "exportWeeklyDietButton": "Exportar dieta semanal",
+  "weeklyDietPdfTitle": "Dieta semanal",
+  "weeklyDietNoDiet": "Sin dieta asignada",
+  "weeklyDietIngredients": "Ingredientes",
+  "weeklyDietAlternatives": "Alternativa",
+  "weeklyDietPreparing": "Preparando PDF…",
+  "weeklyDietEmpty": "No hay dietas asignadas esta semana",
+  "weeklyDietExportError": "No se pudo generar el PDF. Inténtalo de nuevo.",
+  "weeklyDietPrint": "Imprimir",
+  "weeklyDietShare": "Compartir"
 }

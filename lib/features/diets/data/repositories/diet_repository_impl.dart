@@ -1,6 +1,7 @@
 import 'package:exom_app/features/diets/data/datasources/diet_remote_datasource.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
 
 class DietRepositoryImpl implements DietRepository {
@@ -13,6 +14,23 @@ class DietRepositoryImpl implements DietRepository {
     final model = await _remoteDataSource.getTodayDiet(date: date);
     if (model == null) return null;
     return _mapToEntity(model);
+  }
+
+  @override
+  Future<WeeklyDietEntity> getWeeklyDiet(String weekStart) async {
+    final model = await _remoteDataSource.getWeeklyDiet(weekStart);
+    return WeeklyDietEntity(
+      weekStart: model.weekStart,
+      weekEnd: model.weekEnd,
+      days: model.days
+          .map(
+            (day) => WeeklyDietDayEntity(
+              date: day.date,
+              diet: day.diet == null ? null : _mapToEntity(day.diet!),
+            ),
+          )
+          .toList(growable: false),
+    );
   }
 
   @override

@@ -1977,4 +1977,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsDeleteReadConfirm => 'Delete';
+
+  @override
+  String get exportWeeklyDietButton => 'Export weekly diet';
+
+  @override
+  String get weeklyDietPdfTitle => 'Weekly diet';
+
+  @override
+  String get weeklyDietNoDiet => 'No diet assigned';
+
+  @override
+  String get weeklyDietIngredients => 'Ingredients';
+
+  @override
+  String get weeklyDietAlternatives => 'Alternative';
+
+  @override
+  String get weeklyDietPreparing => 'Preparing PDF…';
+
+  @override
+  String get weeklyDietEmpty => 'No diets are assigned this week';
+
+  @override
+  String get weeklyDietExportError =>
+      'Could not generate the PDF. Please try again.';
+
+  @override
+  String get weeklyDietPrint => 'Print';
+
+  @override
+  String get weeklyDietShare => 'Share';
 }

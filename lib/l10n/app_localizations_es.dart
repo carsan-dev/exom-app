@@ -2002,4 +2002,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationsDeleteReadConfirm => 'Eliminar';
+
+  @override
+  String get exportWeeklyDietButton => 'Exportar dieta semanal';
+
+  @override
+  String get weeklyDietPdfTitle => 'Dieta semanal';
+
+  @override
+  String get weeklyDietNoDiet => 'Sin dieta asignada';
+
+  @override
+  String get weeklyDietIngredients => 'Ingredientes';
+
+  @override
+  String get weeklyDietAlternatives => 'Alternativa';
+
+  @override
+  String get weeklyDietPreparing => 'Preparando PDF…';
+
+  @override
+  String get weeklyDietEmpty => 'No hay dietas asignadas esta semana';
+
+  @override
+  String get weeklyDietExportError =>
+      'No se pudo generar el PDF. Inténtalo de nuevo.';
+
+  @override
+  String get weeklyDietPrint => 'Imprimir';
+
+  @override
+  String get weeklyDietShare => 'Compartir';
 }

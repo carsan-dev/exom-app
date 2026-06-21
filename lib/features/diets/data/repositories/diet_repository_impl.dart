@@ -80,6 +80,7 @@ class DietRepositoryImpl implements DietRepository {
       ingredients: model.ingredients
           .map(
             (i) => MealIngredientEntity(
+              id: i.id,
               name: i.name,
               quantity: i.quantity,
               unit: i.unit,

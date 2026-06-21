@@ -8,6 +8,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:exom_app/features/diets/services/ingredient_unit_formatter.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/injection_container.dart';
 
@@ -818,73 +819,17 @@ class _IngredientsSection extends StatelessWidget {
 
   final List<MealIngredientEntity> ingredients;
 
-  String _formatQuantity(double value) {
-    if (value % 1 == 0) return value.toInt().toString();
-    return value
-        .toStringAsFixed(2)
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
-  }
-
-  String _unitLabel(String unit) {
-    switch (unit) {
-      case 'g':
-        return 'g';
-      case 'ml':
-        return 'ml';
-      case 'piece':
-        return 'unidad';
-      case 'tablespoon':
-        return 'cucharada';
-      case 'teaspoon':
-        return 'cucharadita';
-      case 'handful':
-        return 'puñado';
-      case 'slice':
-        return 'rebanada';
-      case 'palm':
-        return 'palma';
-      case 'fist':
-        return 'puño';
-      case 'ladle':
-        return 'cucharón';
-      case 'cold_cut_slice':
-        return 'loncha';
-      case 'glass':
-        return 'vaso';
-      case 'cup':
-        return 'taza';
-      case 'bowl':
-        return 'bol';
-      case 'finger':
-        return 'dedo';
-      case 'pinch':
-        return 'pizca';
-      case 'serving':
-        return 'ración';
-      case 'to_taste':
-        return 'al gusto';
-      default:
-        return unit;
-    }
-  }
-
-  String _ingredientAmountLabel(MealIngredientEntity ingredient) {
-    final unit = _unitLabel(ingredient.unit);
-
-    if (ingredient.unit == 'to_taste') {
-      return unit;
-    }
-
-    final base = '${_formatQuantity(ingredient.quantity)} $unit';
-    final grams = ingredient.gramsEquivalent;
-
-    if (ingredient.unit == 'g' || grams == null || grams <= 0) {
-      return base;
-    }
-
-    return '$base (${_formatQuantity(grams)} g)';
-  }
+  String _ingredientAmountLabel(
+    BuildContext context,
+    MealIngredientEntity ingredient,
+  ) =>
+      IngredientUnitFormatter(
+        locale: Localizations.localeOf(context).toString(),
+      ).amount(
+        quantityValue: ingredient.quantity,
+        unitCode: ingredient.unit,
+        gramsEquivalent: ingredient.gramsEquivalent,
+      );
 
   IconData _fallbackIcon(String ingredientName) {
     final normalized = ingredientName.toLowerCase();
@@ -982,7 +927,7 @@ class _IngredientsSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  _ingredientAmountLabel(ingredient),
+                  _ingredientAmountLabel(context, ingredient),
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: 13,

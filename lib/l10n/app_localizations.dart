@@ -3787,6 +3787,162 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Compartir'**
   String get weeklyDietShare;
+
+  /// No description provided for @weeklyExportFormatTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué quieres exportar?'**
+  String get weeklyExportFormatTitle;
+
+  /// No description provided for @weeklyExportMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú semanal'**
+  String get weeklyExportMenu;
+
+  /// No description provided for @weeklyExportShoppingList.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de la compra'**
+  String get weeklyExportShoppingList;
+
+  /// No description provided for @weeklyVariantSelectorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir alternativas'**
+  String get weeklyVariantSelectorTitle;
+
+  /// No description provided for @weeklyVariantMain.
+  ///
+  /// In es, this message translates to:
+  /// **'Principal'**
+  String get weeklyVariantMain;
+
+  /// No description provided for @weeklyGenerateShoppingList.
+  ///
+  /// In es, this message translates to:
+  /// **'Generar lista'**
+  String get weeklyGenerateShoppingList;
+
+  /// No description provided for @weeklyShoppingListPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de la compra'**
+  String get weeklyShoppingListPdfTitle;
+
+  /// No description provided for @weeklyShoppingListEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ingredientes en las comidas de esta semana'**
+  String get weeklyShoppingListEmpty;
+
+  /// No description provided for @ingredientToTaste.
+  ///
+  /// In es, this message translates to:
+  /// **'al gusto'**
+  String get ingredientToTaste;
+
+  /// No description provided for @ingredientUnitG.
+  ///
+  /// In es, this message translates to:
+  /// **'g'**
+  String get ingredientUnitG;
+
+  /// No description provided for @ingredientUnitMl.
+  ///
+  /// In es, this message translates to:
+  /// **'ml'**
+  String get ingredientUnitMl;
+
+  /// No description provided for @ingredientUnitPiece.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{unidad} other{unidades}}'**
+  String ingredientUnitPiece(num count);
+
+  /// No description provided for @ingredientUnitTablespoon.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{cucharada} other{cucharadas}}'**
+  String ingredientUnitTablespoon(num count);
+
+  /// No description provided for @ingredientUnitTeaspoon.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{cucharadita} other{cucharaditas}}'**
+  String ingredientUnitTeaspoon(num count);
+
+  /// No description provided for @ingredientUnitHandful.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{puñado} other{puñados}}'**
+  String ingredientUnitHandful(num count);
+
+  /// No description provided for @ingredientUnitSlice.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{rebanada} other{rebanadas}}'**
+  String ingredientUnitSlice(num count);
+
+  /// No description provided for @ingredientUnitPalm.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{palma} other{palmas}}'**
+  String ingredientUnitPalm(num count);
+
+  /// No description provided for @ingredientUnitFist.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{puño} other{puños}}'**
+  String ingredientUnitFist(num count);
+
+  /// No description provided for @ingredientUnitLadle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{cucharón} other{cucharones}}'**
+  String ingredientUnitLadle(num count);
+
+  /// No description provided for @ingredientUnitColdCutSlice.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{loncha} other{lonchas}}'**
+  String ingredientUnitColdCutSlice(num count);
+
+  /// No description provided for @ingredientUnitGlass.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{vaso} other{vasos}}'**
+  String ingredientUnitGlass(num count);
+
+  /// No description provided for @ingredientUnitCup.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{taza} other{tazas}}'**
+  String ingredientUnitCup(num count);
+
+  /// No description provided for @ingredientUnitBowl.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{bol} other{boles}}'**
+  String ingredientUnitBowl(num count);
+
+  /// No description provided for @ingredientUnitFinger.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{dedo} other{dedos}}'**
+  String ingredientUnitFinger(num count);
+
+  /// No description provided for @ingredientUnitPinch.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{pizca} other{pizcas}}'**
+  String ingredientUnitPinch(num count);
+
+  /// No description provided for @ingredientUnitServing.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{ración} other{raciones}}'**
+  String ingredientUnitServing(num count);
 }
 
 class _AppLocalizationsDelegate

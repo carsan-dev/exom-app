@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,7 +18,11 @@ import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.d
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_weekly_diet_usecase.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
+import 'package:exom_app/features/diets/services/weekly_shopping_list_builder.dart';
 
 enum _PdfAction { print, share }
 
@@ -515,6 +520,38 @@ class _CalendarViewState extends State<_CalendarView> {
         messenger.showSnackBar(SnackBar(content: Text(l10n.weeklyDietEmpty)));
         return;
       }
+      if (!context.mounted) return;
+
+      final format = await showModalBottomSheet<WeeklyDietExportFormat>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                title: Text(
+                  l10n.weeklyExportFormatTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_view_week_outlined),
+                title: Text(l10n.weeklyExportMenu),
+                onTap: () =>
+                    Navigator.pop(sheetContext, WeeklyDietExportFormat.menu),
+              ),
+              ListTile(
+                leading: const Icon(Icons.shopping_cart_outlined),
+                title: Text(l10n.weeklyExportShoppingList),
+                onTap: () => Navigator.pop(
+                  sheetContext,
+                  WeeklyDietExportFormat.shoppingList,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (format == null || !context.mounted) return;
 
       final labels = WeeklyDietPdfLabels(
         title: l10n.weeklyDietPdfTitle,
@@ -528,11 +565,46 @@ class _CalendarViewState extends State<_CalendarView> {
           'DINNER': l10n.mealTypeDinner,
         },
       );
-      final bytes = await GetIt.I<WeeklyDietPdfService>().build(
-        week: week,
-        locale: locale,
-        labels: labels,
-      );
+      late final Uint8List bytes;
+      late final String filename;
+      if (format == WeeklyDietExportFormat.menu) {
+        bytes = await GetIt.I<WeeklyDietPdfService>().build(
+          week: week,
+          locale: locale,
+          labels: labels,
+        );
+        filename = 'dieta_semanal_${_apiDate(week.weekStart)}.pdf';
+      } else {
+        final selections =
+            await showModalBottomSheet<List<WeeklyMealSelection>>(
+              context: context,
+              isScrollControlled: true,
+              builder: (sheetContext) => _WeeklyVariantSelector(
+                week: week,
+                locale: locale,
+                title: l10n.weeklyVariantSelectorTitle,
+                mainLabel: l10n.weeklyVariantMain,
+                generateLabel: l10n.weeklyGenerateShoppingList,
+                mealTypes: labels.mealTypes,
+              ),
+            );
+        if (selections == null || !context.mounted) return;
+        final items = const WeeklyShoppingListBuilder().build(
+          week: week,
+          selections: selections,
+          locale: locale,
+        );
+        bytes = await GetIt.I<WeeklyDietPdfService>().buildShoppingList(
+          week: week,
+          items: items,
+          locale: locale,
+          labels: WeeklyShoppingListPdfLabels(
+            title: l10n.weeklyShoppingListPdfTitle,
+            empty: l10n.weeklyShoppingListEmpty,
+          ),
+        );
+        filename = 'lista_compra_${_apiDate(week.weekStart)}.pdf';
+      }
       if (!context.mounted) return;
 
       final action = await showModalBottomSheet<_PdfAction>(
@@ -554,16 +626,17 @@ class _CalendarViewState extends State<_CalendarView> {
           ),
         ),
       );
-      final filename = 'dieta_semanal_${_apiDate(week.weekStart)}.pdf';
       if (action == _PdfAction.print) {
         await Printing.layoutPdf(name: filename, onLayout: (_) async => bytes);
       } else if (action == _PdfAction.share) {
         await Printing.sharePdf(bytes: bytes, filename: filename);
       }
     } catch (_) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.weeklyDietExportError)),
-      );
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.weeklyDietExportError)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isExportingDiet = false);
     }
@@ -1496,6 +1569,165 @@ class _ToggleChip extends StatelessWidget {
 }
 
 // ─── Month/Year Picker Dialog ──────────────────────────────────────────────────
+
+class _WeeklyVariantSelector extends StatefulWidget {
+  const _WeeklyVariantSelector({
+    required this.week,
+    required this.locale,
+    required this.title,
+    required this.mainLabel,
+    required this.generateLabel,
+    required this.mealTypes,
+  });
+
+  final WeeklyDietEntity week;
+  final String locale;
+  final String title;
+  final String mainLabel;
+  final String generateLabel;
+  final Map<String, String> mealTypes;
+
+  @override
+  State<_WeeklyVariantSelector> createState() => _WeeklyVariantSelectorState();
+}
+
+class _WeeklyVariantSelectorState extends State<_WeeklyVariantSelector> {
+  late final Map<String, String> _selectedIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = {};
+    for (final day in widget.week.days) {
+      for (final meal in day.diet?.meals ?? const <MealEntity>[]) {
+        if (meal.variants.isNotEmpty) {
+          _selectedIds[WeeklyMealSelection.selectionKey(day.date, meal.id)] =
+              meal.id;
+        }
+      }
+    }
+  }
+
+  List<WeeklyMealSelection> _result() => [
+    for (final day in widget.week.days)
+      for (final meal in day.diet?.meals ?? const <MealEntity>[])
+        if (meal.variants.isNotEmpty)
+          WeeklyMealSelection(
+            date: day.date,
+            parentMealId: meal.id,
+            selectedMealId:
+                _selectedIds[WeeklyMealSelection.selectionKey(
+                  day.date,
+                  meal.id,
+                )] ??
+                meal.id,
+          ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final dayFormat = DateFormat.EEEE(widget.locale);
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.85,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                children: [
+                  for (final day in widget.week.days)
+                    if ((day.diet?.meals ?? const <MealEntity>[]).any(
+                      (meal) => meal.variants.isNotEmpty,
+                    )) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 6),
+                        child: Text(
+                          toBeginningOfSentenceCase(dayFormat.format(day.date)),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      for (final meal
+                          in day.diet?.meals ?? const <MealEntity>[])
+                        if (meal.variants.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              initialValue:
+                                  _selectedIds[WeeklyMealSelection.selectionKey(
+                                    day.date,
+                                    meal.id,
+                                  )],
+                              decoration: InputDecoration(
+                                labelText:
+                                    widget.mealTypes[meal.type.toUpperCase()] ??
+                                    meal.type,
+                                border: const OutlineInputBorder(),
+                              ),
+                              items: [
+                                DropdownMenuItem(
+                                  value: meal.id,
+                                  child: Text(
+                                    '${widget.mainLabel}: ${meal.name}',
+                                  ),
+                                ),
+                                ...meal.variants.map(
+                                  (variant) => DropdownMenuItem(
+                                    value: variant.id,
+                                    child: Text(variant.name),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setState(() {
+                                  _selectedIds[WeeklyMealSelection.selectionKey(
+                                        day.date,
+                                        meal.id,
+                                      )] =
+                                      value;
+                                });
+                              },
+                            ),
+                          ),
+                    ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.pop(context, _result()),
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(widget.generateLabel),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _MonthYearPickerDialog extends StatefulWidget {
   final int initialYear;

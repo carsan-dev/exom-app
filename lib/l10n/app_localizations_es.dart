@@ -2033,4 +2033,203 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get weeklyDietShare => 'Compartir';
+
+  @override
+  String get weeklyExportFormatTitle => '¿Qué quieres exportar?';
+
+  @override
+  String get weeklyExportMenu => 'Menú semanal';
+
+  @override
+  String get weeklyExportShoppingList => 'Lista de la compra';
+
+  @override
+  String get weeklyVariantSelectorTitle => 'Elegir alternativas';
+
+  @override
+  String get weeklyVariantMain => 'Principal';
+
+  @override
+  String get weeklyGenerateShoppingList => 'Generar lista';
+
+  @override
+  String get weeklyShoppingListPdfTitle => 'Lista de la compra';
+
+  @override
+  String get weeklyShoppingListEmpty =>
+      'No hay ingredientes en las comidas de esta semana';
+
+  @override
+  String get ingredientToTaste => 'al gusto';
+
+  @override
+  String get ingredientUnitG => 'g';
+
+  @override
+  String get ingredientUnitMl => 'ml';
+
+  @override
+  String ingredientUnitPiece(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'unidades',
+      one: 'unidad',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitTablespoon(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'cucharadas',
+      one: 'cucharada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitTeaspoon(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'cucharaditas',
+      one: 'cucharadita',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitHandful(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'puñados',
+      one: 'puñado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitSlice(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'rebanadas',
+      one: 'rebanada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitPalm(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'palmas',
+      one: 'palma',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitFist(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'puños',
+      one: 'puño',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitLadle(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'cucharones',
+      one: 'cucharón',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitColdCutSlice(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'lonchas',
+      one: 'loncha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitGlass(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'vasos',
+      one: 'vaso',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitCup(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tazas',
+      one: 'taza',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitBowl(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'boles',
+      one: 'bol',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitFinger(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'dedos',
+      one: 'dedo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitPinch(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pizcas',
+      one: 'pizca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ingredientUnitServing(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'raciones',
+      one: 'ración',
+    );
+    return '$_temp0';
+  }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
+import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
+import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,21 @@ void main() {
     expect(model.weekStart, DateTime(2026, 6, 15));
     expect(model.days.first.diet, isNull);
     expect(model.days.last.diet?.name, 'Plan');
+  });
+
+  test('ingredient model preserves id and accepts old cache without it', () {
+    final current = MealIngredientModel.fromJson({
+      'quantity': 1,
+      'unit': 'piece',
+      'ingredient': {'id': 'ingredient-1', 'name': 'Apple'},
+    });
+    final cached = MealIngredientModel.fromJson({
+      'quantity': 1,
+      'unit': 'piece',
+      'ingredient': {'name': 'Apple'},
+    });
+    expect(current.id, 'ingredient-1');
+    expect(cached.id, '');
   });
 
   test('PDF service creates a valid localized document', () async {
@@ -49,6 +66,36 @@ void main() {
       ),
     );
 
+    expect(bytes.length, greaterThan(1000));
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
+  test('shopping list PDF creates a multipage valid document', () async {
+    final week = WeeklyDietEntity(
+      weekStart: DateTime(2026, 6, 15),
+      weekEnd: DateTime(2026, 6, 21),
+      days: const [],
+    );
+    final items = List.generate(
+      120,
+      (index) => ShoppingListItem(
+        ingredientKey: '$index',
+        name: 'Ingrediente español $index',
+        quantity: index + 1,
+        unit: 'piece',
+        gramsEquivalent: null,
+        toTaste: false,
+      ),
+    );
+    final bytes = await const WeeklyDietPdfService().buildShoppingList(
+      week: week,
+      items: items,
+      locale: 'es',
+      labels: const WeeklyShoppingListPdfLabels(
+        title: 'Lista de la compra',
+        empty: 'Lista vacía',
+      ),
+    );
     expect(bytes.length, greaterThan(1000));
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
   });

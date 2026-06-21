@@ -1,4 +1,5 @@
 class MealIngredientModel {
+  final String id;
   final String name;
   final double quantity;
   final String unit;
@@ -6,6 +7,7 @@ class MealIngredientModel {
   final String? icon;
 
   const MealIngredientModel({
+    required this.id,
     required this.name,
     required this.quantity,
     required this.unit,
@@ -17,6 +19,10 @@ class MealIngredientModel {
     // Backend returns MealIngredient JOIN row with nested ingredient object
     final ingredient = json['ingredient'] as Map<String, dynamic>?;
     return MealIngredientModel(
+      id:
+          ingredient?['id'] as String? ??
+          json['ingredient_id'] as String? ??
+          '',
       name: ingredient?['name'] as String? ?? json['name'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       unit: json['unit'] as String? ?? '',

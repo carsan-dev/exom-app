@@ -1,4 +1,5 @@
 class MealIngredientEntity {
+  final String id;
   final String name;
   final double quantity;
   final String unit;
@@ -6,6 +7,7 @@ class MealIngredientEntity {
   final String? icon;
 
   const MealIngredientEntity({
+    required this.id,
     required this.name,
     required this.quantity,
     required this.unit,

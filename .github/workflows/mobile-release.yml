@@ -353,22 +353,6 @@ jobs:
       - ios
 
     steps:
-      - name: Update MOBILE_BUILD_NUMBER repository variable
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NEXT_BUILD: ${{ needs.prepare.outputs.build_number }}
-        run: |
-          curl --fail --show-error --silent \
-            --request PATCH \
-            --url "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/MOBILE_BUILD_NUMBER" \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --data "{
-              \"name\": \"MOBILE_BUILD_NUMBER\",
-              \"value\": \"$NEXT_BUILD\"
-            }"
-
       - name: Update Android mobile config
         env:
           MOBILE_CONFIG_API_URL: ${{ secrets.MOBILE_CONFIG_API_URL }}
@@ -413,4 +397,22 @@ jobs:
               \"version\": \"$BUILD_NAME\",
               \"build\": $BUILD_NUMBER,
               \"policy\": \"$UPDATE_POLICY\"
+            }"
+
+      - name: Update MOBILE_BUILD_NUMBER repository variable
+        env:
+          GH_TOKEN: ${{ secrets.REPO_VARIABLES_TOKEN }}
+          NEXT_BUILD: ${{ needs.prepare.outputs.build_number }}
+        run: |
+          : "${GH_TOKEN:?REPO_VARIABLES_TOKEN secret is required}"
+
+          curl --fail --show-error --silent \
+            --request PATCH \
+            --url "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/MOBILE_BUILD_NUMBER" \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "{
+              \"name\": \"MOBILE_BUILD_NUMBER\",
+              \"value\": \"$NEXT_BUILD\"
             }"

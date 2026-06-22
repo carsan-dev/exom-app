@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/services/normalize_training_progress.dart';
 import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_today_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
@@ -121,11 +122,16 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
       try {
         progress = await _getCompletedExercisesUseCase(targetDate);
       } catch (_) {}
+      final normalizedProgress = normalizeTrainingProgress(
+        training: training,
+        rawIds: progress.ids,
+        rawWeights: progress.weights,
+      );
       emit(
         TrainingDetailLoaded(
           training,
-          completedExerciseIds: progress.ids,
-          exerciseWeights: progress.weights,
+          completedExerciseIds: normalizedProgress.ids,
+          exerciseWeights: normalizedProgress.weights,
           selectedDate: targetDate,
         ),
       );

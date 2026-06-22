@@ -1623,6 +1623,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setPerformanceWeightError => 'Weight cannot be negative';
 
   @override
+  String get setPerformanceDataError => 'Enter repetitions or weight';
+
+  @override
+  String get completeWithoutTracking => 'Complete without tracking';
+
+  @override
+  String get circuitExerciseRestTitle => 'Rest between exercises';
+
+  @override
   String get feedbackQueued =>
       'Feedback queued. You can keep navigating while it uploads.';
 

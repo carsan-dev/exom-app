@@ -22,18 +22,14 @@ class ExerciseEntity {
 
 class SetPerformance {
   final int setNumber;
-  final int reps;
+  final int? reps;
   final double? weightKg;
 
-  const SetPerformance({
-    required this.setNumber,
-    required this.reps,
-    this.weightKg,
-  });
+  const SetPerformance({required this.setNumber, this.reps, this.weightKg});
 
   Map<String, dynamic> toJson() => {
     'set_number': setNumber,
-    'reps': reps,
+    if (reps != null) 'reps': reps,
     if (weightKg != null) 'weight_kg': weightKg,
   };
 }

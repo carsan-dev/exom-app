@@ -210,22 +210,20 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     ActiveExerciseState state,
     AppLocalizations l10n,
   ) async {
-    if (!widget.args.trainingExercise.requestSetTracking) {
-      context.read<ActiveExerciseBloc>().add(const CompleteSet());
-      return;
-    }
-
     final performance = await _showSetPerformanceSheet(
       context,
       l10n,
       setNumber: state.currentSet,
       prescribedReps: state.repsOrDuration,
       previousWeight: state.weightKg,
+      repsRequired: widget.args.trainingExercise.requestSetTracking,
     );
     if (!mounted || performance == null) return;
 
     context.read<ActiveExerciseBloc>().add(
-      CompleteSet(reps: performance.reps, weightKg: performance.weight),
+      performance.skipped
+          ? const CompleteSet()
+          : CompleteSet(reps: performance.reps, weightKg: performance.weight),
     );
   }
 
@@ -805,11 +803,12 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-Future<({int reps, double? weight})?> _showSetPerformanceSheet(
+Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
   required int setNumber,
   required String prescribedReps,
+  required bool repsRequired,
   double? previousWeight,
 }) async {
   final palette = context.exomPalette;
@@ -819,7 +818,7 @@ Future<({int reps, double? weight})?> _showSetPerformanceSheet(
         ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
         : '',
   );
-  ({int reps, double? weight})? result;
+  ({int? reps, double? weight, bool skipped})? result;
   String? error;
 
   await showModalBottomSheet(
@@ -889,6 +888,18 @@ Future<({int reps, double? weight})?> _showSetPerformanceSheet(
               const SizedBox(height: 20),
               Row(
                 children: [
+                  if (!repsRequired) ...[
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          result = (reps: null, weight: null, skipped: true);
+                          Navigator.of(ctx).pop();
+                        },
+                        child: Text(l10n.completeWithoutTracking),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(ctx).pop(),
@@ -900,7 +911,13 @@ Future<({int reps, double? weight})?> _showSetPerformanceSheet(
                     child: ElevatedButton(
                       onPressed: () {
                         final reps = int.tryParse(repsController.text.trim());
-                        if (reps == null || reps < 1) {
+                        if (repsRequired && (reps == null || reps < 1)) {
+                          setModalState(
+                            () => error = l10n.setPerformanceRepsError,
+                          );
+                          return;
+                        }
+                        if (reps != null && reps < 1) {
                           setModalState(
                             () => error = l10n.setPerformanceRepsError,
                           );
@@ -916,7 +933,13 @@ Future<({int reps, double? weight})?> _showSetPerformanceSheet(
                           );
                           return;
                         }
-                        result = (reps: reps, weight: weight);
+                        if (reps == null && weight == null) {
+                          setModalState(
+                            () => error = l10n.setPerformanceDataError,
+                          );
+                          return;
+                        }
+                        result = (reps: reps, weight: weight, skipped: false);
                         Navigator.of(ctx).pop();
                       },
                       child: Text(l10n.weightInputSave),

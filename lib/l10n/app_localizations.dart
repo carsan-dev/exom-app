@@ -3056,6 +3056,24 @@ abstract class AppLocalizations {
   /// **'El peso no puede ser negativo'**
   String get setPerformanceWeightError;
 
+  /// No description provided for @setPerformanceDataError.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce repeticiones o peso'**
+  String get setPerformanceDataError;
+
+  /// No description provided for @completeWithoutTracking.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar sin registrar'**
+  String get completeWithoutTracking;
+
+  /// No description provided for @circuitExerciseRestTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso entre ejercicios'**
+  String get circuitExerciseRestTitle;
+
   /// No description provided for @feedbackQueued.
   ///
   /// In es, this message translates to:

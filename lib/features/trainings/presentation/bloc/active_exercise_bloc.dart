@@ -171,13 +171,13 @@ class ActiveExerciseBloc
 
     final nextCompletedSets = state.completedSets + 1;
     final nextWeight = event.weightKg ?? state.weightKg;
-    final nextPerformances = event.reps == null
+    final nextPerformances = event.reps == null && event.weightKg == null
         ? state.setPerformances
         : [
             ...state.setPerformances,
             SetPerformance(
               setNumber: nextCompletedSets,
-              reps: event.reps!,
+              reps: event.reps,
               weightKg: event.weightKg,
             ),
           ];
@@ -277,7 +277,7 @@ class ActiveExerciseBloc
           .map(
             (data) => SetPerformance(
               setNumber: data['set_number'] as int,
-              reps: data['reps'] as int,
+              reps: data['reps'] as int?,
               weightKg: (data['weight_kg'] as num?)?.toDouble(),
             ),
           )

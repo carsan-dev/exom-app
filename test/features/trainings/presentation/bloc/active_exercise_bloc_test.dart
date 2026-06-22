@@ -176,6 +176,58 @@ void main() {
       });
     });
 
+    test('CompleteSet persists weight without reps', () async {
+      final store = _FakeStore();
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const CompleteSet(weightKg: 42.5));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bloc.state.setPerformances.single.reps, isNull);
+      expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
+        'set_number': 1,
+        'weight_kg': 42.5,
+      });
+    });
+
+    test('CompleteSet persists reps without weight', () async {
+      final store = _FakeStore();
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const CompleteSet(reps: 9));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
+        'set_number': 1,
+        'reps': 9,
+      });
+    });
+
+    test('CompleteSet without data completes without performance', () async {
+      final bloc = ActiveExerciseBloc(
+        localStorage: _FakeStore(),
+        trainingExercise: _trainingExercise(),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const CompleteSet());
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bloc.state.completedSets, 1);
+      expect(bloc.state.setPerformances, isEmpty);
+    });
+
     test('CompleteSet skips rest when restSeconds == 0', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(

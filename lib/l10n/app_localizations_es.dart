@@ -1643,6 +1643,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get setPerformanceWeightError => 'El peso no puede ser negativo';
 
   @override
+  String get setPerformanceDataError => 'Introduce repeticiones o peso';
+
+  @override
+  String get completeWithoutTracking => 'Completar sin registrar';
+
+  @override
+  String get circuitExerciseRestTitle => 'Descanso entre ejercicios';
+
+  @override
   String get feedbackQueued =>
       'Feedback en cola. Puedes seguir navegando mientras se sube.';
 

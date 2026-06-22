@@ -82,6 +82,7 @@ class TrainingExerciseModel {
   final int sets;
   final String repsOrDuration;
   final int restSeconds;
+  final bool requestSetTracking;
   final String? blockId;
   final int? positionInBlock;
   final String? blockName;
@@ -96,6 +97,7 @@ class TrainingExerciseModel {
     required this.sets,
     required this.repsOrDuration,
     required this.restSeconds,
+    this.requestSetTracking = false,
     this.blockId,
     this.positionInBlock,
     this.blockName,
@@ -114,6 +116,9 @@ class TrainingExerciseModel {
       repsOrDuration:
           _readJson<String>(json, 'reps_or_duration', 'repsOrDuration') ?? '',
       restSeconds: _readJson<int>(json, 'rest_seconds', 'restSeconds') ?? 60,
+      requestSetTracking:
+          _readJson<bool>(json, 'request_set_tracking', 'requestSetTracking') ??
+          false,
       blockId: _readJson<String>(json, 'block_id', 'blockId'),
       positionInBlock: _readJson<int>(
         json,

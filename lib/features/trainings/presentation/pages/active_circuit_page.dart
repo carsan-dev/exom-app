@@ -88,6 +88,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   var _status = _CircuitStatus.executing;
   DateTime? _restEndsAt;
   bool _markedComplete = false;
+  final Map<String, List<SetPerformance>> _performances = {};
 
   Color _typeColor(BuildContext context) {
     return trainingAccentColor(
@@ -162,8 +163,18 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return shouldLeave == true;
   }
 
-  void _completeCurrentSeries() {
+  Future<void> _completeCurrentSeries() async {
     if (_status != _CircuitStatus.executing) return;
+
+    if (_currentExercise.requestSetTracking) {
+      final performance = await _requestPerformance(_currentExercise);
+      if (!mounted || performance == null) return;
+      _performances.update(
+        _currentExercise.id,
+        (sets) => [...sets, performance],
+        ifAbsent: () => [performance],
+      );
+    }
 
     final isLastExercise =
         _currentExerciseIndex >= widget.args.exercises.length - 1;
@@ -191,6 +202,91 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     _finishCircuit();
   }
 
+  Future<SetPerformance?> _requestPerformance(
+    TrainingExerciseEntity trainingExercise,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final repsController = TextEditingController();
+    final previousWeight = _performances[trainingExercise.id]?.last.weightKg;
+    final weightController = TextEditingController(
+      text: previousWeight?.toString() ?? '',
+    );
+    String? error;
+    final result = await showDialog<SetPerformance>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(l10n.setPerformanceTitle(_currentRound)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.setPerformancePrescription(
+                  trainingExercise.repsOrDuration,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: repsController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceReps,
+                  errorText: error,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: weightController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceWeightOptional,
+                  suffixText: 'kg',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final reps = int.tryParse(repsController.text.trim());
+                final weightText = weightController.text.trim();
+                final weight = weightText.isEmpty
+                    ? null
+                    : double.tryParse(weightText.replaceAll(',', '.'));
+                if (reps == null || reps < 1) {
+                  setDialogState(() => error = l10n.setPerformanceRepsError);
+                  return;
+                }
+                if (weight != null && weight < 0) {
+                  setDialogState(() => error = l10n.setPerformanceWeightError);
+                  return;
+                }
+                Navigator.of(dialogContext).pop(
+                  SetPerformance(
+                    setNumber: _currentRound,
+                    reps: reps,
+                    weightKg: weight,
+                  ),
+                );
+              },
+              child: Text(l10n.weightInputSave),
+            ),
+          ],
+        ),
+      ),
+    );
+    repsController.dispose();
+    weightController.dispose();
+    return result;
+  }
+
   void _startNextRound() {
     if (_status != _CircuitStatus.roundResting) return;
 
@@ -207,11 +303,14 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     _markedComplete = true;
 
     for (final trainingExercise in widget.args.exercises) {
+      final sets = _performances[trainingExercise.id];
       context.read<TrainingBloc>().add(
         MarkExerciseCompleted(
           trainingExerciseId: trainingExercise.id,
           exerciseId: trainingExercise.exercise.id,
           completed: true,
+          weightUsed: sets == null || sets.isEmpty ? null : sets.last.weightKg,
+          sets: sets,
         ),
       );
     }

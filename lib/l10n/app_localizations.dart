@@ -3020,6 +3020,54 @@ abstract class AppLocalizations {
   /// **'Marcar como pendiente'**
   String get markExercisePendingButton;
 
+  /// No description provided for @setPerformanceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber}'**
+  String setPerformanceTitle(int setNumber);
+
+  /// No description provided for @setPerformancePrescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo: {prescription}'**
+  String setPerformancePrescription(String prescription);
+
+  /// No description provided for @setPerformanceReps.
+  ///
+  /// In es, this message translates to:
+  /// **'Repeticiones realizadas'**
+  String get setPerformanceReps;
+
+  /// No description provided for @setPerformanceWeightOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso usado (opcional)'**
+  String get setPerformanceWeightOptional;
+
+  /// No description provided for @setPerformanceRepsError.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce al menos 1 repetición'**
+  String get setPerformanceRepsError;
+
+  /// No description provided for @setPerformanceWeightError.
+  ///
+  /// In es, this message translates to:
+  /// **'El peso no puede ser negativo'**
+  String get setPerformanceWeightError;
+
+  /// No description provided for @feedbackQueued.
+  ///
+  /// In es, this message translates to:
+  /// **'Feedback en cola. Puedes seguir navegando mientras se sube.'**
+  String get feedbackQueued;
+
+  /// No description provided for @feedbackUploadFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo subir el feedback.'**
+  String get feedbackUploadFailed;
+
   /// No description provided for @weightInputTitle.
   ///
   /// In es, this message translates to:

@@ -19,8 +19,7 @@ class ExerciseVideoPreview extends StatelessWidget {
     this.onTap,
   });
 
-  bool get _hasVideo =>
-      videoUrl != null && videoUrl!.trim().isNotEmpty;
+  bool get _hasVideo => videoUrl != null && videoUrl!.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -50,14 +49,13 @@ class ExerciseVideoPreview extends StatelessWidget {
                           context,
                           MediaQuery.sizeOf(context).width,
                         ),
-                        placeholder: (context, imageUrl) => Container(
-                          color: palette.surfaceVariant,
-                        ),
+                        placeholder: (context, imageUrl) =>
+                            Container(color: palette.surfaceVariant),
                         errorWidget: (context, imageUrl, error) =>
                             _PreviewPlaceholder(
-                          title: title,
-                          description: l10n.activeExerciseNoVideo,
-                        ),
+                              title: title,
+                              description: l10n.activeExerciseNoVideo,
+                            ),
                       )
                     : _PreviewPlaceholder(
                         title: title,
@@ -127,7 +125,9 @@ class ExerciseVideoPreview extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            canOpenVideo ? l10n.video : l10n.activeExerciseNoVideo,
+                            canOpenVideo
+                                ? l10n.video
+                                : l10n.activeExerciseNoVideo,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 12,
@@ -137,23 +137,6 @@ class ExerciseVideoPreview extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (canOpenVideo)
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.14),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.open_in_full_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -169,10 +152,7 @@ class _PreviewPlaceholder extends StatelessWidget {
   final String title;
   final String description;
 
-  const _PreviewPlaceholder({
-    required this.title,
-    required this.description,
-  });
+  const _PreviewPlaceholder({required this.title, required this.description});
 
   @override
   Widget build(BuildContext context) {
@@ -184,11 +164,7 @@ class _PreviewPlaceholder extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.fitness_center,
-            color: palette.textDisabled,
-            size: 42,
-          ),
+          Icon(Icons.fitness_center, color: palette.textDisabled, size: 42),
           const SizedBox(height: 12),
           Text(
             title,
@@ -205,10 +181,7 @@ class _PreviewPlaceholder extends StatelessWidget {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: palette.textSecondary, fontSize: 12),
           ),
         ],
       ),

@@ -169,6 +169,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
             event.exerciseId,
             date,
             weightUsed: event.weightUsed,
+            sets: event.sets,
           );
         } else {
           await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date);

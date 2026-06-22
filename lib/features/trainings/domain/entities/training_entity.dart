@@ -20,12 +20,31 @@ class ExerciseEntity {
   });
 }
 
+class SetPerformance {
+  final int setNumber;
+  final int reps;
+  final double? weightKg;
+
+  const SetPerformance({
+    required this.setNumber,
+    required this.reps,
+    this.weightKg,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'set_number': setNumber,
+    'reps': reps,
+    if (weightKg != null) 'weight_kg': weightKg,
+  };
+}
+
 class TrainingExerciseEntity {
   final String id;
   final int order;
   final int sets;
   final String repsOrDuration;
   final int restSeconds;
+  final bool requestSetTracking;
   final String? blockId;
   final int? positionInBlock;
   final String? blockName;
@@ -40,6 +59,7 @@ class TrainingExerciseEntity {
     required this.sets,
     required this.repsOrDuration,
     required this.restSeconds,
+    this.requestSetTracking = false,
     this.blockId,
     this.positionInBlock,
     this.blockName,

@@ -4,6 +4,7 @@ import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/training_model.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 abstract class TrainingRemoteDataSource {
   Future<TrainingModel?> getTodayTraining({String? date});
@@ -14,6 +15,7 @@ abstract class TrainingRemoteDataSource {
     String exerciseId,
     String date, {
     double? weightUsed,
+    List<SetPerformance>? sets,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
@@ -308,6 +310,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String exerciseId,
     String date, {
     double? weightUsed,
+    List<SetPerformance>? sets,
   }) async {
     try {
       final payload = <String, dynamic>{
@@ -317,6 +320,9 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       };
       if (weightUsed != null) {
         payload['weight_used'] = weightUsed;
+      }
+      if (sets != null) {
+        payload['sets'] = sets.map((set) => set.toJson()).toList();
       }
 
       final response = await _apiClient.dio.post<dynamic>(
@@ -334,6 +340,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         date,
         completed: true,
         exerciseId: exerciseId,
+        weightUsed: weightUsed,
+        sets: sets,
       );
     }
   }

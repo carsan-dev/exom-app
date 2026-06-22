@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 class OfflineSyncService {
   static const _markExerciseCompleted = 'mark_exercise_completed';
@@ -51,6 +52,8 @@ class OfflineSyncService {
     String date, {
     required bool completed,
     String? exerciseId,
+    double? weightUsed,
+    List<SetPerformance>? sets,
   }) async {
     await _updateExerciseProgressCache(
       trainingExerciseId,
@@ -63,6 +66,8 @@ class OfflineSyncService {
       'training_exercise_id': trainingExerciseId,
       'exercise_id': ?exerciseId,
       'date': date,
+      'weight_used': ?weightUsed,
+      'sets': ?sets?.map((set) => set.toJson()).toList(),
     });
   }
 
@@ -175,6 +180,9 @@ class OfflineSyncService {
             'exercise_id': exerciseId,
             'training_exercise_id': trainingExerciseId,
             'date': date,
+            if (action['weight_used'] != null)
+              'weight_used': action['weight_used'],
+            if (action['sets'] != null) 'sets': action['sets'],
           },
         );
         await _cacheProgressResponse(response, date);

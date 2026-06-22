@@ -1,4 +1,5 @@
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 class MarkExerciseCompletedUseCase {
   final TrainingRepository _repository;
@@ -10,10 +11,12 @@ class MarkExerciseCompletedUseCase {
     String exerciseId,
     String date, {
     double? weightUsed,
+    List<SetPerformance>? sets,
   }) => _repository.markExerciseCompleted(
     trainingExerciseId,
     exerciseId,
     date,
     weightUsed: weightUsed,
+    sets: sets,
   );
 }

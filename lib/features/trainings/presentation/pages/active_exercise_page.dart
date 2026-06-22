@@ -182,10 +182,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.activeExerciseCloseTitle),
         content: Text(
-          l10n.activeExerciseCloseMessage(
-            state.completedSets,
-            state.totalSets,
-          ),
+          l10n.activeExerciseCloseMessage(state.completedSets, state.totalSets),
         ),
         actions: [
           TextButton(
@@ -213,14 +210,23 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     ActiveExerciseState state,
     AppLocalizations l10n,
   ) async {
-    final weight = await _showWeightSheet(
+    if (!widget.args.trainingExercise.requestSetTracking) {
+      context.read<ActiveExerciseBloc>().add(const CompleteSet());
+      return;
+    }
+
+    final performance = await _showSetPerformanceSheet(
       context,
       l10n,
+      setNumber: state.currentSet,
+      prescribedReps: state.repsOrDuration,
       previousWeight: state.weightKg,
     );
-    if (!mounted) return;
+    if (!mounted || performance == null) return;
 
-    context.read<ActiveExerciseBloc>().add(CompleteSet(weightKg: weight));
+    context.read<ActiveExerciseBloc>().add(
+      CompleteSet(reps: performance.reps, weightKg: performance.weight),
+    );
   }
 
   Future<void> _openVideoPlayer() async {
@@ -244,8 +250,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     return weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1);
   }
 
-  bool _hasContent(String? value) =>
-      value != null && value.trim().isNotEmpty;
+  bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -268,9 +273,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
 
         if (!_handledCompletion && state.isDone) {
@@ -281,6 +286,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               exerciseId: exercise.id,
               completed: true,
               weightUsed: state.weightKg,
+              sets: state.setPerformances,
             ),
           );
           context.pop();
@@ -376,8 +382,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                 ),
                                 padding: const EdgeInsets.all(20),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       children: [
@@ -390,8 +395,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                             color: typeColor.withValues(
                                               alpha: 0.14,
                                             ),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                           ),
                                           child: Text(
                                             state.isResting
@@ -457,12 +463,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                                 state.totalSets,
                                       minHeight: 8,
                                       backgroundColor: palette.surfaceVariant,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
-                                            state.isDone
-                                                ? semantic.success
-                                                : typeColor,
-                                          ),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        state.isDone
+                                            ? semantic.success
+                                            : typeColor,
+                                      ),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     const SizedBox(height: 8),
@@ -520,16 +525,13 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         key: const ValueKey('footer-executing'),
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () =>
-                              _onCompleteSetPressed(state, l10n),
+                          onPressed: () => _onCompleteSetPressed(state, l10n),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                state.currentSet == state.totalSets
+                            backgroundColor: state.currentSet == state.totalSets
                                 ? semantic.success
                                 : typeColor,
                             foregroundColor: palette.onPrimary,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 18),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
@@ -545,7 +547,10 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         ),
                         totalSeconds: state.restSeconds,
                         restEndsAt: state.restEndsAt!,
-                        onSkip: () => context
+                        onSkip: () => context.read<ActiveExerciseBloc>().add(
+                          const SkipRest(),
+                        ),
+                        onFinished: () => context
                             .read<ActiveExerciseBloc>()
                             .add(const SkipRest()),
                       ),
@@ -581,10 +586,7 @@ class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _CircleIconButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _CircleIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -650,12 +652,14 @@ class _RestingFooter extends StatefulWidget {
   final int totalSeconds;
   final DateTime restEndsAt;
   final VoidCallback onSkip;
+  final VoidCallback onFinished;
 
   const _RestingFooter({
     super.key,
     required this.totalSeconds,
     required this.restEndsAt,
     required this.onSkip,
+    required this.onFinished,
   });
 
   @override
@@ -664,13 +668,27 @@ class _RestingFooter extends StatefulWidget {
 
 class _RestingFooterState extends State<_RestingFooter> {
   Timer? _ticker;
+  bool _didFinish = false;
 
   @override
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
+      if (_remainingSeconds <= 0 && !_didFinish) {
+        _didFinish = true;
+        _ticker?.cancel();
+        widget.onFinished();
+        return;
+      }
       setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _remainingSeconds <= 0 && !_didFinish) {
+        _didFinish = true;
+        _ticker?.cancel();
+        widget.onFinished();
+      }
     });
   }
 
@@ -681,8 +699,9 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 
   int get _remainingSeconds {
-    final remainingMs =
-        widget.restEndsAt.difference(DateTime.now()).inMilliseconds;
+    final remainingMs = widget.restEndsAt
+        .difference(DateTime.now())
+        .inMilliseconds;
     if (remainingMs <= 0) return 0;
     return (remainingMs / 1000).ceil();
   }
@@ -724,8 +743,7 @@ class _RestingFooterState extends State<_RestingFooter> {
                     value: _progressValue,
                     strokeWidth: 4,
                     backgroundColor: palette.surfaceVariant,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(palette.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
                   ),
                 ),
                 Text(
@@ -772,10 +790,7 @@ class _RestingFooterState extends State<_RestingFooter> {
             style: ElevatedButton.styleFrom(
               backgroundColor: palette.primary,
               foregroundColor: palette.onPrimary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               textStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -790,18 +805,22 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-Future<double?> _showWeightSheet(
+Future<({int reps, double? weight})?> _showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
+  required int setNumber,
+  required String prescribedReps,
   double? previousWeight,
 }) async {
   final palette = context.exomPalette;
-  final controller = TextEditingController(
+  final repsController = TextEditingController();
+  final weightController = TextEditingController(
     text: previousWeight != null
         ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
         : '',
   );
-  double? result;
+  ({int reps, double? weight})? result;
+  String? error;
 
   await showModalBottomSheet(
     context: context,
@@ -810,76 +829,109 @@ Future<double?> _showWeightSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.weightInputTitle,
-              style: TextStyle(
-                color: palette.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              autofocus: true,
-              style: TextStyle(color: palette.textPrimary, fontSize: 15),
-              decoration: InputDecoration(
-                hintText: l10n.weightInputHint,
-                hintStyle: TextStyle(color: palette.textDisabled),
-                suffixText: 'kg',
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text(l10n.weightInputSkip),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setModalState) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: palette.divider,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final value = double.tryParse(
-                        controller.text.trim().replaceAll(',', '.'),
-                      );
-                      result = value;
-                      Navigator.of(ctx).pop();
-                    },
-                    child: Text(l10n.weightInputSave),
-                  ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.setPerformanceTitle(setNumber),
+                style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.setPerformancePrescription(prescribedReps),
+                style: TextStyle(color: palette.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: repsController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceReps,
+                  errorText: error,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: weightController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceWeightOptional,
+                  hintStyle: TextStyle(color: palette.textDisabled),
+                  suffixText: 'kg',
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final reps = int.tryParse(repsController.text.trim());
+                        if (reps == null || reps < 1) {
+                          setModalState(
+                            () => error = l10n.setPerformanceRepsError,
+                          );
+                          return;
+                        }
+                        final weightText = weightController.text.trim();
+                        final weight = weightText.isEmpty
+                            ? null
+                            : double.tryParse(weightText.replaceAll(',', '.'));
+                        if (weight != null && weight < 0) {
+                          setModalState(
+                            () => error = l10n.setPerformanceWeightError,
+                          );
+                          return;
+                        }
+                        result = (reps: reps, weight: weight);
+                        Navigator.of(ctx).pop();
+                      },
+                      child: Text(l10n.weightInputSave),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
 
+  repsController.dispose();
+  weightController.dispose();
   return result;
 }

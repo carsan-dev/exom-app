@@ -15,6 +15,7 @@ class ActiveWorkoutHiveModel {
   final int completedSets;
   final DateTime? restEndsAt;
   final double? lastWeightKg;
+  final List<Map<String, dynamic>> completedSetData;
 
   const ActiveWorkoutHiveModel({
     required this.trainingId,
@@ -23,6 +24,7 @@ class ActiveWorkoutHiveModel {
     required this.completedSets,
     this.restEndsAt,
     this.lastWeightKg,
+    this.completedSetData = const [],
   });
 
   ActiveWorkoutHiveModel copyWith({
@@ -32,6 +34,7 @@ class ActiveWorkoutHiveModel {
     int? completedSets,
     Object? restEndsAt = _sentinel,
     Object? lastWeightKg = _sentinel,
+    List<Map<String, dynamic>>? completedSetData,
   }) {
     return ActiveWorkoutHiveModel(
       trainingId: trainingId ?? this.trainingId,
@@ -44,11 +47,13 @@ class ActiveWorkoutHiveModel {
       lastWeightKg: identical(lastWeightKg, _sentinel)
           ? this.lastWeightKg
           : lastWeightKg as double?,
+      completedSetData: completedSetData ?? this.completedSetData,
     );
   }
 }
 
-class ActiveWorkoutHiveModelAdapter extends TypeAdapter<ActiveWorkoutHiveModel> {
+class ActiveWorkoutHiveModelAdapter
+    extends TypeAdapter<ActiveWorkoutHiveModel> {
   @override
   final int typeId = ActiveWorkoutHiveModel.typeId;
 
@@ -67,13 +72,16 @@ class ActiveWorkoutHiveModelAdapter extends TypeAdapter<ActiveWorkoutHiveModel> 
       completedSets: fields[3] as int? ?? 0,
       restEndsAt: fields[4] as DateTime?,
       lastWeightKg: fields[5] as double?,
+      completedSetData: ((fields[6] as List?) ?? const [])
+          .map((value) => Map<String, dynamic>.from(value as Map))
+          .toList(),
     );
   }
 
   @override
   void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.trainingId)
       ..writeByte(1)
@@ -85,7 +93,9 @@ class ActiveWorkoutHiveModelAdapter extends TypeAdapter<ActiveWorkoutHiveModel> 
       ..writeByte(4)
       ..write(obj.restEndsAt)
       ..writeByte(5)
-      ..write(obj.lastWeightKg);
+      ..write(obj.lastWeightKg)
+      ..writeByte(6)
+      ..write(obj.completedSetData);
   }
 }
 

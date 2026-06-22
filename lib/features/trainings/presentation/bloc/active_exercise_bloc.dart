@@ -12,16 +12,14 @@ class StartExercise extends ActiveExerciseEvent {
   final String trainingId;
   final String exerciseId;
 
-  const StartExercise({
-    required this.trainingId,
-    required this.exerciseId,
-  });
+  const StartExercise({required this.trainingId, required this.exerciseId});
 }
 
 class CompleteSet extends ActiveExerciseEvent {
+  final int? reps;
   final double? weightKg;
 
-  const CompleteSet({this.weightKg});
+  const CompleteSet({this.reps, this.weightKg});
 }
 
 class SkipRest extends ActiveExerciseEvent {
@@ -40,6 +38,7 @@ class ActiveExerciseState {
   final int completedSets;
   final String repsOrDuration;
   final double? weightKg;
+  final List<SetPerformance> setPerformances;
   final int restSeconds;
   final ActiveExerciseStatus status;
   final DateTime? restEndsAt;
@@ -51,6 +50,7 @@ class ActiveExerciseState {
     required this.completedSets,
     required this.repsOrDuration,
     required this.weightKg,
+    required this.setPerformances,
     required this.restSeconds,
     required this.status,
     required this.restEndsAt,
@@ -67,6 +67,7 @@ class ActiveExerciseState {
       completedSets: 0,
       repsOrDuration: trainingExercise.repsOrDuration,
       weightKg: initialWeightKg,
+      setPerformances: const [],
       restSeconds: trainingExercise.restSeconds < 0
           ? 0
           : trainingExercise.restSeconds,
@@ -85,6 +86,7 @@ class ActiveExerciseState {
     int? completedSets,
     String? repsOrDuration,
     Object? weightKg = _unset,
+    List<SetPerformance>? setPerformances,
     int? restSeconds,
     ActiveExerciseStatus? status,
     Object? restEndsAt = _unset,
@@ -98,6 +100,7 @@ class ActiveExerciseState {
       weightKg: identical(weightKg, _unset)
           ? this.weightKg
           : weightKg as double?,
+      setPerformances: setPerformances ?? this.setPerformances,
       restSeconds: restSeconds ?? this.restSeconds,
       status: status ?? this.status,
       restEndsAt: identical(restEndsAt, _unset)
@@ -110,7 +113,8 @@ class ActiveExerciseState {
   }
 }
 
-class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> {
+class ActiveExerciseBloc
+    extends Bloc<ActiveExerciseEvent, ActiveExerciseState> {
   final ActiveWorkoutLocalStore _localStorage;
   final TrainingExerciseEntity _trainingExercise;
   final double? _initialWeightKg;
@@ -167,12 +171,23 @@ class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> 
 
     final nextCompletedSets = state.completedSets + 1;
     final nextWeight = event.weightKg ?? state.weightKg;
+    final nextPerformances = event.reps == null
+        ? state.setPerformances
+        : [
+            ...state.setPerformances,
+            SetPerformance(
+              setNumber: nextCompletedSets,
+              reps: event.reps!,
+              weightKg: event.weightKg,
+            ),
+          ];
 
     if (nextCompletedSets >= state.totalSets) {
       final doneState = state.copyWith(
         completedSets: state.totalSets,
         currentSet: state.totalSets,
         weightKg: nextWeight,
+        setPerformances: nextPerformances,
         status: ActiveExerciseStatus.done,
         restEndsAt: null,
         errorMessage: null,
@@ -188,6 +203,7 @@ class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> 
         completedSets: nextCompletedSets,
         currentSet: nextSet,
         weightKg: nextWeight,
+        setPerformances: nextPerformances,
         status: ActiveExerciseStatus.executing,
         restEndsAt: null,
         errorMessage: null,
@@ -201,6 +217,7 @@ class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> 
       completedSets: nextCompletedSets,
       currentSet: nextSet,
       weightKg: nextWeight,
+      setPerformances: nextPerformances,
       status: ActiveExerciseStatus.resting,
       restEndsAt: DateTime.now().add(Duration(seconds: state.restSeconds)),
       errorMessage: null,
@@ -256,6 +273,15 @@ class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> 
       completedSets: completedSets,
       repsOrDuration: _trainingExercise.repsOrDuration,
       weightKg: saved.lastWeightKg ?? _initialWeightKg,
+      setPerformances: saved.completedSetData
+          .map(
+            (data) => SetPerformance(
+              setNumber: data['set_number'] as int,
+              reps: data['reps'] as int,
+              weightKg: (data['weight_kg'] as num?)?.toDouble(),
+            ),
+          )
+          .toList(),
       restSeconds: _trainingExercise.restSeconds < 0
           ? 0
           : _trainingExercise.restSeconds,
@@ -285,6 +311,9 @@ class ActiveExerciseBloc extends Bloc<ActiveExerciseEvent, ActiveExerciseState> 
           completedSets: nextState.completedSets,
           restEndsAt: nextState.isResting ? nextState.restEndsAt : null,
           lastWeightKg: nextState.weightKg,
+          completedSetData: nextState.setPerformances
+              .map((set) => set.toJson())
+              .toList(),
         ),
       );
     } catch (error) {

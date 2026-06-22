@@ -1601,6 +1601,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markExercisePendingButton => 'Mark as pending';
 
   @override
+  String setPerformanceTitle(int setNumber) {
+    return 'Set $setNumber';
+  }
+
+  @override
+  String setPerformancePrescription(String prescription) {
+    return 'Target: $prescription';
+  }
+
+  @override
+  String get setPerformanceReps => 'Completed repetitions';
+
+  @override
+  String get setPerformanceWeightOptional => 'Weight used (optional)';
+
+  @override
+  String get setPerformanceRepsError => 'Enter at least 1 repetition';
+
+  @override
+  String get setPerformanceWeightError => 'Weight cannot be negative';
+
+  @override
+  String get feedbackQueued =>
+      'Feedback queued. You can keep navigating while it uploads.';
+
+  @override
+  String get feedbackUploadFailed => 'Feedback upload failed.';
+
+  @override
   String get weightInputTitle => 'Weight used?';
 
   @override

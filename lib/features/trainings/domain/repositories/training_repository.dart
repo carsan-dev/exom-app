@@ -9,6 +9,7 @@ abstract class TrainingRepository {
     String exerciseId,
     String date, {
     double? weightUsed,
+    List<SetPerformance>? sets,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});

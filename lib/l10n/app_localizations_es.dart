@@ -1621,6 +1621,35 @@ class AppLocalizationsEs extends AppLocalizations {
   String get markExercisePendingButton => 'Marcar como pendiente';
 
   @override
+  String setPerformanceTitle(int setNumber) {
+    return 'Serie $setNumber';
+  }
+
+  @override
+  String setPerformancePrescription(String prescription) {
+    return 'Objetivo: $prescription';
+  }
+
+  @override
+  String get setPerformanceReps => 'Repeticiones realizadas';
+
+  @override
+  String get setPerformanceWeightOptional => 'Peso usado (opcional)';
+
+  @override
+  String get setPerformanceRepsError => 'Introduce al menos 1 repetición';
+
+  @override
+  String get setPerformanceWeightError => 'El peso no puede ser negativo';
+
+  @override
+  String get feedbackQueued =>
+      'Feedback en cola. Puedes seguir navegando mientras se sube.';
+
+  @override
+  String get feedbackUploadFailed => 'No se pudo subir el feedback.';
+
+  @override
   String get weightInputTitle => '¿Peso utilizado?';
 
   @override

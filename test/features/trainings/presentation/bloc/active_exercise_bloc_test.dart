@@ -70,64 +70,67 @@ void main() {
       expect(store.getActiveWorkout('ex-1')!.completedSets, 0);
     });
 
-    test('StartExercise restores executing state when saved rest expired',
-        () async {
-      final store = _FakeStore();
-      await store.saveActiveWorkout(
-        ActiveWorkoutHiveModel(
-          trainingId: 't-1',
-          exerciseId: 'ex-1',
-          currentSet: 2,
-          completedSets: 1,
-          restEndsAt: DateTime.now().subtract(const Duration(seconds: 5)),
-          lastWeightKg: 50,
-        ),
-      );
+    test(
+      'StartExercise restores executing state when saved rest expired',
+      () async {
+        final store = _FakeStore();
+        await store.saveActiveWorkout(
+          ActiveWorkoutHiveModel(
+            trainingId: 't-1',
+            exerciseId: 'ex-1',
+            currentSet: 2,
+            completedSets: 1,
+            restEndsAt: DateTime.now().subtract(const Duration(seconds: 5)),
+            lastWeightKg: 50,
+          ),
+        );
 
-      final bloc = ActiveExerciseBloc(
-        localStorage: store,
-        trainingExercise: _trainingExercise(),
-      );
+        final bloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+        );
 
-      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+        bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(bloc.state.completedSets, 1);
-      expect(bloc.state.currentSet, 2);
-      expect(bloc.state.status, ActiveExerciseStatus.executing);
-      expect(bloc.state.weightKg, 50);
-      expect(bloc.state.restEndsAt, isNull);
-    });
+        expect(bloc.state.completedSets, 1);
+        expect(bloc.state.currentSet, 2);
+        expect(bloc.state.status, ActiveExerciseStatus.executing);
+        expect(bloc.state.weightKg, 50);
+        expect(bloc.state.restEndsAt, isNull);
+      },
+    );
 
-    test('StartExercise restores resting state when saved rest still pending',
-        () async {
-      final store = _FakeStore();
-      final pendingRestEnd =
-          DateTime.now().add(const Duration(seconds: 30));
-      await store.saveActiveWorkout(
-        ActiveWorkoutHiveModel(
-          trainingId: 't-1',
-          exerciseId: 'ex-1',
-          currentSet: 2,
-          completedSets: 1,
-          restEndsAt: pendingRestEnd,
-          lastWeightKg: 60,
-        ),
-      );
+    test(
+      'StartExercise restores resting state when saved rest still pending',
+      () async {
+        final store = _FakeStore();
+        final pendingRestEnd = DateTime.now().add(const Duration(seconds: 30));
+        await store.saveActiveWorkout(
+          ActiveWorkoutHiveModel(
+            trainingId: 't-1',
+            exerciseId: 'ex-1',
+            currentSet: 2,
+            completedSets: 1,
+            restEndsAt: pendingRestEnd,
+            lastWeightKg: 60,
+          ),
+        );
 
-      final bloc = ActiveExerciseBloc(
-        localStorage: store,
-        trainingExercise: _trainingExercise(),
-      );
+        final bloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+        );
 
-      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+        bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(bloc.state.status, ActiveExerciseStatus.resting);
-      expect(bloc.state.completedSets, 1);
-      expect(bloc.state.currentSet, 2);
-      expect(bloc.state.restEndsAt, pendingRestEnd);
-    });
+        expect(bloc.state.status, ActiveExerciseStatus.resting);
+        expect(bloc.state.completedSets, 1);
+        expect(bloc.state.currentSet, 2);
+        expect(bloc.state.restEndsAt, pendingRestEnd);
+      },
+    );
 
     test('CompleteSet on intermediate set transitions to resting', () async {
       final store = _FakeStore();
@@ -150,6 +153,29 @@ void main() {
       expect(store.getActiveWorkout('ex-1')!.completedSets, 1);
     });
 
+    test('CompleteSet persists reps and weight for each tracked set', () async {
+      final store = _FakeStore();
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const CompleteSet(reps: 12, weightKg: 72.5));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bloc.state.setPerformances, hasLength(1));
+      expect(bloc.state.setPerformances.single.setNumber, 1);
+      expect(bloc.state.setPerformances.single.reps, 12);
+      expect(bloc.state.setPerformances.single.weightKg, 72.5);
+      expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
+        'set_number': 1,
+        'reps': 12,
+        'weight_kg': 72.5,
+      });
+    });
+
     test('CompleteSet skips rest when restSeconds == 0', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(
@@ -169,8 +195,7 @@ void main() {
       expect(bloc.state.restEndsAt, isNull);
     });
 
-    test('CompleteSet on last set marks done and clears persistence',
-        () async {
+    test('CompleteSet on last set marks done and clears persistence', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(
         localStorage: store,

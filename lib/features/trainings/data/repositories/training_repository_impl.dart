@@ -33,12 +33,14 @@ class TrainingRepositoryImpl implements TrainingRepository {
     String exerciseId,
     String date, {
     double? weightUsed,
+    List<SetPerformance>? sets,
   }) {
     return _remoteDataSource.markExerciseCompleted(
       trainingExerciseId,
       exerciseId,
       date,
       weightUsed: weightUsed,
+      sets: sets,
     );
   }
 
@@ -81,6 +83,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
       sets: model.sets,
       repsOrDuration: model.repsOrDuration,
       restSeconds: model.restSeconds,
+      requestSetTracking: model.requestSetTracking,
       blockId: model.blockId,
       positionInBlock: model.positionInBlock,
       blockName: model.blockName,

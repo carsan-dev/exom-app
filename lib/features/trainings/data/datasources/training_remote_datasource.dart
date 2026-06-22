@@ -23,6 +23,38 @@ abstract class TrainingRemoteDataSource {
   getCompletedExerciseIds({String? date});
 }
 
+List<TrainingHistoryModel> buildTrainingHistory(
+  List<Map<String, dynamic>> assignmentDays,
+  List<Map<String, dynamic>> calendarDays, {
+  required DateTime today,
+}) {
+  final cutoff = DateTime(today.year, today.month, today.day);
+  final completionByDate = {
+    for (final day in calendarDays)
+      if (day['date'] is String)
+        day['date'] as String: day['training_completed'] as bool? ?? false,
+  };
+  final history = assignmentDays
+      .where((day) {
+        if (day['training'] is! Map<String, dynamic>) return false;
+        final date = DateTime.tryParse(day['date'] as String? ?? '');
+        if (date == null) return false;
+        return DateTime(date.year, date.month, date.day).isBefore(cutoff);
+      })
+      .map(
+        (day) => TrainingHistoryModel.fromAssignmentJson(
+          day,
+          isCompleted:
+              completionByDate[day['date'] as String? ?? ''] ?? false,
+        ),
+      )
+      .where((entry) => entry.id.isNotEmpty)
+      .toList();
+
+  history.sort((left, right) => right.date.compareTo(left.date));
+  return List<TrainingHistoryModel>.unmodifiable(history);
+}
+
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
@@ -108,14 +140,6 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         .toList(growable: false);
   }
 
-  Map<String, bool> _trainingCompletionByDate(List<Map<String, dynamic>> days) {
-    return {
-      for (final day in days)
-        if (day['date'] is String)
-          day['date'] as String: day['training_completed'] as bool? ?? false,
-    };
-  }
-
   Future<String> _getCurrentUserId() async {
     final cachedUser = _localStorage.getCachedMap(_authMeCacheKey);
     final cachedId = cachedUser?['id'] as String?;
@@ -145,27 +169,6 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       }
       rethrow;
     }
-  }
-
-  List<TrainingHistoryModel> _buildTrainingHistory(
-    List<Map<String, dynamic>> assignmentDays,
-    List<Map<String, dynamic>> calendarDays,
-  ) {
-    final completionByDate = _trainingCompletionByDate(calendarDays);
-    final history = assignmentDays
-        .where((day) => day['training'] is Map<String, dynamic>)
-        .map(
-          (day) => TrainingHistoryModel.fromAssignmentJson(
-            day,
-            isCompleted:
-                completionByDate[day['date'] as String? ?? ''] ?? false,
-          ),
-        )
-        .where((entry) => entry.id.isNotEmpty)
-        .toList();
-
-    history.sort((left, right) => right.date.compareTo(left.date));
-    return List<TrainingHistoryModel>.unmodifiable(history);
   }
 
   Future<void> _cacheProgressResponse(
@@ -263,7 +266,11 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       await _localStorage.cacheData(assignmentsCacheKey, assignmentDays);
       await _localStorage.cacheData(calendarCacheKey, calendarDays);
 
-      return _buildTrainingHistory(assignmentDays, calendarDays);
+      return buildTrainingHistory(
+        assignmentDays,
+        calendarDays,
+        today: DateTime.now(),
+      );
     } catch (error) {
       if (isOfflineError(error)) {
         final cachedAssignments =
@@ -271,7 +278,11 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         final cachedCalendar = _getCachedMapList(calendarCacheKey) ?? const [];
 
         if (cachedAssignments.isNotEmpty || cachedCalendar.isNotEmpty) {
-          return _buildTrainingHistory(cachedAssignments, cachedCalendar);
+          return buildTrainingHistory(
+            cachedAssignments,
+            cachedCalendar,
+            today: DateTime.now(),
+          );
         }
       }
       rethrow;

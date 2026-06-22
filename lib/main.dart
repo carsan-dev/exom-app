@@ -18,6 +18,7 @@ import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
 
 @pragma('vm:entry-point')
@@ -35,6 +36,7 @@ Future<void> main() async {
     runApp(const ExomApp());
     unawaited(_initializeFcm());
     unawaited(_initializeOfflineSync());
+    unawaited(sl<FeedbackUploadQueueService>().init());
   } catch (error, stackTrace) {
     debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
     debugPrintStack(stackTrace: stackTrace);
@@ -195,8 +197,55 @@ class ExomApp extends StatelessWidget {
   }
 }
 
-class _ExomAppView extends StatelessWidget {
+class _ExomAppView extends StatefulWidget {
   const _ExomAppView();
+
+  @override
+  State<_ExomAppView> createState() => _ExomAppViewState();
+}
+
+class _ExomAppViewState extends State<_ExomAppView> {
+  StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
+      _showFeedbackNotice,
+    );
+  }
+
+  void _showFeedbackNotice(FeedbackUploadNotice notice) {
+    final messenger = AppRouter.scaffoldMessengerKey.currentState;
+    final context = AppRouter.scaffoldMessengerKey.currentContext;
+    if (messenger == null || context == null) return;
+    final l10n = AppLocalizations.of(context);
+    final isFailure = notice.kind == FeedbackUploadNoticeKind.failed;
+    final message = switch (notice.kind) {
+      FeedbackUploadNoticeKind.queued => l10n.feedbackQueued,
+      FeedbackUploadNoticeKind.completed => l10n.feedbackSentSuccessfully,
+      FeedbackUploadNoticeKind.failed => l10n.feedbackUploadFailed,
+    };
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: isFailure
+            ? SnackBarAction(
+                label: l10n.retry,
+                onPressed: () => unawaited(
+                  sl<FeedbackUploadQueueService>().retry(notice.id),
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedbackSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

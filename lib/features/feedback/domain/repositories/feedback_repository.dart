@@ -8,6 +8,7 @@ abstract class FeedbackRepository {
     required String mediaUrl,
     String? notes,
     String? exerciseId,
+    String? clientUploadId,
   });
   Future<String> uploadMedia(File file, String contentType);
 }

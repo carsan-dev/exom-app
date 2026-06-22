@@ -11,10 +11,12 @@ class CreateFeedbackUseCase {
     required String mediaUrl,
     String? notes,
     String? exerciseId,
+    String? clientUploadId,
   }) => _repository.createFeedback(
     mediaType: mediaType,
     mediaUrl: mediaUrl,
     notes: notes,
     exerciseId: exerciseId,
+    clientUploadId: clientUploadId,
   );
 }

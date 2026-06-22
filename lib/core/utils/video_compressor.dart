@@ -6,7 +6,7 @@ class VideoCompressor {
   static Future<File> compress(File file) async {
     final info = await VideoCompress.compressVideo(
       file.path,
-      quality: VideoQuality.MediumQuality,
+      quality: VideoQuality.Res1280x720Quality,
       deleteOrigin: false,
       includeAudio: true,
     );

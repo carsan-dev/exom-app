@@ -14,6 +14,7 @@ import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart'
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 
 class FeedbackPage extends StatelessWidget {
   final String? exerciseId;
@@ -93,7 +94,7 @@ class FeedbackPage extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: 40 + bottomInset),
                   children: [
                     _FeedbackForm(
-                      isSubmitting: state is FeedbackSubmitting,
+                      isSubmitting: false,
                       exerciseId: exerciseId,
                       exerciseName: exerciseName,
                     ),
@@ -297,6 +298,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
   final _notesController = TextEditingController();
   String _mediaType = 'IMAGE';
   File? _selectedFile;
+  bool _isQueueing = false;
 
   @override
   void dispose() {
@@ -327,10 +329,11 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_selectedFile == null) return;
-    context.read<FeedbackBloc>().add(
-      FeedbackUploadAndSubmit(
+    setState(() => _isQueueing = true);
+    try {
+      await sl<FeedbackUploadQueueService>().enqueue(
         file: _selectedFile!,
         contentType: _contentType(),
         mediaType: _mediaType,
@@ -338,10 +341,20 @@ class _FeedbackFormState extends State<_FeedbackForm> {
             ? null
             : _notesController.text.trim(),
         exerciseId: widget.exerciseId,
-      ),
-    );
-    setState(() => _selectedFile = null);
-    _notesController.clear();
+      );
+      if (!mounted) return;
+      setState(() => _selectedFile = null);
+      _notesController.clear();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).feedbackUploadFailed),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isQueueing = false);
+    }
   }
 
   @override
@@ -381,7 +394,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           FeedbackMediaPicker(
             selectedFile: _selectedFile,
             mediaType: _mediaType,
-            isUploading: widget.isSubmitting,
+            isUploading: _isQueueing,
             onMediaTypeChanged: (type) => setState(() {
               _mediaType = type;
               _selectedFile = null;
@@ -403,10 +416,10 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (widget.isSubmitting || _selectedFile == null)
+              onPressed: (_isQueueing || _selectedFile == null)
                   ? null
                   : _submit,
-              child: widget.isSubmitting
+              child: _isQueueing
                   ? const SizedBox(
                       width: 20,
                       height: 20,

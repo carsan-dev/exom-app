@@ -18,11 +18,13 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
     required String mediaUrl,
     String? notes,
     String? exerciseId,
+    String? clientUploadId,
   }) => _remoteDataSource.createFeedback(
     mediaType: mediaType,
     mediaUrl: mediaUrl,
     notes: notes,
     exerciseId: exerciseId,
+    clientUploadId: clientUploadId,
   );
 
   @override

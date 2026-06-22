@@ -12,6 +12,7 @@ abstract class FeedbackRemoteDataSource {
     required String mediaUrl,
     String? notes,
     String? exerciseId,
+    String? clientUploadId,
   });
   Future<String> uploadMedia(File file, String contentType);
 }
@@ -50,6 +51,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     required String mediaUrl,
     String? notes,
     String? exerciseId,
+    String? clientUploadId,
   }) async {
     final body = <String, dynamic>{
       'media_type': mediaType,
@@ -57,6 +59,8 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       if (exerciseId != null && exerciseId.isNotEmpty)
         'exercise_id': exerciseId,
+      if (clientUploadId != null && clientUploadId.isNotEmpty)
+        'client_upload_id': clientUploadId,
     };
     final response = await _apiClient.dio.post<dynamic>(
       '/feedback',
@@ -103,24 +107,47 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     });
 
     try {
-      final response = await _apiClient.dio.post<dynamic>(
-        '/uploads/file',
-        data: formData,
+      final presignedResponse = await _apiClient.dio.post<dynamic>(
+        '/uploads/presigned',
+        data: {'file_key': fileKey, 'content_type': uploadContentType},
       );
+      final responseData = presignedResponse.data as Map<String, dynamic>;
+      final presigned =
+          (responseData['data'] as Map<String, dynamic>?) ?? responseData;
+      final uploadUrl = presigned['upload_url'] as String;
+      final fileUrl = presigned['file_url'] as String;
+      await Dio().put<dynamic>(
+        uploadUrl,
+        data: uploadFile.openRead(),
+        options: Options(
+          headers: {
+            Headers.contentTypeHeader: uploadContentType,
+            Headers.contentLengthHeader: await uploadFile.length(),
+          },
+        ),
+      );
+      return fileUrl;
+    } on DioException {
+      try {
+        final response = await _apiClient.dio.post<dynamic>(
+          '/uploads/file',
+          data: formData,
+        );
 
-      final payload = response.data;
-      if (payload is! Map<String, dynamic>) {
-        throw Exception('Invalid upload response');
+        final payload = response.data;
+        if (payload is! Map<String, dynamic>) {
+          throw Exception('Invalid upload response');
+        }
+        return ((payload['data'] as Map<String, dynamic>)['file_url']
+                as String?) ??
+            (payload['file_url'] as String);
+      } on DioException catch (error) {
+        final statusCode = error.response?.statusCode;
+        final message = statusCode == null
+            ? 'No se pudo subir el archivo. Revisa tu conexion e intentalo de nuevo.'
+            : 'No se pudo completar la subida del archivo ($statusCode).';
+        throw Exception(message);
       }
-      return ((payload['data'] as Map<String, dynamic>)['file_url']
-              as String?) ??
-          (payload['file_url'] as String);
-    } on DioException catch (error) {
-      final statusCode = error.response?.statusCode;
-      final message = statusCode == null
-          ? 'No se pudo subir el archivo. Revisa tu conexion e intentalo de nuevo.'
-          : 'No se pudo completar la subida del archivo ($statusCode).';
-      throw Exception(message);
     }
   }
 }

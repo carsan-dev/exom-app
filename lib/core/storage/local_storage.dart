@@ -12,6 +12,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _settingsBox = 'settings_box';
   static const _activeWorkoutBox = 'active_workout_box';
   static const _pendingSyncKey = 'offline_sync_actions';
+  static const _feedbackUploadQueueKey = 'feedback_upload_queue';
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
@@ -98,6 +99,16 @@ class LocalStorage implements ActiveWorkoutLocalStore {
       _cache.put(_pendingSyncKey, actions);
 
   Future<void> clearPendingSyncActions() => _cache.delete(_pendingSyncKey);
+
+  List<Map<String, dynamic>> getFeedbackUploadQueue() {
+    return (getCachedList(_feedbackUploadQueueKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: true);
+  }
+
+  Future<void> saveFeedbackUploadQueue(List<Map<String, dynamic>> queue) =>
+      _cache.put(_feedbackUploadQueueKey, queue);
 
   // Active workout
   ValueListenable<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
@@ -229,8 +240,10 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   bool isTutorialCompleteFor({required String uid, String? email}) {
     final identity = resolveOnboardingIdentity(uid: uid, email: email);
     if (identity == null) return false;
-    return _settings.get('$_tutorialCompleteKey::$identity',
-            defaultValue: false) ==
+    return _settings.get(
+          '$_tutorialCompleteKey::$identity',
+          defaultValue: false,
+        ) ==
         true;
   }
 

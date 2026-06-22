@@ -7,7 +7,7 @@ class ImageCompressor {
     File file, {
     int maxWidth = 1200,
     int maxHeight = 1200,
-    int quality = 80,
+    int quality = 75,
   }) async {
     final dir = await getTemporaryDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;

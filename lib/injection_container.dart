@@ -101,6 +101,7 @@ import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_useca
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/upload_feedback_media_usecase.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
@@ -384,6 +385,13 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<FeedbackRepository>(
     () => FeedbackRepositoryImpl(sl<FeedbackRemoteDataSource>()),
+  );
+
+  sl.registerLazySingleton(
+    () => FeedbackUploadQueueService(
+      sl<FeedbackRepository>(),
+      sl<LocalStorage>(),
+    ),
   );
 
   sl.registerLazySingleton(

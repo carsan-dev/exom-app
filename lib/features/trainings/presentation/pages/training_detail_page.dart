@@ -567,6 +567,20 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                     restBetweenRoundsSeconds:
                                         ex.restBetweenRoundsSeconds ?? 60,
                                     exercises: blockExercises,
+                                    previousPerformances: {
+                                      for (final blockExercise
+                                          in blockExercises)
+                                        if (widget
+                                                .state
+                                                .previousPerformances[blockExercise
+                                                .id] !=
+                                            null)
+                                          blockExercise.id:
+                                              widget
+                                                  .state
+                                                  .previousPerformances[blockExercise
+                                                  .id]!,
+                                    },
                                   ),
                                 );
                               },
@@ -634,6 +648,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   accentColorHex: training.accentColor,
                                   trainingLevel: training.level,
                                   initialWeightKg: effectiveWeight,
+                                  previousPerformances:
+                                      widget.state.previousPerformances[ex.id],
                                 ),
                               );
                             },

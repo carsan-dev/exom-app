@@ -60,6 +60,17 @@ class TrainingRepositoryImpl implements TrainingRepository {
     return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 
+  @override
+  Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
+    List<String> exerciseIds,
+    String beforeDate,
+  ) {
+    return _remoteDataSource.getPreviousExercisePerformances(
+      exerciseIds,
+      beforeDate,
+    );
+  }
+
   TrainingEntity _mapToEntity(TrainingModel model) {
     return TrainingEntity(
       id: model.id,

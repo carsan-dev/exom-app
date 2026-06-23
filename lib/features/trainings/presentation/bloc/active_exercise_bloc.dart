@@ -17,9 +17,10 @@ class StartExercise extends ActiveExerciseEvent {
 
 class CompleteSet extends ActiveExerciseEvent {
   final int? reps;
+  final int? seconds;
   final double? weightKg;
 
-  const CompleteSet({this.reps, this.weightKg});
+  const CompleteSet({this.reps, this.seconds, this.weightKg});
 }
 
 class SkipRest extends ActiveExerciseEvent {
@@ -171,13 +172,15 @@ class ActiveExerciseBloc
 
     final nextCompletedSets = state.completedSets + 1;
     final nextWeight = event.weightKg ?? state.weightKg;
-    final nextPerformances = event.reps == null && event.weightKg == null
+    final nextPerformances =
+        event.reps == null && event.seconds == null && event.weightKg == null
         ? state.setPerformances
         : [
             ...state.setPerformances,
             SetPerformance(
               setNumber: nextCompletedSets,
               reps: event.reps,
+              seconds: event.seconds,
               weightKg: event.weightKg,
             ),
           ];
@@ -278,6 +281,7 @@ class ActiveExerciseBloc
             (data) => SetPerformance(
               setNumber: data['set_number'] as int,
               reps: data['reps'] as int?,
+              seconds: data['seconds'] as int?,
               weightKg: (data['weight_kg'] as num?)?.toDouble(),
             ),
           )

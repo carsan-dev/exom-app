@@ -10,6 +10,7 @@ import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
@@ -25,6 +26,7 @@ class ActiveExercisePageArgs {
   final String? accentColorHex;
   final String trainingLevel;
   final double? initialWeightKg;
+  final List<SetPerformance>? previousPerformances;
 
   const ActiveExercisePageArgs({
     required this.trainingBloc,
@@ -34,6 +36,7 @@ class ActiveExercisePageArgs {
     required this.accentColorHex,
     required this.trainingLevel,
     this.initialWeightKg,
+    this.previousPerformances,
   });
 }
 
@@ -216,6 +219,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       setNumber: state.currentSet,
       prescribedReps: state.repsOrDuration,
       previousWeight: state.weightKg,
+      previousPerformance: performanceForSet(
+        widget.args.previousPerformances,
+        state.currentSet,
+      ),
+      timeBased: isTimeBasedPrescription(state.repsOrDuration),
       repsRequired: widget.args.trainingExercise.requestSetTracking,
     );
     if (!mounted || performance == null) return;
@@ -223,7 +231,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     context.read<ActiveExerciseBloc>().add(
       performance.skipped
           ? const CompleteSet()
-          : CompleteSet(reps: performance.reps, weightKg: performance.weight),
+          : CompleteSet(
+              reps: performance.reps,
+              seconds: performance.seconds,
+              weightKg: performance.weight,
+            ),
     );
   }
 
@@ -803,23 +815,29 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
+Future<({int? reps, int? seconds, double? weight, bool skipped})?>
+_showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
   required int setNumber,
   required String prescribedReps,
   required bool repsRequired,
+  required bool timeBased,
   double? previousWeight,
+  SetPerformance? previousPerformance,
 }) async {
   final palette = context.exomPalette;
-  final repsController = TextEditingController();
+  final valueController = TextEditingController();
   final weightController = TextEditingController(
     text: previousWeight != null
         ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
         : '',
   );
-  ({int? reps, double? weight, bool skipped})? result;
+  ({int? reps, int? seconds, double? weight, bool skipped})? result;
   String? error;
+  final previousLabel = previousPerformance == null
+      ? null
+      : formatSetPerformance(previousPerformance);
 
   await showModalBottomSheet(
     context: context,
@@ -861,14 +879,23 @@ Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
                 l10n.setPerformancePrescription(prescribedReps),
                 style: TextStyle(color: palette.textSecondary, fontSize: 13),
               ),
+              if (previousLabel != null && previousLabel.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.setPerformancePrevious(previousLabel),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
-                controller: repsController,
+                controller: valueController,
                 keyboardType: TextInputType.number,
                 autofocus: true,
                 style: TextStyle(color: palette.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
-                  labelText: l10n.setPerformanceReps,
+                  labelText: timeBased
+                      ? l10n.setPerformanceSeconds
+                      : l10n.setPerformanceReps,
                   errorText: error,
                 ),
               ),
@@ -892,7 +919,12 @@ Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
                     Expanded(
                       child: TextButton(
                         onPressed: () {
-                          result = (reps: null, weight: null, skipped: true);
+                          result = (
+                            reps: null,
+                            seconds: null,
+                            weight: null,
+                            skipped: true,
+                          );
                           Navigator.of(ctx).pop();
                         },
                         child: Text(l10n.completeWithoutTracking),
@@ -910,19 +942,25 @@ Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        final reps = int.tryParse(repsController.text.trim());
-                        if (repsRequired && (reps == null || reps < 1)) {
+                        final value = int.tryParse(valueController.text.trim());
+                        if (repsRequired && (value == null || value < 1)) {
                           setModalState(
-                            () => error = l10n.setPerformanceRepsError,
+                            () => error = timeBased
+                                ? l10n.setPerformanceSecondsError
+                                : l10n.setPerformanceRepsError,
                           );
                           return;
                         }
-                        if (reps != null && reps < 1) {
+                        if (value != null && value < 1) {
                           setModalState(
-                            () => error = l10n.setPerformanceRepsError,
+                            () => error = timeBased
+                                ? l10n.setPerformanceSecondsError
+                                : l10n.setPerformanceRepsError,
                           );
                           return;
                         }
+                        final reps = timeBased ? null : value;
+                        final seconds = timeBased ? value : null;
                         final weightText = weightController.text.trim();
                         final weight = weightText.isEmpty
                             ? null
@@ -933,13 +971,18 @@ Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
                           );
                           return;
                         }
-                        if (reps == null && weight == null) {
+                        if (reps == null && seconds == null && weight == null) {
                           setModalState(
                             () => error = l10n.setPerformanceDataError,
                           );
                           return;
                         }
-                        result = (reps: reps, weight: weight, skipped: false);
+                        result = (
+                          reps: reps,
+                          seconds: seconds,
+                          weight: weight,
+                          skipped: false,
+                        );
                         Navigator.of(ctx).pop();
                       },
                       child: Text(l10n.weightInputSave),
@@ -954,7 +997,7 @@ Future<({int? reps, double? weight, bool skipped})?> _showSetPerformanceSheet(
     ),
   );
 
-  repsController.dispose();
+  valueController.dispose();
   weightController.dispose();
   return result;
 }

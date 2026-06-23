@@ -37,6 +37,7 @@ import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase
 import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_previous_exercise_performances_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 
@@ -240,6 +241,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => GetCompletedExercisesUseCase(sl<TrainingRepository>()),
   );
+  sl.registerLazySingleton(
+    () => GetPreviousExercisePerformancesUseCase(sl<TrainingRepository>()),
+  );
 
   sl.registerFactory(
     () => TrainingBloc(
@@ -250,6 +254,8 @@ Future<void> initDependencies() async {
       unmarkExerciseCompletedUseCase: sl<UnmarkExerciseCompletedUseCase>(),
       completeTrainingUseCase: sl<CompleteTrainingUseCase>(),
       getCompletedExercisesUseCase: sl<GetCompletedExercisesUseCase>(),
+      getPreviousExercisePerformancesUseCase:
+          sl<GetPreviousExercisePerformancesUseCase>(),
     ),
   );
 

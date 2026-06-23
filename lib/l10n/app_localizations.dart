@@ -3032,11 +3032,23 @@ abstract class AppLocalizations {
   /// **'Objetivo: {prescription}'**
   String setPerformancePrescription(String prescription);
 
+  /// No description provided for @setPerformancePrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'Anterior: {performance}'**
+  String setPerformancePrevious(String performance);
+
   /// No description provided for @setPerformanceReps.
   ///
   /// In es, this message translates to:
   /// **'Repeticiones realizadas'**
   String get setPerformanceReps;
+
+  /// No description provided for @setPerformanceSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundos realizados'**
+  String get setPerformanceSeconds;
 
   /// No description provided for @setPerformanceWeightOptional.
   ///
@@ -3050,6 +3062,12 @@ abstract class AppLocalizations {
   /// **'Introduce al menos 1 repetición'**
   String get setPerformanceRepsError;
 
+  /// No description provided for @setPerformanceSecondsError.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce al menos 1 segundo'**
+  String get setPerformanceSecondsError;
+
   /// No description provided for @setPerformanceWeightError.
   ///
   /// In es, this message translates to:
@@ -3059,7 +3077,7 @@ abstract class AppLocalizations {
   /// No description provided for @setPerformanceDataError.
   ///
   /// In es, this message translates to:
-  /// **'Introduce repeticiones o peso'**
+  /// **'Introduce repeticiones, segundos o peso'**
   String get setPerformanceDataError;
 
   /// No description provided for @completeWithoutTracking.

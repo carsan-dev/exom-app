@@ -38,6 +38,7 @@ class TrainingDetailLoaded extends TrainingState {
   final Set<String> completedExerciseIds;
   final String selectedDate;
   final Map<String, double> exerciseWeights;
+  final Map<String, List<SetPerformance>> previousPerformances;
   final String? errorMessage;
 
   const TrainingDetailLoaded(
@@ -45,6 +46,7 @@ class TrainingDetailLoaded extends TrainingState {
     this.completedExerciseIds = const {},
     required this.selectedDate,
     this.exerciseWeights = const {},
+    this.previousPerformances = const {},
     this.errorMessage,
   });
 
@@ -53,6 +55,7 @@ class TrainingDetailLoaded extends TrainingState {
     Set<String>? completedExerciseIds,
     String? selectedDate,
     Map<String, double>? exerciseWeights,
+    Map<String, List<SetPerformance>>? previousPerformances,
     String? errorMessage,
   }) {
     return TrainingDetailLoaded(
@@ -60,6 +63,7 @@ class TrainingDetailLoaded extends TrainingState {
       completedExerciseIds: completedExerciseIds ?? this.completedExerciseIds,
       selectedDate: selectedDate ?? this.selectedDate,
       exerciseWeights: exerciseWeights ?? this.exerciseWeights,
+      previousPerformances: previousPerformances ?? this.previousPerformances,
       errorMessage: errorMessage,
     );
   }

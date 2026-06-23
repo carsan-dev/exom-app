@@ -5,6 +5,7 @@ import 'package:exom_app/features/trainings/domain/usecases/complete_training_us
 import 'package:exom_app/features/trainings/domain/usecases/get_today_training_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_previous_exercise_performances_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
@@ -20,6 +21,8 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
   final UnmarkExerciseCompletedUseCase _unmarkExerciseCompletedUseCase;
   final CompleteTrainingUseCase _completeTrainingUseCase;
   final GetCompletedExercisesUseCase _getCompletedExercisesUseCase;
+  final GetPreviousExercisePerformancesUseCase
+  _getPreviousExercisePerformancesUseCase;
 
   TrainingBloc({
     required GetTodayTrainingUseCase getTodayTrainingUseCase,
@@ -29,6 +32,8 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     required UnmarkExerciseCompletedUseCase unmarkExerciseCompletedUseCase,
     required CompleteTrainingUseCase completeTrainingUseCase,
     required GetCompletedExercisesUseCase getCompletedExercisesUseCase,
+    required GetPreviousExercisePerformancesUseCase
+    getPreviousExercisePerformancesUseCase,
   }) : _getTodayTrainingUseCase = getTodayTrainingUseCase,
        _getTrainingsUseCase = getTrainingsUseCase,
        _getTrainingUseCase = getTrainingUseCase,
@@ -36,6 +41,8 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
        _unmarkExerciseCompletedUseCase = unmarkExerciseCompletedUseCase,
        _completeTrainingUseCase = completeTrainingUseCase,
        _getCompletedExercisesUseCase = getCompletedExercisesUseCase,
+       _getPreviousExercisePerformancesUseCase =
+           getPreviousExercisePerformancesUseCase,
        super(const TrainingInitial()) {
     on<TodayTrainingLoadRequested>(_onTodayTrainingLoad);
     on<TrainingsLoadRequested>(_onTrainingsLoad);
@@ -127,11 +134,28 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         rawIds: progress.ids,
         rawWeights: progress.weights,
       );
+      var previousPerformances = <String, List<SetPerformance>>{};
+      try {
+        final previousByExerciseId =
+            await _getPreviousExercisePerformancesUseCase(
+              training.exercises
+                  .map((trainingExercise) => trainingExercise.exercise.id)
+                  .toList(growable: false),
+              targetDate,
+            );
+        previousPerformances = {
+          for (final trainingExercise in training.exercises)
+            if (previousByExerciseId[trainingExercise.exercise.id] != null)
+              trainingExercise.id:
+                  previousByExerciseId[trainingExercise.exercise.id]!,
+        };
+      } catch (_) {}
       emit(
         TrainingDetailLoaded(
           training,
           completedExerciseIds: normalizedProgress.ids,
           exerciseWeights: normalizedProgress.weights,
+          previousPerformances: previousPerformances,
           selectedDate: targetDate,
         ),
       );

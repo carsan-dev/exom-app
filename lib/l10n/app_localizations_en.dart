@@ -1611,7 +1611,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String setPerformancePrevious(String performance) {
+    return 'Previous: $performance';
+  }
+
+  @override
   String get setPerformanceReps => 'Completed repetitions';
+
+  @override
+  String get setPerformanceSeconds => 'Completed seconds';
 
   @override
   String get setPerformanceWeightOptional => 'Weight used (optional)';
@@ -1620,10 +1628,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setPerformanceRepsError => 'Enter at least 1 repetition';
 
   @override
+  String get setPerformanceSecondsError => 'Enter at least 1 second';
+
+  @override
   String get setPerformanceWeightError => 'Weight cannot be negative';
 
   @override
-  String get setPerformanceDataError => 'Enter repetitions or weight';
+  String get setPerformanceDataError => 'Enter repetitions, seconds or weight';
 
   @override
   String get completeWithoutTracking => 'Complete without tracking';

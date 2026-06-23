@@ -21,6 +21,10 @@ abstract class TrainingRemoteDataSource {
   Future<void> completeTraining(String date, {String? notes});
   Future<({Set<String> ids, Map<String, double> weights})>
   getCompletedExerciseIds({String? date});
+  Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
+    List<String> exerciseIds,
+    String beforeDate,
+  );
 }
 
 List<TrainingHistoryModel> buildTrainingHistory(
@@ -44,8 +48,7 @@ List<TrainingHistoryModel> buildTrainingHistory(
       .map(
         (day) => TrainingHistoryModel.fromAssignmentJson(
           day,
-          isCompleted:
-              completionByDate[day['date'] as String? ?? ''] ?? false,
+          isCompleted: completionByDate[day['date'] as String? ?? ''] ?? false,
         ),
       )
       .where((entry) => entry.id.isNotEmpty)
@@ -445,6 +448,56 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         }
       }
       return (ids: <String>{}, weights: <String, double>{});
+    }
+  }
+
+  @override
+  Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
+    List<String> exerciseIds,
+    String beforeDate,
+  ) async {
+    final uniqueIds = exerciseIds.toSet().where((id) => id.isNotEmpty).toList();
+    if (uniqueIds.isEmpty) return const {};
+
+    try {
+      final response = await _apiClient.dio.get<dynamic>(
+        '/progress/exercises/previous',
+        queryParameters: {
+          'exercise_ids': uniqueIds.join(','),
+          'before': beforeDate,
+        },
+      );
+      final data = response.data;
+      if (data is! Map<String, dynamic>) return const {};
+
+      final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+      final result = <String, List<SetPerformance>>{};
+      for (final entry in inner.entries) {
+        final value = entry.value;
+        if (value is! Map<String, dynamic>) continue;
+        final sets = value['sets'];
+        if (sets is! List) continue;
+        result[entry.key] = sets
+            .whereType<Map<String, dynamic>>()
+            .map(
+              (set) => SetPerformance(
+                setNumber: set['set_number'] as int? ?? 1,
+                reps: set['reps'] as int?,
+                seconds: set['seconds'] as int?,
+                weightKg: (set['weight_kg'] as num?)?.toDouble(),
+              ),
+            )
+            .where(
+              (set) =>
+                  set.reps != null ||
+                  set.seconds != null ||
+                  set.weightKg != null,
+            )
+            .toList(growable: false);
+      }
+      return result;
+    } catch (_) {
+      return const {};
     }
   }
 }

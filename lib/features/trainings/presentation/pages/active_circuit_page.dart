@@ -6,6 +6,7 @@ import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/circuit_progression.dart';
+import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
@@ -25,6 +26,7 @@ class ActiveCircuitPageArgs {
   final int rounds;
   final int restBetweenRoundsSeconds;
   final List<TrainingExerciseEntity> exercises;
+  final Map<String, List<SetPerformance>> previousPerformances;
 
   const ActiveCircuitPageArgs({
     required this.trainingBloc,
@@ -37,6 +39,7 @@ class ActiveCircuitPageArgs {
     required this.rounds,
     required this.restBetweenRoundsSeconds,
     required this.exercises,
+    this.previousPerformances = const {},
   });
 }
 
@@ -215,8 +218,16 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     TrainingExerciseEntity trainingExercise,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final repsController = TextEditingController();
+    final valueController = TextEditingController();
     final previousWeight = _performances[trainingExercise.id]?.last.weightKg;
+    final timeBased = isTimeBasedPrescription(trainingExercise.repsOrDuration);
+    final previousPerformance = performanceForSet(
+      widget.args.previousPerformances[trainingExercise.id],
+      _currentRound,
+    );
+    final previousLabel = previousPerformance == null
+        ? null
+        : formatSetPerformance(previousPerformance);
     final weightController = TextEditingController(
       text: previousWeight?.toString() ?? '',
     );
@@ -235,13 +246,19 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                       trainingExercise.repsOrDuration,
                     ),
                   ),
+                  if (previousLabel != null && previousLabel.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.setPerformancePrevious(previousLabel)),
+                  ],
                   const SizedBox(height: 12),
                   TextField(
-                    controller: repsController,
+                    controller: valueController,
                     autofocus: true,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: l10n.setPerformanceReps,
+                      labelText: timeBased
+                          ? l10n.setPerformanceSeconds
+                          : l10n.setPerformanceReps,
                       errorText: error,
                     ),
                   ),
@@ -272,31 +289,37 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                 ),
                 FilledButton(
                   onPressed: () {
-                    final reps = int.tryParse(repsController.text.trim());
+                    final value = int.tryParse(valueController.text.trim());
                     final weightText = weightController.text.trim();
                     final weight = weightText.isEmpty
                         ? null
                         : double.tryParse(weightText.replaceAll(',', '.'));
                     if (trainingExercise.requestSetTracking &&
-                        (reps == null || reps < 1)) {
+                        (value == null || value < 1)) {
                       setDialogState(
-                        () => error = l10n.setPerformanceRepsError,
+                        () => error = timeBased
+                            ? l10n.setPerformanceSecondsError
+                            : l10n.setPerformanceRepsError,
                       );
                       return;
                     }
-                    if (reps != null && reps < 1) {
+                    if (value != null && value < 1) {
                       setDialogState(
-                        () => error = l10n.setPerformanceRepsError,
+                        () => error = timeBased
+                            ? l10n.setPerformanceSecondsError
+                            : l10n.setPerformanceRepsError,
                       );
                       return;
                     }
+                    final reps = timeBased ? null : value;
+                    final seconds = timeBased ? value : null;
                     if (weight != null && weight < 0) {
                       setDialogState(
                         () => error = l10n.setPerformanceWeightError,
                       );
                       return;
                     }
-                    if (reps == null && weight == null) {
+                    if (reps == null && seconds == null && weight == null) {
                       setDialogState(
                         () => error = l10n.setPerformanceDataError,
                       );
@@ -306,6 +329,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                       performance: SetPerformance(
                         setNumber: _currentRound,
                         reps: reps,
+                        seconds: seconds,
                         weightKg: weight,
                       ),
                       skipped: false,
@@ -317,7 +341,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
             ),
           ),
         );
-    repsController.dispose();
+    valueController.dispose();
     weightController.dispose();
     return result;
   }

@@ -9,6 +9,13 @@ void main() {
     expect(isTimeBasedPrescription('12 reps'), isFalse);
   });
 
+  test('converts minute prescriptions to stored seconds', () {
+    expect(timePerformanceUnit('10 min'), TimePerformanceUnit.minutes);
+    expect(secondsFromTimeInput(10, TimePerformanceUnit.minutes), 600);
+    expect(secondsFromTimeInput(45, TimePerformanceUnit.seconds), 45);
+    expect(timeInputFromSeconds(600, TimePerformanceUnit.minutes), 10);
+  });
+
   test('formats previous set performance with seconds and weight', () {
     expect(
       formatSetPerformance(

@@ -1,10 +1,34 @@
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
+enum TimePerformanceUnit { seconds, minutes }
+
 bool isTimeBasedPrescription(String value) {
+  return timePerformanceUnit(value) != null;
+}
+
+TimePerformanceUnit? timePerformanceUnit(String value) {
   final normalized = value.toLowerCase().trim();
-  return RegExp(
-    r'(\bseg\b|segundos?|\bsec\b|seconds?|\bmin\b|minutos?|\bs\b|tiempo|time)',
-  ).hasMatch(normalized);
+  if (RegExp(r'(\bmin\b|minutos?)').hasMatch(normalized)) {
+    return TimePerformanceUnit.minutes;
+  }
+  if (RegExp(
+    r'(\bseg\b|segundos?|\bsec\b|seconds?|\bs\b|tiempo|time)',
+  ).hasMatch(normalized)) {
+    return TimePerformanceUnit.seconds;
+  }
+  return null;
+}
+
+int? secondsFromTimeInput(int? value, TimePerformanceUnit? unit) {
+  if (value == null) return null;
+  return unit == TimePerformanceUnit.minutes ? value * 60 : value;
+}
+
+int? timeInputFromSeconds(int? seconds, TimePerformanceUnit? unit) {
+  if (seconds == null) return null;
+  return unit == TimePerformanceUnit.minutes && seconds % 60 == 0
+      ? seconds ~/ 60
+      : seconds;
 }
 
 SetPerformance? performanceForSet(

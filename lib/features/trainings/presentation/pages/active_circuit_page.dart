@@ -220,7 +220,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     final l10n = AppLocalizations.of(context);
     final valueController = TextEditingController();
     final previousWeight = _performances[trainingExercise.id]?.last.weightKg;
-    final timeBased = isTimeBasedPrescription(trainingExercise.repsOrDuration);
+    final timeUnit = timePerformanceUnit(trainingExercise.repsOrDuration);
+    final timeBased = timeUnit != null;
     final previousPerformance = performanceForSet(
       widget.args.previousPerformances[trainingExercise.id],
       _currentRound,
@@ -257,7 +258,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: timeBased
-                          ? l10n.setPerformanceSeconds
+                          ? timeUnit == TimePerformanceUnit.minutes
+                                ? 'Minutos'
+                                : l10n.setPerformanceSeconds
                           : l10n.setPerformanceReps,
                       errorText: error,
                     ),
@@ -312,7 +315,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                       return;
                     }
                     final reps = timeBased ? null : value;
-                    final seconds = timeBased ? value : null;
+                    final seconds = timeBased
+                        ? secondsFromTimeInput(value, timeUnit)
+                        : null;
                     if (weight != null && weight < 0) {
                       setDialogState(
                         () => error = l10n.setPerformanceWeightError,
@@ -391,6 +396,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final color = _typeColor(context);
+    final solidColorStyle = trainingColorStyle(context, color);
     final exercise = _currentExercise.exercise;
     final completedSeries =
         ((_currentRound - 1) * widget.args.exercises.length) +
@@ -622,7 +628,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                         onPressed: _completeCurrentSeries,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: color,
-                          foregroundColor: palette.onPrimary,
+                          foregroundColor: solidColorStyle.foreground,
+                          side: BorderSide(color: solidColorStyle.border),
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           textStyle: const TextStyle(
                             fontSize: 15,

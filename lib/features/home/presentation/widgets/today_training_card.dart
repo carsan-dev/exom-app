@@ -33,6 +33,7 @@ class TodayTrainingCard extends StatelessWidget {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final color = _trainingColor(context);
+    final solidColorStyle = trainingColorStyle(context, color);
 
     return Semantics(
       label:
@@ -249,7 +250,8 @@ class TodayTrainingCard extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
-                    foregroundColor: palette.onPrimary,
+                    foregroundColor: solidColorStyle.foreground,
+                    side: BorderSide(color: solidColorStyle.border),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

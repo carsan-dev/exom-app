@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -39,10 +40,7 @@ String trainingTypeKey(String? type) {
       .trim();
 }
 
-List<String> resolveTrainingTypes({
-  List<String>? types,
-  String? legacyType,
-}) {
+List<String> resolveTrainingTypes({List<String>? types, String? legacyType}) {
   final uniqueTypes = <String, String>{};
   final rawTypes = <String>[...?types];
 
@@ -71,15 +69,13 @@ List<String> trainingTypeLabels(
   List<String>? types, {
   String? legacyType,
 }) {
-  return resolveTrainingTypes(types: types, legacyType: legacyType)
-      .map((type) => trainingTypeLabel(context, type))
-      .toList(growable: false);
+  return resolveTrainingTypes(
+    types: types,
+    legacyType: legacyType,
+  ).map((type) => trainingTypeLabel(context, type)).toList(growable: false);
 }
 
-String primaryTrainingType(
-  List<String>? types, {
-  String? legacyType,
-}) {
+String primaryTrainingType(List<String>? types, {String? legacyType}) {
   final resolvedTypes = resolveTrainingTypes(
     types: types,
     legacyType: legacyType,
@@ -95,11 +91,7 @@ String trainingTypesSummaryLabel(
   String? legacyType,
   int maxVisible = 2,
 }) {
-  final labels = trainingTypeLabels(
-    context,
-    types,
-    legacyType: legacyType,
-  );
+  final labels = trainingTypeLabels(context, types, legacyType: legacyType);
 
   if (labels.isEmpty) {
     return trainingTypeLabel(context, legacyType);
@@ -129,10 +121,7 @@ String trainingTypeLabel(BuildContext context, String? type) {
   if (_matchesAnyExact(key, const ['hiit'])) {
     return 'HIIT';
   }
-  if (_matchesAnyExact(
-    key,
-    const ['flexibilidad', 'movilidad', 'mobility'],
-  )) {
+  if (_matchesAnyExact(key, const ['flexibilidad', 'movilidad', 'mobility'])) {
     return l10n.trainingMobility;
   }
 
@@ -147,105 +136,90 @@ Color trainingTypeColor(BuildContext context, String? type) {
     return context.trainingAccent;
   }
 
-  if (_matchesAnyFragment(
-    key,
-    const [
-      'fuerza',
-      'strength',
-      'pesas',
-      'muscul',
-      'gym',
-      'empuje',
-      'push',
-      'torso',
-      'upper',
-      'pecho',
-      'hombro',
-      'shoulder',
-      'tricep',
-      'triceps',
-    ],
-  )) {
+  if (_matchesAnyFragment(key, const [
+    'fuerza',
+    'strength',
+    'pesas',
+    'muscul',
+    'gym',
+    'empuje',
+    'push',
+    'torso',
+    'upper',
+    'pecho',
+    'hombro',
+    'shoulder',
+    'tricep',
+    'triceps',
+  ])) {
     return context.trainingAccent;
   }
 
-  if (_matchesAnyFragment(
-    key,
-    const [
-      'cardio',
-      'run',
-      'running',
-      'correr',
-      'bici',
-      'bike',
-      'cycle',
-      'cycling',
-      'spinning',
-      'endurance',
-      'tiron',
-      'pull',
-      'espalda',
-      'back',
-      'bicep',
-      'biceps',
-    ],
-  )) {
+  if (_matchesAnyFragment(key, const [
+    'cardio',
+    'run',
+    'running',
+    'correr',
+    'bici',
+    'bike',
+    'cycle',
+    'cycling',
+    'spinning',
+    'endurance',
+    'tiron',
+    'pull',
+    'espalda',
+    'back',
+    'bicep',
+    'biceps',
+  ])) {
     return semantic.info;
   }
 
-  if (_matchesAnyFragment(
-    key,
-    const [
-      'hiit',
-      'tabata',
-      'metcon',
-      'circuit',
-      'circuito',
-      'cross',
-      'funcional',
-    ],
-  )) {
+  if (_matchesAnyFragment(key, const [
+    'hiit',
+    'tabata',
+    'metcon',
+    'circuit',
+    'circuito',
+    'cross',
+    'funcional',
+  ])) {
     return semantic.accent;
   }
 
-  if (_matchesAnyFragment(
-    key,
-    const [
-      'pierna',
-      'piernas',
-      'leg',
-      'legs',
-      'lower',
-      'glute',
-      'quad',
-      'cuad',
-      'hamstring',
-      'femoral',
-    ],
-  )) {
+  if (_matchesAnyFragment(key, const [
+    'pierna',
+    'piernas',
+    'leg',
+    'legs',
+    'lower',
+    'glute',
+    'quad',
+    'cuad',
+    'hamstring',
+    'femoral',
+  ])) {
     return semantic.success;
   }
 
-  if (_matchesAnyFragment(
-    key,
-    const [
-      'flexibilidad',
-      'movilidad',
-      'mobility',
-      'stretch',
-      'stretching',
-      'recovery',
-      'recuperacion',
-      'yoga',
-      'pilates',
-      'core',
-      'abdomen',
-      'abs',
-      'full body',
-      'fullbody',
-      'cuerpo completo',
-    ],
-  )) {
+  if (_matchesAnyFragment(key, const [
+    'flexibilidad',
+    'movilidad',
+    'mobility',
+    'stretch',
+    'stretching',
+    'recovery',
+    'recuperacion',
+    'yoga',
+    'pilates',
+    'core',
+    'abdomen',
+    'abs',
+    'full body',
+    'fullbody',
+    'cuerpo completo',
+  ])) {
     return semantic.warning;
   }
 
@@ -287,10 +261,9 @@ Color? tryParseTrainingAccentColor(String? value) {
   }
 
   final hex = normalizedValue.substring(1);
-  final argbHex =
-      hex.length == 6
-          ? 'FF$hex'
-          : '${hex.substring(6, 8)}${hex.substring(0, 6)}';
+  final argbHex = hex.length == 6
+      ? 'FF$hex'
+      : '${hex.substring(6, 8)}${hex.substring(0, 6)}';
 
   return Color(int.parse(argbHex, radix: 16));
 }
@@ -306,6 +279,64 @@ Color trainingAccentColor(
         context,
         primaryTrainingType(types, legacyType: legacyType),
       );
+}
+
+class TrainingColorStyle {
+  final Color background;
+  final Color foreground;
+  final Color border;
+
+  const TrainingColorStyle({
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+}
+
+TrainingColorStyle trainingColorStyle(
+  BuildContext context,
+  Color color, {
+  Color? surfaceColor,
+}) {
+  final palette = context.exomPalette;
+  final background = color;
+  final foreground =
+      _contrastRatio(color, Colors.black) >= _contrastRatio(color, Colors.white)
+      ? Colors.black
+      : Colors.white;
+  final surface = surfaceColor ?? palette.surface;
+  final border = _contrastRatio(color, surface) < 1.6
+      ? (foreground == Colors.black
+            ? Colors.black.withValues(alpha: 0.22)
+            : Colors.white.withValues(alpha: 0.34))
+      : color;
+
+  return TrainingColorStyle(
+    background: background,
+    foreground: foreground,
+    border: border,
+  );
+}
+
+double _relativeLuminance(Color color) {
+  double channel(double value) {
+    final normalized = value / 255;
+    return normalized <= 0.03928
+        ? normalized / 12.92
+        : math.pow((normalized + 0.055) / 1.055, 2.4).toDouble();
+  }
+
+  return 0.2126 * channel((color.r * 255).roundToDouble()) +
+      0.7152 * channel((color.g * 255).roundToDouble()) +
+      0.0722 * channel((color.b * 255).roundToDouble());
+}
+
+double _contrastRatio(Color left, Color right) {
+  final leftLum = _relativeLuminance(left);
+  final rightLum = _relativeLuminance(right);
+  final lighter = leftLum > rightLum ? leftLum : rightLum;
+  final darker = leftLum > rightLum ? rightLum : leftLum;
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 bool _matchesAnyExact(String key, List<String> options) {

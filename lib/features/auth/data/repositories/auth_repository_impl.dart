@@ -31,6 +31,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserEntity> socialLogin(String token, String provider) async {
     try {
       final response = await _remoteDataSource.socialLogin(token, provider);
+      await _firebaseAuthService.signInWithCustomToken(response.accessToken);
       _currentUser = response.user.toEntity();
       return _currentUser!;
     } catch (error) {

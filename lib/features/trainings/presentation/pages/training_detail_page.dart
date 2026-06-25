@@ -14,6 +14,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
@@ -370,6 +371,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final color = _trainingColor(context, training);
+    final solidColorStyle = trainingColorStyle(context, color);
     final typeLabels = trainingTypeLabels(context, training.types);
     final completed = widget.state.completedExerciseIds.length;
     final total = training.exercises.length;
@@ -633,6 +635,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             trainingLevel: training.level,
                             isCompleted: isCompleted,
                             weightUsed: effectiveWeight,
+                            currentPerformances:
+                                widget.state.currentPerformances[ex.id],
                             partialProgressLabel: partialProgressLabel,
                             onOpenActive: () {
                               context.push(
@@ -648,6 +652,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   accentColorHex: training.accentColor,
                                   trainingLevel: training.level,
                                   initialWeightKg: effectiveWeight,
+                                  currentPerformances:
+                                      widget.state.currentPerformances[ex.id],
                                   previousPerformances:
                                       widget.state.previousPerformances[ex.id],
                                 ),
@@ -792,7 +798,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: allDone ? semantic.success : color,
-                            foregroundColor: palette.onPrimary,
+                            foregroundColor: allDone
+                                ? palette.onPrimary
+                                : solidColorStyle.foreground,
+                            side: allDone
+                                ? null
+                                : BorderSide(color: solidColorStyle.border),
                           ),
                           icon: Icon(
                             allDone
@@ -973,6 +984,7 @@ class _CircuitCard extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
+    final solidColorStyle = trainingColorStyle(context, color);
     final isCompleted = exerciseCount > 0 && completedCount == exerciseCount;
 
     return Container(
@@ -1059,7 +1071,12 @@ class _CircuitCard extends StatelessWidget {
                   onPressed: onStart,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isCompleted ? semantic.success : color,
-                    foregroundColor: palette.onPrimary,
+                    foregroundColor: isCompleted
+                        ? palette.onPrimary
+                        : solidColorStyle.foreground,
+                    side: isCompleted
+                        ? null
+                        : BorderSide(color: solidColorStyle.border),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                   icon: const Icon(Icons.play_arrow_rounded, size: 20),
@@ -1093,6 +1110,7 @@ class _ExerciseCard extends StatelessWidget {
   final String trainingLevel;
   final bool isCompleted;
   final double? weightUsed;
+  final List<SetPerformance>? currentPerformances;
   final String? partialProgressLabel;
   final VoidCallback onOpenActive;
   final void Function(bool completed, {double? weightUsed}) onToggle;
@@ -1106,6 +1124,7 @@ class _ExerciseCard extends StatelessWidget {
     required this.onOpenActive,
     required this.onToggle,
     this.weightUsed,
+    this.currentPerformances,
     this.partialProgressLabel,
   });
 
@@ -1115,6 +1134,9 @@ class _ExerciseCard extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
+    final currentPerformanceLabel = currentPerformances?.isEmpty ?? true
+        ? null
+        : currentPerformances!.map(formatSetPerformance).join(' | ');
 
     return GestureDetector(
       onTap: () => _showExerciseDetail(context),
@@ -1226,6 +1248,11 @@ class _ExerciseCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (currentPerformanceLabel != null)
+                        _MiniStat(
+                          icon: Icons.edit_note_rounded,
+                          label: currentPerformanceLabel,
+                        ),
                     ],
                   ),
                 ],
@@ -1284,6 +1311,7 @@ class _ExerciseCard extends StatelessWidget {
           accentColorHex: accentColorHex,
           trainingLevel: trainingLevel,
           hasPartialProgress: partialProgressLabel != null,
+          currentPerformances: currentPerformances,
         ),
       ),
     );
@@ -1367,6 +1395,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final String? accentColorHex;
   final String trainingLevel;
   final bool hasPartialProgress;
+  final List<SetPerformance>? currentPerformances;
 
   const _ExerciseDetailSheet({
     required this.exercise,
@@ -1378,6 +1407,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.trainingLevel,
     this.weightUsed,
     this.hasPartialProgress = false,
+    this.currentPerformances,
   });
 
   Color _typeColor(BuildContext context) {
@@ -1461,6 +1491,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final typeColor = _typeColor(context);
+    final solidTypeStyle = trainingColorStyle(context, typeColor);
     final thumbnailUrl = exercise.thumbnailUrl?.trim();
     final videoUrl = exercise.videoUrl?.trim();
     final hasThumbnail = thumbnailUrl != null && thumbnailUrl.isNotEmpty;
@@ -1474,6 +1505,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
         : l10n.weightBadgeLabel(
             weightUsed!.toStringAsFixed(weightUsed! % 1 == 0 ? 0 : 1),
           );
+    final currentPerformanceLabels =
+        (currentPerformances ?? const <SetPerformance>[])
+            .map(formatSetPerformance)
+            .where((label) => label.isNotEmpty)
+            .toList(growable: false);
 
     return ListView(
       controller: scrollController,
@@ -1694,6 +1730,43 @@ class _ExerciseDetailSheet extends StatelessWidget {
             ),
           ),
         ],
+        if (currentPerformanceLabels.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: palette.surfaceVariant.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: palette.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Series registradas hoy',
+                  style: TextStyle(
+                    color: palette.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final label in currentPerformanceLabels)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         if (_hasContent(exercise.techniqueText)) ...[
           const SizedBox(height: 24),
           _VisibleDetailSection(
@@ -1720,6 +1793,25 @@ class _ExerciseDetailSheet extends StatelessWidget {
         ],
         if (isCompleted) ...[
           const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pop(const _SheetCompletionResult(openActiveExercise: true));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: typeColor,
+                foregroundColor: solidTypeStyle.foreground,
+                side: BorderSide(color: solidTypeStyle.border),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.edit_note_rounded, size: 20),
+              label: const Text('Editar datos'),
+            ),
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -1749,7 +1841,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: typeColor,
-                foregroundColor: palette.onPrimary,
+                foregroundColor: solidTypeStyle.foreground,
+                side: BorderSide(color: solidTypeStyle.border),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               icon: const Icon(Icons.play_arrow_rounded, size: 20),

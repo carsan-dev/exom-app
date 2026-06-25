@@ -41,6 +41,19 @@ void main() {
     expect(result.weights, {'training-exercise-1': 40});
   });
 
+  test('maps current set performances to training exercise ids', () {
+    final result = normalizeTrainingProgress(
+      training: training,
+      rawIds: {'exercise-1'},
+      rawWeights: const {},
+      rawPerformances: const {
+        'exercise-1': [SetPerformance(setNumber: 1, reps: 12)],
+      },
+    );
+
+    expect(result.performances['training-exercise-1']?.single.reps, 12);
+  });
+
   test('drops ids outside current training and avoids overcounting', () {
     final result = normalizeTrainingProgress(
       training: training,

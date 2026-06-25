@@ -41,6 +41,12 @@ class SetPerformance {
   };
 }
 
+typedef CompletedExerciseProgress = ({
+  Set<String> ids,
+  Map<String, double> weights,
+  Map<String, List<SetPerformance>> performances,
+});
+
 class TrainingExerciseEntity {
   final String id;
   final int order;

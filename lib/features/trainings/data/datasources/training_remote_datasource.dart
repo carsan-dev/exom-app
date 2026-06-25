@@ -19,8 +19,7 @@ abstract class TrainingRemoteDataSource {
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
-  Future<({Set<String> ids, Map<String, double> weights})>
-  getCompletedExerciseIds({String? date});
+  Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date});
   Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
     List<String> exerciseIds,
     String beforeDate,
@@ -405,8 +404,9 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<({Set<String> ids, Map<String, double> weights})>
-  getCompletedExerciseIds({String? date}) async {
+  Future<CompletedExerciseProgress> getCompletedExerciseIds({
+    String? date,
+  }) async {
     final targetDate = _resolvedDate(date);
     final cacheKey = 'completed_exercises_$targetDate';
 
@@ -421,6 +421,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         final list = inner['exercises_completed'] as List? ?? [];
         final ids = <String>{};
         final weights = <String, double>{};
+        final performances = <String, List<SetPerformance>>{};
         for (final entry in list) {
           final map = entry as Map<String, dynamic>;
           final id =
@@ -430,13 +431,37 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
           if (w != null) {
             weights[id] = (w as num).toDouble();
           }
+          final sets = map['sets'];
+          if (sets is List) {
+            performances[id] = sets
+                .whereType<Map<String, dynamic>>()
+                .map(
+                  (set) => SetPerformance(
+                    setNumber: set['set_number'] as int? ?? 1,
+                    reps: set['reps'] as int?,
+                    seconds: set['seconds'] as int?,
+                    weightKg: (set['weight_kg'] as num?)?.toDouble(),
+                  ),
+                )
+                .where(
+                  (set) =>
+                      set.reps != null ||
+                      set.seconds != null ||
+                      set.weightKg != null,
+                )
+                .toList(growable: false);
+          }
         }
         await _localStorage.cacheData(cacheKey, ids.toList());
         await _localStorage.cacheData('day_progress_$targetDate', inner);
         await _localStorage.cacheData('home_progress_$targetDate', inner);
-        return (ids: ids, weights: weights);
+        return (ids: ids, weights: weights, performances: performances);
       }
-      return (ids: <String>{}, weights: <String, double>{});
+      return (
+        ids: <String>{},
+        weights: <String, double>{},
+        performances: <String, List<SetPerformance>>{},
+      );
     } catch (error) {
       if (isOfflineError(error)) {
         final cached = _localStorage.getCachedList(cacheKey);
@@ -444,10 +469,15 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
           return (
             ids: cached.map((item) => item.toString()).toSet(),
             weights: <String, double>{},
+            performances: <String, List<SetPerformance>>{},
           );
         }
       }
-      return (ids: <String>{}, weights: <String, double>{});
+      return (
+        ids: <String>{},
+        weights: <String, double>{},
+        performances: <String, List<SetPerformance>>{},
+      );
     }
   }
 

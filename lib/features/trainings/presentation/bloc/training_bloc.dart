@@ -122,9 +122,10 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     try {
       final targetDate = _resolvedDate(event.date);
       final training = await _getTrainingUseCase(event.id);
-      ({Set<String> ids, Map<String, double> weights}) progress = (
+      CompletedExerciseProgress progress = (
         ids: <String>{},
         weights: <String, double>{},
+        performances: <String, List<SetPerformance>>{},
       );
       try {
         progress = await _getCompletedExercisesUseCase(targetDate);
@@ -133,6 +134,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         training: training,
         rawIds: progress.ids,
         rawWeights: progress.weights,
+        rawPerformances: progress.performances,
       );
       var previousPerformances = <String, List<SetPerformance>>{};
       try {
@@ -155,6 +157,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
           training,
           completedExerciseIds: normalizedProgress.ids,
           exerciseWeights: normalizedProgress.weights,
+          currentPerformances: normalizedProgress.performances,
           previousPerformances: previousPerformances,
           selectedDate: targetDate,
         ),
@@ -172,22 +175,33 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     if (current is TrainingDetailLoaded) {
       final previous = Set<String>.from(current.completedExerciseIds);
       final previousWeights = Map<String, double>.from(current.exerciseWeights);
+      final previousPerformances = Map<String, List<SetPerformance>>.from(
+        current.currentPerformances,
+      );
       final updated = Set<String>.from(current.completedExerciseIds);
       final updatedWeights = Map<String, double>.from(current.exerciseWeights);
+      final updatedPerformances = Map<String, List<SetPerformance>>.from(
+        current.currentPerformances,
+      );
 
       if (event.completed) {
         updated.add(event.trainingExerciseId);
         if (event.weightUsed != null) {
           updatedWeights[event.trainingExerciseId] = event.weightUsed!;
         }
+        if (event.sets != null) {
+          updatedPerformances[event.trainingExerciseId] = event.sets!;
+        }
       } else {
         updated.remove(event.trainingExerciseId);
         updatedWeights.remove(event.trainingExerciseId);
+        updatedPerformances.remove(event.trainingExerciseId);
       }
       emit(
         current.copyWith(
           completedExerciseIds: updated,
           exerciseWeights: updatedWeights,
+          currentPerformances: updatedPerformances,
         ),
       );
 
@@ -209,6 +223,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
           current.copyWith(
             completedExerciseIds: previous,
             exerciseWeights: previousWeights,
+            currentPerformances: previousPerformances,
             errorMessage: e.toString(),
           ),
         );

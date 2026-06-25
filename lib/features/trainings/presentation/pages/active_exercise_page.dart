@@ -26,6 +26,7 @@ class ActiveExercisePageArgs {
   final String? accentColorHex;
   final String trainingLevel;
   final double? initialWeightKg;
+  final List<SetPerformance>? currentPerformances;
   final List<SetPerformance>? previousPerformances;
 
   const ActiveExercisePageArgs({
@@ -36,6 +37,7 @@ class ActiveExercisePageArgs {
     required this.accentColorHex,
     required this.trainingLevel,
     this.initialWeightKg,
+    this.currentPerformances,
     this.previousPerformances,
   });
 }
@@ -213,17 +215,22 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     ActiveExerciseState state,
     AppLocalizations l10n,
   ) async {
+    final timeUnit = timePerformanceUnit(state.repsOrDuration);
     final performance = await _showSetPerformanceSheet(
       context,
       l10n,
       setNumber: state.currentSet,
       prescribedReps: state.repsOrDuration,
       previousWeight: state.weightKg,
+      currentPerformance: performanceForSet(
+        widget.args.currentPerformances,
+        state.currentSet,
+      ),
       previousPerformance: performanceForSet(
         widget.args.previousPerformances,
         state.currentSet,
       ),
-      timeBased: isTimeBasedPrescription(state.repsOrDuration),
+      timeUnit: timeUnit,
       repsRequired: widget.args.trainingExercise.requestSetTracking,
     );
     if (!mounted || performance == null) return;
@@ -267,6 +274,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     final l10n = AppLocalizations.of(context);
     final exercise = widget.args.trainingExercise.exercise;
     final typeColor = _typeColor(context);
+    final solidTypeStyle = trainingColorStyle(context, typeColor);
 
     if (!_bootstrapped) {
       return ExomStaticBackground(
@@ -540,7 +548,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                             backgroundColor: state.currentSet == state.totalSets
                                 ? semantic.success
                                 : typeColor,
-                            foregroundColor: palette.onPrimary,
+                            foregroundColor: state.currentSet == state.totalSets
+                                ? palette.onPrimary
+                                : solidTypeStyle.foreground,
+                            side: state.currentSet == state.totalSets
+                                ? null
+                                : BorderSide(color: solidTypeStyle.border),
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(
                               fontSize: 15,
@@ -822,19 +835,31 @@ _showSetPerformanceSheet(
   required int setNumber,
   required String prescribedReps,
   required bool repsRequired,
-  required bool timeBased,
+  required TimePerformanceUnit? timeUnit,
   double? previousWeight,
+  SetPerformance? currentPerformance,
   SetPerformance? previousPerformance,
 }) async {
   final palette = context.exomPalette;
-  final valueController = TextEditingController();
+  final timeBased = timeUnit != null;
+  final currentValue = timeBased
+      ? timeInputFromSeconds(currentPerformance?.seconds, timeUnit)
+      : currentPerformance?.reps;
+  final valueController = TextEditingController(
+    text: currentValue?.toString() ?? '',
+  );
   final weightController = TextEditingController(
-    text: previousWeight != null
-        ? previousWeight.toStringAsFixed(previousWeight % 1 == 0 ? 0 : 1)
+    text: (currentPerformance?.weightKg ?? previousWeight) != null
+        ? (currentPerformance?.weightKg ?? previousWeight)!.toStringAsFixed(
+            (currentPerformance?.weightKg ?? previousWeight)! % 1 == 0 ? 0 : 1,
+          )
         : '',
   );
   ({int? reps, int? seconds, double? weight, bool skipped})? result;
   String? error;
+  final currentLabel = currentPerformance == null
+      ? null
+      : formatSetPerformance(currentPerformance);
   final previousLabel = previousPerformance == null
       ? null
       : formatSetPerformance(previousPerformance);
@@ -879,6 +904,13 @@ _showSetPerformanceSheet(
                 l10n.setPerformancePrescription(prescribedReps),
                 style: TextStyle(color: palette.textSecondary, fontSize: 13),
               ),
+              if (currentLabel != null && currentLabel.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Hoy: $currentLabel',
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
+                ),
+              ],
               if (previousLabel != null && previousLabel.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -894,7 +926,9 @@ _showSetPerformanceSheet(
                 style: TextStyle(color: palette.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: timeBased
-                      ? l10n.setPerformanceSeconds
+                      ? timeUnit == TimePerformanceUnit.minutes
+                            ? 'Minutos'
+                            : l10n.setPerformanceSeconds
                       : l10n.setPerformanceReps,
                   errorText: error,
                 ),
@@ -960,7 +994,9 @@ _showSetPerformanceSheet(
                           return;
                         }
                         final reps = timeBased ? null : value;
-                        final seconds = timeBased ? value : null;
+                        final seconds = timeBased
+                            ? secondsFromTimeInput(value, timeUnit)
+                            : null;
                         final weightText = weightController.text.trim();
                         final weight = weightText.isEmpty
                             ? null

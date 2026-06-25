@@ -13,8 +13,7 @@ abstract class TrainingRepository {
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(String date, {String? notes});
-  Future<({Set<String> ids, Map<String, double> weights})>
-  getCompletedExerciseIds({String? date});
+  Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date});
   Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
     List<String> exerciseIds,
     String beforeDate,

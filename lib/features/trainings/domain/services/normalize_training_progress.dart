@@ -1,12 +1,19 @@
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
-({Set<String> ids, Map<String, double> weights}) normalizeTrainingProgress({
+({
+  Set<String> ids,
+  Map<String, double> weights,
+  Map<String, List<SetPerformance>> performances,
+})
+normalizeTrainingProgress({
   required TrainingEntity training,
   required Set<String> rawIds,
   required Map<String, double> rawWeights,
+  Map<String, List<SetPerformance>> rawPerformances = const {},
 }) {
   final ids = <String>{};
   final weights = <String, double>{};
+  final performances = <String, List<SetPerformance>>{};
 
   for (final trainingExercise in training.exercises) {
     final trainingExerciseId = trainingExercise.id;
@@ -20,7 +27,12 @@ import 'package:exom_app/features/trainings/domain/entities/training_entity.dart
     if (weight != null) {
       weights[trainingExerciseId] = weight;
     }
+    final currentPerformances =
+        rawPerformances[trainingExerciseId] ?? rawPerformances[exerciseId];
+    if (currentPerformances != null) {
+      performances[trainingExerciseId] = currentPerformances;
+    }
   }
 
-  return (ids: ids, weights: weights);
+  return (ids: ids, weights: weights, performances: performances);
 }

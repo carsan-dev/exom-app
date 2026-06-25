@@ -1,11 +1,11 @@
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 class GetCompletedExercisesUseCase {
   final TrainingRepository _repository;
 
   const GetCompletedExercisesUseCase(this._repository);
 
-  Future<({Set<String> ids, Map<String, double> weights})> call(
-          [String? date]) =>
+  Future<CompletedExerciseProgress> call([String? date]) =>
       _repository.getCompletedExerciseIds(date: date);
 }

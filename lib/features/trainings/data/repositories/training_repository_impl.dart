@@ -55,8 +55,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<({Set<String> ids, Map<String, double> weights})>
-  getCompletedExerciseIds({String? date}) {
+  Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date}) {
     return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 

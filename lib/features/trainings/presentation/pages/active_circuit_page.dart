@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
@@ -597,55 +598,66 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           bottomNavigationBar: SafeArea(
             top: false,
             minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child:
-                  _status == _CircuitStatus.roundResting ||
-                      _status == _CircuitStatus.exerciseResting
-                  ? _RoundRestFooter(
-                      key: ValueKey(
-                        'round-rest-${_restEndsAt?.millisecondsSinceEpoch}',
-                      ),
-                      totalSeconds: _status == _CircuitStatus.roundResting
-                          ? widget.args.restBetweenRoundsSeconds
-                          : widget
-                                .args
-                                .exercises[_currentExerciseIndex - 1]
-                                .restSeconds,
-                      restEndsAt: _restEndsAt ?? DateTime.now(),
-                      title: _status == _CircuitStatus.roundResting
-                          ? l10n.circuitRoundRestTitle
-                          : l10n.circuitExerciseRestTitle,
-                      nextExerciseName: _status == _CircuitStatus.roundResting
-                          ? widget.args.exercises.first.exercise.name
-                          : _currentExercise.exercise.name,
-                      onSkip: _finishRest,
-                    )
-                  : SizedBox(
-                      key: const ValueKey('circuit-executing-footer'),
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _completeCurrentSeries,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: color,
-                          foregroundColor: solidColorStyle.foreground,
-                          side: BorderSide(color: solidColorStyle.border),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
-                          ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: _androidButtonNavigationExtraSpacing(context),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child:
+                    _status == _CircuitStatus.roundResting ||
+                        _status == _CircuitStatus.exerciseResting
+                    ? _RoundRestFooter(
+                        key: ValueKey(
+                          'round-rest-${_restEndsAt?.millisecondsSinceEpoch}',
                         ),
-                        child: Text(l10n.completeSetButton.toUpperCase()),
+                        totalSeconds: _status == _CircuitStatus.roundResting
+                            ? widget.args.restBetweenRoundsSeconds
+                            : widget
+                                  .args
+                                  .exercises[_currentExerciseIndex - 1]
+                                  .restSeconds,
+                        restEndsAt: _restEndsAt ?? DateTime.now(),
+                        title: _status == _CircuitStatus.roundResting
+                            ? l10n.circuitRoundRestTitle
+                            : l10n.circuitExerciseRestTitle,
+                        nextExerciseName: _status == _CircuitStatus.roundResting
+                            ? widget.args.exercises.first.exercise.name
+                            : _currentExercise.exercise.name,
+                        onSkip: _finishRest,
+                      )
+                    : SizedBox(
+                        key: const ValueKey('circuit-executing-footer'),
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _completeCurrentSeries,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: color,
+                            foregroundColor: solidColorStyle.foreground,
+                            side: BorderSide(color: solidColorStyle.border),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          child: Text(l10n.completeSetButton.toUpperCase()),
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+double _androidButtonNavigationExtraSpacing(BuildContext context) {
+  if (defaultTargetPlatform != TargetPlatform.android) return 0;
+  final gestureInset = MediaQuery.of(context).systemGestureInsets.bottom;
+  return gestureInset == 0 ? 16 : 0;
 }
 
 class _CircleIconButton extends StatelessWidget {

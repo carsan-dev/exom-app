@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -534,66 +535,73 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                 bottomNavigationBar: SafeArea(
                   top: false,
                   minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: switch (state.status) {
-                      ActiveExerciseStatus.executing => SizedBox(
-                        key: const ValueKey('footer-executing'),
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => _onCompleteSetPressed(state, l10n),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: state.currentSet == state.totalSets
-                                ? semantic.success
-                                : typeColor,
-                            foregroundColor: state.currentSet == state.totalSets
-                                ? palette.onPrimary
-                                : solidTypeStyle.foreground,
-                            side: state.currentSet == state.totalSets
-                                ? null
-                                : BorderSide(color: solidTypeStyle.border),
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            textStyle: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: _androidButtonNavigationExtraSpacing(context),
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: switch (state.status) {
+                        ActiveExerciseStatus.executing => SizedBox(
+                          key: const ValueKey('footer-executing'),
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => _onCompleteSetPressed(state, l10n),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  state.currentSet == state.totalSets
+                                  ? semantic.success
+                                  : typeColor,
+                              foregroundColor:
+                                  state.currentSet == state.totalSets
+                                  ? palette.onPrimary
+                                  : solidTypeStyle.foreground,
+                              side: state.currentSet == state.totalSets
+                                  ? null
+                                  : BorderSide(color: solidTypeStyle.border),
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                          ),
-                          child: Text(l10n.completeSetButton.toUpperCase()),
-                        ),
-                      ),
-                      ActiveExerciseStatus.resting => _RestingFooter(
-                        key: ValueKey(
-                          'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
-                        ),
-                        totalSeconds: state.restSeconds,
-                        restEndsAt: state.restEndsAt!,
-                        onSkip: () => context.read<ActiveExerciseBloc>().add(
-                          const SkipRest(),
-                        ),
-                        onFinished: () => context
-                            .read<ActiveExerciseBloc>()
-                            .add(const SkipRest()),
-                      ),
-                      ActiveExerciseStatus.done => Container(
-                        key: const ValueKey('footer-done'),
-                        decoration: GlassDecoration.card(borderRadius: 22),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        alignment: Alignment.center,
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.6,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              palette.primary,
-                            ),
+                            child: Text(l10n.completeSetButton.toUpperCase()),
                           ),
                         ),
-                      ),
-                    },
+                        ActiveExerciseStatus.resting => _RestingFooter(
+                          key: ValueKey(
+                            'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
+                          ),
+                          totalSeconds: state.restSeconds,
+                          restEndsAt: state.restEndsAt!,
+                          onSkip: () => context.read<ActiveExerciseBloc>().add(
+                            const SkipRest(),
+                          ),
+                          onFinished: () => context
+                              .read<ActiveExerciseBloc>()
+                              .add(const SkipRest()),
+                        ),
+                        ActiveExerciseStatus.done => Container(
+                          key: const ValueKey('footer-done'),
+                          decoration: GlassDecoration.card(borderRadius: 22),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          alignment: Alignment.center,
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.6,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                palette.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -603,6 +611,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       ),
     );
   }
+}
+
+double _androidButtonNavigationExtraSpacing(BuildContext context) {
+  if (defaultTargetPlatform != TargetPlatform.android) return 0;
+  final gestureInset = MediaQuery.of(context).systemGestureInsets.bottom;
+  return gestureInset == 0 ? 16 : 0;
 }
 
 class _CircleIconButton extends StatelessWidget {
@@ -874,12 +888,13 @@ _showSetPerformanceSheet(
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setModalState) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Center(
                 child: Container(
                   width: 36,
@@ -947,10 +962,11 @@ _showSetPerformanceSheet(
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
+              Column(
                 children: [
                   if (!repsRequired) ...[
-                    Expanded(
+                    SizedBox(
+                      width: double.infinity,
                       child: TextButton(
                         onPressed: () {
                           result = (
@@ -961,72 +977,108 @@ _showSetPerformanceSheet(
                           );
                           Navigator.of(ctx).pop();
                         },
-                        child: Text(l10n.completeWithoutTracking),
+                        child: Text(
+                          l10n.completeWithoutTracking,
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(height: 8),
                   ],
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text(l10n.cancel),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final value = int.tryParse(valueController.text.trim());
-                        if (repsRequired && (value == null || value < 1)) {
-                          setModalState(
-                            () => error = timeBased
-                                ? l10n.setPerformanceSecondsError
-                                : l10n.setPerformanceRepsError,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackActions =
+                          constraints.maxWidth < 280 ||
+                          MediaQuery.textScalerOf(ctx).scale(1) > 1.3;
+                      final cancelButton = OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: Text(l10n.cancel, maxLines: 1, softWrap: false),
+                      );
+                      final saveButton = ElevatedButton(
+                        onPressed: () {
+                          final value = int.tryParse(
+                            valueController.text.trim(),
                           );
-                          return;
-                        }
-                        if (value != null && value < 1) {
-                          setModalState(
-                            () => error = timeBased
-                                ? l10n.setPerformanceSecondsError
-                                : l10n.setPerformanceRepsError,
+                          if (repsRequired && (value == null || value < 1)) {
+                            setModalState(
+                              () => error = timeBased
+                                  ? l10n.setPerformanceSecondsError
+                                  : l10n.setPerformanceRepsError,
+                            );
+                            return;
+                          }
+                          if (value != null && value < 1) {
+                            setModalState(
+                              () => error = timeBased
+                                  ? l10n.setPerformanceSecondsError
+                                  : l10n.setPerformanceRepsError,
+                            );
+                            return;
+                          }
+                          final reps = timeBased ? null : value;
+                          final seconds = timeBased
+                              ? secondsFromTimeInput(value, timeUnit)
+                              : null;
+                          final weightText = weightController.text.trim();
+                          final weight = weightText.isEmpty
+                              ? null
+                              : double.tryParse(
+                                  weightText.replaceAll(',', '.'),
+                                );
+                          if (weight != null && weight < 0) {
+                            setModalState(
+                              () => error = l10n.setPerformanceWeightError,
+                            );
+                            return;
+                          }
+                          if (reps == null &&
+                              seconds == null &&
+                              weight == null) {
+                            setModalState(
+                              () => error = l10n.setPerformanceDataError,
+                            );
+                            return;
+                          }
+                          result = (
+                            reps: reps,
+                            seconds: seconds,
+                            weight: weight,
+                            skipped: false,
                           );
-                          return;
-                        }
-                        final reps = timeBased ? null : value;
-                        final seconds = timeBased
-                            ? secondsFromTimeInput(value, timeUnit)
-                            : null;
-                        final weightText = weightController.text.trim();
-                        final weight = weightText.isEmpty
-                            ? null
-                            : double.tryParse(weightText.replaceAll(',', '.'));
-                        if (weight != null && weight < 0) {
-                          setModalState(
-                            () => error = l10n.setPerformanceWeightError,
-                          );
-                          return;
-                        }
-                        if (reps == null && seconds == null && weight == null) {
-                          setModalState(
-                            () => error = l10n.setPerformanceDataError,
-                          );
-                          return;
-                        }
-                        result = (
-                          reps: reps,
-                          seconds: seconds,
-                          weight: weight,
-                          skipped: false,
+                          Navigator.of(ctx).pop();
+                        },
+                        child: Text(
+                          l10n.weightInputSave,
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      );
+
+                      if (stackActions) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            cancelButton,
+                            const SizedBox(height: 8),
+                            saveButton,
+                          ],
                         );
-                        Navigator.of(ctx).pop();
-                      },
-                      child: Text(l10n.weightInputSave),
-                    ),
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: cancelButton),
+                          const SizedBox(width: 12),
+                          Expanded(child: saveButton),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

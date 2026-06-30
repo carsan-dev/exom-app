@@ -1220,40 +1220,44 @@ class _ExerciseCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      _MiniStat(
-                        icon: Icons.repeat,
-                        label:
-                            '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
-                      ),
-                      _MiniStat(
-                        icon: Icons.timer_outlined,
-                        label: '${trainingExercise.restSeconds}s ${l10n.rest}',
-                      ),
-                      if (partialProgressLabel != null)
+                  LayoutBuilder(
+                    builder: (context, constraints) => Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
                         _MiniStat(
-                          icon: Icons.stacked_bar_chart_rounded,
-                          label: partialProgressLabel!,
+                          icon: Icons.repeat,
+                          label:
+                              '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
                         ),
-                      if (weightUsed != null) ...[
                         _MiniStat(
-                          icon: Icons.fitness_center,
-                          label: l10n.weightBadgeLabel(
-                            weightUsed!.toStringAsFixed(
-                              weightUsed! % 1 == 0 ? 0 : 1,
+                          icon: Icons.timer_outlined,
+                          label:
+                              '${trainingExercise.restSeconds}s ${l10n.rest}',
+                        ),
+                        if (partialProgressLabel != null)
+                          _MiniStat(
+                            icon: Icons.stacked_bar_chart_rounded,
+                            label: partialProgressLabel!,
+                          ),
+                        if (weightUsed != null) ...[
+                          _MiniStat(
+                            icon: Icons.fitness_center,
+                            label: l10n.weightBadgeLabel(
+                              weightUsed!.toStringAsFixed(
+                                weightUsed! % 1 == 0 ? 0 : 1,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
+                        if (currentPerformanceLabel != null)
+                          _MiniStat(
+                            icon: Icons.edit_note_rounded,
+                            label: currentPerformanceLabel,
+                            maxWidth: constraints.maxWidth,
+                          ),
                       ],
-                      if (currentPerformanceLabel != null)
-                        _MiniStat(
-                          icon: Icons.edit_note_rounded,
-                          label: currentPerformanceLabel,
-                        ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -1365,23 +1369,38 @@ class _ExercisePlaceholder extends StatelessWidget {
 class _MiniStat extends StatelessWidget {
   final IconData icon;
   final String label;
+  final double? maxWidth;
 
-  const _MiniStat({required this.icon, required this.label});
+  const _MiniStat({required this.icon, required this.label, this.maxWidth});
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    return Row(
+    final content = Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: palette.textDisabled, size: 12),
         const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(color: palette.textDisabled, fontSize: 11),
-        ),
+        if (maxWidth == null)
+          Text(
+            label,
+            style: TextStyle(color: palette.textDisabled, fontSize: 11),
+          )
+        else
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: palette.textDisabled, fontSize: 11),
+            ),
+          ),
       ],
     );
+
+    if (maxWidth == null) return content;
+    return SizedBox(width: maxWidth, child: content);
   }
 }
 

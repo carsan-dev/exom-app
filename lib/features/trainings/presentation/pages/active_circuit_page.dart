@@ -93,6 +93,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   var _status = _CircuitStatus.executing;
   DateTime? _restEndsAt;
   bool _markedComplete = false;
+  bool _circuitReadyToFinish = false;
   final Map<String, List<SetPerformance>> _performances = {};
 
   Color _typeColor(BuildContext context) {
@@ -170,6 +171,10 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
 
   Future<void> _completeCurrentSeries() async {
     if (_status != _CircuitStatus.executing) return;
+    if (_circuitReadyToFinish) {
+      await _finishCircuit();
+      return;
+    }
 
     final tracking = await _requestPerformance(_currentExercise);
     if (!mounted || tracking == null) return;
@@ -191,7 +196,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       roundRestSeconds: widget.args.restBetweenRoundsSeconds,
     );
     if (progression.restKind == CircuitRestKind.done) {
-      _finishCircuit();
+      _circuitReadyToFinish = true;
+      await _finishCircuit();
       return;
     }
 
@@ -368,23 +374,43 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     });
   }
 
-  void _finishCircuit() {
+  Future<void> _finishCircuit() async {
     if (_markedComplete) return;
     _markedComplete = true;
+    final trainingBloc = context.read<TrainingBloc>();
 
-    for (final trainingExercise in widget.args.exercises) {
-      final sets = _performances[trainingExercise.id];
-      context.read<TrainingBloc>().add(
-        MarkExerciseCompleted(
-          trainingExerciseId: trainingExercise.id,
-          exerciseId: trainingExercise.exercise.id,
-          completed: true,
-          weightUsed: sets == null || sets.isEmpty ? null : sets.last.weightKg,
-          sets: sets,
+    try {
+      for (final trainingExercise in widget.args.exercises) {
+        final sets = _performances[trainingExercise.id];
+        final completion = Completer<void>();
+        trainingBloc.add(
+          MarkExerciseCompleted(
+            trainingExerciseId: trainingExercise.id,
+            exerciseId: trainingExercise.exercise.id,
+            completed: true,
+            weightUsed: sets == null || sets.isEmpty
+                ? null
+                : sets.last.weightKg,
+            sets: sets,
+            completion: completion,
+          ),
+        );
+        await completion.future;
+      }
+    } catch (_) {
+      _markedComplete = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.',
+          ),
         ),
       );
+      return;
     }
 
+    if (!mounted) return;
     setState(() {
       _status = _CircuitStatus.done;
     });
@@ -595,13 +621,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               ],
             ),
           ),
-          bottomNavigationBar: SafeArea(
-            top: false,
-            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          bottomNavigationBar: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              _trainingFooterBottomPadding(context),
+            ),
             child: Padding(
-              padding: EdgeInsets.only(
-                bottom: _androidButtonNavigationExtraSpacing(context),
-              ),
+              padding: EdgeInsets.zero,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child:
@@ -654,10 +682,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   }
 }
 
-double _androidButtonNavigationExtraSpacing(BuildContext context) {
-  if (defaultTargetPlatform != TargetPlatform.android) return 0;
-  final gestureInset = MediaQuery.of(context).systemGestureInsets.bottom;
-  return gestureInset == 0 ? 16 : 0;
+double _trainingFooterBottomPadding(BuildContext context) {
+  const margin = 16.0;
+  if (defaultTargetPlatform != TargetPlatform.android) return margin;
+  final mediaQuery = MediaQuery.of(context);
+  final navigationInset = mediaQuery.viewPadding.bottom;
+  final usesGestureNavigation = mediaQuery.systemGestureInsets.bottom > 0;
+  return usesGestureNavigation
+      ? navigationInset.clamp(margin, double.infinity)
+      : navigationInset + margin;
 }
 
 class _CircleIconButton extends StatelessWidget {

@@ -1,4 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/normalize_training_progress.dart';
 import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
@@ -218,15 +220,19 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         } else {
           await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date);
         }
+        event.completion?.complete();
       } catch (e) {
         emit(
           current.copyWith(
             completedExerciseIds: previous,
             exerciseWeights: previousWeights,
             currentPerformances: previousPerformances,
-            errorMessage: e.toString(),
+            errorMessage:
+                ApiException.maybeFrom(e)?.message ??
+                'No se pudo guardar el progreso. Inténtalo de nuevo.',
           ),
         );
+        event.completion?.completeError(e);
       }
     }
   }

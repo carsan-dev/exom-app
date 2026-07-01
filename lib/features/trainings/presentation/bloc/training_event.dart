@@ -30,12 +30,14 @@ class MarkExerciseCompleted extends TrainingEvent {
   final bool completed;
   final double? weightUsed;
   final List<SetPerformance>? sets;
+  final Completer<void>? completion;
   const MarkExerciseCompleted({
     required this.trainingExerciseId,
     required this.exerciseId,
     required this.completed,
     this.weightUsed,
     this.sets,
+    this.completion,
   });
 }
 

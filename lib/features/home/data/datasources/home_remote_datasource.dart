@@ -68,12 +68,20 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   }) async {
     try {
       final queryParams = date != null ? {'date': _dateKey(date)} : null;
-      final response = await _apiClient.dio.get<dynamic>(
-        '/trainings/today',
-        queryParameters: queryParams,
-      );
+      late Response<dynamic> response;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        response = await _apiClient.dio.get<dynamic>(
+          '/trainings/today',
+          queryParameters: queryParams,
+        );
+        if (response.statusCode != 204 && response.data != null) break;
+        if (attempt < 2) {
+          await Future<void>.delayed(
+            Duration(milliseconds: 250 * (attempt + 1)),
+          );
+        }
+      }
       if (response.statusCode == 204 || response.data == null) {
-        await _cacheNullableMap(cacheKey, null);
         return null;
       }
       final data = response.data;
@@ -85,7 +93,6 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       return _getCachedNullableMap(cacheKey);
     } on DioException catch (e) {
       if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
-        await _cacheNullableMap(cacheKey, null);
         return null;
       }
       return _getCachedNullableMap(cacheKey);

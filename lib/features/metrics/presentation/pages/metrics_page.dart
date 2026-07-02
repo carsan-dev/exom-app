@@ -103,7 +103,7 @@ class _MetricsViewState extends State<_MetricsView> {
     _populateFallbackValuesFromCachedProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _loadMetricForSelectedDate();
+        _loadLatestMetric();
       }
     });
   }
@@ -255,6 +255,10 @@ class _MetricsViewState extends State<_MetricsView> {
     context.read<MetricsBloc>().add(
       MetricsLoadRequested(date: _apiDate(_selectedMetricDate)),
     );
+  }
+
+  void _loadLatestMetric() {
+    context.read<MetricsBloc>().add(const MetricsLoadRequested());
   }
 
   void _setSleepValue(double value) {

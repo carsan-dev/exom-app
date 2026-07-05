@@ -5,6 +5,7 @@ class HomeSummaryModel {
   final List<String> trainingTypes;
   final String? trainingAccentColor;
   final int? trainingDurationMin;
+  final int? remainingTrainingDurationMin;
   final bool trainingCompleted;
   final String? trainingId;
   final int exercisesCompleted;
@@ -30,6 +31,7 @@ class HomeSummaryModel {
     this.trainingTypes = const [],
     this.trainingAccentColor,
     this.trainingDurationMin,
+    this.remainingTrainingDurationMin,
     this.trainingCompleted = false,
     this.trainingId,
     this.exercisesCompleted = 0,
@@ -80,6 +82,31 @@ class HomeSummaryModel {
         .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
         .toSet();
     final exercisesCompleted = completedExIds.length;
+    var totalTrainingSets = 0;
+    var completedTrainingSets = 0;
+    for (final rawExercise
+        in trainingExercises.whereType<Map<String, dynamic>>()) {
+      final sets = (rawExercise['sets'] as num?)?.toInt() ?? 0;
+      totalTrainingSets += sets;
+      final exercise = rawExercise['exercise'] as Map<String, dynamic>?;
+      final isCompleted =
+          completedExIds.contains(rawExercise['id']) ||
+          completedExIds.contains(exercise?['id']);
+      if (isCompleted) completedTrainingSets += sets;
+    }
+    final trainingDuration = (training?['estimated_duration_min'] as num?)
+        ?.toInt();
+    final remainingTrainingDuration =
+        trainingDuration == null || totalTrainingSets <= 0
+        ? null
+        : (trainingDuration *
+                  (totalTrainingSets - completedTrainingSets).clamp(
+                    0,
+                    totalTrainingSets,
+                  ) /
+                  totalTrainingSets)
+              .round()
+              .clamp(0, trainingDuration);
     final trainingCompleted =
         (progress?['training_completed'] as bool?) ??
         (totalExercises > 0 && exercisesCompleted >= totalExercises);
@@ -136,7 +163,8 @@ class HomeSummaryModel {
       trainingAccentColor: normalizeTrainingAccentHex(
         training?['accentColor'] as String?,
       ),
-      trainingDurationMin: training?['estimated_duration_min'] as int?,
+      trainingDurationMin: trainingDuration,
+      remainingTrainingDurationMin: remainingTrainingDuration,
       trainingCompleted: trainingCompleted,
       exercisesCompleted: exercisesCompleted,
       totalExercises: totalExercises,

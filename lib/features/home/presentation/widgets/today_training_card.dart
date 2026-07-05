@@ -139,11 +139,15 @@ class TodayTrainingCard extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 8,
                 children: [
-                  _StatChip(
-                    icon: Icons.timer_outlined,
-                    label: '${summary.trainingDurationMin ?? '--'} min',
-                    color: semantic.info,
-                  ),
+                  if (!summary.trainingCompleted &&
+                      summary.remainingTrainingDurationMin != null)
+                    _StatChip(
+                      icon: Icons.timer_outlined,
+                      label: l10n.remainingTrainingMinutes(
+                        summary.remainingTrainingDurationMin!,
+                      ),
+                      color: semantic.info,
+                    ),
                   if (summary.trainingCompleted)
                     _StatChip(
                       icon: Icons.check_circle_outline,

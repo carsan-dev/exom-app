@@ -16,6 +16,7 @@ class HomeRepositoryImpl implements HomeRepository {
       trainingTypes: model.trainingTypes,
       trainingAccentColor: model.trainingAccentColor,
       trainingDurationMin: model.trainingDurationMin,
+      remainingTrainingDurationMin: model.remainingTrainingDurationMin,
       trainingCompleted: model.trainingCompleted,
       exercisesCompleted: model.exercisesCompleted,
       totalExercises: model.totalExercises,

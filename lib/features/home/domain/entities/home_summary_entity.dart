@@ -4,6 +4,7 @@ class HomeSummaryEntity {
   final List<String> trainingTypes;
   final String? trainingAccentColor;
   final int? trainingDurationMin;
+  final int? remainingTrainingDurationMin;
   final bool trainingCompleted;
   final int exercisesCompleted;
   final int totalExercises;
@@ -29,6 +30,7 @@ class HomeSummaryEntity {
     this.trainingTypes = const [],
     this.trainingAccentColor,
     this.trainingDurationMin,
+    this.remainingTrainingDurationMin,
     this.trainingCompleted = false,
     this.exercisesCompleted = 0,
     this.totalExercises = 0,

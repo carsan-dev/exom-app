@@ -377,6 +377,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final total = training.exercises.length;
     final progress = total > 0 ? completed / total : 0.0;
     final allDone = total > 0 && completed == total;
+    final remaining = training.remainingProgress(
+      widget.state.completedExerciseIds,
+    );
 
     return ExomStaticBackground(
       child: Scaffold(
@@ -440,12 +443,30 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               label: training.level,
                               color: palette.textSecondary,
                             ),
-                            if (training.estimatedDurationMin != null)
+                            if (allDone)
                               _Badge(
-                                label: '${training.estimatedDurationMin} min',
-                                icon: Icons.timer_outlined,
-                                color: semantic.info,
+                                label: l10n.completed,
+                                icon: Icons.check_circle_outline,
+                                color: semantic.success,
+                              )
+                            else ...[
+                              _Badge(
+                                label: l10n.remainingTrainingWork(
+                                  remaining.remainingExercises,
+                                  remaining.remainingSets,
+                                ),
+                                icon: Icons.fitness_center,
+                                color: color,
                               ),
+                              if (remaining.remainingDurationMin != null)
+                                _Badge(
+                                  label: l10n.remainingTrainingMinutes(
+                                    remaining.remainingDurationMin!,
+                                  ),
+                                  icon: Icons.timer_outlined,
+                                  color: semantic.info,
+                                ),
+                            ],
                             if (training.estimatedCalories != null)
                               _Badge(
                                 label: '${training.estimatedCalories} kcal',

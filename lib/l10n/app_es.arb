@@ -141,6 +141,17 @@
   "caloriesLabel": "Calorías",
   "remainingToConsumeLabel": "Por consumir",
   "remainingKcalLabel": "kcal restantes",
+  "remainingTrainingMinutes": "≈ {minutes} min restantes",
+  "@remainingTrainingMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "remainingTrainingWork": "{exercises} ejercicios · {sets} series restantes",
+  "@remainingTrainingWork": {
+    "placeholders": {
+      "exercises": { "type": "int" },
+      "sets": { "type": "int" }
+    }
+  },
   "proteinLabel": "Proteína",
   "carbsLabel": "Carbos",
   "fatsLabel": "Grasas",

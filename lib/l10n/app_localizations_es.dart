@@ -347,6 +347,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get remainingKcalLabel => 'kcal restantes';
 
   @override
+  String remainingTrainingMinutes(int minutes) {
+    return '≈ $minutes min restantes';
+  }
+
+  @override
+  String remainingTrainingWork(int exercises, int sets) {
+    return '$exercises ejercicios · $sets series restantes';
+  }
+
+  @override
   String get proteinLabel => 'Proteína';
 
   @override

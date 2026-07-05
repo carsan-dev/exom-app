@@ -728,6 +728,18 @@ abstract class AppLocalizations {
   /// **'kcal restantes'**
   String get remainingKcalLabel;
 
+  /// No description provided for @remainingTrainingMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'≈ {minutes} min restantes'**
+  String remainingTrainingMinutes(int minutes);
+
+  /// No description provided for @remainingTrainingWork.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercises} ejercicios · {sets} series restantes'**
+  String remainingTrainingWork(int exercises, int sets);
+
   /// No description provided for @proteinLabel.
   ///
   /// In es, this message translates to:

@@ -130,3 +130,45 @@ class TrainingEntity {
     required this.exercises,
   });
 }
+
+class RemainingTrainingProgress {
+  final int remainingExercises;
+  final int remainingSets;
+  final int? remainingDurationMin;
+
+  const RemainingTrainingProgress({
+    required this.remainingExercises,
+    required this.remainingSets,
+    this.remainingDurationMin,
+  });
+}
+
+extension RemainingTrainingProgressCalculation on TrainingEntity {
+  RemainingTrainingProgress remainingProgress(Set<String> completedIds) {
+    final completedExercises = exercises
+        .where(
+          (item) =>
+              completedIds.contains(item.id) ||
+              completedIds.contains(item.exercise.id),
+        )
+        .toList(growable: false);
+    final totalSets = exercises.fold<int>(0, (sum, item) => sum + item.sets);
+    final completedSets = completedExercises.fold<int>(
+      0,
+      (sum, item) => sum + item.sets,
+    );
+    final remainingSets = (totalSets - completedSets).clamp(0, totalSets);
+    final duration = estimatedDurationMin;
+
+    return RemainingTrainingProgress(
+      remainingExercises: (exercises.length - completedExercises.length).clamp(
+        0,
+        exercises.length,
+      ),
+      remainingSets: remainingSets,
+      remainingDurationMin: duration == null || totalSets <= 0
+          ? null
+          : (duration * remainingSets / totalSets).round().clamp(0, duration),
+    );
+  }
+}

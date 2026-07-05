@@ -1,5 +1,6 @@
-- Training progress is preserved when your coach edits exercises or circuits.
-- Review and edit today's logged sets without unmarking the exercise.
-- Time-based exercises now accept minutes or seconds depending on the prescription.
-- Improved training color contrast for clearer buttons and labels.
-- Now when you open the update metrics page, you can see the last metrics registered.
+- See your remaining calories, macros, exercises, sets, and workout time at a glance.
+- See today's remaining calories, macros, exercises, sets, and workout time.
+- Progress stays saved when your coach edits exercises or circuits.
+- Review and edit today's sets without unmarking the exercise.
+- Timed exercises accept minutes or seconds as prescribed.
+- Opening metrics now shows your previous records.

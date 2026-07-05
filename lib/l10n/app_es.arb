@@ -139,6 +139,8 @@
   "exerciseCompletedButton": "Ejercicio completado",
   "nutritionalInfoTitle": "Información nutricional",
   "caloriesLabel": "Calorías",
+  "remainingToConsumeLabel": "Por consumir",
+  "remainingKcalLabel": "kcal restantes",
   "proteinLabel": "Proteína",
   "carbsLabel": "Carbos",
   "fatsLabel": "Grasas",

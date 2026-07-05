@@ -341,6 +341,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get caloriesLabel => 'Calorías';
 
   @override
+  String get remainingToConsumeLabel => 'Por consumir';
+
+  @override
+  String get remainingKcalLabel => 'kcal restantes';
+
+  @override
   String get proteinLabel => 'Proteína';
 
   @override

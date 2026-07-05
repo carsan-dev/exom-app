@@ -302,13 +302,17 @@ class _DietContent extends StatelessWidget {
             return _DietHeader(
               diet: diet,
               completedCount: completedCount,
+              completedMealIds: state.completedMealIds,
               dateLabel: dateLabel,
             );
           }
           if (index == 1) return const _MealsSectionTitle();
 
           final meal = meals[index - 2];
-          final completedMealId = _completedMealId(meal, state.completedMealIds);
+          final completedMealId = _completedMealId(
+            meal,
+            state.completedMealIds,
+          );
           return _MealCard(
             meal: meal,
             isCompleted: completedMealId != null,
@@ -337,7 +341,10 @@ class _DietContent extends StatelessWidget {
   }
 
   String? _completedMealId(MealEntity meal, Set<String> completedMealIds) {
-    for (final mealId in [meal.id, ...meal.variants.map((variant) => variant.id)]) {
+    for (final mealId in [
+      meal.id,
+      ...meal.variants.map((variant) => variant.id),
+    ]) {
       if (completedMealIds.contains(mealId)) return mealId;
     }
     return null;
@@ -372,11 +379,13 @@ class _DietHeader extends StatelessWidget {
   const _DietHeader({
     required this.diet,
     required this.completedCount,
+    required this.completedMealIds,
     required this.dateLabel,
   });
 
   final DietEntity diet;
   final int completedCount;
+  final Set<String> completedMealIds;
   final String dateLabel;
 
   @override
@@ -386,6 +395,7 @@ class _DietHeader extends StatelessWidget {
     final semantic = context.exomSemantic;
     final dietAccent = context.dietAccent;
     final l10n = AppLocalizations.of(context);
+    final remaining = diet.remainingMacros(completedMealIds);
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -437,34 +447,42 @@ class _DietHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          Text(
+            l10n.remainingToConsumeLabel,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              if (diet.totalCalories != null)
+              if (remaining.calories != null)
                 _MacroStat(
                   label: l10n.caloriesLabel,
-                  value: '${diet.totalCalories}',
+                  value: '${remaining.calories}',
                   unit: 'kcal',
                   color: semantic.calorie,
                 ),
-              if (diet.totalProteinG != null)
+              if (remaining.proteinG != null)
                 _MacroStat(
                   label: l10n.proteinLabel,
-                  value: diet.totalProteinG!.toStringAsFixed(0),
+                  value: remaining.proteinG!.toStringAsFixed(0),
                   unit: 'g',
                   color: palette.primary,
                 ),
-              if (diet.totalCarbsG != null)
+              if (remaining.carbsG != null)
                 _MacroStat(
                   label: l10n.carbsLabel,
-                  value: diet.totalCarbsG!.toStringAsFixed(0),
+                  value: remaining.carbsG!.toStringAsFixed(0),
                   unit: 'g',
                   color: semantic.info,
                 ),
-              if (diet.totalFatG != null)
+              if (remaining.fatG != null)
                 _MacroStat(
                   label: l10n.fatsLabel,
-                  value: diet.totalFatG!.toStringAsFixed(0),
+                  value: remaining.fatG!.toStringAsFixed(0),
                   unit: 'g',
                   color: semantic.warning,
                 ),
@@ -681,13 +699,12 @@ class _MealCard extends StatelessWidget {
                                     meal.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleLarge
-                                        ?.copyWith(
-                                          color: palette.textPrimary,
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.374,
-                                        ),
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      color: palette.textPrimary,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.374,
+                                    ),
                                   ),
                                 );
                               },
@@ -761,7 +778,8 @@ class _MealCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                  if (meal.nutritionalBadges.isNotEmpty || meal.variants.isNotEmpty) ...[
+                  if (meal.nutritionalBadges.isNotEmpty ||
+                      meal.variants.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Wrap(
                       spacing: 4,
@@ -789,29 +807,29 @@ class _MealCard extends StatelessWidget {
                             ),
                           ),
                         ...meal.nutritionalBadges.take(3).map((b) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.glassBackground,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: palette.glassBorder.withValues(
-                                alpha: 0.15,
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.glassBackground,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: palette.glassBorder.withValues(
+                                  alpha: 0.15,
+                                ),
                               ),
                             ),
-                          ),
-                          child: Text(
-                            b,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: palette.textDisabled,
-                              fontSize: 9,
+                            child: Text(
+                              b,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: palette.textDisabled,
+                                fontSize: 9,
+                              ),
                             ),
-                          ),
-                        );
-                      }),
+                          );
+                        }),
                       ],
                     ),
                   ],

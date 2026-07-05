@@ -716,6 +716,18 @@ abstract class AppLocalizations {
   /// **'Calorías'**
   String get caloriesLabel;
 
+  /// No description provided for @remainingToConsumeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Por consumir'**
+  String get remainingToConsumeLabel;
+
+  /// No description provided for @remainingKcalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'kcal restantes'**
+  String get remainingKcalLabel;
+
   /// No description provided for @proteinLabel.
   ///
   /// In es, this message translates to:

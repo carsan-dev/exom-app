@@ -82,14 +82,14 @@ class TodayDietCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                if (summary.totalCalories != null)
+                if (summary.remainingCalories != null)
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 72),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '${summary.totalCalories}',
+                          '${summary.remainingCalories}',
                           textAlign: TextAlign.end,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             color: dietAccent,
@@ -100,7 +100,7 @@ class TodayDietCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'kcal',
+                          l10n.remainingKcalLabel,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: palette.textSecondary,
                             fontSize: 11,

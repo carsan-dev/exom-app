@@ -12,6 +12,7 @@ class HomeSummaryEntity {
   final String? nextMealId;
   final String? nextMealName;
   final int? totalCalories;
+  final int? remainingCalories;
   final int mealsCompleted;
   final int totalMeals;
   final bool isRestDay;
@@ -36,6 +37,7 @@ class HomeSummaryEntity {
     this.nextMealId,
     this.nextMealName,
     this.totalCalories,
+    this.remainingCalories,
     this.mealsCompleted = 0,
     this.totalMeals = 0,
     this.isRestDay = false,

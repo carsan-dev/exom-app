@@ -24,6 +24,7 @@ class HomeRepositoryImpl implements HomeRepository {
       nextMealId: model.nextMealId,
       nextMealName: model.nextMealName,
       totalCalories: model.totalCalories,
+      remainingCalories: model.remainingCalories,
       mealsCompleted: model.mealsCompleted,
       totalMeals: model.totalMeals,
       isRestDay: model.isRestDay,

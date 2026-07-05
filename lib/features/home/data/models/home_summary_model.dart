@@ -14,6 +14,7 @@ class HomeSummaryModel {
   final String? nextMealId;
   final String? nextMealName;
   final int? totalCalories;
+  final int? remainingCalories;
   final int mealsCompleted;
   final int totalMeals;
   final bool isRestDay;
@@ -38,6 +39,7 @@ class HomeSummaryModel {
     this.nextMealId,
     this.nextMealName,
     this.totalCalories,
+    this.remainingCalories,
     this.mealsCompleted = 0,
     this.totalMeals = 0,
     this.isRestDay = false,
@@ -92,16 +94,38 @@ class HomeSummaryModel {
         .whereType<Map<String, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList(growable: false);
-    final nextMeal = normalizedMeals.cast<Map<String, dynamic>?>().firstWhere(
-      (meal) => !completedMealIds.contains(meal?['id'] as String?),
-      orElse: () => normalizedMeals.isNotEmpty ? normalizedMeals.first : null,
-    );
+    final nextMeal = normalizedMeals.cast<Map<String, dynamic>?>().firstWhere((
+      meal,
+    ) {
+      if (meal == null) return false;
+      final groupIds = <String?>[
+        meal['id'] as String?,
+        ...(meal['variants'] as List? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map((variant) => variant['id'] as String?),
+      ];
+      return !groupIds.any(completedMealIds.contains);
+    }, orElse: () => normalizedMeals.isNotEmpty ? normalizedMeals.first : null);
+    var consumedCalories = 0;
+    for (final meal in normalizedMeals) {
+      final options = <Map<String, dynamic>>[
+        meal,
+        ...(meal['variants'] as List? ?? const [])
+            .whereType<Map<String, dynamic>>(),
+      ];
+      for (final option in options) {
+        if (completedMealIds.contains(option['id'])) {
+          consumedCalories += (option['calories'] as num?)?.toInt() ?? 0;
+          break;
+        }
+      }
+    }
+    final totalCalories = (diet?['total_calories'] as num?)?.toInt();
 
     final trainingTypes = resolveTrainingTypes(
-      types:
-          (training?['types'] as List<dynamic>?)
-              ?.map((item) => item.toString())
-              .toList(growable: false),
+      types: (training?['types'] as List<dynamic>?)
+          ?.map((item) => item.toString())
+          .toList(growable: false),
       legacyType: training?['type'] as String?,
     );
 
@@ -120,7 +144,10 @@ class HomeSummaryModel {
       dietName: diet?['name'] as String?,
       nextMealId: nextMeal?['id'] as String?,
       nextMealName: nextMeal?['name'] as String?,
-      totalCalories: diet?['total_calories'] as int?,
+      totalCalories: totalCalories,
+      remainingCalories: totalCalories == null
+          ? null
+          : (totalCalories - consumedCalories).clamp(0, totalCalories).toInt(),
       mealsCompleted: mealsCompleted,
       totalMeals: totalMeals,
       isRestDay: training == null,

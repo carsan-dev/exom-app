@@ -318,6 +318,13 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           final prescriptionLabel = state.weightKg == null
               ? state.repsOrDuration
               : '${state.repsOrDuration} x ${_formatWeight(state.weightKg!)} kg';
+          final previousPerformance = performanceForSet(
+            widget.args.previousPerformances,
+            state.currentSet,
+          );
+          final previousPerformanceLabel = previousPerformance == null
+              ? null
+              : formatSetPerformance(previousPerformance);
 
           return PopScope<void>(
             canPop: false,
@@ -462,6 +469,20 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                    if (previousPerformanceLabel != null &&
+                                        previousPerformanceLabel.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        l10n.setPerformancePrevious(
+                                          previousPerformanceLabel,
+                                        ),
+                                        style: TextStyle(
+                                          color: palette.textSecondary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                     if (state.weightKg != null) ...[
                                       const SizedBox(height: 4),
                                       Text(
@@ -537,7 +558,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                     16,
                     8,
                     16,
-                    _trainingFooterBottomPadding(context),
+                    trainingFooterBottomPadding(
+                      platform: defaultTargetPlatform,
+                      navigationInset: MediaQuery.viewPaddingOf(context).bottom,
+                      systemGestureInset:
+                          MediaQuery.systemGestureInsetsOf(context).bottom,
+                    ),
                   ),
                   child: Padding(
                     padding: EdgeInsets.zero,
@@ -615,15 +641,22 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   }
 }
 
-double _trainingFooterBottomPadding(BuildContext context) {
+@visibleForTesting
+double trainingFooterBottomPadding({
+  required TargetPlatform platform,
+  required double navigationInset,
+  required double systemGestureInset,
+}) {
   const margin = 16.0;
-  if (defaultTargetPlatform != TargetPlatform.android) return margin;
-  final mediaQuery = MediaQuery.of(context);
-  final navigationInset = mediaQuery.viewPadding.bottom;
-  final usesGestureNavigation = mediaQuery.systemGestureInsets.bottom > 0;
-  return usesGestureNavigation
-      ? navigationInset.clamp(margin, double.infinity)
-      : navigationInset + margin;
+  if (platform != TargetPlatform.android) return margin;
+
+  // Gesture navigation normally reports the same bottom area in both insets.
+  // A larger view padding means a persistent three-button navigation bar.
+  final usesButtonNavigation =
+      navigationInset > systemGestureInset + precisionErrorTolerance;
+  return usesButtonNavigation
+      ? navigationInset + margin
+      : navigationInset.clamp(margin, double.infinity);
 }
 
 class _CircleIconButton extends StatelessWidget {

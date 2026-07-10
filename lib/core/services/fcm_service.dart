@@ -158,8 +158,7 @@ class FcmService {
   void _handleForegroundMessage(RemoteMessage message) {
     final route = _resolveRoute(message);
     final rawId = message.data['notification_id'];
-    final notificationId =
-        rawId is String && rawId.isNotEmpty ? rawId : null;
+    final notificationId = rawId is String && rawId.isNotEmpty ? rawId : null;
 
     debugPrint(
       '[FCM] Foreground message: ${message.notification?.title} — ${message.notification?.body}',
@@ -175,8 +174,7 @@ class FcmService {
 
   void _handleNotificationOpen(RemoteMessage message) {
     final rawId = message.data['notification_id'];
-    final notificationId =
-        rawId is String && rawId.isNotEmpty ? rawId : null;
+    final notificationId = rawId is String && rawId.isNotEmpty ? rawId : null;
     if (notificationId != null) {
       unawaited(_markNotificationRead(notificationId));
     } else {
@@ -265,7 +263,7 @@ class FcmService {
         fallbackRoute = '/';
         break;
       default:
-        fallbackRoute = null;
+        fallbackRoute = '/notifications';
     }
 
     return normalizeNotificationRoute(

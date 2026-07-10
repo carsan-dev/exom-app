@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,9 +10,12 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
+import 'package:exom_app/core/navigation/notification_route_utils.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -206,6 +210,7 @@ class _ExomAppView extends StatefulWidget {
 
 class _ExomAppViewState extends State<_ExomAppView> {
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
+  late final NotificationNavigationCoordinator _notificationNavigation;
 
   @override
   void initState() {
@@ -213,6 +218,38 @@ class _ExomAppViewState extends State<_ExomAppView> {
     _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
       _showFeedbackNotice,
     );
+    _notificationNavigation =
+        sl<LocalNotificationService>().navigationCoordinator
+          ..addListener(_schedulePendingNotification);
+    _schedulePendingNotification();
+  }
+
+  void _schedulePendingNotification() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final onboardingComplete = sl<LocalStorage>().isOnboardingCompleteFor(
+        uid: user.uid,
+        email: user.email,
+      );
+      final location = AppRouter.router.routeInformationProvider.value.uri.path;
+      final isRouterReady =
+          onboardingComplete &&
+          location != AppRoutes.splash &&
+          location != AppRoutes.login &&
+          location != AppRoutes.onboarding;
+      _notificationNavigation.consumeIfReady(
+        isReady: isRouterReady,
+        navigate: (route) {
+          if (shouldPushNotificationRoute(route)) {
+            AppRouter.router.push(route);
+          } else {
+            AppRouter.router.go(route);
+          }
+        },
+      );
+    });
   }
 
   void _showFeedbackNotice(FeedbackUploadNotice notice) {
@@ -244,11 +281,13 @@ class _ExomAppViewState extends State<_ExomAppView> {
   @override
   void dispose() {
     _feedbackSubscription?.cancel();
+    _notificationNavigation.removeListener(_schedulePendingNotification);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    _schedulePendingNotification();
     return BlocBuilder<AppPreferencesCubit, AppPreferencesState>(
       builder: (context, state) {
         return MaterialApp.router(

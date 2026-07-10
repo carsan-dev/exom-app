@@ -19,10 +19,7 @@ const Set<String> _supportedExactPaths = {
   '/help',
 };
 
-const List<String> _supportedPrefixes = [
-  '/trainings/',
-  '/recap/',
-];
+const List<String> _supportedPrefixes = ['/trainings/', '/recap/'];
 
 const Set<String> _pushExactPaths = {
   '/profile',
@@ -34,10 +31,37 @@ const Set<String> _pushExactPaths = {
   '/help',
 };
 
-const List<String> _pushPrefixes = [
-  '/trainings/',
-  '/recap/',
-];
+const List<String> _pushPrefixes = ['/trainings/', '/recap/'];
+
+String resolveNotificationRoute(Map<String, dynamic> data) {
+  final directRoute = data['route'];
+  if (directRoute is String) {
+    final normalized = normalizeNotificationRoute(
+      directRoute,
+      fallbackToNotifications: true,
+    );
+    if (normalized != null && normalized != _notificationsFallbackRoute) {
+      return normalized;
+    }
+  }
+
+  final type = data['type']?.toString().toLowerCase();
+  final fallbackRoute = switch (type) {
+    'recap_feedback' || 'recap_reminder' || 'recap' => '/recap',
+    'training' || 'training_reminder' => '/trainings',
+    'meal' || 'diet' || 'diet_reminder' => '/diets',
+    'challenge' || 'challenge_update' => '/challenges',
+    'profile' => '/profile',
+    'calendar' => '/calendar',
+    'home' => '/',
+    _ => _notificationsFallbackRoute,
+  };
+  return normalizeNotificationRoute(
+        fallbackRoute,
+        fallbackToNotifications: true,
+      ) ??
+      _notificationsFallbackRoute;
+}
 
 String? normalizeNotificationRoute(
   String? rawRoute, {
@@ -121,7 +145,8 @@ Uri _applyDateIfNeeded(Uri uri, DateTime? createdAt) {
 
   final localCreatedAt = createdAt.toLocal();
   final now = DateTime.now();
-  final isToday = localCreatedAt.year == now.year &&
+  final isToday =
+      localCreatedAt.year == now.year &&
       localCreatedAt.month == now.month &&
       localCreatedAt.day == now.day;
 
@@ -134,9 +159,6 @@ Uri _applyDateIfNeeded(Uri uri, DateTime? createdAt) {
   final day = localCreatedAt.day.toString().padLeft(2, '0');
 
   return uri.replace(
-    queryParameters: {
-      ...uri.queryParameters,
-      'date': '$year-$month-$day',
-    },
+    queryParameters: {...uri.queryParameters, 'date': '$year-$month-$day'},
   );
 }

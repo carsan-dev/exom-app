@@ -1,17 +1,24 @@
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
 import 'package:exom_app/core/navigation/notification_route_utils.dart';
 
-typedef LocalNotificationTapHandler = void Function(
-  String? notificationId,
-  String? route,
-);
+typedef LocalNotificationTapHandler =
+    void Function(String? notificationId, String? route);
 
 class LocalNotificationService {
+  final NotificationNavigationCoordinator _navigationCoordinator;
+
+  LocalNotificationService({
+    NotificationNavigationCoordinator? navigationCoordinator,
+  }) : _navigationCoordinator =
+           navigationCoordinator ?? NotificationNavigationCoordinator();
+
+  NotificationNavigationCoordinator get navigationCoordinator =>
+      _navigationCoordinator;
+
   static const channelId = 'exom_high_importance';
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
@@ -142,12 +149,6 @@ class LocalNotificationService {
     );
     if (normalizedRoute == null) return;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (shouldPushNotificationRoute(normalizedRoute)) {
-        AppRouter.router.push(normalizedRoute);
-      } else {
-        AppRouter.router.go(normalizedRoute);
-      }
-    });
+    _navigationCoordinator.enqueue(normalizedRoute);
   }
 }

@@ -18,13 +18,17 @@ import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.d
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_weekly_diet_usecase.dart';
+import 'package:exom_app/features/diets/domain/usecases/get_monthly_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
-import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
+import 'package:exom_app/features/diets/domain/utils/diet_export_period_utils.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
 import 'package:exom_app/features/diets/services/weekly_shopping_list_builder.dart';
 
 enum _PdfAction { print, share }
+
+enum _DietExportPeriod { week, month }
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key, this.initialDate});
@@ -484,9 +488,7 @@ class _CalendarViewState extends State<_CalendarView> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: FilledButton.icon(
-        onPressed: _isExportingDiet
-            ? null
-            : () => _exportWeeklyDiet(context, state.selectedDate),
+        onPressed: _isExportingDiet ? null : () => _exportDiet(context, state),
         icon: _isExportingDiet
             ? const SizedBox.square(
                 dimension: 18,
@@ -494,30 +496,56 @@ class _CalendarViewState extends State<_CalendarView> {
               )
             : const Icon(Icons.picture_as_pdf_outlined),
         label: Text(
-          _isExportingDiet
-              ? l10n.weeklyDietPreparing
-              : l10n.exportWeeklyDietButton,
+          _isExportingDiet ? l10n.weeklyDietPreparing : l10n.exportDietButton,
         ),
       ),
     );
   }
 
-  Future<void> _exportWeeklyDiet(
-    BuildContext context,
-    DateTime selectedDate,
-  ) async {
-    setState(() => _isExportingDiet = true);
+  Future<void> _exportDiet(BuildContext context, CalendarLoaded state) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
+    final exportPeriod = await showModalBottomSheet<_DietExportPeriod>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              title: Text(
+                l10n.exportPeriodTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_view_week_outlined),
+              title: Text(l10n.exportThisWeek),
+              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.week),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month_outlined),
+              title: Text(l10n.exportFullMonth),
+              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.month),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (exportPeriod == null || !context.mounted) return;
+    setState(() => _isExportingDiet = true);
     try {
-      final monday = selectedDate.subtract(
-        Duration(days: selectedDate.weekday - DateTime.monday),
-      );
-      final weekStart = _apiDate(monday);
-      final week = await GetIt.I<GetWeeklyDietUseCase>()(weekStart);
-      if (!week.hasDiets) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.weeklyDietEmpty)));
+      late final DietPeriodEntity period;
+      if (exportPeriod == _DietExportPeriod.month) {
+        period = await GetIt.I<GetMonthlyDietUseCase>()(
+          state.year,
+          state.month,
+        );
+      } else {
+        final monday = mondayFor(state.selectedDate);
+        period = await GetIt.I<GetWeeklyDietUseCase>()(_apiDate(monday));
+      }
+      if (!period.hasDiets) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.dietPeriodEmpty)));
         return;
       }
       if (!context.mounted) return;
@@ -535,7 +563,7 @@ class _CalendarViewState extends State<_CalendarView> {
               ),
               ListTile(
                 leading: const Icon(Icons.calendar_view_week_outlined),
-                title: Text(l10n.weeklyExportMenu),
+                title: Text(l10n.exportMenu),
                 onTap: () =>
                     Navigator.pop(sheetContext, WeeklyDietExportFormat.menu),
               ),
@@ -554,7 +582,9 @@ class _CalendarViewState extends State<_CalendarView> {
       if (format == null || !context.mounted) return;
 
       final labels = WeeklyDietPdfLabels(
-        title: l10n.weeklyDietPdfTitle,
+        title: exportPeriod == _DietExportPeriod.month
+            ? l10n.monthlyDietPdfTitle
+            : l10n.weeklyDietPdfTitle,
         noDiet: l10n.weeklyDietNoDiet,
         ingredients: l10n.weeklyDietIngredients,
         alternatives: l10n.weeklyDietAlternatives,
@@ -569,18 +599,23 @@ class _CalendarViewState extends State<_CalendarView> {
       late final String filename;
       if (format == WeeklyDietExportFormat.menu) {
         bytes = await GetIt.I<WeeklyDietPdfService>().build(
-          week: week,
+          week: period,
           locale: locale,
           labels: labels,
         );
-        filename = 'dieta_semanal_${_apiDate(week.weekStart)}.pdf';
+        filename = dietExportFilename(
+          shoppingList: false,
+          start: period.start,
+          end: period.end,
+          calendarMonth: exportPeriod == _DietExportPeriod.month,
+        );
       } else {
         final selections =
             await showModalBottomSheet<List<WeeklyMealSelection>>(
               context: context,
               isScrollControlled: true,
               builder: (sheetContext) => _WeeklyVariantSelector(
-                week: week,
+                week: period,
                 locale: locale,
                 title: l10n.weeklyVariantSelectorTitle,
                 mainLabel: l10n.weeklyVariantMain,
@@ -590,20 +625,29 @@ class _CalendarViewState extends State<_CalendarView> {
             );
         if (selections == null || !context.mounted) return;
         final items = const WeeklyShoppingListBuilder().build(
-          week: week,
+          week: period,
           selections: selections,
           locale: locale,
         );
         bytes = await GetIt.I<WeeklyDietPdfService>().buildShoppingList(
-          week: week,
+          week: period,
           items: items,
           locale: locale,
           labels: WeeklyShoppingListPdfLabels(
-            title: l10n.weeklyShoppingListPdfTitle,
-            empty: l10n.weeklyShoppingListEmpty,
+            title: exportPeriod == _DietExportPeriod.month
+                ? l10n.monthlyShoppingListPdfTitle
+                : l10n.weeklyShoppingListPdfTitle,
+            empty: exportPeriod == _DietExportPeriod.month
+                ? l10n.monthlyShoppingListEmpty
+                : l10n.weeklyShoppingListEmpty,
           ),
         );
-        filename = 'lista_compra_${_apiDate(week.weekStart)}.pdf';
+        filename = dietExportFilename(
+          shoppingList: true,
+          start: period.start,
+          end: period.end,
+          calendarMonth: exportPeriod == _DietExportPeriod.month,
+        );
       }
       if (!context.mounted) return;
 
@@ -1580,7 +1624,7 @@ class _WeeklyVariantSelector extends StatefulWidget {
     required this.mealTypes,
   });
 
-  final WeeklyDietEntity week;
+  final DietPeriodEntity week;
   final String locale;
   final String title;
   final String mainLabel;

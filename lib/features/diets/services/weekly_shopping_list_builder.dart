@@ -1,12 +1,12 @@
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
-import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 
 class WeeklyShoppingListBuilder {
   const WeeklyShoppingListBuilder();
 
   List<ShoppingListItem> build({
-    required WeeklyDietEntity week,
+    required DietPeriodEntity week,
     Iterable<WeeklyMealSelection> selections = const [],
     required String locale,
   }) {

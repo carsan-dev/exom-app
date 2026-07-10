@@ -5,10 +5,12 @@ import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
+import 'package:exom_app/features/diets/data/models/monthly_diet_model.dart';
 
 abstract class DietRemoteDataSource {
   Future<DietModel?> getTodayDiet({String? date});
   Future<WeeklyDietModel> getWeeklyDiet(String weekStart);
+  Future<MonthlyDietModel> getMonthlyDiet(int year, int month);
   Future<MealModel> getMeal(String mealId);
   Future<void> markMealCompleted(String mealId, String date);
   Future<void> unmarkMealCompleted(String mealId, String date);
@@ -133,6 +135,33 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
       if (isOfflineError(error)) {
         final cached = _localStorage.getCachedMap(cacheKey);
         if (cached != null) return WeeklyDietModel.fromJson(cached);
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MonthlyDietModel> getMonthlyDiet(int year, int month) async {
+    final cacheKey = 'diet_month_${year}_${month.toString().padLeft(2, '0')}';
+    try {
+      final response = await _apiClient.dio.get<dynamic>(
+        '/diets/month',
+        queryParameters: {'year': year, 'month': month},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = data['data'];
+        if (inner is Map) {
+          final normalized = Map<String, dynamic>.from(inner);
+          await _localStorage.cacheData(cacheKey, normalized);
+          return MonthlyDietModel.fromJson(normalized);
+        }
+      }
+      throw Exception('Invalid monthly diet response');
+    } catch (error) {
+      if (isOfflineError(error)) {
+        final cached = _localStorage.getCachedMap(cacheKey);
+        if (cached != null) return MonthlyDietModel.fromJson(cached);
       }
       rethrow;
     }

@@ -1,22 +1,16 @@
-import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 
-class WeeklyDietDayEntity {
-  final DateTime date;
-  final DietEntity? diet;
-
-  const WeeklyDietDayEntity({required this.date, required this.diet});
+class WeeklyDietDayEntity extends DietPeriodDayEntity {
+  const WeeklyDietDayEntity({required super.date, required super.diet});
 }
 
-class WeeklyDietEntity {
+class WeeklyDietEntity extends DietPeriodEntity {
   final DateTime weekStart;
   final DateTime weekEnd;
-  final List<WeeklyDietDayEntity> days;
 
   const WeeklyDietEntity({
     required this.weekStart,
     required this.weekEnd,
-    required this.days,
-  });
-
-  bool get hasDiets => days.any((day) => day.diet != null);
+    required List<WeeklyDietDayEntity> days,
+  }) : super(start: weekStart, end: weekEnd, days: days);
 }

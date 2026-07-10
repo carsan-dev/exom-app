@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
+import 'package:exom_app/features/diets/data/models/monthly_diet_model.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
@@ -24,6 +25,24 @@ void main() {
     expect(model.weekStart, DateTime(2026, 6, 15));
     expect(model.days.first.diet, isNull);
     expect(model.days.last.diet?.name, 'Plan');
+  });
+
+  test('monthly model parses 31 days including empty assignments', () {
+    final model = MonthlyDietModel.fromJson({
+      'month_start': '2026-07-01',
+      'month_end': '2026-07-31',
+      'days': List.generate(
+        31,
+        (index) => {
+          'date': '2026-07-${(index + 1).toString().padLeft(2, '0')}',
+          'diet': null,
+        },
+      ),
+    });
+    expect(model.monthStart, DateTime(2026, 7, 1));
+    expect(model.monthEnd, DateTime(2026, 7, 31));
+    expect(model.days, hasLength(31));
+    expect(model.days.every((day) => day.diet == null), isTrue);
   });
 
   test('ingredient model preserves id and accepts old cache without it', () {

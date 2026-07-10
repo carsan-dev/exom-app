@@ -3842,6 +3842,60 @@ abstract class AppLocalizations {
   /// **'Exportar dieta semanal'**
   String get exportWeeklyDietButton;
 
+  /// No description provided for @exportDietButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar menú o lista de la compra'**
+  String get exportDietButton;
+
+  /// No description provided for @exportPeriodTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un periodo'**
+  String get exportPeriodTitle;
+
+  /// No description provided for @exportThisWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta semana'**
+  String get exportThisWeek;
+
+  /// No description provided for @exportFullMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes completo'**
+  String get exportFullMonth;
+
+  /// No description provided for @exportMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú'**
+  String get exportMenu;
+
+  /// No description provided for @dietPeriodEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay dietas asignadas en este periodo'**
+  String get dietPeriodEmpty;
+
+  /// No description provided for @monthlyDietPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú mensual'**
+  String get monthlyDietPdfTitle;
+
+  /// No description provided for @monthlyShoppingListPdfTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista de la compra mensual'**
+  String get monthlyShoppingListPdfTitle;
+
+  /// No description provided for @monthlyShoppingListEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ingredientes en las comidas de este mes'**
+  String get monthlyShoppingListEmpty;
+
   /// No description provided for @weeklyDietPdfTitle.
   ///
   /// In es, this message translates to:

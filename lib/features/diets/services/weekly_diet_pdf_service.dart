@@ -4,7 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
-import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 import 'package:exom_app/features/diets/services/ingredient_unit_formatter.dart';
 
@@ -35,7 +35,7 @@ class WeeklyDietPdfService {
   const WeeklyDietPdfService();
 
   Future<Uint8List> build({
-    required WeeklyDietEntity week,
+    required DietPeriodEntity week,
     required String locale,
     required WeeklyDietPdfLabels labels,
   }) async {
@@ -54,8 +54,8 @@ class WeeklyDietPdfService {
     final dayFormat = DateFormat.EEEE(locale);
     final unitFormatter = IngredientUnitFormatter(locale: locale);
     final range =
-        '${dateFormat.format(week.weekStart)} – '
-        '${dateFormat.format(week.weekEnd)}';
+        '${dateFormat.format(week.start)} – '
+        '${dateFormat.format(week.end)}';
 
     document.addPage(
       pw.MultiPage(
@@ -106,7 +106,7 @@ class WeeklyDietPdfService {
   }
 
   Future<Uint8List> buildShoppingList({
-    required WeeklyDietEntity week,
+    required DietPeriodEntity week,
     required List<ShoppingListItem> items,
     required String locale,
     required WeeklyShoppingListPdfLabels labels,
@@ -125,7 +125,7 @@ class WeeklyDietPdfService {
       theme: pw.ThemeData.withFont(base: regular, bold: bold),
     );
     final range =
-        '${dateFormat.format(week.weekStart)} – ${dateFormat.format(week.weekEnd)}';
+        '${dateFormat.format(week.start)} – ${dateFormat.format(week.end)}';
 
     document.addPage(
       pw.MultiPage(
@@ -207,7 +207,7 @@ class WeeklyDietPdfService {
   }
 
   pw.Widget _buildDay({
-    required WeeklyDietDayEntity day,
+    required DietPeriodDayEntity day,
     required DateFormat dateFormat,
     required DateFormat dayFormat,
     required WeeklyDietPdfLabels labels,

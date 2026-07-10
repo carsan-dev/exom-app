@@ -2,6 +2,7 @@ import 'package:exom_app/features/diets/data/datasources/diet_remote_datasource.
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_entity.dart';
+import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
 
 class DietRepositoryImpl implements DietRepository {
@@ -25,6 +26,23 @@ class DietRepositoryImpl implements DietRepository {
       days: model.days
           .map(
             (day) => WeeklyDietDayEntity(
+              date: day.date,
+              diet: day.diet == null ? null : _mapToEntity(day.diet!),
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  @override
+  Future<DietPeriodEntity> getMonthlyDiet(int year, int month) async {
+    final model = await _remoteDataSource.getMonthlyDiet(year, month);
+    return DietPeriodEntity(
+      start: model.monthStart,
+      end: model.monthEnd,
+      days: model.days
+          .map(
+            (day) => DietPeriodDayEntity(
               date: day.date,
               diet: day.diet == null ? null : _mapToEntity(day.diet!),
             ),

@@ -2073,6 +2073,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exportWeeklyDietButton => 'Exportar dieta semanal';
 
   @override
+  String get exportDietButton => 'Exportar menú o lista de la compra';
+
+  @override
+  String get exportPeriodTitle => 'Elige un periodo';
+
+  @override
+  String get exportThisWeek => 'Esta semana';
+
+  @override
+  String get exportFullMonth => 'Mes completo';
+
+  @override
+  String get exportMenu => 'Menú';
+
+  @override
+  String get dietPeriodEmpty => 'No hay dietas asignadas en este periodo';
+
+  @override
+  String get monthlyDietPdfTitle => 'Menú mensual';
+
+  @override
+  String get monthlyShoppingListPdfTitle => 'Lista de la compra mensual';
+
+  @override
+  String get monthlyShoppingListEmpty =>
+      'No hay ingredientes en las comidas de este mes';
+
+  @override
   String get weeklyDietPdfTitle => 'Dieta semanal';
 
   @override

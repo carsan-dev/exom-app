@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="rest_timer_title">Descanso</string>
+    <string name="rest_timer_countdown">%1$s · quedan %2$s</string>
     <string name="rest_timer_finished_title">Descanso terminado</string>
     <string name="rest_timer_finished_body">Es hora de tu siguiente serie</string>
     <string name="rest_timer_channel_name">Cuenta atrás de descanso</string>

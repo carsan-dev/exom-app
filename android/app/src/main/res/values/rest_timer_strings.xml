@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="rest_timer_title">Rest time</string>
+    <string name="rest_timer_countdown">%1$s · %2$s remaining</string>
     <string name="rest_timer_finished_title">Rest finished</string>
     <string name="rest_timer_finished_body">Time for your next set</string>
     <string name="rest_timer_channel_name">Rest countdown</string>

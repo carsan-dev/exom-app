@@ -12,20 +12,31 @@ import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import java.util.Locale
+import kotlin.math.ceil
 
 class RestTimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var sessionId: String? = null
     private var endsAtMillis = 0L
+    private var durationSeconds = 0
+    private var exerciseName = ""
 
-    private val finishRunnable = Runnable {
-        if (System.currentTimeMillis() < endsAtMillis) {
-            scheduleFinish()
-            return@Runnable
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            if (System.currentTimeMillis() >= endsAtMillis) {
+                showFinishedNotification()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return
+            }
+
+            getSystemService(NotificationManager::class.java).notify(
+                ONGOING_NOTIFICATION_ID,
+                buildOngoingNotification(),
+            )
+            handler.postDelayed(this, 1_000L)
         }
-        showFinishedNotification()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     override fun onCreate() {
@@ -38,48 +49,64 @@ class RestTimerService : Service() {
 
         sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
         endsAtMillis = intent.getLongExtra(EXTRA_ENDS_AT_MILLIS, 0L)
-        val exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME).orEmpty()
-        val durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0)
+        exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME).orEmpty()
+        durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0)
         if (endsAtMillis <= System.currentTimeMillis() || durationSeconds <= 0) {
             showFinishedNotification()
             stopSelf()
             return START_NOT_STICKY
         }
 
-        handler.removeCallbacks(finishRunnable)
+        handler.removeCallbacks(tickRunnable)
         startForeground(
             ONGOING_NOTIFICATION_ID,
-            NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(getString(R.string.rest_timer_title))
-                .setContentText(exerciseName)
-                .setContentIntent(openAppIntent())
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .setSilent(true)
-                .setWhen(endsAtMillis)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
-                .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-                .build(),
+            buildOngoingNotification(),
         )
-        scheduleFinish()
+        handler.postDelayed(tickRunnable, 1_000L)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        handler.removeCallbacks(finishRunnable)
+        handler.removeCallbacks(tickRunnable)
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun scheduleFinish() {
-        handler.removeCallbacks(finishRunnable)
-        handler.postDelayed(
-            finishRunnable,
-            (endsAtMillis - System.currentTimeMillis()).coerceAtLeast(1L),
-        )
+    private fun buildOngoingNotification() =
+        NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(getString(R.string.rest_timer_title))
+            .setContentText(
+                getString(
+                    R.string.rest_timer_countdown,
+                    exerciseName,
+                    formatRemainingTime(),
+                ),
+            )
+            .setContentIntent(openAppIntent())
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setForegroundServiceBehavior(
+                NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE,
+            )
+            .setShowWhen(false)
+            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+            .build()
+
+    private fun formatRemainingTime(): String {
+        val remainingSeconds = ceil(
+            (endsAtMillis - System.currentTimeMillis()).coerceAtLeast(0L) / 1_000.0,
+        ).toLong()
+        val hours = remainingSeconds / 3_600
+        val minutes = (remainingSeconds % 3_600) / 60
+        val seconds = remainingSeconds % 60
+        return if (hours > 0) {
+            String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+        }
     }
 
     private fun showFinishedNotification() {

@@ -12,5 +12,8 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    RestTimerCoordinator.register(
+      with: engineBridge.applicationRegistrar.messenger()
+    )
   }
 }

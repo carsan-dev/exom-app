@@ -29,7 +29,12 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('🙂'));
+    final stressRating = find.text('🙂');
+    expect(stressRating, findsOneWidget);
+    await tester.ensureVisible(stressRating);
+    await tester.pumpAndSettle();
+    await tester.tap(stressRating);
+    await tester.pump();
 
     expect(
       changes.any(

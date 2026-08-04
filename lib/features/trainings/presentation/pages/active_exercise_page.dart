@@ -111,6 +111,8 @@ class _ActiveExerciseView extends StatefulWidget {
 class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _bootstrapped = false;
   bool _handledCompletion = false;
+  bool _allowPop = false;
+  bool _popScheduled = false;
 
   @override
   void initState() {
@@ -124,6 +126,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       accentColor: widget.args.accentColorHex,
       types: widget.args.trainingTypes,
     );
+  }
+
+  void _popOnce() {
+    if (!mounted || _popScheduled) return;
+
+    _popScheduled = true;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.pop();
+    });
   }
 
   Future<void> _bootstrap() async {
@@ -154,7 +166,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
       if (!mounted) return;
       if (shouldDiscard != true) {
-        context.pop();
+        _popOnce();
         return;
       }
 
@@ -309,7 +321,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               sets: state.setPerformances,
             ),
           );
-          context.pop();
+          _popOnce();
         }
       },
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(
@@ -328,12 +340,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               : formatSetPerformance(previousPerformance);
 
           return PopScope<void>(
-            canPop: false,
+            canPop: _allowPop,
             onPopInvokedWithResult: (didPop, _) async {
               if (didPop) return;
               final shouldClose = await _confirmExit();
               if (!context.mounted || !shouldClose) return;
-              context.pop();
+              _popOnce();
             },
             child: ExomStaticBackground(
               child: Scaffold(
@@ -351,7 +363,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                               onTap: () async {
                                 final shouldClose = await _confirmExit();
                                 if (!context.mounted || !shouldClose) return;
-                                context.pop();
+                                _popOnce();
                               },
                             ),
                             const SizedBox(width: 12),
@@ -898,8 +910,14 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-Future<({int? reps, int? seconds, double? weight, bool skipped})?>
-_showSetPerformanceSheet(
+typedef _SetPerformanceResult = ({
+  int? reps,
+  int? seconds,
+  double? weight,
+  bool skipped,
+});
+
+Future<_SetPerformanceResult?> _showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
   required int setNumber,
@@ -911,247 +929,293 @@ _showSetPerformanceSheet(
   SetPerformance? previousPerformance,
 }) async {
   final palette = context.exomPalette;
-  final timeBased = timeUnit != null;
-  final currentValue = timeBased
-      ? timeInputFromSeconds(currentPerformance?.seconds, timeUnit)
-      : currentPerformance?.reps;
-  final valueController = TextEditingController(
-    text: currentValue?.toString() ?? '',
-  );
-  final weightController = TextEditingController(
-    text: (currentPerformance?.weightKg ?? previousWeight) != null
-        ? (currentPerformance?.weightKg ?? previousWeight)!.toStringAsFixed(
-            (currentPerformance?.weightKg ?? previousWeight)! % 1 == 0 ? 0 : 1,
-          )
-        : '',
-  );
-  ({int? reps, int? seconds, double? weight, bool skipped})? result;
-  String? error;
-  final currentLabel = currentPerformance == null
-      ? null
-      : formatSetPerformance(currentPerformance);
-  final previousLabel = previousPerformance == null
-      ? null
-      : formatSetPerformance(previousPerformance);
-
-  await showModalBottomSheet(
+  final sheetDisposed = Completer<void>();
+  final result = await showModalBottomSheet<_SetPerformanceResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: palette.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setModalState) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: palette.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.setPerformanceTitle(setNumber),
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.setPerformancePrescription(prescribedReps),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-                if (currentLabel != null && currentLabel.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Hoy: $currentLabel',
-                    style: TextStyle(
-                      color: palette.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-                if (previousLabel != null && previousLabel.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.setPerformancePrevious(previousLabel),
-                    style: TextStyle(
-                      color: palette.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                TextField(
-                  controller: valueController,
-                  keyboardType: TextInputType.number,
-                  autofocus: true,
-                  style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                  decoration: InputDecoration(
-                    labelText: timeBased
-                        ? timeUnit == TimePerformanceUnit.minutes
-                              ? 'Minutos'
-                              : l10n.setPerformanceSeconds
-                        : l10n.setPerformanceReps,
-                    errorText: error,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: weightController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                  decoration: InputDecoration(
-                    labelText: l10n.setPerformanceWeightOptional,
-                    hintStyle: TextStyle(color: palette.textDisabled),
-                    suffixText: 'kg',
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Column(
-                  children: [
-                    if (!repsRequired) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: () {
-                            result = (
-                              reps: null,
-                              seconds: null,
-                              weight: null,
-                              skipped: true,
-                            );
-                            Navigator.of(ctx).pop();
-                          },
-                          child: Text(
-                            l10n.completeWithoutTracking,
-                            maxLines: 1,
-                            softWrap: false,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final stackActions =
-                            constraints.maxWidth < 280 ||
-                            MediaQuery.textScalerOf(ctx).scale(1) > 1.3;
-                        final cancelButton = OutlinedButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: Text(
-                            l10n.cancel,
-                            maxLines: 1,
-                            softWrap: false,
-                          ),
-                        );
-                        final saveButton = ElevatedButton(
-                          onPressed: () {
-                            final value = int.tryParse(
-                              valueController.text.trim(),
-                            );
-                            if (repsRequired && (value == null || value < 1)) {
-                              setModalState(
-                                () => error = timeBased
-                                    ? l10n.setPerformanceSecondsError
-                                    : l10n.setPerformanceRepsError,
-                              );
-                              return;
-                            }
-                            if (value != null && value < 1) {
-                              setModalState(
-                                () => error = timeBased
-                                    ? l10n.setPerformanceSecondsError
-                                    : l10n.setPerformanceRepsError,
-                              );
-                              return;
-                            }
-                            final reps = timeBased ? null : value;
-                            final seconds = timeBased
-                                ? secondsFromTimeInput(value, timeUnit)
-                                : null;
-                            final weightText = weightController.text.trim();
-                            final weight = weightText.isEmpty
-                                ? null
-                                : double.tryParse(
-                                    weightText.replaceAll(',', '.'),
-                                  );
-                            if (weight != null && weight < 0) {
-                              setModalState(
-                                () => error = l10n.setPerformanceWeightError,
-                              );
-                              return;
-                            }
-                            if (reps == null &&
-                                seconds == null &&
-                                weight == null) {
-                              setModalState(
-                                () => error = l10n.setPerformanceDataError,
-                              );
-                              return;
-                            }
-                            result = (
-                              reps: reps,
-                              seconds: seconds,
-                              weight: weight,
-                              skipped: false,
-                            );
-                            Navigator.of(ctx).pop();
-                          },
-                          child: Text(
-                            l10n.weightInputSave,
-                            maxLines: 1,
-                            softWrap: false,
-                          ),
-                        );
-
-                        if (stackActions) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              cancelButton,
-                              const SizedBox(height: 8),
-                              saveButton,
-                            ],
-                          );
-                        }
-
-                        return Row(
-                          children: [
-                            Expanded(child: cancelButton),
-                            const SizedBox(width: 12),
-                            Expanded(child: saveButton),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    builder: (_) => _SetPerformanceSheet(
+      l10n: l10n,
+      setNumber: setNumber,
+      prescribedReps: prescribedReps,
+      repsRequired: repsRequired,
+      timeUnit: timeUnit,
+      previousWeight: previousWeight,
+      currentPerformance: currentPerformance,
+      previousPerformance: previousPerformance,
+      onDisposed: () {
+        if (!sheetDisposed.isCompleted) sheetDisposed.complete();
+      },
     ),
   );
 
-  valueController.dispose();
-  weightController.dispose();
+  // Navigator completes the route result before its reverse transition and
+  // subtree disposal finish. Wait so the parent BLoC cannot replace/pop this
+  // page while the sheet still owns inherited dependencies and text inputs.
+  if (!sheetDisposed.isCompleted) await sheetDisposed.future;
   return result;
+}
+
+class _SetPerformanceSheet extends StatefulWidget {
+  final AppLocalizations l10n;
+  final int setNumber;
+  final String prescribedReps;
+  final bool repsRequired;
+  final TimePerformanceUnit? timeUnit;
+  final double? previousWeight;
+  final SetPerformance? currentPerformance;
+  final SetPerformance? previousPerformance;
+  final VoidCallback onDisposed;
+
+  const _SetPerformanceSheet({
+    required this.l10n,
+    required this.setNumber,
+    required this.prescribedReps,
+    required this.repsRequired,
+    required this.timeUnit,
+    required this.previousWeight,
+    required this.currentPerformance,
+    required this.previousPerformance,
+    required this.onDisposed,
+  });
+
+  @override
+  State<_SetPerformanceSheet> createState() => _SetPerformanceSheetState();
+}
+
+class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
+  late final TextEditingController _valueController;
+  late final TextEditingController _weightController;
+  String? _error;
+
+  bool get _timeBased => widget.timeUnit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentValue = _timeBased
+        ? timeInputFromSeconds(
+            widget.currentPerformance?.seconds,
+            widget.timeUnit,
+          )
+        : widget.currentPerformance?.reps;
+    final weight = widget.currentPerformance?.weightKg ?? widget.previousWeight;
+    _valueController = TextEditingController(
+      text: currentValue?.toString() ?? '',
+    );
+    _weightController = TextEditingController(
+      text: weight == null
+          ? ''
+          : weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _valueController.dispose();
+    _weightController.dispose();
+    widget.onDisposed();
+    super.dispose();
+  }
+
+  void _completeWithoutTracking() {
+    Navigator.of(
+      context,
+    ).pop((reps: null, seconds: null, weight: null, skipped: true));
+  }
+
+  void _save() {
+    final l10n = widget.l10n;
+    final value = int.tryParse(_valueController.text.trim());
+    if (widget.repsRequired && (value == null || value < 1)) {
+      setState(
+        () => _error = _timeBased
+            ? l10n.setPerformanceSecondsError
+            : l10n.setPerformanceRepsError,
+      );
+      return;
+    }
+    if (value != null && value < 1) {
+      setState(
+        () => _error = _timeBased
+            ? l10n.setPerformanceSecondsError
+            : l10n.setPerformanceRepsError,
+      );
+      return;
+    }
+
+    final reps = _timeBased ? null : value;
+    final seconds = _timeBased
+        ? secondsFromTimeInput(value, widget.timeUnit)
+        : null;
+    final weightText = _weightController.text.trim();
+    final weight = weightText.isEmpty
+        ? null
+        : double.tryParse(weightText.replaceAll(',', '.'));
+    if (weight != null && weight < 0) {
+      setState(() => _error = l10n.setPerformanceWeightError);
+      return;
+    }
+    if (reps == null && seconds == null && weight == null) {
+      setState(() => _error = l10n.setPerformanceDataError);
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pop((reps: reps, seconds: seconds, weight: weight, skipped: false));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = widget.l10n;
+    final currentLabel = widget.currentPerformance == null
+        ? null
+        : formatSetPerformance(widget.currentPerformance!);
+    final previousLabel = widget.previousPerformance == null
+        ? null
+        : formatSetPerformance(widget.previousPerformance!);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: palette.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.setPerformanceTitle(widget.setNumber),
+                style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.setPerformancePrescription(widget.prescribedReps),
+                style: TextStyle(color: palette.textSecondary, fontSize: 13),
+              ),
+              if (currentLabel != null && currentLabel.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Hoy: $currentLabel',
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
+                ),
+              ],
+              if (previousLabel != null && previousLabel.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.setPerformancePrevious(previousLabel),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _valueController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: _timeBased
+                      ? widget.timeUnit == TimePerformanceUnit.minutes
+                            ? 'Minutos'
+                            : l10n.setPerformanceSeconds
+                      : l10n.setPerformanceReps,
+                  errorText: _error,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _weightController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceWeightOptional,
+                  hintStyle: TextStyle(color: palette.textDisabled),
+                  suffixText: 'kg',
+                ),
+              ),
+              const SizedBox(height: 20),
+              Column(
+                children: [
+                  if (!widget.repsRequired) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: _completeWithoutTracking,
+                        child: Text(
+                          l10n.completeWithoutTracking,
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackActions =
+                          constraints.maxWidth < 280 ||
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                      final cancelButton = OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.cancel, maxLines: 1, softWrap: false),
+                      );
+                      final saveButton = ElevatedButton(
+                        onPressed: _save,
+                        child: Text(
+                          l10n.weightInputSave,
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      );
+
+                      if (stackActions) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            cancelButton,
+                            const SizedBox(height: 8),
+                            saveButton,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: cancelButton),
+                          const SizedBox(width: 12),
+                          Expanded(child: saveButton),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

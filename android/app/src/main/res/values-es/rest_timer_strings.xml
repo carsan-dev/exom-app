@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rest_timer_title">Descanso</string>
+    <string name="rest_timer_finished_title">Descanso terminado</string>
+    <string name="rest_timer_finished_body">Es hora de tu siguiente serie</string>
+    <string name="rest_timer_channel_name">Cuenta atrás de descanso</string>
+    <string name="rest_timer_channel_description">Cuenta atrás persistente durante descansos</string>
+    <string name="rest_timer_finished_channel_name">Avisos de descanso</string>
+    <string name="rest_timer_finished_channel_description">Sonido y vibración al terminar un descanso</string>
+</resources>

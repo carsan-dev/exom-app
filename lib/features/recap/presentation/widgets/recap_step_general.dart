@@ -4,6 +4,8 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 
+int stressLevelFromRatingIndex(int index) => index + 1;
+
 class RecapStepGeneral extends StatelessWidget {
   final Map<String, dynamic> formData;
   final void Function(String field, dynamic value) onChanged;
@@ -73,7 +75,10 @@ class RecapStepGeneral extends StatelessWidget {
                     label: l10n.perceivedStress,
                     helperText: l10n.howMuchStressDidYouFeelThisWeek,
                     value: (stressLevel - 1).clamp(0, 4),
-                    onChanged: (value) => onChanged('stress_level', value + 1),
+                    onChanged: (value) => onChanged(
+                      'stress_level',
+                      stressLevelFromRatingIndex(value),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 20),

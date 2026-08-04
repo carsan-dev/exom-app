@@ -1,4 +1,4 @@
-enum CircuitRestKind { none, exercise, round, done }
+enum CircuitRestKind { none, exercise, round, finalRest, done }
 
 class CircuitProgression {
   final int nextRound;
@@ -36,11 +36,12 @@ CircuitProgression advanceCircuit({
   }
 
   if (isLastRound) {
+    final rest = exerciseRestSeconds.clamp(0, 3600);
     return CircuitProgression(
       nextRound: currentRound,
       nextExerciseIndex: currentExerciseIndex,
-      restKind: CircuitRestKind.done,
-      restSeconds: 0,
+      restKind: rest > 0 ? CircuitRestKind.finalRest : CircuitRestKind.done,
+      restSeconds: rest,
     );
   }
 

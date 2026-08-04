@@ -41,6 +41,7 @@ TrainingExerciseEntity _trainingExercise({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('ActiveExerciseBloc', () {
     test('initial state derives from training exercise prescription', () {
       final bloc = ActiveExerciseBloc(
@@ -63,7 +64,7 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.currentSet, 1);
       expect(store.getActiveWorkout('ex-1'), isNotNull);
@@ -91,7 +92,7 @@ void main() {
         );
 
         bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.completedSets, 1);
         expect(bloc.state.currentSet, 2);
@@ -123,7 +124,7 @@ void main() {
         );
 
         bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.status, ActiveExerciseStatus.resting);
         expect(bloc.state.completedSets, 1);
@@ -140,10 +141,10 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       bloc.add(const CompleteSet(weightKg: 70));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.resting);
       expect(bloc.state.completedSets, 1);
@@ -161,9 +162,9 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(reps: 12, weightKg: 72.5));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.setPerformances, hasLength(1));
       expect(bloc.state.setPerformances.single.setNumber, 1);
@@ -184,9 +185,9 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(weightKg: 42.5));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.setPerformances.single.reps, isNull);
       expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
@@ -203,9 +204,9 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(reps: 9));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
         'set_number': 1,
@@ -220,9 +221,9 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.completedSets, 1);
       expect(bloc.state.setPerformances, isEmpty);
@@ -236,10 +237,10 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       bloc.add(const CompleteSet(weightKg: 70));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.executing);
       expect(bloc.state.completedSets, 1);
@@ -247,7 +248,7 @@ void main() {
       expect(bloc.state.restEndsAt, isNull);
     });
 
-    test('CompleteSet on last set marks done and clears persistence', () async {
+    test('CompleteSet on last set enters finalResting then clears', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(
         localStorage: store,
@@ -255,18 +256,88 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(weightKg: 65));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       // Skip the rest to be ready to complete the final set.
       bloc.add(const SkipRest());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(weightKg: 65));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
-      expect(bloc.state.status, ActiveExerciseStatus.done);
+      expect(bloc.state.status, ActiveExerciseStatus.finalResting);
       expect(bloc.state.completedSets, 2);
       expect(bloc.state.currentSet, 2);
+      expect(store.getActiveWorkout('ex-1'), isNotNull);
+
+      bloc.add(const SkipRest());
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.done);
+      expect(store.getActiveWorkout('ex-1'), isNull);
+    });
+
+    test('last set with zero rest completes immediately', () async {
+      final store = _FakeStore();
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(sets: 1, restSeconds: 0),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      bloc.add(const CompleteSet());
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.done);
+      expect(store.getActiveWorkout('ex-1'), isNull);
+    });
+
+    test('restores pending final rest', () async {
+      final store = _FakeStore();
+      final end = DateTime.now().add(const Duration(minutes: 1));
+      await store.saveActiveWorkout(
+        ActiveWorkoutHiveModel(
+          trainingId: 't-1',
+          exerciseId: 'ex-1',
+          currentSet: 1,
+          completedSets: 1,
+          restEndsAt: end,
+        ),
+      );
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(sets: 1),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.finalResting);
+      expect(bloc.state.restEndsAt, end);
+      expect(store.getActiveWorkout('ex-1'), isNotNull);
+    });
+
+    test('expired final rest restores done and clears storage', () async {
+      final store = _FakeStore();
+      await store.saveActiveWorkout(
+        ActiveWorkoutHiveModel(
+          trainingId: 't-1',
+          exerciseId: 'ex-1',
+          currentSet: 1,
+          completedSets: 1,
+          restEndsAt: DateTime.now().subtract(const Duration(seconds: 1)),
+        ),
+      );
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(sets: 1),
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.done);
       expect(store.getActiveWorkout('ex-1'), isNull);
     });
 
@@ -278,12 +349,12 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       bloc.add(const SkipRest());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.executing);
       expect(bloc.state.restEndsAt, isNull);
@@ -298,14 +369,14 @@ void main() {
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const CompleteSet(weightKg: 80));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       bloc.add(const SkipRest());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       bloc.add(const AbandonExercise());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final saved = store.getActiveWorkout('ex-1');
       expect(saved, isNotNull);

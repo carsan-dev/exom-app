@@ -57,6 +57,20 @@ void main() {
       roundRestSeconds: 60,
     );
 
+    expect(result.restKind, CircuitRestKind.finalRest);
+    expect(result.restSeconds, 20);
+  });
+
+  test('last exercise of last round finishes immediately with zero rest', () {
+    final result = advanceCircuit(
+      currentRound: 3,
+      totalRounds: 3,
+      currentExerciseIndex: 2,
+      exerciseCount: 3,
+      exerciseRestSeconds: 0,
+      roundRestSeconds: 60,
+    );
+
     expect(result.restKind, CircuitRestKind.done);
     expect(result.restSeconds, 0);
   });

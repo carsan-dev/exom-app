@@ -78,6 +78,7 @@ class ActiveExercisePage extends StatelessWidget {
         BlocProvider(
           create: (_) => ActiveExerciseBloc(
             localStorage: sl<LocalStorage>(),
+            restTimerCoordinator: sl(),
             trainingExercise: pageArgs.trainingExercise,
             initialWeightKg: pageArgs.initialWeightKg,
           ),
@@ -470,7 +471,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                       ),
                                     ),
                                     if (previousPerformanceLabel != null &&
-                                        previousPerformanceLabel.isNotEmpty) ...[
+                                        previousPerformanceLabel
+                                            .isNotEmpty) ...[
                                       const SizedBox(height: 6),
                                       Text(
                                         l10n.setPerformancePrevious(
@@ -561,8 +563,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                     trainingFooterBottomPadding(
                       platform: defaultTargetPlatform,
                       navigationInset: MediaQuery.viewPaddingOf(context).bottom,
-                      systemGestureInset:
-                          MediaQuery.systemGestureInsetsOf(context).bottom,
+                      systemGestureInset: MediaQuery.systemGestureInsetsOf(
+                        context,
+                      ).bottom,
                     ),
                   ),
                   child: Padding(
@@ -602,6 +605,19 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         ActiveExerciseStatus.resting => _RestingFooter(
                           key: ValueKey(
                             'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
+                          ),
+                          totalSeconds: state.restSeconds,
+                          restEndsAt: state.restEndsAt!,
+                          onSkip: () => context.read<ActiveExerciseBloc>().add(
+                            const SkipRest(),
+                          ),
+                          onFinished: () => context
+                              .read<ActiveExerciseBloc>()
+                              .add(const SkipRest()),
+                        ),
+                        ActiveExerciseStatus.finalResting => _RestingFooter(
+                          key: ValueKey(
+                            'footer-final-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
                           ),
                           totalSeconds: state.restSeconds,
                           restEndsAt: state.restEndsAt!,

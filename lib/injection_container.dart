@@ -8,6 +8,7 @@ import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -157,6 +158,10 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<LocalNotificationService>(
     () => LocalNotificationService(),
+  );
+
+  sl.registerLazySingleton<RestTimerCoordinator>(
+    () => PlatformRestTimerCoordinator(),
   );
 
   sl.registerLazySingleton<OfflineSyncService>(

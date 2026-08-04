@@ -1,8 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 
-enum ActiveExerciseStatus { executing, resting, done }
+enum ActiveExerciseStatus { executing, resting, finalResting, done }
 
 abstract class ActiveExerciseEvent {
   const ActiveExerciseEvent();
@@ -78,7 +79,10 @@ class ActiveExerciseState {
   }
 
   bool get isExecuting => status == ActiveExerciseStatus.executing;
-  bool get isResting => status == ActiveExerciseStatus.resting;
+  bool get isResting =>
+      status == ActiveExerciseStatus.resting ||
+      status == ActiveExerciseStatus.finalResting;
+  bool get isFinalResting => status == ActiveExerciseStatus.finalResting;
   bool get isDone => status == ActiveExerciseStatus.done;
 
   ActiveExerciseState copyWith({
@@ -119,15 +123,19 @@ class ActiveExerciseBloc
   final ActiveWorkoutLocalStore _localStorage;
   final TrainingExerciseEntity _trainingExercise;
   final double? _initialWeightKg;
+  final RestTimerCoordinator _restTimerCoordinator;
   String? _trainingId;
   String? _exerciseId;
 
   ActiveExerciseBloc({
     required ActiveWorkoutLocalStore localStorage,
     required TrainingExerciseEntity trainingExercise,
+    RestTimerCoordinator? restTimerCoordinator,
     double? initialWeightKg,
   }) : _localStorage = localStorage,
        _trainingExercise = trainingExercise,
+       _restTimerCoordinator =
+           restTimerCoordinator ?? PlatformRestTimerCoordinator(),
        _initialWeightKg = initialWeightKg,
        super(
          ActiveExerciseState.initial(
@@ -152,7 +160,15 @@ class ActiveExerciseBloc
     if (saved != null && saved.trainingId == event.trainingId) {
       final restored = _restoreState(saved);
       emit(restored.copyWith(errorMessage: null));
-      await _persistState(restored, emit);
+      if (restored.isDone) {
+        await _restTimerCoordinator.cancel();
+        await _removeSavedProgress(emit);
+      } else {
+        if (restored.isResting) {
+          await _startNativeRest(restored);
+        }
+        await _persistState(restored, emit);
+      }
       return;
     }
 
@@ -186,6 +202,21 @@ class ActiveExerciseBloc
           ];
 
     if (nextCompletedSets >= state.totalSets) {
+      if (state.restSeconds > 0) {
+        final finalRestingState = state.copyWith(
+          completedSets: state.totalSets,
+          currentSet: state.totalSets,
+          weightKg: nextWeight,
+          setPerformances: nextPerformances,
+          status: ActiveExerciseStatus.finalResting,
+          restEndsAt: DateTime.now().add(Duration(seconds: state.restSeconds)),
+          errorMessage: null,
+        );
+        emit(finalRestingState);
+        await _persistState(finalRestingState, emit);
+        await _startNativeRest(finalRestingState);
+        return;
+      }
       final doneState = state.copyWith(
         completedSets: state.totalSets,
         currentSet: state.totalSets,
@@ -196,6 +227,7 @@ class ActiveExerciseBloc
         errorMessage: null,
       );
       emit(doneState);
+      await _restTimerCoordinator.cancel();
       await _removeSavedProgress(emit);
       return;
     }
@@ -227,6 +259,7 @@ class ActiveExerciseBloc
     );
     emit(restingState);
     await _persistState(restingState, emit);
+    await _startNativeRest(restingState);
   }
 
   Future<void> _onSkipRest(
@@ -234,6 +267,18 @@ class ActiveExerciseBloc
     Emitter<ActiveExerciseState> emit,
   ) async {
     if (!state.isResting) return;
+
+    await _restTimerCoordinator.cancel();
+    if (state.isFinalResting) {
+      final doneState = state.copyWith(
+        status: ActiveExerciseStatus.done,
+        restEndsAt: null,
+        errorMessage: null,
+      );
+      emit(doneState);
+      await _removeSavedProgress(emit);
+      return;
+    }
 
     final executingState = state.copyWith(
       status: ActiveExerciseStatus.executing,
@@ -249,19 +294,13 @@ class ActiveExerciseBloc
     Emitter<ActiveExerciseState> emit,
   ) async {
     if (state.isDone) return;
+    await _restTimerCoordinator.cancel();
     await _persistState(state.copyWith(errorMessage: null), emit);
   }
 
   ActiveExerciseState _restoreState(ActiveWorkoutHiveModel saved) {
     final totalSets = _trainingExercise.sets;
     final completedSets = saved.completedSets.clamp(0, totalSets);
-
-    if (completedSets >= totalSets) {
-      return ActiveExerciseState.initial(
-        _trainingExercise,
-        initialWeightKg: saved.lastWeightKg ?? _initialWeightKg,
-      );
-    }
 
     final now = DateTime.now();
     final hasPendingRest =
@@ -289,10 +328,26 @@ class ActiveExerciseBloc
       restSeconds: _trainingExercise.restSeconds < 0
           ? 0
           : _trainingExercise.restSeconds,
-      status: hasPendingRest
+      status: completedSets >= totalSets
+          ? hasPendingRest
+                ? ActiveExerciseStatus.finalResting
+                : ActiveExerciseStatus.done
+          : hasPendingRest
           ? ActiveExerciseStatus.resting
           : ActiveExerciseStatus.executing,
       restEndsAt: hasPendingRest ? saved.restEndsAt : null,
+    );
+  }
+
+  Future<void> _startNativeRest(ActiveExerciseState restState) {
+    final exerciseId = _exerciseId ?? _trainingExercise.exercise.id;
+    return _restTimerCoordinator.start(
+      RestTimerSession(
+        id: '${_trainingId ?? ''}:$exerciseId',
+        exerciseName: _trainingExercise.exercise.name,
+        durationSeconds: restState.restSeconds,
+        endsAt: restState.restEndsAt!,
+      ),
     );
   }
 

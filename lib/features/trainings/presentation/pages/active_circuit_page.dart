@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
@@ -15,6 +16,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/injection_container.dart';
 
 class ActiveCircuitPageArgs {
   final TrainingBloc trainingBloc;
@@ -44,7 +46,13 @@ class ActiveCircuitPageArgs {
   });
 }
 
-enum _CircuitStatus { executing, exerciseResting, roundResting, done }
+enum _CircuitStatus {
+  executing,
+  exerciseResting,
+  roundResting,
+  finalResting,
+  done,
+}
 
 class ActiveCircuitPage extends StatelessWidget {
   final String trainingId;
@@ -166,7 +174,11 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       ),
     );
 
-    return shouldLeave == true;
+    if (shouldLeave == true) {
+      await sl<RestTimerCoordinator>().cancel();
+      return true;
+    }
+    return false;
   }
 
   Future<void> _completeCurrentSeries() async {
@@ -206,6 +218,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         _status = _CircuitStatus.roundResting;
       } else if (progression.restKind == CircuitRestKind.exercise) {
         _status = _CircuitStatus.exerciseResting;
+      } else if (progression.restKind == CircuitRestKind.finalRest) {
+        _status = _CircuitStatus.finalResting;
       }
       if (progression.restKind == CircuitRestKind.none) {
         _currentRound = progression.nextRound;
@@ -219,6 +233,16 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         }
       }
     });
+    if (progression.restKind != CircuitRestKind.none) {
+      await sl<RestTimerCoordinator>().start(
+        RestTimerSession(
+          id: '${widget.trainingId}:${widget.args.blockId}',
+          exerciseName: _currentExercise.exercise.name,
+          durationSeconds: progression.restSeconds,
+          endsAt: _restEndsAt!,
+        ),
+      );
+    }
   }
 
   Future<({SetPerformance? performance, bool skipped})?> _requestPerformance(
@@ -358,9 +382,16 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return result;
   }
 
-  void _finishRest() {
+  Future<void> _finishRest() async {
     if (_status != _CircuitStatus.roundResting &&
-        _status != _CircuitStatus.exerciseResting) {
+        _status != _CircuitStatus.exerciseResting &&
+        _status != _CircuitStatus.finalResting) {
+      return;
+    }
+
+    await sl<RestTimerCoordinator>().cancel();
+    if (_status == _CircuitStatus.finalResting) {
+      await _finishCircuit();
       return;
     }
 
@@ -378,6 +409,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     if (_markedComplete) return;
     _markedComplete = true;
     final trainingBloc = context.read<TrainingBloc>();
+    await sl<RestTimerCoordinator>().cancel();
 
     try {
       for (final trainingExercise in widget.args.exercises) {
@@ -516,7 +548,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                                 children: [
                                   _StatusPill(
                                     label:
-                                        _status == _CircuitStatus.roundResting
+                                        _status == _CircuitStatus.finalResting
+                                        ? l10n.activeExerciseResting
+                                        : _status == _CircuitStatus.roundResting
                                         ? l10n.circuitRoundRestTitle
                                         : _status ==
                                               _CircuitStatus.exerciseResting
@@ -525,6 +559,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                                     color:
                                         _status ==
                                                 _CircuitStatus.roundResting ||
+                                            _status ==
+                                                _CircuitStatus.finalResting ||
                                             _status ==
                                                 _CircuitStatus.exerciseResting
                                         ? semantic.warning
@@ -633,7 +669,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child:
-                    _status == _CircuitStatus.roundResting ||
+                    _status == _CircuitStatus.finalResting ||
+                        _status == _CircuitStatus.roundResting ||
                         _status == _CircuitStatus.exerciseResting
                     ? _RoundRestFooter(
                         key: ValueKey(
@@ -646,13 +683,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                                   .exercises[_currentExerciseIndex - 1]
                                   .restSeconds,
                         restEndsAt: _restEndsAt ?? DateTime.now(),
-                        title: _status == _CircuitStatus.roundResting
+                        title: _status == _CircuitStatus.finalResting
+                            ? l10n.activeExerciseResting
+                            : _status == _CircuitStatus.roundResting
                             ? l10n.circuitRoundRestTitle
                             : l10n.circuitExerciseRestTitle,
                         nextExerciseName: _status == _CircuitStatus.roundResting
                             ? widget.args.exercises.first.exercise.name
                             : _currentExercise.exercise.name,
-                        onSkip: _finishRest,
+                        onSkip: () => unawaited(_finishRest()),
                       )
                     : SizedBox(
                         key: const ValueKey('circuit-executing-footer'),

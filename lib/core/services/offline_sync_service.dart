@@ -71,11 +71,20 @@ class OfflineSyncService {
     });
   }
 
-  Future<void> queueTrainingCompletion(String date, {String? notes}) async {
-    await _updateTrainingCompletionCache(date, notes: notes);
+  Future<void> queueTrainingCompletion(
+    String date, {
+    required String trainingId,
+    String? notes,
+  }) async {
+    await _updateTrainingCompletionCache(
+      date,
+      trainingId: trainingId,
+      notes: notes,
+    );
     await _enqueueAction({
       'type': _completeTraining,
       'date': date,
+      'training_id': trainingId,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });
   }
@@ -180,6 +189,8 @@ class OfflineSyncService {
             'exercise_id': exerciseId,
             'training_exercise_id': trainingExerciseId,
             'date': date,
+            if (action['training_id'] != null)
+              'training_id': action['training_id'],
             if (action['weight_used'] != null)
               'weight_used': action['weight_used'],
             if (action['sets'] != null) 'sets': action['sets'],
@@ -278,6 +289,7 @@ class OfflineSyncService {
 
   Future<void> _updateTrainingCompletionCache(
     String date, {
+    required String trainingId,
     String? notes,
   }) async {
     final progress = _getProgressCache(date);
@@ -289,22 +301,51 @@ class OfflineSyncService {
               entry,
     };
 
-    final assignedIds = _getAssignedExerciseIds(date);
+    final training = _localStorage.getCachedMap('training_detail_$trainingId');
+    final rawExercises = training?['exercises'];
+    final assignedIds = rawExercises is List
+        ? rawExercises
+              .whereType<Map<String, dynamic>>()
+              .map((exercise) => exercise['id'])
+              .whereType<String>()
+              .toSet()
+        : <String>{};
     if (assignedIds.isNotEmpty) {
-      progress['exercises_completed'] = assignedIds
-          .map(
-            (exerciseId) =>
-                currentById[exerciseId] ??
-                {
-                  'exercise_id': exerciseId,
-                  'training_exercise_id': exerciseId,
-                  'completed_at': DateTime.now().toIso8601String(),
-                },
-          )
-          .toList(growable: false);
+      progress['exercises_completed'] = [
+        ...currentExercises.where(
+          (entry) => !assignedIds.contains(entry['training_exercise_id']),
+        ),
+        ...assignedIds.map(
+          (exerciseId) =>
+              currentById[exerciseId] ??
+              {
+                'exercise_id': exerciseId,
+                'training_exercise_id': exerciseId,
+                'completed_at': DateTime.now().toIso8601String(),
+              },
+        ),
+      ];
     }
 
-    progress['training_completed'] = true;
+    final completedTrainings = <String>{
+      ...((progress['trainings_completed'] as List?) ?? const [])
+          .whereType<String>(),
+      trainingId,
+    };
+    progress['trainings_completed'] = completedTrainings.toList(
+      growable: false,
+    );
+    final dayTrainings = _localStorage.getCachedList('training_day_$date');
+    final assignedTrainingIds =
+        dayTrainings
+            ?.whereType<Map<String, dynamic>>()
+            .map((training) => training['id'])
+            .whereType<String>()
+            .toSet() ??
+        <String>{};
+    progress['training_completed'] =
+        assignedTrainingIds.isNotEmpty &&
+        assignedTrainingIds.every(completedTrainings.contains);
     if (notes != null && notes.trim().isNotEmpty) {
       progress['notes'] = notes.trim();
     }

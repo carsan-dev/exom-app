@@ -1,3 +1,15 @@
+class HomeTrainingItemEntity {
+  final String id;
+  final String name;
+  final bool completed;
+
+  const HomeTrainingItemEntity({
+    required this.id,
+    required this.name,
+    required this.completed,
+  });
+}
+
 class HomeSummaryEntity {
   final String? trainingId;
   final String? trainingName;
@@ -6,6 +18,7 @@ class HomeSummaryEntity {
   final int? trainingDurationMin;
   final int? remainingTrainingDurationMin;
   final bool trainingCompleted;
+  final List<HomeTrainingItemEntity> trainings;
   final int exercisesCompleted;
   final int totalExercises;
   final String? dietId;
@@ -32,6 +45,7 @@ class HomeSummaryEntity {
     this.trainingDurationMin,
     this.remainingTrainingDurationMin,
     this.trainingCompleted = false,
+    this.trainings = const [],
     this.exercisesCompleted = 0,
     this.totalExercises = 0,
     this.dietId,

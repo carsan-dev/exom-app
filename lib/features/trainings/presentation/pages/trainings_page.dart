@@ -112,16 +112,21 @@ class _TrainingsView extends StatelessWidget {
         ),
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          if (state.todayTraining != null) ...[
+          if (state.todayTrainings.isNotEmpty) ...[
             _SectionHeader(
               title: selectedDate == null
                   ? l10n.todaysTrainingTitle
                   : '${l10n.training} $dateLabel',
             ),
-            _TodayTrainingBanner(
-              training: state.todayTraining!,
-              selectedDate: state.selectedDate,
-              historyDate: state.historyDate,
+            ...state.todayTrainings.map(
+              (training) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _TodayTrainingBanner(
+                  training: training,
+                  selectedDate: state.selectedDate,
+                  historyDate: state.historyDate,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
           ] else ...[
@@ -372,11 +377,7 @@ Color _trainingColor(
   required List<String> types,
   required String? accentColor,
 }) {
-  return trainingAccentColor(
-    context,
-    accentColor: accentColor,
-    types: types,
-  );
+  return trainingAccentColor(context, accentColor: accentColor, types: types);
 }
 
 String _historyDateLabel(BuildContext context, DateTime date) {
@@ -573,26 +574,28 @@ class _TodayTrainingBanner extends StatelessWidget {
                     runSpacing: 6,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      ...typeLabels.take(2).map(
-                        (label) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                      ...typeLabels
+                          .take(2)
+                          .map(
+                            (label) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
                       if (typeLabels.length > 2)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -630,21 +633,21 @@ class _TodayTrainingBanner extends StatelessWidget {
                     tag: 'training-${training.id}-title',
                     flightShuttleBuilder:
                         (flightCtx, anim, dir, fromCtx, toCtx) {
-                      return Material(
-                        color: Colors.transparent,
-                        child: Text(
-                          training.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: palette.textPrimary,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.374,
-                          ),
-                        ),
-                      );
-                    },
+                          return Material(
+                            color: Colors.transparent,
+                            child: Text(
+                              training.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: palette.textPrimary,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.374,
+                              ),
+                            ),
+                          );
+                        },
                     child: Material(
                       color: Colors.transparent,
                       child: Text(
@@ -883,26 +886,28 @@ class _TrainingHistoryListItem extends StatelessWidget {
                         runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          ...typeLabels.take(2).map(
-                            (label) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                          ...typeLabels
+                              .take(2)
+                              .map(
+                                (label) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      color: color,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
                           if (typeLabels.length > 2)
                             Text(
                               '+${typeLabels.length - 2}',

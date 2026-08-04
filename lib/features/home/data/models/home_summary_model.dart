@@ -1,6 +1,7 @@
 import 'package:exom_app/core/utils/training_type_utils.dart';
 
 class HomeSummaryModel {
+  final List<HomeTrainingItemModel> trainings;
   final String? trainingName;
   final List<String> trainingTypes;
   final String? trainingAccentColor;
@@ -27,6 +28,7 @@ class HomeSummaryModel {
   final double? lastSleepHours;
 
   const HomeSummaryModel({
+    this.trainings = const [],
     this.trainingName,
     this.trainingTypes = const [],
     this.trainingAccentColor,
@@ -61,6 +63,15 @@ class HomeSummaryModel {
     required Map<String, dynamic>? latestMetric,
     required Map<String, dynamic>? progress,
   }) {
+    final dayTrainings = training?['trainings'] is List
+        ? (training!['trainings'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false)
+        : training != null
+        ? [training]
+        : const <Map<String, dynamic>>[];
+    final primaryTraining = dayTrainings.isNotEmpty ? dayTrainings.first : null;
+    training = primaryTraining;
     final firstName = profile?['first_name'] as String?;
     final lastName = profile?['last_name'] as String?;
     final fullName = [
@@ -157,6 +168,16 @@ class HomeSummaryModel {
     );
 
     return HomeSummaryModel(
+      trainings: dayTrainings
+          .map(
+            (item) => HomeTrainingItemModel(
+              id: item['id'] as String? ?? '',
+              name: item['name'] as String? ?? '',
+              completed: item['completed'] as bool? ?? false,
+            ),
+          )
+          .where((item) => item.id.isNotEmpty)
+          .toList(growable: false),
       trainingId: training?['id'] as String?,
       trainingName: training?['name'] as String?,
       trainingTypes: trainingTypes,
@@ -187,4 +208,16 @@ class HomeSummaryModel {
       lastSleepHours: (latestMetric?['sleep_hours'] as num?)?.toDouble(),
     );
   }
+}
+
+class HomeTrainingItemModel {
+  final String id;
+  final String name;
+  final bool completed;
+
+  const HomeTrainingItemModel({
+    required this.id,
+    required this.name,
+    required this.completed,
+  });
 }

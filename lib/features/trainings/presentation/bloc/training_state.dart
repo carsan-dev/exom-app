@@ -14,23 +14,23 @@ class TrainingLoading extends TrainingState {
 
 class TrainingsLoaded extends TrainingState {
   final List<TrainingHistoryEntity> history;
-  final TrainingEntity? todayTraining;
+  final List<TrainingEntity> todayTrainings;
   final String selectedDate;
   final String historyDate;
 
   const TrainingsLoaded({
     required this.history,
-    this.todayTraining,
+    this.todayTrainings = const [],
     required this.selectedDate,
     required this.historyDate,
   });
 }
 
 class TodayTrainingLoaded extends TrainingState {
-  final TrainingEntity? training;
+  final List<TrainingEntity> trainings;
   final String selectedDate;
 
-  const TodayTrainingLoaded(this.training, {required this.selectedDate});
+  const TodayTrainingLoaded(this.trainings, {required this.selectedDate});
 }
 
 class TrainingDetailLoaded extends TrainingState {

@@ -71,7 +71,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       late Response<dynamic> response;
       for (var attempt = 0; attempt < 3; attempt++) {
         response = await _apiClient.dio.get<dynamic>(
-          '/trainings/today',
+          '/trainings/day',
           queryParameters: queryParams,
         );
         if (response.statusCode != 204 && response.data != null) break;

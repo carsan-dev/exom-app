@@ -18,6 +18,15 @@ class HomeRepositoryImpl implements HomeRepository {
       trainingDurationMin: model.trainingDurationMin,
       remainingTrainingDurationMin: model.remainingTrainingDurationMin,
       trainingCompleted: model.trainingCompleted,
+      trainings: model.trainings
+          .map(
+            (training) => HomeTrainingItemEntity(
+              id: training.id,
+              name: training.name,
+              completed: training.completed,
+            ),
+          )
+          .toList(growable: false),
       exercisesCompleted: model.exercisesCompleted,
       totalExercises: model.totalExercises,
       dietId: model.dietId,

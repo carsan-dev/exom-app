@@ -16,6 +16,12 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
+  Future<List<TrainingEntity>> getDayTrainings({String? date}) async {
+    final models = await _remoteDataSource.getDayTrainings(date: date);
+    return models.map(_mapToEntity).toList(growable: false);
+  }
+
+  @override
   Future<List<TrainingHistoryEntity>> getTrainings({String? date}) async {
     final models = await _remoteDataSource.getTrainings(date: date);
     return models.map(_mapHistoryToEntity).toList();
@@ -50,8 +56,16 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<void> completeTraining(String date, {String? notes}) {
-    return _remoteDataSource.completeTraining(date, notes: notes);
+  Future<void> completeTraining(
+    String date, {
+    required String trainingId,
+    String? notes,
+  }) {
+    return _remoteDataSource.completeTraining(
+      date,
+      trainingId: trainingId,
+      notes: notes,
+    );
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:exom_app/features/trainings/domain/entities/training_entity.dart
 
 abstract class TrainingRepository {
   Future<TrainingEntity?> getTodayTraining({String? date});
+  Future<List<TrainingEntity>> getDayTrainings({String? date});
   Future<List<TrainingHistoryEntity>> getTrainings({String? date});
   Future<TrainingEntity> getTraining(String id);
   Future<void> markExerciseCompleted(
@@ -12,7 +13,11 @@ abstract class TrainingRepository {
     List<SetPerformance>? sets,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
-  Future<void> completeTraining(String date, {String? notes});
+  Future<void> completeTraining(
+    String date, {
+    required String trainingId,
+    String? notes,
+  });
   Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date});
   Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
     List<String> exerciseIds,

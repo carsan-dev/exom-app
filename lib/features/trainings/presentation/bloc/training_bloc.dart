@@ -71,11 +71,11 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     emit(const TrainingLoading());
     try {
       final targetDate = _resolvedDate(event.date);
-      final training = await _getTodayTrainingUseCase(targetDate);
-      if (training == null) {
+      final trainings = await _getTodayTrainingUseCase(targetDate);
+      if (trainings.isEmpty) {
         emit(TrainingNoContent(selectedDate: targetDate));
       } else {
-        emit(TodayTrainingLoaded(training, selectedDate: targetDate));
+        emit(TodayTrainingLoaded(trainings, selectedDate: targetDate));
       }
     } catch (e) {
       emit(TrainingError(e.toString()));
@@ -100,7 +100,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
       emit(
         TrainingsLoaded(
           history: history,
-          todayTraining: results[1] as TrainingEntity?,
+          todayTrainings: results[1] as List<TrainingEntity>,
           selectedDate: targetDate,
           historyDate: historyDate,
         ),
@@ -254,7 +254,11 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     emit(current.copyWith(completedExerciseIds: allExerciseIds));
 
     try {
-      await _completeTrainingUseCase(current.selectedDate, notes: event.notes);
+      await _completeTrainingUseCase(
+        current.selectedDate,
+        trainingId: current.training.id,
+        notes: event.notes,
+      );
     } catch (_) {
       emit(current.copyWith(completedExerciseIds: previous));
     }

@@ -133,6 +133,55 @@ class TodayTrainingCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (summary.trainings.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Column(
+                  children: summary.trainings.indexed
+                      .map((entry) {
+                        final (index, training) = entry;
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () =>
+                              context.push('/trainings/${training.id}'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  child: Text(
+                                    '${index + 1}.',
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: palette.textSecondary,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    training.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Icon(
+                                  training.completed
+                                      ? Icons.check_circle
+                                      : Icons.chevron_right,
+                                  size: 20,
+                                  color: training.completed
+                                      ? semantic.success
+                                      : palette.textSecondary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Wrap(

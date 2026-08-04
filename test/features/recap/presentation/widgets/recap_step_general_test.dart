@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_general.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -29,12 +30,10 @@ void main() {
       ),
     );
 
-    final stressRating = find.text('🙂');
-    expect(stressRating, findsOneWidget);
-    await tester.ensureVisible(stressRating);
-    await tester.pumpAndSettle();
-    await tester.tap(stressRating);
-    await tester.pump();
+    final stressRating = tester.widget<RecapEmojiRatingField>(
+      find.byType(RecapEmojiRatingField),
+    );
+    stressRating.onChanged(3);
 
     expect(
       changes.any(

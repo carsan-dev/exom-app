@@ -22,6 +22,8 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
   VideoPlayerController? _controller;
   Object? _initializationError;
   bool _isInitializing = true;
+  bool _isSpeedBoostActive = false;
+  double? _speedBeforeBoost;
 
   @override
   void initState() {
@@ -103,6 +105,62 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
     await controller.seekTo(Duration(milliseconds: targetMilliseconds));
   }
 
+  Future<void> _startSpeedBoost() async {
+    final controller = _controller;
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        !controller.value.isPlaying ||
+        _isSpeedBoostActive) {
+      return;
+    }
+
+    _speedBeforeBoost = controller.value.playbackSpeed;
+    setState(() => _isSpeedBoostActive = true);
+
+    try {
+      await controller.setPlaybackSpeed(2);
+    } catch (_) {
+      if (!mounted || controller != _controller || !_isSpeedBoostActive) return;
+      setState(() {
+        _isSpeedBoostActive = false;
+        _speedBeforeBoost = null;
+      });
+    }
+  }
+
+  Future<void> _stopSpeedBoost() async {
+    if (!_isSpeedBoostActive) return;
+
+    final controller = _controller;
+    final speedToRestore = _speedBeforeBoost ?? 1;
+    _speedBeforeBoost = null;
+    if (mounted) {
+      setState(() => _isSpeedBoostActive = false);
+    } else {
+      _isSpeedBoostActive = false;
+    }
+
+    if (controller == null || !controller.value.isInitialized) return;
+    try {
+      await controller.setPlaybackSpeed(speedToRestore);
+    } catch (_) {
+      // The player may have been disposed while the gesture was ending.
+    }
+  }
+
+  Widget _interactionZone(Duration seekOffset) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onDoubleTap: () => _seekBy(seekOffset),
+        onLongPressStart: (_) => _startSpeedBoost(),
+        onLongPressEnd: (_) => _stopSpeedBoost(),
+        onLongPressCancel: _stopSpeedBoost,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+
   String _formatDuration(Duration duration) {
     final totalSeconds = duration.inSeconds;
     final hours = totalSeconds ~/ 3600;
@@ -179,22 +237,8 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () =>
-                                _seekBy(const Duration(seconds: -5)),
-                            child: const SizedBox(),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onDoubleTap: () =>
-                                _seekBy(const Duration(seconds: 5)),
-                            child: const SizedBox(),
-                          ),
-                        ),
+                        _interactionZone(const Duration(seconds: -5)),
+                        _interactionZone(const Duration(seconds: 5)),
                       ],
                     ),
                     IgnorePointer(
@@ -210,6 +254,61 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
                               Colors.black.withValues(alpha: 0.6),
                             ],
                             stops: const [0, 0.2, 0.58, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top:
+                          MediaQuery.paddingOf(context).top +
+                          kToolbarHeight +
+                          12,
+                      left: 0,
+                      right: 0,
+                      child: IgnorePointer(
+                        child: ExcludeSemantics(
+                          excluding: !_isSpeedBoostActive,
+                          child: AnimatedOpacity(
+                            opacity: _isSpeedBoostActive ? 1 : 0,
+                            duration: const Duration(milliseconds: 140),
+                            curve: Curves.easeOut,
+                            child: AnimatedScale(
+                              scale: _isSpeedBoostActive ? 1 : 0.92,
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOutBack,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.68),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.fast_forward_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '2×',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),

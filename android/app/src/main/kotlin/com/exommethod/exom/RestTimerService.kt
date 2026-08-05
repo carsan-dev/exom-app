@@ -6,7 +6,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
-import android.net.Uri
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -22,13 +22,12 @@ class RestTimerService : Service() {
     private var durationSeconds = 0
     private var exerciseName = ""
     private var soundEnabled = true
+    private var completionPlayer: MediaPlayer? = null
 
     private val tickRunnable = object : Runnable {
         override fun run() {
             if (System.currentTimeMillis() >= endsAtMillis) {
-                showFinishedNotification()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                finishTimer()
                 return
             }
 
@@ -48,14 +47,14 @@ class RestTimerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action != ACTION_START) return START_NOT_STICKY
 
+        releaseCompletionPlayer()
         sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
         endsAtMillis = intent.getLongExtra(EXTRA_ENDS_AT_MILLIS, 0L)
         exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME).orEmpty()
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0)
         soundEnabled = intent.getBooleanExtra(EXTRA_SOUND_ENABLED, true)
         if (endsAtMillis <= System.currentTimeMillis() || durationSeconds <= 0) {
-            showFinishedNotification()
-            stopSelf()
+            finishTimer()
             return START_NOT_STICKY
         }
 
@@ -70,6 +69,7 @@ class RestTimerService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
+        releaseCompletionPlayer()
         super.onDestroy()
     }
 
@@ -112,12 +112,7 @@ class RestTimerService : Service() {
     }
 
     private fun showFinishedNotification() {
-        val channelId = if (soundEnabled) {
-            FINISHED_CHANNEL_ID
-        } else {
-            SILENT_FINISHED_CHANNEL_ID
-        }
-        val builder = NotificationCompat.Builder(this, channelId)
+        val builder = NotificationCompat.Builder(this, FINISHED_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(getString(R.string.rest_timer_finished_title))
             .setContentText(getString(R.string.rest_timer_finished_body))
@@ -127,13 +122,65 @@ class RestTimerService : Service() {
             .setVibrate(FINISHED_VIBRATION_PATTERN)
             .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-        if (soundEnabled) {
-            builder.setSound(finishedSoundUri())
-        }
         getSystemService(NotificationManager::class.java).notify(
             FINISHED_NOTIFICATION_ID,
             builder.build(),
         )
+    }
+
+    private fun finishTimer() {
+        handler.removeCallbacks(tickRunnable)
+        showFinishedNotification()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (soundEnabled) {
+            playFinishedSound()
+        } else {
+            stopSelf()
+        }
+    }
+
+    private fun playFinishedSound() {
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        val player = try {
+            MediaPlayer.create(this, R.raw.exom_rest_finished, attributes, 0)
+        } catch (_: RuntimeException) {
+            null
+        }
+        if (player == null) {
+            stopSelf()
+            return
+        }
+
+        completionPlayer = player
+        player.setOnCompletionListener { completedPlayer ->
+            if (completionPlayer === completedPlayer) {
+                releaseCompletionPlayer()
+                stopSelf()
+            }
+        }
+        player.setOnErrorListener { failedPlayer, _, _ ->
+            if (completionPlayer === failedPlayer) {
+                releaseCompletionPlayer()
+                stopSelf()
+            }
+            true
+        }
+        try {
+            player.start()
+        } catch (_: IllegalStateException) {
+            releaseCompletionPlayer()
+            stopSelf()
+        }
+    }
+
+    private fun releaseCompletionPlayer() {
+        completionPlayer?.setOnCompletionListener(null)
+        completionPlayer?.setOnErrorListener(null)
+        completionPlayer?.release()
+        completionPlayer = null
     }
 
     private fun openAppIntent(): PendingIntent {
@@ -152,6 +199,8 @@ class RestTimerService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java)
         manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_ID)
+        manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_V2_ID)
+        manager.deleteNotificationChannel(LEGACY_SILENT_FINISHED_CHANNEL_ID)
         manager.createNotificationChannel(
             NotificationChannel(
                 ONGOING_CHANNEL_ID,
@@ -168,30 +217,10 @@ class RestTimerService : Service() {
                 description = getString(R.string.rest_timer_finished_channel_description)
                 enableVibration(true)
                 vibrationPattern = FINISHED_VIBRATION_PATTERN
-                setSound(
-                    finishedSoundUri(),
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                        .build(),
-                )
-            },
-        )
-        manager.createNotificationChannel(
-            NotificationChannel(
-                SILENT_FINISHED_CHANNEL_ID,
-                getString(R.string.rest_timer_finished_silent_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = getString(R.string.rest_timer_finished_silent_channel_description)
-                enableVibration(true)
-                vibrationPattern = FINISHED_VIBRATION_PATTERN
                 setSound(null, null)
             },
         )
     }
-
-    private fun finishedSoundUri(): Uri =
-        Uri.parse("android.resource://$packageName/${R.raw.exom_rest_finished}")
 
     companion object {
         const val ACTION_START = "com.exommethod.exom.action.START_REST_TIMER"
@@ -202,9 +231,10 @@ class RestTimerService : Service() {
         const val EXTRA_SOUND_ENABLED = "sound_enabled"
 
         private const val ONGOING_CHANNEL_ID = "exom_rest_timer"
-        private const val FINISHED_CHANNEL_ID = "exom_rest_finished_v2"
-        private const val SILENT_FINISHED_CHANNEL_ID = "exom_rest_finished_silent"
+        private const val FINISHED_CHANNEL_ID = "exom_rest_finished_v3"
         private const val LEGACY_FINISHED_CHANNEL_ID = "exom_rest_finished"
+        private const val LEGACY_FINISHED_CHANNEL_V2_ID = "exom_rest_finished_v2"
+        private const val LEGACY_SILENT_FINISHED_CHANNEL_ID = "exom_rest_finished_silent"
         private const val ONGOING_NOTIFICATION_ID = 41020
         private const val FINISHED_NOTIFICATION_ID = 41021
         private val FINISHED_VIBRATION_PATTERN = longArrayOf(0, 300, 150, 500)

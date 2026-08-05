@@ -22,8 +22,9 @@ void main() {
   });
 
   test('starts, replaces and cancels one active session', () async {
+    var soundEnabled = false;
     final coordinator = PlatformRestTimerCoordinator(
-      notificationSoundEnabled: () => false,
+      notificationSoundEnabled: () => soundEnabled,
     );
     final first = RestTimerSession(
       id: 'first',
@@ -40,6 +41,7 @@ void main() {
 
     await coordinator.start(first);
     expect(coordinator.activeSession, same(first));
+    soundEnabled = true;
     await coordinator.start(second);
     expect(coordinator.activeSession, same(second));
     await coordinator.cancel();
@@ -53,6 +55,6 @@ void main() {
       'cancel',
     ]);
     expect((calls[1].arguments as Map)['soundEnabled'], false);
-    expect((calls[3].arguments as Map)['soundEnabled'], false);
+    expect((calls[3].arguments as Map)['soundEnabled'], true);
   });
 }

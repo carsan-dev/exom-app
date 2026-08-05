@@ -6,11 +6,11 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import java.util.Locale
 import kotlin.math.ceil
@@ -117,7 +117,9 @@ class RestTimerService : Service() {
             .setContentIntent(openAppIntent())
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(finishedSoundUri())
+            .setVibrate(FINISHED_VIBRATION_PATTERN)
+            .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .build()
         getSystemService(NotificationManager::class.java).notify(
@@ -141,6 +143,7 @@ class RestTimerService : Service() {
     private fun createChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java)
+        manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_ID)
         manager.createNotificationChannel(
             NotificationChannel(
                 ONGOING_CHANNEL_ID,
@@ -156,9 +159,9 @@ class RestTimerService : Service() {
             ).apply {
                 description = getString(R.string.rest_timer_finished_channel_description)
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 300, 150, 500)
+                vibrationPattern = FINISHED_VIBRATION_PATTERN
                 setSound(
-                    Settings.System.DEFAULT_NOTIFICATION_URI,
+                    finishedSoundUri(),
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
                         .build(),
@@ -166,6 +169,9 @@ class RestTimerService : Service() {
             },
         )
     }
+
+    private fun finishedSoundUri(): Uri =
+        Uri.parse("android.resource://$packageName/${R.raw.exom_rest_finished}")
 
     companion object {
         const val ACTION_START = "com.exommethod.exom.action.START_REST_TIMER"
@@ -175,8 +181,10 @@ class RestTimerService : Service() {
         const val EXTRA_ENDS_AT_MILLIS = "ends_at_millis"
 
         private const val ONGOING_CHANNEL_ID = "exom_rest_timer"
-        private const val FINISHED_CHANNEL_ID = "exom_rest_finished"
+        private const val FINISHED_CHANNEL_ID = "exom_rest_finished_v2"
+        private const val LEGACY_FINISHED_CHANNEL_ID = "exom_rest_finished"
         private const val ONGOING_NOTIFICATION_ID = 41020
         private const val FINISHED_NOTIFICATION_ID = 41021
+        private val FINISHED_VIBRATION_PATTERN = longArrayOf(0, 300, 150, 500)
     }
 }

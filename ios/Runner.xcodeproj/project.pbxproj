@@ -20,6 +20,7 @@
 		AA0000010000000000000002 /* RestTimerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000008 /* RestTimerWidgetBundle.swift */; };
 		AA0000010000000000000003 /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000009 /* RestTimerLiveActivity.swift */; };
 		AA0000010000000000000004 /* RestTimerWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000001000000000000000B /* RestTimerWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
+		AA0000010000000000000016 /* exom_rest_finished.wav in Resources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000017 /* exom_rest_finished.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +87,7 @@
 		AA0000010000000000000009 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
 		AA000001000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA000001000000000000000B /* RestTimerWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RestTimerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000010000000000000017 /* exom_rest_finished.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = exom_rest_finished.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +160,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				AA0000010000000000000007 /* RestTimerCoordinator.swift */,
+				AA0000010000000000000017 /* exom_rest_finished.wav */,
 				7E7A1F8F2C90000100E43A01 /* GoogleService-Info.plist */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -294,6 +297,7 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				7E7A1F902C90000100E43A01 /* GoogleService-Info.plist in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				AA0000010000000000000016 /* exom_rest_finished.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

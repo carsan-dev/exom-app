@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -15,5 +16,21 @@ import UIKit
     RestTimerCoordinator.register(
       with: engineBridge.applicationRegistrar.messenger()
     )
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    if notification.request.identifier.hasPrefix("exom.rest.") {
+      completionHandler([.banner, .sound])
+    } else {
+      super.userNotificationCenter(
+        center,
+        willPresent: notification,
+        withCompletionHandler: completionHandler
+      )
+    }
   }
 }

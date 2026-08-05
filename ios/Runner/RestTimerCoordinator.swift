@@ -14,6 +14,10 @@ struct RestTimerAttributes: ActivityAttributes {
 final class RestTimerCoordinator {
   private static let channelName = "com.exommethod.exom/rest_timer"
   private static let notificationPrefix = "exom.rest."
+  private static let finishedSoundName = UNNotificationSoundName(
+    rawValue: "exom_rest_finished.wav"
+  )
+  private static var notificationGeneration = 0
 
   static func register(with messenger: FlutterBinaryMessenger) {
     let channel = FlutterMethodChannel(name: channelName, binaryMessenger: messenger)
@@ -42,9 +46,11 @@ final class RestTimerCoordinator {
   }
 
   private static func start(id: String, exerciseName: String, endsAt: Date) {
-    cancel()
+    notificationGeneration += 1
+    let generation = notificationGeneration
+    endLiveActivities()
     requestNotificationPermissionContextually()
-    scheduleFinishedNotification(id: id, endsAt: endsAt)
+    scheduleFinishedNotification(id: id, endsAt: endsAt, generation: generation)
 
     guard #available(iOS 16.1, *), ActivityAuthorizationInfo().areActivitiesEnabled else {
       return
@@ -62,11 +68,20 @@ final class RestTimerCoordinator {
   }
 
   private static func cancel() {
+    notificationGeneration += 1
+    let generation = notificationGeneration
     let center = UNUserNotificationCenter.current()
     center.getPendingNotificationRequests { requests in
       let ids = requests.map(\.identifier).filter { $0.hasPrefix(notificationPrefix) }
-      center.removePendingNotificationRequests(withIdentifiers: ids)
+      DispatchQueue.main.async {
+        guard generation == notificationGeneration else { return }
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+      }
     }
+    endLiveActivities()
+  }
+
+  private static func endLiveActivities() {
     if #available(iOS 16.1, *) {
       Task {
         for activity in Activity<RestTimerAttributes>.activities {
@@ -84,23 +99,35 @@ final class RestTimerCoordinator {
     }
   }
 
-  private static func scheduleFinishedNotification(id: String, endsAt: Date) {
+  private static func scheduleFinishedNotification(
+    id: String,
+    endsAt: Date,
+    generation: Int
+  ) {
     guard endsAt > Date() else { return }
     let spanish = Locale.preferredLanguages.first?.hasPrefix("es") == true
     let content = UNMutableNotificationContent()
     content.title = spanish ? "Descanso terminado" : "Rest finished"
     content.body = spanish ? "Es hora de tu siguiente serie" : "Time for your next set"
-    content.sound = .default
+    content.sound = UNNotificationSound(named: finishedSoundName)
     let trigger = UNTimeIntervalNotificationTrigger(
       timeInterval: max(1, endsAt.timeIntervalSinceNow),
       repeats: false
     )
-    UNUserNotificationCenter.current().add(
-      UNNotificationRequest(
-        identifier: notificationPrefix + id,
-        content: content,
-        trigger: trigger
-      )
-    )
+    let center = UNUserNotificationCenter.current()
+    center.getPendingNotificationRequests { requests in
+      let staleIds = requests.map(\.identifier).filter { $0.hasPrefix(notificationPrefix) }
+      DispatchQueue.main.async {
+        guard generation == notificationGeneration else { return }
+        center.removePendingNotificationRequests(withIdentifiers: staleIds)
+        center.add(
+          UNNotificationRequest(
+            identifier: notificationPrefix + id,
+            content: content,
+            trigger: trigger
+          )
+        )
+      }
+    }
   }
 }

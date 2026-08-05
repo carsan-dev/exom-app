@@ -466,6 +466,8 @@
   "notificationsSettingsTitle": "Notificaciones",
   "pushNotificationsOption": "Notificaciones push",
   "pushNotificationsDescription": "Avisos de entrenador, seguimiento y recordatorios",
+  "restTimerSoundOption": "Sonido al finalizar el descanso",
+  "restTimerSoundDescription": "Reproduce un aviso al terminar el temporizador",
   "dataAndSupportTitle": "Datos y soporte",
   "offlineModeOption": "Modo offline",
   "offlineModeDescription": "La app conserva el ultimo Home, Perfil, Calendario, Dieta y Entreno cargados",
@@ -565,6 +567,7 @@
   },
   "restTimerSkip": "Saltar",
   "completeSetButton": "Completar serie",
+    "exerciseCompleted": "¡Ejercicio completado!",
     "exerciseSetProgress": "Serie {current} / {total}",
     "@exerciseSetProgress": {
       "placeholders": {

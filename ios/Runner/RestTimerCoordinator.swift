@@ -33,8 +33,9 @@ final class RestTimerCoordinator {
           result(FlutterError(code: "invalid_arguments", message: nil, details: nil))
           return
         }
+        let soundEnabled = arguments["soundEnabled"] as? Bool ?? true
         let endsAt = Date(timeIntervalSince1970: endsAtMillis.doubleValue / 1000)
-        start(id: id, exerciseName: exerciseName, endsAt: endsAt)
+        start(id: id, exerciseName: exerciseName, endsAt: endsAt, soundEnabled: soundEnabled)
         result(nil)
       case "cancel":
         cancel()
@@ -45,12 +46,22 @@ final class RestTimerCoordinator {
     }
   }
 
-  private static func start(id: String, exerciseName: String, endsAt: Date) {
+  private static func start(
+    id: String,
+    exerciseName: String,
+    endsAt: Date,
+    soundEnabled: Bool
+  ) {
     notificationGeneration += 1
     let generation = notificationGeneration
     endLiveActivities()
     requestNotificationPermissionContextually()
-    scheduleFinishedNotification(id: id, endsAt: endsAt, generation: generation)
+    scheduleFinishedNotification(
+      id: id,
+      endsAt: endsAt,
+      generation: generation,
+      soundEnabled: soundEnabled
+    )
 
     guard #available(iOS 16.1, *), ActivityAuthorizationInfo().areActivitiesEnabled else {
       return
@@ -102,14 +113,17 @@ final class RestTimerCoordinator {
   private static func scheduleFinishedNotification(
     id: String,
     endsAt: Date,
-    generation: Int
+    generation: Int,
+    soundEnabled: Bool
   ) {
     guard endsAt > Date() else { return }
     let spanish = Locale.preferredLanguages.first?.hasPrefix("es") == true
     let content = UNMutableNotificationContent()
     content.title = spanish ? "Descanso terminado" : "Rest finished"
     content.body = spanish ? "Es hora de tu siguiente serie" : "Time for your next set"
-    content.sound = UNNotificationSound(named: finishedSoundName)
+    if soundEnabled {
+      content.sound = UNNotificationSound(named: finishedSoundName)
+    }
     let trigger = UNTimeIntervalNotificationTrigger(
       timeInterval: max(1, endsAt.timeIntervalSinceNow),
       repeats: false

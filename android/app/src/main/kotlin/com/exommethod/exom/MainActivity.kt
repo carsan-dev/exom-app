@@ -26,6 +26,7 @@ class MainActivity : FlutterActivity() {
                             putExtra(RestTimerService.EXTRA_EXERCISE_NAME, call.argument<String>("exerciseName"))
                             putExtra(RestTimerService.EXTRA_DURATION_SECONDS, call.argument<Int>("durationSeconds") ?: 0)
                             putExtra(RestTimerService.EXTRA_ENDS_AT_MILLIS, call.argument<Number>("endsAtMillis")?.toLong() ?: 0L)
+                            putExtra(RestTimerService.EXTRA_SOUND_ENABLED, call.argument<Boolean>("soundEnabled") ?: true)
                         }
                         ContextCompat.startForegroundService(this, intent)
                         result.success(null)

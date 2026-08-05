@@ -1296,6 +1296,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Coach alerts, follow-up and reminders';
 
   @override
+  String get restTimerSoundOption => 'Rest timer sound';
+
+  @override
+  String get restTimerSoundDescription =>
+      'Play a sound when the rest timer finishes';
+
+  @override
   String get dataAndSupportTitle => 'Data and support';
 
   @override
@@ -1542,6 +1549,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completeSetButton => 'Complete set';
+
+  @override
+  String get exerciseCompleted => 'Exercise completed!';
 
   @override
   String exerciseSetProgress(int current, int total) {

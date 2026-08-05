@@ -2462,6 +2462,18 @@ abstract class AppLocalizations {
   /// **'Avisos de entrenador, seguimiento y recordatorios'**
   String get pushNotificationsDescription;
 
+  /// No description provided for @restTimerSoundOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Sonido al finalizar el descanso'**
+  String get restTimerSoundOption;
+
+  /// No description provided for @restTimerSoundDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproduce un aviso al terminar el temporizador'**
+  String get restTimerSoundDescription;
+
   /// No description provided for @dataAndSupportTitle.
   ///
   /// In es, this message translates to:
@@ -2923,6 +2935,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Completar serie'**
   String get completeSetButton;
+
+  /// No description provided for @exerciseCompleted.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Ejercicio completado!'**
+  String get exerciseCompleted;
 
   /// No description provided for @exerciseSetProgress.
   ///

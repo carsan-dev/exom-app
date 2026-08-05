@@ -8,4 +8,6 @@
     <string name="rest_timer_channel_description">Cuenta atrás persistente durante descansos</string>
     <string name="rest_timer_finished_channel_name">Avisos de descanso</string>
     <string name="rest_timer_finished_channel_description">Sonido y vibración al terminar un descanso</string>
+    <string name="rest_timer_finished_silent_channel_name">Avisos de descanso silenciosos</string>
+    <string name="rest_timer_finished_silent_channel_description">Solo vibración al terminar un descanso</string>
 </resources>

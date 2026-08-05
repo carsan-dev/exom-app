@@ -1313,6 +1313,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Avisos de entrenador, seguimiento y recordatorios';
 
   @override
+  String get restTimerSoundOption => 'Sonido al finalizar el descanso';
+
+  @override
+  String get restTimerSoundDescription =>
+      'Reproduce un aviso al terminar el temporizador';
+
+  @override
   String get dataAndSupportTitle => 'Datos y soporte';
 
   @override
@@ -1562,6 +1569,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get completeSetButton => 'Completar serie';
+
+  @override
+  String get exerciseCompleted => '¡Ejercicio completado!';
 
   @override
   String exerciseSetProgress(int current, int total) {

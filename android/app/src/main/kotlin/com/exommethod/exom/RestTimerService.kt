@@ -21,6 +21,7 @@ class RestTimerService : Service() {
     private var endsAtMillis = 0L
     private var durationSeconds = 0
     private var exerciseName = ""
+    private var soundEnabled = true
 
     private val tickRunnable = object : Runnable {
         override fun run() {
@@ -51,6 +52,7 @@ class RestTimerService : Service() {
         endsAtMillis = intent.getLongExtra(EXTRA_ENDS_AT_MILLIS, 0L)
         exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME).orEmpty()
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0)
+        soundEnabled = intent.getBooleanExtra(EXTRA_SOUND_ENABLED, true)
         if (endsAtMillis <= System.currentTimeMillis() || durationSeconds <= 0) {
             showFinishedNotification()
             stopSelf()
@@ -110,21 +112,27 @@ class RestTimerService : Service() {
     }
 
     private fun showFinishedNotification() {
-        val notification = NotificationCompat.Builder(this, FINISHED_CHANNEL_ID)
+        val channelId = if (soundEnabled) {
+            FINISHED_CHANNEL_ID
+        } else {
+            SILENT_FINISHED_CHANNEL_ID
+        }
+        val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(getString(R.string.rest_timer_finished_title))
             .setContentText(getString(R.string.rest_timer_finished_body))
             .setContentIntent(openAppIntent())
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setSound(finishedSoundUri())
             .setVibrate(FINISHED_VIBRATION_PATTERN)
             .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .build()
+        if (soundEnabled) {
+            builder.setSound(finishedSoundUri())
+        }
         getSystemService(NotificationManager::class.java).notify(
             FINISHED_NOTIFICATION_ID,
-            notification,
+            builder.build(),
         )
     }
 
@@ -168,6 +176,18 @@ class RestTimerService : Service() {
                 )
             },
         )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                SILENT_FINISHED_CHANNEL_ID,
+                getString(R.string.rest_timer_finished_silent_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = getString(R.string.rest_timer_finished_silent_channel_description)
+                enableVibration(true)
+                vibrationPattern = FINISHED_VIBRATION_PATTERN
+                setSound(null, null)
+            },
+        )
     }
 
     private fun finishedSoundUri(): Uri =
@@ -179,9 +199,11 @@ class RestTimerService : Service() {
         const val EXTRA_EXERCISE_NAME = "exercise_name"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"
         const val EXTRA_ENDS_AT_MILLIS = "ends_at_millis"
+        const val EXTRA_SOUND_ENABLED = "sound_enabled"
 
         private const val ONGOING_CHANNEL_ID = "exom_rest_timer"
         private const val FINISHED_CHANNEL_ID = "exom_rest_finished_v2"
+        private const val SILENT_FINISHED_CHANNEL_ID = "exom_rest_finished_silent"
         private const val LEGACY_FINISHED_CHANNEL_ID = "exom_rest_finished"
         private const val ONGOING_NOTIFICATION_ID = 41020
         private const val FINISHED_NOTIFICATION_ID = 41021

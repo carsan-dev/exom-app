@@ -16,6 +16,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
+  static const _restTimerSoundEnabledKey = 'rest_timer_sound_enabled';
   static const _legacyOnboardingCompleteKey = 'onboarding_complete';
   static const _onboardingIdentityKey = 'onboarding_complete_identity';
   static const _tutorialCompleteKey = 'tutorial_complete';
@@ -168,6 +169,12 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   UnitSystem getUnitSystemPreference() =>
       unitSystemFromStorageValue(getSetting<String>(_unitSystemKey));
+
+  Future<void> saveRestTimerSoundEnabled(bool enabled) =>
+      saveSetting(_restTimerSoundEnabledKey, enabled);
+
+  bool getRestTimerSoundEnabled() =>
+      getSetting<bool>(_restTimerSoundEnabledKey, defaultValue: true) ?? true;
 
   // User preferences
   String? get fcmToken => _auth.get('fcm_token');

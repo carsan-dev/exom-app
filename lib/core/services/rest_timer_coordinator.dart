@@ -34,6 +34,10 @@ class PlatformRestTimerCoordinator implements RestTimerCoordinator {
   );
 
   RestTimerSession? _activeSession;
+  final bool Function() _notificationSoundEnabled;
+
+  PlatformRestTimerCoordinator({bool Function()? notificationSoundEnabled})
+    : _notificationSoundEnabled = notificationSoundEnabled ?? (() => true);
 
   @override
   RestTimerSession? get activeSession => _activeSession;
@@ -45,7 +49,10 @@ class PlatformRestTimerCoordinator implements RestTimerCoordinator {
     }
     _activeSession = session;
     try {
-      await _channel.invokeMethod<void>('start', session.toMap());
+      await _channel.invokeMethod<void>('start', {
+        ...session.toMap(),
+        'soundEnabled': _notificationSoundEnabled(),
+      });
     } on MissingPluginException {
       // Unit tests and unsupported platforms keep internal countdown working.
     } on PlatformException {

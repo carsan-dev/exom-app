@@ -8,4 +8,6 @@
     <string name="rest_timer_channel_description">Persistent countdown during workout rests</string>
     <string name="rest_timer_finished_channel_name">Rest alerts</string>
     <string name="rest_timer_finished_channel_description">Sound and vibration when a rest finishes</string>
+    <string name="rest_timer_finished_silent_channel_name">Silent rest alerts</string>
+    <string name="rest_timer_finished_silent_channel_description">Vibration only when a rest finishes</string>
 </resources>

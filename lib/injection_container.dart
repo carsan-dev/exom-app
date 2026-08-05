@@ -161,7 +161,9 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<RestTimerCoordinator>(
-    () => PlatformRestTimerCoordinator(),
+    () => PlatformRestTimerCoordinator(
+      notificationSoundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
+    ),
   );
 
   sl.registerLazySingleton<OfflineSyncService>(

@@ -446,6 +446,8 @@
   "notificationsSettingsTitle": "Notifications",
   "pushNotificationsOption": "Push notifications",
   "pushNotificationsDescription": "Coach alerts, follow-up and reminders",
+  "restTimerSoundOption": "Rest timer sound",
+  "restTimerSoundDescription": "Play a sound when the rest timer finishes",
   "dataAndSupportTitle": "Data and support",
   "offlineModeOption": "Offline mode",
   "offlineModeDescription": "The app keeps the latest Home, Profile, Calendar, Diet and Training data loaded",
@@ -530,6 +532,7 @@
   },
   "restTimerSkip": "Skip",
   "completeSetButton": "Complete set",
+    "exerciseCompleted": "Exercise completed!",
     "exerciseSetProgress": "Set {current} / {total}",
     "@exerciseSetProgress": {
       "placeholders": {

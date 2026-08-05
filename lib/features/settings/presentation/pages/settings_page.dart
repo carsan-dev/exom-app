@@ -1,4 +1,4 @@
-﻿import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,7 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
+import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -28,6 +29,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
+  bool _restTimerSoundEnabled = true;
   bool _busy = false;
 
   @override
@@ -39,6 +41,18 @@ class _SettingsPageState extends State<SettingsPage> {
           defaultValue: true,
         ) ??
         true;
+    _restTimerSoundEnabled = sl<LocalStorage>().getRestTimerSoundEnabled();
+  }
+
+  Future<void> _toggleRestTimerSound(bool enabled) async {
+    await sl<LocalStorage>().saveRestTimerSoundEnabled(enabled);
+    final restTimerCoordinator = sl<RestTimerCoordinator>();
+    final activeSession = restTimerCoordinator.activeSession;
+    if (activeSession != null) {
+      await restTimerCoordinator.start(activeSession);
+    }
+    if (!mounted) return;
+    setState(() => _restTimerSoundEnabled = enabled);
   }
 
   Future<void> _toggleNotifications(bool enabled) async {
@@ -234,7 +248,12 @@ class _SettingsPageState extends State<SettingsPage> {
               surfaceTintColor: Colors.transparent,
             ),
             body: ListView(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 48),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                MediaQuery.of(context).padding.bottom + 48,
+              ),
               children: [
                 _SettingsGroup(
                   title: l10n.appearanceSettingsTitle,
@@ -388,6 +407,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: _busy
                           ? null
                           : () => _toggleNotifications(!_notificationsEnabled),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.volume_up_outlined,
+                      title: l10n.restTimerSoundOption,
+                      subtitle: l10n.restTimerSoundDescription,
+                      trailing: Switch(
+                        value: _restTimerSoundEnabled,
+                        onChanged: _toggleRestTimerSound,
+                      ),
+                      onTap: () =>
+                          _toggleRestTimerSound(!_restTimerSoundEnabled),
                     ),
                   ],
                 ),
@@ -596,10 +626,7 @@ class _CreditsSheet extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: palette.glassBorder,
-            width: 0.5,
-          ),
+          border: Border.all(color: palette.glassBorder, width: 0.5),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
@@ -813,4 +840,3 @@ class _ThemeModeTile extends StatelessWidget {
     );
   }
 }
-

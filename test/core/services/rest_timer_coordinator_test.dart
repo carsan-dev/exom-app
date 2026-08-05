@@ -22,7 +22,9 @@ void main() {
   });
 
   test('starts, replaces and cancels one active session', () async {
-    final coordinator = PlatformRestTimerCoordinator();
+    final coordinator = PlatformRestTimerCoordinator(
+      notificationSoundEnabled: () => false,
+    );
     final first = RestTimerSession(
       id: 'first',
       exerciseName: 'Press',
@@ -50,5 +52,7 @@ void main() {
       'start',
       'cancel',
     ]);
+    expect((calls[1].arguments as Map)['soundEnabled'], false);
+    expect((calls[3].arguments as Map)['soundEnabled'], false);
   });
 }

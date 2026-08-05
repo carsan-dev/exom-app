@@ -462,10 +462,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                     ),
                                     const SizedBox(height: 18),
                                     Text(
-                                      l10n.exerciseSetProgress(
-                                        state.currentSet,
-                                        state.totalSets,
-                                      ),
+                                      state.isFinalResting
+                                          ? l10n.exerciseCompleted
+                                          : l10n.exerciseSetProgress(
+                                              state.currentSet,
+                                              state.totalSets,
+                                            ),
                                       style: TextStyle(
                                         color: palette.textPrimary,
                                         fontSize: 32,

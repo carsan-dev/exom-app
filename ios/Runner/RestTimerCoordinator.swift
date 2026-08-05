@@ -122,7 +122,13 @@ final class RestTimerCoordinator {
     content.title = spanish ? "Descanso terminado" : "Rest finished"
     content.body = spanish ? "Es hora de tu siguiente serie" : "Time for your next set"
     if soundEnabled {
-      content.sound = UNNotificationSound(named: finishedSoundName)
+      let bundledSound = Bundle.main.url(
+        forResource: "exom_rest_finished",
+        withExtension: "wav"
+      )
+      content.sound = bundledSound == nil
+        ? .default
+        : UNNotificationSound(named: finishedSoundName)
     }
     let trigger = UNTimeIntervalNotificationTrigger(
       timeInterval: max(1, endsAt.timeIntervalSinceNow),

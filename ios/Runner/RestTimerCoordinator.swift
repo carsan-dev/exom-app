@@ -18,8 +18,17 @@ final class RestTimerCoordinator {
     rawValue: "exom_rest_finished.wav"
   )
   private static var notificationGeneration = 0
+  private static var activeTimerId: String?
+  private static var activeNotificationIdentifier: String?
+  private static var activeSoundEnabled = false
+  private static var suppressedForegroundNotifications = Set<String>()
+  private static var onTimerFinished: (() -> Void)?
 
-  static func register(with messenger: FlutterBinaryMessenger) {
+  static func register(
+    with messenger: FlutterBinaryMessenger,
+    onTimerFinished: @escaping () -> Void
+  ) {
+    self.onTimerFinished = onTimerFinished
     let channel = FlutterMethodChannel(name: channelName, binaryMessenger: messenger)
     channel.setMethodCallHandler { call, result in
       switch call.method {
@@ -36,6 +45,16 @@ final class RestTimerCoordinator {
         let soundEnabled = arguments["soundEnabled"] as? Bool ?? true
         let endsAt = Date(timeIntervalSince1970: endsAtMillis.doubleValue / 1000)
         start(id: id, exerciseName: exerciseName, endsAt: endsAt, soundEnabled: soundEnabled)
+        result(nil)
+      case "finish":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let id = arguments["id"] as? String
+        else {
+          result(FlutterError(code: "invalid_arguments", message: nil, details: nil))
+          return
+        }
+        finish(id: id)
         result(nil)
       case "cancel":
         cancel()
@@ -54,10 +73,17 @@ final class RestTimerCoordinator {
   ) {
     notificationGeneration += 1
     let generation = notificationGeneration
+    if let previousIdentifier = activeNotificationIdentifier {
+      suppressedForegroundNotifications.insert(previousIdentifier)
+    }
+    let notificationIdentifier = notificationPrefix + id + "." + String(generation)
+    activeTimerId = id
+    activeNotificationIdentifier = notificationIdentifier
+    activeSoundEnabled = soundEnabled
     endLiveActivities()
     requestNotificationPermissionContextually()
     scheduleFinishedNotification(
-      id: id,
+      identifier: notificationIdentifier,
       endsAt: endsAt,
       generation: generation,
       soundEnabled: soundEnabled
@@ -81,6 +107,12 @@ final class RestTimerCoordinator {
   private static func cancel() {
     notificationGeneration += 1
     let generation = notificationGeneration
+    if let identifier = activeNotificationIdentifier {
+      suppressedForegroundNotifications.insert(identifier)
+    }
+    activeTimerId = nil
+    activeNotificationIdentifier = nil
+    activeSoundEnabled = false
     let center = UNUserNotificationCenter.current()
     center.getPendingNotificationRequests { requests in
       let ids = requests.map(\.identifier).filter { $0.hasPrefix(notificationPrefix) }
@@ -90,6 +122,54 @@ final class RestTimerCoordinator {
       }
     }
     endLiveActivities()
+  }
+
+  private static func finish(id: String) {
+    guard activeTimerId == id else { return }
+
+    notificationGeneration += 1
+    let finishedNotificationIdentifier = activeNotificationIdentifier
+    if let identifier = finishedNotificationIdentifier {
+      suppressedForegroundNotifications.insert(identifier)
+      UNUserNotificationCenter.current().removePendingNotificationRequests(
+        withIdentifiers: [identifier]
+      )
+    }
+    let shouldPlaySound = activeSoundEnabled
+    activeTimerId = nil
+    activeNotificationIdentifier = nil
+    activeSoundEnabled = false
+    endLiveActivities()
+    guard shouldPlaySound else { return }
+    guard let identifier = finishedNotificationIdentifier else {
+      onTimerFinished?()
+      return
+    }
+
+    let center = UNUserNotificationCenter.current()
+    center.getDeliveredNotifications { notifications in
+      let wasAlreadyDelivered = notifications.contains {
+        $0.request.identifier == identifier
+      }
+      DispatchQueue.main.async {
+        guard !wasAlreadyDelivered else { return }
+        onTimerFinished?()
+      }
+    }
+  }
+
+  static func shouldPresentForegroundNotification(identifier: String) -> Bool {
+    guard identifier.hasPrefix(notificationPrefix) else { return true }
+    if suppressedForegroundNotifications.remove(identifier) != nil {
+      return false
+    }
+    if let activeIdentifier = activeNotificationIdentifier {
+      guard identifier == activeIdentifier else { return false }
+      activeTimerId = nil
+      activeNotificationIdentifier = nil
+      activeSoundEnabled = false
+    }
+    return true
   }
 
   private static func endLiveActivities() {
@@ -111,7 +191,7 @@ final class RestTimerCoordinator {
   }
 
   private static func scheduleFinishedNotification(
-    id: String,
+    identifier: String,
     endsAt: Date,
     generation: Int,
     soundEnabled: Bool
@@ -142,7 +222,7 @@ final class RestTimerCoordinator {
         center.removePendingNotificationRequests(withIdentifiers: staleIds)
         center.add(
           UNNotificationRequest(
-            identifier: notificationPrefix + id,
+            identifier: identifier,
             content: content,
             trigger: trigger
           )

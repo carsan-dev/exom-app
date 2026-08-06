@@ -18,7 +18,10 @@ import UserNotifications
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     RestTimerCoordinator.register(
-      with: engineBridge.applicationRegistrar.messenger()
+      with: engineBridge.applicationRegistrar.messenger(),
+      onTimerFinished: { [weak self] in
+        _ = self?.playRestTimerSound()
+      }
     )
   }
 
@@ -28,10 +31,14 @@ import UserNotifications
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
     if notification.request.identifier.hasPrefix("exom.rest.") {
+      guard RestTimerCoordinator.shouldPresentForegroundNotification(
+        identifier: notification.request.identifier
+      ) else {
+        completionHandler([])
+        return
+      }
       let shouldPlaySound = notification.request.content.sound != nil
-      if shouldPlaySound, playRestTimerSound() {
-        completionHandler([.banner])
-      } else if shouldPlaySound {
+      if shouldPlaySound {
         completionHandler([.banner, .sound])
       } else {
         completionHandler([.banner])
@@ -56,20 +63,42 @@ import UserNotifications
       return false
     }
 
-    restTimerPlayer?.stop()
+    finishRestTimerPlayback()
+    let audioSession = AVAudioSession.sharedInstance()
+    do {
+      try audioSession.setCategory(.playback, mode: .default, options: [.duckOthers])
+      try audioSession.setActive(true)
+    } catch {
+      // AVAudioPlayer can still succeed with the existing audio session.
+    }
     restTimerPlayer = player
     player.delegate = self
     player.prepareToPlay()
     if player.play() {
       return true
     }
-    restTimerPlayer = nil
+    finishRestTimerPlayback()
     return false
+  }
+
+  private func finishRestTimerPlayback() {
+    restTimerPlayer?.stop()
+    restTimerPlayer = nil
+    try? AVAudioSession.sharedInstance().setActive(
+      false,
+      options: [.notifyOthersOnDeactivation]
+    )
   }
 
   func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
     if restTimerPlayer === player {
-      restTimerPlayer = nil
+      finishRestTimerPlayback()
+    }
+  }
+
+  func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+    if restTimerPlayer === player {
+      finishRestTimerPlayback()
     }
   }
 }

@@ -236,7 +236,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     if (progression.restKind != CircuitRestKind.none) {
       await sl<RestTimerCoordinator>().start(
         RestTimerSession(
-          id: '${widget.trainingId}:${widget.args.blockId}',
+          id: '${widget.trainingId}:${widget.args.blockId}:${_restEndsAt!.millisecondsSinceEpoch}',
           exerciseName: _currentExercise.exercise.name,
           durationSeconds: progression.restSeconds,
           endsAt: _restEndsAt!,
@@ -382,16 +382,21 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return result;
   }
 
-  Future<void> _finishRest() async {
+  Future<void> _finishRest({required bool finishedNaturally}) async {
     if (_status != _CircuitStatus.roundResting &&
         _status != _CircuitStatus.exerciseResting &&
         _status != _CircuitStatus.finalResting) {
       return;
     }
 
-    await sl<RestTimerCoordinator>().cancel();
+    final restTimerCoordinator = sl<RestTimerCoordinator>();
+    if (finishedNaturally) {
+      await restTimerCoordinator.finish();
+    } else {
+      await restTimerCoordinator.cancel();
+    }
     if (_status == _CircuitStatus.finalResting) {
-      await _finishCircuit();
+      await _finishCircuit(cancelRestTimer: false);
       return;
     }
 
@@ -405,11 +410,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     });
   }
 
-  Future<void> _finishCircuit() async {
+  Future<void> _finishCircuit({bool cancelRestTimer = true}) async {
     if (_markedComplete) return;
     _markedComplete = true;
     final trainingBloc = context.read<TrainingBloc>();
-    await sl<RestTimerCoordinator>().cancel();
+    if (cancelRestTimer) {
+      await sl<RestTimerCoordinator>().cancel();
+    }
 
     try {
       for (final trainingExercise in widget.args.exercises) {
@@ -691,7 +698,10 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                         nextExerciseName: _status == _CircuitStatus.roundResting
                             ? widget.args.exercises.first.exercise.name
                             : _currentExercise.exercise.name,
-                        onSkip: () => unawaited(_finishRest()),
+                        onSkip: () =>
+                            unawaited(_finishRest(finishedNaturally: false)),
+                        onFinished: () =>
+                            unawaited(_finishRest(finishedNaturally: true)),
                       )
                     : SizedBox(
                         key: const ValueKey('circuit-executing-footer'),
@@ -787,6 +797,7 @@ class _RoundRestFooter extends StatefulWidget {
   final int totalSeconds;
   final DateTime restEndsAt;
   final VoidCallback onSkip;
+  final VoidCallback onFinished;
   final String title;
   final String nextExerciseName;
 
@@ -795,6 +806,7 @@ class _RoundRestFooter extends StatefulWidget {
     required this.totalSeconds,
     required this.restEndsAt,
     required this.onSkip,
+    required this.onFinished,
     required this.title,
     required this.nextExerciseName,
   });
@@ -815,10 +827,17 @@ class _RoundRestFooterState extends State<_RoundRestFooter> {
       if (_remainingSeconds <= 0 && !_didFinish) {
         _didFinish = true;
         _ticker?.cancel();
-        widget.onSkip();
+        widget.onFinished();
         return;
       }
       setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _remainingSeconds <= 0 && !_didFinish) {
+        _didFinish = true;
+        _ticker?.cancel();
+        widget.onFinished();
+      }
     });
   }
 

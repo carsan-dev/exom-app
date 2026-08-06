@@ -25,6 +25,7 @@ abstract class RestTimerCoordinator {
   RestTimerSession? get activeSession;
 
   Future<void> start(RestTimerSession session);
+  Future<void> finish();
   Future<void> cancel();
 }
 
@@ -57,6 +58,21 @@ class PlatformRestTimerCoordinator implements RestTimerCoordinator {
       // Unit tests and unsupported platforms keep internal countdown working.
     } on PlatformException {
       // Notification denial/failure must never stop workout progression.
+    }
+  }
+
+  @override
+  Future<void> finish() async {
+    final session = _activeSession;
+    if (session == null) return;
+
+    _activeSession = null;
+    try {
+      await _channel.invokeMethod<void>('finish', {'id': session.id});
+    } on MissingPluginException {
+      // Unit tests and unsupported platforms keep internal countdown working.
+    } on PlatformException {
+      // Native completion failure must never stop workout progression.
     }
   }
 

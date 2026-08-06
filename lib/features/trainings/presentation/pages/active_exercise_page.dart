@@ -627,7 +627,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                           ),
                           onFinished: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const SkipRest()),
+                              .add(const FinishRest()),
                         ),
                         ActiveExerciseStatus.finalResting => _RestingFooter(
                           key: ValueKey(
@@ -640,7 +640,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                           ),
                           onFinished: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const SkipRest()),
+                              .add(const FinishRest()),
                         ),
                         ActiveExerciseStatus.done => Container(
                           key: const ValueKey('footer-done'),

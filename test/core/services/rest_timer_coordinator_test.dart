@@ -21,7 +21,7 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  test('starts, replaces and cancels one active session', () async {
+  test('starts, replaces, finishes and cancels one active session', () async {
     var soundEnabled = false;
     final coordinator = PlatformRestTimerCoordinator(
       notificationSoundEnabled: () => soundEnabled,
@@ -44,7 +44,7 @@ void main() {
     soundEnabled = true;
     await coordinator.start(second);
     expect(coordinator.activeSession, same(second));
-    await coordinator.cancel();
+    await coordinator.finish();
 
     expect(coordinator.activeSession, isNull);
     expect(calls.map((call) => call.method), [
@@ -52,6 +52,17 @@ void main() {
       'start',
       'cancel',
       'start',
+      'finish',
+    ]);
+    expect((calls[4].arguments as Map)['id'], 'second');
+
+    await coordinator.cancel();
+    expect(calls.map((call) => call.method), [
+      'cancel',
+      'start',
+      'cancel',
+      'start',
+      'finish',
       'cancel',
     ]);
     expect((calls[1].arguments as Map)['soundEnabled'], false);

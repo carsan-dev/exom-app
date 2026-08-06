@@ -28,6 +28,10 @@ class SkipRest extends ActiveExerciseEvent {
   const SkipRest();
 }
 
+class FinishRest extends ActiveExerciseEvent {
+  const FinishRest();
+}
+
 class AbandonExercise extends ActiveExerciseEvent {
   const AbandonExercise();
 }
@@ -146,6 +150,7 @@ class ActiveExerciseBloc
     on<StartExercise>(_onStartExercise);
     on<CompleteSet>(_onCompleteSet);
     on<SkipRest>(_onSkipRest);
+    on<FinishRest>(_onFinishRest);
     on<AbandonExercise>(_onAbandonExercise);
   }
 
@@ -266,9 +271,27 @@ class ActiveExerciseBloc
     SkipRest event,
     Emitter<ActiveExerciseState> emit,
   ) async {
+    await _leaveRest(emit, finishedNaturally: false);
+  }
+
+  Future<void> _onFinishRest(
+    FinishRest event,
+    Emitter<ActiveExerciseState> emit,
+  ) async {
+    await _leaveRest(emit, finishedNaturally: true);
+  }
+
+  Future<void> _leaveRest(
+    Emitter<ActiveExerciseState> emit, {
+    required bool finishedNaturally,
+  }) async {
     if (!state.isResting) return;
 
-    await _restTimerCoordinator.cancel();
+    if (finishedNaturally) {
+      await _restTimerCoordinator.finish();
+    } else {
+      await _restTimerCoordinator.cancel();
+    }
     if (state.isFinalResting) {
       final doneState = state.copyWith(
         status: ActiveExerciseStatus.done,
@@ -343,7 +366,7 @@ class ActiveExerciseBloc
     final exerciseId = _exerciseId ?? _trainingExercise.exercise.id;
     return _restTimerCoordinator.start(
       RestTimerSession(
-        id: '${_trainingId ?? ''}:$exerciseId',
+        id: '${_trainingId ?? ''}:$exerciseId:${restState.restEndsAt!.millisecondsSinceEpoch}',
         exerciseName: _trainingExercise.exercise.name,
         durationSeconds: restState.restSeconds,
         endsAt: restState.restEndsAt!,

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
@@ -18,6 +19,32 @@ class _FakeStore implements ActiveWorkoutLocalStore {
   @override
   Future<void> removeActiveWorkout(String exerciseId) async {
     _data.remove(exerciseId);
+  }
+}
+
+class _FakeRestTimerCoordinator implements RestTimerCoordinator {
+  @override
+  RestTimerSession? activeSession;
+  final startedSessions = <RestTimerSession>[];
+  int finishCalls = 0;
+  int cancelCalls = 0;
+
+  @override
+  Future<void> start(RestTimerSession session) async {
+    activeSession = session;
+    startedSessions.add(session);
+  }
+
+  @override
+  Future<void> finish() async {
+    activeSession = null;
+    finishCalls += 1;
+  }
+
+  @override
+  Future<void> cancel() async {
+    activeSession = null;
+    cancelCalls += 1;
   }
 }
 
@@ -343,9 +370,11 @@ void main() {
 
     test('SkipRest transitions back to executing', () async {
       final store = _FakeStore();
+      final restTimerCoordinator = _FakeRestTimerCoordinator();
       final bloc = ActiveExerciseBloc(
         localStorage: store,
         trainingExercise: _trainingExercise(),
+        restTimerCoordinator: restTimerCoordinator,
       );
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
@@ -359,6 +388,57 @@ void main() {
       expect(bloc.state.status, ActiveExerciseStatus.executing);
       expect(bloc.state.restEndsAt, isNull);
       expect(store.getActiveWorkout('ex-1')!.restEndsAt, isNull);
+      expect(restTimerCoordinator.cancelCalls, 1);
+      expect(restTimerCoordinator.finishCalls, 0);
+    });
+
+    test(
+      'FinishRest completes native timer without cancelling its sound',
+      () async {
+        final store = _FakeStore();
+        final restTimerCoordinator = _FakeRestTimerCoordinator();
+        final bloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+          restTimerCoordinator: restTimerCoordinator,
+        );
+
+        bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+        await pumpEventQueue();
+        bloc.add(const CompleteSet());
+        await pumpEventQueue();
+
+        bloc.add(const FinishRest());
+        await pumpEventQueue();
+
+        expect(bloc.state.status, ActiveExerciseStatus.executing);
+        expect(restTimerCoordinator.finishCalls, 1);
+        expect(restTimerCoordinator.cancelCalls, 0);
+      },
+    );
+
+    test('each rest uses a unique native session id', () async {
+      final restTimerCoordinator = _FakeRestTimerCoordinator();
+      final bloc = ActiveExerciseBloc(
+        localStorage: _FakeStore(),
+        trainingExercise: _trainingExercise(),
+        restTimerCoordinator: restTimerCoordinator,
+      );
+
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      bloc.add(const CompleteSet());
+      await pumpEventQueue();
+      bloc.add(const FinishRest());
+      await pumpEventQueue();
+      bloc.add(const CompleteSet());
+      await pumpEventQueue();
+
+      expect(restTimerCoordinator.startedSessions, hasLength(2));
+      expect(
+        restTimerCoordinator.startedSessions.first.id,
+        isNot(restTimerCoordinator.startedSessions.last.id),
+      );
     });
 
     test('AbandonExercise keeps saved progress for later resume', () async {

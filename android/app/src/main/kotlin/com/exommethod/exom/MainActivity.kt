@@ -31,6 +31,14 @@ class MainActivity : FlutterActivity() {
                         ContextCompat.startForegroundService(this, intent)
                         result.success(null)
                     }
+                    "finish" -> {
+                        val intent = Intent(this, RestTimerService::class.java).apply {
+                            action = RestTimerService.ACTION_FINISH
+                            putExtra(RestTimerService.EXTRA_SESSION_ID, call.argument<String>("id"))
+                        }
+                        startService(intent)
+                        result.success(null)
+                    }
                     "cancel" -> {
                         stopService(Intent(this, RestTimerService::class.java))
                         result.success(null)

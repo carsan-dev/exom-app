@@ -6,6 +6,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
@@ -22,7 +24,11 @@ class RestTimerService : Service() {
     private var durationSeconds = 0
     private var exerciseName = ""
     private var soundEnabled = true
+    private var timerFinished = false
     private var completionPlayer: MediaPlayer? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var hasAudioFocus = false
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { }
 
     private val tickRunnable = object : Runnable {
         override fun run() {
@@ -45,9 +51,15 @@ class RestTimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_FINISH) {
+            val finished = finishTimer(intent.getStringExtra(EXTRA_SESSION_ID))
+            if (!finished && sessionId == null) stopSelf(startId)
+            return START_NOT_STICKY
+        }
         if (intent?.action != ACTION_START) return START_NOT_STICKY
 
         releaseCompletionPlayer()
+        timerFinished = false
         sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
         endsAtMillis = intent.getLongExtra(EXTRA_ENDS_AT_MILLIS, 0L)
         exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME).orEmpty()
@@ -128,20 +140,27 @@ class RestTimerService : Service() {
         )
     }
 
-    private fun finishTimer() {
+    private fun finishTimer(expectedSessionId: String? = null): Boolean {
+        if (timerFinished ||
+            (expectedSessionId != null && expectedSessionId != sessionId)
+        ) {
+            return false
+        }
+
+        timerFinished = true
         handler.removeCallbacks(tickRunnable)
         showFinishedNotification()
-        stopForeground(STOP_FOREGROUND_REMOVE)
         if (soundEnabled) {
             playFinishedSound()
         } else {
-            stopSelf()
+            stopTimerService()
         }
+        return true
     }
 
     private fun playFinishedSound() {
         val attributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         val player = try {
@@ -150,30 +169,66 @@ class RestTimerService : Service() {
             null
         }
         if (player == null) {
-            stopSelf()
+            stopTimerService()
             return
         }
 
         completionPlayer = player
+        requestCompletionAudioFocus(attributes)
+        player.setVolume(1.0f, 1.0f)
         player.setOnCompletionListener { completedPlayer ->
             if (completionPlayer === completedPlayer) {
                 releaseCompletionPlayer()
-                stopSelf()
+                stopTimerService()
             }
         }
         player.setOnErrorListener { failedPlayer, _, _ ->
             if (completionPlayer === failedPlayer) {
                 releaseCompletionPlayer()
-                stopSelf()
+                stopTimerService()
             }
             true
         }
         try {
             player.start()
-        } catch (_: IllegalStateException) {
+        } catch (_: RuntimeException) {
             releaseCompletionPlayer()
-            stopSelf()
+            stopTimerService()
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun requestCompletionAudioFocus(attributes: AudioAttributes) {
+        val audioManager = getSystemService(AudioManager::class.java)
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(attributes)
+                .setOnAudioFocusChangeListener(audioFocusChangeListener, handler)
+                .build()
+                .also { audioFocusRequest = it }
+                .let(audioManager::requestAudioFocus)
+        } else {
+            audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_ALARM,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+            )
+        }
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    @Suppress("DEPRECATION")
+    private fun abandonCompletionAudioFocus() {
+        val audioManager = getSystemService(AudioManager::class.java)
+        if (hasAudioFocus) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
+            } else {
+                audioManager.abandonAudioFocus(audioFocusChangeListener)
+            }
+        }
+        audioFocusRequest = null
+        hasAudioFocus = false
     }
 
     private fun releaseCompletionPlayer() {
@@ -181,6 +236,12 @@ class RestTimerService : Service() {
         completionPlayer?.setOnErrorListener(null)
         completionPlayer?.release()
         completionPlayer = null
+        abandonCompletionAudioFocus()
+    }
+
+    private fun stopTimerService() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun openAppIntent(): PendingIntent {
@@ -224,6 +285,7 @@ class RestTimerService : Service() {
 
     companion object {
         const val ACTION_START = "com.exommethod.exom.action.START_REST_TIMER"
+        const val ACTION_FINISH = "com.exommethod.exom.action.FINISH_REST_TIMER"
         const val EXTRA_SESSION_ID = "session_id"
         const val EXTRA_EXERCISE_NAME = "exercise_name"
         const val EXTRA_DURATION_SECONDS = "duration_seconds"

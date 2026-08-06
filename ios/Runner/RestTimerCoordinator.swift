@@ -9,6 +9,7 @@ struct RestTimerAttributes: ActivityAttributes {
 
   let sessionId: String
   let exerciseName: String
+  let startedAt: Date
 }
 
 final class RestTimerCoordinator {
@@ -92,7 +93,11 @@ final class RestTimerCoordinator {
     guard #available(iOS 16.1, *), ActivityAuthorizationInfo().areActivitiesEnabled else {
       return
     }
-    let attributes = RestTimerAttributes(sessionId: id, exerciseName: exerciseName)
+    let attributes = RestTimerAttributes(
+      sessionId: id,
+      exerciseName: exerciseName,
+      startedAt: Date()
+    )
     do {
       _ = try Activity.request(
         attributes: attributes,

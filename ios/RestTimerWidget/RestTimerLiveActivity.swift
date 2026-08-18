@@ -28,7 +28,7 @@ private struct ExomMark: View {
       .renderingMode(.template)
       .resizable()
       .scaledToFit()
-      .foregroundStyle(onAccent ? ExomLiveActivityStyle.cocoa : ExomLiveActivityStyle.lime)
+      .foregroundColor(onAccent ? ExomLiveActivityStyle.cocoa : ExomLiveActivityStyle.lime)
       .frame(width: size, height: size)
       .accessibilityHidden(true)
   }
@@ -96,6 +96,7 @@ struct RestTimerLiveActivity: Widget {
               .foregroundStyle(ExomLiveActivityStyle.ivory)
               .lineLimit(1)
             progress(from: context.attributes.startedAt, until: context.state.endsAt)
+              .padding(.horizontal, 8)
           }
           .padding(.top, 4)
         }
@@ -105,8 +106,8 @@ struct RestTimerLiveActivity: Widget {
         countdown(until: context.state.endsAt)
           .font(.caption.weight(.bold))
           .monospacedDigit()
-          .foregroundStyle(ExomLiveActivityStyle.ivory)
-          .frame(maxWidth: 44)
+          .foregroundStyle(ExomLiveActivityStyle.lime)
+          .frame(minWidth: 38, alignment: .trailing)
       } minimal: {
         ExomMark(size: 18)
       }
@@ -119,7 +120,11 @@ struct RestTimerLiveActivity: Widget {
   }
 
   private func progress(from start: Date, until end: Date) -> some View {
-    ProgressView(timerInterval: start...end, countsDown: true)
+    ProgressView(timerInterval: start...end, countsDown: true) {
+      EmptyView()
+    } currentValueLabel: {
+      EmptyView()
+    }
       .progressViewStyle(.linear)
       .tint(ExomLiveActivityStyle.lime)
       .background(ExomLiveActivityStyle.track, in: Capsule())

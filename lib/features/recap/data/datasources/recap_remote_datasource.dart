@@ -71,7 +71,7 @@ class RecapRemoteDataSourceImpl implements RecapRemoteDataSource {
   Future<RecapModel> updateRecap(String id, Map<String, dynamic> data) async {
     final response = await _apiClient.dio.put<dynamic>(
       '/recaps/$id',
-      data: RecapModel.toCreateJson(data),
+      data: RecapModel.toUpdateJson(data),
     );
     final respData = response.data;
     if (respData is Map<String, dynamic>) {

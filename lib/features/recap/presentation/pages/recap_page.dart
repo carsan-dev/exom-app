@@ -360,6 +360,7 @@ class _RecapViewState extends State<_RecapView> {
       'week_end_date': _apiDateFormat.format(recap.weekEndDate),
       'training_effort': recap.trainingEffort,
       'training_sessions': recap.trainingSessions,
+      'average_daily_steps': recap.averageDailySteps,
       'training_progress': recap.trainingProgress,
       'training_notes': recap.trainingNotes,
       'nutrition_quality': recap.nutritionQuality,
@@ -782,6 +783,8 @@ class _RecapFormView extends StatelessWidget {
   bool get _isStartStep => state.step == _stepStart;
   bool get _isImprovementStep => state.step == _stepImprovement;
   bool get _isCoreStep => state.step >= 1 && state.step <= 4;
+  bool get _hasValidationErrors =>
+      !isValidRecapAverageDailySteps(state.formData['average_daily_steps']);
 
   @override
   Widget build(BuildContext context) {
@@ -888,6 +891,17 @@ class _RecapFormView extends StatelessWidget {
             decoration: _recapStickyBarDecoration(context),
             child: Column(
               children: [
+                if (_hasValidationErrors) ...[
+                  Text(
+                    l10n.correctInvalidRecapFields,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: palette.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Row(
                   children: [
                     TextButton.icon(
@@ -899,7 +913,7 @@ class _RecapFormView extends StatelessWidget {
                     ),
                     const Spacer(),
                     OutlinedButton.icon(
-                      onPressed: onSaveDraft,
+                      onPressed: _hasValidationErrors ? null : onSaveDraft,
                       icon: const Icon(Icons.save_outlined),
                       label: Text(l10n.save),
                     ),
@@ -910,7 +924,7 @@ class _RecapFormView extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _isImprovementStep
-                        ? onSubmit
+                        ? (_hasValidationErrors ? null : onSubmit)
                         : () => onStepChanged(state.step + 1),
                     icon: Icon(
                       _isImprovementStep

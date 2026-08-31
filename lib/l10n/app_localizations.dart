@@ -2036,6 +2036,54 @@ abstract class AppLocalizations {
   /// **'¿Cómo valoras el número de sesiones?'**
   String get howDoYouRateTheNumberOfSessions;
 
+  /// No description provided for @dailyActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad diaria'**
+  String get dailyActivity;
+
+  /// No description provided for @dailyActivityRecapDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade el movimiento cotidiano para completar el contexto de la semana.'**
+  String get dailyActivityRecapDescription;
+
+  /// No description provided for @averageDailySteps.
+  ///
+  /// In es, this message translates to:
+  /// **'Media diaria de pasos'**
+  String get averageDailySteps;
+
+  /// No description provided for @averageDailyStepsHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'Consulta la media de los últimos siete días en tu móvil o reloj.'**
+  String get averageDailyStepsHelper;
+
+  /// No description provided for @averageDailyStepsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: 8500'**
+  String get averageDailyStepsHint;
+
+  /// No description provided for @stepsPerDay.
+  ///
+  /// In es, this message translates to:
+  /// **'pasos/día'**
+  String get stepsPerDay;
+
+  /// No description provided for @averageDailyStepsRangeError.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce un valor entre 0 y 200.000.'**
+  String get averageDailyStepsRangeError;
+
+  /// No description provided for @correctInvalidRecapFields.
+  ///
+  /// In es, this message translates to:
+  /// **'Corrige los campos no válidos antes de guardar o enviar.'**
+  String get correctInvalidRecapFields;
+
   /// No description provided for @perceivedProgress.
   ///
   /// In es, this message translates to:

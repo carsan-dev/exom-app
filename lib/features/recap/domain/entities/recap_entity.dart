@@ -1,3 +1,9 @@
+const int recapAverageDailyStepsMax = 200000;
+
+bool isValidRecapAverageDailySteps(Object? value) =>
+    value == null ||
+    (value is int && value >= 0 && value <= recapAverageDailyStepsMax);
+
 class RecapEntity {
   final String id;
   final DateTime weekStartDate;
@@ -7,6 +13,7 @@ class RecapEntity {
   // Training
   final int? trainingEffort;
   final int? trainingSessions;
+  final int? averageDailySteps;
   final String? trainingProgress;
   final String? trainingNotes;
 
@@ -52,6 +59,7 @@ class RecapEntity {
     required this.status,
     this.trainingEffort,
     this.trainingSessions,
+    this.averageDailySteps,
     this.trainingProgress,
     this.trainingNotes,
     this.nutritionQuality,
@@ -97,6 +105,7 @@ class RecapEntity {
       status: status,
       trainingEffort: trainingEffort,
       trainingSessions: trainingSessions,
+      averageDailySteps: averageDailySteps,
       trainingProgress: trainingProgress,
       trainingNotes: trainingNotes,
       nutritionQuality: nutritionQuality,

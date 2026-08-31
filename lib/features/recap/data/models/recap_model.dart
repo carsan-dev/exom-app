@@ -8,6 +8,7 @@ class RecapModel extends RecapEntity {
     required super.status,
     super.trainingEffort,
     super.trainingSessions,
+    super.averageDailySteps,
     super.trainingProgress,
     super.trainingNotes,
     super.nutritionQuality,
@@ -43,6 +44,7 @@ class RecapModel extends RecapEntity {
       status: json['status'] as String? ?? 'DRAFT',
       trainingEffort: json['training_effort'] as int?,
       trainingSessions: json['training_sessions'] as int?,
+      averageDailySteps: json['average_daily_steps'] as int?,
       trainingProgress: json['training_progress'] as String?,
       trainingNotes: json['training_notes'] as String?,
       nutritionQuality: json['nutrition_quality'] as String?,
@@ -111,6 +113,35 @@ class RecapModel extends RecapEntity {
 
     if (payload['stress_enabled'] != true) {
       payload.remove('stress_level');
+    }
+
+    return payload;
+  }
+
+  static Map<String, dynamic> toUpdateJson(Map<String, dynamic> formData) {
+    final payload = Map<String, dynamic>.from(formData);
+
+    for (final entry in formData.entries) {
+      final value = entry.value;
+      if (value is String && value.trim().isEmpty) {
+        payload[entry.key] = null;
+      }
+    }
+
+    for (final field in const ['muscle_pain_zones', 'improvement_areas']) {
+      if (payload.containsKey(field)) {
+        payload[field] = List<String>.from(
+          (payload[field] as List<dynamic>?) ?? const <String>[],
+        );
+      }
+    }
+
+    if (payload['hydration_enabled'] == false) {
+      payload['hydration_level'] = null;
+    }
+
+    if (payload['stress_enabled'] == false) {
+      payload['stress_level'] = null;
     }
 
     return payload;

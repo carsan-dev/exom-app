@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
 
 class RecapStepTraining extends StatelessWidget {
@@ -62,6 +63,21 @@ class RecapStepTraining extends StatelessWidget {
                 'EXCELENTE',
               ],
               onSelected: (value) => onChanged('training_progress', value),
+            ),
+          ),
+          RecapSectionCard(
+            title: l10n.dailyActivity,
+            subtitle: l10n.dailyActivityRecapDescription,
+            icon: Icons.directions_walk,
+            child: RecapIntegerField(
+              label: l10n.averageDailySteps,
+              helperText: l10n.averageDailyStepsHelper,
+              hintText: l10n.averageDailyStepsHint,
+              suffixText: l10n.stepsPerDay,
+              maxErrorText: l10n.averageDailyStepsRangeError,
+              value: (formData['average_daily_steps'] as num?)?.toInt(),
+              max: recapAverageDailyStepsMax,
+              onChanged: (value) => onChanged('average_daily_steps', value),
             ),
           ),
           RecapSectionCard(

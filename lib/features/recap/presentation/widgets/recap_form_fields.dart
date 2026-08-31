@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -633,6 +634,112 @@ class RecapBodyMapField extends StatelessWidget {
             }).toList(),
           ),
         ],
+      ],
+    );
+  }
+}
+
+class RecapIntegerField extends StatefulWidget {
+  final String label;
+  final String helperText;
+  final String hintText;
+  final String? suffixText;
+  final String maxErrorText;
+  final int? value;
+  final int max;
+  final ValueChanged<int?> onChanged;
+
+  const RecapIntegerField({
+    super.key,
+    required this.label,
+    required this.helperText,
+    required this.hintText,
+    this.suffixText,
+    required this.maxErrorText,
+    required this.value,
+    required this.max,
+    required this.onChanged,
+  });
+
+  @override
+  State<RecapIntegerField> createState() => _RecapIntegerFieldState();
+}
+
+class _RecapIntegerFieldState extends State<RecapIntegerField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value?.toString() ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant RecapIntegerField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextText = widget.value?.toString() ?? '';
+    if (oldWidget.value != widget.value && _controller.text != nextText) {
+      _controller
+        ..text = nextText
+        ..selection = TextSelection.collapsed(offset: nextText.length);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: palette.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          widget.helperText,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: palette.textSecondary,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controller,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(widget.max.toString().length + 1),
+          ],
+          style: TextStyle(color: palette.textPrimary),
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            suffixText: widget.suffixText,
+            errorText:
+                (_controller.text.isNotEmpty &&
+                    (int.tryParse(_controller.text) ?? widget.max + 1) >
+                        widget.max)
+                ? widget.maxErrorText
+                : null,
+            hintStyle: TextStyle(color: palette.textDisabled),
+          ),
+          onChanged: (text) {
+            setState(() {});
+            widget.onChanged(text.isEmpty ? null : int.tryParse(text));
+          },
+        ),
       ],
     );
   }

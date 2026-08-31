@@ -1069,6 +1069,34 @@ class AppLocalizationsEs extends AppLocalizations {
       '¿Cómo valoras el número de sesiones?';
 
   @override
+  String get dailyActivity => 'Actividad diaria';
+
+  @override
+  String get dailyActivityRecapDescription =>
+      'Añade el movimiento cotidiano para completar el contexto de la semana.';
+
+  @override
+  String get averageDailySteps => 'Media diaria de pasos';
+
+  @override
+  String get averageDailyStepsHelper =>
+      'Consulta la media de los últimos siete días en tu móvil o reloj.';
+
+  @override
+  String get averageDailyStepsHint => 'Ej: 8500';
+
+  @override
+  String get stepsPerDay => 'pasos/día';
+
+  @override
+  String get averageDailyStepsRangeError =>
+      'Introduce un valor entre 0 y 200.000.';
+
+  @override
+  String get correctInvalidRecapFields =>
+      'Corrige los campos no válidos antes de guardar o enviar.';
+
+  @override
   String get perceivedProgress => 'Progreso percibido';
 
   @override

@@ -305,6 +305,12 @@ class _RecapDetailContent extends StatelessWidget {
           children: [
             _Item('Esfuerzo', recap.trainingEffort?.toString() ?? '—'),
             _Item('Sesiones', recap.trainingSessions?.toString() ?? '—'),
+            _Item(
+              l10n.averageDailySteps,
+              recap.averageDailySteps != null
+                  ? '${NumberFormat.decimalPattern(l10n.localeName).format(recap.averageDailySteps)} ${l10n.stepsPerDay}'
+                  : '—',
+            ),
             _Item('Progreso', _opt(recap.trainingProgress)),
             _Item('Notas', recap.trainingNotes ?? '—'),
           ],

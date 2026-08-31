@@ -167,6 +167,8 @@
   "warmUp": "Calentamiento",
   "cooldown": "Enfriamiento",
   "addQuickNoteOptional": "Añadir nota rápida (Opcional)",
+  "yourTrainingNote": "Tu nota",
+  "trainerReply": "Respuesta de tu entrenador",
   "completedExercisesLabel": "ejercicios completados",
   "workoutCompletedMessage": "¡Entrenamiento completado!",
   "rest": "descanso",

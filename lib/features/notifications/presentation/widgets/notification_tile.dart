@@ -20,6 +20,7 @@ class NotificationTile extends StatelessWidget {
     switch (type) {
       case 'training':
       case 'training_reminder':
+      case 'training_note_reply':
         return Icons.fitness_center;
       case 'diet':
       case 'diet_reminder':
@@ -78,11 +79,7 @@ class NotificationTile extends StatelessWidget {
                   color: palette.primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  _iconForType(),
-                  color: palette.primary,
-                  size: 20,
-                ),
+                child: Icon(_iconForType(), color: palette.primary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(

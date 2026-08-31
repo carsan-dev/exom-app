@@ -818,6 +818,18 @@ abstract class AppLocalizations {
   /// **'Añadir nota rápida (Opcional)'**
   String get addQuickNoteOptional;
 
+  /// No description provided for @yourTrainingNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu nota'**
+  String get yourTrainingNote;
+
+  /// No description provided for @trainerReply.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta de tu entrenador'**
+  String get trainerReply;
+
   /// No description provided for @completedExercisesLabel.
   ///
   /// In es, this message translates to:

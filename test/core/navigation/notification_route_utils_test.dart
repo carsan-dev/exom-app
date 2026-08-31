@@ -58,6 +58,10 @@ void main() {
         '/recap/abc',
       );
       expect(resolveNotificationRoute({'type': 'training'}), '/trainings');
+      expect(
+        resolveNotificationRoute({'type': 'training_note_reply'}),
+        '/trainings',
+      );
       expect(resolveNotificationRoute(const {}), '/notifications');
     });
 

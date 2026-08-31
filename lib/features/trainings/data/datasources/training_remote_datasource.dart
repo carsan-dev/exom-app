@@ -24,7 +24,7 @@ abstract class TrainingRemoteDataSource {
     required String trainingId,
     String? notes,
   });
-  Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date});
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date});
   Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
     List<String> exerciseIds,
     String beforeDate,
@@ -68,6 +68,55 @@ List<TrainingHistoryModel> buildTrainingHistory(
 
   history.sort((left, right) => right.date.compareTo(left.date));
   return List<TrainingHistoryModel>.unmodifiable(history);
+}
+
+TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
+  final list = json['exercises_completed'] as List? ?? [];
+  final ids = <String>{};
+  final weights = <String, double>{};
+  final performances = <String, List<SetPerformance>>{};
+
+  for (final entry in list.whereType<Map>()) {
+    final id = (entry['training_exercise_id'] ?? entry['exercise_id'])
+        ?.toString();
+    if (id == null || id.isEmpty) continue;
+    ids.add(id);
+
+    final weight = entry['weight_used'];
+    if (weight is num) {
+      weights[id] = weight.toDouble();
+    }
+
+    final sets = entry['sets'];
+    if (sets is List) {
+      performances[id] = sets
+          .whereType<Map>()
+          .map(
+            (set) => SetPerformance(
+              setNumber: set['set_number'] as int? ?? 1,
+              reps: set['reps'] as int?,
+              seconds: set['seconds'] as int?,
+              weightKg: (set['weight_kg'] as num?)?.toDouble(),
+            ),
+          )
+          .where(
+            (set) =>
+                set.reps != null || set.seconds != null || set.weightKg != null,
+          )
+          .toList(growable: false);
+    }
+  }
+
+  return TrainingDayProgress(
+    ids: ids,
+    weights: weights,
+    performances: performances,
+    note: json['notes'] as String?,
+    adminReplyText: json['admin_reply_text'] as String?,
+    adminReplySentAt: DateTime.tryParse(
+      json['admin_reply_sent_at'] as String? ?? '',
+    ),
+  );
 }
 
 class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
@@ -465,9 +514,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<CompletedExerciseProgress> getCompletedExerciseIds({
-    String? date,
-  }) async {
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async {
     final targetDate = _resolvedDate(date);
     final cacheKey = 'completed_exercises_$targetDate';
 
@@ -479,66 +526,29 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        final list = inner['exercises_completed'] as List? ?? [];
-        final ids = <String>{};
-        final weights = <String, double>{};
-        final performances = <String, List<SetPerformance>>{};
-        for (final entry in list) {
-          final map = entry as Map<String, dynamic>;
-          final id =
-              (map['training_exercise_id'] ?? map['exercise_id']) as String;
-          ids.add(id);
-          final w = map['weight_used'];
-          if (w != null) {
-            weights[id] = (w as num).toDouble();
-          }
-          final sets = map['sets'];
-          if (sets is List) {
-            performances[id] = sets
-                .whereType<Map<String, dynamic>>()
-                .map(
-                  (set) => SetPerformance(
-                    setNumber: set['set_number'] as int? ?? 1,
-                    reps: set['reps'] as int?,
-                    seconds: set['seconds'] as int?,
-                    weightKg: (set['weight_kg'] as num?)?.toDouble(),
-                  ),
-                )
-                .where(
-                  (set) =>
-                      set.reps != null ||
-                      set.seconds != null ||
-                      set.weightKg != null,
-                )
-                .toList(growable: false);
-          }
-        }
-        await _localStorage.cacheData(cacheKey, ids.toList());
+        final progress = parseTrainingDayProgress(inner);
+        await _localStorage.cacheData(cacheKey, progress.ids.toList());
         await _localStorage.cacheData('day_progress_$targetDate', inner);
         await _localStorage.cacheData('home_progress_$targetDate', inner);
-        return (ids: ids, weights: weights, performances: performances);
+        return progress;
       }
-      return (
-        ids: <String>{},
-        weights: <String, double>{},
-        performances: <String, List<SetPerformance>>{},
-      );
+      return const TrainingDayProgress();
     } catch (error) {
       if (isOfflineError(error)) {
+        final cachedProgress = _localStorage.getCachedMap(
+          'day_progress_$targetDate',
+        );
+        if (cachedProgress != null) {
+          return parseTrainingDayProgress(cachedProgress);
+        }
         final cached = _localStorage.getCachedList(cacheKey);
         if (cached != null) {
-          return (
+          return TrainingDayProgress(
             ids: cached.map((item) => item.toString()).toSet(),
-            weights: <String, double>{},
-            performances: <String, List<SetPerformance>>{},
           );
         }
       }
-      return (
-        ids: <String>{},
-        weights: <String, double>{},
-        performances: <String, List<SetPerformance>>{},
-      );
+      return const TrainingDayProgress();
     }
   }
 

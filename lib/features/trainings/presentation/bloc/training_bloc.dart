@@ -124,11 +124,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     try {
       final targetDate = _resolvedDate(event.date);
       final training = await _getTrainingUseCase(event.id);
-      CompletedExerciseProgress progress = (
-        ids: <String>{},
-        weights: <String, double>{},
-        performances: <String, List<SetPerformance>>{},
-      );
+      var progress = const TrainingDayProgress();
       try {
         progress = await _getCompletedExercisesUseCase(targetDate);
       } catch (_) {}
@@ -162,6 +158,9 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
           currentPerformances: normalizedProgress.performances,
           previousPerformances: previousPerformances,
           selectedDate: targetDate,
+          clientNote: progress.note,
+          adminReplyText: progress.adminReplyText,
+          adminReplySentAt: progress.adminReplySentAt,
         ),
       );
     } catch (e) {

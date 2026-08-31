@@ -48,7 +48,7 @@ String resolveNotificationRoute(Map<String, dynamic> data) {
   final type = data['type']?.toString().toLowerCase();
   final fallbackRoute = switch (type) {
     'recap_feedback' || 'recap_reminder' || 'recap' => '/recap',
-    'training' || 'training_reminder' => '/trainings',
+    'training' || 'training_reminder' || 'training_note_reply' => '/trainings',
     'meal' || 'diet' || 'diet_reminder' => '/diets',
     'challenge' || 'challenge_update' => '/challenges',
     'profile' => '/profile',

@@ -47,6 +47,24 @@ typedef CompletedExerciseProgress = ({
   Map<String, List<SetPerformance>> performances,
 });
 
+class TrainingDayProgress {
+  final Set<String> ids;
+  final Map<String, double> weights;
+  final Map<String, List<SetPerformance>> performances;
+  final String? note;
+  final String? adminReplyText;
+  final DateTime? adminReplySentAt;
+
+  const TrainingDayProgress({
+    this.ids = const {},
+    this.weights = const {},
+    this.performances = const {},
+    this.note,
+    this.adminReplyText,
+    this.adminReplySentAt,
+  });
+}
+
 class TrainingExerciseEntity {
   final String id;
   final int order;

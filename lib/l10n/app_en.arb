@@ -152,6 +152,8 @@
   "warmUp": "Warm-up",
   "cooldown": "Cooldown",
   "addQuickNoteOptional": "Add a quick note (optional)",
+  "yourTrainingNote": "Your note",
+  "trainerReply": "Your trainer's reply",
   "completedExercisesLabel": "completed exercises",
   "workoutCompletedMessage": "Workout completed!",
   "rest": "rest",

@@ -396,6 +396,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addQuickNoteOptional => 'Añadir nota rápida (Opcional)';
 
   @override
+  String get yourTrainingNote => 'Tu nota';
+
+  @override
+  String get trainerReply => 'Respuesta de tu entrenador';
+
+  @override
   String get completedExercisesLabel => 'ejercicios completados';
 
   @override

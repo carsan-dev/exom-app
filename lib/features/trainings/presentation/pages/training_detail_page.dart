@@ -708,6 +708,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     _DescriptionCard(text: training.cooldownDescription!),
                   ],
 
+                  if (widget.state.clientNote != null ||
+                      widget.state.adminReplyText != null)
+                    TrainingNoteReplyCard(
+                      note: widget.state.clientNote,
+                      reply: widget.state.adminReplyText,
+                    ),
+
                   // Quick notes
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -846,6 +853,72 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class TrainingNoteReplyCard extends StatelessWidget {
+  const TrainingNoteReplyCard({super.key, this.note, this.reply});
+
+  final String? note;
+  final String? reply;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (note != null) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 18,
+                  color: palette.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  AppLocalizations.of(context).yourTrainingNote,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(note!, style: theme.textTheme.bodyMedium),
+          ],
+          if (note != null && reply != null) const SizedBox(height: 16),
+          if (reply != null) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.mark_chat_read_outlined,
+                  size: 18,
+                  color: palette.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  AppLocalizations.of(context).trainerReply,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: palette.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(reply!, style: theme.textTheme.bodyMedium),
+          ],
+        ],
       ),
     );
   }

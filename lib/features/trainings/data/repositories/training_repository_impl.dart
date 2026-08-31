@@ -69,7 +69,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<CompletedExerciseProgress> getCompletedExerciseIds({String? date}) {
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) {
     return _remoteDataSource.getCompletedExerciseIds(date: date);
   }
 

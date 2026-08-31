@@ -242,6 +242,7 @@ class FcmService {
         break;
       case 'training':
       case 'training_reminder':
+      case 'training_note_reply':
         fallbackRoute = '/trainings';
         break;
       case 'meal':

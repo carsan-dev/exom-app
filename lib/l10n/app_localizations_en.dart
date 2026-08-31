@@ -393,6 +393,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addQuickNoteOptional => 'Add a quick note (optional)';
 
   @override
+  String get yourTrainingNote => 'Your note';
+
+  @override
+  String get trainerReply => 'Your trainer\'s reply';
+
+  @override
   String get completedExercisesLabel => 'completed exercises';
 
   @override

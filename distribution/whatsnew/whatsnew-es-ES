@@ -1,6 +1,2 @@
-- Mantén pulsado un lateral del vídeo para reproducirlo a 2× hasta soltar.
-- El descanso sigue en segundo plano y con la pantalla bloqueada, también tras la última serie.
-- Consulta el contador en la notificación de Android.
-- Escucha el nuevo aviso EXOM al terminar el descanso o desactívalo desde Ajustes.
-- Los ejercicios completados quedan claramente identificados tras la última serie.
-- Mayor estabilidad al finalizar o cerrar ejercicios.
+- Consulta tus pasos diarios en el recap semanal y sigue mejor tu actividad.
+- Recibe y consulta las respuestas de tu entrenador a las notas que dejas al completar un entreno.

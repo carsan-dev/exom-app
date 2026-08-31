@@ -18,6 +18,7 @@ import 'package:exom_app/features/trainings/domain/services/training_performance
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
+import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -572,6 +573,26 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               exerciseCount: blockExercises.length,
                               completedCount: completedCount,
                               color: color,
+                              onFeedback: () {
+                                context.push(
+                                  AppRoutes.feedback,
+                                  extra: FeedbackPageArgs.circuit(
+                                    circuitName: ex.blockName ?? 'Circuito',
+                                    circuitExercises: blockExercises
+                                        .map(
+                                          (blockExercise) =>
+                                              FeedbackExerciseTarget(
+                                                key: blockExercise.id,
+                                                exerciseId:
+                                                    blockExercise.exercise.id,
+                                                exerciseName:
+                                                    blockExercise.exercise.name,
+                                              ),
+                                        )
+                                        .toList(growable: false),
+                                  ),
+                                );
+                              },
                               onStart: () {
                                 context.push(
                                   AppRoutes.activeCircuitPath(
@@ -1059,6 +1080,7 @@ class _CircuitCard extends StatelessWidget {
   final int exerciseCount;
   final int completedCount;
   final Color color;
+  final VoidCallback onFeedback;
   final VoidCallback onStart;
   final VoidCallback? onMarkPending;
 
@@ -1069,6 +1091,7 @@ class _CircuitCard extends StatelessWidget {
     required this.exerciseCount,
     required this.completedCount,
     required this.color,
+    required this.onFeedback,
     required this.onStart,
     required this.onMarkPending,
   });
@@ -1190,6 +1213,16 @@ class _CircuitCard extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('circuit-feedback-button'),
+              onPressed: onFeedback,
+              icon: const Icon(Icons.video_library_outlined, size: 19),
+              label: Text(l10n.circuitFeedbackAction),
+            ),
           ),
         ],
       ),
@@ -1419,7 +1452,13 @@ class _ExerciseCard extends StatelessWidget {
     if (result.openFeedback) {
       GoRouter.of(context).push(
         AppRoutes.feedback,
-        extra: <String, String?>{'exerciseId': ex.id, 'exerciseName': ex.name},
+        extra: FeedbackPageArgs.exercise(
+          FeedbackExerciseTarget(
+            key: trainingExercise.id,
+            exerciseId: ex.id,
+            exerciseName: ex.name,
+          ),
+        ),
       );
       return;
     }

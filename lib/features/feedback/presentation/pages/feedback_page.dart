@@ -16,11 +16,39 @@ import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_p
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 
-class FeedbackPage extends StatelessWidget {
-  final String? exerciseId;
-  final String? exerciseName;
+class FeedbackExerciseTarget {
+  final String key;
+  final String exerciseId;
+  final String exerciseName;
 
-  const FeedbackPage({super.key, this.exerciseId, this.exerciseName});
+  const FeedbackExerciseTarget({
+    required this.key,
+    required this.exerciseId,
+    required this.exerciseName,
+  });
+}
+
+class FeedbackPageArgs {
+  final FeedbackExerciseTarget? exercise;
+  final String? circuitName;
+  final List<FeedbackExerciseTarget> circuitExercises;
+
+  const FeedbackPageArgs.exercise(this.exercise)
+    : circuitName = null,
+      circuitExercises = const [];
+
+  const FeedbackPageArgs.circuit({
+    required this.circuitName,
+    required this.circuitExercises,
+  }) : exercise = null;
+
+  bool get isCircuit => circuitExercises.isNotEmpty;
+}
+
+class FeedbackPage extends StatelessWidget {
+  final FeedbackPageArgs? args;
+
+  const FeedbackPage({super.key, this.args});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +67,9 @@ class FeedbackPage extends StatelessWidget {
               onPressed: () => context.pop(),
             ),
             title: Text(
-              l10n.feedback,
+              args?.isCircuit == true
+                  ? l10n.circuitFeedbackTitle
+                  : l10n.feedback,
               style: TextStyle(
                 color: palette.textPrimary,
                 fontSize: 18,
@@ -93,11 +123,18 @@ class FeedbackPage extends StatelessWidget {
                 child: ListView(
                   padding: EdgeInsets.only(bottom: 40 + bottomInset),
                   children: [
-                    _FeedbackForm(
-                      isSubmitting: false,
-                      exerciseId: exerciseId,
-                      exerciseName: exerciseName,
-                    ),
+                    if (args?.isCircuit == true)
+                      CircuitFeedbackForm(
+                        circuitName: args!.circuitName ?? '',
+                        targets: args!.circuitExercises,
+                        onQueued: () => context.pop(),
+                      )
+                    else
+                      _FeedbackForm(
+                        isSubmitting: false,
+                        exerciseId: args?.exercise?.exerciseId,
+                        exerciseName: args?.exercise?.exerciseName,
+                      ),
                     if (items.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -132,6 +169,234 @@ class FeedbackPage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class CircuitFeedbackUpload {
+  final FeedbackExerciseTarget target;
+  final File file;
+  final String? notes;
+
+  const CircuitFeedbackUpload({
+    required this.target,
+    required this.file,
+    this.notes,
+  });
+}
+
+typedef CircuitFeedbackEnqueue =
+    Future<void> Function(CircuitFeedbackUpload upload);
+
+class CircuitFeedbackForm extends StatefulWidget {
+  final String circuitName;
+  final List<FeedbackExerciseTarget> targets;
+  final CircuitFeedbackEnqueue? enqueue;
+  final VoidCallback? onQueued;
+
+  const CircuitFeedbackForm({
+    super.key,
+    required this.circuitName,
+    required this.targets,
+    this.enqueue,
+    this.onQueued,
+  });
+
+  @override
+  State<CircuitFeedbackForm> createState() => _CircuitFeedbackFormState();
+}
+
+class _CircuitFeedbackFormState extends State<CircuitFeedbackForm> {
+  final Map<String, File> _selectedFiles = {};
+  final Map<String, TextEditingController> _notesControllers = {};
+  bool _isQueueing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final target in widget.targets) {
+      _notesControllers[target.key] = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _notesControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _enqueue(CircuitFeedbackUpload upload) async {
+    final customEnqueue = widget.enqueue;
+    if (customEnqueue != null) return customEnqueue(upload);
+    await sl<FeedbackUploadQueueService>().enqueue(
+      file: upload.file,
+      contentType: _feedbackContentType(upload.file, 'VIDEO'),
+      mediaType: 'VIDEO',
+      notes: upload.notes,
+      exerciseId: upload.target.exerciseId,
+    );
+  }
+
+  Future<void> _submit() async {
+    if (_selectedFiles.isEmpty || _isQueueing) return;
+    setState(() => _isQueueing = true);
+
+    var failed = 0;
+    final selectedTargets = widget.targets
+        .where((target) => _selectedFiles.containsKey(target.key))
+        .toList(growable: false);
+
+    for (final target in selectedTargets) {
+      final file = _selectedFiles[target.key]!;
+      final notes = _notesControllers[target.key]!.text.trim();
+      try {
+        await _enqueue(
+          CircuitFeedbackUpload(
+            target: target,
+            file: file,
+            notes: notes.isEmpty ? null : notes,
+          ),
+        );
+        _selectedFiles.remove(target.key);
+        _notesControllers[target.key]!.clear();
+      } catch (_) {
+        failed++;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isQueueing = false);
+    if (failed == 0) {
+      widget.onQueued?.call();
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).feedbackUploadFailed),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final selectedCount = _selectedFiles.length;
+
+    return Column(
+      children: [
+        GlassCard(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.all(20),
+          borderRadius: 22,
+          elevated: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.circuitName,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.circuitFeedbackDescription,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (final target in widget.targets)
+          GlassCard(
+            key: ValueKey('circuit-feedback-${target.key}'),
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            padding: const EdgeInsets.all(16),
+            borderRadius: 18,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target.exerciseName,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FeedbackMediaPicker(
+                  selectedFile: _selectedFiles[target.key],
+                  mediaType: 'VIDEO',
+                  videoOnly: true,
+                  isUploading: _isQueueing,
+                  onMediaTypeChanged: (_) {},
+                  onFileSelected: (file) =>
+                      setState(() => _selectedFiles[target.key] = file),
+                  onClear: () =>
+                      setState(() => _selectedFiles.remove(target.key)),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesControllers[target.key],
+                  enabled: !_isQueueing,
+                  maxLines: 2,
+                  style: TextStyle(color: palette.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: l10n.additionalNotesOptional,
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              key: const ValueKey('send-circuit-feedback'),
+              onPressed: selectedCount == 0 || _isQueueing ? null : _submit,
+              child: _isQueueing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(l10n.circuitFeedbackSendCount(selectedCount)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _feedbackContentType(File file, String mediaType) {
+  final ext = file.path.split('.').last.toLowerCase();
+  switch (ext) {
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'mov':
+      return 'video/quicktime';
+    case 'avi':
+      return 'video/x-msvideo';
+    case 'mp4':
+      return 'video/mp4';
+    default:
+      return mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg';
   }
 }
 
@@ -310,23 +575,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     if (_selectedFile == null) {
       return _mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg';
     }
-    final ext = _selectedFile!.path.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'mov':
-        return 'video/quicktime';
-      case 'avi':
-        return 'video/x-msvideo';
-      case 'mp4':
-        return 'video/mp4';
-      default:
-        return _mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg';
-    }
+    return _feedbackContentType(_selectedFile!, _mediaType);
   }
 
   Future<void> _submit() async {

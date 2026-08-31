@@ -338,14 +338,11 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.feedback,
         pageBuilder: (_, state) {
-          final extra = state.extra as Map<String, String?>?;
+          final extra = state.extra as FeedbackPageArgs?;
           return _platformPage(
             key: state.pageKey,
             name: state.name,
-            child: FeedbackPage(
-              exerciseId: extra?['exerciseId'],
-              exerciseName: extra?['exerciseName'],
-            ),
+            child: FeedbackPage(args: extra),
           );
         },
       ),

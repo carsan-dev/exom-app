@@ -634,6 +634,15 @@
   "feedbackFromGallery": "From gallery",
   "feedbackUploading": "Uploading...",
   "feedbackSendFromExercise": "Send feedback",
+  "circuitFeedbackAction": "Send videos",
+  "circuitFeedbackTitle": "Circuit videos",
+  "circuitFeedbackDescription": "Add a video and an optional note to each exercise you want reviewed.",
+  "circuitFeedbackSendCount": "{count, plural, =1{Send 1 video} other{Send {count} videos}}",
+  "@circuitFeedbackSendCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "errorNetwork": "Network error",
   "errorAccountLocked": "Account locked — contact your coach",

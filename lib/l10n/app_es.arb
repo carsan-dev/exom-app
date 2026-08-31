@@ -669,6 +669,15 @@
   "feedbackFromGallery": "Desde galería",
   "feedbackUploading": "Subiendo...",
   "feedbackSendFromExercise": "Enviar feedback",
+  "circuitFeedbackAction": "Enviar vídeos",
+  "circuitFeedbackTitle": "Vídeos del circuito",
+  "circuitFeedbackDescription": "Añade un vídeo y una nota opcional a los ejercicios que quieras revisar.",
+  "circuitFeedbackSendCount": "{count, plural, =1{Enviar 1 vídeo} other{Enviar {count} vídeos}}",
+  "@circuitFeedbackSendCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "errorNetwork": "Error de red",
   "errorAccountLocked": "Cuenta bloqueada — contacta a tu entrenador",

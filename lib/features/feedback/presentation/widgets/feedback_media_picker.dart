@@ -12,6 +12,7 @@ class FeedbackMediaPicker extends StatelessWidget {
   final ValueChanged<String> onMediaTypeChanged;
   final ValueChanged<File> onFileSelected;
   final VoidCallback? onClear;
+  final bool videoOnly;
 
   const FeedbackMediaPicker({
     super.key,
@@ -21,6 +22,7 @@ class FeedbackMediaPicker extends StatelessWidget {
     required this.onMediaTypeChanged,
     required this.onFileSelected,
     this.onClear,
+    this.videoOnly = false,
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
@@ -163,26 +165,28 @@ class FeedbackMediaPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            _TypeChip(
-              label: l10n.feedbackSelectImage,
-              icon: Icons.image_outlined,
-              selected: mediaType == 'IMAGE',
-              onTap: () => onMediaTypeChanged('IMAGE'),
-              palette: palette,
-            ),
-            const SizedBox(width: 8),
-            _TypeChip(
-              label: l10n.feedbackSelectVideo,
-              icon: Icons.videocam_outlined,
-              selected: mediaType == 'VIDEO',
-              onTap: () => onMediaTypeChanged('VIDEO'),
-              palette: palette,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+        if (!videoOnly) ...[
+          Row(
+            children: [
+              _TypeChip(
+                label: l10n.feedbackSelectImage,
+                icon: Icons.image_outlined,
+                selected: mediaType == 'IMAGE',
+                onTap: () => onMediaTypeChanged('IMAGE'),
+                palette: palette,
+              ),
+              const SizedBox(width: 8),
+              _TypeChip(
+                label: l10n.feedbackSelectVideo,
+                icon: Icons.videocam_outlined,
+                selected: mediaType == 'VIDEO',
+                onTap: () => onMediaTypeChanged('VIDEO'),
+                palette: palette,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         GestureDetector(
           onTap: () {
             if (mediaType == 'VIDEO') {

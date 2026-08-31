@@ -3272,6 +3272,30 @@ abstract class AppLocalizations {
   /// **'Enviar feedback'**
   String get feedbackSendFromExercise;
 
+  /// No description provided for @circuitFeedbackAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar vídeos'**
+  String get circuitFeedbackAction;
+
+  /// No description provided for @circuitFeedbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeos del circuito'**
+  String get circuitFeedbackTitle;
+
+  /// No description provided for @circuitFeedbackDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade un vídeo y una nota opcional a los ejercicios que quieras revisar.'**
+  String get circuitFeedbackDescription;
+
+  /// No description provided for @circuitFeedbackSendCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Enviar 1 vídeo} other{Enviar {count} vídeos}}'**
+  String circuitFeedbackSendCount(int count);
+
   /// No description provided for @errorNetwork.
   ///
   /// In es, this message translates to:

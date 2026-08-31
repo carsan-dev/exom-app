@@ -1766,6 +1766,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedbackSendFromExercise => 'Enviar feedback';
 
   @override
+  String get circuitFeedbackAction => 'Enviar vídeos';
+
+  @override
+  String get circuitFeedbackTitle => 'Vídeos del circuito';
+
+  @override
+  String get circuitFeedbackDescription =>
+      'Añade un vídeo y una nota opcional a los ejercicios que quieras revisar.';
+
+  @override
+  String circuitFeedbackSendCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Enviar $count vídeos',
+      one: 'Enviar 1 vídeo',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get errorNetwork => 'Error de red';
 
   @override

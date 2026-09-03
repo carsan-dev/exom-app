@@ -1190,6 +1190,12 @@ abstract class AppLocalizations {
   /// **'Perfil'**
   String get profilePageTitle;
 
+  /// No description provided for @profileFallbackUserName.
+  ///
+  /// In es, this message translates to:
+  /// **'USUARIO EXOM'**
+  String get profileFallbackUserName;
+
   /// No description provided for @beginnerLevel.
   ///
   /// In es, this message translates to:
@@ -4207,6 +4213,258 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{ración} other{raciones}}'**
   String ingredientUnitServing(num count);
+
+  /// No description provided for @lastSetVideoReminderOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordatorio de vídeo de última serie'**
+  String get lastSetVideoReminderOption;
+
+  /// No description provided for @lastSetVideoReminderDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisa antes de comenzar una última serie que requiere vídeo'**
+  String get lastSetVideoReminderDescription;
+
+  /// No description provided for @pendingUploadsOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Subidas pendientes'**
+  String get pendingUploadsOption;
+
+  /// No description provided for @pendingUploadsDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa, reintenta o elimina evidencias que aún no se han sincronizado'**
+  String get pendingUploadsDescription;
+
+  /// No description provided for @pendingUploadsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Subidas pendientes'**
+  String get pendingUploadsTitle;
+
+  /// No description provided for @pendingUploadsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay subidas pendientes'**
+  String get pendingUploadsEmpty;
+
+  /// No description provided for @pendingUploadAttempts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 intento} other{{count} intentos}}'**
+  String pendingUploadAttempts(int count);
+
+  /// No description provided for @pendingUploadDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get pendingUploadDelete;
+
+  /// No description provided for @pendingUploadDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar esta evidencia?'**
+  String get pendingUploadDeleteTitle;
+
+  /// No description provided for @pendingUploadDeleteMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'También se eliminará la acción de progreso que depende de ella.'**
+  String get pendingUploadDeleteMessage;
+
+  /// No description provided for @pendingUploadRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get pendingUploadRetry;
+
+  /// No description provided for @pendingUploadQueuedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'En cola'**
+  String get pendingUploadQueuedStatus;
+
+  /// No description provided for @pendingUploadUploadingStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Subiendo'**
+  String get pendingUploadUploadingStatus;
+
+  /// No description provided for @pendingUploadCompletedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Completada'**
+  String get pendingUploadCompletedStatus;
+
+  /// No description provided for @pendingUploadFailedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Fallida'**
+  String get pendingUploadFailedStatus;
+
+  /// No description provided for @lastSetReminderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Última serie'**
+  String get lastSetReminderTitle;
+
+  /// No description provided for @lastSetReminderMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitamos un vídeo de {exerciseName}. Puedes adjuntarlo ahora o al terminar el circuito.'**
+  String lastSetReminderMessage(String exerciseName);
+
+  /// No description provided for @doNotShowAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'No mostrar de nuevo'**
+  String get doNotShowAgain;
+
+  /// No description provided for @attachAtEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'Al terminar'**
+  String get attachAtEnd;
+
+  /// No description provided for @attachNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Adjuntar ahora'**
+  String get attachNow;
+
+  /// No description provided for @recordNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Grabar ahora'**
+  String get recordNow;
+
+  /// No description provided for @chooseFromGallery.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir de la galería'**
+  String get chooseFromGallery;
+
+  /// No description provided for @requiredCircuitVideos.
+  ///
+  /// In es, this message translates to:
+  /// **'{circuitName} · vídeos obligatorios'**
+  String requiredCircuitVideos(String circuitName);
+
+  /// No description provided for @setPerformanceMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Minutos'**
+  String get setPerformanceMinutes;
+
+  /// No description provided for @circuitSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.'**
+  String get circuitSaveError;
+
+  /// No description provided for @mediaPickerPermissionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Permiso necesario'**
+  String get mediaPickerPermissionTitle;
+
+  /// No description provided for @mediaPickerPermissionMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Da acceso a la cámara o a la galería desde Ajustes y vuelve a intentarlo.'**
+  String get mediaPickerPermissionMessage;
+
+  /// No description provided for @mediaPickerErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el archivo'**
+  String get mediaPickerErrorTitle;
+
+  /// No description provided for @mediaPickerErrorMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba de nuevo o elige un archivo de la galería.'**
+  String get mediaPickerErrorMessage;
+
+  /// No description provided for @mediaPickerFileMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo leer o guardar el archivo. Comprueba el espacio disponible y vuelve a intentarlo.'**
+  String get mediaPickerFileMessage;
+
+  /// No description provided for @upcomingLastSetTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prepárate para grabar'**
+  String get upcomingLastSetTitle;
+
+  /// No description provided for @upcomingLastSetMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La siguiente es la última serie. Necesitarás adjuntar su vídeo para completar el ejercicio.'**
+  String get upcomingLastSetMessage;
+
+  /// No description provided for @understood.
+  ///
+  /// In es, this message translates to:
+  /// **'Entendido'**
+  String get understood;
+
+  /// No description provided for @attachLastSetVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Adjunta el vídeo de tu última serie'**
+  String get attachLastSetVideo;
+
+  /// No description provided for @lastSetVideoRequiredDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Es obligatorio para completar este ejercicio.'**
+  String get lastSetVideoRequiredDescription;
+
+  /// No description provided for @videoReadyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo preparado'**
+  String get videoReadyTitle;
+
+  /// No description provided for @optionalComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentario opcional'**
+  String get optionalComment;
+
+  /// No description provided for @changeVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get changeVideo;
+
+  /// No description provided for @useVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar vídeo'**
+  String get useVideo;
+
+  /// No description provided for @pendingSyncFailuresTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Acciones pendientes con error'**
+  String get pendingSyncFailuresTitle;
+
+  /// No description provided for @pendingSyncFailedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo sincronizar el progreso'**
+  String get pendingSyncFailedStatus;
+
+  /// No description provided for @pendingSyncDeleteMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.'**
+  String get pendingSyncDeleteMessage;
 }
 
 class _AppLocalizationsDelegate

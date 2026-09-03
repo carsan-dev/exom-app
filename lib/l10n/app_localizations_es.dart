@@ -603,6 +603,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profilePageTitle => 'Perfil';
 
   @override
+  String get profileFallbackUserName => 'USUARIO EXOM';
+
+  @override
   String get beginnerLevel => 'Principiante';
 
   @override
@@ -2391,4 +2394,153 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get lastSetVideoReminderOption =>
+      'Recordatorio de vídeo de última serie';
+
+  @override
+  String get lastSetVideoReminderDescription =>
+      'Avisa antes de comenzar una última serie que requiere vídeo';
+
+  @override
+  String get pendingUploadsOption => 'Subidas pendientes';
+
+  @override
+  String get pendingUploadsDescription =>
+      'Revisa, reintenta o elimina evidencias que aún no se han sincronizado';
+
+  @override
+  String get pendingUploadsTitle => 'Subidas pendientes';
+
+  @override
+  String get pendingUploadsEmpty => 'No hay subidas pendientes';
+
+  @override
+  String pendingUploadAttempts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count intentos',
+      one: '1 intento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadDelete => 'Eliminar';
+
+  @override
+  String get pendingUploadDeleteTitle => '¿Eliminar esta evidencia?';
+
+  @override
+  String get pendingUploadDeleteMessage =>
+      'También se eliminará la acción de progreso que depende de ella.';
+
+  @override
+  String get pendingUploadRetry => 'Reintentar';
+
+  @override
+  String get pendingUploadQueuedStatus => 'En cola';
+
+  @override
+  String get pendingUploadUploadingStatus => 'Subiendo';
+
+  @override
+  String get pendingUploadCompletedStatus => 'Completada';
+
+  @override
+  String get pendingUploadFailedStatus => 'Fallida';
+
+  @override
+  String get lastSetReminderTitle => 'Última serie';
+
+  @override
+  String lastSetReminderMessage(String exerciseName) {
+    return 'Necesitamos un vídeo de $exerciseName. Puedes adjuntarlo ahora o al terminar el circuito.';
+  }
+
+  @override
+  String get doNotShowAgain => 'No mostrar de nuevo';
+
+  @override
+  String get attachAtEnd => 'Al terminar';
+
+  @override
+  String get attachNow => 'Adjuntar ahora';
+
+  @override
+  String get recordNow => 'Grabar ahora';
+
+  @override
+  String get chooseFromGallery => 'Elegir de la galería';
+
+  @override
+  String requiredCircuitVideos(String circuitName) {
+    return '$circuitName · vídeos obligatorios';
+  }
+
+  @override
+  String get setPerformanceMinutes => 'Minutos';
+
+  @override
+  String get circuitSaveError =>
+      'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.';
+
+  @override
+  String get mediaPickerPermissionTitle => 'Permiso necesario';
+
+  @override
+  String get mediaPickerPermissionMessage =>
+      'Da acceso a la cámara o a la galería desde Ajustes y vuelve a intentarlo.';
+
+  @override
+  String get mediaPickerErrorTitle => 'No se pudo abrir el archivo';
+
+  @override
+  String get mediaPickerErrorMessage =>
+      'Prueba de nuevo o elige un archivo de la galería.';
+
+  @override
+  String get mediaPickerFileMessage =>
+      'No se pudo leer o guardar el archivo. Comprueba el espacio disponible y vuelve a intentarlo.';
+
+  @override
+  String get upcomingLastSetTitle => 'Prepárate para grabar';
+
+  @override
+  String get upcomingLastSetMessage =>
+      'La siguiente es la última serie. Necesitarás adjuntar su vídeo para completar el ejercicio.';
+
+  @override
+  String get understood => 'Entendido';
+
+  @override
+  String get attachLastSetVideo => 'Adjunta el vídeo de tu última serie';
+
+  @override
+  String get lastSetVideoRequiredDescription =>
+      'Es obligatorio para completar este ejercicio.';
+
+  @override
+  String get videoReadyTitle => 'Vídeo preparado';
+
+  @override
+  String get optionalComment => 'Comentario opcional';
+
+  @override
+  String get changeVideo => 'Cambiar';
+
+  @override
+  String get useVideo => 'Usar vídeo';
+
+  @override
+  String get pendingSyncFailuresTitle => 'Acciones pendientes con error';
+
+  @override
+  String get pendingSyncFailedStatus => 'No se pudo sincronizar el progreso';
+
+  @override
+  String get pendingSyncDeleteMessage =>
+      'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.';
 }

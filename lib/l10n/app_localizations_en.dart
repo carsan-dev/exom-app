@@ -595,6 +595,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePageTitle => 'Profile';
 
   @override
+  String get profileFallbackUserName => 'EXOM USER';
+
+  @override
   String get beginnerLevel => 'Beginner';
 
   @override
@@ -2365,4 +2368,152 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get lastSetVideoReminderOption => 'Final-set video reminder';
+
+  @override
+  String get lastSetVideoReminderDescription =>
+      'Warn before starting a final set that requires video';
+
+  @override
+  String get pendingUploadsOption => 'Pending uploads';
+
+  @override
+  String get pendingUploadsDescription =>
+      'Review, retry or delete evidence that has not synced yet';
+
+  @override
+  String get pendingUploadsTitle => 'Pending uploads';
+
+  @override
+  String get pendingUploadsEmpty => 'There are no pending uploads';
+
+  @override
+  String pendingUploadAttempts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attempts',
+      one: '1 attempt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadDelete => 'Delete';
+
+  @override
+  String get pendingUploadDeleteTitle => 'Delete this evidence?';
+
+  @override
+  String get pendingUploadDeleteMessage =>
+      'The progress action that depends on it will also be deleted.';
+
+  @override
+  String get pendingUploadRetry => 'Retry';
+
+  @override
+  String get pendingUploadQueuedStatus => 'Queued';
+
+  @override
+  String get pendingUploadUploadingStatus => 'Uploading';
+
+  @override
+  String get pendingUploadCompletedStatus => 'Completed';
+
+  @override
+  String get pendingUploadFailedStatus => 'Failed';
+
+  @override
+  String get lastSetReminderTitle => 'Final set';
+
+  @override
+  String lastSetReminderMessage(String exerciseName) {
+    return 'We need a video of $exerciseName. You can attach it now or when the circuit ends.';
+  }
+
+  @override
+  String get doNotShowAgain => 'Don\'t show again';
+
+  @override
+  String get attachAtEnd => 'At the end';
+
+  @override
+  String get attachNow => 'Attach now';
+
+  @override
+  String get recordNow => 'Record now';
+
+  @override
+  String get chooseFromGallery => 'Choose from gallery';
+
+  @override
+  String requiredCircuitVideos(String circuitName) {
+    return '$circuitName · required videos';
+  }
+
+  @override
+  String get setPerformanceMinutes => 'Minutes';
+
+  @override
+  String get circuitSaveError =>
+      'The circuit could not be saved. Your data is still here; try again.';
+
+  @override
+  String get mediaPickerPermissionTitle => 'Permission required';
+
+  @override
+  String get mediaPickerPermissionMessage =>
+      'Allow camera or gallery access in Settings and try again.';
+
+  @override
+  String get mediaPickerErrorTitle => 'The file could not be opened';
+
+  @override
+  String get mediaPickerErrorMessage =>
+      'Try again or choose a file from the gallery.';
+
+  @override
+  String get mediaPickerFileMessage =>
+      'The file could not be read or saved. Check the available storage and try again.';
+
+  @override
+  String get upcomingLastSetTitle => 'Get ready to record';
+
+  @override
+  String get upcomingLastSetMessage =>
+      'The next set is the final one. You will need to attach its video to complete the exercise.';
+
+  @override
+  String get understood => 'Got it';
+
+  @override
+  String get attachLastSetVideo => 'Attach your final-set video';
+
+  @override
+  String get lastSetVideoRequiredDescription =>
+      'It is required to complete this exercise.';
+
+  @override
+  String get videoReadyTitle => 'Video ready';
+
+  @override
+  String get optionalComment => 'Optional comment';
+
+  @override
+  String get changeVideo => 'Change';
+
+  @override
+  String get useVideo => 'Use video';
+
+  @override
+  String get pendingSyncFailuresTitle => 'Pending actions with errors';
+
+  @override
+  String get pendingSyncFailedStatus => 'Progress could not be synced';
+
+  @override
+  String get pendingSyncDeleteMessage =>
+      'This pending action will be deleted. The local change will no longer be retried.';
 }

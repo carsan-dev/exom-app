@@ -23,6 +23,39 @@ import UserNotifications
         _ = self?.playRestTimerSound()
       }
     )
+    let settingsChannel = FlutterMethodChannel(
+      name: "com.exommethod.exom/app_settings",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    settingsChannel.setMethodCallHandler { call, result in
+      guard call.method == "open" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+        result(
+          FlutterError(
+            code: "SETTINGS_URL_UNAVAILABLE",
+            message: "Application settings URL is unavailable",
+            details: nil
+          )
+        )
+        return
+      }
+      UIApplication.shared.open(settingsURL) { opened in
+        if opened {
+          result(nil)
+        } else {
+          result(
+            FlutterError(
+              code: "SETTINGS_OPEN_FAILED",
+              message: "Application settings could not be opened",
+              details: nil
+            )
+          )
+        }
+      }
+    }
   }
 
   override func userNotificationCenter(

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 
 class FeedbackMediaPicker extends StatelessWidget {
   final File? selectedFile;
@@ -26,22 +27,76 @@ class FeedbackMediaPicker extends StatelessWidget {
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source);
-    if (picked != null) {
-      onFileSelected(File(picked.path));
+    try {
+      final picked = await ImagePicker().pickImage(source: source);
+      if (picked != null) onFileSelected(File(picked.path));
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      final action = await showMediaPickerErrorDialog(
+        context,
+        error,
+        canUseGallery: source != ImageSource.gallery,
+      );
+      if (!context.mounted) return;
+      if (action == MediaPickerRecoveryAction.retry) {
+        await _pickImage(context, source);
+      } else if (action == MediaPickerRecoveryAction.gallery) {
+        await _pickImage(context, ImageSource.gallery);
+      }
     }
   }
 
-  Future<void> _pickVideo(BuildContext context) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickVideo(
-      source: ImageSource.gallery,
-      maxDuration: const Duration(minutes: 2),
-    );
-    if (picked != null) {
-      onFileSelected(File(picked.path));
+  Future<void> _pickVideo(BuildContext context, ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickVideo(
+        source: source,
+        maxDuration: const Duration(minutes: 2),
+      );
+      if (picked != null) onFileSelected(File(picked.path));
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      final action = await showMediaPickerErrorDialog(
+        context,
+        error,
+        canUseGallery: source != ImageSource.gallery,
+      );
+      if (!context.mounted) return;
+      if (action == MediaPickerRecoveryAction.retry) {
+        await _pickVideo(context, source);
+      } else if (action == MediaPickerRecoveryAction.gallery) {
+        await _pickVideo(context, ImageSource.gallery);
+      }
     }
+  }
+
+  void _showVideoSourceSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: Text(l10n.feedbackFromCamera),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickVideo(context, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library_outlined),
+              title: Text(l10n.feedbackFromGallery),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickVideo(context, ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showImageSourceSheet(BuildContext context) {
@@ -190,7 +245,7 @@ class FeedbackMediaPicker extends StatelessWidget {
         GestureDetector(
           onTap: () {
             if (mediaType == 'VIDEO') {
-              _pickVideo(context);
+              _showVideoSourceSheet(context);
             } else {
               _showImageSourceSheet(context);
             }
@@ -203,7 +258,7 @@ class FeedbackMediaPicker extends StatelessWidget {
               children: [
                 Icon(
                   mediaType == 'VIDEO'
-                      ? Icons.video_library_outlined
+                      ? Icons.video_call_outlined
                       : Icons.add_photo_alternate_outlined,
                   color: palette.textDisabled,
                   size: 20,
@@ -211,7 +266,7 @@ class FeedbackMediaPicker extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   mediaType == 'VIDEO'
-                      ? l10n.feedbackFromGallery
+                      ? l10n.feedbackSelectVideo
                       : l10n.feedbackSelectImage,
                   style: TextStyle(color: palette.textSecondary, fontSize: 14),
                 ),

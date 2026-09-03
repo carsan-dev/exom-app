@@ -192,6 +192,7 @@ class CircuitFeedbackForm extends StatefulWidget {
   final List<FeedbackExerciseTarget> targets;
   final CircuitFeedbackEnqueue? enqueue;
   final VoidCallback? onQueued;
+  final bool requireAll;
 
   const CircuitFeedbackForm({
     super.key,
@@ -199,6 +200,7 @@ class CircuitFeedbackForm extends StatefulWidget {
     required this.targets,
     this.enqueue,
     this.onQueued,
+    this.requireAll = false,
   });
 
   @override
@@ -361,7 +363,13 @@ class _CircuitFeedbackFormState extends State<CircuitFeedbackForm> {
             width: double.infinity,
             child: ElevatedButton(
               key: const ValueKey('send-circuit-feedback'),
-              onPressed: selectedCount == 0 || _isQueueing ? null : _submit,
+              onPressed:
+                  selectedCount == 0 ||
+                      _isQueueing ||
+                      (widget.requireAll &&
+                          selectedCount != widget.targets.length)
+                  ? null
+                  : _submit,
               child: _isQueueing
                   ? const SizedBox(
                       width: 20,
@@ -391,8 +399,10 @@ String _feedbackContentType(File file, String mediaType) {
       return 'image/webp';
     case 'mov':
       return 'video/quicktime';
-    case 'avi':
-      return 'video/x-msvideo';
+    case 'm4v':
+      return 'video/x-m4v';
+    case 'webm':
+      return 'video/webm';
     case 'mp4':
       return 'video/mp4';
     default:

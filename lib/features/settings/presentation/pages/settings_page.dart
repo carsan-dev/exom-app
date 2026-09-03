@@ -19,6 +19,7 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -30,6 +31,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _restTimerSoundEnabled = true;
+  bool _lastSetReminderEnabled = true;
   bool _busy = false;
 
   @override
@@ -42,6 +44,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ) ??
         true;
     _restTimerSoundEnabled = sl<LocalStorage>().getRestTimerSoundEnabled();
+    _lastSetReminderEnabled =
+        sl<LocalStorage>().getSetting<bool>(
+          'last_set_video_reminder_enabled',
+          defaultValue: true,
+        ) ??
+        true;
   }
 
   Future<void> _toggleRestTimerSound(bool enabled) async {
@@ -92,6 +100,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _toggleLastSetReminder(bool enabled) async {
+    await sl<LocalStorage>().saveSetting(
+      'last_set_video_reminder_enabled',
+      enabled,
+    );
+    if (mounted) setState(() => _lastSetReminderEnabled = enabled);
   }
 
   Future<void> _clearOfflineCache() async {
@@ -419,6 +435,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: () =>
                           _toggleRestTimerSound(!_restTimerSoundEnabled),
                     ),
+                    _SettingsTile(
+                      icon: Icons.video_camera_front_outlined,
+                      title: l10n.lastSetVideoReminderOption,
+                      subtitle: l10n.lastSetVideoReminderDescription,
+                      trailing: Switch(
+                        value: _lastSetReminderEnabled,
+                        onChanged: _toggleLastSetReminder,
+                      ),
+                      onTap: () =>
+                          _toggleLastSetReminder(!_lastSetReminderEnabled),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -436,6 +463,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: l10n.clearCacheOption,
                       subtitle: l10n.clearCacheDescription,
                       onTap: _clearOfflineCache,
+                    ),
+                    _SettingsTile(
+                      icon: Icons.cloud_upload_outlined,
+                      title: l10n.pendingUploadsOption,
+                      subtitle: l10n.pendingUploadsDescription,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PendingUploadsPage(),
+                        ),
+                      ),
                     ),
                     _SettingsTile(
                       icon: Icons.feedback_outlined,

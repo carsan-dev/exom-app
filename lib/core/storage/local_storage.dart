@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> clearAuth() => _auth.clear();
 
   Future<void> clearSessionData() async {
-    await Future.wait([clearAuth(), clearCache()]);
+    await Future.wait([clearAuth(), clearCache(), _activeWorkouts.clear()]);
   }
 
   // Cache
@@ -82,7 +83,32 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> removeCachedData(String key) => _cache.delete(key);
 
-  Future<void> clearCache() => _cache.clear();
+  Future<void> clearCache() async {
+    final cleanupFailures = await _purgeFeedbackUploadFiles();
+    await _cache.clear();
+    if (cleanupFailures.isNotEmpty) {
+      await saveFeedbackUploadQueue(cleanupFailures);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _purgeFeedbackUploadFiles() async {
+    final cleanupFailures = <Map<String, dynamic>>[];
+    for (final item in getFeedbackUploadQueue()) {
+      final path = item['file_path'] as String?;
+      if (path == null) continue;
+      final file = File(path);
+      try {
+        if (await file.exists()) await file.delete();
+      } on FileSystemException catch (error) {
+        cleanupFailures.add({
+          ...item,
+          'status': item['status'] == 'completed' ? 'completed' : 'failed',
+          'last_error': 'cleanup_failed: $error',
+        });
+      }
+    }
+    return cleanupFailures;
+  }
 
   List<Map<String, dynamic>> getPendingSyncActions() {
     final actions = getCachedList(_pendingSyncKey);

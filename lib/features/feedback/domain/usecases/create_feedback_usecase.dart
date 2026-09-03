@@ -9,12 +9,14 @@ class CreateFeedbackUseCase {
   Future<FeedbackEntity> call({
     required String mediaType,
     required String mediaUrl,
+    String? uploadId,
     String? notes,
     String? exerciseId,
     String? clientUploadId,
   }) => _repository.createFeedback(
     mediaType: mediaType,
     mediaUrl: mediaUrl,
+    uploadId: uploadId,
     notes: notes,
     exerciseId: exerciseId,
     clientUploadId: clientUploadId,

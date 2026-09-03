@@ -7,6 +7,11 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/core/utils/async_mutex.dart';
+
+class _FeedbackDependencyPending implements Exception {
+  const _FeedbackDependencyPending();
+}
 
 class OfflineSyncService {
   static const _markExerciseCompleted = 'mark_exercise_completed';
@@ -17,13 +22,23 @@ class OfflineSyncService {
 
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
+  final bool Function() _isAuthenticated;
+  final AsyncMutex _queueMutex = AsyncMutex();
+  final StreamController<void> _changes = StreamController<void>.broadcast();
 
   StreamSubscription<User?>? _authSubscription;
   Timer? _syncTimer;
   bool _initialized = false;
   bool _syncInProgress = false;
 
-  OfflineSyncService(this._apiClient, this._localStorage);
+  Stream<void> get changes => _changes.stream;
+
+  OfflineSyncService(
+    this._apiClient,
+    this._localStorage, {
+    bool Function()? isAuthenticated,
+  }) : _isAuthenticated =
+           isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null);
 
   Future<void> init() async {
     if (_initialized) {
@@ -54,6 +69,8 @@ class OfflineSyncService {
     String? exerciseId,
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   }) async {
     await _updateExerciseProgressCache(
       trainingExerciseId,
@@ -68,6 +85,8 @@ class OfflineSyncService {
       'date': date,
       'weight_used': ?weightUsed,
       'sets': ?sets?.map((set) => set.toJson()).toList(),
+      'last_set_feedback_client_upload_id': ?lastSetFeedbackClientUploadId,
+      'training_id': ?trainingId,
     });
   }
 
@@ -81,10 +100,23 @@ class OfflineSyncService {
       trainingId: trainingId,
       notes: notes,
     );
+    final dependencies = _localStorage
+        .getFeedbackUploadQueue()
+        .where(
+          (item) =>
+              item['training_id'] == trainingId &&
+              item['assignment_date'] == date &&
+              item['status'] != 'completed',
+        )
+        .map((item) => item['id'])
+        .whereType<String>()
+        .toSet()
+        .toList(growable: false);
     await _enqueueAction({
       'type': _completeTraining,
       'date': date,
       'training_id': trainingId,
+      if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });
   }
@@ -103,45 +135,54 @@ class OfflineSyncService {
   }
 
   Future<void> syncPendingActions() async {
-    if (_syncInProgress || FirebaseAuth.instance.currentUser == null) {
+    if (_syncInProgress || !_isAuthenticated()) {
       return;
     }
 
-    final queue = _localStorage.getPendingSyncActions();
-    if (queue.isEmpty) {
+    if (_localStorage.getPendingSyncActions().isEmpty) {
       return;
     }
 
     _syncInProgress = true;
 
     try {
-      final pending = List<Map<String, dynamic>>.from(queue);
-
-      while (pending.isNotEmpty) {
-        final action = Map<String, dynamic>.from(pending.first);
-
+      final visitedIds = <String>{};
+      while (true) {
+        final action = await _claimNextAction(visitedIds);
+        if (action == null) break;
+        final id = action['id'] as String;
+        visitedIds.add(id);
         try {
           await _replayAction(action);
-          pending.removeAt(0);
-          await _persistQueue(pending);
+          await _removeById(id);
+        } on _FeedbackDependencyPending {
+          await _mutateById(id, (current) => {...current, 'status': 'queued'});
         } on DioException catch (error) {
           final statusCode = error.response?.statusCode;
-
-          if (isOfflineError(error) ||
+          final retryable =
+              isOfflineError(error) ||
               statusCode == 401 ||
-              statusCode == 403 ||
-              (statusCode != null && statusCode >= 500)) {
-            debugPrint('[SYNC] Replay paused: ${error.message}');
-            break;
-          }
-
-          debugPrint('[SYNC] Dropping unrecoverable action: $action');
-          pending.removeAt(0);
-          await _persistQueue(pending);
+              statusCode == 409 ||
+              statusCode == 429 ||
+              (statusCode != null && statusCode >= 500);
+          await _mutateById(
+            id,
+            (current) => _failedOrRetriedAction(
+              current,
+              error.message ?? error.toString(),
+              retryable: retryable,
+            ),
+          );
         } catch (error) {
-          debugPrint('[SYNC] Dropping invalid action: $action ($error)');
-          pending.removeAt(0);
-          await _persistQueue(pending);
+          debugPrint('[SYNC] Keeping invalid action visible: $action ($error)');
+          await _mutateById(
+            id,
+            (current) => _failedOrRetriedAction(
+              current,
+              error.toString(),
+              retryable: false,
+            ),
+          );
         }
       }
     } finally {
@@ -150,13 +191,91 @@ class OfflineSyncService {
   }
 
   Future<void> _enqueueAction(Map<String, dynamic> action) async {
-    final queue = _localStorage.getPendingSyncActions();
-    queue.add({
-      ...action,
-      'queued_at': DateTime.now().toUtc().toIso8601String(),
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      queue.add({
+        ...action,
+        'id': DateTime.now().microsecondsSinceEpoch.toString(),
+        'status': 'queued',
+        'attempts': 0,
+        'queued_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      await _persistQueue(queue);
     });
-    await _persistQueue(queue);
+    _changes.add(null);
   }
+
+  Map<String, dynamic> _failedOrRetriedAction(
+    Map<String, dynamic> action,
+    String error, {
+    required bool retryable,
+  }) {
+    final attempts = (action['attempts'] as int? ?? 0) + 1;
+    if (!retryable || attempts >= 5) {
+      return {
+        ...action,
+        'status': 'failed',
+        'attempts': attempts,
+        'last_error': error,
+      };
+    }
+    const delays = [30, 120, 600, 3600];
+    return {
+      ...action,
+      'status': 'queued',
+      'attempts': attempts,
+      'last_error': error,
+      'next_attempt_at': DateTime.now()
+          .toUtc()
+          .add(Duration(seconds: delays[attempts - 1]))
+          .toIso8601String(),
+    };
+  }
+
+  Future<void> removeActionsDependingOnFeedback(String feedbackId) async {
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      for (var index = 0; index < queue.length; index++) {
+        final action = Map<String, dynamic>.from(queue[index]);
+        final dependencies =
+            ((action['depends_on_feedback_ids'] as List?) ?? const [])
+                .whereType<String>()
+                .toList(growable: true);
+        final directlyDepends =
+            action['last_set_feedback_client_upload_id'] == feedbackId;
+        final transitivelyDepends = dependencies.remove(feedbackId);
+        if (!directlyDepends && !transitivelyDepends) continue;
+        action.remove('last_set_feedback_client_upload_id');
+        action['depends_on_feedback_ids'] = dependencies;
+        action['status'] = 'failed';
+        action['last_error'] = 'feedback_discarded';
+        queue[index] = action;
+      }
+      await _persistQueue(queue);
+    });
+    _changes.add(null);
+  }
+
+  Future<void> retryAction(String id) async {
+    await _mutateById(id, (action) {
+      if (action['status'] != 'failed') return action;
+      return {
+        ...action,
+        'status': 'queued',
+        'attempts': 0,
+        'next_attempt_at': DateTime.now().toUtc().toIso8601String(),
+        'last_error': null,
+      };
+    });
+    await syncPendingActions();
+  }
+
+  Future<void> discardAction(String id) async {
+    await _removeById(id);
+  }
+
+  List<Map<String, dynamic>> get pendingActions =>
+      _localStorage.getPendingSyncActions();
 
   Future<void> _persistQueue(List<Map<String, dynamic>> queue) async {
     if (queue.isEmpty) {
@@ -175,6 +294,17 @@ class OfflineSyncService {
       throw StateError('Pending sync action is missing required fields');
     }
 
+    final dependencies =
+        ((action['depends_on_feedback_ids'] as List?) ?? const [])
+            .whereType<String>();
+    final feedbackQueue = _localStorage.getFeedbackUploadQueue();
+    if (dependencies.any((id) {
+      final matches = feedbackQueue.where((item) => item['id'] == id);
+      return matches.isNotEmpty && matches.first['status'] != 'completed';
+    })) {
+      throw const _FeedbackDependencyPending();
+    }
+
     switch (type) {
       case _markExerciseCompleted:
         final exerciseId = action['exercise_id'] as String?;
@@ -182,6 +312,15 @@ class OfflineSyncService {
             action['training_exercise_id'] as String? ?? exerciseId;
         if (trainingExerciseId == null || exerciseId == null) {
           throw StateError('Pending sync action is missing exercise ids');
+        }
+        final feedbackId =
+            action['last_set_feedback_client_upload_id'] as String?;
+        if (feedbackId != null &&
+            _localStorage.getFeedbackUploadQueue().any(
+              (item) =>
+                  item['id'] == feedbackId && item['status'] != 'completed',
+            )) {
+          throw const _FeedbackDependencyPending();
         }
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/exercises/complete',
@@ -194,6 +333,7 @@ class OfflineSyncService {
             if (action['weight_used'] != null)
               'weight_used': action['weight_used'],
             if (action['sets'] != null) 'sets': action['sets'],
+            'last_set_feedback_client_upload_id': ?feedbackId,
           },
         );
         await _cacheProgressResponse(response, date);
@@ -218,6 +358,8 @@ class OfflineSyncService {
           '/progress/trainings/complete',
           data: {
             'date': date,
+            if (action['training_id'] != null)
+              'training_id': action['training_id'],
             if (action['notes'] != null) 'notes': action['notes'],
           },
         );
@@ -248,6 +390,58 @@ class OfflineSyncService {
       default:
         throw StateError('Unsupported pending sync action type: $type');
     }
+  }
+
+  bool hasPendingFeedbackForTraining(String trainingId, String date) {
+    return _localStorage.getFeedbackUploadQueue().any(
+      (item) =>
+          item['training_id'] == trainingId &&
+          item['assignment_date'] == date &&
+          item['status'] != 'completed',
+    );
+  }
+
+  Future<Map<String, dynamic>?> _claimNextAction(Set<String> excludedIds) {
+    return _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      final index = queue.indexWhere((action) {
+        if (excludedIds.contains(action['id'])) return false;
+        if (action['status'] != 'queued') return false;
+        final next = DateTime.tryParse(
+          action['next_attempt_at'] as String? ?? '',
+        );
+        return next == null || !next.isAfter(DateTime.now());
+      });
+      if (index < 0) return null;
+      final claimed = {...queue[index], 'status': 'uploading'};
+      queue[index] = claimed;
+      await _persistQueue(queue);
+      _changes.add(null);
+      return Map<String, dynamic>.from(claimed);
+    });
+  }
+
+  Future<void> _mutateById(
+    String id,
+    Map<String, dynamic> Function(Map<String, dynamic>) mutate,
+  ) {
+    return _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      final index = queue.indexWhere((action) => action['id'] == id);
+      if (index < 0) return;
+      queue[index] = mutate(Map<String, dynamic>.from(queue[index]));
+      await _persistQueue(queue);
+      _changes.add(null);
+    });
+  }
+
+  Future<void> _removeById(String id) {
+    return _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions()
+        ..removeWhere((action) => action['id'] == id);
+      await _persistQueue(queue);
+      _changes.add(null);
+    });
   }
 
   Future<void> _updateExerciseProgressCache(

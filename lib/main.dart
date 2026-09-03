@@ -253,6 +253,10 @@ class _ExomAppViewState extends State<_ExomAppView> {
   }
 
   void _showFeedbackNotice(FeedbackUploadNotice notice) {
+    if (notice.kind == FeedbackUploadNoticeKind.uploading ||
+        notice.kind == FeedbackUploadNoticeKind.discarded) {
+      return;
+    }
     final messenger = AppRouter.scaffoldMessengerKey.currentState;
     final context = AppRouter.scaffoldMessengerKey.currentContext;
     if (messenger == null || context == null) return;
@@ -262,6 +266,8 @@ class _ExomAppViewState extends State<_ExomAppView> {
       FeedbackUploadNoticeKind.queued => l10n.feedbackQueued,
       FeedbackUploadNoticeKind.completed => l10n.feedbackSentSuccessfully,
       FeedbackUploadNoticeKind.failed => l10n.feedbackUploadFailed,
+      FeedbackUploadNoticeKind.uploading => l10n.feedbackQueued,
+      FeedbackUploadNoticeKind.discarded => l10n.feedbackQueued,
     };
     messenger.showSnackBar(
       SnackBar(

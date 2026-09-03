@@ -406,6 +406,7 @@ Future<void> initDependencies() async {
     () => FeedbackUploadQueueService(
       sl<FeedbackRepository>(),
       sl<LocalStorage>(),
+      sl<OfflineSyncService>(),
     ),
   );
 

@@ -68,13 +68,14 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
   ) async {
     emit(FeedbackSubmitting(_cachedItems));
     try {
-      final fileUrl = await _uploadFeedbackMediaUseCase(
+      final upload = await _uploadFeedbackMediaUseCase(
         event.file,
         event.contentType,
       );
       await _createFeedbackUseCase(
         mediaType: event.mediaType,
-        mediaUrl: fileUrl,
+        mediaUrl: upload.fileUrl,
+        uploadId: upload.uploadId,
         notes: event.notes,
         exerciseId: event.exerciseId,
       );

@@ -6,6 +6,6 @@ class UploadFeedbackMediaUseCase {
 
   const UploadFeedbackMediaUseCase(this._repository);
 
-  Future<String> call(File file, String contentType) =>
+  Future<ManagedFeedbackUpload> call(File file, String contentType) =>
       _repository.uploadMedia(file, contentType);
 }

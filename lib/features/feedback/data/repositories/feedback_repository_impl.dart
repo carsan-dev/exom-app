@@ -16,18 +16,28 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
   Future<FeedbackEntity> createFeedback({
     required String mediaType,
     required String mediaUrl,
+    String? uploadId,
     String? notes,
     String? exerciseId,
     String? clientUploadId,
+    String? feedbackKind,
+    String? trainingId,
+    String? trainingExerciseId,
+    String? assignmentDate,
   }) => _remoteDataSource.createFeedback(
     mediaType: mediaType,
     mediaUrl: mediaUrl,
+    uploadId: uploadId,
     notes: notes,
     exerciseId: exerciseId,
     clientUploadId: clientUploadId,
+    feedbackKind: feedbackKind,
+    trainingId: trainingId,
+    trainingExerciseId: trainingExerciseId,
+    assignmentDate: assignmentDate,
   );
 
   @override
-  Future<String> uploadMedia(File file, String contentType) =>
+  Future<ManagedFeedbackUpload> uploadMedia(File file, String contentType) =>
       _remoteDataSource.uploadMedia(file, contentType);
 }

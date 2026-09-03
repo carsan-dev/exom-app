@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class ApiClient {
   late final Dio _dio;
 
-  ApiClient({String? baseUrl}) {
+  ApiClient({String? baseUrl, bool useAuth = true}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl ?? 'http://10.0.2.2:3000/api/v1',
@@ -18,7 +18,7 @@ class ApiClient {
       ),
     );
 
-    _dio.interceptors.add(_AuthInterceptor());
+    if (useAuth) _dio.interceptors.add(_AuthInterceptor());
     _dio.interceptors.add(_LoggingInterceptor());
   }
 

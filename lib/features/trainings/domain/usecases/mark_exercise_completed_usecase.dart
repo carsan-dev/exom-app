@@ -12,11 +12,15 @@ class MarkExerciseCompletedUseCase {
     String date, {
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   }) => _repository.markExerciseCompleted(
     trainingExerciseId,
     exerciseId,
     date,
     weightUsed: weightUsed,
     sets: sets,
+    lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
+    trainingId: trainingId,
   );
 }

@@ -198,6 +198,9 @@ class TrainingModel {
   final String? cooldownDescription;
   final List<String> tags;
   final List<TrainingExerciseModel> exercises;
+  final String? assignmentTrainingId;
+  final String? assignmentDate;
+  final bool requiresLastSetVideo;
 
   const TrainingModel({
     required this.id,
@@ -211,6 +214,9 @@ class TrainingModel {
     this.cooldownDescription,
     required this.tags,
     required this.exercises,
+    this.assignmentTrainingId,
+    this.assignmentDate,
+    this.requiresLastSetVideo = false,
   });
 
   factory TrainingModel.fromJson(Map<String, dynamic> json) {
@@ -235,6 +241,9 @@ class TrainingModel {
               )
               .toList() ??
           [],
+      assignmentTrainingId: json['assignment_training_id'] as String?,
+      assignmentDate: json['assignment_date'] as String?,
+      requiresLastSetVideo: json['requires_last_set_video'] as bool? ?? false,
     );
   }
 }

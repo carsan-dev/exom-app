@@ -16,6 +16,7 @@ class ActiveWorkoutHiveModel {
   final DateTime? restEndsAt;
   final double? lastWeightKg;
   final List<Map<String, dynamic>> completedSetData;
+  final String? lastSetFeedbackClientUploadId;
 
   const ActiveWorkoutHiveModel({
     required this.trainingId,
@@ -25,6 +26,7 @@ class ActiveWorkoutHiveModel {
     this.restEndsAt,
     this.lastWeightKg,
     this.completedSetData = const [],
+    this.lastSetFeedbackClientUploadId,
   });
 
   ActiveWorkoutHiveModel copyWith({
@@ -35,6 +37,7 @@ class ActiveWorkoutHiveModel {
     Object? restEndsAt = _sentinel,
     Object? lastWeightKg = _sentinel,
     List<Map<String, dynamic>>? completedSetData,
+    Object? lastSetFeedbackClientUploadId = _sentinel,
   }) {
     return ActiveWorkoutHiveModel(
       trainingId: trainingId ?? this.trainingId,
@@ -48,6 +51,10 @@ class ActiveWorkoutHiveModel {
           ? this.lastWeightKg
           : lastWeightKg as double?,
       completedSetData: completedSetData ?? this.completedSetData,
+      lastSetFeedbackClientUploadId:
+          identical(lastSetFeedbackClientUploadId, _sentinel)
+          ? this.lastSetFeedbackClientUploadId
+          : lastSetFeedbackClientUploadId as String?,
     );
   }
 }
@@ -75,13 +82,14 @@ class ActiveWorkoutHiveModelAdapter
       completedSetData: ((fields[6] as List?) ?? const [])
           .map((value) => Map<String, dynamic>.from(value as Map))
           .toList(),
+      lastSetFeedbackClientUploadId: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.trainingId)
       ..writeByte(1)
@@ -95,7 +103,9 @@ class ActiveWorkoutHiveModelAdapter
       ..writeByte(5)
       ..write(obj.lastWeightKg)
       ..writeByte(6)
-      ..write(obj.completedSetData);
+      ..write(obj.completedSetData)
+      ..writeByte(7)
+      ..write(obj.lastSetFeedbackClientUploadId);
   }
 }
 

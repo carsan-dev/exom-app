@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/circuit_progression.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
@@ -15,8 +19,11 @@ import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 
 class ActiveCircuitPageArgs {
   final TrainingBloc trainingBloc;
@@ -30,6 +37,8 @@ class ActiveCircuitPageArgs {
   final int restBetweenRoundsSeconds;
   final List<TrainingExerciseEntity> exercises;
   final Map<String, List<SetPerformance>> previousPerformances;
+  final bool requiresLastSetVideo;
+  final String assignmentDate;
 
   const ActiveCircuitPageArgs({
     required this.trainingBloc,
@@ -43,6 +52,8 @@ class ActiveCircuitPageArgs {
     required this.restBetweenRoundsSeconds,
     required this.exercises,
     this.previousPerformances = const {},
+    this.requiresLastSetVideo = false,
+    required this.assignmentDate,
   });
 }
 
@@ -52,6 +63,31 @@ enum _CircuitStatus {
   roundResting,
   finalResting,
   done,
+}
+
+@visibleForTesting
+Map<String, String> restoreCircuitFeedbackStatuses(
+  Map<String, String> feedbackIds,
+  Map<String, String> storedStatuses,
+  String? Function(String id) currentStatus,
+) {
+  final restored = <String, String>{};
+  final staleExerciseIds = <String>[];
+  for (final entry in feedbackIds.entries) {
+    final liveStatus = currentStatus(entry.value);
+    final storedStatus = storedStatuses[entry.key];
+    if (liveStatus == null &&
+        storedStatus != null &&
+        storedStatus != 'completed') {
+      staleExerciseIds.add(entry.key);
+      continue;
+    }
+    restored[entry.key] = liveStatus ?? storedStatus ?? 'completed';
+  }
+  for (final exerciseId in staleExerciseIds) {
+    feedbackIds.remove(exerciseId);
+  }
+  return restored;
 }
 
 class ActiveCircuitPage extends StatelessWidget {
@@ -103,6 +139,160 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   bool _markedComplete = false;
   bool _circuitReadyToFinish = false;
   final Map<String, List<SetPerformance>> _performances = {};
+  final Map<String, String> _lastSetFeedbackIds = {};
+  final Map<String, String> _lastSetFeedbackStatuses = {};
+  StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
+
+  String get _stateKey {
+    final userId = sl<FirebaseAuthService>().currentUser?.uid ?? 'anonymous';
+    return 'active_circuit:$userId:${widget.args.assignmentDate}:'
+        '${widget.trainingId}:${widget.args.blockId}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreState();
+    _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
+      _onFeedbackNotice,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resumeRestIfNeeded());
+  }
+
+  void _restoreState() {
+    final stored = sl<LocalStorage>().getCachedMap(_stateKey);
+    if (stored == null) return;
+
+    final round = (stored['round'] as num?)?.toInt();
+    final exerciseIndex = (stored['exercise_index'] as num?)?.toInt();
+    final statusName = stored['status'] as String?;
+    _CircuitStatus? restoredStatus;
+    for (final value in _CircuitStatus.values) {
+      if (value.name == statusName) restoredStatus = value;
+    }
+    if (round == null ||
+        round < 1 ||
+        round > widget.args.rounds ||
+        exerciseIndex == null ||
+        exerciseIndex < 0 ||
+        exerciseIndex >= widget.args.exercises.length ||
+        restoredStatus == null ||
+        restoredStatus == _CircuitStatus.done) {
+      return;
+    }
+
+    _currentRound = round;
+    _currentExerciseIndex = exerciseIndex;
+    _status = restoredStatus;
+    _circuitReadyToFinish = stored['ready_to_finish'] == true;
+    _restEndsAt = DateTime.tryParse(stored['rest_ends_at'] as String? ?? '');
+
+    final performances = stored['performances'];
+    if (performances is Map) {
+      for (final entry in performances.entries) {
+        final rawSets = entry.value;
+        if (rawSets is! List) continue;
+        final sets = <SetPerformance>[];
+        for (final rawSet in rawSets.whereType<Map>()) {
+          try {
+            sets.add(
+              SetPerformance.fromJson(Map<String, dynamic>.from(rawSet)),
+            );
+          } on Object {
+            // Ignore only the malformed set; keep the remaining recovery data.
+          }
+        }
+        if (sets.isNotEmpty) _performances[entry.key.toString()] = sets;
+      }
+    }
+
+    final feedbackIds = stored['feedback_ids'];
+    if (feedbackIds is Map) {
+      _lastSetFeedbackIds.addAll(
+        feedbackIds.map(
+          (key, value) => MapEntry(key.toString(), value.toString()),
+        ),
+      );
+    }
+    final feedbackStatuses = stored['feedback_statuses'];
+    if (feedbackStatuses is Map) {
+      _lastSetFeedbackStatuses.addAll(
+        feedbackStatuses.map(
+          (key, value) => MapEntry(key.toString(), value.toString()),
+        ),
+      );
+    }
+    final queue = sl<FeedbackUploadQueueService>();
+    final restoredStatuses = restoreCircuitFeedbackStatuses(
+      _lastSetFeedbackIds,
+      _lastSetFeedbackStatuses,
+      queue.statusOf,
+    );
+    _lastSetFeedbackStatuses
+      ..clear()
+      ..addAll(restoredStatuses);
+  }
+
+  void _onFeedbackNotice(FeedbackUploadNotice notice) {
+    final exerciseEntry = _lastSetFeedbackIds.entries.where(
+      (entry) => entry.value == notice.id,
+    );
+    if (exerciseEntry.isEmpty) return;
+    final exerciseId = exerciseEntry.first.key;
+    if (notice.kind == FeedbackUploadNoticeKind.discarded) {
+      _lastSetFeedbackIds.remove(exerciseId);
+      _lastSetFeedbackStatuses.remove(exerciseId);
+    } else {
+      _lastSetFeedbackStatuses[exerciseId] = notice.kind.name;
+    }
+    unawaited(_persistState());
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _feedbackSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _resumeRestIfNeeded() async {
+    if (!mounted ||
+        _status == _CircuitStatus.executing ||
+        _status == _CircuitStatus.done) {
+      return;
+    }
+    final endsAt = _restEndsAt;
+    if (endsAt == null || !endsAt.isAfter(DateTime.now())) {
+      await _finishRest(finishedNaturally: true);
+      return;
+    }
+    await sl<RestTimerCoordinator>().start(
+      RestTimerSession(
+        id: '${widget.trainingId}:${widget.args.blockId}:${endsAt.millisecondsSinceEpoch}',
+        exerciseName: _currentExercise.exercise.name,
+        durationSeconds: endsAt.difference(DateTime.now()).inSeconds,
+        endsAt: endsAt,
+      ),
+    );
+  }
+
+  Future<void> _persistState() {
+    return sl<LocalStorage>().cacheData(_stateKey, <String, dynamic>{
+      'round': _currentRound,
+      'exercise_index': _currentExerciseIndex,
+      'status': _status.name,
+      'rest_ends_at': _restEndsAt?.toIso8601String(),
+      'ready_to_finish': _circuitReadyToFinish,
+      'performances': _performances.map(
+        (key, sets) => MapEntry(
+          key,
+          sets.map((performance) => performance.toJson()).toList(),
+        ),
+      ),
+      'feedback_ids': Map<String, String>.from(_lastSetFeedbackIds),
+      'feedback_statuses': Map<String, String>.from(_lastSetFeedbackStatuses),
+    });
+  }
 
   Color _typeColor(BuildContext context) {
     return trainingAccentColor(
@@ -188,6 +378,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       return;
     }
 
+    if (widget.args.requiresLastSetVideo &&
+        _currentRound == widget.args.rounds &&
+        !_lastSetFeedbackIds.containsKey(_currentExercise.id)) {
+      await _showLastRoundReminder(_currentExercise);
+      if (!mounted) return;
+    }
+
     final tracking = await _requestPerformance(_currentExercise);
     if (!mounted || tracking == null) return;
     final performance = tracking.performance;
@@ -209,6 +406,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     );
     if (progression.restKind == CircuitRestKind.done) {
       _circuitReadyToFinish = true;
+      await _persistState();
       await _finishCircuit();
       return;
     }
@@ -233,6 +431,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         }
       }
     });
+    await _persistState();
     if (progression.restKind != CircuitRestKind.none) {
       await sl<RestTimerCoordinator>().start(
         RestTimerSession(
@@ -243,6 +442,189 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         ),
       );
     }
+  }
+
+  Future<void> _showLastRoundReminder(
+    TrainingExerciseEntity trainingExercise,
+  ) async {
+    final storage = sl<LocalStorage>();
+    final remindersEnabled =
+        storage.getSetting<bool>(
+          'last_set_video_reminder_enabled',
+          defaultValue: true,
+        ) ??
+        true;
+    if (!remindersEnabled) return;
+    var hideAgain = false;
+    final attach = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(AppLocalizations.of(context).lastSetReminderTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppLocalizations.of(
+                  context,
+                ).lastSetReminderMessage(trainingExercise.exercise.name),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: hideAgain,
+                onChanged: (value) =>
+                    setDialogState(() => hideAgain = value ?? false),
+                title: Text(AppLocalizations.of(context).doNotShowAgain),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(AppLocalizations.of(context).attachAtEnd),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(AppLocalizations.of(context).attachNow),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (hideAgain) {
+      await storage.saveSetting('last_set_video_reminder_enabled', false);
+    }
+    if (attach != true || !mounted) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: Text(AppLocalizations.of(context).recordNow),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library_outlined),
+              title: Text(AppLocalizations.of(context).chooseFromGallery),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await _pickCircuitVideo(source);
+    if (picked == null) return;
+    final id = await _enqueueCircuitVideo(trainingExercise, picked, null);
+    if (mounted) {
+      setState(() {
+        _lastSetFeedbackIds[trainingExercise.id] = id;
+        _lastSetFeedbackStatuses[trainingExercise.id] = 'queued';
+      });
+      await _persistState();
+    }
+  }
+
+  Future<File?> _pickCircuitVideo(ImageSource initialSource) async {
+    var source = initialSource;
+    while (mounted) {
+      try {
+        final picked = await ImagePicker().pickVideo(
+          source: source,
+          maxDuration: const Duration(minutes: 2),
+        );
+        return picked == null ? null : File(picked.path);
+      } on Object catch (error) {
+        if (!mounted) return null;
+        final action = await showMediaPickerErrorDialog(
+          context,
+          error,
+          canUseGallery: source != ImageSource.gallery,
+        );
+        if (action == MediaPickerRecoveryAction.gallery) {
+          source = ImageSource.gallery;
+        } else if (action != MediaPickerRecoveryAction.retry) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<String> _enqueueCircuitVideo(
+    TrainingExerciseEntity trainingExercise,
+    File file,
+    String? notes,
+  ) => sl<FeedbackUploadQueueService>().enqueue(
+    file: file,
+    contentType: _videoContentType(file),
+    mediaType: 'VIDEO',
+    notes: notes,
+    exerciseId: trainingExercise.exercise.id,
+    feedbackKind: 'LAST_SET',
+    trainingId: widget.trainingId,
+    trainingExerciseId: trainingExercise.id,
+    assignmentDate: widget.args.assignmentDate,
+  );
+
+  String _videoContentType(File file) {
+    return switch (file.path.split('.').last.toLowerCase()) {
+      'mov' => 'video/quicktime',
+      'm4v' => 'video/x-m4v',
+      'webm' => 'video/webm',
+      _ => 'video/mp4',
+    };
+  }
+
+  Future<bool> _collectMissingVideos() async {
+    final missing = widget.args.exercises
+        .where((exercise) => !_lastSetFeedbackIds.containsKey(exercise.id))
+        .toList(growable: false);
+    if (missing.isEmpty) return true;
+    final completed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * .9,
+          child: SingleChildScrollView(
+            child: CircuitFeedbackForm(
+              circuitName: AppLocalizations.of(
+                context,
+              ).requiredCircuitVideos(widget.args.blockName),
+              requireAll: true,
+              targets: missing
+                  .map(
+                    (exercise) => FeedbackExerciseTarget(
+                      key: exercise.id,
+                      exerciseId: exercise.exercise.id,
+                      exerciseName: exercise.exercise.name,
+                    ),
+                  )
+                  .toList(growable: false),
+              enqueue: (upload) async {
+                final exercise = missing.firstWhere(
+                  (item) => item.id == upload.target.key,
+                );
+                final id = await _enqueueCircuitVideo(
+                  exercise,
+                  upload.file,
+                  upload.notes,
+                );
+                _lastSetFeedbackIds[exercise.id] = id;
+                _lastSetFeedbackStatuses[exercise.id] = 'queued';
+                await _persistState();
+              },
+              onQueued: () => Navigator.pop(sheetContext, true),
+            ),
+          ),
+        ),
+      ),
+    );
+    return completed == true;
   }
 
   Future<({SetPerformance? performance, bool skipped})?> _requestPerformance(
@@ -290,7 +672,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                     decoration: InputDecoration(
                       labelText: timeBased
                           ? timeUnit == TimePerformanceUnit.minutes
-                                ? 'Minutos'
+                                ? l10n.setPerformanceMinutes
                                 : l10n.setPerformanceSeconds
                           : l10n.setPerformanceReps,
                       errorText: error,
@@ -408,10 +790,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       _status = _CircuitStatus.executing;
       _restEndsAt = null;
     });
+    await _persistState();
   }
 
   Future<void> _finishCircuit({bool cancelRestTimer = true}) async {
     if (_markedComplete) return;
+    if (widget.args.requiresLastSetVideo && !await _collectMissingVideos()) {
+      return;
+    }
+    if (!mounted) return;
     _markedComplete = true;
     final trainingBloc = context.read<TrainingBloc>();
     if (cancelRestTimer) {
@@ -431,6 +818,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                 ? null
                 : sets.last.weightKg,
             sets: sets,
+            lastSetFeedbackClientUploadId:
+                _lastSetFeedbackIds[trainingExercise.id],
             completion: completion,
           ),
         );
@@ -438,13 +827,10 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       }
     } catch (_) {
       _markedComplete = false;
+      await _persistState();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.',
-          ),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context).circuitSaveError)),
       );
       return;
     }
@@ -453,6 +839,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     setState(() {
       _status = _CircuitStatus.done;
     });
+    await sl<LocalStorage>().removeCachedData(_stateKey);
+    if (!mounted) return;
     context.pop();
   }
 

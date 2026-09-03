@@ -123,7 +123,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     emit(const TrainingLoading());
     try {
       final targetDate = _resolvedDate(event.date);
-      final training = await _getTrainingUseCase(event.id);
+      final training = await _getTrainingUseCase(event.id, date: targetDate);
       var progress = const TrainingDayProgress();
       try {
         progress = await _getCompletedExercisesUseCase(targetDate);
@@ -215,6 +215,8 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
             date,
             weightUsed: event.weightUsed,
             sets: event.sets,
+            lastSetFeedbackClientUploadId: event.lastSetFeedbackClientUploadId,
+            trainingId: current.training.id,
           );
         } else {
           await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date);

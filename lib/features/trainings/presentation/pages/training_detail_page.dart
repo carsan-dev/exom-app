@@ -625,6 +625,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                                   .previousPerformances[blockExercise
                                                   .id]!,
                                     },
+                                    requiresLastSetVideo:
+                                        training.requiresLastSetVideo,
+                                    assignmentDate: widget.state.selectedDate,
                                   ),
                                 );
                               },
@@ -698,10 +701,23 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                       widget.state.currentPerformances[ex.id],
                                   previousPerformances:
                                       widget.state.previousPerformances[ex.id],
+                                  requiresLastSetVideo:
+                                      training.requiresLastSetVideo,
+                                  assignmentDate: widget.state.selectedDate,
                                 ),
                               );
                             },
                             onToggle: (val, {double? weightUsed}) {
+                              if (val && training.requiresLastSetVideo) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Abre el ejercicio para completar la última serie y adjuntar su vídeo.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
                               context.read<TrainingBloc>().add(
                                 MarkExerciseCompleted(
                                   trainingExerciseId: ex.id,
@@ -834,6 +850,17 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           onPressed: () {
                             if (allDone) {
                               Navigator.of(context).pop(true);
+                              return;
+                            }
+
+                            if (training.requiresLastSetVideo) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Completa cada ejercicio y adjunta el vídeo de su última serie.',
+                                  ),
+                                ),
+                              );
                               return;
                             }
 

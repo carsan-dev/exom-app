@@ -10,13 +10,15 @@ abstract class TrainingRemoteDataSource {
   Future<TrainingModel?> getTodayTraining({String? date});
   Future<List<TrainingModel>> getDayTrainings({String? date});
   Future<List<TrainingHistoryModel>> getTrainings({String? date});
-  Future<TrainingModel> getTraining(String id);
+  Future<TrainingModel> getTraining(String id, {String? date});
   Future<void> markExerciseCompleted(
     String trainingExerciseId,
     String exerciseId,
     String date, {
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(
@@ -393,11 +395,14 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   @override
-  Future<TrainingModel> getTraining(String id) async {
-    final cacheKey = 'training_detail_$id';
+  Future<TrainingModel> getTraining(String id, {String? date}) async {
+    final cacheKey = 'training_detail_${id}_${date ?? 'catalog'}';
 
     try {
-      final response = await _apiClient.dio.get<dynamic>('/trainings/$id');
+      final response = await _apiClient.dio.get<dynamic>(
+        '/trainings/$id',
+        queryParameters: date == null ? null : {'date': date},
+      );
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = data['data'];
@@ -425,7 +430,22 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String date, {
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   }) async {
+    if (lastSetFeedbackClientUploadId != null) {
+      await _offlineSyncService.queueExerciseCompletion(
+        trainingExerciseId,
+        date,
+        completed: true,
+        exerciseId: exerciseId,
+        weightUsed: weightUsed,
+        sets: sets,
+        lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
+        trainingId: trainingId,
+      );
+      return;
+    }
     try {
       final payload = <String, dynamic>{
         'exercise_id': exerciseId,
@@ -456,6 +476,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         exerciseId: exerciseId,
         weightUsed: weightUsed,
         sets: sets,
+        lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
+        trainingId: trainingId,
       );
     }
   }
@@ -490,6 +512,14 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     required String trainingId,
     String? notes,
   }) async {
+    if (_offlineSyncService.hasPendingFeedbackForTraining(trainingId, date)) {
+      await _offlineSyncService.queueTrainingCompletion(
+        date,
+        trainingId: trainingId,
+        notes: notes,
+      );
+      return;
+    }
     try {
       final response = await _apiClient.dio.post<dynamic>(
         '/progress/trainings/complete',

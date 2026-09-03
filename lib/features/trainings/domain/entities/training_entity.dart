@@ -33,6 +33,15 @@ class SetPerformance {
     this.weightKg,
   });
 
+  factory SetPerformance.fromJson(Map<String, dynamic> json) {
+    return SetPerformance(
+      setNumber: (json['set_number'] as num).toInt(),
+      reps: (json['reps'] as num?)?.toInt(),
+      seconds: (json['seconds'] as num?)?.toInt(),
+      weightKg: (json['weight_kg'] as num?)?.toDouble(),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'set_number': setNumber,
     if (reps != null) 'reps': reps,
@@ -133,6 +142,9 @@ class TrainingEntity {
   final String? cooldownDescription;
   final List<String> tags;
   final List<TrainingExerciseEntity> exercises;
+  final String? assignmentTrainingId;
+  final String? assignmentDate;
+  final bool requiresLastSetVideo;
 
   const TrainingEntity({
     required this.id,
@@ -146,6 +158,9 @@ class TrainingEntity {
     this.cooldownDescription,
     required this.tags,
     required this.exercises,
+    this.assignmentTrainingId,
+    this.assignmentDate,
+    this.requiresLastSetVideo = false,
   });
 }
 

@@ -20,8 +20,14 @@ class CompleteSet extends ActiveExerciseEvent {
   final int? reps;
   final int? seconds;
   final double? weightKg;
+  final String? lastSetFeedbackClientUploadId;
 
-  const CompleteSet({this.reps, this.seconds, this.weightKg});
+  const CompleteSet({
+    this.reps,
+    this.seconds,
+    this.weightKg,
+    this.lastSetFeedbackClientUploadId,
+  });
 }
 
 class SkipRest extends ActiveExerciseEvent {
@@ -49,6 +55,7 @@ class ActiveExerciseState {
   final ActiveExerciseStatus status;
   final DateTime? restEndsAt;
   final String? errorMessage;
+  final String? lastSetFeedbackClientUploadId;
 
   const ActiveExerciseState({
     required this.currentSet,
@@ -61,6 +68,7 @@ class ActiveExerciseState {
     required this.status,
     required this.restEndsAt,
     this.errorMessage,
+    this.lastSetFeedbackClientUploadId,
   });
 
   factory ActiveExerciseState.initial(
@@ -100,6 +108,7 @@ class ActiveExerciseState {
     ActiveExerciseStatus? status,
     Object? restEndsAt = _unset,
     Object? errorMessage = _unset,
+    Object? lastSetFeedbackClientUploadId = _unset,
   }) {
     return ActiveExerciseState(
       currentSet: currentSet ?? this.currentSet,
@@ -118,6 +127,10 @@ class ActiveExerciseState {
       errorMessage: identical(errorMessage, _unset)
           ? this.errorMessage
           : errorMessage as String?,
+      lastSetFeedbackClientUploadId:
+          identical(lastSetFeedbackClientUploadId, _unset)
+          ? this.lastSetFeedbackClientUploadId
+          : lastSetFeedbackClientUploadId as String?,
     );
   }
 }
@@ -216,6 +229,9 @@ class ActiveExerciseBloc
           status: ActiveExerciseStatus.finalResting,
           restEndsAt: DateTime.now().add(Duration(seconds: state.restSeconds)),
           errorMessage: null,
+          lastSetFeedbackClientUploadId:
+              event.lastSetFeedbackClientUploadId ??
+              state.lastSetFeedbackClientUploadId,
         );
         emit(finalRestingState);
         await _persistState(finalRestingState, emit);
@@ -230,6 +246,9 @@ class ActiveExerciseBloc
         status: ActiveExerciseStatus.done,
         restEndsAt: null,
         errorMessage: null,
+        lastSetFeedbackClientUploadId:
+            event.lastSetFeedbackClientUploadId ??
+            state.lastSetFeedbackClientUploadId,
       );
       emit(doneState);
       await _restTimerCoordinator.cancel();
@@ -359,6 +378,7 @@ class ActiveExerciseBloc
           ? ActiveExerciseStatus.resting
           : ActiveExerciseStatus.executing,
       restEndsAt: hasPendingRest ? saved.restEndsAt : null,
+      lastSetFeedbackClientUploadId: saved.lastSetFeedbackClientUploadId,
     );
   }
 
@@ -396,6 +416,8 @@ class ActiveExerciseBloc
           completedSetData: nextState.setPerformances
               .map((set) => set.toJson())
               .toList(),
+          lastSetFeedbackClientUploadId:
+              nextState.lastSetFeedbackClientUploadId,
         ),
       );
     } catch (error) {

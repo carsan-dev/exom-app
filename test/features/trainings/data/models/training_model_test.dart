@@ -10,6 +10,9 @@ void main() {
         'type': 'Fuerza',
         'level': 'PRINCIPIANTE',
         'tags': <String>[],
+        'assignment_training_id': 'assignment-training-1',
+        'assignment_date': '2026-09-01',
+        'requires_last_set_video': true,
         'exercises': [
           {
             'id': 'training-exercise-1',
@@ -51,6 +54,9 @@ void main() {
       expect(trainingExercise.exercise.techniqueText, 'Pies firmes');
       expect(trainingExercise.exercise.commonErrorsText, 'Bloquear rodillas');
       expect(trainingExercise.exercise.explanationText, 'Empuja controlado');
+      expect(model.assignmentTrainingId, 'assignment-training-1');
+      expect(model.assignmentDate, '2026-09-01');
+      expect(model.requiresLastSetVideo, isTrue);
     });
   });
 }

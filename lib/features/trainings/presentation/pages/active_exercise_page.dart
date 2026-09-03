@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -10,12 +12,14 @@ import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -29,6 +33,8 @@ class ActiveExercisePageArgs {
   final double? initialWeightKg;
   final List<SetPerformance>? currentPerformances;
   final List<SetPerformance>? previousPerformances;
+  final bool requiresLastSetVideo;
+  final String assignmentDate;
 
   const ActiveExercisePageArgs({
     required this.trainingBloc,
@@ -40,6 +46,8 @@ class ActiveExercisePageArgs {
     this.initialWeightKg,
     this.currentPerformances,
     this.previousPerformances,
+    this.requiresLastSetVideo = false,
+    required this.assignmentDate,
   });
 }
 
@@ -113,6 +121,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _handledCompletion = false;
   bool _allowPop = false;
   bool _popScheduled = false;
+  bool _reminderShown = false;
+  _SetPerformanceResult? _pendingLastSetPerformance;
+  int? _pendingLastSetNumber;
 
   @override
   void initState() {
@@ -184,6 +195,13 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     setState(() {
       _bootstrapped = true;
     });
+    final activeState = context.read<ActiveExerciseBloc>().state;
+    if (widget.args.requiresLastSetVideo &&
+        activeState.currentSet == activeState.totalSets) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showUpcomingLastSetReminder(),
+      );
+    }
   }
 
   Future<bool> _confirmExit() async {
@@ -230,34 +248,208 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     AppLocalizations l10n,
   ) async {
     final timeUnit = timePerformanceUnit(state.repsOrDuration);
-    final performance = await _showSetPerformanceSheet(
-      context,
-      l10n,
-      setNumber: state.currentSet,
-      prescribedReps: state.repsOrDuration,
-      previousWeight: state.weightKg,
-      currentPerformance: performanceForSet(
-        widget.args.currentPerformances,
-        state.currentSet,
-      ),
-      previousPerformance: performanceForSet(
-        widget.args.previousPerformances,
-        state.currentSet,
-      ),
-      timeUnit: timeUnit,
-      repsRequired: widget.args.trainingExercise.requestSetTracking,
-    );
+    final savedPerformance = _pendingLastSetNumber == state.currentSet
+        ? _pendingLastSetPerformance
+        : null;
+    final performance =
+        savedPerformance ??
+        await _showSetPerformanceSheet(
+          context,
+          l10n,
+          setNumber: state.currentSet,
+          prescribedReps: state.repsOrDuration,
+          previousWeight: state.weightKg,
+          currentPerformance: performanceForSet(
+            widget.args.currentPerformances,
+            state.currentSet,
+          ),
+          previousPerformance: performanceForSet(
+            widget.args.previousPerformances,
+            state.currentSet,
+          ),
+          timeUnit: timeUnit,
+          repsRequired: widget.args.trainingExercise.requestSetTracking,
+        );
     if (!mounted || performance == null) return;
 
+    String? feedbackId = state.lastSetFeedbackClientUploadId;
+    if (state.currentSet == state.totalSets &&
+        widget.args.requiresLastSetVideo &&
+        feedbackId == null) {
+      feedbackId = await _enqueueLastSetVideo();
+      if (!mounted || feedbackId == null) {
+        _pendingLastSetPerformance = performance;
+        _pendingLastSetNumber = state.currentSet;
+        return;
+      }
+    }
+
+    _pendingLastSetPerformance = null;
+    _pendingLastSetNumber = null;
     context.read<ActiveExerciseBloc>().add(
       performance.skipped
-          ? const CompleteSet()
+          ? CompleteSet(lastSetFeedbackClientUploadId: feedbackId)
           : CompleteSet(
               reps: performance.reps,
               seconds: performance.seconds,
               weightKg: performance.weight,
+              lastSetFeedbackClientUploadId: feedbackId,
             ),
     );
+    if (widget.args.requiresLastSetVideo &&
+        state.currentSet == state.totalSets - 1) {
+      await _showUpcomingLastSetReminder();
+    }
+  }
+
+  Future<void> _showUpcomingLastSetReminder() async {
+    if (_reminderShown || !mounted) return;
+    final storage = sl<LocalStorage>();
+    final enabled =
+        storage.getSetting<bool>(
+          'last_set_video_reminder_enabled',
+          defaultValue: true,
+        ) ??
+        true;
+    if (!enabled) return;
+    _reminderShown = true;
+    var hideAgain = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(AppLocalizations.of(context).upcomingLastSetTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(AppLocalizations.of(context).upcomingLastSetMessage),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: hideAgain,
+                onChanged: (value) =>
+                    setDialogState(() => hideAgain = value ?? false),
+                title: Text(AppLocalizations.of(context).doNotShowAgain),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(AppLocalizations.of(context).understood),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (hideAgain) {
+      await storage.saveSetting('last_set_video_reminder_enabled', false);
+    }
+  }
+
+  Future<String?> _enqueueLastSetVideo() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: Text(AppLocalizations.of(context).attachLastSetVideo),
+              subtitle: Text(
+                AppLocalizations.of(context).lastSetVideoRequiredDescription,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: Text(AppLocalizations.of(context).recordNow),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library_outlined),
+              title: Text(AppLocalizations.of(context).chooseFromGallery),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return null;
+    final picked = await _pickLastSetVideo(source);
+    if (picked == null || !mounted) return null;
+    final notesController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(AppLocalizations.of(context).videoReadyTitle),
+        content: TextField(
+          controller: notesController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).optionalComment,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(AppLocalizations.of(context).changeVideo),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(AppLocalizations.of(context).useVideo),
+          ),
+        ],
+      ),
+    );
+    final notes = notesController.text.trim();
+    notesController.dispose();
+    if (confirmed != true) return null;
+    return sl<FeedbackUploadQueueService>().enqueue(
+      file: picked,
+      contentType: _videoContentType(picked),
+      mediaType: 'VIDEO',
+      notes: notes.isEmpty ? null : notes,
+      exerciseId: widget.args.trainingExercise.exercise.id,
+      feedbackKind: 'LAST_SET',
+      trainingId: widget.trainingId,
+      trainingExerciseId: widget.args.trainingExercise.id,
+      assignmentDate: widget.args.assignmentDate,
+    );
+  }
+
+  String _videoContentType(File file) {
+    return switch (file.path.split('.').last.toLowerCase()) {
+      'mov' => 'video/quicktime',
+      'm4v' => 'video/x-m4v',
+      'webm' => 'video/webm',
+      _ => 'video/mp4',
+    };
+  }
+
+  Future<File?> _pickLastSetVideo(ImageSource initialSource) async {
+    var source = initialSource;
+    while (mounted) {
+      try {
+        final picked = await ImagePicker().pickVideo(
+          source: source,
+          maxDuration: const Duration(minutes: 2),
+        );
+        return picked == null ? null : File(picked.path);
+      } on Object catch (error) {
+        if (!mounted) return null;
+        final action = await showMediaPickerErrorDialog(
+          context,
+          error,
+          canUseGallery: source != ImageSource.gallery,
+        );
+        if (action == MediaPickerRecoveryAction.gallery) {
+          source = ImageSource.gallery;
+        } else if (action != MediaPickerRecoveryAction.retry) {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> _openVideoPlayer() async {
@@ -319,6 +511,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               completed: true,
               weightUsed: state.weightKg,
               sets: state.setPerformances,
+              lastSetFeedbackClientUploadId:
+                  state.lastSetFeedbackClientUploadId,
             ),
           );
           _popOnce();

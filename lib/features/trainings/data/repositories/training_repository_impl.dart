@@ -28,8 +28,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<TrainingEntity> getTraining(String id) async {
-    final model = await _remoteDataSource.getTraining(id);
+  Future<TrainingEntity> getTraining(String id, {String? date}) async {
+    final model = await _remoteDataSource.getTraining(id, date: date);
     return _mapToEntity(model);
   }
 
@@ -40,6 +40,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
     String date, {
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   }) {
     return _remoteDataSource.markExerciseCompleted(
       trainingExerciseId,
@@ -47,6 +49,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
       date,
       weightUsed: weightUsed,
       sets: sets,
+      lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
+      trainingId: trainingId,
     );
   }
 
@@ -97,6 +101,9 @@ class TrainingRepositoryImpl implements TrainingRepository {
       cooldownDescription: model.cooldownDescription,
       tags: model.tags,
       exercises: model.exercises.map(_mapExerciseToEntity).toList(),
+      assignmentTrainingId: model.assignmentTrainingId,
+      assignmentDate: model.assignmentDate,
+      requiresLastSetVideo: model.requiresLastSetVideo,
     );
   }
 

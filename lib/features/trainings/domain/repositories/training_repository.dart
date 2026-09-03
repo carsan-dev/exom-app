@@ -4,13 +4,15 @@ abstract class TrainingRepository {
   Future<TrainingEntity?> getTodayTraining({String? date});
   Future<List<TrainingEntity>> getDayTrainings({String? date});
   Future<List<TrainingHistoryEntity>> getTrainings({String? date});
-  Future<TrainingEntity> getTraining(String id);
+  Future<TrainingEntity> getTraining(String id, {String? date});
   Future<void> markExerciseCompleted(
     String trainingExerciseId,
     String exerciseId,
     String date, {
     double? weightUsed,
     List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId,
+    String? trainingId,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
   Future<void> completeTraining(

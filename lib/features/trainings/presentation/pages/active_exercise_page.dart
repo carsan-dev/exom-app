@@ -203,12 +203,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       _bootstrapped = true;
     });
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
-    if (widget.args.requiresLastSetVideo &&
-        activeState.currentSet == activeState.totalSets) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _prepareLastSetVideo(),
-      );
-    }
+    _scheduleLastSetVideoPreparation(activeState);
   }
 
   Future<bool> _confirmExit() async {
@@ -304,10 +299,23 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               lastSetFeedbackClientUploadId: feedbackId,
             ),
     );
-    if (widget.args.requiresLastSetVideo &&
-        state.currentSet == state.totalSets - 1) {
-      await _prepareLastSetVideo();
+  }
+
+  void _scheduleLastSetVideoPreparation(ActiveExerciseState state) {
+    if (!shouldPrepareLastSetVideo(
+      requiresLastSetVideo: widget.args.requiresLastSetVideo,
+      isExecuting: state.isExecuting,
+      currentSet: state.currentSet,
+      totalSets: state.totalSets,
+      completedSets: state.completedSets,
+      feedbackId:
+          _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
+    )) {
+      return;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_prepareLastSetVideo());
+    });
   }
 
   Future<String?> _prepareLastSetVideo() async {
@@ -321,6 +329,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     _lastSetVideoPromptOpen = true;
     try {
       await _showUpcomingLastSetReminder();
+      if (!mounted) return null;
+      await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return null;
       final feedbackId = await _enqueueLastSetVideo();
       if (!mounted || feedbackId == null) return null;
@@ -407,14 +417,14 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     if (source == null || !mounted) return null;
     final picked = await _pickLastSetVideo(source);
     if (picked == null || !mounted) return null;
-    final notesController = TextEditingController();
+    var notes = '';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(AppLocalizations.of(context).videoReadyTitle),
         content: TextField(
-          controller: notesController,
           maxLines: 3,
+          onChanged: (value) => notes = value,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context).optionalComment,
           ),
@@ -431,9 +441,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         ],
       ),
     );
-    final notes = notesController.text.trim();
-    notesController.dispose();
     if (confirmed != true) return null;
+    notes = notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
       file: picked,
       contentType: _videoContentType(picked),
@@ -524,8 +533,10 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     return BlocListener<ActiveExerciseBloc, ActiveExerciseState>(
       listenWhen: (previous, current) =>
           previous.status != current.status ||
+          previous.currentSet != current.currentSet ||
           previous.errorMessage != current.errorMessage,
       listener: (context, state) {
+        _scheduleLastSetVideoPreparation(state);
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(
             context,
@@ -893,6 +904,22 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       ),
     );
   }
+}
+
+@visibleForTesting
+bool shouldPrepareLastSetVideo({
+  required bool requiresLastSetVideo,
+  required bool isExecuting,
+  required int currentSet,
+  required int totalSets,
+  required int completedSets,
+  required String? feedbackId,
+}) {
+  return requiresLastSetVideo &&
+      isExecuting &&
+      currentSet == totalSets &&
+      completedSets < totalSets &&
+      (feedbackId == null || feedbackId.isEmpty);
 }
 
 @visibleForTesting

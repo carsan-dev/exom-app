@@ -122,6 +122,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _allowPop = false;
   bool _popScheduled = false;
   bool _reminderShown = false;
+  bool _lastSetVideoPromptOpen = false;
+  String? _preparedLastSetFeedbackId;
   _SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
 
@@ -185,21 +187,26 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     }
 
     if (!mounted) return;
-    context.read<ActiveExerciseBloc>().add(
+    final bloc = context.read<ActiveExerciseBloc>();
+    final startedState = bloc.stream.first;
+    bloc.add(
       StartExercise(
         trainingId: widget.trainingId,
         exerciseId: widget.exerciseId,
       ),
     );
 
+    final activeState = await startedState;
+    if (!mounted) return;
+
     setState(() {
       _bootstrapped = true;
     });
-    final activeState = context.read<ActiveExerciseBloc>().state;
+    _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
     if (widget.args.requiresLastSetVideo &&
         activeState.currentSet == activeState.totalSets) {
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _showUpcomingLastSetReminder(),
+        (_) => _prepareLastSetVideo(),
       );
     }
   }
@@ -272,11 +279,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         );
     if (!mounted || performance == null) return;
 
-    String? feedbackId = state.lastSetFeedbackClientUploadId;
+    String? feedbackId =
+        _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId;
     if (state.currentSet == state.totalSets &&
         widget.args.requiresLastSetVideo &&
         feedbackId == null) {
-      feedbackId = await _enqueueLastSetVideo();
+      feedbackId = await _prepareLastSetVideo();
       if (!mounted || feedbackId == null) {
         _pendingLastSetPerformance = performance;
         _pendingLastSetNumber = state.currentSet;
@@ -298,12 +306,35 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     );
     if (widget.args.requiresLastSetVideo &&
         state.currentSet == state.totalSets - 1) {
+      await _prepareLastSetVideo();
+    }
+  }
+
+  Future<String?> _prepareLastSetVideo() async {
+    final bloc = context.read<ActiveExerciseBloc>();
+    final existingId =
+        _preparedLastSetFeedbackId ?? bloc.state.lastSetFeedbackClientUploadId;
+    if (existingId != null || _lastSetVideoPromptOpen || !mounted) {
+      return existingId;
+    }
+
+    _lastSetVideoPromptOpen = true;
+    try {
       await _showUpcomingLastSetReminder();
+      if (!mounted) return null;
+      final feedbackId = await _enqueueLastSetVideo();
+      if (!mounted || feedbackId == null) return null;
+      _preparedLastSetFeedbackId = feedbackId;
+      bloc.add(AttachLastSetFeedback(feedbackId));
+      return feedbackId;
+    } finally {
+      _lastSetVideoPromptOpen = false;
     }
   }
 
   Future<void> _showUpcomingLastSetReminder() async {
     if (_reminderShown || !mounted) return;
+    _reminderShown = true;
     final storage = sl<LocalStorage>();
     final enabled =
         storage.getSetting<bool>(
@@ -312,7 +343,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         ) ??
         true;
     if (!enabled) return;
-    _reminderShown = true;
     var hideAgain = false;
     await showDialog<void>(
       context: context,

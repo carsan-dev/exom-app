@@ -30,6 +30,12 @@ class CompleteSet extends ActiveExerciseEvent {
   });
 }
 
+class AttachLastSetFeedback extends ActiveExerciseEvent {
+  final String clientUploadId;
+
+  const AttachLastSetFeedback(this.clientUploadId);
+}
+
 class SkipRest extends ActiveExerciseEvent {
   const SkipRest();
 }
@@ -161,6 +167,7 @@ class ActiveExerciseBloc
          ),
        ) {
     on<StartExercise>(_onStartExercise);
+    on<AttachLastSetFeedback>(_onAttachLastSetFeedback);
     on<CompleteSet>(_onCompleteSet);
     on<SkipRest>(_onSkipRest);
     on<FinishRest>(_onFinishRest);
@@ -196,6 +203,19 @@ class ActiveExerciseBloc
     );
     emit(initial);
     await _persistState(initial, emit);
+  }
+
+  Future<void> _onAttachLastSetFeedback(
+    AttachLastSetFeedback event,
+    Emitter<ActiveExerciseState> emit,
+  ) async {
+    if (event.clientUploadId.trim().isEmpty || state.isDone) return;
+    final nextState = state.copyWith(
+      lastSetFeedbackClientUploadId: event.clientUploadId,
+      errorMessage: null,
+    );
+    emit(nextState);
+    await _persistState(nextState, emit);
   }
 
   Future<void> _onCompleteSet(

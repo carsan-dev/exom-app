@@ -181,6 +181,41 @@ void main() {
       expect(store.getActiveWorkout('ex-1')!.completedSets, 1);
     });
 
+    test(
+      'AttachLastSetFeedback persists before final set completion',
+      () async {
+        final store = _FakeStore();
+        final bloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+        );
+
+        bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+        await pumpEventQueue();
+        bloc.add(const AttachLastSetFeedback('feedback-1'));
+        await pumpEventQueue();
+
+        expect(bloc.state.lastSetFeedbackClientUploadId, 'feedback-1');
+        expect(
+          store.getActiveWorkout('ex-1')!.lastSetFeedbackClientUploadId,
+          'feedback-1',
+        );
+
+        final restoredBloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+        );
+        restoredBloc.add(
+          const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'),
+        );
+        await pumpEventQueue();
+
+        expect(restoredBloc.state.lastSetFeedbackClientUploadId, 'feedback-1');
+        await bloc.close();
+        await restoredBloc.close();
+      },
+    );
+
     test('CompleteSet persists reps and weight for each tracked set', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(

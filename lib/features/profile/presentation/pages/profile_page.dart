@@ -23,6 +23,7 @@ import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -487,15 +488,51 @@ class _ProfileHeader extends StatelessWidget {
   });
 
   Future<void> _pickAndUpload(BuildContext context) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final l10n = AppLocalizations.of(context);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(l10n.feedbackFromCamera),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.feedbackFromGallery),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
     );
-    if (picked == null) return;
-    if (!context.mounted) return;
-    context.read<ProfileBloc>().add(
-      ProfileAvatarUploadRequested(File(picked.path)),
-    );
+    if (source == null) return;
+    var selectedSource = source;
+    while (context.mounted) {
+      try {
+        final picked = await ImagePicker().pickImage(source: selectedSource);
+        if (picked == null || !context.mounted) return;
+        context.read<ProfileBloc>().add(
+          ProfileAvatarUploadRequested(File(picked.path)),
+        );
+        return;
+      } on Object catch (error) {
+        if (!context.mounted) return;
+        final action = await showMediaPickerErrorDialog(
+          context,
+          error,
+          canUseGallery: selectedSource != ImageSource.gallery,
+        );
+        if (action == MediaPickerRecoveryAction.gallery) {
+          selectedSource = ImageSource.gallery;
+        } else if (action != MediaPickerRecoveryAction.retry) {
+          return;
+        }
+      }
+    }
   }
 
   String _levelLabel(BuildContext context, String? level) {
@@ -555,7 +592,7 @@ class _ProfileHeader extends StatelessWidget {
                 Text(
                   profile.fullName.isNotEmpty
                       ? profile.fullName.toUpperCase()
-                      : 'USUARIO EXOM',
+                      : AppLocalizations.of(context).profileFallbackUserName,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: palette.textPrimary,
                     fontSize: 18,

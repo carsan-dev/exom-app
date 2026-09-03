@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 
 class OnboardingBasicsStep extends StatefulWidget {
   const OnboardingBasicsStep({
@@ -58,13 +59,49 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final l10n = AppLocalizations.of(context);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(l10n.feedbackFromCamera),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.feedbackFromGallery),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
     );
-    if (picked != null) {
-      setState(() => _localAvatarPath = picked.path);
-      widget.onAvatarPicked(picked.path);
+    if (source == null) return;
+    var selectedSource = source;
+    while (mounted) {
+      try {
+        final picked = await ImagePicker().pickImage(source: selectedSource);
+        if (picked == null || !mounted) return;
+        setState(() => _localAvatarPath = picked.path);
+        widget.onAvatarPicked(picked.path);
+        return;
+      } on Object catch (error) {
+        if (!mounted) return;
+        final action = await showMediaPickerErrorDialog(
+          context,
+          error,
+          canUseGallery: selectedSource != ImageSource.gallery,
+        );
+        if (action == MediaPickerRecoveryAction.gallery) {
+          selectedSource = ImageSource.gallery;
+        } else if (action != MediaPickerRecoveryAction.retry) {
+          return;
+        }
+      }
     }
   }
 

@@ -73,32 +73,48 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<ProfileModel> uploadAvatar(File file) async {
     final compressed = await ImageCompressor.compressAvatar(file);
-    final fileKey =
-        'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        compressed.path,
-        filename: '${DateTime.now().millisecondsSinceEpoch}.jpg',
-        contentType: DioMediaType('image', 'jpeg'),
-      ),
-      'file_key': fileKey,
-      'content_type': 'image/jpeg',
-    });
-
-    final response = await _apiClient.dio.post<dynamic>(
-      '/uploads/file',
-      data: formData,
-    );
-
-    final payload = response.data;
-    if (payload is! Map<String, dynamic>) {
-      throw Exception('Invalid upload response');
+    try {
+      final extension = compressed.path.split('.').last.toLowerCase();
+      final contentType = switch (extension) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => throw UnsupportedError('Unsupported avatar image format'),
+      };
+      final bytes = await compressed.length();
+      final sessionResponse = await _apiClient.dio.post<dynamic>(
+        '/uploads/sessions',
+        data: {
+          'purpose': 'AVATAR',
+          'content_type': contentType,
+          'bytes': bytes,
+        },
+      );
+      final payload = sessionResponse.data as Map<String, dynamic>;
+      final session = (payload['data'] as Map<String, dynamic>?) ?? payload;
+      final uploadId = session['upload_id'] as String;
+      await Dio().put<dynamic>(
+        session['upload_url'] as String,
+        data: compressed.openRead(),
+        options: Options(
+          headers: {
+            Headers.contentTypeHeader: contentType,
+            Headers.contentLengthHeader: bytes,
+          },
+        ),
+      );
+      await _apiClient.dio.post<dynamic>(
+        '/uploads/sessions/$uploadId/complete',
+      );
+      return updateProfile({'avatar_upload_id': uploadId});
+    } finally {
+      if (compressed.absolute.path != file.absolute.path) {
+        try {
+          if (await compressed.exists()) await compressed.delete();
+        } on FileSystemException {
+          // Upload result must not be reported as a network failure.
+        }
+      }
     }
-    final fileUrl =
-        ((payload['data'] as Map<String, dynamic>)['file_url'] as String?) ??
-        (payload['file_url'] as String);
-
-    return updateProfile({'avatar_url': fileUrl});
   }
 }

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/services/pending_progress_overlay.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/training_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -244,11 +245,16 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     final data = response.data;
     if (data is Map<String, dynamic>) {
       final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-      await _localStorage.cacheData('day_progress_$date', inner);
-      await _localStorage.cacheData('home_progress_$date', inner);
+      final merged = overlayPendingProgressActions(
+        progress: inner,
+        actions: _localStorage.getPendingSyncActions(),
+        date: date,
+      );
+      await _localStorage.cacheData('day_progress_$date', merged);
+      await _localStorage.cacheData('home_progress_$date', merged);
       await _localStorage.cacheData(
         'completed_exercises_$date',
-        (inner['exercises_completed'] as List? ?? [])
+        (merged['exercises_completed'] as List? ?? [])
             .map(
               (entry) =>
                   ((entry as Map<String, dynamic>)['training_exercise_id'] ??
@@ -556,10 +562,15 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        final progress = parseTrainingDayProgress(inner);
+        final merged = overlayPendingProgressActions(
+          progress: inner,
+          actions: _localStorage.getPendingSyncActions(),
+          date: targetDate,
+        );
+        final progress = parseTrainingDayProgress(merged);
         await _localStorage.cacheData(cacheKey, progress.ids.toList());
-        await _localStorage.cacheData('day_progress_$targetDate', inner);
-        await _localStorage.cacheData('home_progress_$targetDate', inner);
+        await _localStorage.cacheData('day_progress_$targetDate', merged);
+        await _localStorage.cacheData('home_progress_$targetDate', merged);
         return progress;
       }
       return const TrainingDayProgress();
@@ -569,12 +580,31 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
           'day_progress_$targetDate',
         );
         if (cachedProgress != null) {
-          return parseTrainingDayProgress(cachedProgress);
+          return parseTrainingDayProgress(
+            overlayPendingProgressActions(
+              progress: cachedProgress,
+              actions: _localStorage.getPendingSyncActions(),
+              date: targetDate,
+            ),
+          );
         }
         final cached = _localStorage.getCachedList(cacheKey);
         if (cached != null) {
-          return TrainingDayProgress(
-            ids: cached.map((item) => item.toString()).toSet(),
+          return parseTrainingDayProgress(
+            overlayPendingProgressActions(
+              progress: {
+                'exercises_completed': cached
+                    .map(
+                      (item) => {
+                        'training_exercise_id': item.toString(),
+                        'exercise_id': item.toString(),
+                      },
+                    )
+                    .toList(growable: false),
+              },
+              actions: _localStorage.getPendingSyncActions(),
+              date: targetDate,
+            ),
           );
         }
       }

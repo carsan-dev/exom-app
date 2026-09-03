@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/services/pending_progress_overlay.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/core/utils/async_mutex.dart';
 
@@ -72,12 +73,6 @@ class OfflineSyncService {
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
   }) async {
-    await _updateExerciseProgressCache(
-      trainingExerciseId,
-      date,
-      completed: completed,
-      exerciseId: exerciseId,
-    );
     await _enqueueAction({
       'type': completed ? _markExerciseCompleted : _unmarkExerciseCompleted,
       'training_exercise_id': trainingExerciseId,
@@ -88,6 +83,20 @@ class OfflineSyncService {
       'last_set_feedback_client_upload_id': ?lastSetFeedbackClientUploadId,
       'training_id': ?trainingId,
     });
+    await _updateExerciseProgressCache(
+      trainingExerciseId,
+      date,
+      completed: completed,
+      exerciseId: exerciseId,
+    );
+    if (lastSetFeedbackClientUploadId != null &&
+        _localStorage.getFeedbackUploadQueue().any(
+          (item) =>
+              item['id'] == lastSetFeedbackClientUploadId &&
+              item['status'] == 'completed',
+        )) {
+      unawaited(syncPendingActions());
+    }
   }
 
   Future<void> queueTrainingCompletion(
@@ -95,11 +104,6 @@ class OfflineSyncService {
     required String trainingId,
     String? notes,
   }) async {
-    await _updateTrainingCompletionCache(
-      date,
-      trainingId: trainingId,
-      notes: notes,
-    );
     final dependencies = _localStorage
         .getFeedbackUploadQueue()
         .where(
@@ -119,6 +123,19 @@ class OfflineSyncService {
       if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
     });
+    await _updateTrainingCompletionCache(
+      date,
+      trainingId: trainingId,
+      notes: notes,
+    );
+    if (dependencies.isNotEmpty &&
+        dependencies.every(
+          (id) => _localStorage.getFeedbackUploadQueue().any(
+            (item) => item['id'] == id && item['status'] == 'completed',
+          ),
+        )) {
+      unawaited(syncPendingActions());
+    }
   }
 
   Future<void> queueMealCompletion(
@@ -126,12 +143,12 @@ class OfflineSyncService {
     String date, {
     required bool completed,
   }) async {
-    await _updateMealProgressCache(mealId, date, completed: completed);
     await _enqueueAction({
       'type': completed ? _markMealCompleted : _unmarkMealCompleted,
       'meal_id': mealId,
       'date': date,
     });
+    await _updateMealProgressCache(mealId, date, completed: completed);
   }
 
   Future<void> syncPendingActions() async {
@@ -586,22 +603,30 @@ class OfflineSyncService {
       progress,
     ).toSet().toList(growable: false);
 
-    final normalized = {
-      ...progress,
-      'exercises_completed': normalizedExercises,
-      'meals_completed': normalizedMeals,
-    };
+    final normalized = overlayPendingProgressActions(
+      progress: {
+        ...progress,
+        'exercises_completed': normalizedExercises,
+        'meals_completed': normalizedMeals,
+      },
+      actions: _localStorage.getPendingSyncActions(),
+      date: date,
+    );
+    final persistedExercises = _getExerciseEntries(normalized);
+    final persistedMeals = _getMealIds(
+      normalized,
+    ).toSet().toList(growable: false);
 
     await _localStorage.cacheData('day_progress_$date', normalized);
     await _localStorage.cacheData('home_progress_$date', normalized);
     await _localStorage.cacheData(
       'completed_exercises_$date',
-      normalizedExercises
+      persistedExercises
           .map((entry) => entry['training_exercise_id'] ?? entry['exercise_id'])
           .whereType<String>()
           .toList(growable: false),
     );
-    await _localStorage.cacheData('completed_meals_$date', normalizedMeals);
+    await _localStorage.cacheData('completed_meals_$date', persistedMeals);
   }
 
   Set<String> _getAssignedExerciseIds(String date) {

@@ -318,6 +318,28 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     });
   }
 
+  Future<void> _persistCompletionAndClose(ActiveExerciseState state) async {
+    final completion = Completer<void>();
+    context.read<TrainingBloc>().add(
+      MarkExerciseCompleted(
+        trainingExerciseId: widget.args.trainingExercise.id,
+        exerciseId: widget.args.trainingExercise.exercise.id,
+        completed: true,
+        weightUsed: state.weightKg,
+        sets: state.setPerformances,
+        lastSetFeedbackClientUploadId: state.lastSetFeedbackClientUploadId,
+        completion: completion,
+      ),
+    );
+
+    try {
+      await completion.future;
+      if (mounted) _popOnce();
+    } catch (_) {
+      _handledCompletion = false;
+    }
+  }
+
   Future<String?> _prepareLastSetVideo() async {
     final bloc = context.read<ActiveExerciseBloc>();
     final existingId =
@@ -545,18 +567,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
         if (!_handledCompletion && state.isDone) {
           _handledCompletion = true;
-          context.read<TrainingBloc>().add(
-            MarkExerciseCompleted(
-              trainingExerciseId: widget.args.trainingExercise.id,
-              exerciseId: exercise.id,
-              completed: true,
-              weightUsed: state.weightKg,
-              sets: state.setPerformances,
-              lastSetFeedbackClientUploadId:
-                  state.lastSetFeedbackClientUploadId,
-            ),
-          );
-          _popOnce();
+          unawaited(_persistCompletionAndClose(state));
         }
       },
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(

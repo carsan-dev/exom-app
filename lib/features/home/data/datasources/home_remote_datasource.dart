@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/services/pending_progress_overlay.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/home/data/models/home_summary_model.dart';
 
@@ -197,12 +198,25 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        await _cacheNullableMap(cacheKey, inner);
-        return inner;
+        final targetDate = _dateKey(target);
+        final merged = overlayPendingProgressActions(
+          progress: inner,
+          actions: _localStorage.getPendingSyncActions(),
+          date: targetDate,
+        );
+        await _cacheNullableMap(cacheKey, merged);
+        return merged;
       }
       return _getCachedNullableMap(cacheKey);
     } catch (_) {
-      return _getCachedNullableMap(cacheKey);
+      final cached = _getCachedNullableMap(cacheKey);
+      if (cached == null) return null;
+      final target = date ?? DateTime.now();
+      return overlayPendingProgressActions(
+        progress: cached,
+        actions: _localStorage.getPendingSyncActions(),
+        date: _dateKey(target),
+      );
     }
   }
 }

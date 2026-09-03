@@ -228,6 +228,52 @@ void main() {
     expect(requests, ['/progress/trainings/complete']);
     expect(storage.actions, isEmpty);
   });
+
+  test('keeps completion cached while the server response is stale', () async {
+    final storage = FakeSyncStorage(
+      actions: [
+        {
+          'id': 'exercise-action',
+          'type': 'mark_exercise_completed',
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'date': '2026-09-03',
+          'status': 'queued',
+          'attempts': 0,
+        },
+      ],
+    );
+    final client = respondingClient((options, handler) {
+      handler.resolve(
+        Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: {
+            'data': {
+              'exercises_completed': <Map<String, dynamic>>[],
+              'meals_completed': <String>[],
+            },
+          },
+        ),
+      );
+    });
+    final service = OfflineSyncService(
+      client,
+      storage,
+      isAuthenticated: () => true,
+    );
+
+    await service.syncPendingActions();
+
+    final cached = storage.getCachedMap('day_progress_2026-09-03');
+    final exercises = (cached?['exercises_completed'] as List?) ?? const [];
+    expect(storage.actions, isEmpty);
+    expect(exercises, hasLength(1));
+    expect(
+      (exercises.single as Map)['training_exercise_id'],
+      'training-exercise-1',
+    );
+  });
 }
 
 ApiClient respondingClient(

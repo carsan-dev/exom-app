@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/services/pending_progress_overlay.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/diets/data/models/diet_model.dart';
 import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
@@ -62,11 +63,16 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
     final data = response.data;
     if (data is Map<String, dynamic>) {
       final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-      await _localStorage.cacheData('day_progress_$date', inner);
-      await _localStorage.cacheData('home_progress_$date', inner);
+      final merged = overlayPendingProgressActions(
+        progress: inner,
+        actions: _localStorage.getPendingSyncActions(),
+        date: date,
+      );
+      await _localStorage.cacheData('day_progress_$date', merged);
+      await _localStorage.cacheData('home_progress_$date', merged);
       await _localStorage.cacheData(
         'completed_meals_$date',
-        (inner['meals_completed'] as List? ?? [])
+        (merged['meals_completed'] as List? ?? [])
             .map((entry) => entry.toString())
             .toList(growable: false),
       );
@@ -248,21 +254,46 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        final list = inner['meals_completed'] as List? ?? [];
+        final merged = overlayPendingProgressActions(
+          progress: inner,
+          actions: _localStorage.getPendingSyncActions(),
+          date: targetDate,
+        );
+        final list = merged['meals_completed'] as List? ?? [];
         final completedIds = list
             .map((entry) => entry.toString())
             .toList(growable: false);
         await _localStorage.cacheData(cacheKey, completedIds);
-        await _localStorage.cacheData('day_progress_$targetDate', inner);
-        await _localStorage.cacheData('home_progress_$targetDate', inner);
+        await _localStorage.cacheData('day_progress_$targetDate', merged);
+        await _localStorage.cacheData('home_progress_$targetDate', merged);
         return completedIds.toSet();
       }
       return {};
     } catch (error) {
       if (isOfflineError(error)) {
+        final cachedProgress = _localStorage.getCachedMap(
+          'day_progress_$targetDate',
+        );
+        if (cachedProgress != null) {
+          final merged = overlayPendingProgressActions(
+            progress: cachedProgress,
+            actions: _localStorage.getPendingSyncActions(),
+            date: targetDate,
+          );
+          return (merged['meals_completed'] as List? ?? const [])
+              .map((entry) => entry.toString())
+              .toSet();
+        }
         final cached = _localStorage.getCachedList(cacheKey);
         if (cached != null) {
-          return cached.map((entry) => entry.toString()).toSet();
+          final merged = overlayPendingProgressActions(
+            progress: {'meals_completed': cached},
+            actions: _localStorage.getPendingSyncActions(),
+            date: targetDate,
+          );
+          return (merged['meals_completed'] as List? ?? const [])
+              .map((entry) => entry.toString())
+              .toSet();
         }
       }
       return {};

@@ -199,7 +199,7 @@ class HomeSummaryModel {
           : (totalCalories - consumedCalories).clamp(0, totalCalories).toInt(),
       mealsCompleted: mealsCompleted,
       totalMeals: totalMeals,
-      isRestDay: training == null,
+      isRestDay: training == null && diet == null,
       streakDays: streak?['current_days'] as int? ?? 0,
       clientName: fullName.isNotEmpty ? fullName : null,
       avatarUrl: profile?['avatar_url'] as String?,

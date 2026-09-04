@@ -60,6 +60,7 @@ void main() {
 
     expect(summary.remainingCalories, 1450);
     expect(summary.nextMealId, 'lunch');
+    expect(summary.isRestDay, isFalse);
   });
 
   test('keeps total when completed meal has no calories', () {

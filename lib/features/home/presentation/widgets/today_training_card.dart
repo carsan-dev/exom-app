@@ -4,15 +4,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/utils/date_utils.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class TodayTrainingCard extends StatelessWidget {
-  const TodayTrainingCard({super.key, required this.summary});
+  const TodayTrainingCard({
+    super.key,
+    required this.summary,
+    required this.selectedDate,
+  });
 
   final HomeSummaryEntity summary;
+  final DateTime selectedDate;
 
   Color _trainingColor(BuildContext context) {
     return trainingAccentColor(
@@ -28,6 +34,7 @@ class TodayTrainingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final assignmentDate = AppDateUtils.toIso(selectedDate);
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
@@ -142,8 +149,16 @@ class TodayTrainingCard extends StatelessWidget {
                         final (index, training) = entry;
                         return InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: () =>
-                              context.push('/trainings/${training.id}'),
+                          onTap: () async {
+                            await context.push(
+                              '/trainings/${training.id}?date=$assignmentDate',
+                            );
+                            if (context.mounted) {
+                              context.read<HomeBloc>().add(
+                                HomeLoadRequested(date: selectedDate),
+                              );
+                            }
+                          },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
@@ -282,11 +297,11 @@ class TodayTrainingCard extends StatelessWidget {
                       ? () async {
                           HapticFeedback.selectionClick();
                           await context.push(
-                            '/trainings/${summary.trainingId}',
+                            '/trainings/${summary.trainingId}?date=$assignmentDate',
                           );
                           if (context.mounted) {
                             context.read<HomeBloc>().add(
-                              const HomeLoadRequested(),
+                              HomeLoadRequested(date: selectedDate),
                             );
                           }
                         }

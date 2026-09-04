@@ -455,7 +455,7 @@ class _LoadedBody extends StatelessWidget {
       color: palette.primary,
       backgroundColor: palette.surface,
       onRefresh: () async {
-        context.read<HomeBloc>().add(const HomeLoadRequested());
+        context.read<HomeBloc>().add(HomeLoadRequested(date: selectedDate));
       },
       child: Stack(
         children: [
@@ -472,9 +472,21 @@ class _LoadedBody extends StatelessWidget {
               const SliverToBoxAdapter(child: SizedBox(height: 12)),
               const SliverToBoxAdapter(child: WeekDaySelector()),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverToBoxAdapter(child: TodayTrainingCard(summary: summary)),
-              SliverToBoxAdapter(child: TodayDietCard(summary: summary)),
-              SliverToBoxAdapter(child: StatsRow(summary: summary)),
+              SliverToBoxAdapter(
+                child: TodayTrainingCard(
+                  summary: summary,
+                  selectedDate: selectedDate,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: TodayDietCard(
+                  summary: summary,
+                  selectedDate: selectedDate,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: StatsRow(summary: summary, selectedDate: selectedDate),
+              ),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
@@ -500,7 +512,7 @@ class _RestDayBody extends StatelessWidget {
       color: palette.primary,
       backgroundColor: palette.surface,
       onRefresh: () async {
-        context.read<HomeBloc>().add(const HomeLoadRequested());
+        context.read<HomeBloc>().add(HomeLoadRequested(date: selectedDate));
       },
       child: Stack(
         children: [
@@ -583,7 +595,9 @@ class _RestDayBody extends StatelessWidget {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(child: StatsRow(summary: summary)),
+              SliverToBoxAdapter(
+                child: StatsRow(summary: summary, selectedDate: selectedDate),
+              ),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),

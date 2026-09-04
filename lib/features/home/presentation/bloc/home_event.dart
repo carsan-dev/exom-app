@@ -5,7 +5,9 @@ abstract class HomeEvent {
 }
 
 class HomeLoadRequested extends HomeEvent {
-  const HomeLoadRequested();
+  final DateTime? date;
+
+  const HomeLoadRequested({this.date});
 }
 
 class HomeDateSelected extends HomeEvent {

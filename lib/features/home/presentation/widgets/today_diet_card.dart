@@ -5,17 +5,24 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/utils/date_utils.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 
 class TodayDietCard extends StatelessWidget {
-  const TodayDietCard({super.key, required this.summary});
+  const TodayDietCard({
+    super.key,
+    required this.summary,
+    required this.selectedDate,
+  });
 
   final HomeSummaryEntity summary;
+  final DateTime selectedDate;
 
   @override
   Widget build(BuildContext context) {
+    final assignmentDate = AppDateUtils.toIso(selectedDate);
     final theme = Theme.of(context);
     final palette = context.exomPalette;
     final dietAccent = context.dietAccent;
@@ -197,12 +204,15 @@ class TodayDietCard extends StatelessWidget {
                     await showMealDetailSheet(
                       context,
                       mealId: summary.nextMealId!,
+                      selectedDate: assignmentDate,
                     );
                   } else {
-                    await context.push('/diets');
+                    await context.push('/diets?date=$assignmentDate');
                   }
                   if (context.mounted) {
-                    context.read<HomeBloc>().add(const HomeLoadRequested());
+                    context.read<HomeBloc>().add(
+                      HomeLoadRequested(date: selectedDate),
+                    );
                   }
                 },
                 icon: const Icon(Icons.arrow_forward, size: 16),

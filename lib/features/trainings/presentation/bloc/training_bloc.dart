@@ -260,8 +260,15 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         trainingId: current.training.id,
         notes: event.notes,
       );
-    } catch (_) {
-      emit(current.copyWith(completedExerciseIds: previous));
+    } catch (error) {
+      emit(
+        current.copyWith(
+          completedExerciseIds: previous,
+          errorMessage:
+              ApiException.maybeFrom(error)?.message ??
+              'No se pudo completar el entrenamiento. Inténtalo de nuevo.',
+        ),
+      );
     }
   }
 }

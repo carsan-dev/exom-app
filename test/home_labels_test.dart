@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -8,6 +9,8 @@ import 'package:exom_app/features/home/presentation/widgets/today_training_card.
 import 'package:exom_app/l10n/app_localizations.dart';
 
 void main() {
+  final selectedDate = DateTime(2026, 9, 5);
+
   Widget homeCardHarness(Widget child) {
     return MediaQuery(
       data: const MediaQueryData(
@@ -22,6 +25,45 @@ void main() {
         home: Scaffold(body: child),
       ),
     );
+  }
+
+  Future<Uri> openCardRoute(
+    WidgetTester tester, {
+    required Widget child,
+    required String tapText,
+    required String destinationPath,
+  }) async {
+    Uri? openedUri;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(body: child),
+        ),
+        GoRoute(
+          path: destinationPath,
+          builder: (context, state) {
+            openedUri = state.uri;
+            return const Scaffold(body: Text('Destino'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: AppTheme.light,
+        locale: const Locale('es'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        routerConfig: router,
+      ),
+    );
+    await tester.tap(find.text(tapText));
+    await tester.pumpAndSettle();
+
+    return openedUri!;
   }
 
   testWidgets('TodayTrainingCard shows the mockup CTA label', (tester) async {
@@ -40,11 +82,61 @@ void main() {
         locale: const Locale('es'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Scaffold(body: TodayTrainingCard(summary: summary)),
+        home: Scaffold(
+          body: TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+        ),
       ),
     );
 
     expect(find.text('Comenzar'), findsOneWidget);
+  });
+
+  testWidgets('TodayTrainingCard keeps selected date when opening training', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: 'Full Body',
+      trainingTypes: ['FUERZA'],
+    );
+    final uri = await openCardRoute(
+      tester,
+      child: TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+      tapText: 'Comenzar',
+      destinationPath: '/trainings/:id',
+    );
+
+    expect(uri.queryParameters['date'], '2026-09-05');
+  });
+
+  testWidgets('TodayTrainingCard keeps date for secondary training', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: 'Primero',
+      trainings: [
+        HomeTrainingItemEntity(
+          id: 'training-1',
+          name: 'Primero',
+          completed: false,
+        ),
+        HomeTrainingItemEntity(
+          id: 'training-2',
+          name: 'Segundo',
+          completed: false,
+        ),
+      ],
+    );
+    final uri = await openCardRoute(
+      tester,
+      child: TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+      tapText: 'Segundo',
+      destinationPath: '/trainings/:id',
+    );
+
+    expect(uri.path, '/trainings/training-2');
+    expect(uri.queryParameters['date'], '2026-09-05');
   });
 
   testWidgets('TodayTrainingCard handles long text with large fonts', (
@@ -61,7 +153,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      homeCardHarness(TodayTrainingCard(summary: summary)),
+      homeCardHarness(
+        TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+      ),
     );
 
     expect(tester.takeException(), isNull);
@@ -84,7 +178,9 @@ void main() {
         locale: const Locale('es'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Scaffold(body: TodayDietCard(summary: summary)),
+        home: Scaffold(
+          body: TodayDietCard(summary: summary, selectedDate: selectedDate),
+        ),
       ),
     );
 
@@ -104,9 +200,30 @@ void main() {
       totalMeals: 4,
     );
 
-    await tester.pumpWidget(homeCardHarness(TodayDietCard(summary: summary)));
+    await tester.pumpWidget(
+      homeCardHarness(
+        TodayDietCard(summary: summary, selectedDate: selectedDate),
+      ),
+    );
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('TodayDietCard keeps selected date when opening full diet', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      dietId: 'diet-1',
+      dietName: 'Plan diario',
+    );
+    final uri = await openCardRoute(
+      tester,
+      child: TodayDietCard(summary: summary, selectedDate: selectedDate),
+      tapText: 'Ver dieta completa',
+      destinationPath: '/diets',
+    );
+
+    expect(uri.queryParameters['date'], '2026-09-05');
   });
 
   testWidgets('NoConnectionWidget exposes the offline CTA label', (

@@ -21,7 +21,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     final now = DateTime.now();
     final today = DateTime.utc(now.year, now.month, now.day);
-    await _loadForDate(today, emit);
+    await _loadForDate(event.date ?? today, emit);
   }
 
   Future<void> _onDateSelected(

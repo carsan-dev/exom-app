@@ -14,9 +14,14 @@ import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart'
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 
 class StatsRow extends StatelessWidget {
-  const StatsRow({super.key, required this.summary});
+  const StatsRow({
+    super.key,
+    required this.summary,
+    required this.selectedDate,
+  });
 
   final HomeSummaryEntity summary;
+  final DateTime selectedDate;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +52,9 @@ class StatsRow extends StatelessWidget {
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
-                  context.read<HomeBloc>().add(const HomeLoadRequested());
+                  context.read<HomeBloc>().add(
+                    HomeLoadRequested(date: selectedDate),
+                  );
                 }
               },
             ),
@@ -77,7 +84,9 @@ class StatsRow extends StatelessWidget {
               onTap: () async {
                 await context.push('/profile/metrics');
                 if (context.mounted) {
-                  context.read<HomeBloc>().add(const HomeLoadRequested());
+                  context.read<HomeBloc>().add(
+                    HomeLoadRequested(date: selectedDate),
+                  );
                 }
               },
             ),
@@ -181,4 +190,3 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-

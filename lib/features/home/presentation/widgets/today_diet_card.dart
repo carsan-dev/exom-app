@@ -22,6 +22,10 @@ class TodayDietCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (summary.dietId == null) {
+      return const SizedBox.shrink();
+    }
+
     final assignmentDate = AppDateUtils.toIso(selectedDate);
     final theme = Theme.of(context);
     final palette = context.exomPalette;

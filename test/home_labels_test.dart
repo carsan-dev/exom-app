@@ -91,6 +91,24 @@ void main() {
     expect(find.text('Comenzar'), findsOneWidget);
   });
 
+  testWidgets('TodayTrainingCard hides when day only has a diet', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      dietId: 'diet-1',
+      dietName: 'Plan diario',
+    );
+
+    await tester.pumpWidget(
+      homeCardHarness(
+        TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+      ),
+    );
+
+    expect(find.text('Entrenamiento de hoy'), findsNothing);
+    expect(find.text('Sin nombre'), findsNothing);
+  });
+
   testWidgets('TodayTrainingCard keeps selected date when opening training', (
     tester,
   ) async {
@@ -185,6 +203,22 @@ void main() {
     );
 
     expect(find.text('Siguiente comida'), findsOneWidget);
+  });
+
+  testWidgets('TodayDietCard hides when day only has training', (tester) async {
+    const summary = HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: 'Full Body',
+    );
+
+    await tester.pumpWidget(
+      homeCardHarness(
+        TodayDietCard(summary: summary, selectedDate: selectedDate),
+      ),
+    );
+
+    expect(find.text('Dieta de hoy'), findsNothing);
+    expect(find.text('Plan nutricional'), findsNothing);
   });
 
   testWidgets('TodayDietCard handles long text with large fonts', (

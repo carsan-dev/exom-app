@@ -34,6 +34,10 @@ class TodayTrainingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (summary.trainingId == null && summary.trainings.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final assignmentDate = AppDateUtils.toIso(selectedDate);
     final theme = Theme.of(context);
     final palette = context.exomPalette;

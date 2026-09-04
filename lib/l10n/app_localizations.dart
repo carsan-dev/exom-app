@@ -404,6 +404,18 @@ abstract class AppLocalizations {
   /// **'Entrenamiento de hoy'**
   String get todaysTrainingTitle;
 
+  /// No description provided for @todaysTrainingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamientos de hoy'**
+  String get todaysTrainingsTitle;
+
+  /// No description provided for @assignedTrainingsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} entrenamientos asignados'**
+  String assignedTrainingsCount(int count);
+
   /// No description provided for @trainingUntitledLabel.
   ///
   /// In es, this message translates to:

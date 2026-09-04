@@ -67,6 +67,13 @@
   "openCalendarButton": "Open calendar",
 
   "todaysTrainingTitle": "Today's training",
+  "todaysTrainingsTitle": "Today's trainings",
+  "assignedTrainingsCount": "{count} assigned trainings",
+  "@assignedTrainingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "trainingUntitledLabel": "Untitled",
   "trainingCompletedLabel": "Completed",
   "viewTrainingButton": "Open training",

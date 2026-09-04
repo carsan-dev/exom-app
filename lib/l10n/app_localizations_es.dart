@@ -178,6 +178,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get todaysTrainingTitle => 'Entrenamiento de hoy';
 
   @override
+  String get todaysTrainingsTitle => 'Entrenamientos de hoy';
+
+  @override
+  String assignedTrainingsCount(int count) {
+    return '$count entrenamientos asignados';
+  }
+
+  @override
   String get trainingUntitledLabel => 'Sin nombre';
 
   @override

@@ -72,6 +72,13 @@
   "openCalendarButton": "Ver calendario",
 
   "todaysTrainingTitle": "Entrenamiento de hoy",
+  "todaysTrainingsTitle": "Entrenamientos de hoy",
+  "assignedTrainingsCount": "{count} entrenamientos asignados",
+  "@assignedTrainingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "trainingUntitledLabel": "Sin nombre",
   "trainingCompletedLabel": "Completado",
   "viewTrainingButton": "Ver entrenamiento",

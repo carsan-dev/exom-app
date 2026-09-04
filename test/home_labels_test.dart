@@ -157,6 +157,39 @@ void main() {
     expect(uri.queryParameters['date'], '2026-09-05');
   });
 
+  testWidgets('TodayTrainingCard presents multiple trainings as a group', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: 'Primero',
+      totalExercises: 4,
+      trainings: [
+        HomeTrainingItemEntity(
+          id: 'training-1',
+          name: 'Primero',
+          completed: false,
+        ),
+        HomeTrainingItemEntity(
+          id: 'training-2',
+          name: 'Segundo',
+          completed: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      homeCardHarness(
+        TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+      ),
+    );
+
+    expect(find.text('Entrenamientos de hoy'), findsOneWidget);
+    expect(find.text('2 entrenamientos asignados'), findsOneWidget);
+    expect(find.text('Primero'), findsOneWidget);
+    expect(find.text('Segundo'), findsOneWidget);
+  });
+
   testWidgets('TodayTrainingCard handles long text with large fonts', (
     tester,
   ) async {

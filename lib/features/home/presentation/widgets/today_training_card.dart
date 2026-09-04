@@ -45,10 +45,16 @@ class TodayTrainingCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final color = _trainingColor(context);
     final solidColorStyle = trainingColorStyle(context, color);
+    final hasMultipleTrainings = summary.trainings.length > 1;
+    final cardTitle = hasMultipleTrainings
+        ? l10n.todaysTrainingsTitle
+        : l10n.todaysTrainingTitle;
+    final cardHeading = hasMultipleTrainings
+        ? l10n.assignedTrainingsCount(summary.trainings.length)
+        : summary.trainingName ?? l10n.trainingUntitledLabel;
 
     return Semantics(
-      label:
-          '${l10n.todaysTrainingTitle}: ${summary.trainingName ?? l10n.trainingUntitledLabel}',
+      label: '$cardTitle: $cardHeading',
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: GlassDecoration.accentCard(color),
@@ -91,7 +97,7 @@ class TodayTrainingCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.todaysTrainingTitle,
+                          cardTitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: palette.textSecondary,
                             fontSize: 12,
@@ -102,7 +108,7 @@ class TodayTrainingCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          summary.trainingName ?? l10n.trainingUntitledLabel,
+                          cardHeading,
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: palette.textPrimary,
                             fontSize: 18,

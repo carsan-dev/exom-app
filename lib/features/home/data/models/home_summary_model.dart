@@ -84,54 +84,149 @@ class HomeSummaryModel {
       weightDate = DateTime.tryParse(latestMetric!['date'] as String);
     }
 
-    final trainingExercises =
-        (training?['exercises'] as List?) ??
-        (training?['training_exercises'] as List?) ??
-        [];
+    List<Map<String, dynamic>> exercisesFor(Map<String, dynamic> training) =>
+        ((training['exercises'] as List?) ??
+                (training['training_exercises'] as List?) ??
+                const [])
+            .whereType<Map<String, dynamic>>()
+            .toList(growable: false);
+
+    final trainingExercises = dayTrainings
+        .expand(exercisesFor)
+        .toList(growable: false);
     final totalExercises = trainingExercises.length;
-    final completedExIds = (progress?['exercises_completed'] as List? ?? [])
-        .map((e) => (e as Map<String, dynamic>)['exercise_id'] as String)
+    final completedEntries = (progress?['exercises_completed'] as List? ?? [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: false);
+    final completedTrainingExerciseIds = completedEntries
+        .map((entry) => entry['training_exercise_id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
         .toSet();
-    final exercisesCompleted = completedExIds.length;
-    var totalTrainingSets = 0;
-    var completedTrainingSets = 0;
-    for (final rawExercise
-        in trainingExercises.whereType<Map<String, dynamic>>()) {
-      final sets = (rawExercise['sets'] as num?)?.toInt() ?? 0;
-      totalTrainingSets += sets;
-      final exercise = rawExercise['exercise'] as Map<String, dynamic>?;
-      final isCompleted =
-          completedExIds.contains(rawExercise['id']) ||
-          completedExIds.contains(exercise?['id']);
-      if (isCompleted) completedTrainingSets += sets;
+    final legacyCompletedExerciseCounts = <String, int>{};
+    for (final entry in completedEntries) {
+      if (entry['training_exercise_id'] != null) continue;
+      final exerciseId = entry['exercise_id']?.toString();
+      if (exerciseId == null || exerciseId.isEmpty) continue;
+      legacyCompletedExerciseCounts.update(
+        exerciseId,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
     }
-    final trainingDuration = (training?['estimated_duration_min'] as num?)
-        ?.toInt();
-    final remainingTrainingDuration =
-        trainingDuration == null || totalTrainingSets <= 0
-        ? null
-        : (trainingDuration *
-                  (totalTrainingSets - completedTrainingSets).clamp(
-                    0,
-                    totalTrainingSets,
-                  ) /
-                  totalTrainingSets)
-              .round()
-              .clamp(0, trainingDuration);
+
+    final completedCurrentOccurrenceIds = <String>{};
+    for (final rawExercise in trainingExercises) {
+      final trainingExerciseId = rawExercise['id']?.toString();
+      if (trainingExerciseId == null || trainingExerciseId.isEmpty) continue;
+      if (completedTrainingExerciseIds.contains(trainingExerciseId)) {
+        completedCurrentOccurrenceIds.add(trainingExerciseId);
+        continue;
+      }
+
+      final exercise = rawExercise['exercise'] as Map<String, dynamic>?;
+      final exerciseId = exercise?['id']?.toString();
+      final legacyKey = [trainingExerciseId, exerciseId]
+          .whereType<String>()
+          .firstWhere(
+            (id) => (legacyCompletedExerciseCounts[id] ?? 0) > 0,
+            orElse: () => '',
+          );
+      if (legacyKey.isEmpty) continue;
+      completedCurrentOccurrenceIds.add(trainingExerciseId);
+      final remaining = legacyCompletedExerciseCounts[legacyKey]! - 1;
+      if (remaining == 0) {
+        legacyCompletedExerciseCounts.remove(legacyKey);
+      } else {
+        legacyCompletedExerciseCounts[legacyKey] = remaining;
+      }
+    }
+    final exercisesCompleted = completedCurrentOccurrenceIds.length;
+    final completedTrainingIds =
+        (progress?['trainings_completed'] as List? ?? const [])
+            .map((id) => id.toString())
+            .toSet();
+    final legacyDayCompletion =
+        dayTrainings.length == 1 &&
+        progress?['training_completed'] == true &&
+        completedEntries.isEmpty &&
+        completedTrainingIds.isEmpty;
+    bool isTrainingCompleted(Map<String, dynamic> item) {
+      final trainingId = item['id']?.toString();
+      if (trainingId != null && completedTrainingIds.contains(trainingId)) {
+        return true;
+      }
+      final exercises = exercisesFor(item);
+      return (exercises.isNotEmpty &&
+              exercises.every(
+                (exercise) => completedCurrentOccurrenceIds.contains(
+                  exercise['id']?.toString(),
+                ),
+              )) ||
+          legacyDayCompletion;
+    }
+
     final trainingCompleted =
-        (progress?['training_completed'] as bool?) ??
-        (totalExercises > 0 && exercisesCompleted >= totalExercises);
+        dayTrainings.isNotEmpty && dayTrainings.every(isTrainingCompleted);
+    final trainingDurations = dayTrainings
+        .map((item) => (item['estimated_duration_min'] as num?)?.toInt())
+        .toList(growable: false);
+    final trainingDuration =
+        trainingDurations.isNotEmpty &&
+            trainingDurations.every((duration) => duration != null)
+        ? trainingDurations.whereType<int>().fold<int>(
+            0,
+            (sum, duration) => sum + duration,
+          )
+        : null;
+    final remainingTrainingDuration = trainingDuration == null
+        ? null
+        : dayTrainings.fold<int>(0, (sum, item) {
+            if (isTrainingCompleted(item)) return sum;
+            final duration = (item['estimated_duration_min'] as num?)!.toInt();
+            final exercises = exercisesFor(item);
+            final totalSets = exercises.fold<int>(
+              0,
+              (sets, exercise) =>
+                  sets + ((exercise['sets'] as num?)?.toInt() ?? 0),
+            );
+            if (totalSets <= 0) return sum + duration;
+            final completedSets = exercises
+                .where(
+                  (exercise) => completedCurrentOccurrenceIds.contains(
+                    exercise['id']?.toString(),
+                  ),
+                )
+                .fold<int>(
+                  0,
+                  (sets, exercise) =>
+                      sets + ((exercise['sets'] as num?)?.toInt() ?? 0),
+                );
+            return sum +
+                (duration *
+                        (totalSets - completedSets).clamp(0, totalSets) /
+                        totalSets)
+                    .round()
+                    .clamp(0, duration);
+          });
 
     final dietMeals = diet?['meals'] as List? ?? [];
-    final totalMeals = dietMeals.length;
     final completedMealIds = (progress?['meals_completed'] as List? ?? [])
         .map((e) => e as String)
         .toSet();
-    final mealsCompleted = completedMealIds.length;
     final normalizedMeals = dietMeals
         .whereType<Map<String, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList(growable: false);
+    final totalMeals = normalizedMeals.length;
+    bool isMealGroupCompleted(Map<String, dynamic> meal) => <String?>[
+      meal['id'] as String?,
+      ...(meal['variants'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((variant) => variant['id'] as String?),
+    ].any(completedMealIds.contains);
+    final mealsCompleted = normalizedMeals.where(isMealGroupCompleted).length;
     final nextMeal = normalizedMeals.cast<Map<String, dynamic>?>().firstWhere((
       meal,
     ) {
@@ -160,12 +255,17 @@ class HomeSummaryModel {
     }
     final totalCalories = (diet?['total_calories'] as num?)?.toInt();
 
-    final trainingTypes = resolveTrainingTypes(
-      types: (training?['types'] as List<dynamic>?)
-          ?.map((item) => item.toString())
-          .toList(growable: false),
-      legacyType: training?['type'] as String?,
-    );
+    final trainingTypes = dayTrainings
+        .expand(
+          (item) => resolveTrainingTypes(
+            types: (item['types'] as List<dynamic>?)
+                ?.map((type) => type.toString())
+                .toList(growable: false),
+            legacyType: item['type'] as String?,
+          ),
+        )
+        .toSet()
+        .toList(growable: false);
 
     return HomeSummaryModel(
       trainings: dayTrainings
@@ -173,7 +273,7 @@ class HomeSummaryModel {
             (item) => HomeTrainingItemModel(
               id: item['id'] as String? ?? '',
               name: item['name'] as String? ?? '',
-              completed: item['completed'] as bool? ?? false,
+              completed: isTrainingCompleted(item),
             ),
           )
           .where((item) => item.id.isNotEmpty)

@@ -7,6 +7,151 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('replays an interrupted upload when the app starts again', () async {
+    final storage = FakeSyncStorage(
+      actions: [
+        {
+          'id': 'interrupted-exercise',
+          'type': 'mark_exercise_completed',
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'date': '2026-09-05',
+          'status': 'uploading',
+          'attempts': 0,
+        },
+      ],
+    );
+    final requests = <String>[];
+    final client = respondingClient((options, handler) {
+      requests.add(options.path);
+      handler.resolve(Response(requestOptions: options, statusCode: 200));
+    });
+    final service = OfflineSyncService(
+      client,
+      storage,
+      isAuthenticated: () => true,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+
+    await service.init();
+
+    expect(requests, ['/progress/exercises/complete']);
+    expect(storage.actions, isEmpty);
+    await service.dispose();
+  });
+
+  test(
+    'retries immediately when connectivity returns despite backoff',
+    () async {
+      final reconnects = StreamController<bool>();
+      final storage = FakeSyncStorage(
+        actions: [
+          {
+            'id': 'offline-exercise',
+            'type': 'mark_exercise_completed',
+            'training_exercise_id': 'training-exercise-1',
+            'exercise_id': 'exercise-1',
+            'date': '2026-09-05',
+            'status': 'queued',
+            'attempts': 1,
+            'next_attempt_at': DateTime.now()
+                .toUtc()
+                .add(const Duration(hours: 1))
+                .toIso8601String(),
+          },
+        ],
+      );
+      final requests = <String>[];
+      final client = respondingClient((options, handler) {
+        requests.add(options.path);
+        handler.resolve(Response(requestOptions: options, statusCode: 200));
+      });
+      final service = OfflineSyncService(
+        client,
+        storage,
+        isAuthenticated: () => true,
+        authenticationChanges: const Stream<bool>.empty(),
+        connectivityChanges: reconnects.stream,
+      );
+
+      await service.init();
+      expect(requests, isEmpty);
+
+      final drained = service.changes.firstWhere(
+        (_) => storage.actions.isEmpty,
+      );
+      reconnects.add(true);
+      await drained.timeout(const Duration(seconds: 1));
+
+      expect(requests, ['/progress/exercises/complete']);
+      expect(storage.actions, isEmpty);
+      await service.dispose();
+      await reconnects.close();
+    },
+  );
+
+  test(
+    'retries reconnect after an in-flight offline request finishes',
+    () async {
+      final reconnects = StreamController<bool>();
+      final firstRequestStarted = Completer<void>();
+      final releaseFirstRequest = Completer<void>();
+      final storage = FakeSyncStorage(
+        actions: [
+          {
+            'id': 'in-flight-exercise',
+            'type': 'mark_exercise_completed',
+            'training_exercise_id': 'training-exercise-1',
+            'exercise_id': 'exercise-1',
+            'date': '2026-09-05',
+            'status': 'queued',
+            'attempts': 0,
+          },
+        ],
+      );
+      var requestCount = 0;
+      final client = respondingClient((options, handler) {
+        requestCount++;
+        if (requestCount == 1) {
+          firstRequestStarted.complete();
+          releaseFirstRequest.future.then(
+            (_) => handler.reject(
+              DioException.connectionError(
+                requestOptions: options,
+                reason: 'offline',
+              ),
+            ),
+          );
+          return;
+        }
+        handler.resolve(Response(requestOptions: options, statusCode: 200));
+      });
+      final service = OfflineSyncService(
+        client,
+        storage,
+        isAuthenticated: () => true,
+        authenticationChanges: const Stream<bool>.empty(),
+        connectivityChanges: reconnects.stream,
+      );
+
+      final initialization = service.init();
+      await firstRequestStarted.future;
+      final drained = service.changes.firstWhere(
+        (_) => storage.actions.isEmpty,
+      );
+      reconnects.add(true);
+      releaseFirstRequest.complete();
+      await initialization;
+      await drained.timeout(const Duration(seconds: 1));
+
+      expect(requestCount, 2);
+      expect(storage.actions, isEmpty);
+      await service.dispose();
+      await reconnects.close();
+    },
+  );
+
   test('skips an upload-blocked action and executes later actions', () async {
     final storage = FakeSyncStorage(
       actions: [
@@ -142,6 +287,41 @@ void main() {
       expect(storage.actions.single['attempts'], 5);
     },
   );
+
+  test('keeps prolonged offline actions queued after five attempts', () async {
+    final storage = FakeSyncStorage(
+      actions: [
+        {
+          'id': 'offline-exercise',
+          'type': 'mark_exercise_completed',
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'date': '2026-09-05',
+          'status': 'queued',
+          'attempts': 4,
+        },
+      ],
+    );
+    final client = respondingClient((options, handler) {
+      handler.reject(
+        DioException.connectionError(
+          requestOptions: options,
+          reason: 'offline',
+        ),
+      );
+    });
+    final service = OfflineSyncService(
+      client,
+      storage,
+      isAuthenticated: () => true,
+    );
+
+    await service.syncPendingActions();
+
+    expect(storage.actions.single['status'], 'queued');
+    expect(storage.actions.single['attempts'], 5);
+    expect(storage.actions.single['next_attempt_at'], isNotNull);
+  });
 
   test('preserves actions enqueued while a replay is in flight', () async {
     final storage = FakeSyncStorage(

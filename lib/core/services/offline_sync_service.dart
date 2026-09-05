@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -24,13 +25,16 @@ class OfflineSyncService {
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
   final bool Function() _isAuthenticated;
+  final Stream<bool> Function() _authenticationChanges;
+  final Stream<bool> _connectivityChanges;
   final AsyncMutex _queueMutex = AsyncMutex();
+  final AsyncMutex _syncMutex = AsyncMutex();
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
-  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<bool>? _authSubscription;
+  StreamSubscription<bool>? _connectivitySubscription;
   Timer? _syncTimer;
   bool _initialized = false;
-  bool _syncInProgress = false;
 
   Stream<void> get changes => _changes.stream;
 
@@ -38,8 +42,23 @@ class OfflineSyncService {
     this._apiClient,
     this._localStorage, {
     bool Function()? isAuthenticated,
+    Stream<bool>? authenticationChanges,
+    Stream<bool>? connectivityChanges,
   }) : _isAuthenticated =
-           isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null);
+           isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null),
+       _authenticationChanges = authenticationChanges != null
+           ? (() => authenticationChanges)
+           : (() => FirebaseAuth.instance.authStateChanges().map(
+               (user) => user != null,
+             )),
+       _connectivityChanges =
+           connectivityChanges ??
+           Connectivity().onConnectivityChanged
+               .map(
+                 (results) =>
+                     results.any((result) => result != ConnectivityResult.none),
+               )
+               .distinct();
 
   Future<void> init() async {
     if (_initialized) {
@@ -47,12 +66,16 @@ class OfflineSyncService {
     }
 
     _initialized = true;
+    await _recoverInterruptedActions();
 
-    _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((
-      user,
-    ) {
-      if (user != null) {
+    _authSubscription ??= _authenticationChanges().listen((authenticated) {
+      if (authenticated) {
         unawaited(syncPendingActions());
+      }
+    });
+    _connectivitySubscription ??= _connectivityChanges.listen((connected) {
+      if (connected) {
+        unawaited(_syncAfterReconnect());
       }
     });
 
@@ -61,6 +84,13 @@ class OfflineSyncService {
     });
 
     await syncPendingActions();
+  }
+
+  Future<void> dispose() async {
+    _syncTimer?.cancel();
+    await _authSubscription?.cancel();
+    await _connectivitySubscription?.cancel();
+    await _changes.close();
   }
 
   Future<void> queueExerciseCompletion(
@@ -151,8 +181,19 @@ class OfflineSyncService {
     await _updateMealProgressCache(mealId, date, completed: completed);
   }
 
-  Future<void> syncPendingActions() async {
-    if (_syncInProgress || !_isAuthenticated()) {
+  Future<void> syncPendingActions() {
+    return _syncMutex.protect(_syncPendingActionsLocked);
+  }
+
+  Future<void> _syncAfterReconnect() {
+    return _syncMutex.protect(() async {
+      await _makeQueuedActionsEligibleNow();
+      await _syncPendingActionsLocked();
+    });
+  }
+
+  Future<void> _syncPendingActionsLocked() async {
+    if (!_isAuthenticated()) {
       return;
     }
 
@@ -160,51 +201,81 @@ class OfflineSyncService {
       return;
     }
 
-    _syncInProgress = true;
-
-    try {
-      final visitedIds = <String>{};
-      while (true) {
-        final action = await _claimNextAction(visitedIds);
-        if (action == null) break;
-        final id = action['id'] as String;
-        visitedIds.add(id);
-        try {
-          await _replayAction(action);
-          await _removeById(id);
-        } on _FeedbackDependencyPending {
-          await _mutateById(id, (current) => {...current, 'status': 'queued'});
-        } on DioException catch (error) {
-          final statusCode = error.response?.statusCode;
-          final retryable =
-              isOfflineError(error) ||
-              statusCode == 401 ||
-              statusCode == 409 ||
-              statusCode == 429 ||
-              (statusCode != null && statusCode >= 500);
-          await _mutateById(
-            id,
-            (current) => _failedOrRetriedAction(
-              current,
-              error.message ?? error.toString(),
-              retryable: retryable,
-            ),
-          );
-        } catch (error) {
-          debugPrint('[SYNC] Keeping invalid action visible: $action ($error)');
-          await _mutateById(
-            id,
-            (current) => _failedOrRetriedAction(
-              current,
-              error.toString(),
-              retryable: false,
-            ),
-          );
-        }
+    final visitedIds = <String>{};
+    while (true) {
+      final action = await _claimNextAction(visitedIds);
+      if (action == null) break;
+      final id = action['id'] as String;
+      visitedIds.add(id);
+      try {
+        await _replayAction(action);
+        await _removeById(id);
+      } on _FeedbackDependencyPending {
+        await _mutateById(id, (current) => {...current, 'status': 'queued'});
+      } on DioException catch (error) {
+        final statusCode = error.response?.statusCode;
+        final offline = isOfflineError(error);
+        final retryable =
+            offline ||
+            statusCode == 401 ||
+            statusCode == 409 ||
+            statusCode == 429 ||
+            (statusCode != null && statusCode >= 500);
+        await _mutateById(
+          id,
+          (current) => _failedOrRetriedAction(
+            current,
+            error.message ?? error.toString(),
+            retryable: retryable,
+            retryIndefinitely: offline,
+          ),
+        );
+      } catch (error) {
+        debugPrint('[SYNC] Keeping invalid action visible: $action ($error)');
+        await _mutateById(
+          id,
+          (current) => _failedOrRetriedAction(
+            current,
+            error.toString(),
+            retryable: false,
+          ),
+        );
       }
-    } finally {
-      _syncInProgress = false;
     }
+  }
+
+  Future<void> _recoverInterruptedActions() async {
+    var changed = false;
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      for (var index = 0; index < queue.length; index++) {
+        if (queue[index]['status'] != 'uploading') continue;
+        final recovered = <String, dynamic>{...queue[index], 'status': 'queued'}
+          ..remove('next_attempt_at');
+        queue[index] = recovered;
+        changed = true;
+      }
+      if (changed) await _persistQueue(queue);
+    });
+    if (changed) _changes.add(null);
+  }
+
+  Future<void> _makeQueuedActionsEligibleNow() async {
+    var changed = false;
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      for (var index = 0; index < queue.length; index++) {
+        if (queue[index]['status'] != 'queued' ||
+            !queue[index].containsKey('next_attempt_at')) {
+          continue;
+        }
+        queue[index] = Map<String, dynamic>.from(queue[index])
+          ..remove('next_attempt_at');
+        changed = true;
+      }
+      if (changed) await _persistQueue(queue);
+    });
+    if (changed) _changes.add(null);
   }
 
   Future<void> _enqueueAction(Map<String, dynamic> action) async {
@@ -226,9 +297,10 @@ class OfflineSyncService {
     Map<String, dynamic> action,
     String error, {
     required bool retryable,
+    bool retryIndefinitely = false,
   }) {
     final attempts = (action['attempts'] as int? ?? 0) + 1;
-    if (!retryable || attempts >= 5) {
+    if (!retryable || (!retryIndefinitely && attempts >= 5)) {
       return {
         ...action,
         'status': 'failed',
@@ -237,6 +309,9 @@ class OfflineSyncService {
       };
     }
     const delays = [30, 120, 600, 3600];
+    final delayIndex = attempts <= delays.length
+        ? attempts - 1
+        : delays.length - 1;
     return {
       ...action,
       'status': 'queued',
@@ -244,7 +319,7 @@ class OfflineSyncService {
       'last_error': error,
       'next_attempt_at': DateTime.now()
           .toUtc()
-          .add(Duration(seconds: delays[attempts - 1]))
+          .add(Duration(seconds: delays[delayIndex]))
           .toIso8601String(),
     };
   }

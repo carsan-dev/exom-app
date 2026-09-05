@@ -137,17 +137,26 @@ class AppRouter {
       if (loc == AppRoutes.splash) return null;
 
       final user = FirebaseAuth.instance.currentUser;
+      final authState = context.read<AuthBloc>().state;
+      final isAuthenticated = authState is AuthAuthenticated;
+      final isLocked = authState is AuthAccountLocked;
       final isAuthRoute =
           loc == AppRoutes.login ||
           loc == AppRoutes.forgotPassword ||
           loc == AppRoutes.accountLocked;
       final isCompletingAuth = _isCompletingAuth(context);
 
-      if (user == null && !isAuthRoute) return AppRoutes.login;
+      if (isLocked && loc != AppRoutes.accountLocked) {
+        return AppRoutes.accountLocked;
+      }
+      if (!isAuthenticated && !isAuthRoute) return AppRoutes.login;
+      if (isAuthenticated && user == null && !isAuthRoute) {
+        return AppRoutes.login;
+      }
       if (user != null && loc == AppRoutes.login && isCompletingAuth) {
         return null;
       }
-      if (user != null && loc == AppRoutes.login) {
+      if (isAuthenticated && user != null && loc == AppRoutes.login) {
         final done = sl<LocalStorage>().isOnboardingCompleteFor(
           uid: user.uid,
           email: user.email,
@@ -156,7 +165,10 @@ class AppRouter {
       }
 
       // Show onboarding to newly authenticated users who haven't seen it
-      if (user != null && !isAuthRoute && loc != AppRoutes.onboarding) {
+      if (isAuthenticated &&
+          user != null &&
+          !isAuthRoute &&
+          loc != AppRoutes.onboarding) {
         final done = sl<LocalStorage>().isOnboardingCompleteFor(
           uid: user.uid,
           email: user.email,

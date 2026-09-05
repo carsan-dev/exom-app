@@ -21,6 +21,8 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:exom_app/features/auth/presentation/validated_session_service_starter.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
@@ -38,9 +40,6 @@ Future<void> main() async {
   try {
     await _bootstrap().timeout(const Duration(seconds: 20));
     runApp(const ExomApp());
-    unawaited(_initializeFcm());
-    unawaited(_initializeOfflineSync());
-    unawaited(sl<FeedbackUploadQueueService>().init());
   } catch (error, stackTrace) {
     debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
     debugPrintStack(stackTrace: stackTrace);
@@ -81,6 +80,14 @@ Future<void> _initializeOfflineSync() async {
     await sl<OfflineSyncService>().init();
   } catch (error) {
     debugPrint('[SYNC] Initialization failed: $error');
+  }
+}
+
+Future<void> _initializeFeedbackUploads() async {
+  try {
+    await sl<FeedbackUploadQueueService>().init();
+  } catch (error) {
+    debugPrint('[FEEDBACK] Queue initialization failed: $error');
   }
 }
 
@@ -211,10 +218,16 @@ class _ExomAppView extends StatefulWidget {
 class _ExomAppViewState extends State<_ExomAppView> {
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
   late final NotificationNavigationCoordinator _notificationNavigation;
+  late final ValidatedSessionServiceStarter _authenticatedServices;
 
   @override
   void initState() {
     super.initState();
+    _authenticatedServices = ValidatedSessionServiceStarter([
+      _initializeFcm,
+      _initializeOfflineSync,
+      _initializeFeedbackUploads,
+    ]);
     _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
       _showFeedbackNotice,
     );
@@ -222,11 +235,16 @@ class _ExomAppViewState extends State<_ExomAppView> {
         sl<LocalNotificationService>().navigationCoordinator
           ..addListener(_schedulePendingNotification);
     _schedulePendingNotification();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _authenticatedServices.handle(context.read<AuthBloc>().state);
+    });
   }
 
   void _schedulePendingNotification() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (context.read<AuthBloc>().state is! AuthAuthenticated) return;
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
       final onboardingComplete = sl<LocalStorage>().isOnboardingCompleteFor(
@@ -294,30 +312,37 @@ class _ExomAppViewState extends State<_ExomAppView> {
   @override
   Widget build(BuildContext context) {
     _schedulePendingNotification();
-    return BlocBuilder<AppPreferencesCubit, AppPreferencesState>(
-      builder: (context, state) {
-        return MaterialApp.router(
-          title: 'EXOM',
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: state.themeMode,
-          routerConfig: AppRouter.router,
-          scaffoldMessengerKey: AppRouter.scaffoldMessengerKey,
-          debugShowCheckedModeBanner: false,
-          locale: state.locale, // null → system locale
-          supportedLocales: AppPreferencesDefaults.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          builder: (context, child) {
-            // Sync glass decoration brightness with the active theme so
-            // static GlassDecoration.* factories pick the right tokens.
-            GlassDecoration.brightness = Theme.of(context).brightness;
-            return GestureDetector(
-              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
-        );
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        _authenticatedServices.handle(state);
+        AppRouter.router.refresh();
+        _schedulePendingNotification();
       },
+      child: BlocBuilder<AppPreferencesCubit, AppPreferencesState>(
+        builder: (context, state) {
+          return MaterialApp.router(
+            title: 'EXOM',
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: state.themeMode,
+            routerConfig: AppRouter.router,
+            scaffoldMessengerKey: AppRouter.scaffoldMessengerKey,
+            debugShowCheckedModeBanner: false,
+            locale: state.locale, // null → system locale
+            supportedLocales: AppPreferencesDefaults.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            builder: (context, child) {
+              // Sync glass decoration brightness with the active theme so
+              // static GlassDecoration.* factories pick the right tokens.
+              GlassDecoration.brightness = Theme.of(context).brightness;
+              return GestureDetector(
+                onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

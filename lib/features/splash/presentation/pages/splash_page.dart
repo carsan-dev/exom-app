@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -10,6 +11,8 @@ import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/injection_container.dart';
 
 class SplashPage extends StatefulWidget {
@@ -196,6 +199,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   }
 
   void _navigate() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAccountLocked) {
+      context.go(AppRoutes.accountLocked);
+      return;
+    }
+    if (authState is! AuthAuthenticated) {
+      context.go(AppRoutes.login);
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       context.go(AppRoutes.login);

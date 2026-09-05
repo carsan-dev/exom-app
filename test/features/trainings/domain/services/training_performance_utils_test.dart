@@ -64,6 +64,41 @@ void main() {
     );
   });
 
+  test('formats structured repetition and second ranges', () {
+    TrainingExerciseEntity exercise({
+      required ExerciseMeasureType measureType,
+      required int min,
+      required int max,
+    }) => TrainingExerciseEntity(
+      id: 'te-range',
+      order: 0,
+      sets: 1,
+      repsOrDuration: 'legacy',
+      measureType: measureType,
+      targetValueMin: min,
+      targetValueMax: max,
+      restSeconds: 30,
+      exercise: const ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla',
+        muscleGroups: ['pierna'],
+      ),
+    );
+
+    expect(
+      formatExercisePrescription(
+        exercise(measureType: ExerciseMeasureType.reps, min: 8, max: 10),
+      ),
+      '8-10 reps',
+    );
+    expect(
+      formatExercisePrescription(
+        exercise(measureType: ExerciseMeasureType.seconds, min: 30, max: 45),
+      ),
+      '30-45s',
+    );
+  });
+
   test('picks matching set or latest fallback', () {
     final performances = [
       const SetPerformance(setNumber: 1, reps: 12),

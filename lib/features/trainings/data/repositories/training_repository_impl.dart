@@ -115,6 +115,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
       repsOrDuration: model.repsOrDuration,
       measureType: model.measureType,
       targetValue: model.targetValue,
+      targetValueMin: model.targetValueMin,
+      targetValueMax: model.targetValueMax,
       targetRir: model.targetRir,
       restSeconds: model.restSeconds,
       requestSetTracking: model.requestSetTracking,

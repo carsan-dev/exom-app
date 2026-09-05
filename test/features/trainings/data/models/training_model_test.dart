@@ -65,5 +65,26 @@ void main() {
       expect(model.assignmentDate, '2026-09-01');
       expect(model.requiresLastSetVideo, isTrue);
     });
+
+    test('parses structured target ranges from API response keys', () {
+      final exercise = TrainingExerciseModel.fromJson({
+        'id': 'training-exercise-range',
+        'order': 0,
+        'sets': 3,
+        'reps_or_duration': '8-10',
+        'measure_type': 'REPS',
+        'target_value': null,
+        'target_value_min': 8,
+        'target_value_max': 10,
+        'rest_seconds': 60,
+        'exercise': {'id': 'exercise-1', 'name': 'Sentadilla'},
+      });
+
+      expect(exercise.measureType, ExerciseMeasureType.reps);
+      expect(exercise.targetValue, isNull);
+      expect(exercise.targetValueMin, 8);
+      expect(exercise.targetValueMax, 10);
+      expect(exercise.repsOrDuration, '8-10');
+    });
   });
 }

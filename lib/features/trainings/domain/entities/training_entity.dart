@@ -87,6 +87,8 @@ class TrainingExerciseEntity {
   final String repsOrDuration;
   final ExerciseMeasureType? measureType;
   final int? targetValue;
+  final int? targetValueMin;
+  final int? targetValueMax;
   final int? targetRir;
   final int restSeconds;
   final bool requestSetTracking;
@@ -105,6 +107,8 @@ class TrainingExerciseEntity {
     required this.repsOrDuration,
     this.measureType,
     this.targetValue,
+    this.targetValueMin,
+    this.targetValueMax,
     this.targetRir,
     required this.restSeconds,
     this.requestSetTracking = false,

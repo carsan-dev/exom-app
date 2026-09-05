@@ -30,11 +30,14 @@ TimePerformanceUnit? timePerformanceUnitForExercise(
 }
 
 String formatExercisePrescription(TrainingExerciseEntity exercise) {
-  final target = exercise.targetValue == null
-      ? exercise.repsOrDuration
-      : exercise.measureType == ExerciseMeasureType.seconds
-      ? '${exercise.targetValue}s'
-      : '${exercise.targetValue} reps';
+  final suffix = exercise.measureType == ExerciseMeasureType.seconds
+      ? 's'
+      : ' reps';
+  final target = exercise.targetValue != null
+      ? '${exercise.targetValue}$suffix'
+      : exercise.targetValueMin != null && exercise.targetValueMax != null
+      ? '${exercise.targetValueMin}-${exercise.targetValueMax}$suffix'
+      : exercise.repsOrDuration;
   return exercise.targetRir == null
       ? target
       : '$target · RIR ${exercise.targetRir}';

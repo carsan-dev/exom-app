@@ -84,6 +84,8 @@ class TrainingExerciseModel {
   final String repsOrDuration;
   final ExerciseMeasureType? measureType;
   final int? targetValue;
+  final int? targetValueMin;
+  final int? targetValueMax;
   final int? targetRir;
   final int restSeconds;
   final bool requestSetTracking;
@@ -102,6 +104,8 @@ class TrainingExerciseModel {
     required this.repsOrDuration,
     this.measureType,
     this.targetValue,
+    this.targetValueMin,
+    this.targetValueMax,
     this.targetRir,
     required this.restSeconds,
     this.requestSetTracking = false,
@@ -132,6 +136,16 @@ class TrainingExerciseModel {
         _ => null,
       },
       targetValue: _readJson<num>(json, 'target_value', 'targetValue')?.toInt(),
+      targetValueMin: _readJson<num>(
+        json,
+        'target_value_min',
+        'targetValueMin',
+      )?.toInt(),
+      targetValueMax: _readJson<num>(
+        json,
+        'target_value_max',
+        'targetValueMax',
+      )?.toInt(),
       targetRir: _readJson<num>(json, 'target_rir', 'targetRir')?.toInt(),
       restSeconds: _readJson<int>(json, 'rest_seconds', 'restSeconds') ?? 60,
       requestSetTracking:

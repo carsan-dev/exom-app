@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -21,9 +22,42 @@ void main() {
     );
     expect(
       ApiException.fromDioError(
+        DioException(
+          requestOptions: request,
+          type: DioExceptionType.unknown,
+          error: const SocketException('Connection refused'),
+        ),
+      ).statusCode,
+      0,
+    );
+    expect(
+      ApiException.fromDioError(
+        DioException(
+          requestOptions: request,
+          type: DioExceptionType.unknown,
+          error: const HttpException(
+            'Connection closed before full header was received',
+          ),
+        ),
+      ).statusCode,
+      0,
+    );
+    expect(
+      ApiException.fromDioError(
         DioException(requestOptions: request, type: DioExceptionType.unknown),
       ).statusCode,
       500,
+    );
+    expect(
+      ApiException.fromDioError(
+        DioException(
+          requestOptions: request,
+          response: Response<void>(requestOptions: request, statusCode: 503),
+          type: DioExceptionType.unknown,
+          error: const SocketException('Connection reset'),
+        ),
+      ).statusCode,
+      503,
     );
   });
 

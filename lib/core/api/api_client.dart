@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
+import 'package:exom_app/core/api/network_utils.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -228,7 +229,11 @@ class _LoggingInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (kDebugMode) {
-      debugPrint('[API] Error: ${err.response?.statusCode} - ${err.message}');
+      debugPrint(
+        '[API] Error: status=${err.response?.statusCode} '
+        'type=${err.type} cause=${err.error?.runtimeType} '
+        'message=${err.message ?? err.error}',
+      );
     }
     handler.next(err);
   }
@@ -251,11 +256,7 @@ class ApiException implements Exception {
   }
 
   factory ApiException.fromDioError(DioException e) {
-    final isNetwork =
-        e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.sendTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError;
+    final isNetwork = isOfflineError(e);
     final statusCode = isNetwork ? 0 : (e.response?.statusCode ?? 500);
     final data = e.response?.data;
     String? message;

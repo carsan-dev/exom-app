@@ -20,12 +20,14 @@ class CompleteSet extends ActiveExerciseEvent {
   final int? reps;
   final int? seconds;
   final double? weightKg;
+  final int? rir;
   final String? lastSetFeedbackClientUploadId;
 
   const CompleteSet({
     this.reps,
     this.seconds,
     this.weightKg,
+    this.rir,
     this.lastSetFeedbackClientUploadId,
   });
 }
@@ -227,7 +229,10 @@ class ActiveExerciseBloc
     final nextCompletedSets = state.completedSets + 1;
     final nextWeight = event.weightKg ?? state.weightKg;
     final nextPerformances =
-        event.reps == null && event.seconds == null && event.weightKg == null
+        event.reps == null &&
+            event.seconds == null &&
+            event.weightKg == null &&
+            event.rir == null
         ? state.setPerformances
         : [
             ...state.setPerformances,
@@ -236,6 +241,7 @@ class ActiveExerciseBloc
               reps: event.reps,
               seconds: event.seconds,
               weightKg: event.weightKg,
+              rir: event.rir,
             ),
           ];
 
@@ -384,6 +390,7 @@ class ActiveExerciseBloc
               reps: data['reps'] as int?,
               seconds: data['seconds'] as int?,
               weightKg: (data['weight_kg'] as num?)?.toDouble(),
+              rir: (data['rir'] as num?)?.toInt(),
             ),
           )
           .toList(),

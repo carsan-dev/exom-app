@@ -1716,6 +1716,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get setPerformanceWeightOptional => 'Peso usado (opcional)';
 
   @override
+  String get setPerformanceRirOptional => 'RIR alcanzado (opcional)';
+
+  @override
   String get setPerformanceRepsError => 'Introduce al menos 1 repetición';
 
   @override
@@ -1725,11 +1728,29 @@ class AppLocalizationsEs extends AppLocalizations {
   String get setPerformanceWeightError => 'El peso no puede ser negativo';
 
   @override
+  String get setPerformanceRirError => 'El RIR debe ser un entero entre 0 y 10';
+
+  @override
   String get setPerformanceDataError =>
       'Introduce repeticiones, segundos o peso';
 
   @override
   String get completeWithoutTracking => 'Completar sin registrar';
+
+  @override
+  String get completeTrainingConfirmTitle =>
+      '¿Completar todo el entrenamiento?';
+
+  @override
+  String get completeTrainingConfirmMessage =>
+      'Se marcarán como completados todos los ejercicios pendientes. Esta acción respetará los registros y evidencias obligatorios.';
+
+  @override
+  String get completeTrainingConfirmAction => 'Completar todo';
+
+  @override
+  String get completeTrainingTrackingRequired =>
+      'Registra el rendimiento obligatorio de todas las series antes de completar todo.';
 
   @override
   String get circuitExerciseRestTitle => 'Descanso entre ejercicios';

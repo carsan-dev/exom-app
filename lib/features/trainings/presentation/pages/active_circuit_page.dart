@@ -632,8 +632,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   ) async {
     final l10n = AppLocalizations.of(context);
     final valueController = TextEditingController();
+    final currentPerformance = performanceForSet(
+      _performances[trainingExercise.id],
+      _currentRound,
+    );
     final previousWeight = _performances[trainingExercise.id]?.last.weightKg;
-    final timeUnit = timePerformanceUnit(trainingExercise.repsOrDuration);
+    final timeUnit = timePerformanceUnitForExercise(trainingExercise);
     final timeBased = timeUnit != null;
     final previousPerformance = performanceForSet(
       widget.args.previousPerformances[trainingExercise.id],
@@ -644,6 +648,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         : formatSetPerformance(previousPerformance);
     final weightController = TextEditingController(
       text: previousWeight?.toString() ?? '',
+    );
+    final rirController = TextEditingController(
+      text: currentPerformance?.rir?.toString() ?? '',
     );
     String? error;
     final result =
@@ -657,7 +664,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                 children: [
                   Text(
                     l10n.setPerformancePrescription(
-                      trainingExercise.repsOrDuration,
+                      formatExercisePrescription(trainingExercise),
                     ),
                   ),
                   if (previousLabel != null && previousLabel.isNotEmpty) ...[
@@ -689,6 +696,14 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                       suffixText: 'kg',
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: rirController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: l10n.setPerformanceRirOptional,
+                    ),
+                  ),
                 ],
               ),
               actions: [
@@ -710,6 +725,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                     final weight = weightText.isEmpty
                         ? null
                         : double.tryParse(weightText.replaceAll(',', '.'));
+                    final rirText = rirController.text.trim();
+                    final rir = rirText.isEmpty ? null : int.tryParse(rirText);
                     if (trainingExercise.requestSetTracking &&
                         (value == null || value < 1)) {
                       setDialogState(
@@ -737,7 +754,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                       );
                       return;
                     }
-                    if (reps == null && seconds == null && weight == null) {
+                    if (rirText.isNotEmpty &&
+                        (rir == null || rir < 0 || rir > 10)) {
+                      setDialogState(() => error = l10n.setPerformanceRirError);
+                      return;
+                    }
+                    if (reps == null &&
+                        seconds == null &&
+                        weight == null &&
+                        rir == null) {
                       setDialogState(
                         () => error = l10n.setPerformanceDataError,
                       );
@@ -749,6 +774,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                         reps: reps,
                         seconds: seconds,
                         weightKg: weight,
+                        rir: rir,
                       ),
                       skipped: false,
                     ));
@@ -761,6 +787,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         );
     valueController.dispose();
     weightController.dispose();
+    rirController.dispose();
     return result;
   }
 
@@ -1009,7 +1036,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                               const SizedBox(height: 8),
                               Text(
                                 _formatPrescription(
-                                  _currentExercise.repsOrDuration,
+                                  formatExercisePrescription(_currentExercise),
                                 ),
                                 style: TextStyle(
                                   color: palette.textSecondary,

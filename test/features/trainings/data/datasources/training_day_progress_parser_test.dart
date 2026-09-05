@@ -13,7 +13,7 @@ void main() {
           'exercise_id': 'exercise-1',
           'weight_used': 20,
           'sets': [
-            {'set_number': 1, 'reps': 12, 'weight_kg': 20},
+            {'set_number': 1, 'reps': 12, 'weight_kg': 20, 'rir': 0},
           ],
         },
       ],
@@ -22,6 +22,7 @@ void main() {
     expect(progress.ids, {'training-exercise-1'});
     expect(progress.weights, {'training-exercise-1': 20});
     expect(progress.performances['training-exercise-1']?.single.reps, 12);
+    expect(progress.performances['training-exercise-1']?.single.rir, 0);
     expect(progress.note, 'Me molestó la rodilla');
     expect(progress.adminReplyText, 'Reduce el peso');
     expect(

@@ -249,7 +249,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     ActiveExerciseState state,
     AppLocalizations l10n,
   ) async {
-    final timeUnit = timePerformanceUnit(state.repsOrDuration);
+    final timeUnit = timePerformanceUnitForExercise(
+      widget.args.trainingExercise,
+    );
     final savedPerformance = _pendingLastSetNumber == state.currentSet
         ? _pendingLastSetPerformance
         : null;
@@ -259,7 +261,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           context,
           l10n,
           setNumber: state.currentSet,
-          prescribedReps: state.repsOrDuration,
+          prescribedReps: formatExercisePrescription(
+            widget.args.trainingExercise,
+          ),
           previousWeight: state.weightKg,
           currentPerformance: performanceForSet(
             widget.args.currentPerformances,
@@ -296,6 +300,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               reps: performance.reps,
               seconds: performance.seconds,
               weightKg: performance.weight,
+              rir: performance.rir,
               lastSetFeedbackClientUploadId: feedbackId,
             ),
     );
@@ -574,9 +579,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         builder: (context, state) {
           final palette = context.exomPalette;
           final semantic = context.exomSemantic;
+          final targetPrescription = formatExercisePrescription(
+            widget.args.trainingExercise,
+          );
           final prescriptionLabel = state.weightKg == null
-              ? state.repsOrDuration
-              : '${state.repsOrDuration} x ${_formatWeight(state.weightKg!)} kg';
+              ? targetPrescription
+              : '$targetPrescription x ${_formatWeight(state.weightKg!)} kg';
           final previousPerformance = performanceForSet(
             widget.args.previousPerformances,
             state.currentSet,
@@ -1178,6 +1186,7 @@ typedef _SetPerformanceResult = ({
   int? reps,
   int? seconds,
   double? weight,
+  int? rir,
   bool skipped,
 });
 
@@ -1253,6 +1262,7 @@ class _SetPerformanceSheet extends StatefulWidget {
 class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
   late final TextEditingController _valueController;
   late final TextEditingController _weightController;
+  late final TextEditingController _rirController;
   String? _error;
 
   bool get _timeBased => widget.timeUnit != null;
@@ -1275,12 +1285,16 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
           ? ''
           : weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1),
     );
+    _rirController = TextEditingController(
+      text: widget.currentPerformance?.rir?.toString() ?? '',
+    );
   }
 
   @override
   void dispose() {
     _valueController.dispose();
     _weightController.dispose();
+    _rirController.dispose();
     widget.onDisposed();
     super.dispose();
   }
@@ -1288,7 +1302,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
   void _completeWithoutTracking() {
     Navigator.of(
       context,
-    ).pop((reps: null, seconds: null, weight: null, skipped: true));
+    ).pop((reps: null, seconds: null, weight: null, rir: null, skipped: true));
   }
 
   void _save() {
@@ -1323,14 +1337,24 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
       setState(() => _error = l10n.setPerformanceWeightError);
       return;
     }
-    if (reps == null && seconds == null && weight == null) {
+    final rirText = _rirController.text.trim();
+    final rir = rirText.isEmpty ? null : int.tryParse(rirText);
+    if (rirText.isNotEmpty && (rir == null || rir < 0 || rir > 10)) {
+      setState(() => _error = l10n.setPerformanceRirError);
+      return;
+    }
+    if (reps == null && seconds == null && weight == null && rir == null) {
       setState(() => _error = l10n.setPerformanceDataError);
       return;
     }
 
-    Navigator.of(
-      context,
-    ).pop((reps: reps, seconds: seconds, weight: weight, skipped: false));
+    Navigator.of(context).pop((
+      reps: reps,
+      seconds: seconds,
+      weight: weight,
+      rir: rir,
+      skipped: false,
+    ));
   }
 
   @override
@@ -1417,6 +1441,17 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
                   labelText: l10n.setPerformanceWeightOptional,
                   hintStyle: TextStyle(color: palette.textDisabled),
                   suffixText: 'kg',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _rirController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: palette.textPrimary, fontSize: 15),
+                decoration: InputDecoration(
+                  labelText: l10n.setPerformanceRirOptional,
+                  hintText: widget.currentPerformance?.rir?.toString(),
+                  hintStyle: TextStyle(color: palette.textDisabled),
                 ),
               ),
               const SizedBox(height: 20),

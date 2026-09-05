@@ -8,15 +8,36 @@ bool isTimeBasedPrescription(String value) {
 
 TimePerformanceUnit? timePerformanceUnit(String value) {
   final normalized = value.toLowerCase().trim();
-  if (RegExp(r'(\bmin\b|minutos?)').hasMatch(normalized)) {
+  if (RegExp(r'(\bmin\b|\bmins\b|minutos?|minutes?)').hasMatch(normalized)) {
     return TimePerformanceUnit.minutes;
   }
   if (RegExp(
-    r'(\bseg\b|segundos?|\bsec\b|seconds?|\bs\b|tiempo|time)',
+    r'(\d+\s*s\b|\bseg\b|segundos?|\bsec\b|seconds?|\bs\b|tiempo|time)',
   ).hasMatch(normalized)) {
     return TimePerformanceUnit.seconds;
   }
   return null;
+}
+
+TimePerformanceUnit? timePerformanceUnitForExercise(
+  TrainingExerciseEntity exercise,
+) {
+  return switch (exercise.measureType) {
+    ExerciseMeasureType.reps => null,
+    ExerciseMeasureType.seconds => TimePerformanceUnit.seconds,
+    null => timePerformanceUnit(exercise.repsOrDuration),
+  };
+}
+
+String formatExercisePrescription(TrainingExerciseEntity exercise) {
+  final target = exercise.targetValue == null
+      ? exercise.repsOrDuration
+      : exercise.measureType == ExerciseMeasureType.seconds
+      ? '${exercise.targetValue}s'
+      : '${exercise.targetValue} reps';
+  return exercise.targetRir == null
+      ? target
+      : '$target · RIR ${exercise.targetRir}';
 }
 
 int? secondsFromTimeInput(int? value, TimePerformanceUnit? unit) {
@@ -54,6 +75,9 @@ String formatSetPerformance(SetPerformance performance) {
   if (performance.weightKg != null) {
     final weight = performance.weightKg!;
     parts.add('${weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1)} kg');
+  }
+  if (performance.rir != null) {
+    parts.add('RIR ${performance.rir}');
   }
   return parts.join(' · ');
 }

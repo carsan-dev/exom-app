@@ -20,17 +20,21 @@ class ExerciseEntity {
   });
 }
 
+enum ExerciseMeasureType { reps, seconds }
+
 class SetPerformance {
   final int setNumber;
   final int? reps;
   final int? seconds;
   final double? weightKg;
+  final int? rir;
 
   const SetPerformance({
     required this.setNumber,
     this.reps,
     this.seconds,
     this.weightKg,
+    this.rir,
   });
 
   factory SetPerformance.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,7 @@ class SetPerformance {
       reps: (json['reps'] as num?)?.toInt(),
       seconds: (json['seconds'] as num?)?.toInt(),
       weightKg: (json['weight_kg'] as num?)?.toDouble(),
+      rir: (json['rir'] as num?)?.toInt(),
     );
   }
 
@@ -47,6 +52,7 @@ class SetPerformance {
     if (reps != null) 'reps': reps,
     if (seconds != null) 'seconds': seconds,
     if (weightKg != null) 'weight_kg': weightKg,
+    if (rir != null) 'rir': rir,
   };
 }
 
@@ -79,6 +85,9 @@ class TrainingExerciseEntity {
   final int order;
   final int sets;
   final String repsOrDuration;
+  final ExerciseMeasureType? measureType;
+  final int? targetValue;
+  final int? targetRir;
   final int restSeconds;
   final bool requestSetTracking;
   final String? blockId;
@@ -94,6 +103,9 @@ class TrainingExerciseEntity {
     required this.order,
     required this.sets,
     required this.repsOrDuration,
+    this.measureType,
+    this.targetValue,
+    this.targetRir,
     required this.restSeconds,
     this.requestSetTracking = false,
     this.blockId,

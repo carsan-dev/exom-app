@@ -225,17 +225,19 @@ void main() {
 
       bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
       await pumpEventQueue();
-      bloc.add(const CompleteSet(reps: 12, weightKg: 72.5));
+      bloc.add(const CompleteSet(reps: 12, weightKg: 72.5, rir: 2));
       await pumpEventQueue();
 
       expect(bloc.state.setPerformances, hasLength(1));
       expect(bloc.state.setPerformances.single.setNumber, 1);
       expect(bloc.state.setPerformances.single.reps, 12);
       expect(bloc.state.setPerformances.single.weightKg, 72.5);
+      expect(bloc.state.setPerformances.single.rir, 2);
       expect(store.getActiveWorkout('ex-1')!.completedSetData.single, {
         'set_number': 1,
         'reps': 12,
         'weight_kg': 72.5,
+        'rir': 2,
       });
     });
 

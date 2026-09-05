@@ -147,13 +147,20 @@ class OfflineSyncService {
         .whereType<String>()
         .toSet()
         .toList(growable: false);
-    await _enqueueAction({
-      'type': _completeTraining,
-      'date': date,
-      'training_id': trainingId,
-      if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
-      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-    });
+    await _enqueueAction(
+      {
+        'type': _completeTraining,
+        'date': date,
+        'training_id': trainingId,
+        if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+      isDuplicate: (action) =>
+          action['type'] == _completeTraining &&
+          action['date'] == date &&
+          action['training_id'] == trainingId &&
+          action['status'] != 'failed',
+    );
     await _updateTrainingCompletionCache(
       date,
       trainingId: trainingId,
@@ -322,9 +329,14 @@ class OfflineSyncService {
     });
   }
 
-  Future<void> _enqueueAction(Map<String, dynamic> action) async {
+  Future<bool> _enqueueAction(
+    Map<String, dynamic> action, {
+    bool Function(Map<String, dynamic> action)? isDuplicate,
+  }) async {
+    var enqueued = false;
     await _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
+      if (isDuplicate != null && queue.any(isDuplicate)) return;
       queue.add({
         ...action,
         'id': DateTime.now().microsecondsSinceEpoch.toString(),
@@ -333,8 +345,10 @@ class OfflineSyncService {
         'queued_at': DateTime.now().toUtc().toIso8601String(),
       });
       await _persistQueue(queue);
+      enqueued = true;
     });
-    _changes.add(null);
+    if (enqueued) _changes.add(null);
+    return enqueued;
   }
 
   Map<String, dynamic> _failedOrRetriedAction(
@@ -458,6 +472,7 @@ class OfflineSyncService {
             )) {
           throw const _FeedbackDependencyPending();
         }
+        final sets = _setPerformancesForReplay(action['sets']);
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/exercises/complete',
           data: {
@@ -466,7 +481,7 @@ class OfflineSyncService {
             'date': date,
             if (action['weight_used'] != null)
               'weight_used': action['weight_used'],
-            if (action['sets'] != null) 'sets': action['sets'],
+            'sets': ?sets,
             'last_set_feedback_client_upload_id': ?feedbackId,
           },
         );
@@ -524,6 +539,25 @@ class OfflineSyncService {
       default:
         throw StateError('Unsupported pending sync action type: $type');
     }
+  }
+
+  List<Map<String, dynamic>>? _setPerformancesForReplay(Object? value) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw StateError('Pending sync action has invalid set performances');
+    }
+    return value
+        .map((set) {
+          if (set is! Map) {
+            throw StateError(
+              'Pending sync action has an invalid set performance',
+            );
+          }
+          final normalized = Map<String, dynamic>.from(set);
+          if (normalized['rir'] == null) normalized.remove('rir');
+          return normalized;
+        })
+        .toList(growable: false);
   }
 
   bool hasPendingFeedbackForTraining(String trainingId, String date) {

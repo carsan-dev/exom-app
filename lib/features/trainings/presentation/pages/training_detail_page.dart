@@ -23,6 +23,61 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 
+bool _hasRequiredSetPerformance(
+  TrainingExerciseEntity exercise,
+  List<SetPerformance>? performances,
+) {
+  if (!exercise.requestSetTracking) return true;
+  final bySet = {
+    for (final performance in performances ?? const <SetPerformance>[])
+      performance.setNumber: performance,
+  };
+  final timeBased = timePerformanceUnitForExercise(exercise) != null;
+  final requiredSets = exercise.blockRounds ?? exercise.sets;
+  return List.generate(requiredSets, (index) => index + 1).every((setNumber) {
+    final performance = bySet[setNumber];
+    return timeBased ? performance?.seconds != null : performance?.reps != null;
+  });
+}
+
+Future<bool> _confirmCompleteTraining(
+  BuildContext context,
+  AppLocalizations l10n,
+) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (_) => CompleteTrainingConfirmationDialog(l10n: l10n),
+      ) ??
+      false;
+}
+
+class CompleteTrainingConfirmationDialog extends StatelessWidget {
+  const CompleteTrainingConfirmationDialog({super.key, required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('complete-training-confirmation'),
+      title: Text(l10n.completeTrainingConfirmTitle),
+      content: Text(l10n.completeTrainingConfirmMessage),
+      actions: [
+        TextButton(
+          key: const Key('cancel-complete-training'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          key: const Key('confirm-complete-training'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(l10n.completeTrainingConfirmAction),
+        ),
+      ],
+    );
+  }
+}
+
 class TrainingDetailPage extends StatelessWidget {
   final String trainingId;
   final String? selectedDate;
@@ -350,6 +405,7 @@ class _DetailScaffold extends StatefulWidget {
 
 class _DetailScaffoldState extends State<_DetailScaffold> {
   final _notesController = TextEditingController();
+  bool _completeConfirmationOpen = false;
 
   @override
   void dispose() {
@@ -847,7 +903,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          key: const Key('complete-training-button'),
+                          onPressed: () async {
+                            if (_completeConfirmationOpen) return;
                             if (allDone) {
                               Navigator.of(context).pop(true);
                               return;
@@ -863,6 +921,35 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               );
                               return;
                             }
+
+                            final missingRequiredPerformance = training
+                                .exercises
+                                .any(
+                                  (exercise) => !_hasRequiredSetPerformance(
+                                    exercise,
+                                    widget.state.currentPerformances[exercise
+                                        .id],
+                                  ),
+                                );
+                            if (missingRequiredPerformance) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    l10n.completeTrainingTrackingRequired,
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setState(() => _completeConfirmationOpen = true);
+                            final confirmed = await _confirmCompleteTraining(
+                              context,
+                              l10n,
+                            );
+                            if (!context.mounted) return;
+                            setState(() => _completeConfirmationOpen = false);
+                            if (!confirmed) return;
 
                             context.read<TrainingBloc>().add(
                               CompleteTrainingRequested(
@@ -890,7 +977,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           label: Text(
                             allDone
                                 ? l10n.workoutCompletedMessage
-                                : l10n.completed,
+                                : l10n.completeTrainingConfirmAction,
                           ),
                         ),
                       ),
@@ -1382,7 +1469,7 @@ class _ExerciseCard extends StatelessWidget {
                         _MiniStat(
                           icon: Icons.repeat,
                           label:
-                              '${trainingExercise.sets} x ${trainingExercise.repsOrDuration}',
+                              '${trainingExercise.sets} x ${formatExercisePrescription(trainingExercise)}',
                         ),
                         _MiniStat(
                           icon: Icons.timer_outlined,
@@ -1600,7 +1687,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   String _buildMetadata(AppLocalizations l10n) {
     return l10n.exerciseMetadata(
       trainingExercise.sets,
-      trainingExercise.repsOrDuration,
+      formatExercisePrescription(trainingExercise),
       trainingExercise.restSeconds,
     );
   }

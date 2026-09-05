@@ -4,9 +4,81 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('persists seconds and RIR in queued exercise completion', () async {
+    final storage = FakeSyncStorage();
+    final service = OfflineSyncService(
+      respondingClient((options, handler) {}),
+      storage,
+      isAuthenticated: () => false,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+
+    await service.queueExerciseCompletion(
+      'training-exercise-1',
+      '2026-09-05',
+      completed: true,
+      exerciseId: 'exercise-1',
+      sets: const [SetPerformance(setNumber: 1, seconds: 45, rir: 2)],
+    );
+
+    expect(storage.actions.single['sets'], [
+      {'set_number': 1, 'seconds': 45, 'rir': 2},
+    ]);
+    await service.dispose();
+  });
+
+  test('omits absent RIR so replay cannot clear a stored value', () async {
+    final storage = FakeSyncStorage();
+    final service = OfflineSyncService(
+      respondingClient((options, handler) {}),
+      storage,
+      isAuthenticated: () => false,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+
+    await service.queueExerciseCompletion(
+      'training-exercise-1',
+      '2026-09-05',
+      completed: true,
+      exerciseId: 'exercise-1',
+      sets: const [SetPerformance(setNumber: 1, reps: 10)],
+    );
+
+    expect((storage.actions.single['sets'] as List).single, {
+      'set_number': 1,
+      'reps': 10,
+    });
+    await service.dispose();
+  });
+
+  test('deduplicates repeated pending complete-training actions', () async {
+    final storage = FakeSyncStorage();
+    final service = OfflineSyncService(
+      respondingClient((options, handler) {}),
+      storage,
+      isAuthenticated: () => false,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+
+    await Future.wait([
+      service.queueTrainingCompletion('2026-09-05', trainingId: 'training-1'),
+      service.queueTrainingCompletion('2026-09-05', trainingId: 'training-1'),
+    ]);
+
+    expect(
+      storage.actions.where((action) => action['type'] == 'complete_training'),
+      hasLength(1),
+    );
+    await service.dispose();
+  });
+
   test('replays an interrupted upload when the app starts again', () async {
     final storage = FakeSyncStorage(
       actions: [
@@ -17,6 +89,9 @@ void main() {
           'exercise_id': 'exercise-1',
           'training_id': 'training-1',
           'date': '2026-09-05',
+          'sets': [
+            {'set_number': 1, 'reps': 10, 'rir': null},
+          ],
           'status': 'uploading',
           'attempts': 0,
         },
@@ -44,6 +119,9 @@ void main() {
       'exercise_id': 'exercise-1',
       'training_exercise_id': 'training-exercise-1',
       'date': '2026-09-05',
+      'sets': [
+        {'set_number': 1, 'reps': 10},
+      ],
     });
     expect(storage.actions, isEmpty);
     await service.dispose();

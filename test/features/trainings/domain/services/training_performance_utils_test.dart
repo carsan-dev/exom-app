@@ -16,12 +16,51 @@ void main() {
     expect(timeInputFromSeconds(600, TimePerformanceUnit.minutes), 10);
   });
 
+  test(
+    'structured measure wins and legacy prescription remains compatible',
+    () {
+      TrainingExerciseEntity exercise({ExerciseMeasureType? measureType}) =>
+          TrainingExerciseEntity(
+            id: 'te-1',
+            order: 0,
+            sets: 1,
+            repsOrDuration: '45s',
+            measureType: measureType,
+            targetValue: measureType == null ? null : 45,
+            targetRir: 2,
+            restSeconds: 30,
+            exercise: const ExerciseEntity(
+              id: 'ex-1',
+              name: 'Plancha',
+              muscleGroups: ['core'],
+            ),
+          );
+
+      expect(
+        timePerformanceUnitForExercise(
+          exercise(measureType: ExerciseMeasureType.reps),
+        ),
+        isNull,
+      );
+      expect(
+        timePerformanceUnitForExercise(exercise()),
+        TimePerformanceUnit.seconds,
+      );
+      expect(
+        formatExercisePrescription(
+          exercise(measureType: ExerciseMeasureType.seconds),
+        ),
+        '45s · RIR 2',
+      );
+    },
+  );
+
   test('formats previous set performance with seconds and weight', () {
     expect(
       formatSetPerformance(
-        const SetPerformance(setNumber: 1, seconds: 40, weightKg: 12.5),
+        const SetPerformance(setNumber: 1, seconds: 40, weightKg: 12.5, rir: 2),
       ),
-      '40s · 12.5 kg',
+      '40s · 12.5 kg · RIR 2',
     );
   });
 

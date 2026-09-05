@@ -3176,6 +3176,12 @@ abstract class AppLocalizations {
   /// **'Peso usado (opcional)'**
   String get setPerformanceWeightOptional;
 
+  /// No description provided for @setPerformanceRirOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'RIR alcanzado (opcional)'**
+  String get setPerformanceRirOptional;
+
   /// No description provided for @setPerformanceRepsError.
   ///
   /// In es, this message translates to:
@@ -3194,6 +3200,12 @@ abstract class AppLocalizations {
   /// **'El peso no puede ser negativo'**
   String get setPerformanceWeightError;
 
+  /// No description provided for @setPerformanceRirError.
+  ///
+  /// In es, this message translates to:
+  /// **'El RIR debe ser un entero entre 0 y 10'**
+  String get setPerformanceRirError;
+
   /// No description provided for @setPerformanceDataError.
   ///
   /// In es, this message translates to:
@@ -3205,6 +3217,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Completar sin registrar'**
   String get completeWithoutTracking;
+
+  /// No description provided for @completeTrainingConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Completar todo el entrenamiento?'**
+  String get completeTrainingConfirmTitle;
+
+  /// No description provided for @completeTrainingConfirmMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se marcarán como completados todos los ejercicios pendientes. Esta acción respetará los registros y evidencias obligatorios.'**
+  String get completeTrainingConfirmMessage;
+
+  /// No description provided for @completeTrainingConfirmAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar todo'**
+  String get completeTrainingConfirmAction;
+
+  /// No description provided for @completeTrainingTrackingRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra el rendimiento obligatorio de todas las series antes de completar todo.'**
+  String get completeTrainingTrackingRequired;
 
   /// No description provided for @circuitExerciseRestTitle.
   ///

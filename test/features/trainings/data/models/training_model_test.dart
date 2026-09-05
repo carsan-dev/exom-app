@@ -1,4 +1,5 @@
 import 'package:exom_app/features/trainings/data/models/training_model.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -19,6 +20,9 @@ void main() {
             'order': 1,
             'sets': 1,
             'repsOrDuration': '12',
+            'measureType': 'SECONDS',
+            'targetValue': 45,
+            'targetRir': 2,
             'restSeconds': 15,
             'blockId': 'block-1',
             'positionInBlock': 0,
@@ -45,6 +49,9 @@ void main() {
       final trainingExercise = model.exercises.single;
 
       expect(trainingExercise.repsOrDuration, '12');
+      expect(trainingExercise.measureType, ExerciseMeasureType.seconds);
+      expect(trainingExercise.targetValue, 45);
+      expect(trainingExercise.targetRir, 2);
       expect(trainingExercise.restSeconds, 15);
       expect(trainingExercise.blockId, 'block-1');
       expect(trainingExercise.positionInBlock, 0);

@@ -74,6 +74,42 @@ void main() {
     expect(merged['meals_completed'], isEmpty);
   });
 
+  test('pending legacy set update preserves cached RIR by set number', () {
+    final merged = overlayPendingProgressActions(
+      progress: {
+        'exercises_completed': [
+          {
+            'training_exercise_id': 'training-exercise-1',
+            'exercise_id': 'exercise-1',
+            'sets': [
+              {'set_number': 1, 'reps': 8, 'rir': 3},
+              {'set_number': 2, 'reps': 7, 'rir': 4},
+            ],
+          },
+        ],
+      },
+      actions: const [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'sets': [
+            {'set_number': 1, 'reps': 10, 'rir': null},
+          ],
+          'status': 'queued',
+        },
+      ],
+      date: date,
+    );
+
+    final sets = (merged['exercises_completed'] as List).single['sets'] as List;
+    expect(sets, [
+      {'set_number': 1, 'reps': 10, 'rir': 3},
+      {'set_number': 2, 'reps': 7, 'rir': 4},
+    ]);
+  });
+
   test('does not present permanently failed actions as server progress', () {
     final merged = overlayPendingProgressActions(
       progress: {

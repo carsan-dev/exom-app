@@ -1,4 +1,5 @@
 import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 List<String> _resolveTrainingTypesFromJson(Map<String, dynamic> json) {
   final rawTypes =
@@ -81,6 +82,9 @@ class TrainingExerciseModel {
   final int order;
   final int sets;
   final String repsOrDuration;
+  final ExerciseMeasureType? measureType;
+  final int? targetValue;
+  final int? targetRir;
   final int restSeconds;
   final bool requestSetTracking;
   final String? blockId;
@@ -96,6 +100,9 @@ class TrainingExerciseModel {
     required this.order,
     required this.sets,
     required this.repsOrDuration,
+    this.measureType,
+    this.targetValue,
+    this.targetRir,
     required this.restSeconds,
     this.requestSetTracking = false,
     this.blockId,
@@ -115,6 +122,17 @@ class TrainingExerciseModel {
       sets: json['sets'] as int? ?? 0,
       repsOrDuration:
           _readJson<String>(json, 'reps_or_duration', 'repsOrDuration') ?? '',
+      measureType: switch (_readJson<String>(
+        json,
+        'measure_type',
+        'measureType',
+      )) {
+        'REPS' => ExerciseMeasureType.reps,
+        'SECONDS' => ExerciseMeasureType.seconds,
+        _ => null,
+      },
+      targetValue: _readJson<num>(json, 'target_value', 'targetValue')?.toInt(),
+      targetRir: _readJson<num>(json, 'target_rir', 'targetRir')?.toInt(),
       restSeconds: _readJson<int>(json, 'rest_seconds', 'restSeconds') ?? 60,
       requestSetTracking:
           _readJson<bool>(json, 'request_set_tracking', 'requestSetTracking') ??

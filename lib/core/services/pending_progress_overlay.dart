@@ -1,3 +1,27 @@
+List<Map<String, dynamic>> _mergePendingSets(
+  Object? existingValue,
+  Object? pendingValue,
+) {
+  final existing = (existingValue as List? ?? const [])
+      .whereType<Map>()
+      .map((set) => Map<String, dynamic>.from(set))
+      .toList(growable: false);
+  final pending = (pendingValue as List? ?? const [])
+      .whereType<Map>()
+      .map((set) {
+        final normalized = Map<String, dynamic>.from(set);
+        if (normalized['rir'] == null) normalized.remove('rir');
+        return normalized;
+      })
+      .toList(growable: false);
+  final pendingByNumber = {for (final set in pending) set['set_number']: set};
+  final existingNumbers = existing.map((set) => set['set_number']).toSet();
+  return [
+    ...existing.map((set) => {...set, ...?pendingByNumber[set['set_number']]}),
+    ...pending.where((set) => !existingNumbers.contains(set['set_number'])),
+  ];
+}
+
 Map<String, dynamic> overlayPendingProgressActions({
   required Map<String, dynamic> progress,
   required Iterable<Map<String, dynamic>> actions,
@@ -42,7 +66,8 @@ Map<String, dynamic> overlayPendingProgressActions({
           'exercise_id': ?exerciseId,
           if (action['weight_used'] != null)
             'weight_used': action['weight_used'],
-          if (action['sets'] != null) 'sets': action['sets'],
+          if (action['sets'] != null)
+            'sets': _mergePendingSets(existing['sets'], action['sets']),
           'completed_at':
               existing['completed_at'] ??
               action['queued_at'] ??

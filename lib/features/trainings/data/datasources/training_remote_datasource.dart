@@ -100,11 +100,15 @@ TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
               reps: set['reps'] as int?,
               seconds: set['seconds'] as int?,
               weightKg: (set['weight_kg'] as num?)?.toDouble(),
+              rir: (set['rir'] as num?)?.toInt(),
             ),
           )
           .where(
             (set) =>
-                set.reps != null || set.seconds != null || set.weightKg != null,
+                set.reps != null ||
+                set.seconds != null ||
+                set.weightKg != null ||
+                set.rir != null,
           )
           .toList(growable: false);
     }
@@ -646,13 +650,15 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
                 reps: set['reps'] as int?,
                 seconds: set['seconds'] as int?,
                 weightKg: (set['weight_kg'] as num?)?.toDouble(),
+                rir: (set['rir'] as num?)?.toInt(),
               ),
             )
             .where(
               (set) =>
                   set.reps != null ||
                   set.seconds != null ||
-                  set.weightKg != null,
+                  set.weightKg != null ||
+                  set.rir != null,
             )
             .toList(growable: false);
       }

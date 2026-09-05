@@ -5,13 +5,21 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:exom_app/core/auth/auth_token_provider.dart';
 
-class FirebaseAuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+class FirebaseAuthService implements AuthTokenProvider {
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  GoogleSignIn get _googleSignIn => GoogleSignIn.instance;
   bool _googleSignInInitialized = false;
 
   User? get currentUser => _auth.currentUser;
+  @override
+  LocalAuthSession? get currentSession {
+    final user = currentUser;
+    if (user == null) return null;
+    return LocalAuthSession(uid: user.uid, email: user.email);
+  }
+
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<UserCredential> signInWithEmail(String email, String password) {
@@ -73,8 +81,16 @@ class FirebaseAuthService {
     return signInWithCredential(credential);
   }
 
+  @override
   Future<String?> getIdToken({bool forceRefresh = false}) async {
-    return _auth.currentUser?.getIdToken(forceRefresh);
+    try {
+      return await _auth.currentUser?.getIdToken(forceRefresh);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'network-request-failed') {
+        throw const AuthTokenNetworkException();
+      }
+      rethrow;
+    }
   }
 
   Future<UserCredential> linkCurrentUserWithCredential(

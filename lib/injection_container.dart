@@ -142,11 +142,14 @@ Future<void> initDependencies() async {
     () => AppPreferencesCubit(sl<LocalStorage>()),
   );
 
-  sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(baseUrl: FlavorConfig.instance.apiBaseUrl),
-  );
-
   sl.registerLazySingleton<FirebaseAuthService>(() => FirebaseAuthService());
+
+  sl.registerLazySingleton<ApiClient>(
+    () => ApiClient(
+      baseUrl: FlavorConfig.instance.apiBaseUrl,
+      authTokenProvider: sl<FirebaseAuthService>(),
+    ),
+  );
 
   sl.registerLazySingleton<FcmService>(
     () => FcmService(

@@ -1,11 +1,19 @@
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:exom_app/core/auth/auth_token_provider.dart';
 
 class ApiClient {
   late final Dio _dio;
 
-  ApiClient({String? baseUrl, bool useAuth = true}) {
+  ApiClient({
+    String? baseUrl,
+    bool useAuth = true,
+    AuthTokenProvider? authTokenProvider,
+  }) {
+    if (useAuth && authTokenProvider == null) {
+      throw ArgumentError.notNull('authTokenProvider');
+    }
+
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl ?? 'http://10.0.2.2:3000/api/v1',
@@ -18,7 +26,9 @@ class ApiClient {
       ),
     );
 
-    if (useAuth) _dio.interceptors.add(_AuthInterceptor());
+    if (useAuth) {
+      _dio.interceptors.add(_AuthInterceptor(_dio, authTokenProvider!));
+    }
     _dio.interceptors.add(_LoggingInterceptor());
   }
 
@@ -88,15 +98,49 @@ class ApiClient {
 }
 
 class _AuthInterceptor extends Interceptor {
+  static const _retryKey = 'exom.auth.retry';
+  static const _refreshExcludedPaths = {
+    '/auth/login',
+    '/auth/social',
+    '/auth/forgot-password',
+  };
+
+  final Dio _dio;
+  final AuthTokenProvider _authTokenProvider;
+  Future<String?>? _refreshInFlight;
+  String? _tokenBeforeLastRefresh;
+  String? _lastRefreshedToken;
+  bool _hasCompletedRefresh = false;
+
+  _AuthInterceptor(this._dio, this._authTokenProvider);
+
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final token = await user.getIdToken();
-      options.headers['Authorization'] = 'Bearer $token';
+    if (options.extra[_retryKey] == true &&
+        options.headers.containsKey('Authorization')) {
+      handler.next(options);
+      return;
+    }
+
+    if (_authTokenProvider.currentSession != null) {
+      try {
+        final token = await _authTokenProvider.getIdToken();
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+      } on AuthTokenNetworkException catch (error) {
+        handler.reject(
+          DioException.connectionError(
+            requestOptions: options,
+            reason: 'Firebase token refresh failed due to connectivity',
+            error: error,
+          ),
+        );
+        return;
+      }
     }
     handler.next(options);
   }
@@ -106,20 +150,69 @@ class _AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
-      // Token might be expired, try to refresh
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          final token = await user.getIdToken(true); // force refresh
-          final opts = err.requestOptions;
-          opts.headers['Authorization'] = 'Bearer $token';
-          final response = await Dio().fetch(opts);
-          return handler.resolve(response);
-        }
-      } catch (_) {}
+    final options = err.requestOptions;
+    if (err.response?.statusCode != 401 ||
+        options.extra[_retryKey] == true ||
+        _refreshExcludedPaths.any(options.uri.path.endsWith) ||
+        _authTokenProvider.currentSession == null) {
+      handler.next(err);
+      return;
     }
-    handler.next(err);
+
+    try {
+      final failedAuthorization = options.headers['Authorization']?.toString();
+      final token = await _refreshToken(failedAuthorization);
+      if (token == null || token.isEmpty) {
+        handler.next(err);
+        return;
+      }
+
+      final retryOptions = options.copyWith(
+        headers: {...options.headers, 'Authorization': 'Bearer $token'},
+        extra: {...options.extra, _retryKey: true},
+      );
+      final response = await _dio.fetch<dynamic>(retryOptions);
+      handler.resolve(response);
+    } on AuthTokenNetworkException catch (refreshError) {
+      handler.next(
+        DioException.connectionError(
+          requestOptions: options,
+          reason: 'Firebase token refresh failed due to connectivity',
+          error: refreshError,
+        ),
+      );
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    } catch (_) {
+      handler.next(err);
+    }
+  }
+
+  Future<String?> _refreshToken(String? failedAuthorization) {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+
+    if (_hasCompletedRefresh &&
+        failedAuthorization == _tokenBeforeLastRefresh) {
+      return Future<String?>.value(_lastRefreshedToken);
+    }
+
+    _tokenBeforeLastRefresh = failedAuthorization;
+    final refresh = _authTokenProvider.getIdToken(forceRefresh: true);
+    _refreshInFlight = refresh;
+    return refresh
+        .then((token) {
+          if (token != null && token.isNotEmpty) {
+            _lastRefreshedToken = token;
+            _hasCompletedRefresh = true;
+          }
+          return token;
+        })
+        .whenComplete(() {
+          if (identical(_refreshInFlight, refresh)) {
+            _refreshInFlight = null;
+          }
+        });
   }
 }
 
@@ -162,8 +255,7 @@ class ApiException implements Exception {
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError ||
-        e.response == null;
+        e.type == DioExceptionType.connectionError;
     final statusCode = isNetwork ? 0 : (e.response?.statusCode ?? 500);
     final data = e.response?.data;
     String? message;

@@ -15,6 +15,7 @@ void main() {
           'type': 'mark_exercise_completed',
           'training_exercise_id': 'training-exercise-1',
           'exercise_id': 'exercise-1',
+          'training_id': 'training-1',
           'date': '2026-09-05',
           'status': 'uploading',
           'attempts': 0,
@@ -22,8 +23,10 @@ void main() {
       ],
     );
     final requests = <String>[];
+    Map<String, dynamic>? exercisePayload;
     final client = respondingClient((options, handler) {
       requests.add(options.path);
+      exercisePayload = Map<String, dynamic>.from(options.data as Map);
       handler.resolve(Response(requestOptions: options, statusCode: 200));
     });
     final service = OfflineSyncService(
@@ -37,6 +40,11 @@ void main() {
     await service.init();
 
     expect(requests, ['/progress/exercises/complete']);
+    expect(exercisePayload, {
+      'exercise_id': 'exercise-1',
+      'training_exercise_id': 'training-exercise-1',
+      'date': '2026-09-05',
+    });
     expect(storage.actions, isEmpty);
     await service.dispose();
   });
@@ -218,6 +226,16 @@ void main() {
         },
       ],
     );
+    storage.cache.addAll({
+      'day_progress_2026-09-01': {
+        'exercises_completed': ['stale'],
+      },
+      'home_progress_2026-09-01': {
+        'exercises_completed': ['stale'],
+      },
+      'completed_exercises_2026-09-01': ['training-exercise-1'],
+      'completed_meals_2026-09-01': ['meal-1'],
+    });
     final requests = <String>[];
     final client = respondingClient((options, handler) {
       requests.add(options.path);
@@ -248,7 +266,68 @@ void main() {
     expect(storage.actions, hasLength(1));
     expect(storage.actions.single['status'], 'failed');
     expect(storage.actions.single['attempts'], 1);
+    final progress = storage.getCachedMap('day_progress_2026-09-01');
+    expect(progress?['exercises_completed'], isEmpty);
+    expect(progress?['meals_completed'], ['meal-1']);
   });
+
+  test(
+    'clears stale progress from an action that failed before restart',
+    () async {
+      final storage = FakeSyncStorage(
+        actions: [
+          {
+            'id': 'failed-exercise',
+            'type': 'mark_exercise_completed',
+            'training_exercise_id': 'training-exercise-1',
+            'exercise_id': 'exercise-1',
+            'date': '2026-09-05',
+            'status': 'failed',
+            'attempts': 1,
+          },
+          {
+            'id': 'queued-exercise',
+            'type': 'mark_exercise_completed',
+            'training_exercise_id': 'training-exercise-2',
+            'exercise_id': 'exercise-2',
+            'date': '2026-09-05',
+            'status': 'queued',
+            'attempts': 0,
+          },
+        ],
+      );
+      storage.cache.addAll({
+        'day_progress_2026-09-05': {
+          'exercises_completed': ['stale'],
+        },
+        'home_progress_2026-09-05': {
+          'exercises_completed': ['stale'],
+        },
+        'completed_exercises_2026-09-05': ['training-exercise-1'],
+      });
+      final service = OfflineSyncService(
+        respondingClient((options, handler) {
+          handler.resolve(Response(requestOptions: options, statusCode: 200));
+        }),
+        storage,
+        isAuthenticated: () => false,
+        authenticationChanges: const Stream<bool>.empty(),
+        connectivityChanges: const Stream<bool>.empty(),
+      );
+
+      await service.init();
+
+      expect(storage.actions.first['status'], 'failed');
+      final progress = storage.getCachedMap('day_progress_2026-09-05');
+      final exercises = (progress?['exercises_completed'] as List?) ?? const [];
+      expect(exercises, hasLength(1));
+      expect(
+        (exercises.single as Map)['training_exercise_id'],
+        'training-exercise-2',
+      );
+      await service.dispose();
+    },
+  );
 
   test(
     'retries dependent 409 responses and fails manually after five attempts',

@@ -17,6 +17,7 @@ Map<String, dynamic> overlayPendingProgressActions({
 
   for (final action in actions) {
     if (action['date'] != date) continue;
+    if (action['status'] == 'failed') continue;
 
     switch (action['type']) {
       case 'mark_exercise_completed':

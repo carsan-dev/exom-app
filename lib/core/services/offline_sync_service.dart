@@ -67,6 +67,7 @@ class OfflineSyncService {
 
     _initialized = true;
     await _recoverInterruptedActions();
+    await _rebuildFailedActionProgressCaches();
 
     _authSubscription ??= _authenticationChanges().listen((authenticated) {
       if (authenticated) {
@@ -221,24 +222,20 @@ class OfflineSyncService {
             statusCode == 409 ||
             statusCode == 429 ||
             (statusCode != null && statusCode >= 500);
-        await _mutateById(
+        await _recordReplayFailure(
           id,
-          (current) => _failedOrRetriedAction(
-            current,
-            error.message ?? error.toString(),
-            retryable: retryable,
-            retryIndefinitely: offline,
-          ),
+          action,
+          error.message ?? error.toString(),
+          retryable: retryable,
+          retryIndefinitely: offline,
         );
       } catch (error) {
         debugPrint('[SYNC] Keeping invalid action visible: $action ($error)');
-        await _mutateById(
+        await _recordReplayFailure(
           id,
-          (current) => _failedOrRetriedAction(
-            current,
-            error.toString(),
-            retryable: false,
-          ),
+          action,
+          error.toString(),
+          retryable: false,
         );
       }
     }
@@ -276,6 +273,53 @@ class OfflineSyncService {
       if (changed) await _persistQueue(queue);
     });
     if (changed) _changes.add(null);
+  }
+
+  Future<void> _recordReplayFailure(
+    String id,
+    Map<String, dynamic> action,
+    String error, {
+    required bool retryable,
+    bool retryIndefinitely = false,
+  }) async {
+    var failedPermanently = false;
+    await _mutateById(id, (current) {
+      final updated = _failedOrRetriedAction(
+        current,
+        error,
+        retryable: retryable,
+        retryIndefinitely: retryIndefinitely,
+      );
+      failedPermanently = updated['status'] == 'failed';
+      return updated;
+    });
+    if (failedPermanently) {
+      await _rebuildProgressCachesAfterFailure(action['date'] as String?);
+    }
+  }
+
+  Future<void> _rebuildFailedActionProgressCaches() async {
+    final failedDates = _localStorage
+        .getPendingSyncActions()
+        .where((action) => action['status'] == 'failed')
+        .map((action) => action['date'])
+        .whereType<String>()
+        .toSet();
+    for (final date in failedDates) {
+      await _rebuildProgressCachesAfterFailure(date);
+    }
+  }
+
+  Future<void> _rebuildProgressCachesAfterFailure(String? date) async {
+    if (date == null) return;
+    await _saveProgressCache(date, {
+      'date': date,
+      'training_completed': false,
+      'trainings_completed': <String>[],
+      'exercises_completed': <Map<String, dynamic>>[],
+      'meals_completed': <String>[],
+      'notes': null,
+    });
   }
 
   Future<void> _enqueueAction(Map<String, dynamic> action) async {
@@ -420,8 +464,6 @@ class OfflineSyncService {
             'exercise_id': exerciseId,
             'training_exercise_id': trainingExerciseId,
             'date': date,
-            if (action['training_id'] != null)
-              'training_id': action['training_id'],
             if (action['weight_used'] != null)
               'weight_used': action['weight_used'],
             if (action['sets'] != null) 'sets': action['sets'],

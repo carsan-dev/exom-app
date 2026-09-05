@@ -73,4 +73,40 @@ void main() {
     expect(merged['exercises_completed'], isEmpty);
     expect(merged['meals_completed'], isEmpty);
   });
+
+  test('does not present permanently failed actions as server progress', () {
+    final merged = overlayPendingProgressActions(
+      progress: {
+        'exercises_completed': <Map<String, dynamic>>[],
+        'meals_completed': <String>[],
+        'trainings_completed': <String>[],
+      },
+      actions: const [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'status': 'failed',
+        },
+        {
+          'type': 'mark_meal_completed',
+          'date': date,
+          'meal_id': 'meal-1',
+          'status': 'failed',
+        },
+        {
+          'type': 'complete_training',
+          'date': date,
+          'training_id': 'training-1',
+          'status': 'failed',
+        },
+      ],
+      date: date,
+    );
+
+    expect(merged['exercises_completed'], isEmpty);
+    expect(merged['meals_completed'], isEmpty);
+    expect(merged['trainings_completed'], isEmpty);
+  });
 }

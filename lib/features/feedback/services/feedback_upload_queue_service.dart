@@ -197,10 +197,11 @@ class FeedbackUploadQueueService {
     if (_processing) return;
     _processing = true;
     try {
-      await _purgeExpiredItems();
       await _retryCompletedCleanup();
+      await _purgeExpiredItems();
       if (!_isAuthenticated()) return;
       while (true) {
+        if (!_isAuthenticated()) break;
         final item = await _claimNext();
         if (item == null) break;
         final id = item['id'] as String;
@@ -227,6 +228,13 @@ class FeedbackUploadQueueService {
             file,
             item['content_type'] as String,
           );
+          if (!_isAuthenticated()) {
+            await _mutateById(
+              id,
+              (current) => {...current, 'status': 'queued'},
+            );
+            break;
+          }
           await _repository.createFeedback(
             mediaType: item['media_type'] as String,
             mediaUrl: upload.fileUrl,
@@ -239,6 +247,13 @@ class FeedbackUploadQueueService {
             trainingExerciseId: item['training_exercise_id'] as String?,
             assignmentDate: item['assignment_date'] as String?,
           );
+          if (!_isAuthenticated()) {
+            await _mutateById(
+              id,
+              (current) => {...current, 'status': 'queued'},
+            );
+            break;
+          }
           String? cleanupError;
           try {
             await _deleteFile(file.path);
@@ -258,6 +273,13 @@ class FeedbackUploadQueueService {
           );
           await _offlineSync.syncPendingActions();
         } catch (error) {
+          if (!_isAuthenticated()) {
+            await _mutateById(
+              id,
+              (current) => {...current, 'status': 'queued'},
+            );
+            break;
+          }
           if (attempts >= 5) {
             await _mutateById(
               id,
@@ -385,6 +407,9 @@ class FeedbackUploadQueueService {
       return _storage
           .getFeedbackUploadQueue()
           .where((item) {
+            if (!_isAuthenticated() && item['status'] != 'completed') {
+              return false;
+            }
             final queuedAt = DateTime.tryParse(
               item['queued_at'] as String? ?? '',
             );
@@ -395,6 +420,7 @@ class FeedbackUploadQueueService {
           .toList(growable: false);
     });
     for (final item in expired) {
+      if (!_isAuthenticated() && item['status'] != 'completed') continue;
       final id = item['id'] as String?;
       final path = item['file_path'] as String?;
       if (id == null) continue;

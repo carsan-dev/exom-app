@@ -8,6 +8,45 @@ import 'package:exom_app/features/trainings/domain/entities/training_entity.dart
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'pauses replay and preserves claimed work when validation is revoked in flight',
+    () async {
+      var authenticated = true;
+      var requests = 0;
+      final storage = FakeSyncStorage(
+        actions: [
+          for (var i = 0; i < 2; i++)
+            {
+              'id': 'action-$i',
+              'type': 'complete_training',
+              'training_id': 'training-$i',
+              'date': '2026-09-05',
+              'status': 'queued',
+              'attempts': 0,
+            },
+        ],
+      );
+      final service = OfflineSyncService(
+        respondingClient((options, handler) {
+          requests++;
+          authenticated = false;
+          handler.resolve(Response(requestOptions: options, statusCode: 200));
+        }),
+        storage,
+        isAuthenticated: () => authenticated,
+        authenticationChanges: const Stream<bool>.empty(),
+        connectivityChanges: const Stream<bool>.empty(),
+      );
+      await service.syncPendingActions();
+      expect(requests, 1);
+      expect(storage.actions, hasLength(2));
+      expect(
+        storage.actions.map((action) => action['status']),
+        everyElement('queued'),
+      );
+      await service.dispose();
+    },
+  );
   test('persists seconds and RIR in queued exercise completion', () async {
     final storage = FakeSyncStorage();
     final service = OfflineSyncService(

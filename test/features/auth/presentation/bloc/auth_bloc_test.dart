@@ -16,7 +16,52 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 
 void main() {
+  test('late login result cannot authenticate after logout', () async {
+    final repository = _DelayedLoginRepository();
+    final firebase = _MutableFirebaseAuthService();
+    final bloc = AuthBloc(
+      loginUseCase: LoginUseCase(repository),
+      socialLoginUseCase: SocialLoginUseCase(repository),
+      logoutUseCase: LogoutUseCase(repository),
+      getMeUseCase: GetMeUseCase(repository),
+      deleteAccountUseCase: DeleteAccountUseCase(repository),
+      firebaseAuthService: firebase,
+    );
+    bloc.add(
+      const AuthLoginRequested(email: 'client@exom.dev', password: 'password'),
+    );
+    await repository.started.future;
+    final loggedOut = bloc.stream.firstWhere(
+      (state) => state is AuthUnauthenticated,
+    );
+    bloc.add(const AuthLogoutRequested());
+    await loggedOut;
+    repository.result.complete(
+      const UserEntity(
+        id: 'old-user',
+        email: 'client@exom.dev',
+        role: 'CLIENT',
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(bloc.state, isA<AuthUnauthenticated>());
+    await bloc.close();
+  });
   group('AuthCheckStatusRequested', () {
+    test(
+      'a network failure after backend 401 cannot restore offline authentication',
+      () async {
+        final fixture = _fixture(
+          const ApiException(
+            statusCode: 0,
+            message: 'refresh offline after rejection',
+            backendRejectedSession: true,
+          ),
+        );
+        expect(await fixture.checkStatus(), isA<AuthError>());
+        expect(fixture.firebase.signOutCalls, 0);
+      },
+    );
     test('401 does not authenticate and clears Firebase session', () async {
       final fixture = _fixture(
         const ApiException(statusCode: 401, message: 'unauthorized'),
@@ -161,7 +206,7 @@ class _AuthFixture {
   final _FakeFirebaseAuthService firebase;
 
   Future<AuthState> checkStatus() async {
-    final nextState = bloc.stream.first;
+    final nextState = bloc.stream.firstWhere((state) => state is! AuthLoading);
     bloc.add(const AuthCheckStatusRequested());
     final state = await nextState;
     await bloc.close();
@@ -259,4 +304,14 @@ class _RacingAuthRepository implements AuthRepository {
 
   @override
   Future<void> forgotPassword(String email) async {}
+}
+
+class _DelayedLoginRepository extends _RacingAuthRepository {
+  final started = Completer<void>();
+  final result = Completer<UserEntity>();
+  @override
+  Future<UserEntity> login(String email, String password) {
+    started.complete();
+    return result.future;
+  }
 }

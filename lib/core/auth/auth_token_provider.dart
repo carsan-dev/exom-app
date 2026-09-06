@@ -1,8 +1,9 @@
 class LocalAuthSession {
   final String uid;
   final String? email;
+  final int generation;
 
-  const LocalAuthSession({required this.uid, this.email});
+  const LocalAuthSession({required this.uid, this.email, this.generation = 0});
 }
 
 class AuthTokenNetworkException implements Exception {

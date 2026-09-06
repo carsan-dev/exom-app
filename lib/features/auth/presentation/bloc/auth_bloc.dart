@@ -22,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   String? _pendingLinkEmail;
   String? _pendingLinkProvider;
   int _sessionValidationGeneration = 0;
+  final void Function(AuthState)? onSessionStateChanged;
 
   AuthBloc({
     required LoginUseCase loginUseCase,
@@ -30,6 +31,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required GetMeUseCase getMeUseCase,
     required DeleteAccountUseCase deleteAccountUseCase,
     required FirebaseAuthService firebaseAuthService,
+    this.onSessionStateChanged,
   }) : _loginUseCase = loginUseCase,
        _socialLoginUseCase = socialLoginUseCase,
        _logoutUseCase = logoutUseCase,
@@ -45,6 +47,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLinkCancelled>(_onLinkCancelled);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthAccountDeletionRequested>(_onAccountDeletionRequested);
+  }
+
+  @override
+  void onChange(Change<AuthState> change) {
+    onSessionStateChanged?.call(change.nextState);
+    super.onChange(change);
   }
 
   void _clearPendingLink() {
@@ -99,10 +107,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required String provider,
     required String? email,
     required Emitter<AuthState> emit,
+    required int generation,
   }) async {
     try {
       await _firebaseAuthService.signOut();
     } catch (_) {}
+    if (generation != _sessionValidationGeneration) return;
 
     final normalizedEmail = email?.trim().toLowerCase();
     if (normalizedEmail == null || normalizedEmail.isEmpty) {
@@ -130,49 +140,59 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     String provider,
     Emitter<AuthState> emit,
   ) async {
-    _sessionValidationGeneration++;
+    final generation = ++_sessionValidationGeneration;
     emit(const AuthLoading());
 
-    final credential = await _createSocialCredential(provider);
+    OAuthCredential? credential;
     String? socialEmail;
     try {
+      credential = await _createSocialCredential(provider);
+      if (generation != _sessionValidationGeneration) return;
       final socialSession = await _firebaseAuthService.signInWithCredential(
         credential,
       );
       socialEmail = socialSession.user?.email;
+      if (generation != _sessionValidationGeneration) return;
       final user = await _completeSocialLogin(provider);
+      if (generation != _sessionValidationGeneration) return;
       _clearPendingLink();
       emit(AuthAuthenticated(user));
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'account-exists-with-different-credential') {
+      if (generation != _sessionValidationGeneration) return;
+      if (e.code == 'account-exists-with-different-credential' &&
+          credential != null) {
         await _preparePasswordLinkFlow(
           credential: credential,
           provider: provider,
           email: e.email,
           emit: emit,
+          generation: generation,
         );
         return;
       }
 
       emit(AuthError(_firebaseAuthMessage(e)));
     } on ApiException catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       if (e.isLocked) {
         emit(const AuthAccountLocked());
         return;
       }
 
-      if (e.statusCode == 409) {
+      if (e.statusCode == 409 && credential != null) {
         await _preparePasswordLinkFlow(
           credential: credential,
           provider: provider,
           email: socialEmail,
           emit: emit,
+          generation: generation,
         );
         return;
       }
 
       emit(AuthError(e.message));
     } catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(e.toString()));
     }
   }
@@ -182,6 +202,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final validationGeneration = ++_sessionValidationGeneration;
+    emit(const AuthLoading());
     final firebaseSession = _firebaseAuthService.currentSession;
     if (firebaseSession == null) {
       emit(const AuthUnauthenticated());
@@ -190,7 +211,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     bool isCurrentValidation() =>
         validationGeneration == _sessionValidationGeneration &&
-        _firebaseAuthService.currentSession?.uid == firebaseSession.uid;
+        _firebaseAuthService.currentSession?.uid == firebaseSession.uid &&
+        _firebaseAuthService.currentSession?.generation ==
+            firebaseSession.generation;
 
     try {
       final user = await _getMeUseCase();
@@ -200,7 +223,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (!isCurrentValidation()) return;
       if (e.isLocked) {
         emit(const AuthAccountLocked());
-      } else if (e.isNetworkError) {
+      } else if (e.isNetworkError && !e.backendRejectedSession) {
         final entity = UserEntity(
           id: firebaseSession.uid,
           email: firebaseSession.email ?? '',
@@ -211,6 +234,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           await _firebaseAuthService.signOut();
         } catch (_) {}
+        if (validationGeneration != _sessionValidationGeneration) return;
         emit(const AuthUnauthenticated());
       } else {
         emit(AuthError(e.message));
@@ -225,19 +249,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    _sessionValidationGeneration++;
+    final generation = ++_sessionValidationGeneration;
     _clearPendingLink();
     emit(const AuthLoading());
     try {
       final user = await _loginUseCase(event.email, event.password);
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else {
         emit(AuthError(e.message));
       }
     } catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(e.toString()));
     }
   }
@@ -260,7 +287,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLinkPasswordSubmitted event,
     Emitter<AuthState> emit,
   ) async {
-    _sessionValidationGeneration++;
+    final generation = ++_sessionValidationGeneration;
     final pendingCredential = _pendingLinkCredential;
     final pendingEmail = _pendingLinkEmail;
     final pendingProvider = _pendingLinkProvider;
@@ -278,6 +305,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const AuthLoading());
     try {
       final user = await _loginUseCase(pendingEmail, event.password);
+      if (generation != _sessionValidationGeneration) return;
 
       try {
         await _firebaseAuthService.linkCurrentUserWithCredential(
@@ -289,23 +317,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       }
 
+      if (generation != _sessionValidationGeneration) return;
       _clearPendingLink();
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else {
         emit(AuthError(e.message));
       }
     } on FirebaseAuthException catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       try {
         await _logoutUseCase();
       } catch (_) {}
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(_firebaseAuthMessage(e)));
     } catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       try {
         await _logoutUseCase();
       } catch (_) {}
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(e.toString()));
     }
   }
@@ -323,7 +357,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    _sessionValidationGeneration++;
+    final generation = ++_sessionValidationGeneration;
     _clearPendingLink();
     emit(const AuthLoading());
     try {
@@ -331,23 +365,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (_) {
       // Best effort logout
     }
-    emit(const AuthUnauthenticated());
+    if (generation == _sessionValidationGeneration) {
+      emit(const AuthUnauthenticated());
+    }
   }
 
   Future<void> _onAccountDeletionRequested(
     AuthAccountDeletionRequested event,
     Emitter<AuthState> emit,
   ) async {
-    _sessionValidationGeneration++;
+    final generation = ++_sessionValidationGeneration;
     _clearPendingLink();
     emit(const AuthLoading());
     try {
       await _deleteAccountUseCase();
+      if (generation != _sessionValidationGeneration) return;
       emit(const AuthAccountDeleted());
       emit(const AuthUnauthenticated());
     } on ApiException catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(e.message));
     } catch (e) {
+      if (generation != _sessionValidationGeneration) return;
       emit(AuthError(e.toString()));
     }
   }

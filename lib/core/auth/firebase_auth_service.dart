@@ -6,32 +6,44 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
+import 'package:exom_app/core/utils/async_mutex.dart';
 
 class FirebaseAuthService implements AuthTokenProvider {
   FirebaseAuth get _auth => FirebaseAuth.instance;
   GoogleSignIn get _googleSignIn => GoogleSignIn.instance;
   bool _googleSignInInitialized = false;
+  int _sessionGeneration = 0;
+  final _sessionMutex = AsyncMutex();
 
   User? get currentUser => _auth.currentUser;
   @override
   LocalAuthSession? get currentSession {
     final user = currentUser;
     if (user == null) return null;
-    return LocalAuthSession(uid: user.uid, email: user.email);
+    return LocalAuthSession(
+      uid: user.uid,
+      email: user.email,
+      generation: _sessionGeneration,
+    );
   }
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<UserCredential> signInWithEmail(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+    _sessionGeneration++;
+    return _sessionMutex.protect(
+      () => _auth.signInWithEmailAndPassword(email: email, password: password),
+    );
   }
 
   Future<UserCredential> signInWithCustomToken(String token) {
-    return _auth.signInWithCustomToken(token);
+    _sessionGeneration++;
+    return _sessionMutex.protect(() => _auth.signInWithCustomToken(token));
   }
 
   Future<UserCredential> signInWithCredential(AuthCredential credential) {
-    return _auth.signInWithCredential(credential);
+    _sessionGeneration++;
+    return _sessionMutex.protect(() => _auth.signInWithCredential(credential));
   }
 
   Future<void> _ensureGoogleSignInInitialized() async {
@@ -108,12 +120,14 @@ class FirebaseAuthService implements AuthTokenProvider {
   }
 
   Future<void> signOut() async {
-    if (!_googleSignInInitialized) {
-      await _auth.signOut();
-      return;
-    }
-
-    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+    _sessionGeneration++;
+    await _sessionMutex.protect(() async {
+      if (!_googleSignInInitialized) {
+        await _auth.signOut();
+        return;
+      }
+      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+    });
   }
 
   Future<void> sendPasswordResetEmail(String email) {

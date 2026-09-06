@@ -211,16 +211,29 @@ class OfflineSyncService {
 
     final visitedIds = <String>{};
     while (true) {
+      if (!_isAuthenticated()) break;
       final action = await _claimNextAction(visitedIds);
       if (action == null) break;
       final id = action['id'] as String;
       visitedIds.add(id);
       try {
+        if (!_isAuthenticated()) {
+          await _mutateById(id, (current) => {...current, 'status': 'queued'});
+          break;
+        }
         await _replayAction(action);
+        if (!_isAuthenticated()) {
+          await _mutateById(id, (current) => {...current, 'status': 'queued'});
+          break;
+        }
         await _removeById(id);
       } on _FeedbackDependencyPending {
         await _mutateById(id, (current) => {...current, 'status': 'queued'});
       } on DioException catch (error) {
+        if (!_isAuthenticated()) {
+          await _mutateById(id, (current) => {...current, 'status': 'queued'});
+          break;
+        }
         final statusCode = error.response?.statusCode;
         final offline = isOfflineError(error);
         final retryable =

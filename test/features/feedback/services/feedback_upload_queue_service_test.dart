@@ -10,6 +10,43 @@ import 'package:exom_app/features/feedback/services/feedback_upload_queue_servic
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'does not create feedback or delete evidence after validation is revoked during upload',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'exom-auth-upload-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/evidence.mp4');
+      await file.writeAsBytes([0]);
+      final storage = FakeFeedbackQueueStorage([
+        {
+          'id': 'pending',
+          'file_path': file.path,
+          'content_type': 'video/mp4',
+          'media_type': 'VIDEO',
+          'status': 'queued',
+          'attempts': 0,
+        },
+      ]);
+      var authenticated = true;
+      final repository = BlockingFeedbackRepository();
+      final service = FeedbackUploadQueueService(
+        repository,
+        storage,
+        FakeOfflineSyncService(storage),
+        isAuthenticated: () => authenticated,
+      );
+      final processing = service.processQueue();
+      await repository.firstUploadStarted.future;
+      authenticated = false;
+      repository.releaseFirstUpload.complete();
+      await processing;
+      expect(repository.createCalls, 0);
+      expect(await file.exists(), true);
+      expect(storage.queue.single['status'], 'queued');
+    },
+  );
   test('discard deletes the physical file and its dependent action', () async {
     final directory = await Directory.systemTemp.createTemp(
       'exom-feedback-queue-',
@@ -192,40 +229,43 @@ void main() {
     expect(offline.removedDependencies, isEmpty);
   });
 
-  test('purges expired local evidence even while signed out', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'exom-feedback-expired-',
-    );
-    addTearDown(() async {
-      if (await directory.exists()) await directory.delete(recursive: true);
-    });
-    final file = File('${directory.path}/expired.mp4');
-    await file.writeAsBytes([0, 0, 0, 0]);
-    final storage = FakeFeedbackQueueStorage([
-      {
-        'id': 'feedback-1',
-        'file_path': file.path,
-        'status': 'failed',
-        'queued_at': DateTime.now()
-            .toUtc()
-            .subtract(const Duration(hours: 25))
-            .toIso8601String(),
-      },
-    ]);
-    final offline = FakeOfflineSyncService(storage);
-    final service = FeedbackUploadQueueService(
-      FakeFeedbackRepository(),
-      storage,
-      offline,
-      isAuthenticated: () => false,
-    );
+  test(
+    'preserves pending evidence while the session is not validated regardless of age',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'exom-feedback-expired-',
+      );
+      addTearDown(() async {
+        if (await directory.exists()) await directory.delete(recursive: true);
+      });
+      final file = File('${directory.path}/expired.mp4');
+      await file.writeAsBytes([0, 0, 0, 0]);
+      final storage = FakeFeedbackQueueStorage([
+        {
+          'id': 'feedback-1',
+          'file_path': file.path,
+          'status': 'failed',
+          'queued_at': DateTime.now()
+              .toUtc()
+              .subtract(const Duration(hours: 25))
+              .toIso8601String(),
+        },
+      ]);
+      final offline = FakeOfflineSyncService(storage);
+      final service = FeedbackUploadQueueService(
+        FakeFeedbackRepository(),
+        storage,
+        offline,
+        isAuthenticated: () => false,
+      );
 
-    await service.processQueue();
+      await service.processQueue();
 
-    expect(await file.exists(), isFalse);
-    expect(storage.queue, isEmpty);
-    expect(offline.removedDependencies, ['feedback-1']);
-  });
+      expect(await file.exists(), isTrue);
+      expect(storage.queue.single['id'], 'feedback-1');
+      expect(offline.removedDependencies, isEmpty);
+    },
+  );
 
   test('keeps completed evidence unblocked when TTL cleanup fails', () async {
     final storage = FakeFeedbackQueueStorage([

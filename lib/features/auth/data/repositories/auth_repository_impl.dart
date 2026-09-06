@@ -10,6 +10,13 @@ class AuthRepositoryImpl implements AuthRepository {
   final LocalStorage _localStorage;
 
   UserEntity? _currentUser;
+  int _operationGeneration = 0;
+
+  void _checkOperation(int generation) {
+    if (generation != _operationGeneration) {
+      throw StateError('Authentication operation superseded');
+    }
+  }
 
   AuthRepositoryImpl({
     required AuthRemoteDataSource remoteDataSource,
@@ -21,43 +28,57 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserEntity> login(String email, String password) async {
+    final generation = ++_operationGeneration;
     final response = await _remoteDataSource.login(email, password);
+    _checkOperation(generation);
     await _firebaseAuthService.signInWithCustomToken(response.accessToken);
+    _checkOperation(generation);
     _currentUser = response.user.toEntity();
     return _currentUser!;
   }
 
   @override
   Future<UserEntity> socialLogin(String token, String provider) async {
+    final generation = ++_operationGeneration;
     try {
       final response = await _remoteDataSource.socialLogin(token, provider);
+      _checkOperation(generation);
       await _firebaseAuthService.signInWithCustomToken(response.accessToken);
+      _checkOperation(generation);
       _currentUser = response.user.toEntity();
       return _currentUser!;
     } catch (error) {
-      await _firebaseAuthService.signOut();
+      if (generation == _operationGeneration) {
+        await _firebaseAuthService.signOut();
+      }
       rethrow;
     }
   }
 
   @override
   Future<void> logout() async {
+    final generation = ++_operationGeneration;
     try {
       await _remoteDataSource.logout();
     } catch (_) {
       // Best effort — always sign out of Firebase
     }
+    if (generation != _operationGeneration) return;
     try {
       await _firebaseAuthService.signOut();
     } finally {
-      await _localStorage.clearSessionData();
-      _currentUser = null;
+      if (generation == _operationGeneration) {
+        await _localStorage.clearSessionData();
+        _currentUser = null;
+      }
     }
   }
 
   @override
   Future<UserEntity> getMe() async {
+    final generation = _operationGeneration;
     final userModel = await _remoteDataSource.getMe();
+    _checkOperation(generation);
     _currentUser = userModel.toEntity();
     return _currentUser!;
   }
@@ -72,16 +93,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> deleteAccount() async {
+    final generation = ++_operationGeneration;
     try {
       await _remoteDataSource.deleteAccount();
     } finally {
-      try {
-        await _firebaseAuthService.signOut();
-      } catch (_) {
-        // Firebase user may already be gone after backend delete
+      if (generation == _operationGeneration) {
+        try {
+          await _firebaseAuthService.signOut();
+        } catch (_) {
+          // Firebase user may already be gone after backend delete.
+        }
+        if (generation == _operationGeneration) {
+          await _localStorage.clearSessionData();
+          _currentUser = null;
+        }
       }
-      await _localStorage.clearSessionData();
-      _currentUser = null;
     }
   }
 }

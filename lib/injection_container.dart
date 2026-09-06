@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
@@ -143,6 +144,9 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<FirebaseAuthService>(() => FirebaseAuthService());
+  sl.registerLazySingleton<ValidatedSessionGate>(
+    () => ValidatedSessionGate(() => sl<FirebaseAuthService>().currentSession),
+  );
 
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(
@@ -156,6 +160,7 @@ Future<void> initDependencies() async {
       sl<ApiClient>(),
       sl<LocalStorage>(),
       sl<LocalNotificationService>(),
+      isAuthenticated: () => sl<ValidatedSessionGate>().isAuthenticated,
     ),
   );
 
@@ -170,7 +175,11 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<OfflineSyncService>(
-    () => OfflineSyncService(sl<ApiClient>(), sl<LocalStorage>()),
+    () => OfflineSyncService(
+      sl<ApiClient>(),
+      sl<LocalStorage>(),
+      isAuthenticated: () => sl<ValidatedSessionGate>().isAuthenticated,
+    ),
   );
 
   sl.registerLazySingleton<AppUpdateService>(
@@ -198,6 +207,7 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AuthBloc(
+      onSessionStateChanged: sl<ValidatedSessionGate>().handle,
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
@@ -410,6 +420,7 @@ Future<void> initDependencies() async {
       sl<FeedbackRepository>(),
       sl<LocalStorage>(),
       sl<OfflineSyncService>(),
+      isAuthenticated: () => sl<ValidatedSessionGate>().isAuthenticated,
     ),
   );
 

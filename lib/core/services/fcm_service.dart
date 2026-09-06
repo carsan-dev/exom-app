@@ -18,6 +18,7 @@ class FcmService {
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openAppSubscription;
   bool _initialized = false;
+  final bool Function() _isAuthenticated;
 
   final StreamController<RemoteMessage> _incomingController =
       StreamController<RemoteMessage>.broadcast();
@@ -29,8 +30,10 @@ class FcmService {
   FcmService(
     this._apiClient,
     this._localStorage,
-    this._localNotificationService,
-  );
+    this._localNotificationService, {
+    bool Function()? isAuthenticated,
+  }) : _isAuthenticated =
+           isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null);
 
   Future<void> init() async {
     _localNotificationService.onTap = _handleLocalTap;
@@ -136,7 +139,7 @@ class FcmService {
       return;
     }
 
-    if (FirebaseAuth.instance.currentUser == null) {
+    if (!_isAuthenticated()) {
       debugPrint('[FCM] Token pending until user signs in');
       await _localStorage.saveFcmToken(token);
       return;
@@ -156,6 +159,7 @@ class FcmService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
+    if (!_isAuthenticated()) return;
     final route = _resolveRoute(message);
     final rawId = message.data['notification_id'];
     final notificationId = rawId is String && rawId.isNotEmpty ? rawId : null;
@@ -173,6 +177,7 @@ class FcmService {
   }
 
   void _handleNotificationOpen(RemoteMessage message) {
+    if (!_isAuthenticated()) return;
     final rawId = message.data['notification_id'];
     final notificationId = rawId is String && rawId.isNotEmpty ? rawId : null;
     if (notificationId != null) {
@@ -191,6 +196,7 @@ class FcmService {
   }
 
   void _handleLocalTap(String? notificationId, String? route) {
+    if (!_isAuthenticated()) return;
     if (notificationId != null && notificationId.isNotEmpty) {
       unawaited(_markNotificationRead(notificationId));
     }
@@ -202,6 +208,7 @@ class FcmService {
   }
 
   Future<void> _markNotificationRead(String id) async {
+    if (!_isAuthenticated()) return;
     try {
       await _apiClient.dio.put<dynamic>('/notifications/$id/read');
       debugPrint('[FCM] Notification $id marked as read');

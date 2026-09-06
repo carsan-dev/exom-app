@@ -100,6 +100,7 @@ class ApiClient {
 
 class _AuthInterceptor extends Interceptor {
   static const _retryKey = 'exom.auth.retry';
+  static const _sessionKey = 'exom.auth.session';
   static const _refreshExcludedPaths = {
     '/auth/login',
     '/auth/social',
@@ -112,6 +113,26 @@ class _AuthInterceptor extends Interceptor {
   String? _tokenBeforeLastRefresh;
   String? _lastRefreshedToken;
   bool _hasCompletedRefresh = false;
+  String? _refreshSession;
+
+  String? get _currentSessionKey {
+    final session = _authTokenProvider.currentSession;
+    return session == null ? null : '${session.uid}:${session.generation}';
+  }
+
+  bool _isPublic(RequestOptions options) =>
+      _refreshExcludedPaths.any(options.uri.path.endsWith);
+
+  bool _isStale(RequestOptions options) =>
+      !_isPublic(options) &&
+      options.extra.containsKey(_sessionKey) &&
+      options.extra[_sessionKey] != _currentSessionKey;
+
+  DioException _sessionChanged(RequestOptions options) => DioException(
+    requestOptions: options,
+    type: DioExceptionType.cancel,
+    message: 'Authentication session changed',
+  );
 
   _AuthInterceptor(this._dio, this._authTokenProvider);
 
@@ -120,6 +141,15 @@ class _AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    if (_isPublic(options)) {
+      handler.next(options);
+      return;
+    }
+    if (_isStale(options)) {
+      handler.reject(_sessionChanged(options));
+      return;
+    }
+    options.extra[_sessionKey] = _currentSessionKey;
     if (options.extra[_retryKey] == true &&
         options.headers.containsKey('Authorization')) {
       handler.next(options);
@@ -129,6 +159,10 @@ class _AuthInterceptor extends Interceptor {
     if (_authTokenProvider.currentSession != null) {
       try {
         final token = await _authTokenProvider.getIdToken();
+        if (_isStale(options)) {
+          handler.reject(_sessionChanged(options));
+          return;
+        }
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -141,9 +175,24 @@ class _AuthInterceptor extends Interceptor {
           ),
         );
         return;
+      } catch (error) {
+        handler.reject(DioException(requestOptions: options, error: error));
+        return;
       }
     }
     handler.next(options);
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    if (_isStale(response.requestOptions)) {
+      handler.reject(_sessionChanged(response.requestOptions));
+      return;
+    }
+    handler.next(response);
   }
 
   @override
@@ -152,6 +201,10 @@ class _AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final options = err.requestOptions;
+    if (_isStale(options)) {
+      handler.next(_sessionChanged(options));
+      return;
+    }
     if (err.response?.statusCode != 401 ||
         options.extra[_retryKey] == true ||
         _refreshExcludedPaths.any(options.uri.path.endsWith) ||
@@ -161,8 +214,13 @@ class _AuthInterceptor extends Interceptor {
     }
 
     try {
+      options.extra['exom.auth.backendRejected'] = true;
       final failedAuthorization = options.headers['Authorization']?.toString();
       final token = await _refreshToken(failedAuthorization);
+      if (_isStale(options)) {
+        handler.next(_sessionChanged(options));
+        return;
+      }
       if (token == null || token.isEmpty) {
         handler.next(err);
         return;
@@ -190,6 +248,13 @@ class _AuthInterceptor extends Interceptor {
   }
 
   Future<String?> _refreshToken(String? failedAuthorization) {
+    final session = _currentSessionKey;
+    if (_refreshSession != session) {
+      _refreshSession = session;
+      _refreshInFlight = null;
+      _hasCompletedRefresh = false;
+      _lastRefreshedToken = null;
+    }
     final inFlight = _refreshInFlight;
     if (inFlight != null) return inFlight;
 
@@ -199,11 +264,15 @@ class _AuthInterceptor extends Interceptor {
     }
 
     _tokenBeforeLastRefresh = failedAuthorization;
+    _hasCompletedRefresh = false;
     final refresh = _authTokenProvider.getIdToken(forceRefresh: true);
     _refreshInFlight = refresh;
     return refresh
         .then((token) {
-          if (token != null && token.isNotEmpty) {
+          if (_refreshSession == session &&
+              _currentSessionKey == session &&
+              token != null &&
+              token.isNotEmpty) {
             _lastRefreshedToken = token;
             _hasCompletedRefresh = true;
           }
@@ -242,8 +311,13 @@ class _LoggingInterceptor extends Interceptor {
 class ApiException implements Exception {
   final int statusCode;
   final String message;
+  final bool backendRejectedSession;
 
-  const ApiException({required this.statusCode, required this.message});
+  const ApiException({
+    required this.statusCode,
+    required this.message,
+    this.backendRejectedSession = false,
+  });
 
   static ApiException? maybeFrom(Object error) {
     if (error is ApiException) {
@@ -283,7 +357,12 @@ class ApiException implements Exception {
     message ??= e.error?.toString().trim();
     message ??= 'Request failed';
 
-    return ApiException(statusCode: statusCode, message: message);
+    return ApiException(
+      statusCode: statusCode,
+      message: message,
+      backendRejectedSession:
+          e.requestOptions.extra['exom.auth.backendRejected'] == true,
+    );
   }
 
   bool get isUnauthorized => statusCode == 401;

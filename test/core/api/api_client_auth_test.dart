@@ -8,6 +8,51 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
 
 void main() {
+  test(
+    'a late 401 from A never replays its write using B credentials',
+    () async {
+      final provider = _SwitchingTokenProvider();
+      final adapter = _DelayedAdapter();
+      final client = ApiClient(
+        baseUrl: 'https://api.exom.test',
+        authTokenProvider: provider,
+      );
+      client.dio.httpClientAdapter = adapter;
+      final request = client.dio.post<dynamic>(
+        '/progress/complete-training',
+        data: {'notes': 'account A'},
+      );
+      final result = expectLater(request, throwsA(isA<DioException>()));
+      await adapter.started.future;
+      provider.uid = 'B';
+      adapter.response.complete(401);
+      await result;
+      expect(adapter.requests, 1);
+      expect(provider.forcedRefreshes, 0);
+    },
+  );
+
+  test(
+    'a successful response from A is discarded after switching to B',
+    () async {
+      final provider = _SwitchingTokenProvider();
+      final adapter = _DelayedAdapter();
+      final client = ApiClient(
+        baseUrl: 'https://api.exom.test',
+        authTokenProvider: provider,
+      );
+      client.dio.httpClientAdapter = adapter;
+      final result = expectLater(
+        client.dio.get<dynamic>('/auth/me'),
+        throwsA(isA<DioException>()),
+      );
+      await adapter.started.future;
+      provider.uid = 'B';
+      adapter.response.complete(200);
+      await result;
+    },
+  );
+
   test('only concrete connectivity failures are classified as offline', () {
     final request = RequestOptions(path: '/auth/me');
 
@@ -190,6 +235,7 @@ void main() {
     expect(error, isA<DioException>());
     expect(ApiException.fromDioError(error as DioException).statusCode, 0);
     expect(provider.forcedRefreshes, 1);
+    expect(ApiException.fromDioError(error).backendRejectedSession, true);
   });
 }
 
@@ -211,6 +257,43 @@ class _FakeTokenProvider implements AuthTokenProvider {
     _cachedToken = await _refresh();
     return _cachedToken;
   }
+}
+
+class _SwitchingTokenProvider implements AuthTokenProvider {
+  String uid = 'A';
+  int forcedRefreshes = 0;
+  @override
+  LocalAuthSession get currentSession => LocalAuthSession(uid: uid);
+  @override
+  Future<String?> getIdToken({bool forceRefresh = false}) async {
+    if (forceRefresh) forcedRefreshes++;
+    return '$uid-token';
+  }
+}
+
+class _DelayedAdapter implements HttpClientAdapter {
+  final started = Completer<void>();
+  final response = Completer<int>();
+  int requests = 0;
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests++;
+    if (!started.isCompleted) started.complete();
+    return ResponseBody.fromString(
+      '{}',
+      requests == 1 ? await response.future : 200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 class _RequestTokenNetworkFailureProvider implements AuthTokenProvider {

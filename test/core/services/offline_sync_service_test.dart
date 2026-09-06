@@ -541,11 +541,31 @@ void main() {
         firstRequestStarted.complete();
         releaseFirstRequest.future.then(
           (_) => handler.resolve(
-            Response(requestOptions: options, statusCode: 200),
+            Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {
+                'sync_revision': requests.length,
+                'operation_revision': requests.length,
+                'exercises_completed': [],
+                'meals_completed': [],
+              },
+            ),
           ),
         );
       } else {
-        handler.resolve(Response(requestOptions: options, statusCode: 200));
+        handler.resolve(
+          Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'sync_revision': requests.length,
+              'operation_revision': requests.length,
+              'exercises_completed': [],
+              'meals_completed': [],
+            },
+          ),
+        );
       }
     });
     final service = OfflineSyncService(

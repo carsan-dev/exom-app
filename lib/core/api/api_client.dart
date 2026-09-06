@@ -1,3 +1,4 @@
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
@@ -143,6 +144,16 @@ class _AuthInterceptor extends Interceptor {
   ) async {
     if (_isPublic(options)) {
       handler.next(options);
+      return;
+    }
+    final requestedSession = LocalStorage.requestSessionKey;
+    if (requestedSession != null) {
+      options.extra.putIfAbsent(_sessionKey, () => requestedSession);
+    }
+    final expectedOwner = options.extra['exom.auth.expectedOwner'];
+    if (expectedOwner != null &&
+        expectedOwner != _authTokenProvider.currentSession?.uid) {
+      handler.reject(_sessionChanged(options));
       return;
     }
     if (_isStale(options)) {

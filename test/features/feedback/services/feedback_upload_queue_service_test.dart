@@ -226,7 +226,9 @@ void main() {
 
     expect(storage.queue.single['status'], 'failed');
     expect(storage.queue.single['last_error'], startsWith('cleanup_failed:'));
-    expect(offline.removedDependencies, isEmpty);
+    // Explicit discard blocks dependencies even when file cleanup must retry.
+    expect(offline.removedDependencies, ['feedback-1']);
+    expect(storage.queue.single['discard_requested'], isTrue);
   });
 
   test(
@@ -337,6 +339,7 @@ class FakeFeedbackRepository implements FeedbackRepository {
   FakeFeedbackRepository({this.uploadError});
 
   final Object? uploadError;
+  Object? createError;
   int uploadCalls = 0;
   int createCalls = 0;
 
@@ -354,6 +357,7 @@ class FakeFeedbackRepository implements FeedbackRepository {
     String? assignmentDate,
   }) async {
     createCalls++;
+    if (createError case final error?) throw error;
     return FeedbackEntity(
       id: clientUploadId ?? 'feedback',
       mediaType: mediaType,
@@ -369,8 +373,9 @@ class FakeFeedbackRepository implements FeedbackRepository {
   @override
   Future<ManagedFeedbackUpload> uploadMedia(
     File file,
-    String contentType,
-  ) async {
+    String contentType, {
+    FeedbackUploadContext? context,
+  }) async {
     uploadCalls++;
     if (uploadError case final error?) throw error;
     return const ManagedFeedbackUpload(
@@ -387,8 +392,9 @@ class BlockingFeedbackRepository extends FakeFeedbackRepository {
   @override
   Future<ManagedFeedbackUpload> uploadMedia(
     File file,
-    String contentType,
-  ) async {
+    String contentType, {
+    FeedbackUploadContext? context,
+  }) async {
     uploadCalls++;
     if (uploadCalls == 1) {
       firstUploadStarted.complete();

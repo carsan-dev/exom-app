@@ -85,7 +85,7 @@ class ActiveExercisePage extends StatelessWidget {
         BlocProvider<TrainingBloc>.value(value: pageArgs.trainingBloc),
         BlocProvider(
           create: (_) => ActiveExerciseBloc(
-            localStorage: sl<LocalStorage>(),
+            localStorage: sl<LocalStorage>().bindActiveWorkoutStore(),
             restTimerCoordinator: sl(),
             trainingExercise: pageArgs.trainingExercise,
             initialWeightKg: pageArgs.initialWeightKg,
@@ -117,6 +117,7 @@ class _ActiveExerciseView extends StatefulWidget {
 }
 
 class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
+  final String? _ownerSession = sl<LocalStorage>().sessionStamp;
   bool _bootstrapped = false;
   bool _handledCompletion = false;
   bool _allowPop = false;
@@ -183,6 +184,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         return;
       }
 
+      if (storage.sessionStamp != _ownerSession) return;
       await storage.clearForeignActiveWorkouts(widget.trainingId);
     }
 
@@ -471,6 +473,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     if (confirmed != true) return null;
     notes = notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
+      expectedSession: _ownerSession,
       file: picked,
       contentType: _videoContentType(picked),
       mediaType: 'VIDEO',

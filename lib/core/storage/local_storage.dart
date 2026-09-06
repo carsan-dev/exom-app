@@ -1,5 +1,8 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
+import 'store_process_lock.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:exom_app/core/auth/auth_token_provider.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +11,91 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 
 class LocalStorage implements ActiveWorkoutLocalStore {
+  LocalStorage({
+    LocalAuthSession? Function()? currentSession,
+    String environment = 'test',
+  }) : _currentSession = currentSession,
+       _environment = environment;
+  final LocalAuthSession? Function()? _currentSession;
+  final String _environment;
+  // Production always injects Firebase identity. Unscoped mode is for isolated
+  // stores/tests only; it must never adopt legacy data into a live account.
+  String? get ownerId => _currentSession?.call()?.uid;
+  String get environment => _environment;
+  String? get sessionStamp {
+    if (_currentSession == null) return 'isolated';
+    final session = _currentSession();
+    return session == null
+        ? null
+        : '${session.uid}:${session.generation}:$_environment';
+  }
+
+  static final Object _sessionZone = Object();
+  static final Object _authSessionZone = Object();
+  static String? get requestSessionKey =>
+      Zone.current[_authSessionZone] as String?;
+  Future<T> sessionTask<T>(Future<T> Function() action) {
+    final session = _currentSession?.call();
+    final authKey = session == null
+        ? null
+        : '${session.uid}:${session.generation}';
+    final expected = Zone.current[_sessionZone] ?? sessionStamp ?? 'signed-out';
+    return runZoned(
+      () async {
+        guardSession();
+        final result = await action();
+        guardSession();
+        return result;
+      },
+      zoneValues: {
+        _sessionZone: expected,
+        _authSessionZone: requestSessionKey ?? authKey,
+      },
+    );
+  }
+
+  void guardSession() {
+    final expected = Zone.current[_sessionZone];
+    if (expected != null && expected != sessionStamp) {
+      throw const LocalSessionChanged();
+    }
+  }
+
+  Future<void> withSession(Future<void> Function() action) async {
+    try {
+      await sessionTask(action);
+    } on LocalSessionChanged {
+      // Old work stays persisted in its owner's namespace for later recovery.
+    }
+  }
+
+  String _key(String key) {
+    guardSession();
+    if (_currentSession == null) return key;
+    final uid = ownerId;
+    final scope = base64Url.encode(
+      utf8.encode(jsonEncode([_environment, uid])),
+    );
+    return 'v2:$scope:$key';
+  }
+
+  Map<String, Object?> get queueIdentity => {
+    'format_version': 2,
+    'owner_id': ownerId,
+    'environment': _environment,
+  };
+  bool ownsEntry(Map<String, dynamic> item) =>
+      _currentSession == null ||
+      (ownerId != null &&
+          item['owner_id'] == ownerId &&
+          item['environment'] == _environment &&
+          item['format_version'] == 2);
+  // Legacy keys remain untouched, inaccessible to current-session consumers.
+  // Recovery requires explicit ownership verification; logging in is insufficient.
+  bool get hasUnattributedData =>
+      _cache.containsKey(_pendingSyncKey) ||
+      _cache.containsKey(_feedbackUploadQueueKey);
+
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
   static const _settingsBox = 'settings_box';
@@ -22,7 +110,13 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _onboardingIdentityKey = 'onboarding_complete_identity';
   static const _tutorialCompleteKey = 'tutorial_complete';
 
+  // A process owns the Hive store for its lifetime. A second process fails
+  // before opening cached boxes; a crash releases the OS lock automatically.
+  static StoreProcessLock? _processLock;
   static Future<void> init() async {
+    if (_processLock != null) return;
+    final directory = await getApplicationDocumentsDirectory();
+    _processLock = await StoreProcessLock.acquire(directory);
     await Hive.initFlutter();
     if (!Hive.isAdapterRegistered(ActiveWorkoutHiveModel.typeId)) {
       Hive.registerAdapter(ActiveWorkoutHiveModelAdapter());
@@ -49,15 +143,16 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> clearAuth() => _auth.clear();
 
   Future<void> clearSessionData() async {
-    await Future.wait([clearAuth(), clearCache(), _activeWorkouts.clear()]);
+    await clearAuth();
   }
 
   // Cache
-  Future<void> cacheData(String key, dynamic value) => _cache.put(key, value);
+  Future<void> cacheData(String key, dynamic value) =>
+      _cache.put(_key(key), value);
 
-  T? getCachedData<T>(String key) => _cache.get(key) as T?;
+  T? getCachedData<T>(String key) => _cache.get(_key(key)) as T?;
 
-  dynamic getCachedValue(String key) => _normalize(_cache.get(key));
+  dynamic getCachedValue(String key) => _normalize(_cache.get(_key(key)));
 
   Map<String, dynamic>? getCachedMap(String key) {
     final value = getCachedValue(key);
@@ -81,33 +176,17 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     return null;
   }
 
-  Future<void> removeCachedData(String key) => _cache.delete(key);
+  Future<void> removeCachedData(String key) => _cache.delete(_key(key));
 
   Future<void> clearCache() async {
-    final cleanupFailures = await _purgeFeedbackUploadFiles();
-    await _cache.clear();
-    if (cleanupFailures.isNotEmpty) {
-      await saveFeedbackUploadQueue(cleanupFailures);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _purgeFeedbackUploadFiles() async {
-    final cleanupFailures = <Map<String, dynamic>>[];
-    for (final item in getFeedbackUploadQueue()) {
-      final path = item['file_path'] as String?;
-      if (path == null) continue;
-      final file = File(path);
-      try {
-        if (await file.exists()) await file.delete();
-      } on FileSystemException catch (error) {
-        cleanupFailures.add({
-          ...item,
-          'status': item['status'] == 'completed' ? 'completed' : 'failed',
-          'last_error': 'cleanup_failed: $error',
-        });
-      }
-    }
-    return cleanupFailures;
+    final prefix = _key('');
+    final preserved = {_key(_pendingSyncKey), _key(_feedbackUploadQueueKey)};
+    // Cache clearing never discards queues, evidence or active workouts.
+    final keys = _cache.keys
+        .whereType<String>()
+        .where((key) => key.startsWith(prefix) && !preserved.contains(key))
+        .toList();
+    await _cache.deleteAll(keys);
   }
 
   List<Map<String, dynamic>> getPendingSyncActions() {
@@ -119,23 +198,35 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     return actions
         .whereType<Map>()
         .map((entry) => Map<String, dynamic>.from(entry))
+        .where(ownsEntry)
         .toList(growable: true);
   }
 
   Future<void> savePendingSyncActions(List<Map<String, dynamic>> actions) =>
-      _cache.put(_pendingSyncKey, actions);
+      _saveQueue(_pendingSyncKey, actions);
 
-  Future<void> clearPendingSyncActions() => _cache.delete(_pendingSyncKey);
+  Future<void> clearPendingSyncActions() => _saveQueue(_pendingSyncKey, []);
 
   List<Map<String, dynamic>> getFeedbackUploadQueue() {
     return (getCachedList(_feedbackUploadQueueKey) ?? const [])
         .whereType<Map>()
         .map((entry) => Map<String, dynamic>.from(entry))
+        .where(ownsEntry)
         .toList(growable: true);
   }
 
   Future<void> saveFeedbackUploadQueue(List<Map<String, dynamic>> queue) =>
-      _cache.put(_feedbackUploadQueueKey, queue);
+      _saveQueue(_feedbackUploadQueueKey, queue);
+
+  Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) {
+    final quarantined = (getCachedList(key) ?? const []).where(
+      (entry) => entry is! Map<String, dynamic> || !ownsEntry(entry),
+    );
+    return _cache.put(_key(key), [...quarantined, ...entries]);
+  }
+
+  ActiveWorkoutLocalStore bindActiveWorkoutStore() =>
+      _SessionWorkoutStore(this, sessionStamp);
 
   // Active workout
   ValueListenable<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
@@ -143,10 +234,13 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   @override
   ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
-      _activeWorkouts.get(exerciseId);
+      _activeWorkouts.get(_key(exerciseId));
 
-  List<ActiveWorkoutHiveModel> getActiveWorkouts() =>
-      _activeWorkouts.values.toList(growable: false);
+  List<ActiveWorkoutHiveModel> getActiveWorkouts() => _activeWorkouts.keys
+      .whereType<String>()
+      .where((key) => key.startsWith(_key('')))
+      .map((key) => _activeWorkouts.get(key)!)
+      .toList(growable: false);
 
   List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) {
     return getActiveWorkouts()
@@ -156,16 +250,16 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   @override
   Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) =>
-      _activeWorkouts.put(workout.exerciseId, workout);
+      _activeWorkouts.put(_key(workout.exerciseId), workout);
 
   @override
   Future<void> removeActiveWorkout(String exerciseId) =>
-      _activeWorkouts.delete(exerciseId);
+      _activeWorkouts.delete(_key(exerciseId));
 
   Future<void> clearForeignActiveWorkouts(String trainingId) async {
-    final keys = _activeWorkouts.values
+    final keys = getActiveWorkouts()
         .where((entry) => entry.trainingId != trainingId)
-        .map((entry) => entry.exerciseId)
+        .map((entry) => _key(entry.exerciseId))
         .toList(growable: false);
     if (keys.isEmpty) return;
     await _activeWorkouts.deleteAll(keys);
@@ -301,5 +395,40 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     }
 
     return value;
+  }
+}
+
+class LocalSessionChanged implements Exception {
+  const LocalSessionChanged();
+}
+
+class _SessionWorkoutStore implements ActiveWorkoutLocalStore {
+  _SessionWorkoutStore(this.storage, this.session);
+  final LocalStorage storage;
+  final String? session;
+  void _check() {
+    if (session == null || storage.sessionStamp != session) {
+      throw const LocalSessionChanged();
+    }
+  }
+
+  @override
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) {
+    _check();
+    return storage.getActiveWorkout(exerciseId);
+  }
+
+  @override
+  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) async {
+    _check();
+    await storage.saveActiveWorkout(workout);
+    _check();
+  }
+
+  @override
+  Future<void> removeActiveWorkout(String exerciseId) async {
+    _check();
+    await storage.removeActiveWorkout(exerciseId);
+    _check();
   }
 }

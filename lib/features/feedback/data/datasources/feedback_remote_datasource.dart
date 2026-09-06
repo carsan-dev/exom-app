@@ -20,13 +20,23 @@ abstract class FeedbackRemoteDataSource {
     String? trainingExerciseId,
     String? assignmentDate,
   });
-  Future<ManagedFeedbackUpload> uploadMedia(File file, String contentType);
+  Future<ManagedFeedbackUpload> uploadMedia(
+    File file,
+    String contentType, {
+    FeedbackUploadContext? context,
+  });
 }
 
 class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
   final ApiClient _apiClient;
 
-  const FeedbackRemoteDataSourceImpl(this._apiClient);
+  const FeedbackRemoteDataSourceImpl(
+    this._apiClient, {
+    this.prepareFile,
+    this.transferClient,
+  });
+  final Future<File> Function(File file, String contentType)? prepareFile;
+  final Dio? transferClient;
 
   @override
   Future<List<FeedbackModel>> getMyFeedback() async {
@@ -95,106 +105,196 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
   @override
   Future<ManagedFeedbackUpload> uploadMedia(
     File file,
-    String contentType,
-  ) async {
-    final isImage = contentType.startsWith('image/');
+    String contentType, {
+    FeedbackUploadContext? context,
+  }) async {
+    final checkpoint = <String, dynamic>{...?context?.checkpoint};
+    void guard() {
+      if (context != null && !context.isCurrent()) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/uploads/sessions'),
+          type: DioExceptionType.cancel,
+          message: 'upload_session_changed',
+        );
+      }
+    }
+
+    Future<void> save() async {
+      guard();
+      await context?.saveCheckpoint(Map<String, dynamic>.from(checkpoint));
+      guard();
+    }
+
+    Map<String, dynamic> body(Response<dynamic> response) {
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        throw StateError('Invalid upload response');
+      }
+      return (data['data'] as Map<String, dynamic>?) ?? data;
+    }
+
+    guard();
+    context?.onProcessing?.call();
     final isVideo = contentType.startsWith('video/');
-    final File uploadFile;
-    if (isImage) {
-      uploadFile = await ImageCompressor.compress(file);
-    } else if (isVideo) {
-      uploadFile = await VideoCompressor.compress(file);
+    final preparedPath = checkpoint['prepared_path'] as String?;
+    File uploadFile;
+    if (preparedPath != null && await File(preparedPath).exists()) {
+      uploadFile = File(preparedPath);
     } else {
-      uploadFile = file;
+      final compressed = prepareFile != null
+          ? await prepareFile!(file, contentType)
+          : isVideo
+          ? await VideoCompressor.compress(file)
+          : contentType.startsWith('image/')
+          ? await ImageCompressor.compress(file)
+          : file;
+      guard();
+      if (compressed.absolute.path != file.absolute.path) {
+        // The compressor's temporary output must survive restart/OS cache purge.
+        final ext = compressed.path.split('.').last.toLowerCase();
+        uploadFile = await compressed.copy('${file.path}.prepared.$ext');
+        checkpoint['prepared_path'] = uploadFile.path;
+        await save();
+      } else {
+        uploadFile = file;
+      }
     }
     final ext = uploadFile.path.split('.').last.toLowerCase();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final fileKey = 'feedback/$timestamp.$ext';
-    final uploadContentType = switch (ext) {
+    final mime = switch (ext) {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
-      'webp' when isImage => 'image/webp',
+      'webp' => 'image/webp',
       'mp4' => 'video/mp4',
       'mov' => 'video/quicktime',
       'm4v' => 'video/x-m4v',
-      'webm' when isVideo => 'video/webm',
+      'webm' => 'video/webm',
       _ => contentType,
     };
-
-    try {
-      try {
-        final bytes = await uploadFile.length();
-        final presignedResponse = await _apiClient.dio.post<dynamic>(
+    final bytes = await uploadFile.length();
+    final operationId =
+        context?.operationId ??
+        DateTime.now().microsecondsSinceEpoch.toString();
+    // At most one renewal in a run; persistent generation survives a lost response.
+    for (var renewal = 0; renewal < 2; renewal++) {
+      guard();
+      final generation = checkpoint['generation'] as int? ?? 0;
+      checkpoint['generation'] = generation;
+      await save();
+      final session = body(
+        await _apiClient.dio.post<dynamic>(
           '/uploads/sessions',
           data: {
             'purpose': isVideo ? 'FEEDBACK_VIDEO' : 'FEEDBACK_IMAGE',
-            'content_type': uploadContentType,
+            'content_type': mime,
             'bytes': bytes,
+            'client_operation_id': '$operationId:$generation',
           },
-        );
-        final responseData = presignedResponse.data as Map<String, dynamic>;
-        final presigned =
-            (responseData['data'] as Map<String, dynamic>?) ?? responseData;
-        final uploadId = presigned['upload_id'] as String;
-        await Dio().put<dynamic>(
-          presigned['upload_url'] as String,
-          data: uploadFile.openRead(),
-          options: Options(
-            headers: {
-              Headers.contentTypeHeader: uploadContentType,
-              Headers.contentLengthHeader: bytes,
-            },
-          ),
-        );
-        final completeResponse = await _apiClient.dio.post<dynamic>(
-          '/uploads/sessions/$uploadId/complete',
-        );
-        final completeData = completeResponse.data as Map<String, dynamic>;
-        final completed =
-            (completeData['data'] as Map<String, dynamic>?) ?? completeData;
+        ),
+      );
+      guard();
+      final uploadId = session['upload_id'] as String;
+      checkpoint['upload_id'] = uploadId;
+      await save();
+      try {
+        // Reconcile first, including a PUT or confirmation whose response was lost.
+        // The API distinguishes a missing object from a transient inspection error.
+        Map<String, dynamic>? verified;
+        try {
+          context?.onProcessing?.call();
+          verified = body(
+            await _apiClient.dio.post<dynamic>(
+              '/uploads/sessions/$uploadId/complete',
+            ),
+          );
+        } on DioException catch (error) {
+          final data = error.response?.data;
+          if (data is! Map || data['code'] != 'UPLOAD_OBJECT_MISSING') rethrow;
+        }
+        guard();
+        if (verified == null) {
+          final url = session['upload_url'] as String;
+          if (session['transport'] == 'proxy') {
+            await _apiClient.dio.post<dynamic>(
+              url,
+              data: FormData.fromMap({
+                'file': await MultipartFile.fromFile(
+                  uploadFile.path,
+                  contentType: DioMediaType.parse(mime),
+                ),
+              }),
+              onSendProgress: (sent, total) {
+                guard();
+                context?.onProgress?.call(sent, total);
+              },
+              options: Options(
+                sendTimeout: const Duration(minutes: 10),
+                receiveTimeout: const Duration(minutes: 2),
+              ),
+            );
+          } else {
+            final transfer =
+                transferClient ??
+                Dio(
+                  BaseOptions(
+                    connectTimeout: const Duration(seconds: 15),
+                    sendTimeout: const Duration(minutes: 10),
+                    receiveTimeout: const Duration(seconds: 60),
+                  ),
+                );
+            try {
+              await transfer.put<dynamic>(
+                url,
+                data: uploadFile.openRead(),
+                onSendProgress: (sent, total) {
+                  guard();
+                  context?.onProgress?.call(sent, total);
+                },
+                options: Options(
+                  headers: {
+                    Headers.contentTypeHeader: mime,
+                    Headers.contentLengthHeader: bytes,
+                  },
+                ),
+              );
+            } finally {
+              if (transferClient == null) transfer.close();
+            }
+          }
+          guard();
+          context?.onProcessing?.call();
+          verified = body(
+            await _apiClient.dio.post<dynamic>(
+              '/uploads/sessions/$uploadId/complete',
+            ),
+          );
+        }
+        guard();
         return ManagedFeedbackUpload(
           uploadId: uploadId,
-          fileUrl: completed['file_url'] as String,
+          fileUrl: verified['file_url'] as String,
         );
-      } on DioException {
-        final formData = FormData.fromMap({
-          'file': await MultipartFile.fromFile(
-            uploadFile.path,
-            filename: '$timestamp.$ext',
-            contentType: DioMediaType.parse(uploadContentType),
-          ),
-          'file_key': fileKey,
-          'content_type': uploadContentType,
-        });
-        final response = await _apiClient.dio.post<dynamic>(
-          '/uploads/file',
-          data: formData,
+      } on DioException catch (error) {
+        final data = error.response?.data;
+        final code = data is Map ? data['code'] : null;
+        final urlExpiry = DateTime.tryParse(
+          session['presigned_expires_at'] as String? ?? '',
         );
-
-        final payload = response.data;
-        if (payload is! Map<String, dynamic>) {
-          throw Exception('Invalid upload response');
+        final expiredUrl =
+            session['transport'] != 'proxy' &&
+            error.response?.statusCode == 403 &&
+            ((urlExpiry != null && !urlExpiry.isAfter(DateTime.now())) ||
+                (data is String &&
+                    data.contains('<Code>ExpiredRequest</Code>')));
+        if (expiredUrl && renewal == 0) {
+          // Renew the capability for the same object. Reconcile before another PUT.
+          continue;
         }
-        final result = (payload['data'] as Map<String, dynamic>?) ?? payload;
-        return ManagedFeedbackUpload(
-          uploadId: result['upload_id'] as String,
-          fileUrl: result['file_url'] as String,
-        );
-      }
-    } on DioException catch (error) {
-      final statusCode = error.response?.statusCode;
-      final message = statusCode == null
-          ? 'No se pudo subir el archivo. Revisa tu conexion e intentalo de nuevo.'
-          : 'No se pudo completar la subida del archivo ($statusCode).';
-      throw Exception(message);
-    } finally {
-      if (uploadFile.absolute.path != file.absolute.path) {
-        try {
-          if (await uploadFile.exists()) await uploadFile.delete();
-        } on FileSystemException {
-          // Cleanup failure is local and must not turn success into retry.
-        }
+        if (code != 'UPLOAD_EXPIRED' || renewal == 1) rethrow;
+        checkpoint['generation'] = generation + 1;
+        checkpoint.remove('upload_id');
+        await save();
       }
     }
+    throw StateError('Upload renewal exhausted');
   }
 }

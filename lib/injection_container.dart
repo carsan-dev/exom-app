@@ -137,7 +137,12 @@ Future<void> initDependencies() async {
   final packageInfo = await PackageInfo.fromPlatform();
 
   // ── Core ──────────────────────────────────────────────────────────────────
-  sl.registerLazySingleton<LocalStorage>(() => LocalStorage());
+  sl.registerLazySingleton<LocalStorage>(
+    () => LocalStorage(
+      currentSession: () => sl<FirebaseAuthService>().currentSession,
+      environment: FlavorConfig.instance.apiBaseUrl,
+    ),
+  );
   sl.registerLazySingleton<PackageInfo>(() => packageInfo);
   sl.registerLazySingleton<AppPreferencesCubit>(
     () => AppPreferencesCubit(sl<LocalStorage>()),

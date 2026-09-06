@@ -151,7 +151,9 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String key,
     Map<String, dynamic>? value,
   ) async {
-    await _localStorage.cacheData(key, value ?? {_emptyMarker: true});
+    return _localStorage.sessionTask(() async {
+      await _localStorage.cacheData(key, value ?? {_emptyMarker: true});
+    });
   }
 
   Map<String, dynamic>? _getCachedNullableMap(String key) {
@@ -212,225 +214,208 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   }
 
   Future<String> _getCurrentUserId() async {
-    final cachedUser = _localStorage.getCachedMap(_authMeCacheKey);
-    final cachedId = cachedUser?['id'] as String?;
+    return _localStorage.sessionTask(() async {
+      final cachedUser = _localStorage.getCachedMap(_authMeCacheKey);
+      final cachedId = cachedUser?['id'] as String?;
 
-    try {
-      final response = await _apiClient.dio.get<dynamic>('/auth/me');
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'];
-        if (inner is Map<String, dynamic>) {
-          await _localStorage.cacheData(_authMeCacheKey, inner);
-          final id = inner['id'] as String?;
-          if (id != null && id.isNotEmpty) {
-            return id;
+      try {
+        final response = await _apiClient.dio.get<dynamic>('/auth/me');
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'];
+          if (inner is Map<String, dynamic>) {
+            await _localStorage.cacheData(_authMeCacheKey, inner);
+            final id = inner['id'] as String?;
+            if (id != null && id.isNotEmpty) {
+              return id;
+            }
           }
         }
-      }
 
-      if (cachedId != null && cachedId.isNotEmpty) {
-        return cachedId;
-      }
+        if (cachedId != null && cachedId.isNotEmpty) {
+          return cachedId;
+        }
 
-      throw Exception('Invalid current user response');
-    } catch (error) {
-      if (cachedId != null && cachedId.isNotEmpty && isOfflineError(error)) {
-        return cachedId;
+        throw Exception('Invalid current user response');
+      } catch (error) {
+        if (cachedId != null && cachedId.isNotEmpty && isOfflineError(error)) {
+          return cachedId;
+        }
+        rethrow;
       }
-      rethrow;
-    }
-  }
-
-  Future<void> _cacheProgressResponse(
-    Response<dynamic> response,
-    String date,
-  ) async {
-    final data = response.data;
-    if (data is Map<String, dynamic>) {
-      final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-      final merged = overlayPendingProgressActions(
-        progress: inner,
-        actions: _localStorage.getPendingSyncActions(),
-        date: date,
-      );
-      await _localStorage.cacheData('day_progress_$date', merged);
-      await _localStorage.cacheData('home_progress_$date', merged);
-      await _localStorage.cacheData(
-        'completed_exercises_$date',
-        (merged['exercises_completed'] as List? ?? [])
-            .map(
-              (entry) =>
-                  ((entry as Map<String, dynamic>)['training_exercise_id'] ??
-                          entry['exercise_id'])
-                      as String,
-            )
-            .toList(growable: false),
-      );
-    }
+    });
   }
 
   @override
   Future<TrainingModel?> getTodayTraining({String? date}) async {
-    final targetDate = _resolvedDate(date);
-    final cacheKey = 'training_today_$targetDate';
+    return _localStorage.sessionTask(() async {
+      final targetDate = _resolvedDate(date);
+      final cacheKey = 'training_today_$targetDate';
 
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/trainings/today',
-        queryParameters: date != null ? {'date': date} : null,
-      );
-      if (response.statusCode == 204 || response.data == null) {
-        await _cacheNullableMap(cacheKey, null);
-        return null;
-      }
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'];
-        if (inner is Map<String, dynamic>) {
-          await _cacheNullableMap(cacheKey, inner);
-          return TrainingModel.fromJson(inner);
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/trainings/today',
+          queryParameters: date != null ? {'date': date} : null,
+        );
+        if (response.statusCode == 204 || response.data == null) {
+          await _cacheNullableMap(cacheKey, null);
+          return null;
         }
-      }
-      return null;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
-        await _cacheNullableMap(cacheKey, null);
-        return null;
-      }
-
-      if (isOfflineError(e)) {
-        final cached = _getCachedNullableMap(cacheKey);
-        if (cached != null) {
-          return TrainingModel.fromJson(cached);
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'];
+          if (inner is Map<String, dynamic>) {
+            await _cacheNullableMap(cacheKey, inner);
+            return TrainingModel.fromJson(inner);
+          }
         }
-      }
+        return null;
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
+          await _cacheNullableMap(cacheKey, null);
+          return null;
+        }
 
-      rethrow;
-    }
+        if (isOfflineError(e)) {
+          final cached = _getCachedNullableMap(cacheKey);
+          if (cached != null) {
+            return TrainingModel.fromJson(cached);
+          }
+        }
+
+        rethrow;
+      }
+    });
   }
 
   @override
   Future<List<TrainingModel>> getDayTrainings({String? date}) async {
-    final targetDate = _resolvedDate(date);
-    final cacheKey = 'training_day_$targetDate';
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/trainings/day',
-        queryParameters: {'date': targetDate},
-      );
-      final envelope = response.data;
-      final payload = envelope is Map<String, dynamic>
-          ? envelope['data']
-          : null;
-      final rawTrainings =
-          payload is Map<String, dynamic> && payload['trainings'] is List
-          ? payload['trainings'] as List
-          : const <dynamic>[];
-      final maps = rawTrainings
-          .whereType<Map<String, dynamic>>()
-          .map(Map<String, dynamic>.from)
-          .toList(growable: false);
-      await _localStorage.cacheData(cacheKey, maps);
-      return maps.map(TrainingModel.fromJson).toList(growable: false);
-    } on DioException catch (error) {
-      if (isOfflineError(error)) {
-        final cached = _getCachedMapList(cacheKey);
-        if (cached != null) {
-          return cached.map(TrainingModel.fromJson).toList(growable: false);
+    return _localStorage.sessionTask(() async {
+      final targetDate = _resolvedDate(date);
+      final cacheKey = 'training_day_$targetDate';
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/trainings/day',
+          queryParameters: {'date': targetDate},
+        );
+        final envelope = response.data;
+        final payload = envelope is Map<String, dynamic>
+            ? envelope['data']
+            : null;
+        final rawTrainings =
+            payload is Map<String, dynamic> && payload['trainings'] is List
+            ? payload['trainings'] as List
+            : const <dynamic>[];
+        final maps = rawTrainings
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(growable: false);
+        await _localStorage.cacheData(cacheKey, maps);
+        return maps.map(TrainingModel.fromJson).toList(growable: false);
+      } on DioException catch (error) {
+        if (isOfflineError(error)) {
+          final cached = _getCachedMapList(cacheKey);
+          if (cached != null) {
+            return cached.map(TrainingModel.fromJson).toList(growable: false);
+          }
         }
+        // Transitional fallback for servers that still only expose /today.
+        if (error.response?.statusCode == 404) {
+          final first = await getTodayTraining(date: targetDate);
+          return first == null ? const [] : [first];
+        }
+        rethrow;
       }
-      // Transitional fallback for servers that still only expose /today.
-      if (error.response?.statusCode == 404) {
-        final first = await getTodayTraining(date: targetDate);
-        return first == null ? const [] : [first];
-      }
-      rethrow;
-    }
+    });
   }
 
   @override
   Future<List<TrainingHistoryModel>> getTrainings({String? date}) async {
-    final targetDate = _resolvedDate(date);
-    final monthDate = DateTime.tryParse(targetDate) ?? DateTime.now();
-    final userId = await _getCurrentUserId();
-    final assignmentsCacheKey =
-        'trainings_history_assignments_${userId}_${monthDate.year}_${monthDate.month}';
-    final calendarCacheKey =
-        'trainings_history_calendar_${monthDate.year}_${monthDate.month}';
+    return _localStorage.sessionTask(() async {
+      final targetDate = _resolvedDate(date);
+      final monthDate = DateTime.tryParse(targetDate) ?? DateTime.now();
+      final userId = await _getCurrentUserId();
+      final assignmentsCacheKey =
+          'trainings_history_assignments_${userId}_${monthDate.year}_${monthDate.month}';
+      final calendarCacheKey =
+          'trainings_history_calendar_${monthDate.year}_${monthDate.month}';
 
-    try {
-      final responses = await Future.wait([
-        _apiClient.dio.get<dynamic>(
-          '/assignments/month',
-          queryParameters: {
-            'client_id': userId,
-            'year': monthDate.year,
-            'month': monthDate.month,
-          },
-        ),
-        _apiClient.dio.get<dynamic>(
-          '/calendar/month',
-          queryParameters: {'year': monthDate.year, 'month': monthDate.month},
-        ),
-      ]);
+      try {
+        final responses = await Future.wait([
+          _apiClient.dio.get<dynamic>(
+            '/assignments/month',
+            queryParameters: {
+              'client_id': userId,
+              'year': monthDate.year,
+              'month': monthDate.month,
+            },
+          ),
+          _apiClient.dio.get<dynamic>(
+            '/calendar/month',
+            queryParameters: {'year': monthDate.year, 'month': monthDate.month},
+          ),
+        ]);
 
-      final assignmentDays = _extractAssignmentDays(responses[0].data);
-      final calendarDays = _extractCalendarDays(responses[1].data);
+        final assignmentDays = _extractAssignmentDays(responses[0].data);
+        final calendarDays = _extractCalendarDays(responses[1].data);
 
-      await _localStorage.cacheData(assignmentsCacheKey, assignmentDays);
-      await _localStorage.cacheData(calendarCacheKey, calendarDays);
+        await _localStorage.cacheData(assignmentsCacheKey, assignmentDays);
+        await _localStorage.cacheData(calendarCacheKey, calendarDays);
 
-      return buildTrainingHistory(
-        assignmentDays,
-        calendarDays,
-        today: DateTime.now(),
-      );
-    } catch (error) {
-      if (isOfflineError(error)) {
-        final cachedAssignments =
-            _getCachedMapList(assignmentsCacheKey) ?? const [];
-        final cachedCalendar = _getCachedMapList(calendarCacheKey) ?? const [];
+        return buildTrainingHistory(
+          assignmentDays,
+          calendarDays,
+          today: DateTime.now(),
+        );
+      } catch (error) {
+        if (isOfflineError(error)) {
+          final cachedAssignments =
+              _getCachedMapList(assignmentsCacheKey) ?? const [];
+          final cachedCalendar =
+              _getCachedMapList(calendarCacheKey) ?? const [];
 
-        if (cachedAssignments.isNotEmpty || cachedCalendar.isNotEmpty) {
-          return buildTrainingHistory(
-            cachedAssignments,
-            cachedCalendar,
-            today: DateTime.now(),
-          );
+          if (cachedAssignments.isNotEmpty || cachedCalendar.isNotEmpty) {
+            return buildTrainingHistory(
+              cachedAssignments,
+              cachedCalendar,
+              today: DateTime.now(),
+            );
+          }
         }
+        rethrow;
       }
-      rethrow;
-    }
+    });
   }
 
   @override
   Future<TrainingModel> getTraining(String id, {String? date}) async {
-    final cacheKey = 'training_detail_${id}_${date ?? 'catalog'}';
+    return _localStorage.sessionTask(() async {
+      final cacheKey = 'training_detail_${id}_${date ?? 'catalog'}';
 
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/trainings/$id',
-        queryParameters: date == null ? null : {'date': date},
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'];
-        if (inner is Map<String, dynamic>) {
-          await _localStorage.cacheData(cacheKey, inner);
-          return TrainingModel.fromJson(inner);
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/trainings/$id',
+          queryParameters: date == null ? null : {'date': date},
+        );
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'];
+          if (inner is Map<String, dynamic>) {
+            await _localStorage.cacheData(cacheKey, inner);
+            return TrainingModel.fromJson(inner);
+          }
         }
-      }
-      throw Exception('Invalid response');
-    } catch (error) {
-      if (isOfflineError(error)) {
-        final cached = _localStorage.getCachedMap(cacheKey);
-        if (cached != null) {
-          return TrainingModel.fromJson(cached);
+        throw Exception('Invalid response');
+      } catch (error) {
+        if (isOfflineError(error)) {
+          final cached = _localStorage.getCachedMap(cacheKey);
+          if (cached != null) {
+            return TrainingModel.fromJson(cached);
+          }
         }
+        rethrow;
       }
-      rethrow;
-    }
+    });
   }
 
   @override
@@ -443,7 +428,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
   }) async {
-    if (lastSetFeedbackClientUploadId != null) {
+    return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
         trainingExerciseId,
         date,
@@ -454,42 +439,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
         trainingId: trainingId,
       );
-      return;
-    }
-    try {
-      final payload = <String, dynamic>{
-        'exercise_id': exerciseId,
-        'training_exercise_id': trainingExerciseId,
-        'date': date,
-      };
-      if (weightUsed != null) {
-        payload['weight_used'] = weightUsed;
-      }
-      if (sets != null) {
-        payload['sets'] = sets.map((set) => set.toJson()).toList();
-      }
-
-      final response = await _apiClient.dio.post<dynamic>(
-        '/progress/exercises/complete',
-        data: payload,
-      );
-      await _cacheProgressResponse(response, date);
-    } on DioException catch (error) {
-      if (!isOfflineError(error)) {
-        rethrow;
-      }
-
-      await _offlineSyncService.queueExerciseCompletion(
-        trainingExerciseId,
-        date,
-        completed: true,
-        exerciseId: exerciseId,
-        weightUsed: weightUsed,
-        sets: sets,
-        lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
-        trainingId: trainingId,
-      );
-    }
+      await _offlineSyncService.syncForDate(date);
+    });
   }
 
   @override
@@ -497,23 +448,14 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String trainingExerciseId,
     String date,
   ) async {
-    try {
-      final response = await _apiClient.dio.delete<dynamic>(
-        '/progress/exercises/$trainingExerciseId',
-        queryParameters: {'date': date},
-      );
-      await _cacheProgressResponse(response, date);
-    } on DioException catch (error) {
-      if (!isOfflineError(error)) {
-        rethrow;
-      }
-
+    return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
         trainingExerciseId,
         date,
         completed: false,
       );
-    }
+      await _offlineSyncService.syncForDate(date);
+    });
   }
 
   @override
@@ -522,98 +464,79 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     required String trainingId,
     String? notes,
   }) async {
-    if (_offlineSyncService.hasPendingFeedbackForTraining(trainingId, date)) {
+    return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueTrainingCompletion(
         date,
         trainingId: trainingId,
         notes: notes,
       );
-      return;
-    }
-    try {
-      final response = await _apiClient.dio.post<dynamic>(
-        '/progress/trainings/complete',
-        data: {
-          'date': date,
-          'training_id': trainingId,
-          if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-        },
-      );
-      await _cacheProgressResponse(response, date);
-    } on DioException catch (error) {
-      if (!isOfflineError(error)) {
-        rethrow;
-      }
-
-      await _offlineSyncService.queueTrainingCompletion(
-        date,
-        trainingId: trainingId,
-        notes: notes,
-      );
-    }
+      await _offlineSyncService.syncForDate(date);
+    });
   }
 
   @override
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async {
-    final targetDate = _resolvedDate(date);
-    final cacheKey = 'completed_exercises_$targetDate';
+    return _localStorage.sessionTask(() async {
+      final targetDate = _resolvedDate(date);
+      final cacheKey = 'completed_exercises_$targetDate';
 
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/progress',
-        queryParameters: {'date': targetDate},
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        final merged = overlayPendingProgressActions(
-          progress: inner,
-          actions: _localStorage.getPendingSyncActions(),
-          date: targetDate,
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/progress',
+          queryParameters: {'date': targetDate},
         );
-        final progress = parseTrainingDayProgress(merged);
-        await _localStorage.cacheData(cacheKey, progress.ids.toList());
-        await _localStorage.cacheData('day_progress_$targetDate', merged);
-        await _localStorage.cacheData('home_progress_$targetDate', merged);
-        return progress;
-      }
-      return const TrainingDayProgress();
-    } catch (error) {
-      if (isOfflineError(error)) {
-        final cachedProgress = _localStorage.getCachedMap(
-          'day_progress_$targetDate',
-        );
-        if (cachedProgress != null) {
-          return parseTrainingDayProgress(
-            overlayPendingProgressActions(
-              progress: cachedProgress,
-              actions: _localStorage.getPendingSyncActions(),
-              date: targetDate,
-            ),
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+          final merged = overlayPendingProgressActions(
+            progress: inner,
+            actions: _localStorage.getPendingSyncActions(),
+            date: targetDate,
           );
+          final progress = parseTrainingDayProgress(merged);
+          await _localStorage.cacheData(cacheKey, progress.ids.toList());
+          await _localStorage.cacheData('day_progress_$targetDate', merged);
+          await _localStorage.cacheData('home_progress_$targetDate', merged);
+          return progress;
         }
-        final cached = _localStorage.getCachedList(cacheKey);
-        if (cached != null) {
-          return parseTrainingDayProgress(
-            overlayPendingProgressActions(
-              progress: {
-                'exercises_completed': cached
-                    .map(
-                      (item) => {
-                        'training_exercise_id': item.toString(),
-                        'exercise_id': item.toString(),
-                      },
-                    )
-                    .toList(growable: false),
-              },
-              actions: _localStorage.getPendingSyncActions(),
-              date: targetDate,
-            ),
+        return const TrainingDayProgress();
+      } catch (error) {
+        if (isOfflineError(error)) {
+          final cachedProgress = _localStorage.getCachedMap(
+            'day_progress_$targetDate',
           );
+          if (cachedProgress != null) {
+            return parseTrainingDayProgress(
+              overlayPendingProgressActions(
+                progress: cachedProgress,
+                actions: _localStorage.getPendingSyncActions(),
+                date: targetDate,
+              ),
+            );
+          }
+          final cached = _localStorage.getCachedList(cacheKey);
+          if (cached != null) {
+            return parseTrainingDayProgress(
+              overlayPendingProgressActions(
+                progress: {
+                  'exercises_completed': cached
+                      .map(
+                        (item) => {
+                          'training_exercise_id': item.toString(),
+                          'exercise_id': item.toString(),
+                        },
+                      )
+                      .toList(growable: false),
+                },
+                actions: _localStorage.getPendingSyncActions(),
+                date: targetDate,
+              ),
+            );
+          }
         }
+        return const TrainingDayProgress();
       }
-      return const TrainingDayProgress();
-    }
+    });
   }
 
   @override
@@ -621,50 +544,55 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     List<String> exerciseIds,
     String beforeDate,
   ) async {
-    final uniqueIds = exerciseIds.toSet().where((id) => id.isNotEmpty).toList();
-    if (uniqueIds.isEmpty) return const {};
+    return _localStorage.sessionTask(() async {
+      final uniqueIds = exerciseIds
+          .toSet()
+          .where((id) => id.isNotEmpty)
+          .toList();
+      if (uniqueIds.isEmpty) return const {};
 
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/progress/exercises/previous',
-        queryParameters: {
-          'exercise_ids': uniqueIds.join(','),
-          'before': beforeDate,
-        },
-      );
-      final data = response.data;
-      if (data is! Map<String, dynamic>) return const {};
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/progress/exercises/previous',
+          queryParameters: {
+            'exercise_ids': uniqueIds.join(','),
+            'before': beforeDate,
+          },
+        );
+        final data = response.data;
+        if (data is! Map<String, dynamic>) return const {};
 
-      final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-      final result = <String, List<SetPerformance>>{};
-      for (final entry in inner.entries) {
-        final value = entry.value;
-        if (value is! Map<String, dynamic>) continue;
-        final sets = value['sets'];
-        if (sets is! List) continue;
-        result[entry.key] = sets
-            .whereType<Map<String, dynamic>>()
-            .map(
-              (set) => SetPerformance(
-                setNumber: set['set_number'] as int? ?? 1,
-                reps: set['reps'] as int?,
-                seconds: set['seconds'] as int?,
-                weightKg: (set['weight_kg'] as num?)?.toDouble(),
-                rir: (set['rir'] as num?)?.toInt(),
-              ),
-            )
-            .where(
-              (set) =>
-                  set.reps != null ||
-                  set.seconds != null ||
-                  set.weightKg != null ||
-                  set.rir != null,
-            )
-            .toList(growable: false);
+        final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+        final result = <String, List<SetPerformance>>{};
+        for (final entry in inner.entries) {
+          final value = entry.value;
+          if (value is! Map<String, dynamic>) continue;
+          final sets = value['sets'];
+          if (sets is! List) continue;
+          result[entry.key] = sets
+              .whereType<Map<String, dynamic>>()
+              .map(
+                (set) => SetPerformance(
+                  setNumber: set['set_number'] as int? ?? 1,
+                  reps: set['reps'] as int?,
+                  seconds: set['seconds'] as int?,
+                  weightKg: (set['weight_kg'] as num?)?.toDouble(),
+                  rir: (set['rir'] as num?)?.toInt(),
+                ),
+              )
+              .where(
+                (set) =>
+                    set.reps != null ||
+                    set.seconds != null ||
+                    set.weightKg != null ||
+                    set.rir != null,
+              )
+              .toList(growable: false);
+        }
+        return result;
+      } catch (_) {
+        return const {};
       }
-      return result;
-    } catch (_) {
-      return const {};
-    }
+    });
   }
 }

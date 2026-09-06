@@ -38,6 +38,9 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
   );
 
   @override
-  Future<ManagedFeedbackUpload> uploadMedia(File file, String contentType) =>
-      _remoteDataSource.uploadMedia(file, contentType);
+  Future<ManagedFeedbackUpload> uploadMedia(
+    File file,
+    String contentType, {
+    FeedbackUploadContext? context,
+  }) => _remoteDataSource.uploadMedia(file, contentType, context: context);
 }

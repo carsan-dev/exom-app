@@ -1,6 +1,10 @@
+import 'package:exom_app/core/utils/operation_id.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
+import 'package:dio/dio.dart';
+import 'package:exom_app/core/api/network_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -11,6 +15,7 @@ import 'package:exom_app/core/utils/async_mutex.dart';
 enum FeedbackUploadNoticeKind {
   queued,
   uploading,
+  processing,
   completed,
   failed,
   discarded,
@@ -19,8 +24,15 @@ enum FeedbackUploadNoticeKind {
 class FeedbackUploadNotice {
   final String id;
   final FeedbackUploadNoticeKind kind;
+  final int? sentBytes;
+  final int? totalBytes;
 
-  const FeedbackUploadNotice(this.id, this.kind);
+  const FeedbackUploadNotice(
+    this.id,
+    this.kind, {
+    this.sentBytes,
+    this.totalBytes,
+  });
 }
 
 class FeedbackUploadQueueService {
@@ -32,10 +44,28 @@ class FeedbackUploadQueueService {
   final Future<void> Function(String) _deleteFile;
   final StreamController<FeedbackUploadNotice> _notices =
       StreamController<FeedbackUploadNotice>.broadcast();
-  final AsyncMutex _queueMutex = AsyncMutex();
+  static final AsyncMutex _queueMutex = AsyncMutex();
+  static final AsyncMutex _runnerMutex = AsyncMutex();
 
   bool _processing = false;
   bool _initialized = false;
+  Timer? _timer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  final Map<String, FeedbackUploadNotice> _progress = {};
+
+  FeedbackUploadNotice? progressOf(String id) => _progress[id];
+
+  void _report(FeedbackUploadNotice notice) {
+    _storage.guardSession();
+    _progress[notice.id] = notice;
+    if (!_notices.isClosed) _notices.add(notice);
+  }
+
+  Future<void> dispose() async {
+    _timer?.cancel();
+    await _connectivitySubscription?.cancel();
+    await _notices.close();
+  }
 
   FeedbackUploadQueueService(
     this._repository,
@@ -50,47 +80,21 @@ class FeedbackUploadQueueService {
            applicationSupportDirectory ?? getApplicationSupportDirectory,
        _deleteFile = deleteFile ?? _deleteExistingFile;
 
+  bool get hasUnattributedData => _storage.hasUnattributedData;
+
   Stream<FeedbackUploadNotice> get notices => _notices.stream;
 
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
-    final original = _storage.getFeedbackUploadQueue();
-    final recovered = <Map<String, dynamic>>[];
-    for (final raw in original) {
-      var item = Map<String, dynamic>.from(raw);
-      final queuedAt = DateTime.tryParse(item['queued_at'] as String? ?? '');
-      final expired =
-          queuedAt != null &&
-          DateTime.now().toUtc().difference(queuedAt.toUtc()) >=
-              const Duration(hours: 24);
-      if (expired) {
-        try {
-          final path = item['file_path'] as String?;
-          if (path != null) {
-            await _deleteFile(path);
-          }
-          final id = item['id'] as String?;
-          if (id != null && item['status'] != 'completed') {
-            await _offlineSync.removeActionsDependingOnFeedback(id);
-          }
-          continue;
-        } on FileSystemException catch (error) {
-          item = {
-            ...item,
-            'status': item['status'] == 'completed' ? 'completed' : 'failed',
-            'last_error': 'cleanup_failed: $error',
-          };
-        }
-      } else if (item['status'] == 'uploading') {
-        item = {...item, 'status': 'queued'};
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
+      if (results.any((result) => result != ConnectivityResult.none)) {
+        unawaited(processQueue());
       }
-      recovered.add(item);
-    }
-    await _queueMutex.protect(
-      () => _storage.saveFeedbackUploadQueue(recovered),
-    );
-    Timer.periodic(
+    });
+    _timer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => unawaited(processQueue()),
     );
@@ -99,6 +103,7 @@ class FeedbackUploadQueueService {
 
   Future<String> enqueue({
     required File file,
+    String? expectedSession,
     required String contentType,
     required String mediaType,
     String? notes,
@@ -108,17 +113,27 @@ class FeedbackUploadQueueService {
     String? trainingExerciseId,
     String? assignmentDate,
   }) async {
-    final id = DateTime.now().microsecondsSinceEpoch.toString();
+    final session = _storage.sessionStamp;
+    if (session == null ||
+        (expectedSession != null && expectedSession != session)) {
+      throw const LocalSessionChanged();
+    }
+    final id = newOperationId();
     final directory = Directory(
       '${(await _applicationSupportDirectory()).path}/feedback_uploads',
     );
     await directory.create(recursive: true);
     final extension = file.path.split('.').last.toLowerCase();
     final stableFile = await file.copy('${directory.path}/$id.$extension');
+    if (_storage.sessionStamp != session) {
+      throw StateError('Session changed during preparation');
+    }
     await _queueMutex.protect(() async {
+      if (_storage.sessionStamp != session) throw StateError('Session changed');
       final queue = _storage.getFeedbackUploadQueue();
       queue.add({
         'id': id,
+        ..._storage.queueIdentity,
         'file_path': stableFile.path,
         'content_type': contentType,
         'media_type': mediaType,
@@ -135,14 +150,16 @@ class FeedbackUploadQueueService {
       });
       await _storage.saveFeedbackUploadQueue(queue);
     });
-    _notices.add(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.queued));
+    _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.queued));
     unawaited(processQueue());
     return id;
   }
 
   Future<void> retry(String id) async {
     await _mutateById(id, (item) {
-      if (item['status'] != 'failed') return item;
+      if (item['status'] != 'failed' || item['discard_requested'] == true) {
+        return item;
+      }
       return {
         ...item,
         'status': 'queued',
@@ -154,25 +171,48 @@ class FeedbackUploadQueueService {
     await processQueue();
   }
 
-  List<Map<String, dynamic>> get pendingItems =>
-      _storage.getFeedbackUploadQueue();
+  List<Map<String, dynamic>> get pendingItems => _storage
+      .getFeedbackUploadQueue()
+      .where((item) => item['dismissed'] != true)
+      .toList();
 
   Future<void> discard(String id) async {
     final item = await _queueMutex.protect(() async {
       final queue = _storage.getFeedbackUploadQueue();
       final index = queue.indexWhere((entry) => entry['id'] == id);
       if (index < 0) return null;
-      final claimed = {...queue[index], 'status': 'discarding'};
+      if (queue[index]['status'] == 'completed') {
+        return {...queue[index], 'already_confirmed': true};
+      }
+      if (queue[index]['status'] == 'uploading' ||
+          queue[index]['status'] == 'processing') {
+        throw StateError(
+          'Espera a que termine la operación en curso antes de descartar',
+        );
+      }
+      final claimed = {
+        ...queue[index],
+        'status': 'discarding',
+        'discard_requested': true,
+      };
       queue[index] = claimed;
       await _storage.saveFeedbackUploadQueue(queue);
       return claimed;
     });
     if (item == null) return;
+    if (item['already_confirmed'] == true) {
+      await _mutateById(id, (current) => {...current, 'dismissed': true});
+      return;
+    }
+    await _offlineSync.removeActionsDependingOnFeedback(id);
     try {
       final filePath = item['file_path'] as String?;
       if (filePath != null) {
         await _deleteFile(filePath);
       }
+      final prepared =
+          (item['upload_checkpoint'] as Map?)?['prepared_path'] as String?;
+      if (prepared != null && prepared != filePath) await _deleteFile(prepared);
     } on FileSystemException catch (error) {
       await _mutateById(
         id,
@@ -189,24 +229,52 @@ class FeedbackUploadQueueService {
         ..removeWhere((entry) => entry['id'] == id);
       await _storage.saveFeedbackUploadQueue(queue);
     });
-    await _offlineSync.removeActionsDependingOnFeedback(id);
     _notices.add(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.discarded));
   }
 
-  Future<void> processQueue() async {
+  Future<void> processQueue() =>
+      _storage.withSession(() => _runnerMutex.protect(_processQueueLocked));
+
+  Future<void> _processQueueLocked() async {
     if (_processing) return;
     _processing = true;
+    final session = _storage.sessionStamp;
+    bool current() =>
+        session != null &&
+        _storage.sessionStamp == session &&
+        _isAuthenticated();
     try {
+      await _queueMutex.protect(() async {
+        final original = _storage.getFeedbackUploadQueue();
+        final recovered = original.map((raw) {
+          final item = Map<String, dynamic>.from(raw);
+          return item['status'] == 'uploading' || item['status'] == 'processing'
+              ? {...item, 'status': 'queued'}
+              : item;
+        }).toList();
+        await _storage.saveFeedbackUploadQueue(recovered);
+      });
+      for (final item in _storage.getFeedbackUploadQueue().where(
+        (item) => item['discard_requested'] == true,
+      )) {
+        try {
+          await discard(item['id'] as String);
+        } on FileSystemException {
+          /* durable retry next wake */
+        }
+      }
       await _retryCompletedCleanup();
-      await _purgeExpiredItems();
-      if (!_isAuthenticated()) return;
+      await _cleanupLegacyCompleted();
+      if (!current()) return;
       while (true) {
-        if (!_isAuthenticated()) break;
+        if (!current()) break;
         final item = await _claimNext();
         if (item == null) break;
         final id = item['id'] as String;
         final file = File(item['file_path'] as String);
-        if (!await file.exists()) {
+        final exists = await file.exists();
+        if (!current()) break;
+        if (!exists) {
           await _mutateById(
             id,
             (current) => {
@@ -224,17 +292,65 @@ class FeedbackUploadQueueService {
         final attempts = item['attempts'] as int? ?? 1;
 
         try {
-          final upload = await _repository.uploadMedia(
-            file,
-            item['content_type'] as String,
-          );
-          if (!_isAuthenticated()) {
+          final savedUploadId = item['verified_upload_id'] as String?;
+          final savedUrl = item['verified_file_url'] as String?;
+          final upload = savedUploadId != null && savedUrl != null
+              ? ManagedFeedbackUpload(
+                  uploadId: savedUploadId,
+                  fileUrl: savedUrl,
+                )
+              : await _repository.uploadMedia(
+                  file,
+                  item['content_type'] as String,
+                  context: FeedbackUploadContext(
+                    operationId: id,
+                    checkpoint: Map<String, dynamic>.from(
+                      item['upload_checkpoint'] as Map? ?? {},
+                    ),
+                    saveCheckpoint: (checkpoint) => _mutateById(
+                      id,
+                      (current) => {
+                        ...current,
+                        'upload_checkpoint': checkpoint,
+                      },
+                    ),
+                    isCurrent: current,
+                    onProgress: (sent, total) => _report(
+                      FeedbackUploadNotice(
+                        id,
+                        FeedbackUploadNoticeKind.uploading,
+                        sentBytes: sent,
+                        totalBytes: total,
+                      ),
+                    ),
+                    onProcessing: () => _report(
+                      FeedbackUploadNotice(
+                        id,
+                        FeedbackUploadNoticeKind.processing,
+                      ),
+                    ),
+                  ),
+                );
+          if (_storage.sessionStamp != session) break;
+          if (!current()) {
             await _mutateById(
               id,
               (current) => {...current, 'status': 'queued'},
             );
             break;
           }
+          await _mutateById(
+            id,
+            (current) => {
+              ...current,
+              'status': 'processing',
+              'verified_upload_id': upload.uploadId,
+              'verified_file_url': upload.fileUrl,
+            },
+          );
+          _report(
+            FeedbackUploadNotice(id, FeedbackUploadNoticeKind.processing),
+          );
           await _repository.createFeedback(
             mediaType: item['media_type'] as String,
             mediaUrl: upload.fileUrl,
@@ -254,9 +370,29 @@ class FeedbackUploadQueueService {
             );
             break;
           }
+          // Commit confirmation before touching the file. A crash from here on
+          // retries only cleanup, never transfer or feedback creation.
+          await _mutateById(
+            id,
+            (current) => {
+              ...current,
+              'status': 'completed',
+              'cleanup_pending': true,
+              'last_error': null,
+            },
+          );
           String? cleanupError;
           try {
             await _deleteFile(file.path);
+            final checkpoint =
+                _storage.getFeedbackUploadQueue().firstWhere(
+                      (entry) => entry['id'] == id,
+                    )['upload_checkpoint']
+                    as Map?;
+            final prepared = checkpoint?['prepared_path'];
+            if (prepared is String && prepared != file.path) {
+              await _deleteFile(prepared);
+            }
           } on FileSystemException catch (error) {
             cleanupError = 'cleanup_failed: $error';
           }
@@ -265,14 +401,26 @@ class FeedbackUploadQueueService {
             (current) => {
               ...current,
               'status': 'completed',
+              'cleanup_pending': cleanupError != null,
               'last_error': cleanupError,
             },
           );
-          _notices.add(
-            FeedbackUploadNotice(id, FeedbackUploadNoticeKind.completed),
-          );
+          _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.completed));
           await _offlineSync.syncPendingActions();
         } catch (error) {
+          // Confirmation is terminal. Cleanup or a progress wakeup can fail
+          // after it; neither may turn a confirmed receipt back into upload work.
+          _storage.guardSession();
+          final persisted = _storage.getFeedbackUploadQueue().where(
+            (row) => row['id'] == id,
+          );
+          if (persisted.isNotEmpty &&
+              persisted.first['status'] == 'completed') {
+            _report(
+              FeedbackUploadNotice(id, FeedbackUploadNoticeKind.completed),
+            );
+            continue;
+          }
           if (!_isAuthenticated()) {
             await _mutateById(
               id,
@@ -280,19 +428,48 @@ class FeedbackUploadQueueService {
             );
             break;
           }
-          if (attempts >= 5) {
+          final errorData = error is DioException ? error.response?.data : null;
+          final expired =
+              errorData is Map && errorData['code'] == 'UPLOAD_EXPIRED';
+          if (expired) {
+            await _mutateById(id, (current) {
+              final checkpoint = Map<String, dynamic>.from(
+                current['upload_checkpoint'] as Map? ?? {},
+              );
+              checkpoint['generation'] =
+                  (checkpoint['generation'] as int? ?? 0) + 1;
+              return {...current, 'upload_checkpoint': checkpoint}
+                ..remove('verified_upload_id')
+                ..remove('verified_file_url');
+            });
+          }
+          final retryable =
+              expired ||
+              error is DioException &&
+                  (isOfflineError(error) ||
+                      error.response?.statusCode == 429 ||
+                      (error.response?.statusCode ?? 0) >= 500);
+          // Definitive validation/auth/resource errors require intervention.
+          // Recoverable failures back off indefinitely without deleting media.
+          if (!retryable) {
             await _mutateById(
               id,
               (current) => {
                 ...current,
                 'status': 'failed',
                 'attempts': attempts,
-                'last_error': error.toString(),
+                'last_failure_phase': _progress[id]?.kind.name ?? 'preparing',
+                'last_http_status': error is DioException
+                    ? error.response?.statusCode
+                    : null,
+                'last_error': errorData is Map && errorData['code'] is String
+                    ? errorData['code']
+                    : error is DioException
+                    ? 'upload_request_failed'
+                    : error.toString(),
               },
             );
-            _notices.add(
-              FeedbackUploadNotice(id, FeedbackUploadNoticeKind.failed),
-            );
+            _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.failed));
           } else {
             const delays = [30, 120, 600, 3600];
             await _mutateById(
@@ -301,13 +478,26 @@ class FeedbackUploadQueueService {
                 ...current,
                 'status': 'queued',
                 'attempts': attempts,
+                'last_failure_phase': _progress[id]?.kind.name ?? 'preparing',
+                'last_http_status': error is DioException
+                    ? error.response?.statusCode
+                    : null,
                 'next_attempt_at': DateTime.now()
                     .toUtc()
-                    .add(Duration(seconds: delays[attempts - 1]))
+                    .add(
+                      Duration(
+                        seconds:
+                            delays[(attempts - 1).clamp(0, delays.length - 1)],
+                      ),
+                    )
                     .toIso8601String(),
-                'last_error': error.toString(),
+                'last_error': error is DioException
+                    ? 'network_${error.type.name}_${error.response?.statusCode ?? 0}'
+                    : 'upload_local_failure',
               },
             );
+
+            _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.queued));
           }
         }
       }
@@ -320,6 +510,9 @@ class FeedbackUploadQueueService {
     return _queueMutex.protect(() async {
       final queue = _storage.getFeedbackUploadQueue();
       final index = queue.indexWhere((item) {
+        if (!_storage.ownsEntry(item) || item['discard_requested'] == true) {
+          return false;
+        }
         if (item['status'] != 'queued') return false;
         final next = DateTime.tryParse(
           item['next_attempt_at'] as String? ?? '',
@@ -329,12 +522,13 @@ class FeedbackUploadQueueService {
       if (index < 0) return null;
       final claimed = {
         ...queue[index],
+        'claimed_at': DateTime.now().toUtc().toIso8601String(),
         'status': 'uploading',
         'attempts': (queue[index]['attempts'] as int? ?? 0) + 1,
       };
       queue[index] = claimed;
       await _storage.saveFeedbackUploadQueue(queue);
-      _notices.add(
+      _report(
         FeedbackUploadNotice(
           claimed['id'] as String,
           FeedbackUploadNoticeKind.uploading,
@@ -371,9 +565,10 @@ class FeedbackUploadQueueService {
           .where(
             (item) =>
                 item['status'] == 'completed' &&
-                (item['last_error'] as String? ?? '').startsWith(
-                  'cleanup_failed:',
-                ),
+                (item['cleanup_pending'] == true ||
+                    (item['last_error'] as String? ?? '').startsWith(
+                      'cleanup_failed:',
+                    )),
           )
           .map(Map<String, dynamic>.from)
           .toList(growable: false);
@@ -384,14 +579,16 @@ class FeedbackUploadQueueService {
       if (id == null || path == null) continue;
       try {
         await _deleteFile(path);
-        final queuedAt = DateTime.tryParse(item['queued_at'] as String? ?? '');
-        if (queuedAt != null &&
-            DateTime.now().toUtc().difference(queuedAt.toUtc()) >=
-                const Duration(hours: 24)) {
-          await _removeById(id);
-        } else {
-          await _mutateById(id, (current) => {...current, 'last_error': null});
-        }
+        final prepared = (item['upload_checkpoint'] as Map?)?['prepared_path'];
+        if (prepared is String && prepared != path) await _deleteFile(prepared);
+        await _mutateById(
+          id,
+          (current) => {
+            ...current,
+            'last_error': null,
+            'cleanup_pending': false,
+          },
+        );
       } on FileSystemException catch (error) {
         await _mutateById(
           id,
@@ -401,13 +598,14 @@ class FeedbackUploadQueueService {
     }
   }
 
-  Future<void> _purgeExpiredItems() async {
+  Future<void> _cleanupLegacyCompleted() async {
     final expired = await _queueMutex.protect(() async {
       final now = DateTime.now().toUtc();
       return _storage
           .getFeedbackUploadQueue()
           .where((item) {
-            if (!_isAuthenticated() && item['status'] != 'completed') {
+            if (item['status'] != 'completed' ||
+                item['cleanup_pending'] == false) {
               return false;
             }
             final queuedAt = DateTime.tryParse(
@@ -426,10 +624,14 @@ class FeedbackUploadQueueService {
       if (id == null) continue;
       try {
         if (path != null) await _deleteFile(path);
-        await _removeById(id);
-        if (item['status'] != 'completed') {
-          await _offlineSync.removeActionsDependingOnFeedback(id);
-        }
+        await _mutateById(
+          id,
+          (current) => {
+            ...current,
+            'cleanup_pending': false,
+            'last_error': null,
+          },
+        );
       } on FileSystemException catch (error) {
         await _mutateById(
           id,
@@ -441,14 +643,6 @@ class FeedbackUploadQueueService {
         );
       }
     }
-  }
-
-  Future<void> _removeById(String id) {
-    return _queueMutex.protect(() async {
-      final queue = _storage.getFeedbackUploadQueue()
-        ..removeWhere((item) => item['id'] == id);
-      await _storage.saveFeedbackUploadQueue(queue);
-    });
   }
 
   static Future<void> _deleteExistingFile(String path) async {

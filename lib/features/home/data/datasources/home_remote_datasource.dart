@@ -18,25 +18,27 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
   @override
   Future<HomeSummaryModel> getHomeSummary({DateTime? date}) async {
-    final dateKey = _dateKey(date ?? DateTime.now());
+    return _localStorage.sessionTask(() async {
+      final dateKey = _dateKey(date ?? DateTime.now());
 
-    final results = await Future.wait<Map<String, dynamic>?>(([
-      _getTrainingToday(date: date, cacheKey: 'home_training_$dateKey'),
-      _getDietToday(date: date, cacheKey: 'home_diet_$dateKey'),
-      _getStreak(),
-      _getProfile(),
-      _getLatestMetric(),
-      _getDayProgress(date: date, cacheKey: 'home_progress_$dateKey'),
-    ]));
+      final results = await Future.wait<Map<String, dynamic>?>(([
+        _getTrainingToday(date: date, cacheKey: 'home_training_$dateKey'),
+        _getDietToday(date: date, cacheKey: 'home_diet_$dateKey'),
+        _getStreak(),
+        _getProfile(),
+        _getLatestMetric(),
+        _getDayProgress(date: date, cacheKey: 'home_progress_$dateKey'),
+      ]));
 
-    return HomeSummaryModel.fromParts(
-      training: results[0],
-      diet: results[1],
-      streak: results[2],
-      profile: results[3],
-      latestMetric: results[4],
-      progress: results[5],
-    );
+      return HomeSummaryModel.fromParts(
+        training: results[0],
+        diet: results[1],
+        streak: results[2],
+        profile: results[3],
+        latestMetric: results[4],
+        progress: results[5],
+      );
+    });
   }
 
   String _dateKey(DateTime date) {
@@ -47,7 +49,9 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     String key,
     Map<String, dynamic>? value,
   ) async {
-    await _localStorage.cacheData(key, value ?? {_emptyMarker: true});
+    return _localStorage.sessionTask(() async {
+      await _localStorage.cacheData(key, value ?? {_emptyMarker: true});
+    });
   }
 
   Map<String, dynamic>? _getCachedNullableMap(String key) {
@@ -67,156 +71,168 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     DateTime? date,
     required String cacheKey,
   }) async {
-    try {
-      final queryParams = date != null ? {'date': _dateKey(date)} : null;
-      late Response<dynamic> response;
-      for (var attempt = 0; attempt < 3; attempt++) {
-        response = await _apiClient.dio.get<dynamic>(
-          '/trainings/day',
-          queryParameters: queryParams,
-        );
-        if (response.statusCode != 204 && response.data != null) break;
-        if (attempt < 2) {
-          await Future<void>.delayed(
-            Duration(milliseconds: 250 * (attempt + 1)),
+    return _localStorage.sessionTask(() async {
+      try {
+        final queryParams = date != null ? {'date': _dateKey(date)} : null;
+        late Response<dynamic> response;
+        for (var attempt = 0; attempt < 3; attempt++) {
+          response = await _apiClient.dio.get<dynamic>(
+            '/trainings/day',
+            queryParameters: queryParams,
           );
+          if (response.statusCode != 204 && response.data != null) break;
+          if (attempt < 2) {
+            await Future<void>.delayed(
+              Duration(milliseconds: 250 * (attempt + 1)),
+            );
+          }
         }
+        if (response.statusCode == 204 || response.data == null) {
+          return null;
+        }
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'] as Map<String, dynamic>?;
+          await _cacheNullableMap(cacheKey, inner);
+          return inner;
+        }
+        return _getCachedNullableMap(cacheKey);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
+          return null;
+        }
+        return _getCachedNullableMap(cacheKey);
+      } catch (_) {
+        return _getCachedNullableMap(cacheKey);
       }
-      if (response.statusCode == 204 || response.data == null) {
-        return null;
-      }
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'] as Map<String, dynamic>?;
-        await _cacheNullableMap(cacheKey, inner);
-        return inner;
-      }
-      return _getCachedNullableMap(cacheKey);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
-        return null;
-      }
-      return _getCachedNullableMap(cacheKey);
-    } catch (_) {
-      return _getCachedNullableMap(cacheKey);
-    }
+    });
   }
 
   Future<Map<String, dynamic>?> _getDietToday({
     DateTime? date,
     required String cacheKey,
   }) async {
-    try {
-      final queryParams = date != null ? {'date': _dateKey(date)} : null;
-      final response = await _apiClient.dio.get<dynamic>(
-        '/diets/today',
-        queryParameters: queryParams,
-      );
-      if (response.statusCode == 204 || response.data == null) {
-        await _cacheNullableMap(cacheKey, null);
-        return null;
+    return _localStorage.sessionTask(() async {
+      try {
+        final queryParams = date != null ? {'date': _dateKey(date)} : null;
+        final response = await _apiClient.dio.get<dynamic>(
+          '/diets/today',
+          queryParameters: queryParams,
+        );
+        if (response.statusCode == 204 || response.data == null) {
+          await _cacheNullableMap(cacheKey, null);
+          return null;
+        }
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'] as Map<String, dynamic>?;
+          await _cacheNullableMap(cacheKey, inner);
+          return inner;
+        }
+        return _getCachedNullableMap(cacheKey);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
+          await _cacheNullableMap(cacheKey, null);
+          return null;
+        }
+        return _getCachedNullableMap(cacheKey);
+      } catch (_) {
+        return _getCachedNullableMap(cacheKey);
       }
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'] as Map<String, dynamic>?;
-        await _cacheNullableMap(cacheKey, inner);
-        return inner;
-      }
-      return _getCachedNullableMap(cacheKey);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
-        await _cacheNullableMap(cacheKey, null);
-        return null;
-      }
-      return _getCachedNullableMap(cacheKey);
-    } catch (_) {
-      return _getCachedNullableMap(cacheKey);
-    }
+    });
   }
 
   Future<Map<String, dynamic>?> _getStreak() async {
-    try {
-      final response = await _apiClient.dio.get<dynamic>('/streaks/me');
-      if (response.data == null) return _getCachedNullableMap('home_streak');
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'] as Map<String, dynamic>?;
-        await _cacheNullableMap('home_streak', inner);
-        return inner;
+    return _localStorage.sessionTask(() async {
+      try {
+        final response = await _apiClient.dio.get<dynamic>('/streaks/me');
+        if (response.data == null) return _getCachedNullableMap('home_streak');
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'] as Map<String, dynamic>?;
+          await _cacheNullableMap('home_streak', inner);
+          return inner;
+        }
+        return _getCachedNullableMap('home_streak');
+      } catch (_) {
+        return _getCachedNullableMap('home_streak');
       }
-      return _getCachedNullableMap('home_streak');
-    } catch (_) {
-      return _getCachedNullableMap('home_streak');
-    }
+    });
   }
 
   Future<Map<String, dynamic>?> _getProfile() async {
-    try {
-      final response = await _apiClient.dio.get<dynamic>('/profile/me');
-      if (response.data == null) return _getCachedNullableMap('home_profile');
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'] as Map<String, dynamic>?;
-        await _cacheNullableMap('home_profile', inner);
-        return inner;
+    return _localStorage.sessionTask(() async {
+      try {
+        final response = await _apiClient.dio.get<dynamic>('/profile/me');
+        if (response.data == null) return _getCachedNullableMap('home_profile');
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'] as Map<String, dynamic>?;
+          await _cacheNullableMap('home_profile', inner);
+          return inner;
+        }
+        return _getCachedNullableMap('home_profile');
+      } catch (_) {
+        return _getCachedNullableMap('home_profile');
       }
-      return _getCachedNullableMap('home_profile');
-    } catch (_) {
-      return _getCachedNullableMap('home_profile');
-    }
+    });
   }
 
   Future<Map<String, dynamic>?> _getLatestMetric() async {
-    try {
-      final response = await _apiClient.dio.get<dynamic>('/metrics/latest');
-      if (response.data == null) {
+    return _localStorage.sessionTask(() async {
+      try {
+        final response = await _apiClient.dio.get<dynamic>('/metrics/latest');
+        if (response.data == null) {
+          return _getCachedNullableMap('home_latest_metric');
+        }
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'] as Map<String, dynamic>?;
+          await _cacheNullableMap('home_latest_metric', inner);
+          return inner;
+        }
+        return _getCachedNullableMap('home_latest_metric');
+      } catch (_) {
         return _getCachedNullableMap('home_latest_metric');
       }
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'] as Map<String, dynamic>?;
-        await _cacheNullableMap('home_latest_metric', inner);
-        return inner;
-      }
-      return _getCachedNullableMap('home_latest_metric');
-    } catch (_) {
-      return _getCachedNullableMap('home_latest_metric');
-    }
+    });
   }
 
   Future<Map<String, dynamic>?> _getDayProgress({
     DateTime? date,
     required String cacheKey,
   }) async {
-    try {
-      final target = date ?? DateTime.now();
-      final response = await _apiClient.dio.get<dynamic>(
-        '/progress',
-        queryParameters: {'date': _dateKey(target)},
-      );
-      if (response.data == null) return _getCachedNullableMap(cacheKey);
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-        final targetDate = _dateKey(target);
-        final merged = overlayPendingProgressActions(
-          progress: inner,
-          actions: _localStorage.getPendingSyncActions(),
-          date: targetDate,
+    return _localStorage.sessionTask(() async {
+      try {
+        final target = date ?? DateTime.now();
+        final response = await _apiClient.dio.get<dynamic>(
+          '/progress',
+          queryParameters: {'date': _dateKey(target)},
         );
-        await _cacheNullableMap(cacheKey, merged);
-        return merged;
+        if (response.data == null) return _getCachedNullableMap(cacheKey);
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+          final targetDate = _dateKey(target);
+          final merged = overlayPendingProgressActions(
+            progress: inner,
+            actions: _localStorage.getPendingSyncActions(),
+            date: targetDate,
+          );
+          await _cacheNullableMap(cacheKey, merged);
+          return merged;
+        }
+        return _getCachedNullableMap(cacheKey);
+      } catch (_) {
+        final cached = _getCachedNullableMap(cacheKey);
+        if (cached == null) return null;
+        final target = date ?? DateTime.now();
+        return overlayPendingProgressActions(
+          progress: cached,
+          actions: _localStorage.getPendingSyncActions(),
+          date: _dateKey(target),
+        );
       }
-      return _getCachedNullableMap(cacheKey);
-    } catch (_) {
-      final cached = _getCachedNullableMap(cacheKey);
-      if (cached == null) return null;
-      final target = date ?? DateTime.now();
-      return overlayPendingProgressActions(
-        progress: cached,
-        actions: _localStorage.getPendingSyncActions(),
-        date: _dateKey(target),
-      );
-    }
+    });
   }
 }

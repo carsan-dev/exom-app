@@ -17,91 +17,101 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
 
   @override
   Future<BodyMetricModel> saveMetric(Map<String, dynamic> data) async {
-    final response = await _apiClient.dio.post<dynamic>('/metrics', data: data);
-    final payload = response.data;
-    if (payload is! Map<String, dynamic>) {
-      throw Exception('Invalid metric response');
-    }
+    return _localStorage.sessionTask(() async {
+      final response = await _apiClient.dio.post<dynamic>(
+        '/metrics',
+        data: data,
+      );
+      final payload = response.data;
+      if (payload is! Map<String, dynamic>) {
+        throw Exception('Invalid metric response');
+      }
 
-    final inner = payload['data'];
-    if (inner is! Map<String, dynamic>) {
-      throw Exception('Invalid metric response');
-    }
+      final inner = payload['data'];
+      if (inner is! Map<String, dynamic>) {
+        throw Exception('Invalid metric response');
+      }
 
-    await _localStorage.cacheData('metrics_latest', inner);
-    await _localStorage.cacheData('home_latest_metric', inner);
+      await _localStorage.cacheData('metrics_latest', inner);
+      await _localStorage.cacheData('home_latest_metric', inner);
 
-    final history = _localStorage.getCachedList('metrics_weight_history') ?? [];
-    final updatedHistory = [
-      inner,
-      ...history.whereType<Map<String, dynamic>>(),
-    ].toList();
-    await _localStorage.cacheData('metrics_weight_history', updatedHistory);
+      final history =
+          _localStorage.getCachedList('metrics_weight_history') ?? [];
+      final updatedHistory = [
+        inner,
+        ...history.whereType<Map<String, dynamic>>(),
+      ].toList();
+      await _localStorage.cacheData('metrics_weight_history', updatedHistory);
 
-    return BodyMetricModel.fromJson(inner);
+      return BodyMetricModel.fromJson(inner);
+    });
   }
 
   @override
   Future<BodyMetricModel?> getLatestMetric({String? date}) async {
-    final cacheKey = date == null ? 'metrics_latest' : 'metrics_latest_$date';
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/metrics/latest',
-        queryParameters: date != null ? {'date': date} : null,
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final inner = data['data'];
-        if (inner is Map<String, dynamic>) {
-          await _localStorage.cacheData(cacheKey, inner);
-          await _localStorage.cacheData('home_latest_metric', inner);
-          return BodyMetricModel.fromJson(inner);
+    return _localStorage.sessionTask(() async {
+      final cacheKey = date == null ? 'metrics_latest' : 'metrics_latest_$date';
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/metrics/latest',
+          queryParameters: date != null ? {'date': date} : null,
+        );
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final inner = data['data'];
+          if (inner is Map<String, dynamic>) {
+            await _localStorage.cacheData(cacheKey, inner);
+            await _localStorage.cacheData('home_latest_metric', inner);
+            return BodyMetricModel.fromJson(inner);
+          }
         }
-      }
-      return null;
-    } catch (error) {
-      if (isOfflineError(error)) {
-        final cached = _localStorage.getCachedMap(cacheKey);
-        if (cached != null) {
-          return BodyMetricModel.fromJson(cached);
+        return null;
+      } catch (error) {
+        if (isOfflineError(error)) {
+          final cached = _localStorage.getCachedMap(cacheKey);
+          if (cached != null) {
+            return BodyMetricModel.fromJson(cached);
+          }
         }
+        return null;
       }
-      return null;
-    }
+    });
   }
 
   @override
   Future<List<BodyMetricModel>> getWeightHistory() async {
-    try {
-      final response = await _apiClient.dio.get<dynamic>(
-        '/metrics/weight-history',
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final items = data['data'];
-        if (items is List) {
-          final normalized = items
-              .whereType<Map<String, dynamic>>()
-              .map(Map<String, dynamic>.from)
-              .toList(growable: false);
-          await _localStorage.cacheData('metrics_weight_history', normalized);
-          return normalized
-              .map(BodyMetricModel.fromJson)
-              .toList(growable: false);
+    return _localStorage.sessionTask(() async {
+      try {
+        final response = await _apiClient.dio.get<dynamic>(
+          '/metrics/weight-history',
+        );
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final items = data['data'];
+          if (items is List) {
+            final normalized = items
+                .whereType<Map<String, dynamic>>()
+                .map(Map<String, dynamic>.from)
+                .toList(growable: false);
+            await _localStorage.cacheData('metrics_weight_history', normalized);
+            return normalized
+                .map(BodyMetricModel.fromJson)
+                .toList(growable: false);
+          }
         }
-      }
-      return [];
-    } catch (error) {
-      if (isOfflineError(error)) {
-        final cached = _localStorage.getCachedList('metrics_weight_history');
-        if (cached != null) {
-          return cached
-              .whereType<Map<String, dynamic>>()
-              .map(BodyMetricModel.fromJson)
-              .toList(growable: false);
+        return [];
+      } catch (error) {
+        if (isOfflineError(error)) {
+          final cached = _localStorage.getCachedList('metrics_weight_history');
+          if (cached != null) {
+            return cached
+                .whereType<Map<String, dynamic>>()
+                .map(BodyMetricModel.fromJson)
+                .toList(growable: false);
+          }
         }
+        return [];
       }
-      return [];
-    }
+    });
   }
 }

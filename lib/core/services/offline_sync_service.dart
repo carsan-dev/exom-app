@@ -1,3 +1,4 @@
+import 'package:exom_app/core/utils/operation_id.dart';
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -27,8 +28,8 @@ class OfflineSyncService {
   final bool Function() _isAuthenticated;
   final Stream<bool> Function() _authenticationChanges;
   final Stream<bool> _connectivityChanges;
-  final AsyncMutex _queueMutex = AsyncMutex();
-  final AsyncMutex _syncMutex = AsyncMutex();
+  static final AsyncMutex _queueMutex = AsyncMutex();
+  static final AsyncMutex _syncMutex = AsyncMutex();
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   StreamSubscription<bool>? _authSubscription;
@@ -66,7 +67,6 @@ class OfflineSyncService {
     }
 
     _initialized = true;
-    await _recoverInterruptedActions();
     await _rebuildFailedActionProgressCaches();
 
     _authSubscription ??= _authenticationChanges().listen((authenticated) {
@@ -159,7 +159,9 @@ class OfflineSyncService {
           action['type'] == _completeTraining &&
           action['date'] == date &&
           action['training_id'] == trainingId &&
-          action['status'] != 'failed',
+          action['status'] != 'failed' &&
+          action['notes'] ==
+              (notes?.trim().isEmpty == false ? notes!.trim() : null),
     );
     await _updateTrainingCompletionCache(
       date,
@@ -190,14 +192,18 @@ class OfflineSyncService {
   }
 
   Future<void> syncPendingActions() {
-    return _syncMutex.protect(_syncPendingActionsLocked);
+    return _localStorage.withSession(
+      () => _syncMutex.protect(_syncPendingActionsLocked),
+    );
   }
 
   Future<void> _syncAfterReconnect() {
-    return _syncMutex.protect(() async {
-      await _makeQueuedActionsEligibleNow();
-      await _syncPendingActionsLocked();
-    });
+    return _localStorage.withSession(
+      () => _syncMutex.protect(() async {
+        await _makeQueuedActionsEligibleNow();
+        await _syncPendingActionsLocked();
+      }),
+    );
   }
 
   Future<void> _syncPendingActionsLocked() async {
@@ -205,28 +211,35 @@ class OfflineSyncService {
       return;
     }
 
+    await _recoverInterruptedActions();
+    final session = _localStorage.sessionStamp;
+    bool current() =>
+        session != null &&
+        _localStorage.sessionStamp == session &&
+        _isAuthenticated();
     if (_localStorage.getPendingSyncActions().isEmpty) {
       return;
     }
 
     final visitedIds = <String>{};
     while (true) {
-      if (!_isAuthenticated()) break;
+      if (!current()) break;
       final action = await _claimNextAction(visitedIds);
       if (action == null) break;
       final id = action['id'] as String;
       visitedIds.add(id);
       try {
+        if (_localStorage.sessionStamp != session) break;
+        if (!current()) {
+          await _mutateById(id, (current) => {...current, 'status': 'queued'});
+          break;
+        }
+        final acknowledgedRevision = await _replayAction(action);
         if (!_isAuthenticated()) {
           await _mutateById(id, (current) => {...current, 'status': 'queued'});
           break;
         }
-        await _replayAction(action);
-        if (!_isAuthenticated()) {
-          await _mutateById(id, (current) => {...current, 'status': 'queued'});
-          break;
-        }
-        await _removeById(id);
+        await _acknowledgeAction(id, acknowledgedRevision);
       } on _FeedbackDependencyPending {
         await _mutateById(id, (current) => {...current, 'status': 'queued'});
       } on DioException catch (error) {
@@ -236,21 +249,43 @@ class OfflineSyncService {
         }
         final statusCode = error.response?.statusCode;
         final offline = isOfflineError(error);
+        final errorData = error.response?.data;
+        final conflict =
+            errorData is Map &&
+            (errorData['code'] == 'PROGRESS_VERSION_CONFLICT' ||
+                errorData['code'] == 'PROGRESS_OPERATION_CONFLICT');
         final retryable =
-            offline ||
-            statusCode == 401 ||
-            statusCode == 409 ||
-            statusCode == 429 ||
-            (statusCode != null && statusCode >= 500);
+            !conflict &&
+            (offline ||
+                statusCode == 401 ||
+                statusCode == 409 ||
+                statusCode == 429 ||
+                (statusCode != null && statusCode >= 500));
+        if (conflict && errorData['current_progress'] is Map<String, dynamic>) {
+          await _cacheProgressResponse(
+            Response(
+              requestOptions: error.requestOptions,
+              data: errorData['current_progress'],
+            ),
+            action['date'] as String,
+          );
+        }
         await _recordReplayFailure(
           id,
           action,
-          error.message ?? error.toString(),
+          conflict
+              ? 'progress_conflict_review_required'
+              : (errorData is Map && errorData['code'] is String
+                    ? errorData['code'] as String
+                    : 'sync_request_failed'),
           retryable: retryable,
           retryIndefinitely: offline,
         );
       } catch (error) {
-        debugPrint('[SYNC] Keeping invalid action visible: $action ($error)');
+        if (_localStorage.sessionStamp != session) break;
+        debugPrint(
+          '[SYNC] Invalid action type=${action['type']} cause=${error.runtimeType}',
+        );
         await _recordReplayFailure(
           id,
           action,
@@ -332,14 +367,18 @@ class OfflineSyncService {
 
   Future<void> _rebuildProgressCachesAfterFailure(String? date) async {
     if (date == null) return;
-    await _saveProgressCache(date, {
-      'date': date,
-      'training_completed': false,
-      'trainings_completed': <String>[],
-      'exercises_completed': <Map<String, dynamic>>[],
-      'meals_completed': <String>[],
-      'notes': null,
-    });
+    await _saveProgressCache(
+      date,
+      _localStorage.getCachedMap('server_progress_$date') ??
+          {
+            'date': date,
+            'training_completed': false,
+            'trainings_completed': <String>[],
+            'exercises_completed': <Map<String, dynamic>>[],
+            'meals_completed': <String>[],
+            'notes': null,
+          },
+    );
   }
 
   Future<bool> _enqueueAction(
@@ -349,10 +388,41 @@ class OfflineSyncService {
     var enqueued = false;
     await _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
-      if (isDuplicate != null && queue.any(isDuplicate)) return;
+      final existingForDate = queue
+          .where((entry) => entry['date'] == action['date'])
+          .toList();
+      if (isDuplicate != null &&
+          existingForDate.isNotEmpty &&
+          isDuplicate(existingForDate.last)) {
+        return;
+      }
+      final sameDate = queue
+          .where(
+            (entry) =>
+                entry['date'] == action['date'] && entry['format_version'] == 2,
+          )
+          .toList();
+      if (existingForDate.isEmpty) {
+        final canonical = _localStorage.getCachedMap(
+          'day_progress_${action['date']}',
+        );
+        if (canonical != null) {
+          await _localStorage.cacheData(
+            'server_progress_${action['date']}',
+            canonical,
+          );
+        }
+      }
       queue.add({
         ...action,
-        'id': DateTime.now().microsecondsSinceEpoch.toString(),
+        'expected_revision':
+            _localStorage.getCachedMap(
+              'day_progress_${action['date']}',
+            )?['sync_revision'] ??
+            0,
+        if (sameDate.isNotEmpty) 'predecessor_id': sameDate.last['id'],
+        ..._localStorage.queueIdentity,
+        'id': newOperationId(),
         'status': 'queued',
         'attempts': 0,
         'queued_at': DateTime.now().toUtc().toIso8601String(),
@@ -421,7 +491,10 @@ class OfflineSyncService {
 
   Future<void> retryAction(String id) async {
     await _mutateById(id, (action) {
-      if (action['status'] != 'failed') return action;
+      if (action['status'] != 'failed' ||
+          action['last_error'] == 'progress_conflict_review_required') {
+        return action;
+      }
       return {
         ...action,
         'status': 'queued',
@@ -433,9 +506,28 @@ class OfflineSyncService {
     await syncPendingActions();
   }
 
-  Future<void> discardAction(String id) async {
-    await _removeById(id);
-  }
+  Future<void> discardAction(String id) => _localStorage.withSession(() async {
+    String? date;
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      final index = queue.indexWhere((entry) => entry['id'] == id);
+      if (index < 0 || queue[index]['status'] == 'uploading') return;
+      date = queue[index]['date'] as String?;
+      queue.removeAt(index);
+      for (var i = index; i < queue.length; i++) {
+        if (queue[i]['date'] == date) {
+          queue[i] = {
+            ...queue[i],
+            'status': 'failed',
+            'last_error': 'progress_conflict_review_required',
+          };
+        }
+      }
+      await _persistQueue(queue);
+    });
+    if (date != null) await _rebuildProgressCachesAfterFailure(date);
+    _changes.add(null);
+  });
 
   List<Map<String, dynamic>> get pendingActions =>
       _localStorage.getPendingSyncActions();
@@ -449,7 +541,17 @@ class OfflineSyncService {
     await _localStorage.savePendingSyncActions(queue);
   }
 
-  Future<void> _replayAction(Map<String, dynamic> action) async {
+  Future<int?> _replayAction(Map<String, dynamic> action) async {
+    _localStorage.guardSession();
+    final options = action['format_version'] == 2
+        ? Options(
+            headers: {
+              'x-exom-operation-id': action['id'],
+              'x-exom-revision': action['expected_revision'],
+            },
+            extra: {'exom.auth.expectedOwner': action['owner_id']},
+          )
+        : null;
     final type = action['type'] as String?;
     final date = action['date'] as String?;
 
@@ -463,7 +565,7 @@ class OfflineSyncService {
     final feedbackQueue = _localStorage.getFeedbackUploadQueue();
     if (dependencies.any((id) {
       final matches = feedbackQueue.where((item) => item['id'] == id);
-      return matches.isNotEmpty && matches.first['status'] != 'completed';
+      return matches.isEmpty || matches.first['status'] != 'completed';
     })) {
       throw const _FeedbackDependencyPending();
     }
@@ -479,15 +581,16 @@ class OfflineSyncService {
         final feedbackId =
             action['last_set_feedback_client_upload_id'] as String?;
         if (feedbackId != null &&
-            _localStorage.getFeedbackUploadQueue().any(
+            !_localStorage.getFeedbackUploadQueue().any(
               (item) =>
-                  item['id'] == feedbackId && item['status'] != 'completed',
+                  item['id'] == feedbackId && item['status'] == 'completed',
             )) {
           throw const _FeedbackDependencyPending();
         }
         final sets = _setPerformancesForReplay(action['sets']);
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/exercises/complete',
+          options: options,
           data: {
             'exercise_id': exerciseId,
             'training_exercise_id': trainingExerciseId,
@@ -498,8 +601,13 @@ class OfflineSyncService {
             'last_set_feedback_client_upload_id': ?feedbackId,
           },
         );
-        await _cacheProgressResponse(response, date);
-        return;
+        return _cacheProgressResponse(
+          response,
+          date,
+          acknowledgedId: action['format_version'] == 2
+              ? action['id'] as String
+              : null,
+        );
       case _unmarkExerciseCompleted:
         final trainingExerciseId =
             action['training_exercise_id'] as String? ??
@@ -511,13 +619,20 @@ class OfflineSyncService {
         }
         final response = await _apiClient.dio.delete<dynamic>(
           '/progress/exercises/$trainingExerciseId',
+          options: options,
           queryParameters: {'date': date},
         );
-        await _cacheProgressResponse(response, date);
-        return;
+        return _cacheProgressResponse(
+          response,
+          date,
+          acknowledgedId: action['format_version'] == 2
+              ? action['id'] as String
+              : null,
+        );
       case _completeTraining:
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/trainings/complete',
+          options: options,
           data: {
             'date': date,
             if (action['training_id'] != null)
@@ -525,8 +640,13 @@ class OfflineSyncService {
             if (action['notes'] != null) 'notes': action['notes'],
           },
         );
-        await _cacheProgressResponse(response, date);
-        return;
+        return _cacheProgressResponse(
+          response,
+          date,
+          acknowledgedId: action['format_version'] == 2
+              ? action['id'] as String
+              : null,
+        );
       case _markMealCompleted:
         final mealId = action['meal_id'] as String?;
         if (mealId == null) {
@@ -534,10 +654,16 @@ class OfflineSyncService {
         }
         final response = await _apiClient.dio.post<dynamic>(
           '/progress/meals/complete',
+          options: options,
           data: {'meal_id': mealId, 'date': date},
         );
-        await _cacheProgressResponse(response, date);
-        return;
+        return _cacheProgressResponse(
+          response,
+          date,
+          acknowledgedId: action['format_version'] == 2
+              ? action['id'] as String
+              : null,
+        );
       case _unmarkMealCompleted:
         final mealId = action['meal_id'] as String?;
         if (mealId == null) {
@@ -545,10 +671,16 @@ class OfflineSyncService {
         }
         final response = await _apiClient.dio.delete<dynamic>(
           '/progress/meals/$mealId',
+          options: options,
           queryParameters: {'date': date},
         );
-        await _cacheProgressResponse(response, date);
-        return;
+        return _cacheProgressResponse(
+          response,
+          date,
+          acknowledgedId: action['format_version'] == 2
+              ? action['id'] as String
+              : null,
+        );
       default:
         throw StateError('Unsupported pending sync action type: $type');
     }
@@ -586,15 +718,26 @@ class OfflineSyncService {
     return _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
       final index = queue.indexWhere((action) {
+        if (!_localStorage.ownsEntry(action)) return false;
         if (excludedIds.contains(action['id'])) return false;
         if (action['status'] != 'queued') return false;
+        if (action['format_version'] == 2 &&
+            queue
+                .takeWhile((entry) => entry['id'] != action['id'])
+                .any((entry) => entry['date'] == action['date'])) {
+          return false;
+        }
         final next = DateTime.tryParse(
           action['next_attempt_at'] as String? ?? '',
         );
         return next == null || !next.isAfter(DateTime.now());
       });
       if (index < 0) return null;
-      final claimed = {...queue[index], 'status': 'uploading'};
+      final claimed = {
+        ...queue[index],
+        'status': 'uploading',
+        'claimed_at': DateTime.now().toUtc().toIso8601String(),
+      };
       queue[index] = claimed;
       await _persistQueue(queue);
       _changes.add(null);
@@ -616,13 +759,33 @@ class OfflineSyncService {
     });
   }
 
-  Future<void> _removeById(String id) {
+  Future<void> _acknowledgeAction(String id, int? revision) {
     return _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions()
-        ..removeWhere((action) => action['id'] == id);
+        ..removeWhere((entry) => entry['id'] == id);
+      for (var index = 0; index < queue.length; index++) {
+        if (queue[index]['predecessor_id'] != id) continue;
+        queue[index] = {
+          ...queue[index],
+          if (revision is int) 'expected_revision': revision,
+        }..remove('predecessor_id');
+      }
       await _persistQueue(queue);
       _changes.add(null);
     });
+  }
+
+  Future<void> syncForDate(String date) async {
+    await syncPendingActions();
+    final failures = pendingActions.where(
+      (action) => action['date'] == date && action['status'] == 'failed',
+    );
+    if (failures.isNotEmpty) {
+      throw ApiException(
+        statusCode: 409,
+        message: failures.first['last_error'] as String? ?? 'sync_failed',
+      );
+    }
   }
 
   Future<void> _updateExerciseProgressCache(
@@ -760,8 +923,9 @@ class OfflineSyncService {
 
   Future<void> _saveProgressCache(
     String date,
-    Map<String, dynamic> progress,
-  ) async {
+    Map<String, dynamic> progress, {
+    String? acknowledgedId,
+  }) async {
     final normalizedExercises = _getExerciseEntries(progress);
     final normalizedMeals = _getMealIds(
       progress,
@@ -773,7 +937,10 @@ class OfflineSyncService {
         'exercises_completed': normalizedExercises,
         'meals_completed': normalizedMeals,
       },
-      actions: _localStorage.getPendingSyncActions(),
+      actions: _localStorage
+          .getPendingSyncActions()
+          .where((entry) => entry['id'] != acknowledgedId)
+          .toList(),
       date: date,
     );
     final persistedExercises = _getExerciseEntries(normalized);
@@ -844,16 +1011,26 @@ class OfflineSyncService {
     return rawMeals.map((entry) => entry.toString()).toList(growable: true);
   }
 
-  Future<void> _cacheProgressResponse(
+  Future<int?> _cacheProgressResponse(
     Response<dynamic> response,
-    String date,
-  ) async {
+    String date, {
+    String? acknowledgedId,
+  }) async {
     final data = response.data;
     if (data is! Map<String, dynamic>) {
-      return;
+      if (acknowledgedId != null) {
+        throw StateError('progress_receipt_missing');
+      }
+      return null;
     }
 
     final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-    await _saveProgressCache(date, inner);
+    final revision = inner['operation_revision'] ?? inner['sync_revision'];
+    if (acknowledgedId != null && revision is! int) {
+      throw StateError('progress_receipt_missing');
+    }
+    await _localStorage.cacheData('server_progress_$date', inner);
+    await _saveProgressCache(date, inner, acknowledgedId: acknowledgedId);
+    return revision is int ? revision : null;
   }
 }

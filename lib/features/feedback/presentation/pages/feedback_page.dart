@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -135,6 +137,7 @@ class FeedbackPage extends StatelessWidget {
                         exerciseId: args?.exercise?.exerciseId,
                         exerciseName: args?.exercise?.exerciseName,
                       ),
+                    FeedbackQueuePanel(queue: sl<FeedbackUploadQueueService>()),
                     if (items.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -208,6 +211,9 @@ class CircuitFeedbackForm extends StatefulWidget {
 }
 
 class _CircuitFeedbackFormState extends State<CircuitFeedbackForm> {
+  final String? _ownerSession = sl.isRegistered<LocalStorage>()
+      ? sl<LocalStorage>().sessionStamp
+      : null;
   final Map<String, File> _selectedFiles = {};
   final Map<String, TextEditingController> _notesControllers = {};
   bool _isQueueing = false;
@@ -232,6 +238,7 @@ class _CircuitFeedbackFormState extends State<CircuitFeedbackForm> {
     final customEnqueue = widget.enqueue;
     if (customEnqueue != null) return customEnqueue(upload);
     await sl<FeedbackUploadQueueService>().enqueue(
+      expectedSession: _ownerSession,
       file: upload.file,
       contentType: _feedbackContentType(upload.file, 'VIDEO'),
       mediaType: 'VIDEO',
@@ -570,6 +577,9 @@ class _FeedbackForm extends StatefulWidget {
 }
 
 class _FeedbackFormState extends State<_FeedbackForm> {
+  final String? _ownerSession = sl.isRegistered<LocalStorage>()
+      ? sl<LocalStorage>().sessionStamp
+      : null;
   final _notesController = TextEditingController();
   String _mediaType = 'IMAGE';
   File? _selectedFile;
@@ -593,6 +603,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     setState(() => _isQueueing = true);
     try {
       await sl<FeedbackUploadQueueService>().enqueue(
+        expectedSession: _ownerSession,
         file: _selectedFile!,
         contentType: _contentType(),
         mediaType: _mediaType,

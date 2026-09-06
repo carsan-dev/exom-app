@@ -2567,4 +2567,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pendingSyncDeleteMessage =>
       'This pending action will be deleted. The local change will no longer be retried.';
+
+  @override
+  String get pendingUploadProcessingStatus => 'Processing';
+
+  @override
+  String get pendingUploadLegacyRecovery =>
+      'Local data from an earlier version has no verified owner. It is kept without sending. Contact support to verify its original account and recover it.';
+
+  @override
+  String get pendingSyncConflict =>
+      'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
 }

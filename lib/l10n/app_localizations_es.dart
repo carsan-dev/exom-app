@@ -2594,4 +2594,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get pendingSyncDeleteMessage =>
       'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.';
+
+  @override
+  String get pendingUploadProcessingStatus => 'Procesando';
+
+  @override
+  String get pendingUploadLegacyRecovery =>
+      'Hay datos locales de una versión anterior sin propietario verificado. Se conservan sin enviar. Contacta con soporte para verificar su cuenta de origen y recuperarlos.';
+
+  @override
+  String get pendingSyncConflict =>
+      'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.';
 }

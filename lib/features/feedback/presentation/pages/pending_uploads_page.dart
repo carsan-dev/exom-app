@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
 
 import 'package:flutter/material.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
@@ -113,9 +114,21 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                         ? Icons.videocam_outlined
                         : Icons.image_outlined,
                     title: _statusLabel(l10n, item['status'] as String?),
+                    uploadStatus: FeedbackUploadStatus(
+                      status: item['status'] as String? ?? 'queued',
+                      progress: _queue.progressOf(item['id'] as String),
+                    ),
                     attempts: item['attempts'] as int? ?? 0,
-                    lastError: item['last_error'] as String?,
-                    onRetry: item['status'] == 'failed'
+                    lastError:
+                        item['last_error'] ==
+                            'progress_conflict_review_required'
+                        ? l10n.pendingSyncConflict
+                        : item['last_error'] as String?,
+                    onRetry:
+                        item['status'] == 'failed' &&
+                            item['last_error'] !=
+                                'progress_conflict_review_required' &&
+                            item['discard_requested'] != true
                         ? () => _retry(item['id'] as String)
                         : null,
                     onDelete: () => _discard(item['id'] as String),
@@ -136,7 +149,11 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       title: _statusLabel(l10n, item['status'] as String?),
                       attempts: item['attempts'] as int? ?? 0,
                       lastError: item['last_error'] as String?,
-                      onRetry: item['status'] == 'failed'
+                      onRetry:
+                          item['status'] == 'failed' &&
+                              item['last_error'] !=
+                                  'progress_conflict_review_required' &&
+                              item['discard_requested'] != true
                           ? () => _retrySync(item['id'] as String)
                           : null,
                       onDelete: () => _discardSync(item['id'] as String),
@@ -167,8 +184,10 @@ class _PendingItemTile extends StatelessWidget {
     required this.lastError,
     required this.onRetry,
     required this.onDelete,
+    this.uploadStatus,
   });
 
+  final Widget? uploadStatus;
   final IconData icon;
   final String title;
   final int attempts;
@@ -182,7 +201,7 @@ class _PendingItemTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(icon),
-        title: Text(title),
+        title: uploadStatus ?? Text(title),
         subtitle: Text(
           [
             l10n.pendingUploadAttempts(attempts),
@@ -195,6 +214,7 @@ class _PendingItemTile extends StatelessWidget {
             if (onRetry != null)
               IconButton(
                 tooltip: l10n.pendingUploadRetry,
+                color: Theme.of(context).colorScheme.primary,
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
               ),

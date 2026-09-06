@@ -4549,6 +4549,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.'**
   String get pendingSyncDeleteMessage;
+
+  /// No description provided for @pendingUploadProcessingStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Procesando'**
+  String get pendingUploadProcessingStatus;
+
+  /// No description provided for @pendingUploadLegacyRecovery.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay datos locales de una versión anterior sin propietario verificado. Se conservan sin enviar. Contacta con soporte para verificar su cuenta de origen y recuperarlos.'**
+  String get pendingUploadLegacyRecovery;
+
+  /// No description provided for @pendingSyncConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.'**
+  String get pendingSyncConflict;
 }
 
 class _AppLocalizationsDelegate

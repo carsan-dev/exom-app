@@ -16,8 +16,12 @@ Useful variants:
 ```bat
 scripts\run-android-dev.cmd -DeviceId RZGYA0Q2ADV
 scripts\run-android-dev.cmd -SkipRun
+scripts\run-android-dev.cmd --dart-define=EXOM_SKIP_UPDATE_CHECK=true
 scripts\run-android-dev.cmd --dart-define=EXOM_API_BASE_URL=http://192.168.1.20:3000/api/v1
 ```
+
+`EXOM_SKIP_UPDATE_CHECK` is honored only by debug builds and is intended for
+local testing.
 
 By default the script:
 

@@ -12,6 +12,10 @@ import 'package:exom_app/core/models/mobile_app_config_model.dart';
 class AppUpdateService {
   AppUpdateService(this._apiClient, this._packageInfo);
 
+  static const _skipUpdateCheck = bool.fromEnvironment(
+    'EXOM_SKIP_UPDATE_CHECK',
+  );
+
   final ApiClient _apiClient;
   final PackageInfo _packageInfo;
 
@@ -19,6 +23,11 @@ class AppUpdateService {
       '${_packageInfo.version} ($_currentBuildNumber)';
 
   Future<AppUpdateDecision> checkForUpdates() async {
+    if (kDebugMode && _skipUpdateCheck) {
+      debugPrint('[APP_UPDATE] Skipping update check for debug testing');
+      return _upToDateDecision();
+    }
+
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return _upToDateDecision();
     }

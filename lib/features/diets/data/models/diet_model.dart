@@ -90,6 +90,58 @@ class MealModel {
   }
 }
 
+class DietHistoryEntryModel {
+  final DietModel diet;
+  final bool legacyAvailable;
+
+  const DietHistoryEntryModel({
+    required this.diet,
+    required this.legacyAvailable,
+  });
+
+  factory DietHistoryEntryModel.fromJson(Map<String, dynamic> json) {
+    if (json['version'] != 1) {
+      throw const FormatException('Unsupported diet history version');
+    }
+    return DietHistoryEntryModel(
+      diet: DietModel.fromJson(json['diet'] as Map<String, dynamic>),
+      legacyAvailable: json['provenance'] == 'legacy_available',
+    );
+  }
+}
+
+class DietHistoryModel {
+  final List<DietHistoryEntryModel> entries;
+  final List<String> unresolvedMealIds;
+
+  const DietHistoryModel({
+    required this.entries,
+    required this.unresolvedMealIds,
+  });
+
+  factory DietHistoryModel.fromProgress(Map<String, dynamic> json) {
+    final entries = (json['diet_history'] as List? ?? const [])
+        .map(
+          (entry) =>
+              DietHistoryEntryModel.fromJson(entry as Map<String, dynamic>),
+        )
+        .toList(growable: false);
+    final knownIds = entries
+        .expand((entry) => entry.diet.meals)
+        .expand(
+          (meal) => [meal.id, ...meal.variants.map((variant) => variant.id)],
+        )
+        .toSet();
+    return DietHistoryModel(
+      entries: entries,
+      unresolvedMealIds: (json['meals_completed'] as List? ?? const [])
+          .whereType<String>()
+          .where((id) => !knownIds.contains(id))
+          .toList(growable: false),
+    );
+  }
+}
+
 class DietModel {
   final String id;
   final String name;

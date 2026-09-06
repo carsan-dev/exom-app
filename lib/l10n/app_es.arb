@@ -903,6 +903,12 @@
   "optionalComment": "Comentario opcional",
   "changeVideo": "Cambiar",
   "useVideo": "Usar vídeo",
+  "dietHistoryTitle": "Histórico de dietas",
+  "dietHistoryReadOnly": "Solo lectura. Estas copias no cambian tu plan actual.",
+  "dietHistoryEmpty": "No hay copias conservadas para esta fecha.",
+  "dietHistoryLegacy": "Contenido disponible al migrar; puede no reflejar ediciones anteriores.",
+  "dietHistoryMissing": "Hay comidas registradas sin detalle histórico conservado:",
+  "dietHistoryLoadError": "No se pudo cargar el histórico. Cierra y vuelve a intentarlo.",
   "pendingSyncFailuresTitle": "Acciones pendientes con error",
   "pendingSyncFailedStatus": "No se pudo sincronizar el progreso",
   "pendingSyncDeleteMessage": "Se eliminará esta acción pendiente. El cambio local dejará de intentarse."

@@ -11,6 +11,22 @@ class DietRepositoryImpl implements DietRepository {
   const DietRepositoryImpl(this._remoteDataSource);
 
   @override
+  Future<DietHistory> getDietHistory({String? date}) async {
+    final history = await _remoteDataSource.getDietHistory(date: date);
+    return DietHistory(
+      entries: history.entries
+          .map(
+            (entry) => DietHistoryEntry(
+              diet: _mapToEntity(entry.diet),
+              legacyAvailable: entry.legacyAvailable,
+            ),
+          )
+          .toList(growable: false),
+      unresolvedMealIds: history.unresolvedMealIds,
+    );
+  }
+
+  @override
   Future<DietEntity?> getTodayDiet({String? date}) async {
     final model = await _remoteDataSource.getTodayDiet(date: date);
     if (model == null) return null;

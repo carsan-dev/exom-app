@@ -2537,6 +2537,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useVideo => 'Use video';
 
   @override
+  String get dietHistoryTitle => 'Diet history';
+
+  @override
+  String get dietHistoryReadOnly =>
+      'Read only. These copies do not change your current plan.';
+
+  @override
+  String get dietHistoryEmpty => 'No preserved copies for this date.';
+
+  @override
+  String get dietHistoryLegacy =>
+      'Content available at migration; earlier edits may not be reflected.';
+
+  @override
+  String get dietHistoryMissing =>
+      'Some recorded meals have no preserved historical detail:';
+
+  @override
+  String get dietHistoryLoadError =>
+      'History could not be loaded. Close and try again.';
+
+  @override
   String get pendingSyncFailuresTitle => 'Pending actions with errors';
 
   @override

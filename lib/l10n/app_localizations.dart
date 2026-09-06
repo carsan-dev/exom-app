@@ -4496,6 +4496,42 @@ abstract class AppLocalizations {
   /// **'Usar vídeo'**
   String get useVideo;
 
+  /// No description provided for @dietHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Histórico de dietas'**
+  String get dietHistoryTitle;
+
+  /// No description provided for @dietHistoryReadOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo lectura. Estas copias no cambian tu plan actual.'**
+  String get dietHistoryReadOnly;
+
+  /// No description provided for @dietHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay copias conservadas para esta fecha.'**
+  String get dietHistoryEmpty;
+
+  /// No description provided for @dietHistoryLegacy.
+  ///
+  /// In es, this message translates to:
+  /// **'Contenido disponible al migrar; puede no reflejar ediciones anteriores.'**
+  String get dietHistoryLegacy;
+
+  /// No description provided for @dietHistoryMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay comidas registradas sin detalle histórico conservado:'**
+  String get dietHistoryMissing;
+
+  /// No description provided for @dietHistoryLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el histórico. Cierra y vuelve a intentarlo.'**
+  String get dietHistoryLoadError;
+
   /// No description provided for @pendingSyncFailuresTitle.
   ///
   /// In es, this message translates to:

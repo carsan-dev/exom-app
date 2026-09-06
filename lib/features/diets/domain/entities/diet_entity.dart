@@ -64,6 +64,20 @@ class DietEntity {
   });
 }
 
+class DietHistoryEntry {
+  final DietEntity diet;
+  final bool legacyAvailable;
+
+  const DietHistoryEntry({required this.diet, required this.legacyAvailable});
+}
+
+class DietHistory {
+  final List<DietHistoryEntry> entries;
+  final List<String> unresolvedMealIds;
+
+  const DietHistory({required this.entries, required this.unresolvedMealIds});
+}
+
 class RemainingDietMacros {
   final int? calories;
   final double? proteinG;

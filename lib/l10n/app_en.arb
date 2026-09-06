@@ -868,6 +868,12 @@
   "optionalComment": "Optional comment",
   "changeVideo": "Change",
   "useVideo": "Use video",
+  "dietHistoryTitle": "Diet history",
+  "dietHistoryReadOnly": "Read only. These copies do not change your current plan.",
+  "dietHistoryEmpty": "No preserved copies for this date.",
+  "dietHistoryLegacy": "Content available at migration; earlier edits may not be reflected.",
+  "dietHistoryMissing": "Some recorded meals have no preserved historical detail:",
+  "dietHistoryLoadError": "History could not be loaded. Close and try again.",
   "pendingSyncFailuresTitle": "Pending actions with errors",
   "pendingSyncFailedStatus": "Progress could not be synced",
   "pendingSyncDeleteMessage": "This pending action will be deleted. The local change will no longer be retried."

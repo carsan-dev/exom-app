@@ -9,6 +9,8 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
+import 'package:exom_app/features/diets/presentation/widgets/diet_history_button.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 import 'package:exom_app/injection_container.dart';
@@ -22,7 +24,14 @@ class DietsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<DietBloc>()..add(DietLoadRequested(date: selectedDate)),
-      child: _DietsView(selectedDate: selectedDate),
+      child: Column(
+        children: [
+          Expanded(child: _DietsView(selectedDate: selectedDate)),
+          DietHistoryButton(
+            load: () => sl<DietRepository>().getDietHistory(date: selectedDate),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2564,6 +2564,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get useVideo => 'Usar vídeo';
 
   @override
+  String get dietHistoryTitle => 'Histórico de dietas';
+
+  @override
+  String get dietHistoryReadOnly =>
+      'Solo lectura. Estas copias no cambian tu plan actual.';
+
+  @override
+  String get dietHistoryEmpty => 'No hay copias conservadas para esta fecha.';
+
+  @override
+  String get dietHistoryLegacy =>
+      'Contenido disponible al migrar; puede no reflejar ediciones anteriores.';
+
+  @override
+  String get dietHistoryMissing =>
+      'Hay comidas registradas sin detalle histórico conservado:';
+
+  @override
+  String get dietHistoryLoadError =>
+      'No se pudo cargar el histórico. Cierra y vuelve a intentarlo.';
+
+  @override
   String get pendingSyncFailuresTitle => 'Acciones pendientes con error';
 
   @override

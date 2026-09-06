@@ -9,6 +9,7 @@ import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
 import 'package:exom_app/features/diets/data/models/monthly_diet_model.dart';
 
 abstract class DietRemoteDataSource {
+  Future<DietHistoryModel> getDietHistory({String? date});
   Future<DietModel?> getTodayDiet({String? date});
   Future<WeeklyDietModel> getWeeklyDiet(String weekStart);
   Future<MonthlyDietModel> getMonthlyDiet(int year, int month);
@@ -115,6 +116,29 @@ class DietRemoteDataSourceImpl implements DietRemoteDataSource {
         }
       }
 
+      rethrow;
+    }
+  }
+
+  @override
+  Future<DietHistoryModel> getDietHistory({String? date}) async {
+    final targetDate = _resolvedDate(date);
+    final cacheKey = 'diet_history_$targetDate';
+    try {
+      final response = await _apiClient.dio.get<dynamic>(
+        '/progress',
+        queryParameters: {'date': targetDate},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final progress = (data['data'] as Map<String, dynamic>?) ?? data;
+      final history = DietHistoryModel.fromProgress(progress);
+      await _localStorage.cacheData(cacheKey, progress);
+      return history;
+    } catch (error) {
+      if (isOfflineError(error)) {
+        final cached = _localStorage.getCachedMap(cacheKey);
+        if (cached != null) return DietHistoryModel.fromProgress(cached);
+      }
       rethrow;
     }
   }

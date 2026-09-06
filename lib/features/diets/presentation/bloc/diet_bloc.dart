@@ -101,7 +101,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     try {
       final targetDate = _resolvedDate(event.date);
       final results = await Future.wait([
-        _getMealUseCase(event.mealId),
+        _getMealUseCase(event.mealId, date: targetDate),
         _getCompletedMealsUseCase(targetDate),
       ]);
       final meal = results[0] as MealEntity;

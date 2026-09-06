@@ -243,16 +243,14 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     Emitter<TrainingState> emit,
   ) async {
     final current = state;
-    if (current is! TrainingDetailLoaded) {
+    if (current is! TrainingDetailLoaded || current.isCompleting) {
       return;
     }
 
     final allExerciseIds = current.training.exercises
         .map((trainingExercise) => trainingExercise.id)
         .toSet();
-    final previous = Set<String>.from(current.completedExerciseIds);
-
-    emit(current.copyWith(completedExerciseIds: allExerciseIds));
+    emit(current.copyWith(isCompleting: true));
 
     try {
       await _completeTrainingUseCase(
@@ -260,10 +258,27 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         trainingId: current.training.id,
         notes: event.notes,
       );
+      final latest = state;
+      if (latest is TrainingDetailLoaded &&
+          latest.training.id == current.training.id &&
+          latest.selectedDate == current.selectedDate) {
+        emit(
+          latest.copyWith(
+            completedExerciseIds: allExerciseIds,
+            isCompleting: false,
+          ),
+        );
+      }
     } catch (error) {
+      final latest = state;
+      if (latest is! TrainingDetailLoaded ||
+          latest.training.id != current.training.id ||
+          latest.selectedDate != current.selectedDate) {
+        return;
+      }
       emit(
-        current.copyWith(
-          completedExerciseIds: previous,
+        latest.copyWith(
+          isCompleting: false,
           errorMessage:
               ApiException.maybeFrom(error)?.message ??
               'No se pudo completar el entrenamiento. Inténtalo de nuevo.',

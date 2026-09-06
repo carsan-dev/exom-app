@@ -904,61 +904,72 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           key: const Key('complete-training-button'),
-                          onPressed: () async {
-                            if (_completeConfirmationOpen) return;
-                            if (allDone) {
-                              Navigator.of(context).pop(true);
-                              return;
-                            }
+                          onPressed: widget.state.isCompleting
+                              ? null
+                              : () async {
+                                  if (_completeConfirmationOpen) return;
+                                  if (allDone) {
+                                    Navigator.of(context).pop(true);
+                                    return;
+                                  }
 
-                            if (training.requiresLastSetVideo) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Completa cada ejercicio y adjunta el vídeo de su última serie.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
+                                  if (training.requiresLastSetVideo) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Completa cada ejercicio y adjunta el vídeo de su última serie.',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
 
-                            final missingRequiredPerformance = training
-                                .exercises
-                                .any(
-                                  (exercise) => !_hasRequiredSetPerformance(
-                                    exercise,
-                                    widget.state.currentPerformances[exercise
-                                        .id],
-                                  ),
-                                );
-                            if (missingRequiredPerformance) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    l10n.completeTrainingTrackingRequired,
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
+                                  final missingRequiredPerformance = training
+                                      .exercises
+                                      .any(
+                                        (
+                                          exercise,
+                                        ) => !_hasRequiredSetPerformance(
+                                          exercise,
+                                          widget
+                                              .state
+                                              .currentPerformances[exercise.id],
+                                        ),
+                                      );
+                                  if (missingRequiredPerformance) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.completeTrainingTrackingRequired,
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
 
-                            setState(() => _completeConfirmationOpen = true);
-                            final confirmed = await _confirmCompleteTraining(
-                              context,
-                              l10n,
-                            );
-                            if (!context.mounted) return;
-                            setState(() => _completeConfirmationOpen = false);
-                            if (!confirmed) return;
+                                  setState(
+                                    () => _completeConfirmationOpen = true,
+                                  );
+                                  final confirmed =
+                                      await _confirmCompleteTraining(
+                                        context,
+                                        l10n,
+                                      );
+                                  if (!context.mounted) return;
+                                  setState(
+                                    () => _completeConfirmationOpen = false,
+                                  );
+                                  if (!confirmed) return;
 
-                            context.read<TrainingBloc>().add(
-                              CompleteTrainingRequested(
-                                notes: _notesController.text.trim().isEmpty
-                                    ? null
-                                    : _notesController.text.trim(),
-                              ),
-                            );
-                          },
+                                  context.read<TrainingBloc>().add(
+                                    CompleteTrainingRequested(
+                                      notes:
+                                          _notesController.text.trim().isEmpty
+                                          ? null
+                                          : _notesController.text.trim(),
+                                    ),
+                                  );
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: allDone ? semantic.success : color,
                             foregroundColor: allDone

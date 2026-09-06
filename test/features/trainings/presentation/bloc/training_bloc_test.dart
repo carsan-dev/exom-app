@@ -1,3 +1,12 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hive/hive.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
+import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -13,8 +22,74 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('completion keeps selected date and exposes backend rejection', () async {
-    final repository = _FailingCompletionRepository();
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'real completion flow cancels without dispatch and confirms once ($brightness)',
+      (tester) async {
+        await sl.reset();
+        final repository = _DelayedCompletionRepository();
+        sl.registerFactory<TrainingBloc>(
+          () => TrainingBloc(
+            getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+            getTrainingsUseCase: GetTrainingsUseCase(repository),
+            getTrainingUseCase: GetTrainingUseCase(repository),
+            markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(
+              repository,
+            ),
+            unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(
+              repository,
+            ),
+            completeTrainingUseCase: CompleteTrainingUseCase(repository),
+            getCompletedExercisesUseCase: GetCompletedExercisesUseCase(
+              repository,
+            ),
+            getPreviousExercisePerformancesUseCase:
+                GetPreviousExercisePerformancesUseCase(repository),
+          ),
+        );
+        sl.registerSingleton<LocalStorage>(_PageStorage());
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(brightness: brightness),
+            locale: const Locale('es'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const TrainingDetailPage(
+              trainingId: 'training-1',
+              selectedDate: '2026-09-05',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('complete-training-button')));
+        await tester.pumpAndSettle();
+        expect(repository.calls, 0);
+        await tester.tap(find.byKey(const Key('cancel-complete-training')));
+        await tester.pumpAndSettle();
+        expect(repository.calls, 0);
+        await tester.tap(find.byKey(const Key('complete-training-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('confirm-complete-training')));
+        await tester.pumpAndSettle();
+        expect(repository.calls, 1);
+        final button = tester.widget<ElevatedButton>(
+          find.byKey(const Key('complete-training-button')),
+        );
+        expect(button.onPressed, isNull);
+        repository.release.complete();
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await sl.reset();
+      },
+    );
+  }
+  test('concurrent complete commands share one in-flight operation', () async {
+    final repository = _DelayedCompletionRepository();
     final bloc = TrainingBloc(
       getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
       getTrainingsUseCase: GetTrainingsUseCase(repository),
@@ -28,30 +103,59 @@ void main() {
       getPreviousExercisePerformancesUseCase:
           GetPreviousExercisePerformancesUseCase(repository),
     );
-    addTearDown(bloc.close);
-
     final loaded = bloc.stream.firstWhere(
       (state) => state is TrainingDetailLoaded,
     );
     bloc.add(
-      const TrainingDetailLoadRequested(
-        'training-1',
-        date: '2026-09-05',
-      ),
+      const TrainingDetailLoadRequested('training-1', date: '2026-09-05'),
     );
     await loaded;
-
-    final failed = bloc.stream.firstWhere(
-      (state) =>
-          state is TrainingDetailLoaded && state.errorMessage != null,
-    );
     bloc.add(const CompleteTrainingRequested());
-    final state = await failed as TrainingDetailLoaded;
-
-    expect(repository.completedDate, '2026-09-05');
-    expect(state.selectedDate, '2026-09-05');
-    expect(state.errorMessage, 'Entrenamiento no asignado para esa fecha');
+    await repository.started.future;
+    bloc.add(const CompleteTrainingRequested());
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.calls, 1);
+    repository.release.complete();
+    await bloc.close();
   });
+  test(
+    'completion keeps selected date and exposes backend rejection',
+    () async {
+      final repository = _FailingCompletionRepository();
+      final bloc = TrainingBloc(
+        getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+        getTrainingsUseCase: GetTrainingsUseCase(repository),
+        getTrainingUseCase: GetTrainingUseCase(repository),
+        markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+        unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(
+          repository,
+        ),
+        completeTrainingUseCase: CompleteTrainingUseCase(repository),
+        getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+        getPreviousExercisePerformancesUseCase:
+            GetPreviousExercisePerformancesUseCase(repository),
+      );
+      addTearDown(bloc.close);
+
+      final loaded = bloc.stream.firstWhere(
+        (state) => state is TrainingDetailLoaded,
+      );
+      bloc.add(
+        const TrainingDetailLoadRequested('training-1', date: '2026-09-05'),
+      );
+      await loaded;
+
+      final failed = bloc.stream.firstWhere(
+        (state) => state is TrainingDetailLoaded && state.errorMessage != null,
+      );
+      bloc.add(const CompleteTrainingRequested());
+      final state = await failed as TrainingDetailLoaded;
+
+      expect(repository.completedDate, '2026-09-05');
+      expect(state.selectedDate, '2026-09-05');
+      expect(state.errorMessage, 'Entrenamiento no asignado para esa fecha');
+    },
+  );
 }
 
 class _FailingCompletionRepository implements TrainingRepository {
@@ -119,3 +223,29 @@ class _FailingCompletionRepository implements TrainingRepository {
     String date,
   ) async {}
 }
+
+class _DelayedCompletionRepository extends _FailingCompletionRepository {
+  final started = Completer<void>();
+  final release = Completer<void>();
+  int calls = 0;
+  @override
+  Future<void> completeTraining(
+    String date, {
+    required String trainingId,
+    String? notes,
+  }) async {
+    calls++;
+    if (!started.isCompleted) started.complete();
+    await release.future;
+  }
+}
+
+class _PageStorage extends LocalStorage {
+  final notifier = ValueNotifier<Box<ActiveWorkoutHiveModel>>(
+    _EmptyWorkoutBox(),
+  );
+  @override
+  ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() => notifier;
+}
+
+class _EmptyWorkoutBox extends Fake implements Box<ActiveWorkoutHiveModel> {}

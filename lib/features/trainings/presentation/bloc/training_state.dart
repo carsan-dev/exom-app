@@ -44,6 +44,7 @@ class TrainingDetailLoaded extends TrainingState {
   final String? adminReplyText;
   final DateTime? adminReplySentAt;
   final String? errorMessage;
+  final bool isCompleting;
 
   const TrainingDetailLoaded(
     this.training, {
@@ -56,6 +57,7 @@ class TrainingDetailLoaded extends TrainingState {
     this.adminReplyText,
     this.adminReplySentAt,
     this.errorMessage,
+    this.isCompleting = false,
   });
 
   TrainingDetailLoaded copyWith({
@@ -69,6 +71,7 @@ class TrainingDetailLoaded extends TrainingState {
     String? adminReplyText,
     DateTime? adminReplySentAt,
     String? errorMessage,
+    bool? isCompleting,
   }) {
     return TrainingDetailLoaded(
       training ?? this.training,
@@ -81,6 +84,7 @@ class TrainingDetailLoaded extends TrainingState {
       adminReplyText: adminReplyText ?? this.adminReplyText,
       adminReplySentAt: adminReplySentAt ?? this.adminReplySentAt,
       errorMessage: errorMessage,
+      isCompleting: isCompleting ?? this.isCompleting,
     );
   }
 }

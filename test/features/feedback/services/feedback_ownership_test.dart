@@ -165,6 +165,70 @@ void main() {
     },
   );
   test(
+    'reconnect queued by A cannot wake B after account replacement',
+    () async {
+      final connectivity = StreamController<bool>();
+      final file = await File(
+        '${dir.path}/pending-reconnect.mp4',
+      ).writeAsBytes([1]);
+      await storage.saveFeedbackUploadQueue([
+        {
+          'id': 'A-pending',
+          'file_path': file.path,
+          'status': 'queued',
+          'content_type': 'video/mp4',
+          'media_type': 'VIDEO',
+          ...storage.queueIdentity,
+        },
+      ]);
+      final repository = BlockingFeedbackRepository();
+      final service = FeedbackUploadQueueService(
+        repository,
+        storage,
+        FakeOfflineSyncService(storage),
+        isAuthenticated: () => current != null,
+        connectivityChanges: connectivity.stream,
+      );
+      addTearDown(() async {
+        await service.dispose();
+        await connectivity.close();
+      });
+      final initialization = service.init();
+      await repository.firstUploadStarted.future;
+      connectivity.add(true);
+      await Future<void>.delayed(Duration.zero);
+      current = const LocalAuthSession(uid: 'B', generation: 2);
+      final nextAttempt = DateTime.now()
+          .add(const Duration(hours: 1))
+          .toIso8601String();
+      await storage.saveFeedbackUploadQueue([
+        {
+          'id': 'B-pending',
+          'file_path': file.path,
+          'status': 'queued',
+          'content_type': 'video/mp4',
+          'media_type': 'VIDEO',
+          ...storage.queueIdentity,
+          'last_error': 'network_connectionError_0',
+          'next_attempt_at': nextAttempt,
+        },
+      ]);
+      repository.releaseFirstUpload.complete();
+      await initialization;
+      await service.processQueue();
+      expect(repository.uploadCalls, 1);
+      expect(repository.createCalls, 0);
+      expect(storage.getFeedbackUploadQueue().single['id'], 'B-pending');
+      expect(
+        storage.getFeedbackUploadQueue().single['next_attempt_at'],
+        nextAttempt,
+      );
+      current = const LocalAuthSession(uid: 'A', generation: 3);
+      expect(storage.getFeedbackUploadQueue().single['status'], 'uploading');
+      expect(await file.exists(), isTrue);
+    },
+  );
+  test(
     'active workouts are isolated by owner/environment and stale writers are rejected',
     () async {
       final bound = storage.bindActiveWorkoutStore();

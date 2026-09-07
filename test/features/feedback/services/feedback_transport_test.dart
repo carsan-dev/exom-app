@@ -49,6 +49,7 @@ void main() {
       final keys = <String>[];
       final checkpoints = <Map<String, dynamic>>[];
       final progress = <int>[];
+      final stages = <String>[];
       api.dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
@@ -98,7 +99,10 @@ void main() {
       );
       final source = FeedbackRemoteDataSourceImpl(
         api,
-        prepareFile: (f, _) async => f,
+        prepareFile: (f, _) async {
+          expect(stages.last, 'preparing');
+          return f;
+        },
         transferClient: transfer,
       );
       FeedbackUploadContext context() => FeedbackUploadContext(
@@ -106,7 +110,10 @@ void main() {
         checkpoint: checkpoints.isEmpty ? {} : checkpoints.last,
         saveCheckpoint: (value) async => checkpoints.add(value),
         isCurrent: () => true,
+        onPreparing: () => stages.add('preparing'),
+        onProcessing: () => stages.add('processing'),
         onProgress: (sent, total) {
+          stages.add('sending');
           expect(total, 16384);
           progress.add(sent);
         },
@@ -124,6 +131,12 @@ void main() {
       expect(adapter.calls, 1);
       expect(adapter.bytes, 16384);
       expect(progress.last, 16384);
+      expect(stages.first, 'preparing');
+      expect(stages.last, 'processing');
+      expect(
+        stages.indexOf('sending'),
+        greaterThan(stages.indexOf('preparing')),
+      );
       expect(keys, ['stable:0', 'stable:0']);
       expect(await file.exists(), true);
     },

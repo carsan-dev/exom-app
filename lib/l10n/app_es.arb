@@ -912,6 +912,8 @@
   "pendingSyncFailuresTitle": "Acciones pendientes con error",
   "pendingSyncFailedStatus": "No se pudo sincronizar el progreso",
   "pendingSyncDeleteMessage": "Se eliminará esta acción pendiente. El cambio local dejará de intentarse.",
+  "feedbackOfflineMessage": "Sin conexión a internet. Tus evidencias pendientes siguen guardadas.",
+  "pendingUploadPreparingStatus": "Preparando archivo",
   "pendingUploadProcessingStatus": "Procesando",
   "pendingUploadLegacyRecovery": "Hay datos locales de una versión anterior sin propietario verificado. Se conservan sin enviar. Contacta con soporte para verificar su cuenta de origen y recuperarlos.",
   "pendingSyncConflict": "Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido."

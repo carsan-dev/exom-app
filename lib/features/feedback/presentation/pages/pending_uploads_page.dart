@@ -124,11 +124,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                             'progress_conflict_review_required'
                         ? l10n.pendingSyncConflict
                         : item['last_error'] as String?,
-                    onRetry:
-                        item['status'] == 'failed' &&
-                            item['last_error'] !=
-                                'progress_conflict_review_required' &&
-                            item['discard_requested'] != true
+                    onRetry: FeedbackUploadQueueService.canRetry(item)
                         ? () => _retry(item['id'] as String)
                         : null,
                     onDelete: () => _discard(item['id'] as String),

@@ -271,7 +271,8 @@ class _ExomAppViewState extends State<_ExomAppView> {
   }
 
   void _showFeedbackNotice(FeedbackUploadNotice notice) {
-    if (notice.kind == FeedbackUploadNoticeKind.uploading ||
+    if (notice.kind == FeedbackUploadNoticeKind.preparing ||
+        notice.kind == FeedbackUploadNoticeKind.uploading ||
         notice.kind == FeedbackUploadNoticeKind.processing ||
         notice.kind == FeedbackUploadNoticeKind.discarded) {
       return;
@@ -287,6 +288,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
       FeedbackUploadNoticeKind.failed => l10n.feedbackUploadFailed,
       FeedbackUploadNoticeKind.uploading => l10n.feedbackQueued,
       FeedbackUploadNoticeKind.processing => l10n.feedbackQueued,
+      FeedbackUploadNoticeKind.preparing => l10n.feedbackQueued,
       FeedbackUploadNoticeKind.discarded => l10n.feedbackQueued,
     };
     messenger.showSnackBar(

@@ -2569,6 +2569,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'This pending action will be deleted. The local change will no longer be retried.';
 
   @override
+  String get feedbackOfflineMessage =>
+      'No internet connection. Your pending evidence is still saved.';
+
+  @override
+  String get pendingUploadPreparingStatus => 'Preparing file';
+
+  @override
   String get pendingUploadProcessingStatus => 'Processing';
 
   @override

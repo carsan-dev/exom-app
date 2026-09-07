@@ -877,6 +877,8 @@
   "pendingSyncFailuresTitle": "Pending actions with errors",
   "pendingSyncFailedStatus": "Progress could not be synced",
   "pendingSyncDeleteMessage": "This pending action will be deleted. The local change will no longer be retried.",
+  "feedbackOfflineMessage": "No internet connection. Your pending evidence is still saved.",
+  "pendingUploadPreparingStatus": "Preparing file",
   "pendingUploadProcessingStatus": "Processing",
   "pendingUploadLegacyRecovery": "Local data from an earlier version has no verified owner. It is kept without sending. Contact support to verify its original account and recover it.",
   "pendingSyncConflict": "Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change."

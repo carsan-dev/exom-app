@@ -2596,6 +2596,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.';
 
   @override
+  String get feedbackOfflineMessage =>
+      'Sin conexión a internet. Tus evidencias pendientes siguen guardadas.';
+
+  @override
+  String get pendingUploadPreparingStatus => 'Preparando archivo';
+
+  @override
   String get pendingUploadProcessingStatus => 'Procesando';
 
   @override

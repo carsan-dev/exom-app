@@ -15,6 +15,7 @@ class FeedbackUploadContext {
   final Future<void> Function(Map<String, dynamic>) saveCheckpoint;
   final bool Function() isCurrent;
   final void Function(int sent, int total)? onProgress;
+  final void Function()? onPreparing;
   final void Function()? onProcessing;
 
   const FeedbackUploadContext({
@@ -23,6 +24,7 @@ class FeedbackUploadContext {
     required this.saveCheckpoint,
     required this.isCurrent,
     this.onProgress,
+    this.onPreparing,
     this.onProcessing,
   });
 }

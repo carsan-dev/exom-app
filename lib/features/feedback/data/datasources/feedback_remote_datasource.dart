@@ -134,7 +134,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     }
 
     guard();
-    context?.onProcessing?.call();
+    context?.onPreparing?.call();
     final isVideo = contentType.startsWith('video/');
     final preparedPath = checkpoint['prepared_path'] as String?;
     File uploadFile;

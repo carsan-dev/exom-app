@@ -15,6 +15,7 @@ import 'package:exom_app/core/utils/async_mutex.dart';
 enum FeedbackUploadNoticeKind {
   queued,
   uploading,
+  preparing,
   processing,
   completed,
   failed,
@@ -42,6 +43,7 @@ class FeedbackUploadQueueService {
   final bool Function() _isAuthenticated;
   final Future<Directory> Function() _applicationSupportDirectory;
   final Future<void> Function(String) _deleteFile;
+  final Stream<bool> _connectivityChanges;
   final StreamController<FeedbackUploadNotice> _notices =
       StreamController<FeedbackUploadNotice>.broadcast();
   static final AsyncMutex _queueMutex = AsyncMutex();
@@ -50,7 +52,7 @@ class FeedbackUploadQueueService {
   bool _processing = false;
   bool _initialized = false;
   Timer? _timer;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<bool>? _connectivitySubscription;
   final Map<String, FeedbackUploadNotice> _progress = {};
 
   FeedbackUploadNotice? progressOf(String id) => _progress[id];
@@ -74,11 +76,18 @@ class FeedbackUploadQueueService {
     bool Function()? isAuthenticated,
     Future<Directory> Function()? applicationSupportDirectory,
     Future<void> Function(String)? deleteFile,
+    Stream<bool>? connectivityChanges,
   }) : _isAuthenticated =
            isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null),
        _applicationSupportDirectory =
            applicationSupportDirectory ?? getApplicationSupportDirectory,
-       _deleteFile = deleteFile ?? _deleteExistingFile;
+       _deleteFile = deleteFile ?? _deleteExistingFile,
+       _connectivityChanges =
+           connectivityChanges ??
+           Connectivity().onConnectivityChanged.map(
+             (results) =>
+                 results.any((result) => result != ConnectivityResult.none),
+           );
 
   bool get hasUnattributedData => _storage.hasUnattributedData;
 
@@ -87,11 +96,11 @@ class FeedbackUploadQueueService {
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-      results,
+    _connectivitySubscription = _connectivityChanges.distinct().listen((
+      connected,
     ) {
-      if (results.any((result) => result != ConnectivityResult.none)) {
-        unawaited(processQueue());
+      if (connected) {
+        unawaited(_processAfterReconnect());
       }
     });
     _timer = Timer.periodic(
@@ -155,11 +164,15 @@ class FeedbackUploadQueueService {
     return id;
   }
 
-  Future<void> retry(String id) async {
+  static bool canRetry(Map<String, dynamic> item) =>
+      (item['status'] == 'failed' || item['status'] == 'queued') &&
+      item['discard_requested'] != true;
+
+  Future<void> retry(String id) => _storage.withSession(() async {
+    var changed = false;
     await _mutateById(id, (item) {
-      if (item['status'] != 'failed' || item['discard_requested'] == true) {
-        return item;
-      }
+      if (!canRetry(item)) return item;
+      changed = true;
       return {
         ...item,
         'status': 'queued',
@@ -168,8 +181,10 @@ class FeedbackUploadQueueService {
         'last_error': null,
       };
     });
+    if (!changed) return;
+    _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.queued));
     await processQueue();
-  }
+  });
 
   List<Map<String, dynamic>> get pendingItems => _storage
       .getFeedbackUploadQueue()
@@ -234,6 +249,37 @@ class FeedbackUploadQueueService {
 
   Future<void> processQueue() =>
       _storage.withSession(() => _runnerMutex.protect(_processQueueLocked));
+
+  // Match the existing durable error codes, including queues from older builds.
+  // Connectivity is not permission to bypass a server's 429/5xx backoff.
+  static final _networkFailure = RegExp(
+    r'^network_(connectionError|connectionTimeout|receiveTimeout|sendTimeout|unknown)_0$',
+  );
+
+  Future<void> _processAfterReconnect() => _storage.withSession(
+    () => _runnerMutex.protect(() async {
+      // Wait for any in-flight attempt before removing its newly saved delay.
+      await _queueMutex.protect(() async {
+        final queue = _storage.getFeedbackUploadQueue();
+        var changed = false;
+        for (var i = 0; i < queue.length; i++) {
+          final item = queue[i];
+          final error = item['last_error'];
+          if (item['status'] != 'queued' ||
+              item['discard_requested'] == true ||
+              !item.containsKey('next_attempt_at') ||
+              error is! String ||
+              !_networkFailure.hasMatch(error)) {
+            continue;
+          }
+          queue[i] = Map<String, dynamic>.from(item)..remove('next_attempt_at');
+          changed = true;
+        }
+        if (changed) await _storage.saveFeedbackUploadQueue(queue);
+      });
+      await _processQueueLocked();
+    }),
+  );
 
   Future<void> _processQueueLocked() async {
     if (_processing) return;
@@ -321,6 +367,12 @@ class FeedbackUploadQueueService {
                         FeedbackUploadNoticeKind.uploading,
                         sentBytes: sent,
                         totalBytes: total,
+                      ),
+                    ),
+                    onPreparing: () => _report(
+                      FeedbackUploadNotice(
+                        id,
+                        FeedbackUploadNoticeKind.preparing,
                       ),
                     ),
                     onProcessing: () => _report(

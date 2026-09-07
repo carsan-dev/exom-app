@@ -4550,6 +4550,18 @@ abstract class AppLocalizations {
   /// **'Se eliminará esta acción pendiente. El cambio local dejará de intentarse.'**
   String get pendingSyncDeleteMessage;
 
+  /// No description provided for @feedbackOfflineMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión a internet. Tus evidencias pendientes siguen guardadas.'**
+  String get feedbackOfflineMessage;
+
+  /// No description provided for @pendingUploadPreparingStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando archivo'**
+  String get pendingUploadPreparingStatus;
+
   /// No description provided for @pendingUploadProcessingStatus.
   ///
   /// In es, this message translates to:

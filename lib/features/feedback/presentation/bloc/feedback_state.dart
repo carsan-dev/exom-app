@@ -27,5 +27,10 @@ class FeedbackSubmitSuccess extends FeedbackLoaded {
 
 class FeedbackError extends FeedbackLoaded {
   final String message;
-  const FeedbackError(this.message, [super.items = const []]);
+  final bool isOffline;
+  const FeedbackError(this.message, [super.items = const []])
+    : isOffline = false;
+  const FeedbackError.offline([super.items = const []])
+    : message = '',
+      isOffline = true;
 }

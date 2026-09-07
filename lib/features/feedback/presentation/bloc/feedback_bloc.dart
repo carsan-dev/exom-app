@@ -38,7 +38,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
       _cachedItems = items;
       emit(FeedbackLoaded(items));
     } catch (error) {
-      emit(FeedbackError(_errorMessage(error), _cachedItems));
+      emit(_failure(error));
     }
   }
 
@@ -58,7 +58,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
       _cachedItems = items;
       emit(FeedbackSubmitSuccess(items));
     } catch (error) {
-      emit(FeedbackError(_errorMessage(error), _cachedItems));
+      emit(_failure(error));
     }
   }
 
@@ -83,8 +83,15 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
       _cachedItems = items;
       emit(FeedbackSubmitSuccess(items));
     } catch (error) {
-      emit(FeedbackError(_errorMessage(error), _cachedItems));
+      emit(_failure(error));
     }
+  }
+
+  FeedbackError _failure(Object error) {
+    if (ApiException.maybeFrom(error)?.isNetworkError == true) {
+      return FeedbackError.offline(_cachedItems);
+    }
+    return FeedbackError(_errorMessage(error), _cachedItems);
   }
 
   String _errorMessage(Object error) {

@@ -80,94 +80,102 @@ class FeedbackPage extends StatelessWidget {
               ),
             ),
           ),
-          body: BlocConsumer<FeedbackBloc, FeedbackState>(
-            listener: (context, state) {
-              if (state is FeedbackSubmitSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppLocalizations.of(context).feedbackSentSuccessfully,
+          body: FeedbackQueueLayout(
+            queue: sl<FeedbackUploadQueueService>(),
+            child: BlocConsumer<FeedbackBloc, FeedbackState>(
+              listener: (context, state) {
+                if (state is FeedbackSubmitSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context).feedbackSentSuccessfully,
+                      ),
+                      backgroundColor: AppColors.success,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    backgroundColor: AppColors.success,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              }
-              if (state is FeedbackError) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: palette.error,
-                  ),
-                );
-              }
-            },
-            builder: (context, state) {
-              if (state is FeedbackLoading) {
-                return const _FeedbackLoadingBody();
-              }
-
-              final items = (state is FeedbackLoaded)
-                  ? state.items
-                  : <FeedbackEntity>[];
-
-              final bottomInset = MediaQuery.paddingOf(context).bottom;
-              return RefreshIndicator(
-                color: palette.primary,
-                backgroundColor: palette.surface,
-                onRefresh: () async {
-                  context.read<FeedbackBloc>().add(
-                    const FeedbackLoadRequested(),
                   );
-                },
-                child: ListView(
-                  padding: EdgeInsets.only(bottom: 40 + bottomInset),
-                  children: [
-                    if (args?.isCircuit == true)
-                      CircuitFeedbackForm(
-                        circuitName: args!.circuitName ?? '',
-                        targets: args!.circuitExercises,
-                        onQueued: () => context.pop(),
-                      )
-                    else
-                      _FeedbackForm(
-                        isSubmitting: false,
-                        exerciseId: args?.exercise?.exerciseId,
-                        exerciseName: args?.exercise?.exerciseName,
+                }
+                if (state is FeedbackError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        state.isOffline
+                            ? l10n.feedbackOfflineMessage
+                            : state.message,
                       ),
-                    FeedbackQueuePanel(queue: sl<FeedbackUploadQueueService>()),
-                    if (items.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text(
-                          l10n.history,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: palette.textPrimary,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      backgroundColor: state.isOffline
+                          ? palette.surfaceElevated
+                          : palette.error,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is FeedbackLoading) {
+                  return const _FeedbackLoadingBody();
+                }
+
+                final items = (state is FeedbackLoaded)
+                    ? state.items
+                    : <FeedbackEntity>[];
+
+                final bottomInset = MediaQuery.paddingOf(context).bottom;
+                return RefreshIndicator(
+                  color: palette.primary,
+                  backgroundColor: palette.surface,
+                  onRefresh: () async {
+                    context.read<FeedbackBloc>().add(
+                      const FeedbackLoadRequested(),
+                    );
+                  },
+                  child: ListView(
+                    padding: EdgeInsets.only(bottom: 40 + bottomInset),
+                    children: [
+                      if (args?.isCircuit == true)
+                        CircuitFeedbackForm(
+                          circuitName: args!.circuitName ?? '',
+                          targets: args!.circuitExercises,
+                          onQueued: () => context.pop(),
+                        )
+                      else
+                        _FeedbackForm(
+                          isSubmitting: false,
+                          exerciseId: args?.exercise?.exerciseId,
+                          exerciseName: args?.exercise?.exerciseName,
                         ),
-                      ),
-                      ...items.map((f) => _FeedbackCard(feedback: f)),
-                    ] else if (state is FeedbackLoaded)
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(
+                      if (items.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                           child: Text(
-                            l10n.noFeedbackYet,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: palette.textDisabled,
-                              fontSize: 13,
+                            l10n.history,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: palette.textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              );
-            },
+                        ...items.map((f) => _FeedbackCard(feedback: f)),
+                      ] else if (state is FeedbackLoaded)
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Center(
+                            child: Text(
+                              l10n.noFeedbackYet,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: palette.textDisabled,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),

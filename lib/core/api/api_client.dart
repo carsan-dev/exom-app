@@ -314,6 +314,21 @@ class _LoggingInterceptor extends Interceptor {
         'type=${err.type} cause=${err.error?.runtimeType} '
         'message=${err.message ?? err.error}',
       );
+      // Diagnose the additive upload contract without logging response bodies,
+      // credentials, signed URLs or user input from other validation errors.
+      final data = err.response?.data;
+      if (err.response?.statusCode == 400 &&
+          err.requestOptions.uri.path.endsWith('/uploads/sessions') &&
+          data is Map) {
+        final message = data['message'];
+        const unsupported = 'property client_operation_id should not exist';
+        if (message == unsupported ||
+            (message is List && message.contains(unsupported))) {
+          debugPrint(
+            '[UPLOAD] session_rejected reason=operation_identity_unsupported',
+          );
+        }
+      }
     }
     handler.next(err);
   }

@@ -1,5 +1,6 @@
-- Consulta el RIR objetivo y registra las repeticiones en reserva de cada serie.
-- Sigue objetivos de repeticiones o segundos, incluidos rangos.
+- Consulta y registra el RIR; sigue objetivos de repeticiones o segundos, con rangos.
 - Confirma antes de completar todo un entrenamiento.
-- Consulta el histórico conservado de dietas y el detalle de las comidas por fecha.
-- Mejoras en el inicio de sesión, la planificación y el guardado de tu progreso.
+- Consulta tu histórico de dietas y comidas por fecha.
+- Mejoras en inicio de sesión, planificación y guardado del progreso.
+- Recuperación de acciones y subidas pendientes al reconectar, conservando tus evidencias.
+- Progreso de subida y procesamiento visible, reintentos y avisos sin conexión más claros, adaptados al tema claro y oscuro.

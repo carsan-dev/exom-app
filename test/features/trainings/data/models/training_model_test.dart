@@ -4,6 +4,26 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TrainingModel', () {
+    test('accepts resolved mesocycle targets without mixing dates or performed RIR', () {
+      TrainingModel day(String date, int? target) => TrainingModel.fromJson({
+        'id': 'shared-training', 'name': 'Fuerza', 'type': 'FUERZA',
+        'level': 'PRINCIPIANTE', 'assignment_date': date,
+        'rir_proposal': [3, 2, 1, 0],
+        'exercises': [for (final id in ['plain', 'circuit']) {
+          'id': id, 'sets': 3, 'reps_or_duration': '10',
+          'target_rir': target, 'block_id': id == 'circuit' ? 'block' : null,
+          'exercise': {'id': 'same-exercise', 'name': 'Sentadilla'},
+        }],
+      });
+      final downloaded = day('2026-09-09', 0);
+      final nextWeek = day('2026-09-14', 10);
+      final cancelled = day('2026-09-21', null);
+      expect(downloaded.exercises.map((e) => e.targetRir), [0, 0]);
+      expect(nextWeek.exercises.map((e) => e.targetRir), [10, 10]);
+      expect(cancelled.exercises.map((e) => e.targetRir), [null, null]);
+      expect(downloaded.assignmentDate, '2026-09-09');
+      expect(downloaded.exercises.first.targetRir, 0);
+    });
     test('parses exercise media from camelCase response keys', () {
       final model = TrainingModel.fromJson({
         'id': 'training-1',

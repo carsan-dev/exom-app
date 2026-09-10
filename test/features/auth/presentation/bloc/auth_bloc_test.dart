@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -16,6 +17,43 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 
 void main() {
+  for (final event in [
+    const AuthGoogleLoginRequested(),
+    const AuthAppleLoginRequested(),
+  ]) {
+    test(
+      'disabled account is rejected in Spanish for ${event.runtimeType}',
+      () async {
+        final repository = _FakeAuthRepository(
+          StateError('unexpected backend call'),
+        );
+        final bloc = AuthBloc(
+          loginUseCase: LoginUseCase(repository),
+          socialLoginUseCase: SocialLoginUseCase(repository),
+          logoutUseCase: LogoutUseCase(repository),
+          getMeUseCase: GetMeUseCase(repository),
+          deleteAccountUseCase: DeleteAccountUseCase(repository),
+          firebaseAuthService: _DisabledFirebaseAuthService(),
+        );
+        final states = <AuthState>[];
+        final subscription = bloc.stream.listen(states.add);
+        final rejected = bloc.stream.firstWhere((state) => state is AuthError);
+        bloc.add(event);
+        final state = await rejected;
+        expect(
+          state,
+          isA<AuthError>().having(
+            (error) => error.message,
+            'message',
+            'Tu cuenta ha sido dada de baja por un administrador. Contacta con tu entrenador.',
+          ),
+        );
+        expect(states.whereType<AuthAuthenticated>(), isEmpty);
+        await subscription.cancel();
+        await bloc.close();
+      },
+    );
+  }
   test('late login result cannot authenticate after logout', () async {
     final repository = _DelayedLoginRepository();
     final firebase = _MutableFirebaseAuthService();
@@ -224,6 +262,22 @@ class _FakeFirebaseAuthService extends FirebaseAuthService {
   @override
   Future<void> signOut() async {
     signOutCalls++;
+  }
+}
+
+class _DisabledFirebaseAuthService extends FirebaseAuthService {
+  @override
+  Future<OAuthCredential> createGoogleCredential() async =>
+      GoogleAuthProvider.credential(idToken: 'fixture');
+  @override
+  Future<OAuthCredential> createAppleCredential() async =>
+      OAuthProvider('apple.com').credential(idToken: 'fixture');
+  @override
+  Future<UserCredential> signInWithCredential(AuthCredential credential) async {
+    throw FirebaseAuthException(
+      code: 'user-disabled',
+      message: 'The user account has been disabled by an administrator.',
+    );
   }
 }
 

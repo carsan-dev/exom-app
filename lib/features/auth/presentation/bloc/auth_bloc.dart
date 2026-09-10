@@ -74,6 +74,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   String _firebaseAuthMessage(FirebaseAuthException error) {
     switch (error.code) {
+      case 'user-disabled':
+        return 'Tu cuenta ha sido dada de baja por un administrador. Contacta con tu entrenador.';
       case 'credential-already-in-use':
         return 'Este acceso social ya está vinculado a otra cuenta. Inicia sesión con tu método original o revisa la configuración de Firebase antes de volver a intentarlo.';
       case 'no-current-user':

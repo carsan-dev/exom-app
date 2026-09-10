@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_today_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_meal_usecase.dart';
@@ -89,7 +90,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
         );
       }
     } catch (e) {
-      emit(DietError(e.toString()));
+      emit(DietError.from(e));
     }
   }
 
@@ -115,7 +116,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
         ),
       );
     } catch (e) {
-      emit(DietError(e.toString()));
+      emit(DietError.from(e));
     }
   }
 

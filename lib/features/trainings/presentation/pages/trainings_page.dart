@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -56,7 +57,9 @@ class _TrainingsView extends StatelessWidget {
         }
         if (state is TrainingError) {
           return ErrorWidget2(
-            message: state.message,
+            message: state.apiException != null
+                ? localizedApiError(context, state.apiException!)
+                : AppLocalizations.of(context).errorServer,
             onRetry: () => context.read<TrainingBloc>().add(
               TrainingsLoadRequested(
                 date: state.selectedDate ?? selectedDate,

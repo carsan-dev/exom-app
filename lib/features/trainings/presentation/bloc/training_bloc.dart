@@ -78,7 +78,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         emit(TodayTrainingLoaded(trainings, selectedDate: targetDate));
       }
     } catch (e) {
-      emit(TrainingError(e.toString()));
+      emit(TrainingError.from(e));
     }
   }
 
@@ -107,8 +107,8 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
       );
     } catch (e) {
       emit(
-        TrainingError(
-          e.toString(),
+        TrainingError.from(
+          e,
           selectedDate: _resolvedDate(event.date),
           historyDate: _resolvedDate(event.historyDate ?? event.date),
         ),
@@ -164,7 +164,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         ),
       );
     } catch (e) {
-      emit(TrainingError(e.toString()));
+      emit(TrainingError.from(e));
     }
   }
 

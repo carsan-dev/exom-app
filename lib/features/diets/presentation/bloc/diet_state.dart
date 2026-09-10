@@ -72,5 +72,12 @@ class MealDetailLoaded extends DietState {
 
 class DietError extends DietState {
   final String message;
-  const DietError(this.message);
+  final ApiException? apiException;
+
+  const DietError(this.message, {this.apiException});
+
+  factory DietError.from(Object error) {
+    final apiException = ApiException.maybeFrom(error);
+    return DietError(apiException?.message ?? '', apiException: apiException);
+  }
 }

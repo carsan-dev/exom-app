@@ -91,10 +91,30 @@ class TrainingDetailLoaded extends TrainingState {
 
 class TrainingError extends TrainingState {
   final String message;
+  final ApiException? apiException;
   final String? selectedDate;
   final String? historyDate;
 
-  const TrainingError(this.message, {this.selectedDate, this.historyDate});
+  const TrainingError(
+    this.message, {
+    this.apiException,
+    this.selectedDate,
+    this.historyDate,
+  });
+
+  factory TrainingError.from(
+    Object error, {
+    String? selectedDate,
+    String? historyDate,
+  }) {
+    final apiException = ApiException.maybeFrom(error);
+    return TrainingError(
+      apiException?.message ?? '',
+      apiException: apiException,
+      selectedDate: selectedDate,
+      historyDate: historyDate,
+    );
+  }
 }
 
 class TrainingNoContent extends TrainingState {

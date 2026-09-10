@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -127,7 +128,12 @@ class _TrainingDetailView extends StatelessWidget {
               surfaceTintColor: Colors.transparent,
               title: const Text('Error'),
             ),
-            body: ErrorWidget2(message: state.message, onRetry: null),
+            body: ErrorWidget2(
+              message: state.apiException != null
+                  ? localizedApiError(context, state.apiException!)
+                  : AppLocalizations.of(context).errorServer,
+              onRetry: null,
+            ),
           );
         }
         if (state is TrainingDetailLoaded) {

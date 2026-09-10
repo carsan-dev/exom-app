@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
@@ -65,7 +66,9 @@ class _DietsView extends StatelessWidget {
         }
         if (state is DietError) {
           return ErrorWidget2(
-            message: state.message,
+            message: state.apiException != null
+                ? localizedApiError(context, state.apiException!)
+                : l10n.errorServer,
             onRetry: () => context.read<DietBloc>().add(
               DietLoadRequested(date: selectedDate),
             ),

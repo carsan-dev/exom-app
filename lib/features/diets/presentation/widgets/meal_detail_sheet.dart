@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
@@ -90,7 +91,9 @@ class _MealDetailSheetContent extends StatelessWidget {
         if (state is DietError) {
           return _MealDetailError(
             scrollController: scrollController,
-            message: state.message,
+            message: state.apiException != null
+                ? localizedApiError(context, state.apiException!)
+                : AppLocalizations.of(context).errorServer,
             onRetry: () {
               context.read<DietBloc>().add(
                 MealDetailLoadRequested(mealId, date: selectedDate),

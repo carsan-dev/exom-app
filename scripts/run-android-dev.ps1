@@ -1,12 +1,17 @@
 param(
     [string]$DeviceId,
-    [int]$Port = 3000,
+    [ValidateRange(1, 65535)][int]$Port = 3000,
     [switch]$SkipRun,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$FlutterArgs
 )
 
 $ErrorActionPreference = 'Stop'
+
+$joinedArgs = $FlutterArgs -join ' '
+if ($joinedArgs -match 'EXOM_FLAVOR=(?!dev(?:\s|$))') {
+    throw 'Este helper solo ejecuta dev. Usa el procedimiento separado para staging/prod.'
+}
 
 function Get-AndroidDeviceId {
     param([string]$PreferredDeviceId)
@@ -51,7 +56,11 @@ if ($SkipRun) {
     exit 0
 }
 
-$runArgs = @('run', '-d', $resolvedDeviceId) + $FlutterArgs
+$defines = @('--dart-define=EXOM_FLAVOR=dev')
+if ($joinedArgs -notmatch 'EXOM_API_BASE_URL=') {
+    $defines += "--dart-define=EXOM_API_BASE_URL=http://127.0.0.1:$Port/api/v1"
+}
+$runArgs = @('run', '-d', $resolvedDeviceId) + $defines + $FlutterArgs
 Write-Host "[exom] flutter $($runArgs -join ' ')"
 & flutter @runArgs
 exit $LASTEXITCODE

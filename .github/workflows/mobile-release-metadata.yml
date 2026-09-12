@@ -3,12 +3,8 @@ name: Publish Mobile Release Metadata
 on:
   workflow_dispatch:
     inputs:
-      build_name:
-        description: "Public app version"
-        required: true
-        type: string
-      build_number:
-        description: "Published Android/iOS build number"
+      release_run_id:
+        description: "Successful Mobile Release run ID for this exact commit"
         required: true
         type: string
       update_policy:
@@ -23,30 +19,35 @@ on:
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
 
 jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+
   publish:
     name: Publish release metadata
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:
-      - name: Validate inputs
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify successful release and its immutable manifest
         env:
-          BUILD_NAME: ${{ inputs.build_name }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
-        run: |
-          : "${BUILD_NAME:?build_name is required}"
-          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "Invalid build number: $BUILD_NUMBER"
-            exit 1
-          fi
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+        run: node scripts/verify-release.mjs
 
       - name: Update Android mobile config
         env:
           MOBILE_CONFIG_API_URL: ${{ secrets.MOBILE_CONFIG_API_URL }}
           MOBILE_CONFIG_UPDATE_TOKEN: ${{ secrets.MOBILE_CONFIG_UPDATE_TOKEN }}
-          BUILD_NAME: ${{ inputs.build_name }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
           UPDATE_POLICY: ${{ inputs.update_policy }}
         run: |
           curl --fail --show-error --silent \
@@ -60,13 +61,10 @@ jobs:
               \"build\": $BUILD_NUMBER,
               \"policy\": \"$UPDATE_POLICY\"
             }"
-
       - name: Update iOS mobile config
         env:
           MOBILE_CONFIG_API_URL: ${{ secrets.MOBILE_CONFIG_API_URL }}
           MOBILE_CONFIG_UPDATE_TOKEN: ${{ secrets.MOBILE_CONFIG_UPDATE_TOKEN }}
-          BUILD_NAME: ${{ inputs.build_name }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
           UPDATE_POLICY: ${{ inputs.update_policy }}
         run: |
           curl --fail --show-error --silent \
@@ -79,20 +77,4 @@ jobs:
               \"version\": \"$BUILD_NAME\",
               \"build\": $BUILD_NUMBER,
               \"policy\": \"$UPDATE_POLICY\"
-            }"
-
-      - name: Update MOBILE_BUILD_NUMBER repository variable
-        env:
-          GH_TOKEN: ${{ secrets.REPO_VARIABLES_TOKEN }}
-          NEXT_BUILD: ${{ inputs.build_number }}
-        run: |
-          curl --fail --show-error --silent \
-            --request PATCH \
-            --url "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/MOBILE_BUILD_NUMBER" \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --data "{
-              \"name\": \"MOBILE_BUILD_NUMBER\",
-              \"value\": \"$NEXT_BUILD\"
             }"

@@ -1,6 +1,7 @@
-- Consulta y registra el RIR; sigue objetivos de repeticiones o segundos, con rangos.
-- Confirma antes de completar todo un entrenamiento.
-- Consulta tu histórico de dietas y comidas por fecha.
-- Mejoras en inicio de sesión, planificación y guardado del progreso.
-- Recuperación de acciones y subidas pendientes al reconectar, conservando tus evidencias.
-- Progreso de subida y procesamiento visible, reintentos y avisos sin conexión más claros, adaptados al tema claro y oscuro.
+- Consulta y registra el RIR y objetivos de repeticiones o segundos, con rangos.
+- Confirma antes de completar todo el entrenamiento.
+- Consulta el histórico de dietas y comidas por fecha.
+- Mejoras en acceso, planificación y guardado del progreso.
+- Recupera acciones y subidas al reconectar, conservando evidencias.
+- Progreso de subida y procesamiento, reintentos y avisos sin conexión más claros en ambos temas.
+- Más fiabilidad del temporizador entre descansos consecutivos.

@@ -1,6 +1,7 @@
-- View and record RIR; follow rep or time targets, including ranges.
+- View and record RIR and rep or time targets, including ranges.
 - Confirm before completing a full workout.
-- View your diet history and meals by date.
+- View diet and meal history by date.
 - Improvements to sign-in, planning and saving progress.
-- Pending actions and uploads recover when you reconnect, keeping your evidence saved.
-- Visible upload and processing progress, retries and clearer offline messages, with light and dark theme support.
+- Recover pending actions and uploads when reconnecting, keeping your evidence.
+- Clearer upload and processing progress, retries and offline messages in both themes.
+- Improved timer reliability between consecutive rest periods.

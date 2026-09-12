@@ -454,29 +454,38 @@ void main() {
       },
     );
 
-    test('each rest uses a unique native session id', () async {
-      final restTimerCoordinator = _FakeRestTimerCoordinator();
-      final bloc = ActiveExerciseBloc(
-        localStorage: _FakeStore(),
-        trainingExercise: _trainingExercise(),
-        restTimerCoordinator: restTimerCoordinator,
-      );
+    test(
+      'each rest uses a unique native session id at the same millisecond',
+      () async {
+        final restTimerCoordinator = _FakeRestTimerCoordinator();
+        final bloc = ActiveExerciseBloc(
+          localStorage: _FakeStore(),
+          now: () => DateTime.utc(2026, 9, 12, 10),
+          trainingExercise: _trainingExercise(),
+          restTimerCoordinator: restTimerCoordinator,
+        );
 
-      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
-      await pumpEventQueue();
-      bloc.add(const CompleteSet());
-      await pumpEventQueue();
-      bloc.add(const FinishRest());
-      await pumpEventQueue();
-      bloc.add(const CompleteSet());
-      await pumpEventQueue();
+        bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+        await pumpEventQueue();
+        bloc.add(const CompleteSet());
+        await pumpEventQueue();
+        bloc.add(const FinishRest());
+        await pumpEventQueue();
+        bloc.add(const CompleteSet());
+        await pumpEventQueue();
 
-      expect(restTimerCoordinator.startedSessions, hasLength(2));
-      expect(
-        restTimerCoordinator.startedSessions.first.id,
-        isNot(restTimerCoordinator.startedSessions.last.id),
-      );
-    });
+        addTearDown(bloc.close);
+        expect(restTimerCoordinator.startedSessions, hasLength(2));
+        expect(
+          restTimerCoordinator.startedSessions.first.endsAt,
+          restTimerCoordinator.startedSessions.last.endsAt,
+        );
+        expect(
+          restTimerCoordinator.startedSessions.first.id,
+          isNot(restTimerCoordinator.startedSessions.last.id),
+        );
+      },
+    );
 
     test('AbandonExercise keeps saved progress for later resume', () async {
       final store = _FakeStore();

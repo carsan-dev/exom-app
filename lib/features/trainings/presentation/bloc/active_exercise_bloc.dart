@@ -149,6 +149,7 @@ class ActiveExerciseBloc
   final TrainingExerciseEntity _trainingExercise;
   final double? _initialWeightKg;
   final RestTimerCoordinator _restTimerCoordinator;
+  final DateTime Function() _now;
   String? _trainingId;
   String? _exerciseId;
 
@@ -157,11 +158,13 @@ class ActiveExerciseBloc
     required TrainingExerciseEntity trainingExercise,
     RestTimerCoordinator? restTimerCoordinator,
     double? initialWeightKg,
+    DateTime Function()? now,
   }) : _localStorage = localStorage,
        _trainingExercise = trainingExercise,
        _restTimerCoordinator =
            restTimerCoordinator ?? PlatformRestTimerCoordinator(),
        _initialWeightKg = initialWeightKg,
+       _now = now ?? DateTime.now,
        super(
          ActiveExerciseState.initial(
            trainingExercise,
@@ -253,7 +256,7 @@ class ActiveExerciseBloc
           weightKg: nextWeight,
           setPerformances: nextPerformances,
           status: ActiveExerciseStatus.finalResting,
-          restEndsAt: DateTime.now().add(Duration(seconds: state.restSeconds)),
+          restEndsAt: _now().add(Duration(seconds: state.restSeconds)),
           errorMessage: null,
           lastSetFeedbackClientUploadId:
               event.lastSetFeedbackClientUploadId ??
@@ -304,7 +307,7 @@ class ActiveExerciseBloc
       weightKg: nextWeight,
       setPerformances: nextPerformances,
       status: ActiveExerciseStatus.resting,
-      restEndsAt: DateTime.now().add(Duration(seconds: state.restSeconds)),
+      restEndsAt: _now().add(Duration(seconds: state.restSeconds)),
       errorMessage: null,
     );
     emit(restingState);
@@ -370,7 +373,7 @@ class ActiveExerciseBloc
     final totalSets = _trainingExercise.sets;
     final completedSets = saved.completedSets.clamp(0, totalSets);
 
-    final now = DateTime.now();
+    final now = _now();
     final hasPendingRest =
         saved.restEndsAt != null && saved.restEndsAt!.isAfter(now);
     final currentSet = hasPendingRest
@@ -413,7 +416,8 @@ class ActiveExerciseBloc
     final exerciseId = _exerciseId ?? _trainingExercise.exercise.id;
     return _restTimerCoordinator.start(
       RestTimerSession(
-        id: '${_trainingId ?? ''}:$exerciseId:${restState.restEndsAt!.millisecondsSinceEpoch}',
+        // The completed set disambiguates equal deadlines and survives restore.
+        id: '${_trainingId ?? ''}:$exerciseId:${restState.completedSets}:${restState.restEndsAt!.millisecondsSinceEpoch}',
         exerciseName: _trainingExercise.exercise.name,
         durationSeconds: restState.restSeconds,
         endsAt: restState.restEndsAt!,

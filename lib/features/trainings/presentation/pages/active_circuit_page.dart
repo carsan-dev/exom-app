@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
@@ -132,6 +134,7 @@ class _ActiveCircuitView extends StatefulWidget {
 }
 
 class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
+  ActiveWorkoutLocalStore? _executionStore;
   var _currentRound = 1;
   var _currentExerciseIndex = 0;
   var _status = _CircuitStatus.executing;
@@ -152,6 +155,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   @override
   void initState() {
     super.initState();
+    if (widget.args.exercises.any(
+      (e) =>
+          e.measureType == ExerciseMeasureType.seconds && e.targetValue != null,
+    )) {
+      _executionStore = sl<LocalStorage>().bindActiveWorkoutStore();
+    }
     _restoreState();
     _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
       _onFeedbackNotice,
@@ -396,6 +405,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       );
     }
 
+    final completedTimerKey =
+        '${_currentExercise.id}:interval:$_currentRound:${widget.args.assignmentDate}';
     final progression = advanceCircuit(
       currentRound: _currentRound,
       totalRounds: widget.args.rounds,
@@ -407,6 +418,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     if (progression.restKind == CircuitRestKind.done) {
       _circuitReadyToFinish = true;
       await _persistState();
+      await _executionStore?.removeActiveWorkout(completedTimerKey);
       await _finishCircuit();
       return;
     }
@@ -433,6 +445,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     });
     await _persistState();
     if (progression.restKind != CircuitRestKind.none) {
+      await _executionStore?.removeActiveWorkout(completedTimerKey);
       await sl<RestTimerCoordinator>().start(
         RestTimerSession(
           id: '${widget.trainingId}:${widget.args.blockId}:${_restEndsAt!.millisecondsSinceEpoch}',
@@ -441,6 +454,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           endsAt: _restEndsAt!,
         ),
       );
+    }
+    if (progression.restKind == CircuitRestKind.none) {
+      await _executionStore?.removeActiveWorkout(completedTimerKey);
     }
   }
 
@@ -1034,16 +1050,38 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                _formatPrescription(
-                                  formatExercisePrescription(_currentExercise),
+                              if (!(_status == _CircuitStatus.executing &&
+                                  _currentExercise.measureType ==
+                                      ExerciseMeasureType.seconds &&
+                                  _currentExercise.targetValue != null &&
+                                  _executionStore != null))
+                                Text(
+                                  _formatPrescription(
+                                    formatExercisePrescription(
+                                      _currentExercise,
+                                    ),
+                                  ),
+                                  style: TextStyle(
+                                    color: palette.textSecondary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                style: TextStyle(
-                                  color: palette.textSecondary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                              if (_status == _CircuitStatus.executing &&
+                                  _currentExercise.measureType ==
+                                      ExerciseMeasureType.seconds &&
+                                  _currentExercise.targetValue != null &&
+                                  _executionStore != null)
+                                CircuitExecutionTimer(
+                                  key: ValueKey(
+                                    '${_currentExercise.id}:$_currentRound',
+                                  ),
+                                  store: _executionStore!,
+                                  exercise: _currentExercise,
+                                  trainingId: widget.trainingId,
+                                  date: widget.args.assignmentDate,
+                                  round: _currentRound,
                                 ),
-                              ),
                               const SizedBox(height: 16),
                               LinearProgressIndicator(
                                 value: totalSeries == 0

@@ -1,3 +1,4 @@
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -13,7 +14,20 @@ class StartExercise extends ActiveExerciseEvent {
   final String trainingId;
   final String exerciseId;
 
-  const StartExercise({required this.trainingId, required this.exerciseId});
+  final String? assignmentDate;
+  const StartExercise({
+    required this.trainingId,
+    required this.exerciseId,
+    this.assignmentDate,
+  });
+}
+
+class ToggleExecutionTimer extends ActiveExerciseEvent {
+  const ToggleExecutionTimer();
+}
+
+class ResetExecutionTimer extends ActiveExerciseEvent {
+  const ResetExecutionTimer();
 }
 
 class CompleteSet extends ActiveExerciseEvent {
@@ -53,6 +67,16 @@ class AbandonExercise extends ActiveExerciseEvent {
 class ActiveExerciseState {
   static const _unset = Object();
 
+  final int timedElapsedMs;
+  final DateTime? timedStartedAt;
+  final int? timedTotalSeconds;
+  final TimedPrescription? timedPrescription;
+  int elapsedAt(DateTime now) =>
+      (timedElapsedMs +
+              (timedStartedAt == null
+                  ? 0
+                  : now.difference(timedStartedAt!).inMilliseconds))
+          .clamp(0, (timedTotalSeconds ?? 0) * 1000);
   final int currentSet;
   final int totalSets;
   final int completedSets;
@@ -66,6 +90,10 @@ class ActiveExerciseState {
   final String? lastSetFeedbackClientUploadId;
 
   const ActiveExerciseState({
+    this.timedElapsedMs = 0,
+    this.timedStartedAt,
+    this.timedTotalSeconds,
+    this.timedPrescription,
     required this.currentSet,
     required this.totalSets,
     required this.completedSets,
@@ -84,6 +112,11 @@ class ActiveExerciseState {
     double? initialWeightKg,
   }) {
     return ActiveExerciseState(
+      timedTotalSeconds:
+          trainingExercise.measureType == ExerciseMeasureType.seconds
+          ? trainingExercise.targetValue
+          : null,
+      timedPrescription: trainingExercise.timedPrescription,
       currentSet: 1,
       totalSets: trainingExercise.sets,
       completedSets: 0,
@@ -106,6 +139,8 @@ class ActiveExerciseState {
   bool get isDone => status == ActiveExerciseStatus.done;
 
   ActiveExerciseState copyWith({
+    int? timedElapsedMs,
+    Object? timedStartedAt = _unset,
     int? currentSet,
     int? totalSets,
     int? completedSets,
@@ -119,6 +154,12 @@ class ActiveExerciseState {
     Object? lastSetFeedbackClientUploadId = _unset,
   }) {
     return ActiveExerciseState(
+      timedElapsedMs: timedElapsedMs ?? this.timedElapsedMs,
+      timedStartedAt: identical(timedStartedAt, _unset)
+          ? this.timedStartedAt
+          : timedStartedAt as DateTime?,
+      timedTotalSeconds: timedTotalSeconds,
+      timedPrescription: timedPrescription,
       currentSet: currentSet ?? this.currentSet,
       totalSets: totalSets ?? this.totalSets,
       completedSets: completedSets ?? this.completedSets,
@@ -171,12 +212,38 @@ class ActiveExerciseBloc
            initialWeightKg: initialWeightKg,
          ),
        ) {
-    on<StartExercise>(_onStartExercise);
-    on<AttachLastSetFeedback>(_onAttachLastSetFeedback);
-    on<CompleteSet>(_onCompleteSet);
-    on<SkipRest>(_onSkipRest);
-    on<FinishRest>(_onFinishRest);
-    on<AbandonExercise>(_onAbandonExercise);
+    // One stream orders opposite actions and their durable writes, including start,
+    // pause/reset, explicit completion and abandonment. Per-type queues would race.
+    on<ActiveExerciseEvent>((event, emit) async {
+      if (event is StartExercise) return _onStartExercise(event, emit);
+      if (event is ToggleExecutionTimer) {
+        if (!state.isExecuting || state.timedTotalSeconds == null) return;
+        final now = _now();
+        final elapsed = state.elapsedAt(now);
+        if (elapsed >= state.timedTotalSeconds! * 1000) return;
+        final next = state.copyWith(
+          timedElapsedMs: elapsed,
+          timedStartedAt: state.timedStartedAt == null ? now : null,
+        );
+        emit(next);
+        await _persistState(next, emit);
+      } else if (event is ResetExecutionTimer) {
+        if (!state.isExecuting) return;
+        final next = state.copyWith(timedElapsedMs: 0, timedStartedAt: null);
+        emit(next);
+        await _persistState(next, emit);
+      } else if (event is AttachLastSetFeedback) {
+        await _onAttachLastSetFeedback(event, emit);
+      } else if (event is CompleteSet) {
+        await _onCompleteSet(event, emit);
+      } else if (event is SkipRest) {
+        await _onSkipRest(event, emit);
+      } else if (event is FinishRest) {
+        await _onFinishRest(event, emit);
+      } else if (event is AbandonExercise) {
+        await _onAbandonExercise(event, emit);
+      }
+    }, transformer: (events, mapper) => events.asyncExpand(mapper));
   }
 
   Future<void> _onStartExercise(
@@ -184,9 +251,20 @@ class ActiveExerciseBloc
     Emitter<ActiveExerciseState> emit,
   ) async {
     _trainingId = event.trainingId;
-    _exerciseId = event.exerciseId;
+    _exerciseId = event.assignmentDate == null
+        ? event.exerciseId
+        : '${event.exerciseId}:${event.assignmentDate}';
 
-    final saved = _localStorage.getActiveWorkout(event.exerciseId);
+    var saved = _localStorage.getActiveWorkout(_exerciseId!);
+    if (saved == null && event.assignmentDate != null) {
+      final legacy = _localStorage.getActiveWorkout(event.exerciseId);
+      if (legacy != null && legacy.trainingId == event.trainingId) {
+        // Keep an owner-bound legacy workout in its original slot until explicit
+        // completion. Do not invent its date or strand its sets during upgrade.
+        saved = legacy;
+        _exerciseId = event.exerciseId;
+      }
+    }
     if (saved != null && saved.trainingId == event.trainingId) {
       final restored = _restoreState(saved);
       emit(restored.copyWith(errorMessage: null));
@@ -229,6 +307,7 @@ class ActiveExerciseBloc
   ) async {
     if (!state.isExecuting) return;
 
+    final setBase = state.copyWith(timedElapsedMs: 0, timedStartedAt: null);
     final nextCompletedSets = state.completedSets + 1;
     final nextWeight = event.weightKg ?? state.weightKg;
     final nextPerformances =
@@ -250,7 +329,7 @@ class ActiveExerciseBloc
 
     if (nextCompletedSets >= state.totalSets) {
       if (state.restSeconds > 0) {
-        final finalRestingState = state.copyWith(
+        final finalRestingState = setBase.copyWith(
           completedSets: state.totalSets,
           currentSet: state.totalSets,
           weightKg: nextWeight,
@@ -267,7 +346,7 @@ class ActiveExerciseBloc
         await _startNativeRest(finalRestingState);
         return;
       }
-      final doneState = state.copyWith(
+      final doneState = setBase.copyWith(
         completedSets: state.totalSets,
         currentSet: state.totalSets,
         weightKg: nextWeight,
@@ -287,7 +366,7 @@ class ActiveExerciseBloc
 
     final nextSet = nextCompletedSets + 1;
     if (state.restSeconds <= 0) {
-      final executingState = state.copyWith(
+      final executingState = setBase.copyWith(
         completedSets: nextCompletedSets,
         currentSet: nextSet,
         weightKg: nextWeight,
@@ -301,7 +380,7 @@ class ActiveExerciseBloc
       return;
     }
 
-    final restingState = state.copyWith(
+    final restingState = setBase.copyWith(
       completedSets: nextCompletedSets,
       currentSet: nextSet,
       weightKg: nextWeight,
@@ -381,6 +460,16 @@ class ActiveExerciseBloc
         : (completedSets + 1).clamp(1, totalSets);
 
     return ActiveExerciseState(
+      timedElapsedMs: saved.timedElapsedMs,
+      timedStartedAt: saved.timedStartedAt,
+      timedTotalSeconds:
+          saved.timedTotalSeconds ??
+          (_trainingExercise.measureType == ExerciseMeasureType.seconds
+              ? _trainingExercise.targetValue
+              : null),
+      timedPrescription: saved.timedTotalSeconds != null
+          ? saved.timedPrescription
+          : _trainingExercise.timedPrescription,
       currentSet: currentSet,
       totalSets: totalSets,
       completedSets: completedSets,
@@ -438,6 +527,10 @@ class ActiveExerciseBloc
     try {
       await _localStorage.saveActiveWorkout(
         ActiveWorkoutHiveModel(
+          timedElapsedMs: nextState.timedElapsedMs,
+          timedStartedAt: nextState.timedStartedAt,
+          timedTotalSeconds: nextState.timedTotalSeconds,
+          timedPrescription: nextState.timedPrescription,
           trainingId: trainingId,
           exerciseId: exerciseId,
           currentSet: nextState.currentSet,

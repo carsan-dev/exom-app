@@ -233,6 +233,8 @@ void main() {
     () async {
       final bound = storage.bindActiveWorkoutStore();
       const workout = ActiveWorkoutHiveModel(
+        timedElapsedMs: 90000,
+        timedTotalSeconds: 1440,
         trainingId: 't',
         exerciseId: 'e',
         currentSet: 2,
@@ -256,6 +258,8 @@ void main() {
       );
       current = const LocalAuthSession(uid: 'A', generation: 3);
       expect(storage.getActiveWorkout('e')?.completedSets, 1);
+      expect(storage.getActiveWorkout('e')?.timedElapsedMs, 90000);
+      expect(storage.getActiveWorkout('e')?.timedTotalSeconds, 1440);
     },
   );
   test(

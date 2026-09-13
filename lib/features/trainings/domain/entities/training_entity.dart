@@ -1,3 +1,5 @@
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
+
 class ExerciseEntity {
   final String id;
   final String name;
@@ -90,6 +92,7 @@ class TrainingExerciseEntity {
   final int? targetValueMin;
   final int? targetValueMax;
   final int? targetRir;
+  final TimedPrescription? timedPrescription;
   final int restSeconds;
   final bool requestSetTracking;
   final String? blockId;
@@ -110,6 +113,7 @@ class TrainingExerciseEntity {
     this.targetValueMin,
     this.targetValueMax,
     this.targetRir,
+    this.timedPrescription,
     required this.restSeconds,
     this.requestSetTracking = false,
     this.blockId,

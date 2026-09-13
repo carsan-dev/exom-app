@@ -1,3 +1,4 @@
+import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -195,6 +196,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       StartExercise(
         trainingId: widget.trainingId,
         exerciseId: widget.exerciseId,
+        assignmentDate: widget.args.assignmentDate,
       ),
     );
 
@@ -584,6 +586,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           final semantic = context.exomSemantic;
           final targetPrescription = formatExercisePrescription(
             widget.args.trainingExercise,
+            savedTotalSeconds: state.timedTotalSeconds,
+            savedTimedPrescription: state.timedPrescription,
           );
           final prescriptionLabel = state.weightKg == null
               ? targetPrescription
@@ -741,6 +745,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                    if (state.isExecuting &&
+                                        state.timedTotalSeconds != null)
+                                      ExecutionTimer(state: state),
                                     if (previousPerformanceLabel != null &&
                                         previousPerformanceLabel
                                             .isNotEmpty) ...[

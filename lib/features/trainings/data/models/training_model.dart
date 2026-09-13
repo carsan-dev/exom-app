@@ -1,3 +1,4 @@
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
@@ -87,6 +88,7 @@ class TrainingExerciseModel {
   final int? targetValueMin;
   final int? targetValueMax;
   final int? targetRir;
+  final TimedPrescription? timedPrescription;
   final int restSeconds;
   final bool requestSetTracking;
   final String? blockId;
@@ -107,6 +109,7 @@ class TrainingExerciseModel {
     this.targetValueMin,
     this.targetValueMax,
     this.targetRir,
+    this.timedPrescription,
     required this.restSeconds,
     this.requestSetTracking = false,
     this.blockId,
@@ -147,6 +150,7 @@ class TrainingExerciseModel {
         'targetValueMax',
       )?.toInt(),
       targetRir: _readJson<num>(json, 'target_rir', 'targetRir')?.toInt(),
+      timedPrescription: TimedPrescription.tryParse(json['timed_config']),
       restSeconds: _readJson<int>(json, 'rest_seconds', 'restSeconds') ?? 60,
       requestSetTracking:
           _readJson<bool>(json, 'request_set_tracking', 'requestSetTracking') ??

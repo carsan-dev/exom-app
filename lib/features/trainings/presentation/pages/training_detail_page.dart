@@ -716,7 +716,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         }
                         final isCompleted = widget.state.completedExerciseIds
                             .contains(ex.id);
-                        final activeWorkout = box.get(ex.id);
+                        final activeWorkout =
+                            sl<LocalStorage>().getActiveWorkout(
+                              '${ex.id}:${widget.state.selectedDate}',
+                            ) ??
+                            sl<LocalStorage>().getActiveWorkout(ex.id);
                         final partialProgress =
                             activeWorkout?.trainingId == training.id
                             ? activeWorkout

@@ -1,3 +1,4 @@
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:hive/hive.dart';
 
 abstract class ActiveWorkoutLocalStore {
@@ -9,6 +10,10 @@ abstract class ActiveWorkoutLocalStore {
 class ActiveWorkoutHiveModel {
   static const int typeId = 1;
 
+  final int timedElapsedMs;
+  final DateTime? timedStartedAt;
+  final int? timedTotalSeconds;
+  final TimedPrescription? timedPrescription;
   final String trainingId;
   final String exerciseId;
   final int currentSet;
@@ -19,6 +24,10 @@ class ActiveWorkoutHiveModel {
   final String? lastSetFeedbackClientUploadId;
 
   const ActiveWorkoutHiveModel({
+    this.timedElapsedMs = 0,
+    this.timedStartedAt,
+    this.timedTotalSeconds,
+    this.timedPrescription,
     required this.trainingId,
     required this.exerciseId,
     required this.currentSet,
@@ -40,6 +49,10 @@ class ActiveWorkoutHiveModel {
     Object? lastSetFeedbackClientUploadId = _sentinel,
   }) {
     return ActiveWorkoutHiveModel(
+      timedElapsedMs: timedElapsedMs,
+      timedStartedAt: timedStartedAt,
+      timedTotalSeconds: timedTotalSeconds,
+      timedPrescription: timedPrescription,
       trainingId: trainingId ?? this.trainingId,
       exerciseId: exerciseId ?? this.exerciseId,
       currentSet: currentSet ?? this.currentSet,
@@ -73,6 +86,10 @@ class ActiveWorkoutHiveModelAdapter
     }
 
     return ActiveWorkoutHiveModel(
+      timedElapsedMs: fields[8] as int? ?? 0,
+      timedStartedAt: fields[9] as DateTime?,
+      timedTotalSeconds: fields[10] as int?,
+      timedPrescription: TimedPrescription.tryParse(fields[11]),
       trainingId: fields[0] as String? ?? '',
       exerciseId: fields[1] as String? ?? '',
       currentSet: fields[2] as int? ?? 1,
@@ -89,7 +106,7 @@ class ActiveWorkoutHiveModelAdapter
   @override
   void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.trainingId)
       ..writeByte(1)
@@ -105,7 +122,15 @@ class ActiveWorkoutHiveModelAdapter
       ..writeByte(6)
       ..write(obj.completedSetData)
       ..writeByte(7)
-      ..write(obj.lastSetFeedbackClientUploadId);
+      ..write(obj.lastSetFeedbackClientUploadId)
+      ..writeByte(8)
+      ..write(obj.timedElapsedMs)
+      ..writeByte(9)
+      ..write(obj.timedStartedAt)
+      ..writeByte(10)
+      ..write(obj.timedTotalSeconds)
+      ..writeByte(11)
+      ..write(obj.timedPrescription?.toJson());
   }
 }
 

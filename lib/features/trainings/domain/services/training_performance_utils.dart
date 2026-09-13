@@ -1,3 +1,4 @@
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 
 enum TimePerformanceUnit { seconds, minutes }
@@ -29,7 +30,26 @@ TimePerformanceUnit? timePerformanceUnitForExercise(
   };
 }
 
-String formatExercisePrescription(TrainingExerciseEntity exercise) {
+String formatExercisePrescription(
+  TrainingExerciseEntity exercise, {
+  int? savedTotalSeconds,
+  TimedPrescription? savedTimedPrescription,
+}) {
+  final timed = savedTotalSeconds != null
+      ? savedTimedPrescription ??
+            const TimedPrescription(unit: TimeDisplayUnit.seconds)
+      : exercise.timedPrescription;
+  if (timed != null && exercise.measureType == ExerciseMeasureType.seconds) {
+    final total = savedTotalSeconds ?? exercise.targetValue;
+    final target = total != null
+        ? timed.instructions(total)
+        : exercise.targetValueMin != null && exercise.targetValueMax != null
+        ? '${formatDurationValue(exercise.targetValueMin!, timed.unit)} – ${formatDurationValue(exercise.targetValueMax!, timed.unit)}'
+        : exercise.repsOrDuration;
+    return exercise.targetRir == null
+        ? target
+        : '$target · RIR ${exercise.targetRir}';
+  }
   final suffix = exercise.measureType == ExerciseMeasureType.seconds
       ? 's'
       : ' reps';

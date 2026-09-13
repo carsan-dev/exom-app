@@ -118,6 +118,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
       targetValueMin: model.targetValueMin,
       targetValueMax: model.targetValueMax,
       targetRir: model.targetRir,
+      timedPrescription: model.timedPrescription,
       restSeconds: model.restSeconds,
       requestSetTracking: model.requestSetTracking,
       blockId: model.blockId,

@@ -1,7 +1,4 @@
-- Consulta y registra el RIR y objetivos de repeticiones o segundos, con rangos.
-- Confirma antes de completar todo el entrenamiento.
-- Consulta el histórico de dietas y comidas por fecha.
-- Mejoras en acceso, planificación y guardado del progreso.
-- Recupera acciones y subidas al reconectar, conservando evidencias.
-- Progreso de subida y procesamiento, reintentos y avisos sin conexión más claros en ambos temas.
-- Más fiabilidad del temporizador entre descansos consecutivos.
+- Consulta los tiempos de tus ejercicios en minutos o segundos.
+- Sigue intervalos temporizados y alterna entre sus tramos, también en circuitos.
+- Pausa y retoma el temporizador conservando tu avance al reabrir la app.
+- Conserva las prescripciones y evidencias de entrenamientos anteriores aunque cambie la rutina.

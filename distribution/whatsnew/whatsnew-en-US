@@ -1,7 +1,4 @@
-- View and record RIR and rep or time targets, including ranges.
-- Confirm before completing a full workout.
-- View diet and meal history by date.
-- Improvements to sign-in, planning and saving progress.
-- Recover pending actions and uploads when reconnecting, keeping your evidence.
-- Clearer upload and processing progress, retries and offline messages in both themes.
-- Improved timer reliability between consecutive rest periods.
+- View exercise durations in minutes or seconds.
+- Follow timed intervals and alternate between segments, including in circuits.
+- Pause and resume the timer, keeping your progress when you reopen the app.
+- Keep past workout prescriptions and evidence even when your routine changes.

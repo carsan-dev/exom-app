@@ -49,14 +49,15 @@ Map<String, dynamic> overlayPendingProgressActions({
         final exerciseId = action['exercise_id'] as String?;
         if (trainingExerciseId == null && exerciseId == null) continue;
 
-        final existingIndex = exercises.indexWhere(
-          (entry) =>
-              (trainingExerciseId != null &&
-                  entry['training_exercise_id'] == trainingExerciseId) ||
-              (entry['training_exercise_id'] == null &&
+        // The overlay has no authoritative assignment context. It cannot
+        // promote unattributed history or choose between duplicate records.
+        bool matches(Map<String, dynamic> entry) => trainingExerciseId != null
+            ? entry['training_exercise_id'] == trainingExerciseId
+            : entry['training_exercise_id'] == null &&
                   exerciseId != null &&
-                  entry['exercise_id'] == exerciseId),
-        );
+                  entry['exercise_id'] == exerciseId;
+        if (exercises.where(matches).length > 1) continue;
+        final existingIndex = exercises.indexWhere(matches);
         final existing = existingIndex < 0
             ? <String, dynamic>{}
             : exercises.removeAt(existingIndex);

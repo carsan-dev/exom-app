@@ -69,66 +69,72 @@ void main() {
       expect(storage.actions, isEmpty);
     },
   );
-  test(
-    'v2 conflicts retain user data and block later writes instead of auto-rebasing',
-    () async {
-      final storage = FakeSyncStorage();
-      var calls = 0;
-      final client = respondingClient((options, handler) {
-        calls++;
-        handler.reject(
-          DioException.badResponse(
-            statusCode: 409,
-            requestOptions: options,
-            response: Response(
-              requestOptions: options,
+  for (final conflictCode in [
+    'PROGRESS_VERSION_CONFLICT',
+    'PROGRESS_HISTORY_AMBIGUOUS',
+  ]) {
+    test(
+      '$conflictCode retains user data and blocks later writes instead of auto-rebasing',
+      () async {
+        final storage = FakeSyncStorage();
+        var calls = 0;
+        final client = respondingClient((options, handler) {
+          calls++;
+          handler.reject(
+            DioException.badResponse(
               statusCode: 409,
-              data: {
-                'code': 'PROGRESS_VERSION_CONFLICT',
-                'current_progress': {
-                  'sync_revision': 4,
-                  'exercises_completed': <Map<String, dynamic>>[],
-                  'meals_completed': <String>[],
+              requestOptions: options,
+              response: Response(
+                requestOptions: options,
+                statusCode: 409,
+                data: {
+                  'code': conflictCode,
+                  if (conflictCode == 'PROGRESS_VERSION_CONFLICT')
+                    'current_progress': {
+                      'sync_revision': 4,
+                      'exercises_completed': <Map<String, dynamic>>[],
+                      'meals_completed': <String>[],
+                    },
                 },
-              },
+              ),
             ),
-          ),
+          );
+        });
+        final service = OfflineSyncService(
+          client,
+          storage,
+          isAuthenticated: () => true,
         );
-      });
-      final service = OfflineSyncService(
-        client,
-        storage,
-        isAuthenticated: () => true,
-      );
-      await service.queueExerciseCompletion(
-        'te',
-        '2026-09-06',
-        completed: true,
-        exerciseId: 'e',
-      );
-      await service.queueExerciseCompletion(
-        'te',
-        '2026-09-06',
-        completed: false,
-      );
-      await service.syncPendingActions();
-      await service.syncPendingActions();
-      expect(calls, 1);
-      expect(storage.actions.first['status'], 'failed');
-      expect(storage.actions.first['expected_revision'], 0);
-      expect(
-        storage.actions.first['last_error'],
-        'progress_conflict_review_required',
-      );
-      expect(storage.actions, hasLength(2));
-      await service.retryAction(storage.actions.first['id'] as String);
-      expect(calls, 1);
-      await service.discardAction(storage.actions.first['id'] as String);
-      expect(storage.actions.single['status'], 'failed');
-      await service.syncPendingActions();
-      expect(calls, 1);
-    },
-  );
+        await service.queueExerciseCompletion(
+          'te',
+          '2026-09-06',
+          completed: true,
+          exerciseId: 'e',
+        );
+        await service.queueExerciseCompletion(
+          'te',
+          '2026-09-06',
+          completed: false,
+        );
+        await service.syncPendingActions();
+        await service.syncPendingActions();
+        expect(calls, 1);
+        expect(storage.actions.first['status'], 'failed');
+        expect(storage.actions.first['expected_revision'], 0);
+        expect(
+          storage.actions.first['last_error'],
+          'progress_conflict_review_required',
+        );
+        expect(storage.actions, hasLength(2));
+        await service.retryAction(storage.actions.first['id'] as String);
+        expect(calls, 1);
+        await service.discardAction(storage.actions.first['id'] as String);
+        expect(storage.actions.single['status'], 'failed');
+        await service.syncPendingActions();
+        expect(calls, 1);
+      },
+    );
+  }
   test(
     'a missing mandatory feedback receipt never permits complete_training',
     () async {

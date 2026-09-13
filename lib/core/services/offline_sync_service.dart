@@ -253,7 +253,8 @@ class OfflineSyncService {
         final conflict =
             errorData is Map &&
             (errorData['code'] == 'PROGRESS_VERSION_CONFLICT' ||
-                errorData['code'] == 'PROGRESS_OPERATION_CONFLICT');
+                errorData['code'] == 'PROGRESS_OPERATION_CONFLICT' ||
+                errorData['code'] == 'PROGRESS_HISTORY_AMBIGUOUS');
         final retryable =
             !conflict &&
             (offline ||

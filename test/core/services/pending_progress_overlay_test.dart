@@ -4,6 +4,63 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const date = '2026-09-03';
 
+  test(
+    'canonical pending action does not claim an unattributed historical entry',
+    () {
+      final legacy = {
+        'exercise_id': 'e',
+        'weight_used': 40,
+        'completed_at': 'old',
+      };
+      final merged = overlayPendingProgressActions(
+        progress: {
+          'exercises_completed': [legacy],
+        },
+        actions: [
+          {
+            'type': 'mark_exercise_completed',
+            'date': date,
+            'training_exercise_id': 'te',
+            'exercise_id': 'e',
+            'weight_used': 50,
+          },
+        ],
+        date: date,
+      );
+      expect(merged['exercises_completed'], [
+        legacy,
+        containsPair('training_exercise_id', 'te'),
+      ]);
+      expect(legacy.containsKey('training_exercise_id'), false);
+    },
+  );
+
+  test('pending edit cannot choose one of two historical records', () {
+    final entries = [20, 30]
+        .map(
+          (weight) => {
+            'training_exercise_id': 'te',
+            'exercise_id': 'e',
+            'weight_used': weight,
+          },
+        )
+        .toList();
+    final merged = overlayPendingProgressActions(
+      progress: {'exercises_completed': entries},
+      actions: [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'weight_used': 50,
+        },
+      ],
+      date: date,
+    );
+    expect(merged['exercises_completed'], entries);
+  });
+
   test('keeps queued exercise completions over stale server progress', () {
     final merged = overlayPendingProgressActions(
       progress: {

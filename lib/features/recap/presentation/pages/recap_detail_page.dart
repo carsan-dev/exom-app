@@ -360,9 +360,27 @@ class _RecapDetailContent extends StatelessWidget {
             _Item('Estado de ánimo', _opt(recap.mood)),
             _Item(
               'Estrés',
-              recap.stressEnabled
-                  ? '${recap.stressLevel ?? 0}/5'
+              recap.stressEnabled && recap.stressLevel != null
+                  ? '${recap.stressLevel}/5'
                   : 'No valorado',
+            ),
+            _Item(
+              l10n.weeklyHunger,
+              recap.hungerLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.hungerLevel}/10',
+            ),
+            _Item(
+              l10n.weeklyEnergy,
+              recap.energyLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.energyLevel}/10',
+            ),
+            _Item(
+              l10n.weeklyDigestion,
+              recap.digestionLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.digestionLevel}/10',
             ),
             _Item('Notas', recap.generalNotes ?? '—'),
           ],

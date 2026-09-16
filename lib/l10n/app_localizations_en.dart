@@ -9,6 +9,34 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get weeklyHunger => 'Weekly hunger (optional)';
+
+  @override
+  String get weeklyHungerScale =>
+      '1 = no hunger · 10 = extreme hunger. Rate your week.';
+
+  @override
+  String get weeklyEnergy => 'Weekly energy (optional)';
+
+  @override
+  String get weeklyEnergyScale =>
+      '1 = no energy · 10 = high energy. Rate your week.';
+
+  @override
+  String get weeklyDigestion => 'Weekly digestion (optional)';
+
+  @override
+  String get weeklyDigestionScale =>
+      '1 = very poor, much discomfort · 10 = very good, no discomfort.';
+
+  @override
+  String get weeklyStressScale =>
+      '0 = no stress · 5 = maximum stress. Original recap scale.';
+
+  @override
+  String get optionalRatingNoData => 'No data';
+
+  @override
   String get appTagline => 'Your personal coach, always with you';
 
   @override

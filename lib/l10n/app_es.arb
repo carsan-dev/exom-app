@@ -1,4 +1,12 @@
 {
+  "weeklyHunger": "Hambre semanal (opcional)",
+  "weeklyHungerScale": "1 = nada de hambre · 10 = hambre extrema. Valora tu semana.",
+  "weeklyEnergy": "Energía semanal (opcional)",
+  "weeklyEnergyScale": "1 = sin energía · 10 = mucha energía. Valora tu semana.",
+  "weeklyDigestion": "Digestión semanal (opcional)",
+  "weeklyDigestionScale": "1 = muy mala, muchas molestias · 10 = muy buena, sin molestias.",
+  "weeklyStressScale": "0 = sin estrés · 5 = estrés máximo. Escala histórica del recap.",
+  "optionalRatingNoData": "Sin dato",
   "@@locale": "es",
 
   "appTagline": "Tu entrenador personal, siempre contigo",

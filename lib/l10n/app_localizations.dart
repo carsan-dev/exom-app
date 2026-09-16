@@ -98,6 +98,54 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
+  /// No description provided for @weeklyHunger.
+  ///
+  /// In es, this message translates to:
+  /// **'Hambre semanal (opcional)'**
+  String get weeklyHunger;
+
+  /// No description provided for @weeklyHungerScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = nada de hambre · 10 = hambre extrema. Valora tu semana.'**
+  String get weeklyHungerScale;
+
+  /// No description provided for @weeklyEnergy.
+  ///
+  /// In es, this message translates to:
+  /// **'Energía semanal (opcional)'**
+  String get weeklyEnergy;
+
+  /// No description provided for @weeklyEnergyScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = sin energía · 10 = mucha energía. Valora tu semana.'**
+  String get weeklyEnergyScale;
+
+  /// No description provided for @weeklyDigestion.
+  ///
+  /// In es, this message translates to:
+  /// **'Digestión semanal (opcional)'**
+  String get weeklyDigestion;
+
+  /// No description provided for @weeklyDigestionScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = muy mala, muchas molestias · 10 = muy buena, sin molestias.'**
+  String get weeklyDigestionScale;
+
+  /// No description provided for @weeklyStressScale.
+  ///
+  /// In es, this message translates to:
+  /// **'0 = sin estrés · 5 = estrés máximo. Escala histórica del recap.'**
+  String get weeklyStressScale;
+
+  /// No description provided for @optionalRatingNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin dato'**
+  String get optionalRatingNoData;
+
   /// No description provided for @appTagline.
   ///
   /// In es, this message translates to:

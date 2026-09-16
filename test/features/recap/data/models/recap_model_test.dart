@@ -3,6 +3,50 @@ import 'package:exom_app/features/recap/data/models/recap_model.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 
 void main() {
+  test(
+    'optional habits survive server draft reload and feedback copy; old recaps have no data',
+    () {
+      final json = <String, Object?>{
+        'id': 'recap-p1',
+        'week_start_date': '2026-09-07',
+        'week_end_date': '2026-09-13',
+        'status': 'DRAFT',
+        'created_at': '2026-09-07',
+      };
+      final old = RecapModel.fromJson(json);
+      expect(old.hungerLevel, isNull);
+      expect(old.energyLevel, isNull);
+      expect(old.digestionLevel, isNull);
+      json.addAll({
+        'hunger_level': 1,
+        'energy_level': 10,
+        'digestion_level': 5,
+        'stress_level': 0,
+      });
+      final restored = RecapModel.fromJson(
+        json,
+      ).copyWith(clientFeedbackReadAt: DateTime(2026));
+      expect(restored.hungerLevel, 1);
+      expect(restored.energyLevel, 10);
+      expect(restored.digestionLevel, 5);
+      expect(restored.stressLevel, 0);
+      final form = {
+        'hunger_level': 1,
+        'energy_level': 10,
+        'digestion_level': null,
+      };
+      expect(RecapModel.toCreateJson(form)['hunger_level'], 1);
+      expect(
+        RecapModel.toCreateJson(form).containsKey('digestion_level'),
+        isFalse,
+      );
+      expect(
+        RecapModel.toUpdateJson(form),
+        containsPair('digestion_level', null),
+      );
+    },
+  );
+
   test('preserves recap anatomy ids and legacy zones in create payload', () {
     final payload = RecapModel.toCreateJson({
       'average_daily_steps': 8500,

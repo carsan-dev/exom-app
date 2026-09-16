@@ -3,6 +3,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
+import 'recap_optional_rating.dart';
 
 int stressLevelFromRatingIndex(int index) => index + 1;
 
@@ -19,7 +20,7 @@ class RecapStepGeneral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stressEnabled = formData['stress_enabled'] as bool? ?? false;
-    final stressLevel = (formData['stress_level'] as num?)?.toInt() ?? 3;
+    final stressLevel = (formData['stress_level'] as num?)?.toInt();
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
@@ -71,16 +72,36 @@ class RecapStepGeneral extends StatelessWidget {
                 ),
                 if (stressEnabled) ...[
                   const SizedBox(height: 8),
-                  RecapEmojiRatingField(
+                  RecapOptionalRating(
                     label: l10n.perceivedStress,
-                    helperText: l10n.howMuchStressDidYouFeelThisWeek,
-                    value: (stressLevel - 1).clamp(0, 4),
-                    onChanged: (value) => onChanged(
-                      'stress_level',
-                      stressLevelFromRatingIndex(value),
-                    ),
+                    helper: l10n.weeklyStressScale,
+                    value: stressLevel,
+                    min: 0,
+                    max: 5,
+                    onChanged: (value) => onChanged('stress_level', value),
                   ),
                 ],
+                const SizedBox(height: 20),
+                RecapOptionalRating(
+                  label: l10n.weeklyHunger,
+                  helper: l10n.weeklyHungerScale,
+                  value: formData['hunger_level'] as int?,
+                  onChanged: (value) => onChanged('hunger_level', value),
+                ),
+                const SizedBox(height: 20),
+                RecapOptionalRating(
+                  label: l10n.weeklyEnergy,
+                  helper: l10n.weeklyEnergyScale,
+                  value: formData['energy_level'] as int?,
+                  onChanged: (value) => onChanged('energy_level', value),
+                ),
+                const SizedBox(height: 20),
+                RecapOptionalRating(
+                  label: l10n.weeklyDigestion,
+                  helper: l10n.weeklyDigestionScale,
+                  value: formData['digestion_level'] as int?,
+                  onChanged: (value) => onChanged('digestion_level', value),
+                ),
                 const SizedBox(height: 20),
                 RecapTextAreaField(
                   label: l10n.notes,

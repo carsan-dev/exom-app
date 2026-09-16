@@ -9,6 +9,34 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get weeklyHunger => 'Hambre semanal (opcional)';
+
+  @override
+  String get weeklyHungerScale =>
+      '1 = nada de hambre · 10 = hambre extrema. Valora tu semana.';
+
+  @override
+  String get weeklyEnergy => 'Energía semanal (opcional)';
+
+  @override
+  String get weeklyEnergyScale =>
+      '1 = sin energía · 10 = mucha energía. Valora tu semana.';
+
+  @override
+  String get weeklyDigestion => 'Digestión semanal (opcional)';
+
+  @override
+  String get weeklyDigestionScale =>
+      '1 = muy mala, muchas molestias · 10 = muy buena, sin molestias.';
+
+  @override
+  String get weeklyStressScale =>
+      '0 = sin estrés · 5 = estrés máximo. Escala histórica del recap.';
+
+  @override
+  String get optionalRatingNoData => 'Sin dato';
+
+  @override
   String get appTagline => 'Tu entrenador personal, siempre contigo';
 
   @override

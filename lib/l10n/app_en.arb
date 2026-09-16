@@ -1,4 +1,12 @@
 {
+  "weeklyHunger": "Weekly hunger (optional)",
+  "weeklyHungerScale": "1 = no hunger · 10 = extreme hunger. Rate your week.",
+  "weeklyEnergy": "Weekly energy (optional)",
+  "weeklyEnergyScale": "1 = no energy · 10 = high energy. Rate your week.",
+  "weeklyDigestion": "Weekly digestion (optional)",
+  "weeklyDigestionScale": "1 = very poor, much discomfort · 10 = very good, no discomfort.",
+  "weeklyStressScale": "0 = no stress · 5 = maximum stress. Original recap scale.",
+  "optionalRatingNoData": "No data",
   "@@locale": "en",
 
   "appTagline": "Your personal coach, always with you",

@@ -35,6 +35,9 @@ class RecapEntity {
   final String? mood;
   final bool stressEnabled;
   final int? stressLevel;
+  final int? hungerLevel;
+  final int? energyLevel;
+  final int? digestionLevel;
   final String? generalNotes;
 
   // Improvement
@@ -75,6 +78,9 @@ class RecapEntity {
     this.mood,
     this.stressEnabled = false,
     this.stressLevel,
+    this.hungerLevel,
+    this.energyLevel,
+    this.digestionLevel,
     this.generalNotes,
     this.improvementAppRating,
     this.improvementServiceRating,
@@ -121,6 +127,9 @@ class RecapEntity {
       mood: mood,
       stressEnabled: stressEnabled,
       stressLevel: stressLevel,
+      hungerLevel: hungerLevel,
+      energyLevel: energyLevel,
+      digestionLevel: digestionLevel,
       generalNotes: generalNotes,
       improvementAppRating: improvementAppRating,
       improvementServiceRating: improvementServiceRating,

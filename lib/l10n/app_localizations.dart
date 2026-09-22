@@ -4838,14 +4838,58 @@ abstract class AppLocalizations {
   /// **'No se pudo crear la sesión de fotos'**
   String get progressPhotosCreateError;
 
+  /// No description provided for @progressPhotosRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar fotos de progreso'**
   String get progressPhotosRefresh;
+
+  /// No description provided for @progressPhotosReviewReplacement.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar sustitución'**
   String get progressPhotosReviewReplacement;
+
+  /// No description provided for @progressPhotosRebaseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Usar la foto activa actual?'**
   String get progressPhotosRebaseTitle;
+
+  /// No description provided for @progressPhotosRebaseMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto local conservada sustituirá la foto activa actual solo si sigue siendo la actual. No se creará una nueva subida.'**
   String get progressPhotosRebaseMessage;
+
+  /// No description provided for @progressPhotosRebaseConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Reasignar sustitución'**
   String get progressPhotosRebaseConfirm;
+
+  /// No description provided for @progressPhotosDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
   String get progressPhotosDiscard;
+
+  /// No description provided for @progressPhotosDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar la foto local conservada?'**
   String get progressPhotosDiscardTitle;
+
+  /// No description provided for @progressPhotosDiscardMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se elimina permanentemente la foto local conservada y se detiene su subida. Esta acción no se puede deshacer.'**
   String get progressPhotosDiscardMessage;
+
+  /// No description provided for @progressPhotosDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
   String get progressPhotosDiscardConfirm;
 }
 

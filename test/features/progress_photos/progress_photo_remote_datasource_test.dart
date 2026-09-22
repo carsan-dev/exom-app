@@ -127,7 +127,7 @@ void main() {
       replacesPhotoId: 'photo-active',
     );
 
-    expect(history.single.photos.single.imageUrl, 'r2://history');
+    expect(history.sessions.single.photos.single.imageUrl, 'r2://history');
     expect(session.id, 'session-created');
     expect(photoResponse.replacesPhotoId, 'photo-active');
     expect(adapter.requests.first.queryParameters, {'page': 2, 'limit': 5});

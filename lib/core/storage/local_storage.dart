@@ -104,6 +104,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _pendingSyncKey = 'offline_sync_actions';
   static const _feedbackUploadQueueKey = 'feedback_upload_queue';
   static const _progressPhotoUploadQueueKey = 'progress_photo_upload_queue';
+  static const _progressPhotoPickerIntentKey = 'progress_photo_picker_intent';
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
@@ -254,6 +255,40 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     queue,
     ownsProgressPhotoQueueEntry,
   );
+
+  /// Android picker recovery is deliberately isolated from upload queue data.
+  /// The record can only be read in the same owner/environment/version scope.
+  Future<void> saveProgressPhotoPickerIntent(Map<String, dynamic> intent) async {
+    final session = sessionStamp;
+    if (session == null) throw const LocalSessionChanged();
+    await saveSetting(_progressPhotoPickerIntentStorageKey(), {
+      ...intent,
+      'format_version': 1,
+      'owner_id': ownerId,
+      'environment': environment,
+      'session_stamp': session,
+    });
+    guardSession();
+  }
+
+  Map<String, dynamic>? getProgressPhotoPickerIntent() {
+    final value = getSetting<dynamic>(_progressPhotoPickerIntentStorageKey());
+    if (value is! Map) return null;
+    final intent = Map<String, dynamic>.from(value);
+    return intent['format_version'] == 1 &&
+            intent['owner_id'] == ownerId &&
+            intent['environment'] == environment
+        ? intent
+        : null;
+  }
+
+  Future<void> clearProgressPhotoPickerIntent() =>
+      _settings.delete(_progressPhotoPickerIntentStorageKey());
+
+  String _progressPhotoPickerIntentStorageKey() {
+    final scope = base64Url.encode(utf8.encode(jsonEncode([1, environment, ownerId])));
+    return '$_progressPhotoPickerIntentKey:$scope';
+  }
 
   Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) =>
       _saveQueueFor(key, entries, ownsEntry);

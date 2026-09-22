@@ -2640,4 +2640,152 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get pendingSyncConflict =>
       'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.';
+
+  @override
+  String get progressPhotosTitle => 'Fotos de progreso';
+
+  @override
+  String get progressPhotosEntry => 'Fotos de progreso';
+
+  @override
+  String get progressPhotosLoading => 'Cargando fotos de progreso';
+
+  @override
+  String get progressPhotosLoadError =>
+      'No se pudieron cargar las fotos de progreso';
+
+  @override
+  String get progressPhotosRetry => 'Reintentar';
+
+  @override
+  String get progressPhotosRecoveryError =>
+      'No se pudo recuperar la foto seleccionada. Selecciónala de nuevo.';
+
+  @override
+  String get progressPhotosEmpty => 'Aún no hay sesiones de fotos de progreso';
+
+  @override
+  String get progressPhotosNewSession => 'Nueva sesión';
+
+  @override
+  String get progressPhotosCreateSession => 'Crear sesión incompleta';
+
+  @override
+  String get progressPhotosLoadMore => 'Cargar más';
+
+  @override
+  String get progressPhotosLoadingMore => 'Cargando más…';
+
+  @override
+  String get progressPhotosChooseSource => 'Elige el origen de la imagen';
+
+  @override
+  String get progressPhotosCamera => 'Cámara';
+
+  @override
+  String get progressPhotosGallery => 'Galería';
+
+  @override
+  String get progressPhotosFront => 'Frontal';
+
+  @override
+  String get progressPhotosLeft => 'Lateral izquierda';
+
+  @override
+  String get progressPhotosRight => 'Lateral derecha';
+
+  @override
+  String get progressPhotosBack => 'Espalda';
+
+  @override
+  String get progressPhotosComplete => 'Completa';
+
+  @override
+  String get progressPhotosIncomplete => 'Sesión incompleta';
+
+  @override
+  String get progressPhotosMissing => 'Pendiente';
+
+  @override
+  String progressPhotosAdd(String view) {
+    return 'Añadir $view';
+  }
+
+  @override
+  String progressPhotosReplace(String view) {
+    return 'Sustituir $view';
+  }
+
+  @override
+  String get progressPhotosReplaceTitle => '¿Sustituir la foto activa?';
+
+  @override
+  String progressPhotosReplaceMessage(String view) {
+    return 'La foto activa $view solo se sustituirá si sigue siendo la actual.';
+  }
+
+  @override
+  String get progressPhotosReplaceConfirm => 'Sustituir';
+
+  @override
+  String get progressPhotosPending => 'Subida pendiente';
+
+  @override
+  String get progressPhotosSynchronizing => 'Sincronizando';
+
+  @override
+  String get progressPhotosConfirmed => 'Confirmada';
+
+  @override
+  String get progressPhotosConfirmedCleanup =>
+      'Confirmada; limpiando la copia local';
+
+  @override
+  String get progressPhotosFailed =>
+      'Falló la subida; se conserva la foto local';
+
+  @override
+  String get progressPhotosConflict =>
+      'La sustitución requiere revisión; se conserva la foto local';
+
+  @override
+  String progressPhotosEnlarge(String view) {
+    return 'Ampliar $view';
+  }
+
+  @override
+  String get progressPhotosCloseImage => 'Cerrar imagen';
+
+  @override
+  String get progressPhotosCreateError => 'No se pudo crear la sesión de fotos';
+
+  @override
+  String get progressPhotosRefresh => 'Actualizar fotos de progreso';
+
+  @override
+  String get progressPhotosReviewReplacement => 'Revisar sustitución';
+
+  @override
+  String get progressPhotosRebaseTitle => '¿Usar la foto activa actual?';
+
+  @override
+  String get progressPhotosRebaseMessage =>
+      'La foto local conservada sustituirá la foto activa actual solo si sigue siendo la actual. No se creará una nueva subida.';
+
+  @override
+  String get progressPhotosRebaseConfirm => 'Reasignar sustitución';
+
+  @override
+  String get progressPhotosDiscard => 'Descartar';
+
+  @override
+  String get progressPhotosDiscardTitle =>
+      '¿Descartar la foto local conservada?';
+
+  @override
+  String get progressPhotosDiscardMessage =>
+      'Se elimina permanentemente la foto local conservada y se detiene su subida. Esta acción no se puede deshacer.';
+
+  @override
+  String get progressPhotosDiscardConfirm => 'Descartar';
 }

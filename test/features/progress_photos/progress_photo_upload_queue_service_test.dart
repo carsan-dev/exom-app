@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
 import 'package:exom_app/core/services/managed_upload.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/features/progress_photos/data/datasources/progress_photo_remote_datasource.dart';
+import 'package:exom_app/features/progress_photos/data/repositories/progress_photo_repository_impl.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
 import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
@@ -374,6 +379,57 @@ void main() {
     expect(storage.all.single['association_checkpoint']['state'], 'associating');
   });
 
+  test('association-only rebase sends only the fresh association at the production HTTP boundary', () async {
+    final api = ApiClient(useAuth: false, baseUrl: 'https://api.exom.test');
+    final adapter = _AssociationOnlyHttpAdapter();
+    api.dio.httpClientAdapter = adapter;
+    final queue = ProgressPhotoUploadQueueService(
+      ProgressPhotoRepositoryImpl(ProgressPhotoRemoteDataSourceImpl(api)),
+      storage,
+      isAuthenticated: () => authenticated,
+      applicationSupportDirectory: () async => directory,
+    );
+    final id = await enqueue(queue, replacement: 'stale-active');
+    final originalAssociationOperation =
+        storage.all.single['association_operation_id'] as String;
+    storage.all.single.addAll({
+      'session_id': 'session-confirmed',
+      'session_checkpoint': {
+        'state': 'confirmed',
+        'session_id': 'session-confirmed',
+      },
+      'upload_checkpoint': {
+        'phase': 'completion_confirmed',
+        'upload_id': 'managed-upload',
+        'file_url': 'r2://managed-upload',
+      },
+      'association_checkpoint': {'state': 'pending'},
+      'status': 'failed',
+      'last_error': 'STALE_REPLACEMENT',
+    });
+
+    await queue.rebaseReplacement(id, 'fresh-active');
+
+    expect(adapter.requests.map((request) => request.path), [
+      '/progress-photos/sessions/session-confirmed/photos',
+    ]);
+    expect(adapter.requests.single.data, {
+      'upload_id': 'managed-upload',
+      'view': 'FRONT',
+      'operation_id': isNot(originalAssociationOperation),
+      'replaces_photo_id': 'fresh-active',
+    });
+    expect(
+      adapter.requests.where(
+        (request) =>
+            request.path == '/uploads/sessions' ||
+            request.path.contains('/complete') ||
+            request.method == 'PUT',
+      ),
+      isEmpty,
+    );
+  });
+
   test('reconnect accelerates only offline failures and retains server backoff', () async {
     final connectivity = StreamController<bool>();
     addTearDown(connectivity.close);
@@ -497,6 +553,41 @@ class PhotoStorage extends LocalStorage {
   }
 }
 
+class _AssociationOnlyHttpAdapter implements HttpClientAdapter {
+  final List<RequestOptions> requests = [];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    await requestStream?.drain<void>();
+    if (options.method == 'POST' &&
+        options.path == '/progress-photos/sessions/session-confirmed/photos') {
+      return ResponseBody.fromString(
+        jsonEncode({
+          'data': {
+            'id': 'rebased-photo',
+            'view': 'FRONT',
+            'image_url': 'r2://managed-upload',
+            'replaces_photo_id': 'fresh-active',
+          },
+        }),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
+    throw StateError('Unexpected HTTP request: ${options.method} ${options.path}');
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 class FakePhotoRepository implements ProgressPhotoRepository {
   int createCalls = 0;
   int uploadCalls = 0;
@@ -512,6 +603,10 @@ class FakePhotoRepository implements ProgressPhotoRepository {
   final Map<String, String> createdAssociations = {};
   final uploadStarted = Completer<void>();
   final releaseUpload = Completer<void>();
+
+  @override
+  Future<ProgressPhotoSession> getSession(String sessionId) =>
+      throw UnimplementedError();
 
   @override
   Future<ProgressPhotoSession> createSession({required String civilDate, required String operationId}) async {
@@ -557,5 +652,6 @@ class FakePhotoRepository implements ProgressPhotoRepository {
   }
 
   @override
-  Future<List<ProgressPhotoSession>> getHistory({int page = 1, int limit = 20}) async => const [];
+  Future<ProgressPhotoHistory> getHistory({int page = 1, int limit = 20}) async =>
+      ProgressPhotoHistory(sessions: const [], total: 0, page: page, limit: limit, totalPages: 0);
 }

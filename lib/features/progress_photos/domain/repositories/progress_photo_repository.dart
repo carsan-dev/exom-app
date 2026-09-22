@@ -4,7 +4,8 @@ import 'package:exom_app/core/services/managed_upload.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 
 abstract class ProgressPhotoRepository {
-  Future<List<ProgressPhotoSession>> getHistory({int page = 1, int limit = 20});
+  Future<ProgressPhotoHistory> getHistory({int page = 1, int limit = 20});
+  Future<ProgressPhotoSession> getSession(String sessionId);
 
   Future<ProgressPhotoSession> createSession({
     required String civilDate,

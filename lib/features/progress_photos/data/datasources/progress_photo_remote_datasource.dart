@@ -6,7 +6,8 @@ import 'package:exom_app/core/services/managed_upload.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 
 abstract class ProgressPhotoRemoteDataSource {
-  Future<List<ProgressPhotoSession>> getHistory({int page = 1, int limit = 20});
+  Future<ProgressPhotoHistory> getHistory({int page = 1, int limit = 20});
+  Future<ProgressPhotoSession> getSession(String sessionId);
   Future<ProgressPhotoSession> createSession({
     required String civilDate,
     required String operationId,
@@ -42,16 +43,31 @@ class ProgressPhotoRemoteDataSourceImpl implements ProgressPhotoRemoteDataSource
   }
 
   @override
-  Future<List<ProgressPhotoSession>> getHistory({int page = 1, int limit = 20}) async {
+  Future<ProgressPhotoHistory> getHistory({int page = 1, int limit = 20}) async {
     final response = await _apiClient.dio.get<dynamic>(
       '/progress-photos/sessions',
       queryParameters: {'page': page, 'limit': limit},
     );
     final data = _body(response);
-    return ((data['data'] as List?) ?? const [])
+    final sessions = ((data['data'] as List?) ?? const [])
         .whereType<Map>()
         .map((session) => ProgressPhotoSession.fromJson(Map<String, dynamic>.from(session)))
         .toList(growable: false);
+    return ProgressPhotoHistory(
+      sessions: sessions,
+      total: data['total'] as int? ?? sessions.length,
+      page: data['page'] as int? ?? page,
+      limit: data['limit'] as int? ?? limit,
+      totalPages: data['totalPages'] as int? ?? 1,
+    );
+  }
+
+  @override
+  Future<ProgressPhotoSession> getSession(String sessionId) async {
+    final response = await _apiClient.dio.get<dynamic>(
+      '/progress-photos/sessions/$sessionId',
+    );
+    return ProgressPhotoSession.fromJson(_body(response));
   }
 
   @override

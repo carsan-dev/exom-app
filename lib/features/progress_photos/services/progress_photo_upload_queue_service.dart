@@ -186,6 +186,39 @@ class ProgressPhotoUploadQueueService {
     await processQueue();
   });
 
+  /// Rebasing a stale replacement never recreates its upload or session. Only
+  /// the association identity and active-photo precondition are renewed.
+  Future<void> rebaseReplacement(String id, String activePhotoId) =>
+      _storage.sessionTask(() async {
+        final item = _find(id);
+        if (item == null || !_hasConfirmedManagedUpload(item)) {
+          throw StateError('A confirmed upload and session are required to rebase');
+        }
+        await _mutate(id, (saved) => {
+          ...saved,
+          'replaces_photo_id': activePhotoId,
+          'association_operation_id': newOperationId(),
+          'association_checkpoint': {'state': 'pending'},
+          'status': 'queued',
+          'last_error': null,
+        });
+        await processQueue();
+      });
+
+  /// Explicit discard is the only UI-authorized path that deletes retained
+  /// local evidence after a permanent failure or a replacement conflict.
+  Future<void> discard(String id) => _storage.sessionTask(() async {
+    final item = _find(id);
+    if (item == null) return;
+    final path = item['file_path'] as String?;
+    if (path != null) await _deleteFile(path);
+    await _queueMutex.protect(() async {
+      final queue = _storage.getProgressPhotoUploadQueue();
+      queue.removeWhere((entry) => entry['id'] == id);
+      await _storage.saveProgressPhotoUploadQueue(queue);
+    });
+  });
+
   Future<void> processQueue() =>
       _storage.withSession(() => _runnerMutex.protect(_processLocked));
 
@@ -226,41 +259,48 @@ class ProgressPhotoUploadQueueService {
         final item = await _claimNext();
         if (item == null) break;
         final id = item['id'] as String;
+        final confirmedUploadId = _confirmedManagedUploadId(item);
         final file = File(item['file_path'] as String);
-        if (!await file.exists()) {
+        if (confirmedUploadId == null && !await file.exists()) {
           await _fail(id, item, 'progress_photo_file_missing', retryable: false);
           continue;
         }
         try {
           final sessionId = await _resolveSession(item, current);
           if (!current()) break;
-          final upload = await _repository.uploadPhoto(
-            file,
-            item['content_type'] as String,
-            context: ManagedUploadContext(
-              operationId: item['upload_operation_id'] as String,
-              checkpoint: Map<String, dynamic>.from(item['upload_checkpoint'] as Map? ?? const {}),
-              isCurrent: current,
-              saveCheckpoint: (checkpoint) {
-                if (!current()) throw const LocalSessionChanged();
-                return _mutate(
-                  id,
-                  (saved) => {...saved, 'upload_checkpoint': checkpoint},
-                );
+          if (confirmedUploadId != null) {
+            // A rebased conflict already owns a confirmed managed object. Its
+            // fresh association precondition must not recreate or transfer it.
+            await _associate(item, sessionId, confirmedUploadId, current);
+          } else {
+            final upload = await _repository.uploadPhoto(
+              file,
+              item['content_type'] as String,
+              context: ManagedUploadContext(
+                operationId: item['upload_operation_id'] as String,
+                checkpoint: Map<String, dynamic>.from(item['upload_checkpoint'] as Map? ?? const {}),
+                isCurrent: current,
+                saveCheckpoint: (checkpoint) {
+                  if (!current()) throw const LocalSessionChanged();
+                  return _mutate(
+                    id,
+                    (saved) => {...saved, 'upload_checkpoint': checkpoint},
+                  );
+                },
+              ),
+            );
+            if (!current()) break;
+            await _mutate(id, (saved) => {
+              ...saved,
+              'upload_checkpoint': {
+                ...(saved['upload_checkpoint'] as Map? ?? const {}),
+                'phase': 'completion_confirmed',
+                'upload_id': upload.uploadId,
+                'file_url': upload.fileUrl,
               },
-            ),
-          );
-          if (!current()) break;
-          await _mutate(id, (saved) => {
-            ...saved,
-            'upload_checkpoint': {
-              ...(saved['upload_checkpoint'] as Map? ?? const {}),
-              'phase': 'completion_confirmed',
-              'upload_id': upload.uploadId,
-              'file_url': upload.fileUrl,
-            },
-          });
-          await _associate(item, sessionId, upload.uploadId, current);
+            });
+            await _associate(item, sessionId, upload.uploadId, current);
+          }
           if (!current()) break;
           // Confirmation is durable before cleanup. Cleanup is an independent,
           // retryable checkpoint and can never cause another association.
@@ -333,6 +373,16 @@ class ProgressPhotoUploadQueueService {
       ...saved,
       'association_checkpoint': {'state': 'confirmed', 'photo_id': photo.id},
     });
+  }
+
+  bool _hasConfirmedManagedUpload(Map<String, dynamic> item) =>
+      item['session_id'] is String && _confirmedManagedUploadId(item) != null;
+
+  String? _confirmedManagedUploadId(Map<String, dynamic> item) {
+    final checkpoint = item['upload_checkpoint'] as Map?;
+    if (checkpoint?['phase'] != 'completion_confirmed') return null;
+    final uploadId = checkpoint?['upload_id'];
+    return uploadId is String && uploadId.isNotEmpty ? uploadId : null;
   }
 
   Future<void> _stageAndPromote(String id, String session) async {
@@ -633,7 +683,10 @@ class ProgressPhotoUploadQueueService {
       }
       return;
     }
-    queue[index] = mutate(Map<String, dynamic>.from(queue[index]));
+    queue[index] = {
+      ...mutate(Map<String, dynamic>.from(queue[index])),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    };
     if (session != null) _requireSession(session);
     await _storage.saveProgressPhotoUploadQueue(queue);
     if (session != null) _requireSession(session);

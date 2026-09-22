@@ -46,6 +46,7 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 
 // Metrics pages
 import '../../features/metrics/presentation/pages/metrics_page.dart';
+import '../../features/progress_photos/presentation/pages/progress_photos_page.dart';
 
 // Challenges pages
 import '../../features/challenges/presentation/pages/challenges_page.dart';
@@ -93,6 +94,7 @@ class AppRoutes {
   static const calendar = '/calendar';
   static const profile = '/profile';
   static const metrics = '/profile/metrics';
+  static const progressPhotos = '/profile/progress-photos';
   static const challenges = '/challenges';
   static const recap = '/recap';
   static const recapDetailBase = '/recap';
@@ -122,6 +124,43 @@ Page<T> _platformPage<T>({
   return MaterialPage<T>(key: key, name: name, child: child);
 }
 
+String? resolveAppRouteRedirect({
+  required String location,
+  required bool isAuthenticated,
+  required bool hasFirebaseUser,
+  required bool isOnboardingComplete,
+  bool isLocked = false,
+  bool isCompletingAuth = false,
+}) {
+  if (location == AppRoutes.splash) return null;
+
+  final isAuthRoute =
+      location == AppRoutes.login ||
+      location == AppRoutes.forgotPassword ||
+      location == AppRoutes.accountLocked;
+  if (isLocked && location != AppRoutes.accountLocked) {
+    return AppRoutes.accountLocked;
+  }
+  if (!isAuthenticated && !isAuthRoute) return AppRoutes.login;
+  if (isAuthenticated && !hasFirebaseUser && !isAuthRoute) {
+    return AppRoutes.login;
+  }
+  if (hasFirebaseUser && location == AppRoutes.login && isCompletingAuth) {
+    return null;
+  }
+  if (isAuthenticated && hasFirebaseUser && location == AppRoutes.login) {
+    return isOnboardingComplete ? AppRoutes.home : AppRoutes.onboarding;
+  }
+  if (isAuthenticated &&
+      hasFirebaseUser &&
+      !isAuthRoute &&
+      location != AppRoutes.onboarding &&
+      !isOnboardingComplete) {
+    return AppRoutes.onboarding;
+  }
+  return null;
+}
+
 class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -144,39 +183,24 @@ class AppRouter {
           loc == AppRoutes.login ||
           loc == AppRoutes.forgotPassword ||
           loc == AppRoutes.accountLocked;
-      final isCompletingAuth = _isCompletingAuth(context);
-
-      if (isLocked && loc != AppRoutes.accountLocked) {
-        return AppRoutes.accountLocked;
-      }
-      if (!isAuthenticated && !isAuthRoute) return AppRoutes.login;
-      if (isAuthenticated && user == null && !isAuthRoute) {
-        return AppRoutes.login;
-      }
-      if (user != null && loc == AppRoutes.login && isCompletingAuth) {
-        return null;
-      }
-      if (isAuthenticated && user != null && loc == AppRoutes.login) {
-        final done = sl<LocalStorage>().isOnboardingCompleteFor(
-          uid: user.uid,
-          email: user.email,
-        );
-        return done ? AppRoutes.home : AppRoutes.onboarding;
-      }
-
-      // Show onboarding to newly authenticated users who haven't seen it
-      if (isAuthenticated &&
+      final shouldCheckOnboarding =
+          isAuthenticated &&
           user != null &&
-          !isAuthRoute &&
-          loc != AppRoutes.onboarding) {
-        final done = sl<LocalStorage>().isOnboardingCompleteFor(
-          uid: user.uid,
-          email: user.email,
-        );
-        if (!done) return AppRoutes.onboarding;
-      }
-
-      return null;
+          (loc == AppRoutes.login ||
+              (!isAuthRoute && loc != AppRoutes.onboarding));
+      final isOnboardingComplete = shouldCheckOnboarding &&
+          sl<LocalStorage>().isOnboardingCompleteFor(
+            uid: user.uid,
+            email: user.email,
+          );
+      return resolveAppRouteRedirect(
+        location: loc,
+        isAuthenticated: isAuthenticated,
+        hasFirebaseUser: user != null,
+        isOnboardingComplete: isOnboardingComplete,
+        isLocked: isLocked,
+        isCompletingAuth: _isCompletingAuth(context),
+      );
     },
     refreshListenable: _refreshListenable,
     routes: [
@@ -323,6 +347,14 @@ class AppRouter {
               key: state.pageKey,
               name: state.name,
               child: const MetricsPage(),
+            ),
+          ),
+          GoRoute(
+            path: 'progress-photos',
+            pageBuilder: (_, state) => _platformPage(
+              key: state.pageKey,
+              name: state.name,
+              child: const ProgressPhotosPage(),
             ),
           ),
         ],

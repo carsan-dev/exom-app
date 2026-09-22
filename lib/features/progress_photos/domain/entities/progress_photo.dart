@@ -1,3 +1,22 @@
+class ProgressPhotoHistory {
+  const ProgressPhotoHistory({
+    required this.sessions,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+  });
+
+  final List<ProgressPhotoSession> sessions;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+
+  bool get hasNextPage => page < totalPages;
+  int? get nextPage => hasNextPage ? page + 1 : null;
+}
+
 class ProgressPhotoSession {
   const ProgressPhotoSession({
     required this.id,

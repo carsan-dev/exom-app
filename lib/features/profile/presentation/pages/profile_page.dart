@@ -463,6 +463,7 @@ class _ProfileContent extends StatelessWidget {
             isUploadingAvatar: isUploadingAvatar,
           ),
           _ActionButtons(profile: profile),
+          const ProgressPhotosEntry(),
           _WeightChartCard(weightHistory: weightHistory),
           _IndicatorCards(profile: profile, latestMetric: latestMetric),
           _BodyDataSection(
@@ -835,6 +836,31 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ProgressPhotosEntry extends StatelessWidget {
+  const ProgressPhotosEntry({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => context.push(AppRoutes.progressPhotos),
+          icon: const Icon(Icons.photo_camera_back_outlined),
+          label: Text(AppLocalizations.of(context).progressPhotosEntry),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: palette.textPrimary,
+            side: BorderSide(color: palette.glassBorder),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
       ),
     );
   }

@@ -11,8 +11,12 @@ class ProgressPhotoRepositoryImpl implements ProgressPhotoRepository {
   final ProgressPhotoRemoteDataSource _remote;
 
   @override
-  Future<List<ProgressPhotoSession>> getHistory({int page = 1, int limit = 20}) =>
+  Future<ProgressPhotoHistory> getHistory({int page = 1, int limit = 20}) =>
       _remote.getHistory(page: page, limit: limit);
+
+  @override
+  Future<ProgressPhotoSession> getSession(String sessionId) =>
+      _remote.getSession(sessionId);
 
   @override
   Future<ProgressPhotoSession> createSession({

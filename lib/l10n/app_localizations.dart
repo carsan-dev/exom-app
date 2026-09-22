@@ -4627,6 +4627,270 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.'**
   String get pendingSyncConflict;
+
+  /// No description provided for @progressPhotosTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de progreso'**
+  String get progressPhotosTitle;
+
+  /// No description provided for @progressPhotosEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de progreso'**
+  String get progressPhotosEntry;
+
+  /// No description provided for @progressPhotosLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando fotos de progreso'**
+  String get progressPhotosLoading;
+
+  /// No description provided for @progressPhotosLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las fotos de progreso'**
+  String get progressPhotosLoadError;
+
+  /// No description provided for @progressPhotosRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get progressPhotosRetry;
+
+  /// No description provided for @progressPhotosRecoveryError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo recuperar la foto seleccionada. Selecciónala de nuevo.'**
+  String get progressPhotosRecoveryError;
+
+  /// No description provided for @progressPhotosEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay sesiones de fotos de progreso'**
+  String get progressPhotosEmpty;
+
+  /// No description provided for @progressPhotosNewSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva sesión'**
+  String get progressPhotosNewSession;
+
+  /// No description provided for @progressPhotosCreateSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear sesión incompleta'**
+  String get progressPhotosCreateSession;
+
+  /// No description provided for @progressPhotosLoadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más'**
+  String get progressPhotosLoadMore;
+
+  /// No description provided for @progressPhotosLoadingMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando más…'**
+  String get progressPhotosLoadingMore;
+
+  /// No description provided for @progressPhotosChooseSource.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el origen de la imagen'**
+  String get progressPhotosChooseSource;
+
+  /// No description provided for @progressPhotosCamera.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara'**
+  String get progressPhotosCamera;
+
+  /// No description provided for @progressPhotosGallery.
+  ///
+  /// In es, this message translates to:
+  /// **'Galería'**
+  String get progressPhotosGallery;
+
+  /// No description provided for @progressPhotosFront.
+  ///
+  /// In es, this message translates to:
+  /// **'Frontal'**
+  String get progressPhotosFront;
+
+  /// No description provided for @progressPhotosLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Lateral izquierda'**
+  String get progressPhotosLeft;
+
+  /// No description provided for @progressPhotosRight.
+  ///
+  /// In es, this message translates to:
+  /// **'Lateral derecha'**
+  String get progressPhotosRight;
+
+  /// No description provided for @progressPhotosBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Espalda'**
+  String get progressPhotosBack;
+
+  /// No description provided for @progressPhotosComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa'**
+  String get progressPhotosComplete;
+
+  /// No description provided for @progressPhotosIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión incompleta'**
+  String get progressPhotosIncomplete;
+
+  /// No description provided for @progressPhotosMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get progressPhotosMissing;
+
+  /// No description provided for @progressPhotosAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir {view}'**
+  String progressPhotosAdd(String view);
+
+  /// No description provided for @progressPhotosReplace.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituir {view}'**
+  String progressPhotosReplace(String view);
+
+  /// No description provided for @progressPhotosReplaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Sustituir la foto activa?'**
+  String get progressPhotosReplaceTitle;
+
+  /// No description provided for @progressPhotosReplaceMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto activa {view} solo se sustituirá si sigue siendo la actual.'**
+  String progressPhotosReplaceMessage(String view);
+
+  /// No description provided for @progressPhotosReplaceConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituir'**
+  String get progressPhotosReplaceConfirm;
+
+  /// No description provided for @progressPhotosPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Subida pendiente'**
+  String get progressPhotosPending;
+
+  /// No description provided for @progressPhotosSynchronizing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando'**
+  String get progressPhotosSynchronizing;
+
+  /// No description provided for @progressPhotosConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmada'**
+  String get progressPhotosConfirmed;
+
+  /// No description provided for @progressPhotosConfirmedCleanup.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmada; limpiando la copia local'**
+  String get progressPhotosConfirmedCleanup;
+
+  /// No description provided for @progressPhotosFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Falló la subida; se conserva la foto local'**
+  String get progressPhotosFailed;
+
+  /// No description provided for @progressPhotosConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'La sustitución requiere revisión; se conserva la foto local'**
+  String get progressPhotosConflict;
+
+  /// No description provided for @progressPhotosEnlarge.
+  ///
+  /// In es, this message translates to:
+  /// **'Ampliar {view}'**
+  String progressPhotosEnlarge(String view);
+
+  /// No description provided for @progressPhotosCloseImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar imagen'**
+  String get progressPhotosCloseImage;
+
+  /// No description provided for @progressPhotosCreateError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo crear la sesión de fotos'**
+  String get progressPhotosCreateError;
+
+  /// No description provided for @progressPhotosRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar fotos de progreso'**
+  String get progressPhotosRefresh;
+
+  /// No description provided for @progressPhotosReviewReplacement.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar sustitución'**
+  String get progressPhotosReviewReplacement;
+
+  /// No description provided for @progressPhotosRebaseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Usar la foto activa actual?'**
+  String get progressPhotosRebaseTitle;
+
+  /// No description provided for @progressPhotosRebaseMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto local conservada sustituirá la foto activa actual solo si sigue siendo la actual. No se creará una nueva subida.'**
+  String get progressPhotosRebaseMessage;
+
+  /// No description provided for @progressPhotosRebaseConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Reasignar sustitución'**
+  String get progressPhotosRebaseConfirm;
+
+  /// No description provided for @progressPhotosDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get progressPhotosDiscard;
+
+  /// No description provided for @progressPhotosDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar la foto local conservada?'**
+  String get progressPhotosDiscardTitle;
+
+  /// No description provided for @progressPhotosDiscardMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se elimina permanentemente la foto local conservada y se detiene su subida. Esta acción no se puede deshacer.'**
+  String get progressPhotosDiscardMessage;
+
+  /// No description provided for @progressPhotosDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get progressPhotosDiscardConfirm;
 }
 
 class _AppLocalizationsDelegate

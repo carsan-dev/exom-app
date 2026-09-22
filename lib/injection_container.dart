@@ -106,6 +106,10 @@ import 'package:exom_app/features/feedback/domain/usecases/create_feedback_useca
 import 'package:exom_app/features/feedback/domain/usecases/upload_feedback_media_usecase.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/progress_photos/data/datasources/progress_photo_remote_datasource.dart';
+import 'package:exom_app/features/progress_photos/data/repositories/progress_photo_repository_impl.dart';
+import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
+import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
 
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
@@ -444,6 +448,21 @@ Future<void> initDependencies() async {
       getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
       createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
       uploadFeedbackMediaUseCase: sl<UploadFeedbackMediaUseCase>(),
+    ),
+  );
+
+  // ── Progress photos (queue only; UI/picker is P2-T5) ────────────────────
+  sl.registerLazySingleton<ProgressPhotoRemoteDataSource>(
+    () => ProgressPhotoRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<ProgressPhotoRepository>(
+    () => ProgressPhotoRepositoryImpl(sl<ProgressPhotoRemoteDataSource>()),
+  );
+  sl.registerLazySingleton(
+    () => ProgressPhotoUploadQueueService(
+      sl<ProgressPhotoRepository>(),
+      sl<LocalStorage>(),
+      isAuthenticated: () => sl<ValidatedSessionGate>().isAuthenticated,
     ),
   );
 

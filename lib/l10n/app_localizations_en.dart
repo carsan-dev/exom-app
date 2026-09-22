@@ -2613,4 +2613,148 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pendingSyncConflict =>
       'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
+
+  @override
+  String get progressPhotosTitle => 'Progress photos';
+
+  @override
+  String get progressPhotosEntry => 'Progress photos';
+
+  @override
+  String get progressPhotosLoading => 'Loading progress photos';
+
+  @override
+  String get progressPhotosLoadError => 'Could not load progress photos';
+
+  @override
+  String get progressPhotosRetry => 'Try again';
+
+  @override
+  String get progressPhotosRecoveryError =>
+      'We could not recover the selected photo. Try selecting it again.';
+
+  @override
+  String get progressPhotosEmpty => 'No progress photo sessions yet';
+
+  @override
+  String get progressPhotosNewSession => 'New session';
+
+  @override
+  String get progressPhotosCreateSession => 'Create incomplete session';
+
+  @override
+  String get progressPhotosLoadMore => 'Load more';
+
+  @override
+  String get progressPhotosLoadingMore => 'Loading more…';
+
+  @override
+  String get progressPhotosChooseSource => 'Choose image source';
+
+  @override
+  String get progressPhotosCamera => 'Camera';
+
+  @override
+  String get progressPhotosGallery => 'Gallery';
+
+  @override
+  String get progressPhotosFront => 'Front';
+
+  @override
+  String get progressPhotosLeft => 'Left side';
+
+  @override
+  String get progressPhotosRight => 'Right side';
+
+  @override
+  String get progressPhotosBack => 'Back';
+
+  @override
+  String get progressPhotosComplete => 'Complete';
+
+  @override
+  String get progressPhotosIncomplete => 'Incomplete session';
+
+  @override
+  String get progressPhotosMissing => 'Missing';
+
+  @override
+  String progressPhotosAdd(String view) {
+    return 'Add $view';
+  }
+
+  @override
+  String progressPhotosReplace(String view) {
+    return 'Replace $view';
+  }
+
+  @override
+  String get progressPhotosReplaceTitle => 'Replace active photo?';
+
+  @override
+  String progressPhotosReplaceMessage(String view) {
+    return 'The active $view photo will be replaced only if it is still current.';
+  }
+
+  @override
+  String get progressPhotosReplaceConfirm => 'Replace';
+
+  @override
+  String get progressPhotosPending => 'Pending upload';
+
+  @override
+  String get progressPhotosSynchronizing => 'Synchronizing';
+
+  @override
+  String get progressPhotosConfirmed => 'Confirmed';
+
+  @override
+  String get progressPhotosConfirmedCleanup => 'Confirmed; cleaning local copy';
+
+  @override
+  String get progressPhotosFailed => 'Upload failed; local photo retained';
+
+  @override
+  String get progressPhotosConflict =>
+      'Replacement needs review; local photo retained';
+
+  @override
+  String progressPhotosEnlarge(String view) {
+    return 'Enlarge $view';
+  }
+
+  @override
+  String get progressPhotosCloseImage => 'Close image';
+
+  @override
+  String get progressPhotosCreateError => 'Could not create the photo session';
+
+  @override
+  String get progressPhotosRefresh => 'Refresh progress photos';
+
+  @override
+  String get progressPhotosReviewReplacement => 'Review replacement';
+
+  @override
+  String get progressPhotosRebaseTitle => 'Use the current active photo?';
+
+  @override
+  String get progressPhotosRebaseMessage =>
+      'Your retained local photo will replace the current active photo only if it is still current. No new upload will be created.';
+
+  @override
+  String get progressPhotosRebaseConfirm => 'Rebase replacement';
+
+  @override
+  String get progressPhotosDiscard => 'Discard';
+
+  @override
+  String get progressPhotosDiscardTitle => 'Discard retained local photo?';
+
+  @override
+  String get progressPhotosDiscardMessage =>
+      'This permanently removes the retained local photo and stops its upload. This cannot be undone.';
+
+  @override
+  String get progressPhotosDiscardConfirm => 'Discard';
 }

@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/services/managed_upload.dart';
 import 'package:exom_app/core/utils/image_compressor.dart';
 import 'package:exom_app/core/utils/video_compressor.dart';
 import 'package:exom_app/features/feedback/data/models/feedback_model.dart';
@@ -28,13 +30,13 @@ abstract class FeedbackRemoteDataSource {
 }
 
 class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
-  final ApiClient _apiClient;
-
   const FeedbackRemoteDataSourceImpl(
     this._apiClient, {
     this.prepareFile,
     this.transferClient,
   });
+
+  final ApiClient _apiClient;
   final Future<File> Function(File file, String contentType)? prepareFile;
   final Dio? transferClient;
 
@@ -79,8 +81,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       if (uploadId != null && uploadId.isNotEmpty) 'upload_id': uploadId,
       if (uploadId == null || uploadId.isEmpty) 'media_url': mediaUrl,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-      if (exerciseId != null && exerciseId.isNotEmpty)
-        'exercise_id': exerciseId,
+      if (exerciseId != null && exerciseId.isNotEmpty) 'exercise_id': exerciseId,
       if (clientUploadId != null && clientUploadId.isNotEmpty)
         'client_upload_id': clientUploadId,
       'feedback_kind': ?feedbackKind,
@@ -88,18 +89,12 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       'training_exercise_id': ?trainingExerciseId,
       'assignment_date': ?assignmentDate,
     };
-    final response = await _apiClient.dio.post<dynamic>(
-      '/feedback',
-      data: body,
-    );
+    final response = await _apiClient.dio.post<dynamic>('/feedback', data: body);
     final data = response.data;
-    if (data is Map<String, dynamic>) {
-      final inner = data['data'];
-      if (inner is Map<String, dynamic>) {
-        return FeedbackModel.fromJson(inner);
-      }
+    if (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>) {
+      return FeedbackModel.fromJson(data['data'] as Map<String, dynamic>);
     }
-    throw Exception('Invalid create feedback response');
+    throw StateError('Invalid create feedback response');
   }
 
   @override
@@ -109,6 +104,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     FeedbackUploadContext? context,
   }) async {
     final checkpoint = <String, dynamic>{...?context?.checkpoint};
+
     void guard() {
       if (context != null && !context.isCurrent()) {
         throw DioException(
@@ -119,18 +115,13 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       }
     }
 
-    Future<void> save() async {
+    Future<void> saveCheckpoint(Map<String, dynamic> value) async {
       guard();
+      checkpoint
+        ..clear()
+        ..addAll(value);
       await context?.saveCheckpoint(Map<String, dynamic>.from(checkpoint));
       guard();
-    }
-
-    Map<String, dynamic> body(Response<dynamic> response) {
-      final data = response.data;
-      if (data is! Map<String, dynamic>) {
-        throw StateError('Invalid upload response');
-      }
-      return (data['data'] as Map<String, dynamic>?) ?? data;
     }
 
     guard();
@@ -150,17 +141,16 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
           : file;
       guard();
       if (compressed.absolute.path != file.absolute.path) {
-        // The compressor's temporary output must survive restart/OS cache purge.
-        final ext = compressed.path.split('.').last.toLowerCase();
-        uploadFile = await compressed.copy('${file.path}.prepared.$ext');
+        final extension = compressed.path.split('.').last.toLowerCase();
+        uploadFile = await compressed.copy('${file.path}.prepared.$extension');
         checkpoint['prepared_path'] = uploadFile.path;
-        await save();
+        await saveCheckpoint(checkpoint);
       } else {
         uploadFile = file;
       }
     }
-    final ext = uploadFile.path.split('.').last.toLowerCase();
-    final mime = switch (ext) {
+    final extension = uploadFile.path.split('.').last.toLowerCase();
+    final mime = switch (extension) {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
       'webp' => 'image/webp',
@@ -170,131 +160,23 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       'webm' => 'video/webm',
       _ => contentType,
     };
-    final bytes = await uploadFile.length();
-    final operationId =
-        context?.operationId ??
-        DateTime.now().microsecondsSinceEpoch.toString();
-    // At most one renewal in a run; persistent generation survives a lost response.
-    for (var renewal = 0; renewal < 2; renewal++) {
-      guard();
-      final generation = checkpoint['generation'] as int? ?? 0;
-      checkpoint['generation'] = generation;
-      await save();
-      final session = body(
-        await _apiClient.dio.post<dynamic>(
-          '/uploads/sessions',
-          data: {
-            'purpose': isVideo ? 'FEEDBACK_VIDEO' : 'FEEDBACK_IMAGE',
-            'content_type': mime,
-            'bytes': bytes,
-            'client_operation_id': '$operationId:$generation',
-          },
-        ),
-      );
-      guard();
-      final uploadId = session['upload_id'] as String;
-      checkpoint['upload_id'] = uploadId;
-      await save();
-      try {
-        // Reconcile first, including a PUT or confirmation whose response was lost.
-        // The API distinguishes a missing object from a transient inspection error.
-        Map<String, dynamic>? verified;
-        try {
-          context?.onProcessing?.call();
-          verified = body(
-            await _apiClient.dio.post<dynamic>(
-              '/uploads/sessions/$uploadId/complete',
-            ),
-          );
-        } on DioException catch (error) {
-          final data = error.response?.data;
-          if (data is! Map || data['code'] != 'UPLOAD_OBJECT_MISSING') rethrow;
-        }
-        guard();
-        if (verified == null) {
-          final url = session['upload_url'] as String;
-          if (session['transport'] == 'proxy') {
-            await _apiClient.dio.post<dynamic>(
-              url,
-              data: FormData.fromMap({
-                'file': await MultipartFile.fromFile(
-                  uploadFile.path,
-                  contentType: DioMediaType.parse(mime),
-                ),
-              }),
-              onSendProgress: (sent, total) {
-                guard();
-                context?.onProgress?.call(sent, total);
-              },
-              options: Options(
-                sendTimeout: const Duration(minutes: 10),
-                receiveTimeout: const Duration(minutes: 2),
-              ),
-            );
-          } else {
-            final transfer =
-                transferClient ??
-                Dio(
-                  BaseOptions(
-                    connectTimeout: const Duration(seconds: 15),
-                    sendTimeout: const Duration(minutes: 10),
-                    receiveTimeout: const Duration(seconds: 60),
-                  ),
-                );
-            try {
-              await transfer.put<dynamic>(
-                url,
-                data: uploadFile.openRead(),
-                onSendProgress: (sent, total) {
-                  guard();
-                  context?.onProgress?.call(sent, total);
-                },
-                options: Options(
-                  headers: {
-                    Headers.contentTypeHeader: mime,
-                    Headers.contentLengthHeader: bytes,
-                  },
-                ),
-              );
-            } finally {
-              if (transferClient == null) transfer.close();
-            }
-          }
-          guard();
-          context?.onProcessing?.call();
-          verified = body(
-            await _apiClient.dio.post<dynamic>(
-              '/uploads/sessions/$uploadId/complete',
-            ),
-          );
-        }
-        guard();
-        return ManagedFeedbackUpload(
-          uploadId: uploadId,
-          fileUrl: verified['file_url'] as String,
-        );
-      } on DioException catch (error) {
-        final data = error.response?.data;
-        final code = data is Map ? data['code'] : null;
-        final urlExpiry = DateTime.tryParse(
-          session['presigned_expires_at'] as String? ?? '',
-        );
-        final expiredUrl =
-            session['transport'] != 'proxy' &&
-            error.response?.statusCode == 403 &&
-            ((urlExpiry != null && !urlExpiry.isAfter(DateTime.now())) ||
-                (data is String &&
-                    data.contains('<Code>ExpiredRequest</Code>')));
-        if (expiredUrl && renewal == 0) {
-          // Renew the capability for the same object. Reconcile before another PUT.
-          continue;
-        }
-        if (code != 'UPLOAD_EXPIRED' || renewal == 1) rethrow;
-        checkpoint['generation'] = generation + 1;
-        checkpoint.remove('upload_id');
-        await save();
-      }
-    }
-    throw StateError('Upload renewal exhausted');
+    final managed = await ManagedUploadTransport(
+      _apiClient,
+      transferClient: transferClient,
+    ).upload(
+      file: uploadFile,
+      contentType: mime,
+      purpose: isVideo ? 'FEEDBACK_VIDEO' : 'FEEDBACK_IMAGE',
+      context: ManagedUploadContext(
+        operationId: context?.operationId ?? DateTime.now().microsecondsSinceEpoch.toString(),
+        checkpoint: checkpoint,
+        saveCheckpoint: saveCheckpoint,
+        isCurrent: () => context?.isCurrent() ?? true,
+        onPreparing: null,
+        onProcessing: context?.onProcessing,
+        onProgress: context?.onProgress,
+      ),
+    );
+    return ManagedFeedbackUpload(uploadId: managed.uploadId, fileUrl: managed.fileUrl);
   }
 }

@@ -94,7 +94,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   // Recovery requires explicit ownership verification; logging in is insufficient.
   bool get hasUnattributedData =>
       _cache.containsKey(_pendingSyncKey) ||
-      _cache.containsKey(_feedbackUploadQueueKey);
+      _cache.containsKey(_feedbackUploadQueueKey) ||
+      _cache.containsKey(_progressPhotoUploadQueueKey);
 
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
@@ -102,6 +103,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _activeWorkoutBox = 'active_workout_box';
   static const _pendingSyncKey = 'offline_sync_actions';
   static const _feedbackUploadQueueKey = 'feedback_upload_queue';
+  static const _progressPhotoUploadQueueKey = 'progress_photo_upload_queue';
+  static const _progressPhotoPickerIntentKey = 'progress_photo_picker_intent';
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
@@ -180,7 +183,11 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> clearCache() async {
     final prefix = _key('');
-    final preserved = {_key(_pendingSyncKey), _key(_feedbackUploadQueueKey)};
+    final preserved = {
+      _key(_pendingSyncKey),
+      _key(_feedbackUploadQueueKey),
+      _key(_progressPhotoUploadQueueKey),
+    };
     // Cache clearing never discards queues, evidence or active workouts.
     final keys = _cache.keys
         .whereType<String>()
@@ -218,9 +225,81 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> saveFeedbackUploadQueue(List<Map<String, dynamic>> queue) =>
       _saveQueue(_feedbackUploadQueueKey, queue);
 
-  Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) {
+  /// Progress-photo evidence has an independent versioned format. Unknown,
+  /// foreign and unattributed records remain in Hive but are never adopted.
+  Map<String, Object?> get progressPhotoQueueIdentity => {
+    'format_version': 1,
+    'owner_id': ownerId,
+    'environment': _environment,
+  };
+
+  bool ownsProgressPhotoQueueEntry(Map<String, dynamic> item) =>
+      _currentSession == null ||
+      (ownerId != null &&
+          item['owner_id'] == ownerId &&
+          item['environment'] == _environment &&
+          item['format_version'] == 1);
+
+  List<Map<String, dynamic>> getProgressPhotoUploadQueue() {
+    return (getCachedList(_progressPhotoUploadQueueKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .where(ownsProgressPhotoQueueEntry)
+        .toList(growable: true);
+  }
+
+  Future<void> saveProgressPhotoUploadQueue(
+    List<Map<String, dynamic>> queue,
+  ) => _saveQueueFor(
+    _progressPhotoUploadQueueKey,
+    queue,
+    ownsProgressPhotoQueueEntry,
+  );
+
+  /// Android picker recovery is deliberately isolated from upload queue data.
+  /// The record can only be read in the same owner/environment/version scope.
+  Future<void> saveProgressPhotoPickerIntent(Map<String, dynamic> intent) async {
+    final session = sessionStamp;
+    if (session == null) throw const LocalSessionChanged();
+    await saveSetting(_progressPhotoPickerIntentStorageKey(), {
+      ...intent,
+      'format_version': 1,
+      'owner_id': ownerId,
+      'environment': environment,
+      'session_stamp': session,
+    });
+    guardSession();
+  }
+
+  Map<String, dynamic>? getProgressPhotoPickerIntent() {
+    final value = getSetting<dynamic>(_progressPhotoPickerIntentStorageKey());
+    if (value is! Map) return null;
+    final intent = Map<String, dynamic>.from(value);
+    return intent['format_version'] == 1 &&
+            intent['owner_id'] == ownerId &&
+            intent['environment'] == environment
+        ? intent
+        : null;
+  }
+
+  Future<void> clearProgressPhotoPickerIntent() =>
+      _settings.delete(_progressPhotoPickerIntentStorageKey());
+
+  String _progressPhotoPickerIntentStorageKey() {
+    final scope = base64Url.encode(utf8.encode(jsonEncode([1, environment, ownerId])));
+    return '$_progressPhotoPickerIntentKey:$scope';
+  }
+
+  Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) =>
+      _saveQueueFor(key, entries, ownsEntry);
+
+  Future<void> _saveQueueFor(
+    String key,
+    List<Map<String, dynamic>> entries,
+    bool Function(Map<String, dynamic>) owns,
+  ) {
     final quarantined = (getCachedList(key) ?? const []).where(
-      (entry) => entry is! Map<String, dynamic> || !ownsEntry(entry),
+      (entry) => entry is! Map<String, dynamic> || !owns(entry),
     );
     return _cache.put(_key(key), [...quarantined, ...entries]);
   }

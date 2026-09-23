@@ -129,7 +129,7 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
       // Do not query the remote history while bytes are only staged/uploading.
       // A confirmed association is the durable boundary after which the server
       // can safely become the visual source for the active view.
-      if (newConfirmations) unawaited(_load());
+      if (newConfirmations) unawaited(_load(background: true));
       return;
     }
     if (mounted) {
@@ -155,13 +155,13 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
       left.length == right.length &&
       left.asMap().entries.every((entry) => entry.value.toString() == right[entry.key].toString());
 
-  Future<void> _load() async {
+  Future<void> _load({bool background = false}) async {
     final expected = _sessionStamp();
     if (expected == null) {
       if (mounted) setState(() => _loading = false);
       return;
     }
-    if (mounted) {
+    if (mounted && !background) {
       setState(() {
         _loading = true;
         _error = null;
@@ -173,6 +173,7 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
       setState(() {
         _loadedSession = expected;
         _sessions = history.sessions;
+        _error = null;
         _nextPage = history.nextPage;
         _pending = _queue.pendingItems;
         _loading = false;
@@ -181,7 +182,7 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
       if (!mounted || _sessionStamp() != expected) return;
       setState(() {
         _loadedSession = expected;
-        _error = error;
+        if (!background) _error = error;
         _pending = _queue.pendingItems;
         _loading = false;
       });
@@ -725,6 +726,7 @@ class _ViewTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                         child: CachedNetworkImage(
                           imageUrl: active!.imageUrl,
+                          useOldImageOnUrlChange: true,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,

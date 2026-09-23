@@ -79,6 +79,39 @@ void main() {
     expect(find.text('Missing'), findsNWidgets(3));
   });
 
+  testWidgets('confirmed queue refresh keeps loaded history and controls interactive while history is pending', (tester) async {
+    repository.history = [sessionFor('s1', '2026-09-16')];
+    await tester.pumpWidget(page(pollInterval: const Duration(milliseconds: 10)));
+    await pumpPage(tester);
+    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(repository.requestedPages, [1]);
+
+    repository.pendingHistories[1] = Completer<ProgressPhotoHistory>();
+    queue.items = [pending('confirmed', 's1', 'FRONT', 'completed')];
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(repository.requestedPages, [1, 1]);
+    expect(find.text('Loading progress photos'), findsNothing);
+    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(find.text('Confirmed'), findsWidgets);
+    expect(find.byTooltip('Refresh progress photos'), findsOneWidget);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh)).onPressed, isNotNull);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pump();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    expect(find.text('16 Sep 2026'), findsOneWidget);
+
+    repository.pendingHistories[1]!.complete(ProgressPhotoHistory(
+      sessions: [sessionFor('s2', '2026-09-17')],
+      total: 1, page: 1, limit: 20, totalPages: 1,
+    ));
+    await pumpPage(tester);
+    expect(find.text('17 Sep 2026'), findsOneWidget);
+  });
+
   testWidgets('creates incomplete sessions and queues camera or gallery selection without treating cancellation as an error', (tester) async {
     final image = File('${directory.path}/picked.jpg');
     repository.history = [

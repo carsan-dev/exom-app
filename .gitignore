@@ -60,3 +60,7 @@ app.*.map.json
 /android/app/.classpath
 /android/app/.project
 /android/app/.settings/
+
+# Local Pi skills
+/.pi/skills/
+/skills-lock.json

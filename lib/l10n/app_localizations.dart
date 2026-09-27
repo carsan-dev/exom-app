@@ -884,6 +884,12 @@ abstract class AppLocalizations {
   /// **'Tu nota'**
   String get yourTrainingNote;
 
+  /// No description provided for @historicalDayNoteUnattributed.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota histórica del día · Ejecución no identificada'**
+  String get historicalDayNoteUnattributed;
+
   /// No description provided for @trainerReply.
   ///
   /// In es, this message translates to:
@@ -3277,6 +3283,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Se marcarán como completados todos los ejercicios pendientes. Esta acción respetará los registros y evidencias obligatorios.'**
   String get completeTrainingConfirmMessage;
+
+  /// No description provided for @completeTrainingRpeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'RPE (obligatorio, 1–10)'**
+  String get completeTrainingRpeLabel;
+
+  /// No description provided for @completeTrainingRpeExplanation.
+  ///
+  /// In es, this message translates to:
+  /// **'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'**
+  String get completeTrainingRpeExplanation;
 
   /// No description provided for @completeTrainingConfirmAction.
   ///

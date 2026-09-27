@@ -302,6 +302,8 @@ class AppRouter {
           child: TrainingDetailPage(
             trainingId: state.pathParameters['id']!,
             selectedDate: state.uri.queryParameters['date'],
+            selectedExecutionId: state.uri.queryParameters['execution'],
+            finalizeSelected: state.uri.queryParameters['action'] == 'finalize',
           ),
         ),
         routes: [

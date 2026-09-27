@@ -14,6 +14,8 @@ class MarkExerciseCompletedUseCase {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   }) => _repository.markExerciseCompleted(
     trainingExerciseId,
     exerciseId,
@@ -22,5 +24,7 @@ class MarkExerciseCompletedUseCase {
     sets: sets,
     lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
     trainingId: trainingId,
+    sessionId: sessionId,
+    operationId: operationId,
   );
 }

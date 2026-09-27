@@ -435,6 +435,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get yourTrainingNote => 'Tu nota';
 
   @override
+  String get historicalDayNoteUnattributed =>
+      'Nota histórica del día · Ejecución no identificada';
+
+  @override
   String get trainerReply => 'Respuesta de tu entrenador';
 
   @override
@@ -1772,6 +1776,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get completeTrainingConfirmMessage =>
       'Se marcarán como completados todos los ejercicios pendientes. Esta acción respetará los registros y evidencias obligatorios.';
+
+  @override
+  String get completeTrainingRpeLabel => 'RPE (obligatorio, 1–10)';
+
+  @override
+  String get completeTrainingRpeExplanation =>
+      'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.';
 
   @override
   String get completeTrainingConfirmAction => 'Completar todo';

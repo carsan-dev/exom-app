@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
@@ -41,67 +43,207 @@ bool _hasRequiredSetPerformance(
   });
 }
 
-Future<bool> _confirmCompleteTraining(
-  BuildContext context,
-  AppLocalizations l10n,
-) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (_) => CompleteTrainingConfirmationDialog(l10n: l10n),
-      ) ??
-      false;
+class TrainingCompletionInput {
+  const TrainingCompletionInput({this.rpe, this.notes});
+  final int? rpe;
+  final String? notes;
 }
 
-class CompleteTrainingConfirmationDialog extends StatelessWidget {
-  const CompleteTrainingConfirmationDialog({super.key, required this.l10n});
+Future<TrainingCompletionInput?> _confirmCompleteTraining(
+  BuildContext context,
+  AppLocalizations l10n, {
+  required LocalStorage storage,
+  required String trainingId,
+  required String date,
+  required String executionId,
+  required String? sessionStamp,
+  String? initialNote,
+}) => showDialog<TrainingCompletionInput>(
+  context: context,
+  builder: (_) => CompleteTrainingConfirmationDialog(
+    l10n: l10n, storage: storage, trainingId: trainingId, date: date,
+    executionId: executionId, sessionStamp: sessionStamp, initialNote: initialNote,
+  ),
+);
+
+class CompleteTrainingConfirmationDialog extends StatefulWidget {
+  const CompleteTrainingConfirmationDialog({super.key, required this.l10n,
+    required this.storage, required this.trainingId, required this.date,
+    required this.executionId, required this.sessionStamp, this.initialNote});
 
   final AppLocalizations l10n;
+  final LocalStorage storage;
+  final String trainingId;
+  final String date;
+  final String executionId;
+  final String? sessionStamp;
+  final String? initialNote;
+
+  @override
+  State<CompleteTrainingConfirmationDialog> createState() =>
+      _CompleteTrainingConfirmationDialogState();
+}
+
+class _CompleteTrainingConfirmationDialogState extends State<CompleteTrainingConfirmationDialog> {
+  late final TextEditingController _note;
+  int? _rpe;
+  bool _saving = false;
+  Future<void> _pendingSave = Future<void>.value();
+
+  void _saveDraft() {
+    _pendingSave = _pendingSave.then((_) => _persist()).catchError((Object _) {
+      // The confirm path retries persistence and stays open if it fails.
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = widget.storage.getTrainingCompletionDraft(
+      widget.trainingId, widget.date, widget.executionId);
+    _rpe = draft?['rpe'] as int?;
+    _note = TextEditingController(text: draft?['notes'] as String? ?? widget.initialNote);
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _persist() async {
+    if (widget.sessionStamp == null || widget.storage.sessionStamp != widget.sessionStamp) {
+      throw const LocalSessionChanged();
+    }
+    await widget.storage.saveTrainingCompletionDraft(
+      widget.trainingId, widget.date, widget.executionId,
+      rpe: _rpe, notes: _note.text);
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       key: const Key('complete-training-confirmation'),
-      title: Text(l10n.completeTrainingConfirmTitle),
-      content: Text(l10n.completeTrainingConfirmMessage),
+      title: Text(widget.l10n.completeTrainingConfirmTitle),
+      content: SingleChildScrollView(child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.l10n.completeTrainingConfirmMessage),
+          const SizedBox(height: 12),
+          Text(widget.l10n.completeTrainingRpeLabel),
+          const SizedBox(height: 4),
+          Text(widget.l10n.completeTrainingRpeExplanation,
+            style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          if (_rpe != null) const SizedBox(key: Key('completion-rpe-selected')),
+          Wrap(spacing: 4, children: [
+            for (var value = 1; value <= 10; value++)
+              ChoiceChip(
+                key: Key('completion-rpe-$value'),
+                label: Text('$value'),
+                selected: _rpe == value,
+                onSelected: _saving ? null : (_) {
+                  setState(() => _rpe = _rpe == value ? null : value);
+                  _saveDraft();
+                },
+              ),
+          ]),
+          TextField(
+            key: const Key('completion-note'),
+            controller: _note,
+            onChanged: (_) => _saveDraft(),
+            maxLines: 2,
+            decoration: InputDecoration(labelText: widget.l10n.addQuickNoteOptional),
+          ),
+        ],
+      )),
       actions: [
         TextButton(
           key: const Key('cancel-complete-training'),
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.cancel),
+          onPressed: _saving ? null : () async {
+            setState(() => _saving = true);
+            try {
+              await _pendingSave;
+              await _persist();
+              if (context.mounted) Navigator.of(context).pop();
+            } catch (_) {
+              if (mounted) setState(() => _saving = false);
+            }
+          },
+          child: Text(widget.l10n.cancel),
         ),
         FilledButton(
           key: const Key('confirm-complete-training'),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.completeTrainingConfirmAction),
+          onPressed: _saving || _rpe == null ? null : () async {
+            setState(() => _saving = true);
+            try {
+              await _pendingSave;
+              await _persist();
+              if (context.mounted) {
+                Navigator.of(context).pop(TrainingCompletionInput(
+                  rpe: _rpe, notes: _note.text.trim().isEmpty ? null : _note.text.trim()));
+              }
+            } catch (_) {
+              if (mounted) setState(() => _saving = false);
+            }
+          },
+          child: Text(widget.l10n.completeTrainingConfirmAction),
         ),
       ],
     );
   }
 }
 
-class TrainingDetailPage extends StatelessWidget {
+class TrainingDetailPage extends StatefulWidget {
   final String trainingId;
   final String? selectedDate;
+  final String? selectedExecutionId;
+  final bool finalizeSelected;
 
   const TrainingDetailPage({
     super.key,
     required this.trainingId,
     this.selectedDate,
+    this.selectedExecutionId,
+    this.finalizeSelected = false,
   });
+
+  @override
+  State<TrainingDetailPage> createState() => _TrainingDetailPageState();
+}
+
+class _TrainingDetailPageState extends State<TrainingDetailPage> {
+  late final String? _sessionStamp;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionStamp = sl<LocalStorage>().sessionStamp;
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
           sl<TrainingBloc>()
-            ..add(TrainingDetailLoadRequested(trainingId, date: selectedDate)),
-      child: const _TrainingDetailView(),
+            ..add(TrainingDetailLoadRequested(widget.trainingId, date: widget.selectedDate)),
+      child: _TrainingDetailView(
+        sessionStamp: _sessionStamp,
+        selectedExecutionId: widget.selectedExecutionId,
+        finalizeSelected: widget.finalizeSelected,
+      ),
     );
   }
 }
 
 class _TrainingDetailView extends StatelessWidget {
-  const _TrainingDetailView();
+  const _TrainingDetailView({required this.sessionStamp,
+    required this.selectedExecutionId, required this.finalizeSelected});
+
+  final String? sessionStamp;
+  final String? selectedExecutionId;
+  final bool finalizeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +279,11 @@ class _TrainingDetailView extends StatelessWidget {
           );
         }
         if (state is TrainingDetailLoaded) {
-          return _DetailScaffold(state: state);
+          return _DetailScaffold(
+            state: state, sessionStamp: sessionStamp,
+            selectedExecutionId: selectedExecutionId,
+            finalizeSelected: finalizeSelected,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -402,8 +548,12 @@ class _TrainingExerciseSkeletonCard extends StatelessWidget {
 
 class _DetailScaffold extends StatefulWidget {
   final TrainingDetailLoaded state;
+  final String? sessionStamp;
+  final String? selectedExecutionId;
+  final bool finalizeSelected;
 
-  const _DetailScaffold({required this.state});
+  const _DetailScaffold({required this.state, required this.sessionStamp,
+    required this.selectedExecutionId, required this.finalizeSelected});
 
   @override
   State<_DetailScaffold> createState() => _DetailScaffoldState();
@@ -412,9 +562,267 @@ class _DetailScaffold extends StatefulWidget {
 class _DetailScaffoldState extends State<_DetailScaffold> {
   final _notesController = TextEditingController();
   bool _completeConfirmationOpen = false;
+  String? _sessionId;
+  String? _displaySessionId;
+  String? _locallyConfirmedSessionId;
+  StreamSubscription<void>? _syncChanges;
+
+  @override
+  void initState() {
+    super.initState();
+    // A mounted detail reads queue state directly; sync events only invalidate it.
+    if (sl.isRegistered<OfflineSyncService>()) {
+      _syncChanges = sl<OfflineSyncService>().changes.listen((_) {
+        if (!_sameSession) return;
+        final id = widget.selectedExecutionId;
+        if (id != null && _sessionId == null) {
+          final storage = sl<LocalStorage>();
+          if (storage.getTrainingExecutions(widget.state.training.id, widget.state.selectedDate)
+              .any((entry) => entry['id'] == id && entry['status'] == 'failed')) {
+            _sessionId = id;
+          }
+        }
+        setState(() {});
+      });
+    }
+    final id = widget.selectedExecutionId;
+    final storage = sl<LocalStorage>();
+    if (id != null && widget.sessionStamp != null &&
+        storage.sessionStamp == widget.sessionStamp &&
+        storage.getPendingTrainingExecutions().any((entry) =>
+          entry['id'] == id && entry['training_id'] == widget.state.training.id &&
+          entry['assignment_date'] == widget.state.selectedDate &&
+          entry['status'] != 'pending-sync' && entry['status'] != 'conflict')) {
+      _sessionId = id;
+      if (widget.finalizeSelected) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_sameSession) _completeSelectedTraining();
+        });
+      }
+    } else {
+      _hydrateSoleExecution();
+    }
+  }
+
+  void _hydrateSoleExecution() {
+    if (!_sameSession) return;
+    final storage = sl<LocalStorage>();
+    // Only an owned registry entry and its matching session progress can
+    // identify a display session. This never chooses an execution for writes.
+    final trainingId = widget.state.training.id;
+    final date = widget.state.selectedDate;
+    final matches = [
+      ...storage.getPendingTrainingExecutions().where((entry) =>
+        entry['training_id'] == trainingId &&
+        entry['assignment_date'] == date &&
+        const ['pending', 'pending-finalize', 'pending-sync', 'failed', 'conflict']
+            .contains(entry['status'])),
+      ...storage.getConfirmedTrainingExecutions(trainingId, date),
+    ];
+    final selected = widget.selectedExecutionId;
+    final candidates = selected == null ? matches :
+        matches.where((entry) => entry['id'] == selected).toList();
+    if (selected == null && matches.length != 1 || candidates.length != 1) return;
+    final entry = candidates.single;
+    final id = entry['id'];
+    if (id is! String || id.isEmpty || !widget.state.sessionProgress.containsKey(id)) {
+      return;
+    }
+    if (const ['confirmed', 'completed'].contains(entry['status']) ||
+        const ['pending', 'pending-finalize', 'failed'].contains(entry['status'])) {
+      _displaySessionId = id;
+    } else if (entry['status'] == 'pending-sync' &&
+        storage.getPendingSyncActions().any((action) =>
+          action['type'] == 'complete_training' &&
+          action['training_id'] == trainingId &&
+          action['date'] == date &&
+          action['training_session_id'] == id &&
+          const ['queued', 'uploading'].contains(action['status']))) {
+      _displaySessionId = id;
+    }
+  }
+
+  String? get _progressSessionId => _sessionId ?? _displaySessionId;
+  TrainingDayProgress get _progress => !_sameSession || _progressSessionId == null
+      ? const TrainingDayProgress()
+      : widget.state.sessionProgress[_progressSessionId] ?? const TrainingDayProgress();
+  bool get _sameSession => mounted && widget.sessionStamp != null &&
+      sl<LocalStorage>().sessionStamp == widget.sessionStamp;
+
+  Future<void> _toggleExercise(TrainingEntity training,
+      TrainingExerciseEntity exercise, bool completed, double? weightUsed) async {
+    final sessionId = await _selectExecution(training, widget.state.selectedDate);
+    if (!mounted || !_sameSession || sessionId == null) return;
+    context.read<TrainingBloc>().add(MarkExerciseCompleted(
+      trainingExerciseId: exercise.id,
+      exerciseId: exercise.exercise.id,
+      completed: completed,
+      weightUsed: weightUsed,
+      sessionId: sessionId,
+      sessionStamp: widget.sessionStamp,
+    ));
+  }
+
+  Future<String?> _selectExecution(TrainingEntity training, String date,
+      {String? legacyExerciseId}) async {
+    if (!_sameSession) return null;
+    final storage = sl<LocalStorage>();
+    final legacy = legacyExerciseId != null &&
+        storage.recoverableLegacyWorkout(training.id, legacyExerciseId, date) != null;
+    if (_sessionId != null && !legacy) return _sessionId;
+    final pending = storage.getTrainingExecutions(training.id, date);
+    final hasPendingSync = storage.getPendingTrainingExecutions().any((entry) =>
+      entry['training_id'] == training.id && entry['assignment_date'] == date &&
+      entry['status'] == 'pending-sync');
+    final hasCompleted = storage.hasCompletedTrainingExecution(training.id, date);
+    String? selected;
+    if (pending.isNotEmpty || legacy || hasPendingSync || hasCompleted) {
+      selected = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Select training execution'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final entry in pending)
+                ListTile(
+                  title: Text('${training.name} · $date'),
+                  subtitle: Text(entry['id'] as String),
+                  onTap: () => Navigator.of(dialogContext).pop(entry['id'] as String),
+                ),
+              if (legacy)
+                ListTile(
+                  key: const Key('recover-legacy-workout'),
+                  title: const Text('Recover saved exercise draft'),
+                  subtitle: const Text('Restore saved sets in a new execution'),
+                  onTap: () => Navigator.of(dialogContext).pop('recover'),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.of(dialogContext).pop('new'),
+                child: const Text('New execution')),
+          ],
+        ),
+      );
+      if (!_sameSession || selected == null) return null;
+    }
+    if (!_sameSession) return null;
+    String id;
+    try {
+      id = selected == 'recover' && legacyExerciseId != null
+          ? await storage.recoverLegacyWorkout(training.id, legacyExerciseId, date)
+          : selected == null || selected == 'new'
+              ? await storage.createTrainingExecution(training.id, date,
+                  trainingName: training.name)
+              : selected;
+    } catch (_) {
+      if (mounted && _sameSession) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Draft recovery failed. Saved data remains available.'),
+        ));
+      }
+      return null;
+    }
+    if (!_sameSession) return null;
+    setState(() {
+      _sessionId = id;
+      _locallyConfirmedSessionId = null;
+    });
+    return id;
+  }
+
+  @override
+  void didUpdateWidget(covariant _DetailScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.state.training.id != oldWidget.state.training.id ||
+        widget.state.selectedDate != oldWidget.state.selectedDate) {
+      _sessionId = null;
+      _displaySessionId = null;
+      _locallyConfirmedSessionId = null;
+      _hydrateSoleExecution();
+    }
+  }
+
+  Future<void> _completeSelectedTraining() async {
+    final training = widget.state.training;
+    final storage = sl<LocalStorage>();
+    final l10n = AppLocalizations.of(context);
+    if (!_sameSession || _completeConfirmationOpen) return;
+    setState(() => _completeConfirmationOpen = true);
+    final sessionId = await _selectExecution(training, widget.state.selectedDate);
+    if (!mounted || !_sameSession || sessionId == null) {
+      if (mounted) setState(() => _completeConfirmationOpen = false);
+      return;
+    }
+    final missingRequiredPerformance = training.exercises.any(
+      (exercise) => !_hasRequiredSetPerformance(
+        exercise, _progress.performances[exercise.id]));
+    final execution = storage.getTrainingExecutions(
+      training.id, widget.state.selectedDate)
+        .where((entry) => entry['id'] == sessionId).firstOrNull;
+    if (missingRequiredPerformance && execution?['status'] != 'failed') {
+      setState(() => _completeConfirmationOpen = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.completeTrainingTrackingRequired)));
+      return;
+    }
+    if (training.requiresLastSetVideo && training.exercises.any((exercise) =>
+        !storage.getFeedbackUploadQueue().any((item) =>
+          item['training_id'] == training.id &&
+          item['assignment_date'] == widget.state.selectedDate &&
+          item['training_session_id'] == sessionId &&
+          item['training_exercise_id'] == exercise.id &&
+          item['feedback_kind'] == 'LAST_SET' &&
+          item['media_type'] == 'VIDEO' &&
+          item['discard_requested'] != true &&
+          const ['queued', 'uploading', 'processing', 'completed']
+              .contains(item['status'])))) {
+      setState(() => _completeConfirmationOpen = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Completa cada ejercicio y adjunta el vídeo de su última serie.')));
+      return;
+    }
+    final saved = storage.getTrainingCompletionDraft(
+      training.id, widget.state.selectedDate, sessionId);
+    if (execution?['status'] == 'conflict' ||
+        execution?['status'] == 'failed' && saved == null) {
+      setState(() => _completeConfirmationOpen = false);
+      return;
+    }
+    final input = execution?['status'] == 'failed'
+        ? TrainingCompletionInput(
+            rpe: saved?['rpe'] as int?, notes: saved?['notes'] as String?)
+        : await _confirmCompleteTraining(context, l10n,
+            storage: storage, trainingId: training.id,
+            date: widget.state.selectedDate, executionId: sessionId,
+            sessionStamp: widget.sessionStamp,
+            initialNote: _notesController.text.trim());
+    if (!mounted) return;
+    setState(() => _completeConfirmationOpen = false);
+    if (!_sameSession || input == null) return;
+    final completion = Completer<void>();
+    context.read<TrainingBloc>().add(CompleteTrainingRequested(
+      sessionId: sessionId, sessionStamp: widget.sessionStamp,
+      completion: completion, notes: input.notes, rpe: input.rpe));
+    try {
+      await completion.future;
+      if (_sameSession) {
+        setState(() {
+          _locallyConfirmedSessionId = sessionId;
+          _sessionId = null;
+        });
+      }
+    } catch (_) {
+      // The bloc exposes the save error; retain the execution for retry.
+    }
+  }
 
   @override
   void dispose() {
+    _syncChanges?.cancel();
     _notesController.dispose();
     super.dispose();
   }
@@ -436,12 +844,35 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final color = _trainingColor(context, training);
     final solidColorStyle = trainingColorStyle(context, color);
     final typeLabels = trainingTypeLabels(context, training.types);
-    final completed = widget.state.completedExerciseIds.length;
+    final completed = _progress.ids.length;
     final total = training.exercises.length;
     final progress = total > 0 ? completed / total : 0.0;
     final allDone = total > 0 && completed == total;
+    final storage = sl<LocalStorage>();
+    final completionActions = storage.getPendingSyncActions().where((action) =>
+      action['type'] == 'complete_training' &&
+      action['training_id'] == training.id &&
+      action['date'] == widget.state.selectedDate).toList();
+    final pendingSync = completionActions.any((action) =>
+      const ['queued', 'uploading'].contains(action['status']) &&
+      (_sessionId == null || action['training_session_id'] == _sessionId));
+    final executions = storage.getTrainingExecutions(
+      training.id, widget.state.selectedDate);
+    final selectedCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
+    final needsConflictReview = completionActions.any((action) =>
+      action['last_error'] == 'progress_conflict_review_required' &&
+      (selectedCompletionId == null ||
+        action['training_session_id'] == selectedCompletionId)) ||
+        executions.any((entry) => entry['status'] == 'conflict' &&
+          (selectedCompletionId == null || entry['id'] == selectedCompletionId));
+    final hasFailedExecution = executions.any((entry) =>
+      entry['status'] == 'failed' &&
+      (_sessionId == null || entry['id'] == _sessionId));
+    final locallyCompleted = selectedCompletionId != null && executions.any((entry) =>
+      const ['completed', 'confirmed'].contains(entry['status']) &&
+      entry['id'] == selectedCompletionId);
     final remaining = training.remainingProgress(
-      widget.state.completedExerciseIds,
+      _progress.ids,
     );
 
     return ExomStaticBackground(
@@ -579,6 +1010,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     _DescriptionCard(text: training.warmupDescription!),
                   ],
 
+                  // Unscoped drafts are retained in Hive but never displayed as
+                  // this account's progress or submitted under its credentials.
+                  if (sl<LocalStorage>().hasQuarantinedWorkoutDrafts)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Saved workout data from an unknown account or date is kept on this device. It cannot be restored automatically; contact support to recover it.',
+                        key: Key('quarantined-workout-notice'),
+                      ),
+                    ),
                   // Exercises section
                   _SectionTitle(
                     title: l10n.exercises,
@@ -619,10 +1060,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                 );
                           final completedCount = blockExercises
                               .where(
-                                (blockExercise) => widget
-                                    .state
-                                    .completedExerciseIds
-                                    .contains(blockExercise.id),
+                                (blockExercise) => _progress.ids.contains(blockExercise.id),
                               )
                               .length;
                           final blockId = ex.blockId!;
@@ -655,7 +1093,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   ),
                                 );
                               },
-                              onStart: () {
+                              onStart: () async {
+                                final sessionId = await _selectExecution(
+                                  training, widget.state.selectedDate);
+                                if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
                                 context.push(
                                   AppRoutes.activeCircuitPath(
                                     training.id,
@@ -663,6 +1104,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                   ),
                                   extra: ActiveCircuitPageArgs(
                                     trainingBloc: context.read<TrainingBloc>(),
+                                    sessionId: sessionId,
                                     trainingName: training.name,
                                     trainingTypes: training.types,
                                     accentColorHex: training.accentColor,
@@ -695,11 +1137,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               },
                               onMarkPending:
                                   completedCount == blockExercises.length
-                                  ? () {
+                                  ? () async {
+                                      final sessionId = await _selectExecution(
+                                        training, widget.state.selectedDate);
+                                      if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
                                       for (final blockExercise
                                           in blockExercises) {
                                         context.read<TrainingBloc>().add(
                                           MarkExerciseCompleted(
+                                            sessionId: sessionId,
+                                            sessionStamp: widget.sessionStamp,
                                             trainingExerciseId:
                                                 blockExercise.id,
                                             exerciseId:
@@ -714,19 +1161,19 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           );
                           continue;
                         }
-                        final isCompleted = widget.state.completedExerciseIds
-                            .contains(ex.id);
-                        final activeWorkout =
-                            sl<LocalStorage>().getActiveWorkout(
-                              '${ex.id}:${widget.state.selectedDate}',
-                            ) ??
-                            sl<LocalStorage>().getActiveWorkout(ex.id);
+                        final isCompleted = _progress.ids.contains(ex.id);
+                        final storage = sl<LocalStorage>();
+                        final activeWorkout = _progressSessionId == null
+                            ? storage.recoverableLegacyWorkout(
+                                training.id, ex.id, widget.state.selectedDate)
+                            : storage.getActiveWorkout(
+                                '${ex.id}:${widget.state.selectedDate}:$_progressSessionId');
                         final partialProgress =
                             activeWorkout?.trainingId == training.id
                             ? activeWorkout
                             : null;
                         final effectiveWeight =
-                            widget.state.exerciseWeights[ex.id] ??
+                            _progress.weights[ex.id] ??
                             partialProgress?.lastWeightKg;
                         final partialProgressLabel =
                             !isCompleted &&
@@ -747,9 +1194,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             isCompleted: isCompleted,
                             weightUsed: effectiveWeight,
                             currentPerformances:
-                                widget.state.currentPerformances[ex.id],
+                                _progress.performances[ex.id],
                             partialProgressLabel: partialProgressLabel,
-                            onOpenActive: () {
+                            onOpenActive: () async {
+                              final sessionId = await _selectExecution(
+                                training, widget.state.selectedDate,
+                                legacyExerciseId: ex.id);
+                              if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+                              final selectedProgress = widget.state.sessionProgress[sessionId]
+                                  ?? const TrainingDayProgress();
                               context.push(
                                 AppRoutes.activeExercisePath(
                                   training.id,
@@ -757,14 +1210,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                 ),
                                 extra: ActiveExercisePageArgs(
                                   trainingBloc: context.read<TrainingBloc>(),
+                                  sessionId: sessionId,
                                   trainingExercise: ex,
                                   trainingName: training.name,
                                   trainingTypes: training.types,
                                   accentColorHex: training.accentColor,
                                   trainingLevel: training.level,
-                                  initialWeightKg: effectiveWeight,
+                                  initialWeightKg: selectedProgress.weights[ex.id],
                                   currentPerformances:
-                                      widget.state.currentPerformances[ex.id],
+                                      selectedProgress.performances[ex.id],
                                   previousPerformances:
                                       widget.state.previousPerformances[ex.id],
                                   requiresLastSetVideo:
@@ -784,14 +1238,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                                 );
                                 return;
                               }
-                              context.read<TrainingBloc>().add(
-                                MarkExerciseCompleted(
-                                  trainingExerciseId: ex.id,
-                                  exerciseId: ex.exercise.id,
-                                  completed: val,
-                                  weightUsed: weightUsed,
-                                ),
-                              );
+                              // Direct toggles still belong to a durable execution.
+                              _toggleExercise(training, ex, val, weightUsed);
                             },
                           ),
                         );
@@ -816,6 +1264,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     TrainingNoteReplyCard(
                       note: widget.state.clientNote,
                       reply: widget.state.adminReplyText,
+                      historicalDayNote: true,
                     ),
 
                   // Quick notes
@@ -914,72 +1363,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           key: const Key('complete-training-button'),
-                          onPressed: widget.state.isCompleting
-                              ? null
-                              : () async {
-                                  if (_completeConfirmationOpen) return;
-                                  if (allDone) {
-                                    Navigator.of(context).pop(true);
-                                    return;
-                                  }
-
-                                  if (training.requiresLastSetVideo) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Completa cada ejercicio y adjunta el vídeo de su última serie.',
-                                        ),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
-                                  final missingRequiredPerformance = training
-                                      .exercises
-                                      .any(
-                                        (
-                                          exercise,
-                                        ) => !_hasRequiredSetPerformance(
-                                          exercise,
-                                          widget
-                                              .state
-                                              .currentPerformances[exercise.id],
-                                        ),
-                                      );
-                                  if (missingRequiredPerformance) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          l10n.completeTrainingTrackingRequired,
-                                        ),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
-                                  setState(
-                                    () => _completeConfirmationOpen = true,
-                                  );
-                                  final confirmed =
-                                      await _confirmCompleteTraining(
-                                        context,
-                                        l10n,
-                                      );
-                                  if (!context.mounted) return;
-                                  setState(
-                                    () => _completeConfirmationOpen = false,
-                                  );
-                                  if (!confirmed) return;
-
-                                  context.read<TrainingBloc>().add(
-                                    CompleteTrainingRequested(
-                                      notes:
-                                          _notesController.text.trim().isEmpty
-                                          ? null
-                                          : _notesController.text.trim(),
-                                    ),
-                                  );
-                                },
+                          onPressed: widget.state.isCompleting || pendingSync || needsConflictReview || locallyCompleted
+                              ? null : _completeSelectedTraining,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: allDone ? semantic.success : color,
                             foregroundColor: allDone
@@ -996,7 +1381,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             size: 18,
                           ),
                           label: Text(
-                            allDone
+                            needsConflictReview ? 'Conflict: review required' : pendingSync ? 'Pending sync' : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? 'Retry completion' : allDone && _sessionId != null
                                 ? l10n.workoutCompletedMessage
                                 : l10n.completeTrainingConfirmAction,
                           ),
@@ -1015,10 +1400,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 }
 
 class TrainingNoteReplyCard extends StatelessWidget {
-  const TrainingNoteReplyCard({super.key, this.note, this.reply});
+  const TrainingNoteReplyCard({super.key, this.note, this.reply,
+    this.historicalDayNote = false});
 
   final String? note;
   final String? reply;
+  final bool historicalDayNote;
 
   @override
   Widget build(BuildContext context) {
@@ -1041,10 +1428,14 @@ class TrainingNoteReplyCard extends StatelessWidget {
                   color: palette.textSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  AppLocalizations.of(context).yourTrainingNote,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    historicalDayNote
+                        ? AppLocalizations.of(context).historicalDayNoteUnattributed
+                        : AppLocalizations.of(context).yourTrainingNote,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],

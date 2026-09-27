@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
@@ -29,6 +30,7 @@ import 'package:exom_app/features/feedback/services/feedback_upload_queue_servic
 
 class ActiveCircuitPageArgs {
   final TrainingBloc trainingBloc;
+  final String? sessionId;
   final String trainingName;
   final List<String> trainingTypes;
   final String? accentColorHex;
@@ -44,6 +46,7 @@ class ActiveCircuitPageArgs {
 
   const ActiveCircuitPageArgs({
     required this.trainingBloc,
+    this.sessionId,
     required this.trainingName,
     required this.trainingTypes,
     required this.accentColorHex,
@@ -90,6 +93,41 @@ Map<String, String> restoreCircuitFeedbackStatuses(
     feedbackIds.remove(exerciseId);
   }
   return restored;
+}
+
+/// Freeze an exercise's outgoing action once, before its first dispatch.
+/// A restored circuit retains this snapshot even if the editable sets change.
+@visibleForTesting
+Map<String, dynamic> snapshotCircuitCompletion(
+  Map<String, Map<String, dynamic>> actions,
+  String exerciseId, {
+  required List<Map<String, dynamic>>? sets,
+  double? weightUsed,
+  String? feedbackId,
+}) {
+  final existing = actions[exerciseId];
+  if (existing != null && existing['operation_id'] is String &&
+      (existing['operation_id'] as String).isNotEmpty) {
+    return existing;
+  }
+  final snapshot = <String, dynamic>{
+    'operation_id': newOperationId(),
+    'sets': sets?.map((set) => Map<String, dynamic>.from(set)).toList(),
+    'weight_used': weightUsed,
+    'feedback_id': feedbackId,
+  };
+  actions[exerciseId] = snapshot;
+  return snapshot;
+}
+
+@visibleForTesting
+Future<void> persistCircuitState(LocalStorage storage, String key,
+    String? ownerSession, Map<String, dynamic> state) async {
+  if (ownerSession == null || storage.sessionStamp != ownerSession) return;
+  await storage.sessionTask(() async {
+    if (storage.sessionStamp != ownerSession) return;
+    await storage.cacheData(key, state);
+  });
 }
 
 class ActiveCircuitPage extends StatelessWidget {
@@ -144,12 +182,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   final Map<String, List<SetPerformance>> _performances = {};
   final Map<String, String> _lastSetFeedbackIds = {};
   final Map<String, String> _lastSetFeedbackStatuses = {};
+  final Map<String, Map<String, dynamic>> _completionActions = {};
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
+  final String? _ownerSession = sl<LocalStorage>().sessionStamp;
 
   String get _stateKey {
     final userId = sl<FirebaseAuthService>().currentUser?.uid ?? 'anonymous';
     return 'active_circuit:$userId:${widget.args.assignmentDate}:'
-        '${widget.trainingId}:${widget.args.blockId}';
+        '${widget.trainingId}:${widget.args.blockId}'
+        '${widget.args.sessionId == null ? '' : ':${widget.args.sessionId}'}';
   }
 
   @override
@@ -212,6 +253,18 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           }
         }
         if (sets.isNotEmpty) _performances[entry.key.toString()] = sets;
+      }
+    }
+
+    final completionActions = stored['completion_actions'];
+    if (completionActions is Map) {
+      for (final entry in completionActions.entries) {
+        if (entry.value is! Map) continue;
+        final action = Map<String, dynamic>.from(entry.value as Map);
+        if (action['operation_id'] is String &&
+            (action['operation_id'] as String).isNotEmpty) {
+          _completionActions[entry.key.toString()] = action;
+        }
       }
     }
 
@@ -286,7 +339,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   }
 
   Future<void> _persistState() {
-    return sl<LocalStorage>().cacheData(_stateKey, <String, dynamic>{
+    final storage = sl<LocalStorage>();
+    if (_ownerSession == null || storage.sessionStamp != _ownerSession) {
+      return Future<void>.value();
+    }
+    return persistCircuitState(storage, _stateKey, _ownerSession, <String, dynamic>{
+      'training_session_id': widget.args.sessionId,
       'round': _currentRound,
       'exercise_index': _currentExerciseIndex,
       'status': _status.name,
@@ -297,6 +355,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           key,
           sets.map((performance) => performance.toJson()).toList(),
         ),
+      ),
+      'completion_actions': _completionActions.map(
+        (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
       ),
       'feedback_ids': Map<String, String>.from(_lastSetFeedbackIds),
       'feedback_statuses': Map<String, String>.from(_lastSetFeedbackStatuses),
@@ -584,6 +645,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     trainingId: widget.trainingId,
     trainingExerciseId: trainingExercise.id,
     assignmentDate: widget.args.assignmentDate,
+    sessionId: widget.args.sessionId,
   );
 
   String _videoContentType(File file) {
@@ -841,7 +903,10 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     if (widget.args.requiresLastSetVideo && !await _collectMissingVideos()) {
       return;
     }
-    if (!mounted) return;
+    if (!mounted || _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return;
+    }
     _markedComplete = true;
     final trainingBloc = context.read<TrainingBloc>();
     if (cancelRestTimer) {
@@ -850,19 +915,31 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
 
     try {
       for (final trainingExercise in widget.args.exercises) {
+        if (sl<LocalStorage>().sessionStamp != _ownerSession) return;
         final sets = _performances[trainingExercise.id];
+        final action = snapshotCircuitCompletion(
+          _completionActions, trainingExercise.id,
+          sets: sets?.map((set) => set.toJson()).toList(),
+          weightUsed: sets == null || sets.isEmpty ? null : sets.last.weightKg,
+          feedbackId: _lastSetFeedbackIds[trainingExercise.id],
+        );
+        // The snapshot must survive a crash or lost response before dispatch.
+        await _persistState();
+        if (sl<LocalStorage>().sessionStamp != _ownerSession) return;
         final completion = Completer<void>();
         trainingBloc.add(
           MarkExerciseCompleted(
             trainingExerciseId: trainingExercise.id,
             exerciseId: trainingExercise.exercise.id,
+            sessionId: widget.args.sessionId,
+            sessionStamp: _ownerSession,
+            operationId: action['operation_id'] as String,
             completed: true,
-            weightUsed: sets == null || sets.isEmpty
-                ? null
-                : sets.last.weightKg,
-            sets: sets,
-            lastSetFeedbackClientUploadId:
-                _lastSetFeedbackIds[trainingExercise.id],
+            weightUsed: action['weight_used'] as double?,
+            sets: (action['sets'] as List?)?.whereType<Map>().map(
+              (set) => SetPerformance.fromJson(Map<String, dynamic>.from(set)),
+            ).toList(),
+            lastSetFeedbackClientUploadId: action['feedback_id'] as String?,
             completion: completion,
           ),
         );
@@ -878,7 +955,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted || sl<LocalStorage>().sessionStamp != _ownerSession) return;
     setState(() {
       _status = _CircuitStatus.done;
     });

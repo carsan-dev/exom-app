@@ -121,6 +121,7 @@ class FeedbackUploadQueueService {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   }) async {
     final session = _storage.sessionStamp;
     if (session == null ||
@@ -153,6 +154,7 @@ class FeedbackUploadQueueService {
         'training_id': ?trainingId,
         'training_exercise_id': ?trainingExerciseId,
         'assignment_date': ?assignmentDate,
+        'training_session_id': ?sessionId,
         'status': 'queued',
         'attempts': 0,
         'queued_at': DateTime.now().toUtc().toIso8601String(),
@@ -414,6 +416,7 @@ class FeedbackUploadQueueService {
             trainingId: item['training_id'] as String?,
             trainingExerciseId: item['training_exercise_id'] as String?,
             assignmentDate: item['assignment_date'] as String?,
+            sessionId: item['training_session_id'] as String?,
           );
           if (!_isAuthenticated()) {
             await _mutateById(

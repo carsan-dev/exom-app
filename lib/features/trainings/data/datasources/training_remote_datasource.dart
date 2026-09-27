@@ -20,11 +20,15 @@ abstract class TrainingRemoteDataSource {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   });
-  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId});
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   });
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date});
@@ -78,6 +82,23 @@ TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
   final ids = <String>{};
   final weights = <String, double>{};
   final performances = <String, List<SetPerformance>>{};
+  final claims = <String, String>{};
+  final conflicting = <String>{};
+  for (final claim in (json['training_sessions'] as List? ?? const []).whereType<Map>()) {
+    final sessionId = claim['training_session_id'];
+    final trainingId = claim['training_id'];
+    if (sessionId is! String || sessionId.isEmpty || trainingId is! String || trainingId.isEmpty) continue;
+    if (claims.containsKey(sessionId) && claims[sessionId] != trainingId) conflicting.add(sessionId);
+    claims[sessionId] = trainingId;
+  }
+  final sessionEntries = <String, List<Map<String, dynamic>>>{};
+  for (final entry in list.whereType<Map>()) {
+    final sessionId = entry['training_session_id'];
+    if (sessionId is! String || sessionId.isEmpty) continue;
+    sessionEntries.putIfAbsent(sessionId, () => []).add(
+      Map<String, dynamic>.from(entry)..remove('training_session_id'),
+    );
+  }
 
   for (final entry in list.whereType<Map>()) {
     final id = (entry['training_exercise_id'] ?? entry['exercise_id'])
@@ -118,6 +139,12 @@ TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
     ids: ids,
     weights: weights,
     performances: performances,
+    sessions: {
+      for (final entry in sessionEntries.entries)
+        if (!conflicting.contains(entry.key))
+          entry.key: parseTrainingDayProgress({'exercises_completed': entry.value}),
+    },
+    sessionTrainings: claims,
     note: json['notes'] as String?,
     adminReplyText: json['admin_reply_text'] as String?,
     adminReplySentAt: DateTime.tryParse(
@@ -427,6 +454,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   }) async {
     return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
@@ -438,23 +467,26 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         sets: sets,
         lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
         trainingId: trainingId,
+        sessionId: sessionId,
+        operationId: operationId,
       );
-      await _offlineSyncService.syncForDate(date);
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
   }
 
   @override
   Future<void> unmarkExerciseCompleted(
     String trainingExerciseId,
-    String date,
+    String date, {String? sessionId}
   ) async {
     return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
         trainingExerciseId,
         date,
         completed: false,
+        sessionId: sessionId,
       );
-      await _offlineSyncService.syncForDate(date);
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
   }
 
@@ -462,15 +494,29 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   }) async {
     return _localStorage.sessionTask(() async {
+      if (sessionId != null &&
+          _localStorage.getTrainingCompletionDraft(trainingId, date, sessionId) == null) {
+        await _localStorage.saveTrainingCompletionDraft(trainingId, date,
+          sessionId, rpe: rpe, notes: notes);
+      }
       await _offlineSyncService.queueTrainingCompletion(
         date,
         trainingId: trainingId,
+        sessionId: sessionId,
+        rpe: rpe,
         notes: notes,
       );
-      await _offlineSyncService.syncForDate(date);
+      if (sessionId != null) {
+        await _localStorage.setTrainingExecutionStatus(sessionId, 'pending-sync');
+      }
+      // Replay may have already acknowledged during enqueue (dependency wakeup).
+      // Only the sync service can confirm after a successful server response.
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
   }
 

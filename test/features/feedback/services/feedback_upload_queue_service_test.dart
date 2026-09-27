@@ -47,6 +47,26 @@ void main() {
       expect(storage.queue.single['status'], 'queued');
     },
   );
+  test('replayed LAST_SET feedback retains its execution identity', () async {
+    final directory = await Directory.systemTemp.createTemp('exom-last-set-');
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/evidence.mp4');
+    await file.writeAsBytes([0]);
+    final storage = FakeFeedbackQueueStorage([{
+      'id': 'last-set-id', 'file_path': file.path,
+      'content_type': 'video/mp4', 'media_type': 'VIDEO',
+      'feedback_kind': 'LAST_SET', 'training_session_id': 'execution-one',
+      'status': 'queued', 'attempts': 0,
+    }]);
+    final repository = FakeFeedbackRepository();
+    final service = FeedbackUploadQueueService(repository, storage,
+      FakeOfflineSyncService(storage), isAuthenticated: () => true);
+    await service.processQueue();
+    expect(repository.createdSessionId, 'execution-one');
+  });
+
   test('discard deletes the physical file and its dependent action', () async {
     final directory = await Directory.systemTemp.createTemp(
       'exom-feedback-queue-',
@@ -342,6 +362,7 @@ class FakeFeedbackRepository implements FeedbackRepository {
   Object? createError;
   int uploadCalls = 0;
   int createCalls = 0;
+  String? createdSessionId;
 
   @override
   Future<FeedbackEntity> createFeedback({
@@ -355,7 +376,9 @@ class FakeFeedbackRepository implements FeedbackRepository {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   }) async {
+    createdSessionId = sessionId;
     createCalls++;
     if (createError case final error?) throw error;
     return FeedbackEntity(

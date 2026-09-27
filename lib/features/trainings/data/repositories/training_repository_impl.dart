@@ -42,6 +42,8 @@ class TrainingRepositoryImpl implements TrainingRepository {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   }) {
     return _remoteDataSource.markExerciseCompleted(
       trainingExerciseId,
@@ -51,23 +53,29 @@ class TrainingRepositoryImpl implements TrainingRepository {
       sets: sets,
       lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
       trainingId: trainingId,
+      sessionId: sessionId,
+      operationId: operationId,
     );
   }
 
   @override
-  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date) {
-    return _remoteDataSource.unmarkExerciseCompleted(trainingExerciseId, date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId}) {
+    return _remoteDataSource.unmarkExerciseCompleted(trainingExerciseId, date, sessionId: sessionId);
   }
 
   @override
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   }) {
     return _remoteDataSource.completeTraining(
       date,
       trainingId: trainingId,
+      sessionId: sessionId,
+      rpe: rpe,
       notes: notes,
     );
   }

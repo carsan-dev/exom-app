@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -29,10 +30,17 @@ class TrainingsPage extends StatelessWidget {
   }
 }
 
-class _TrainingsView extends StatelessWidget {
+class _TrainingsView extends StatefulWidget {
   const _TrainingsView({this.selectedDate});
 
   final String? selectedDate;
+
+  @override
+  State<_TrainingsView> createState() => _TrainingsViewState();
+}
+
+class _TrainingsViewState extends State<_TrainingsView> {
+  String? get selectedDate => widget.selectedDate;
 
   String _dateLabel(BuildContext context, String resolvedDate) {
     final l10n = AppLocalizations.of(context);
@@ -50,7 +58,32 @@ class _TrainingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TrainingBloc, TrainingState>(
+    final storage = sl<LocalStorage>();
+    final stamp = storage.sessionStamp;
+    return Column(children: [
+      if (storage.getPendingTrainingExecutions().isNotEmpty)
+      Flexible(child: SingleChildScrollView(child: PendingTrainingExecutions(
+        storage: storage,
+        onSelect: (entry, action) async {
+          if (stamp == null || storage.sessionStamp != stamp ||
+              !storage.getPendingTrainingExecutions().any((candidate) =>
+                  candidate['id'] == entry['id'] &&
+                  candidate['training_id'] == entry['training_id'] &&
+                  candidate['assignment_date'] == entry['assignment_date'] &&
+                  candidate['status'] == entry['status'])) {
+            return;
+          }
+          final uri = Uri(path: '/trainings/${entry['training_id']}',
+              queryParameters: {
+                'date': entry['assignment_date'] as String,
+                'execution': entry['id'] as String,
+                if (action == 'finalize') 'action': 'finalize',
+              });
+          await context.push(uri.toString());
+          if (mounted && storage.sessionStamp == stamp) setState(() {});
+        },
+      ))),
+      Expanded(child: BlocBuilder<TrainingBloc, TrainingState>(
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
           return const _TrainingsLoadingView();
@@ -86,7 +119,8 @@ class _TrainingsView extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
-    );
+    )),
+    ]);
   }
 
   Widget _buildContent(
@@ -188,6 +222,49 @@ class _TrainingsView extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Global, owner-scoped recovery list independent of the visible calendar month.
+class PendingTrainingExecutions extends StatelessWidget {
+  const PendingTrainingExecutions({super.key, required this.storage, required this.onSelect});
+
+  final LocalStorage storage;
+  final void Function(Map<String, dynamic> entry, String action) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = storage.getPendingTrainingExecutions();
+    if (entries.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (entries.any((entry) => entry['status'] != 'pending-sync'))
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Tienes un entrenamiento pendiente de finalizar'),
+        ),
+      for (final entry in entries)
+        Card(child: Column(children: [
+          ListTile(
+            title: Text('${entry['training_name'] ?? entry['training_id']} · '
+                '${entry['assignment_date']}'),
+            subtitle: Text('${entry['id']} · '
+                '${entry['status'] == 'pending-sync' ? 'Pendiente de sincronización' : entry['status'] == 'conflict' ? 'Conflicto: revisar' : 'Pendiente de finalizar'}'),
+          ),
+          if (entry['status'] != 'pending-sync' && entry['status'] != 'conflict')
+            Row(children: [
+              TextButton(
+                key: Key('pending-continue-${entry['id']}'),
+                onPressed: () => onSelect(entry, 'continue'),
+                child: const Text('Continuar entrenando'),
+              ),
+              TextButton(
+                key: Key('pending-finalize-${entry['id']}'),
+                onPressed: () => onSelect(entry, 'finalize'),
+                child: const Text('Finalizar'),
+              ),
+            ]),
+        ])),
+    ]);
   }
 }
 

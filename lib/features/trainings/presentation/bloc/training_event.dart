@@ -31,6 +31,9 @@ class MarkExerciseCompleted extends TrainingEvent {
   final double? weightUsed;
   final List<SetPerformance>? sets;
   final String? lastSetFeedbackClientUploadId;
+  final String? sessionId;
+  final String? operationId;
+  final String? sessionStamp;
   final Completer<void>? completion;
   const MarkExerciseCompleted({
     required this.trainingExerciseId,
@@ -39,12 +42,19 @@ class MarkExerciseCompleted extends TrainingEvent {
     this.weightUsed,
     this.sets,
     this.lastSetFeedbackClientUploadId,
+    this.sessionId,
+    this.operationId,
+    this.sessionStamp,
     this.completion,
   });
 }
 
 class CompleteTrainingRequested extends TrainingEvent {
+  final int? rpe;
   final String? notes;
+  final String? sessionId;
+  final String? sessionStamp;
+  final Completer<void>? completion;
 
-  const CompleteTrainingRequested({this.notes});
+  const CompleteTrainingRequested({this.rpe, this.notes, this.sessionId, this.sessionStamp, this.completion});
 }

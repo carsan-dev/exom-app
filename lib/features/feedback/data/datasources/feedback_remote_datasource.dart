@@ -21,6 +21,7 @@ abstract class FeedbackRemoteDataSource {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   });
   Future<ManagedFeedbackUpload> uploadMedia(
     File file,
@@ -75,6 +76,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   }) async {
     final body = <String, dynamic>{
       'media_type': mediaType,
@@ -88,6 +90,7 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
       'training_id': ?trainingId,
       'training_exercise_id': ?trainingExerciseId,
       'assignment_date': ?assignmentDate,
+      'training_session_id': ?sessionId,
     };
     final response = await _apiClient.dio.post<dynamic>('/feedback', data: body);
     final data = response.data;

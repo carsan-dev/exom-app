@@ -69,6 +69,8 @@ class TrainingDayProgress {
   final Map<String, double> weights;
   final Map<String, List<SetPerformance>> performances;
   final String? note;
+  final Map<String, TrainingDayProgress> sessions;
+  final Map<String, String> sessionTrainings;
   final String? adminReplyText;
   final DateTime? adminReplySentAt;
 
@@ -77,9 +79,19 @@ class TrainingDayProgress {
     this.weights = const {},
     this.performances = const {},
     this.note,
+    this.sessions = const {},
+    this.sessionTrainings = const {},
     this.adminReplyText,
     this.adminReplySentAt,
   });
+
+  // An absent or ambiguous identity never inherits another execution's progress.
+  TrainingDayProgress forSession(String? sessionId, String trainingId) {
+    if (sessionId == null || sessionId.isEmpty) return const TrainingDayProgress();
+    final owner = sessionTrainings[sessionId];
+    if (owner != null && owner != trainingId) return const TrainingDayProgress();
+    return sessions[sessionId] ?? const TrainingDayProgress();
+  }
 }
 
 class TrainingExerciseEntity {

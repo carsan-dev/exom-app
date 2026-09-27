@@ -16,6 +16,8 @@ class _FeedbackDependencyPending implements Exception {
   const _FeedbackDependencyPending();
 }
 
+enum SyncForDateResult { confirmed, pendingSync }
+
 class OfflineSyncService {
   static const _markExerciseCompleted = 'mark_exercise_completed';
   static const _unmarkExerciseCompleted = 'unmark_exercise_completed';
@@ -103,8 +105,11 @@ class OfflineSyncService {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   }) async {
     await _enqueueAction({
+      'training_session_id': ?sessionId,
       'type': completed ? _markExerciseCompleted : _unmarkExerciseCompleted,
       'training_exercise_id': trainingExerciseId,
       'exercise_id': ?exerciseId,
@@ -113,7 +118,9 @@ class OfflineSyncService {
       'sets': ?sets?.map((set) => set.toJson()).toList(),
       'last_set_feedback_client_upload_id': ?lastSetFeedbackClientUploadId,
       'training_id': ?trainingId,
-    });
+    }, operationId: operationId,
+       isDuplicate: operationId == null ? null : (entry) => entry['id'] == operationId,
+       onRetryFailedDuplicate: operationId == null ? null : (_) {});
     await _updateExerciseProgressCache(
       trainingExerciseId,
       date,
@@ -133,6 +140,8 @@ class OfflineSyncService {
   Future<void> queueTrainingCompletion(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   }) async {
     final dependencies = _localStorage
@@ -141,17 +150,27 @@ class OfflineSyncService {
           (item) =>
               item['training_id'] == trainingId &&
               item['assignment_date'] == date &&
+              item['training_session_id'] == sessionId &&
               item['status'] != 'completed',
         )
         .map((item) => item['id'])
         .whereType<String>()
         .toSet()
         .toList(growable: false);
-    await _enqueueAction(
+    var cachedNotes = notes;
+    final discarded = sessionId == null ? null :
+        _localStorage.getTrainingCompletionDraft(trainingId, date, sessionId)?['discarded_action'];
+    final restored = discarded is Map ? Map<String, dynamic>.from(discarded) : null;
+    if (restored?['last_error'] == 'progress_conflict_review_required') {
+      throw StateError('Training completion requires conflict review');
+    }
+    final enqueued = await _enqueueAction(
       {
         'type': _completeTraining,
         'date': date,
         'training_id': trainingId,
+        'training_session_id': ?sessionId,
+        'rpe': ?rpe,
         if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       },
@@ -159,15 +178,24 @@ class OfflineSyncService {
           action['type'] == _completeTraining &&
           action['date'] == date &&
           action['training_id'] == trainingId &&
-          action['status'] != 'failed' &&
-          action['notes'] ==
-              (notes?.trim().isEmpty == false ? notes!.trim() : null),
+          (sessionId != null
+              ? action['training_session_id'] == sessionId
+              : action['training_session_id'] == null &&
+                  action['status'] != 'failed' &&
+                  action['notes'] ==
+                      (notes?.trim().isEmpty == false ? notes!.trim() : null)),
+      onRetryFailedDuplicate: (action) {
+        cachedNotes = action['notes'] as String?;
+      },
+      restoredAction: restored,
     );
-    await _updateTrainingCompletionCache(
-      date,
-      trainingId: trainingId,
-      notes: notes,
-    );
+    if (enqueued) {
+      await _updateTrainingCompletionCache(
+        date,
+        trainingId: trainingId,
+        notes: sessionId == null ? cachedNotes : null,
+      );
+    }
     if (dependencies.isNotEmpty &&
         dependencies.every(
           (id) => _localStorage.getFeedbackUploadQueue().any(
@@ -281,6 +309,9 @@ class OfflineSyncService {
                     : 'sync_request_failed'),
           retryable: retryable,
           retryIndefinitely: offline,
+          failureCode: errorData is Map && errorData['code'] is String
+              ? errorData['code'] as String
+              : null,
         );
       } catch (error) {
         if (_localStorage.sessionStamp != session) break;
@@ -337,6 +368,7 @@ class OfflineSyncService {
     String error, {
     required bool retryable,
     bool retryIndefinitely = false,
+    String? failureCode,
   }) async {
     var failedPermanently = false;
     await _mutateById(id, (current) {
@@ -345,11 +377,17 @@ class OfflineSyncService {
         error,
         retryable: retryable,
         retryIndefinitely: retryIndefinitely,
+        failureCode: failureCode,
       );
       failedPermanently = updated['status'] == 'failed';
       return updated;
     });
     if (failedPermanently) {
+      final sessionId = action['training_session_id'] as String?;
+      if (action['type'] == _completeTraining && sessionId != null) {
+        await _localStorage.setTrainingExecutionStatus(sessionId,
+          error == 'progress_conflict_review_required' ? 'conflict' : 'failed');
+      }
       await _rebuildProgressCachesAfterFailure(action['date'] as String?);
     }
   }
@@ -384,7 +422,10 @@ class OfflineSyncService {
 
   Future<bool> _enqueueAction(
     Map<String, dynamic> action, {
+    String? operationId,
     bool Function(Map<String, dynamic> action)? isDuplicate,
+    void Function(Map<String, dynamic> action)? onRetryFailedDuplicate,
+    Map<String, dynamic>? restoredAction,
   }) async {
     var enqueued = false;
     await _queueMutex.protect(() async {
@@ -392,10 +433,30 @@ class OfflineSyncService {
       final existingForDate = queue
           .where((entry) => entry['date'] == action['date'])
           .toList();
-      if (isDuplicate != null &&
-          existingForDate.isNotEmpty &&
-          isDuplicate(existingForDate.last)) {
-        return;
+      if (isDuplicate != null) {
+        final duplicateIndex = queue.indexWhere(
+          (entry) => entry['date'] == action['date'] && isDuplicate(entry),
+        );
+        if (duplicateIndex >= 0) {
+          final duplicate = queue[duplicateIndex];
+          if (operationId != null &&
+              (duplicate['type'] != action['type'] ||
+               duplicate['training_exercise_id'] != action['training_exercise_id'] ||
+               duplicate['date'] != action['date'])) {
+            throw StateError('Completion operation identity belongs to another action');
+          }
+          if (duplicate['status'] == 'failed' && onRetryFailedDuplicate != null) {
+            if (duplicate['last_error'] == 'progress_conflict_review_required') {
+              throw StateError('Training completion requires conflict review');
+            }
+            onRetryFailedDuplicate(duplicate);
+            queue[duplicateIndex] = {...duplicate, 'status': 'queued',
+              'attempts': 0, 'last_error': null}..remove('next_attempt_at');
+            await _persistQueue(queue);
+            enqueued = true;
+          }
+          return;
+        }
       }
       final sameDate = queue
           .where(
@@ -423,10 +484,12 @@ class OfflineSyncService {
             0,
         if (sameDate.isNotEmpty) 'predecessor_id': sameDate.last['id'],
         ..._localStorage.queueIdentity,
-        'id': newOperationId(),
+        'id': operationId ?? newOperationId(),
         'status': 'queued',
         'attempts': 0,
         'queued_at': DateTime.now().toUtc().toIso8601String(),
+        if (restoredAction != null) ...restoredAction,
+        if (restoredAction != null) 'status': 'queued',
       });
       await _persistQueue(queue);
       enqueued = true;
@@ -440,6 +503,7 @@ class OfflineSyncService {
     String error, {
     required bool retryable,
     bool retryIndefinitely = false,
+    String? failureCode,
   }) {
     final attempts = (action['attempts'] as int? ?? 0) + 1;
     if (!retryable || (!retryIndefinitely && attempts >= 5)) {
@@ -448,6 +512,7 @@ class OfflineSyncService {
         'status': 'failed',
         'attempts': attempts,
         'last_error': error,
+        'failure_code': failureCode,
       };
     }
     const delays = [30, 120, 600, 3600];
@@ -459,6 +524,7 @@ class OfflineSyncService {
       'status': 'queued',
       'attempts': attempts,
       'last_error': error,
+      'failure_code': failureCode,
       'next_attempt_at': DateTime.now()
           .toUtc()
           .add(Duration(seconds: delays[delayIndex]))
@@ -514,9 +580,19 @@ class OfflineSyncService {
       final index = queue.indexWhere((entry) => entry['id'] == id);
       if (index < 0 || queue[index]['status'] == 'uploading') return;
       date = queue[index]['date'] as String?;
+      final discarded = queue[index];
+      if (discarded['type'] == _completeTraining &&
+          discarded['training_session_id'] is String) {
+        await _localStorage.preserveDiscardedTrainingCompletion(discarded);
+        await _localStorage.setTrainingExecutionStatus(
+          discarded['training_session_id'] as String,
+          discarded['last_error'] == 'progress_conflict_review_required'
+              ? 'conflict' : 'failed');
+      }
       queue.removeAt(index);
       for (var i = index; i < queue.length; i++) {
-        if (queue[i]['date'] == date) {
+        if (queue[i]['date'] == date &&
+            !_isIndependentOfRejectedHistory(discarded, queue[i])) {
           queue[i] = {
             ...queue[i],
             'status': 'failed',
@@ -596,6 +672,8 @@ class OfflineSyncService {
             'exercise_id': exerciseId,
             'training_exercise_id': trainingExerciseId,
             'date': date,
+            if (action['training_session_id'] != null)
+              'training_session_id': action['training_session_id'],
             if (action['weight_used'] != null)
               'weight_used': action['weight_used'],
             'sets': ?sets,
@@ -621,7 +699,11 @@ class OfflineSyncService {
         final response = await _apiClient.dio.delete<dynamic>(
           '/progress/exercises/$trainingExerciseId',
           options: options,
-          queryParameters: {'date': date},
+          queryParameters: {
+            'date': date,
+            if (action['training_session_id'] != null)
+              'training_session_id': action['training_session_id'],
+          },
         );
         return _cacheProgressResponse(
           response,
@@ -638,7 +720,14 @@ class OfflineSyncService {
             'date': date,
             if (action['training_id'] != null)
               'training_id': action['training_id'],
-            if (action['notes'] != null) 'notes': action['notes'],
+            if (action['training_session_id'] != null)
+              'training_session_id': action['training_session_id'],
+            if (action['rpe'] != null) 'rpe': action['rpe'],
+            if (action['notes'] != null)
+              if (action['training_session_id'] != null)
+                'session_note': action['notes']
+              else
+                'notes': action['notes'],
           },
         );
         return _cacheProgressResponse(
@@ -715,6 +804,22 @@ class OfflineSyncService {
     );
   }
 
+  // A history-ambiguous rejection has no server write. It only releases an
+  // operation for another known execution; the day-wide revision stays intact.
+  bool _isIndependentOfRejectedHistory(
+    Map<String, dynamic> prior,
+    Map<String, dynamic> candidate,
+  ) {
+    final priorSession = prior['training_session_id'];
+    final candidateSession = candidate['training_session_id'];
+    return prior['status'] == 'failed' &&
+        prior['failure_code'] == 'PROGRESS_HISTORY_AMBIGUOUS' &&
+        prior['last_error'] == 'progress_conflict_review_required' &&
+        priorSession is String && priorSession.isNotEmpty &&
+        candidateSession is String && candidateSession.isNotEmpty &&
+        priorSession != candidateSession;
+  }
+
   Future<Map<String, dynamic>?> _claimNextAction(Set<String> excludedIds) {
     return _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
@@ -725,7 +830,8 @@ class OfflineSyncService {
         if (action['format_version'] == 2 &&
             queue
                 .takeWhile((entry) => entry['id'] != action['id'])
-                .any((entry) => entry['date'] == action['date'])) {
+                .any((entry) => entry['date'] == action['date'] &&
+                    !_isIndependentOfRejectedHistory(entry, action))) {
           return false;
         }
         final next = DateTime.tryParse(
@@ -762,8 +868,14 @@ class OfflineSyncService {
 
   Future<void> _acknowledgeAction(String id, int? revision) {
     return _queueMutex.protect(() async {
-      final queue = _localStorage.getPendingSyncActions()
-        ..removeWhere((entry) => entry['id'] == id);
+      final queue = _localStorage.getPendingSyncActions();
+      final acknowledged = queue.where((entry) => entry['id'] == id).firstOrNull;
+      if (acknowledged?['type'] == _completeTraining &&
+          acknowledged?['training_session_id'] is String) {
+        await _localStorage.completeTrainingExecution(
+          acknowledged!['training_session_id'] as String);
+      }
+      queue.removeWhere((entry) => entry['id'] == id);
       for (var index = 0; index < queue.length; index++) {
         if (queue[index]['predecessor_id'] != id) continue;
         queue[index] = {
@@ -776,17 +888,26 @@ class OfflineSyncService {
     });
   }
 
-  Future<void> syncForDate(String date) async {
+  Future<SyncForDateResult> syncForDate(String date, {String? sessionId}) async {
     await syncPendingActions();
-    final failures = pendingActions.where(
-      (action) => action['date'] == date && action['status'] == 'failed',
+    final relevant = pendingActions.where(
+      (action) =>
+          action['date'] == date &&
+          !(sessionId != null &&
+              _isIndependentOfRejectedHistory(action, {
+                'training_session_id': sessionId,
+              })),
     );
+    final failures = relevant.where((action) => action['status'] == 'failed');
     if (failures.isNotEmpty) {
       throw ApiException(
         statusCode: 409,
         message: failures.first['last_error'] as String? ?? 'sync_failed',
       );
     }
+    return relevant.isEmpty
+        ? SyncForDateResult.confirmed
+        : SyncForDateResult.pendingSync;
   }
 
   Future<void> _updateExerciseProgressCache(

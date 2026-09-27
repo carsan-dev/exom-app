@@ -26,6 +26,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 
 class ActiveExercisePageArgs {
   final TrainingBloc trainingBloc;
+  final String? sessionId;
   final TrainingExerciseEntity trainingExercise;
   final String trainingName;
   final List<String> trainingTypes;
@@ -39,6 +40,7 @@ class ActiveExercisePageArgs {
 
   const ActiveExercisePageArgs({
     required this.trainingBloc,
+    this.sessionId,
     required this.trainingExercise,
     required this.trainingName,
     required this.trainingTypes,
@@ -197,6 +199,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         trainingId: widget.trainingId,
         exerciseId: widget.exerciseId,
         assignmentDate: widget.args.assignmentDate,
+        sessionId: widget.args.sessionId,
       ),
     );
 
@@ -208,6 +211,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     });
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
     _scheduleLastSetVideoPreparation(activeState);
+    if (activeState.isDone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _beginCompletion(activeState);
+      });
+    }
   }
 
   Future<bool> _confirmExit() async {
@@ -327,6 +335,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     });
   }
 
+  void _beginCompletion(ActiveExerciseState state) {
+    // This page owns the persisted sets; never replay them in a later session.
+    if (_handledCompletion || _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return;
+    }
+    _handledCompletion = true;
+    unawaited(_persistCompletionAndClose(state));
+  }
+
   Future<void> _persistCompletionAndClose(ActiveExerciseState state) async {
     final completion = Completer<void>();
     context.read<TrainingBloc>().add(
@@ -337,12 +355,25 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         weightUsed: state.weightKg,
         sets: state.setPerformances,
         lastSetFeedbackClientUploadId: state.lastSetFeedbackClientUploadId,
+        sessionId: state.sessionId,
+        operationId: state.completionOperationId,
+        sessionStamp: _ownerSession,
         completion: completion,
       ),
     );
 
     try {
       await completion.future;
+      final storage = sl<LocalStorage>();
+      if (storage.sessionStamp != _ownerSession) return;
+      if (state.completionOperationId != null) {
+        for (final draft in storage.getActiveWorkouts()) {
+          if (draft.trainingId == widget.trainingId &&
+              draft.completionOperationId == state.completionOperationId) {
+            await storage.removeActiveWorkout(draft.exerciseId);
+          }
+        }
+      }
       if (mounted) _popOnce();
     } catch (_) {
       _handledCompletion = false;
@@ -472,7 +503,10 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         ],
       ),
     );
-    if (confirmed != true) return null;
+    if (confirmed != true || !mounted || !context.mounted || _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return null;
+    }
     notes = notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
       expectedSession: _ownerSession,
@@ -485,6 +519,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       trainingId: widget.trainingId,
       trainingExerciseId: widget.args.trainingExercise.id,
       assignmentDate: widget.args.assignmentDate,
+      sessionId: context.read<ActiveExerciseBloc>().state.sessionId,
     );
   }
 
@@ -575,10 +610,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
 
-        if (!_handledCompletion && state.isDone) {
-          _handledCompletion = true;
-          unawaited(_persistCompletionAndClose(state));
-        }
+        if (state.isDone) _beginCompletion(state);
       },
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(
         builder: (context, state) {

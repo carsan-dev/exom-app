@@ -1,4 +1,4 @@
-- Track your physical progress with photo sessions organized by date.
-- Capture front, side, and back views using your camera or gallery.
-- Review your photo history and enlarge each view to see the details.
-- Keep selected photos safe while uploads continue after interruptions.
+- Confirm each workout with an RPE rating from 1 to 10 and an optional session note.
+- Resume pending workouts after an interruption; offline progress is saved and syncs when you reconnect.
+- Track separate runs of the same workout, each with its own sets and ratings.
+- Review session context and set history, including exercises measured in seconds.

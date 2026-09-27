@@ -61,6 +61,121 @@ void main() {
     expect(merged['exercises_completed'], entries);
   });
 
+  test('keeps same-day pending executions separate by session and set', () {
+    final merged = overlayPendingProgressActions(
+      progress: {'exercises_completed': <Map<String, dynamic>>[]},
+      actions: const [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'training_session_id': 'session-a',
+          'sets': [
+            {'set_number': 1, 'reps': 8},
+          ],
+        },
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'training_session_id': 'session-b',
+          'sets': [
+            {'set_number': 1, 'reps': 12},
+          ],
+        },
+      ],
+      date: date,
+    );
+
+    final entries = (merged['exercises_completed'] as List)
+        .cast<Map<String, dynamic>>();
+    expect(entries, hasLength(2));
+    expect(entries.map((entry) => entry['training_session_id']), [
+      'session-a',
+      'session-b',
+    ]);
+    expect((entries[0]['sets'] as List).single['reps'], 8);
+    expect((entries[1]['sets'] as List).single['reps'], 12);
+  });
+
+  test('unmarking session B preserves the pending session A entry', () {
+    final merged = overlayPendingProgressActions(
+      progress: {'exercises_completed': <Map<String, dynamic>>[]},
+      actions: const [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'training_session_id': 'session-a',
+          'sets': [
+            {'set_number': 1, 'reps': 8},
+          ],
+        },
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'training_session_id': 'session-b',
+          'sets': [
+            {'set_number': 1, 'reps': 12},
+          ],
+        },
+        {
+          'type': 'unmark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'training_session_id': 'session-b',
+        },
+      ],
+      date: date,
+    );
+
+    final entries = (merged['exercises_completed'] as List)
+        .cast<Map<String, dynamic>>();
+    expect(entries, hasLength(1));
+    expect(entries.single['training_session_id'], 'session-a');
+    expect((entries.single['sets'] as List).single['reps'], 8);
+  });
+
+  test('sessionless legacy remains unattributed beside pending session', () {
+    const legacy = {
+      'training_exercise_id': 'te',
+      'exercise_id': 'e',
+      'sets': [
+        {'set_number': 1, 'reps': 6},
+      ],
+    };
+    final merged = overlayPendingProgressActions(
+      progress: {
+        'exercises_completed': [legacy],
+      },
+      actions: const [
+        {
+          'type': 'mark_exercise_completed',
+          'date': date,
+          'training_exercise_id': 'te',
+          'exercise_id': 'e',
+          'training_session_id': 'session-a',
+          'sets': [
+            {'set_number': 1, 'reps': 8},
+          ],
+        },
+      ],
+      date: date,
+    );
+
+    final entries = (merged['exercises_completed'] as List)
+        .cast<Map<String, dynamic>>();
+    expect(entries, hasLength(2));
+    expect(entries.first, legacy);
+    expect(entries.first.containsKey('training_session_id'), false);
+    expect(entries.last['training_session_id'], 'session-a');
+  });
+
   test('keeps queued exercise completions over stale server progress', () {
     final merged = overlayPendingProgressActions(
       progress: {

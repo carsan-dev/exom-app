@@ -1,3 +1,4 @@
+import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
@@ -13,11 +14,13 @@ abstract class ActiveExerciseEvent {
 class StartExercise extends ActiveExerciseEvent {
   final String trainingId;
   final String exerciseId;
+  final String? sessionId;
 
   final String? assignmentDate;
   const StartExercise({
     required this.trainingId,
     required this.exerciseId,
+    this.sessionId,
     this.assignmentDate,
   });
 }
@@ -77,6 +80,7 @@ class ActiveExerciseState {
                   ? 0
                   : now.difference(timedStartedAt!).inMilliseconds))
           .clamp(0, (timedTotalSeconds ?? 0) * 1000);
+  final String? sessionId;
   final int currentSet;
   final int totalSets;
   final int completedSets;
@@ -88,12 +92,14 @@ class ActiveExerciseState {
   final DateTime? restEndsAt;
   final String? errorMessage;
   final String? lastSetFeedbackClientUploadId;
+  final String? completionOperationId;
 
   const ActiveExerciseState({
     this.timedElapsedMs = 0,
     this.timedStartedAt,
     this.timedTotalSeconds,
     this.timedPrescription,
+    this.sessionId,
     required this.currentSet,
     required this.totalSets,
     required this.completedSets,
@@ -105,6 +111,7 @@ class ActiveExerciseState {
     required this.restEndsAt,
     this.errorMessage,
     this.lastSetFeedbackClientUploadId,
+    this.completionOperationId,
   });
 
   factory ActiveExerciseState.initial(
@@ -143,6 +150,7 @@ class ActiveExerciseState {
     Object? timedStartedAt = _unset,
     int? currentSet,
     int? totalSets,
+    String? sessionId,
     int? completedSets,
     String? repsOrDuration,
     Object? weightKg = _unset,
@@ -152,6 +160,7 @@ class ActiveExerciseState {
     Object? restEndsAt = _unset,
     Object? errorMessage = _unset,
     Object? lastSetFeedbackClientUploadId = _unset,
+    String? completionOperationId,
   }) {
     return ActiveExerciseState(
       timedElapsedMs: timedElapsedMs ?? this.timedElapsedMs,
@@ -160,6 +169,7 @@ class ActiveExerciseState {
           : timedStartedAt as DateTime?,
       timedTotalSeconds: timedTotalSeconds,
       timedPrescription: timedPrescription,
+      sessionId: sessionId ?? this.sessionId,
       currentSet: currentSet ?? this.currentSet,
       totalSets: totalSets ?? this.totalSets,
       completedSets: completedSets ?? this.completedSets,
@@ -180,6 +190,7 @@ class ActiveExerciseState {
           identical(lastSetFeedbackClientUploadId, _unset)
           ? this.lastSetFeedbackClientUploadId
           : lastSetFeedbackClientUploadId as String?,
+      completionOperationId: completionOperationId ?? this.completionOperationId,
     );
   }
 }
@@ -253,10 +264,23 @@ class ActiveExerciseBloc
     _trainingId = event.trainingId;
     _exerciseId = event.assignmentDate == null
         ? event.exerciseId
-        : '${event.exerciseId}:${event.assignmentDate}';
+        : event.sessionId == null
+            ? '${event.exerciseId}:${event.assignmentDate}'
+            : '${event.exerciseId}:${event.assignmentDate}:${event.sessionId}';
 
     var saved = _localStorage.getActiveWorkout(_exerciseId!);
-    if (saved == null && event.assignmentDate != null) {
+    if (saved == null && event.assignmentDate != null && event.sessionId != null) {
+      final dateKey = '${event.exerciseId}:${event.assignmentDate}';
+      final datedDraft = _localStorage.getActiveWorkout(dateKey);
+      if (datedDraft != null && datedDraft.trainingId == event.trainingId &&
+          datedDraft.sessionId == event.sessionId) {
+        // Persist the new key before removing the old one; a crash can be retried.
+        saved = datedDraft.copyWith(exerciseId: _exerciseId);
+        await _localStorage.saveActiveWorkout(saved);
+        await _localStorage.removeActiveWorkout(dateKey);
+      }
+    }
+    if (saved == null && event.assignmentDate != null && event.sessionId == null) {
       final legacy = _localStorage.getActiveWorkout(event.exerciseId);
       if (legacy != null && legacy.trainingId == event.trainingId) {
         // Keep an owner-bound legacy workout in its original slot until explicit
@@ -265,13 +289,28 @@ class ActiveExerciseBloc
         _exerciseId = event.exerciseId;
       }
     }
-    if (saved != null && saved.trainingId == event.trainingId) {
+    if (saved != null &&
+        (saved.trainingId != event.trainingId ||
+            saved.sessionId != event.sessionId)) {
+      // Neither a legacy draft nor another execution may be silently adopted
+      // or overwritten. Keep it recoverable until the owner selects it.
+      _trainingId = null;
+      _exerciseId = null;
+      emit(
+        state.copyWith(
+          errorMessage: 'Existing workout belongs to another execution',
+        ),
+      );
+      return;
+    }
+    if (saved != null) {
       final restored = _restoreState(saved);
-      emit(restored.copyWith(errorMessage: null));
       if (restored.isDone) {
         await _restTimerCoordinator.cancel();
-        await _removeSavedProgress(emit);
+        if (!await _persistState(restored, emit)) return;
+        emit(restored.copyWith(errorMessage: null));
       } else {
+        emit(restored.copyWith(errorMessage: null));
         if (restored.isResting) {
           await _startNativeRest(restored);
         }
@@ -284,15 +323,20 @@ class ActiveExerciseBloc
       _trainingExercise,
       initialWeightKg: _initialWeightKg,
     );
-    emit(initial);
-    await _persistState(initial, emit);
+    final started = initial.copyWith(sessionId: event.sessionId);
+    emit(started);
+    await _persistState(started, emit);
   }
 
   Future<void> _onAttachLastSetFeedback(
     AttachLastSetFeedback event,
     Emitter<ActiveExerciseState> emit,
   ) async {
-    if (event.clientUploadId.trim().isEmpty || state.isDone) return;
+    if (_exerciseId == null ||
+        event.clientUploadId.trim().isEmpty ||
+        state.isDone) {
+      return;
+    }
     final nextState = state.copyWith(
       lastSetFeedbackClientUploadId: event.clientUploadId,
       errorMessage: null,
@@ -305,7 +349,7 @@ class ActiveExerciseBloc
     CompleteSet event,
     Emitter<ActiveExerciseState> emit,
   ) async {
-    if (!state.isExecuting) return;
+    if (_exerciseId == null || !state.isExecuting) return;
 
     final setBase = state.copyWith(timedElapsedMs: 0, timedStartedAt: null);
     final nextCompletedSets = state.completedSets + 1;
@@ -354,13 +398,14 @@ class ActiveExerciseBloc
         status: ActiveExerciseStatus.done,
         restEndsAt: null,
         errorMessage: null,
+        completionOperationId: state.completionOperationId ?? newOperationId(),
         lastSetFeedbackClientUploadId:
             event.lastSetFeedbackClientUploadId ??
             state.lastSetFeedbackClientUploadId,
       );
+      if (!await _persistState(doneState, emit)) return;
       emit(doneState);
       await _restTimerCoordinator.cancel();
-      await _removeSavedProgress(emit);
       return;
     }
 
@@ -424,9 +469,10 @@ class ActiveExerciseBloc
         status: ActiveExerciseStatus.done,
         restEndsAt: null,
         errorMessage: null,
+        completionOperationId: state.completionOperationId ?? newOperationId(),
       );
+      if (!await _persistState(doneState, emit)) return;
       emit(doneState);
-      await _removeSavedProgress(emit);
       return;
     }
 
@@ -460,6 +506,7 @@ class ActiveExerciseBloc
         : (completedSets + 1).clamp(1, totalSets);
 
     return ActiveExerciseState(
+      sessionId: saved.sessionId,
       timedElapsedMs: saved.timedElapsedMs,
       timedStartedAt: saved.timedStartedAt,
       timedTotalSeconds:
@@ -498,6 +545,9 @@ class ActiveExerciseBloc
           : ActiveExerciseStatus.executing,
       restEndsAt: hasPendingRest ? saved.restEndsAt : null,
       lastSetFeedbackClientUploadId: saved.lastSetFeedbackClientUploadId,
+      completionOperationId: saved.completionOperationId ??
+          (completedSets >= totalSets && !hasPendingRest
+              ? newOperationId() : null),
     );
   }
 
@@ -514,14 +564,14 @@ class ActiveExerciseBloc
     );
   }
 
-  Future<void> _persistState(
+  Future<bool> _persistState(
     ActiveExerciseState nextState,
     Emitter<ActiveExerciseState> emit,
   ) async {
     final trainingId = _trainingId;
     final exerciseId = _exerciseId;
     if (trainingId == null || exerciseId == null) {
-      return;
+      return false;
     }
 
     try {
@@ -532,6 +582,7 @@ class ActiveExerciseBloc
           timedTotalSeconds: nextState.timedTotalSeconds,
           timedPrescription: nextState.timedPrescription,
           trainingId: trainingId,
+          sessionId: nextState.sessionId,
           exerciseId: exerciseId,
           currentSet: nextState.currentSet,
           completedSets: nextState.completedSets,
@@ -542,21 +593,13 @@ class ActiveExerciseBloc
               .toList(),
           lastSetFeedbackClientUploadId:
               nextState.lastSetFeedbackClientUploadId,
+          completionOperationId: nextState.completionOperationId,
         ),
       );
-    } catch (error) {
-      emit(nextState.copyWith(errorMessage: error.toString()));
-    }
-  }
-
-  Future<void> _removeSavedProgress(Emitter<ActiveExerciseState> emit) async {
-    final exerciseId = _exerciseId;
-    if (exerciseId == null) return;
-
-    try {
-      await _localStorage.removeActiveWorkout(exerciseId);
+      return true;
     } catch (error) {
       emit(state.copyWith(errorMessage: error.toString()));
+      return false;
     }
   }
 }

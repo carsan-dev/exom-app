@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/auth/auth_token_provider.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -1149,6 +1150,262 @@ void main() {
     expect(storage.actions, isEmpty);
   });
 
+  Future<void> checkStaleTrainingAck({required bool includeSyncRevision}) async {
+    const date = '2026-09-05';
+    const execution = 'execution-1';
+    const operation = 'complete-training-1';
+    final confirmed = <String, dynamic>{
+      'date': date,
+      'sync_revision': 7,
+      'training_sessions': [
+        {'training_session_id': execution, 'training_id': 'training-1'},
+      ],
+      'exercises_completed': [
+        {
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'training_session_id': execution,
+        },
+      ],
+      'meals_completed': <String>[],
+    };
+    final storage = FakeSyncStorage(owner: 'owner-1', actions: [
+      {
+        'format_version': 2,
+        'owner_id': 'owner-1',
+        'environment': 'test',
+        'id': operation,
+        'type': 'complete_training',
+        'training_id': 'training-1',
+        'training_session_id': execution,
+        'date': date,
+        'expected_revision': 5,
+        'status': 'queued',
+        'attempts': 0,
+        'queued_at': '2026-09-05T12:00:00.000Z',
+      },
+    ]);
+    storage.cache.addAll({
+      'server_progress_$date': confirmed,
+      'day_progress_$date': confirmed,
+      'home_progress_$date': confirmed,
+      'completed_exercises_$date': ['training-exercise-1'],
+    });
+    var requests = 0;
+    final service = OfflineSyncService(
+      respondingClient((options, handler) {
+        requests++;
+        expect(options.path, '/progress/trainings/complete');
+        expect(options.headers['x-exom-operation-id'], operation);
+        expect(options.headers['x-exom-revision'], 5);
+        expect(options.extra['exom.auth.expectedOwner'], 'owner-1');
+        expect(options.data, {
+          'date': date,
+          'training_id': 'training-1',
+          'training_session_id': execution,
+        });
+        handler.resolve(Response(requestOptions: options, statusCode: 200,
+          data: {
+            'date': date,
+            'operation_revision': 6,
+            if (includeSyncRevision) 'sync_revision': 6,
+            'training_sessions': [
+              {'training_session_id': execution, 'training_id': 'training-1'},
+            ],
+            'exercises_completed': <Map<String, dynamic>>[],
+            'meals_completed': <String>[],
+          },
+        ));
+      }), storage,
+      isAuthenticated: () => true,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+    try {
+      await service.syncPendingActions();
+      expect(requests, 1);
+      expect(storage.actions, isEmpty);
+      expect(storage.executionStatuses[execution], 'confirmed');
+      for (final key in [
+        'day_progress_$date',
+        'home_progress_$date',
+        'server_progress_$date',
+      ]) {
+        final progress = storage.getCachedMap(key);
+        expect(progress?['sync_revision'], 7, reason: key);
+        expect(progress?['training_sessions'], confirmed['training_sessions'], reason: key);
+        expect(progress?['exercises_completed'], confirmed['exercises_completed'], reason: key);
+      }
+      expect(
+        storage.getCachedList('completed_exercises_$date'),
+        ['training-exercise-1'],
+      );
+    } finally {
+      await service.dispose();
+    }
+  }
+
+  test('does not replace newer confirmed exercise progress with a stale training-completion ACK', () async {
+    await checkStaleTrainingAck(includeSyncRevision: true);
+  });
+
+  test('does not replace newer confirmed exercise progress with an ACK missing sync revision', () async {
+    await checkStaleTrainingAck(includeSyncRevision: false);
+  });
+
+  Future<void> checkPersistedSuccessorRevision({required bool includeSyncRevision}) async {
+    const date = '2026-09-05';
+    const execution = 'execution-1';
+    const predecessorId = 'complete-training-1';
+    const successorId = 'unmark-exercise-1';
+    final confirmed = <String, dynamic>{
+      'date': date,
+      'sync_revision': 7,
+      'training_sessions': [
+        {'training_session_id': execution, 'training_id': 'training-1'},
+      ],
+      'exercises_completed': [
+        {
+          'training_exercise_id': 'training-exercise-1',
+          'exercise_id': 'exercise-1',
+          'training_session_id': execution,
+        },
+      ],
+      'meals_completed': <String>[],
+    };
+    final successor = <String, dynamic>{
+      'format_version': 2,
+      'owner_id': 'owner-1',
+      'environment': 'test',
+      'id': successorId,
+      'type': 'unmark_exercise_completed',
+      'training_exercise_id': 'training-exercise-1',
+      'exercise_id': 'exercise-1',
+      'training_session_id': execution,
+      'date': date,
+      'predecessor_id': predecessorId,
+      'expected_revision': 7,
+      'status': 'queued',
+      'attempts': 0,
+      'queued_at': '2026-09-05T12:01:00.000Z',
+    };
+    final storage = FakeSyncStorage(owner: 'owner-1', actions: [
+      {
+        'format_version': 2,
+        'owner_id': 'owner-1',
+        'environment': 'test',
+        'id': predecessorId,
+        'type': 'complete_training',
+        'training_id': 'training-1',
+        'training_session_id': execution,
+        'date': date,
+        'expected_revision': 5,
+        'status': 'queued',
+        'attempts': 0,
+        'queued_at': '2026-09-05T12:00:00.000Z',
+      },
+      successor,
+    ]);
+    storage.cache.addAll({
+      'server_progress_$date': confirmed,
+      'day_progress_$date': confirmed,
+      'home_progress_$date': confirmed,
+      'completed_exercises_$date': ['training-exercise-1'],
+    });
+    final firstRequestStarted = Completer<void>();
+    final releaseFirstAck = Completer<void>();
+    final revisions = <dynamic>[];
+    final service = OfflineSyncService(
+      respondingClient((options, handler) {
+        revisions.add(options.headers['x-exom-revision']);
+        if (options.path == '/progress/trainings/complete') {
+          expect(options.headers['x-exom-operation-id'], predecessorId);
+          expect(options.extra['exom.auth.expectedOwner'], 'owner-1');
+          expect(options.data, {
+            'date': date,
+            'training_id': 'training-1',
+            'training_session_id': execution,
+          });
+          firstRequestStarted.complete();
+          releaseFirstAck.future.then((_) => handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'date': date,
+              'operation_revision': 6,
+              if (includeSyncRevision) 'sync_revision': 6,
+              'training_sessions': confirmed['training_sessions'],
+              'exercises_completed': <Map<String, dynamic>>[],
+              'meals_completed': <String>[],
+            },
+          )));
+          return;
+        }
+        expect(options.path, '/progress/exercises/training-exercise-1');
+        expect(storage.actions.map((action) => action['id']), [successorId],
+          reason: 'A is retired only after its ACK; B remains until its own ACK');
+        for (final key in ['server_progress_$date', 'day_progress_$date', 'home_progress_$date']) {
+          expect(storage.getCachedMap(key), confirmed,
+            reason: 'A stale receipt must not replace confirmed revision 7 in $key');
+        }
+        expect(options.method, 'DELETE');
+        expect(options.headers['x-exom-operation-id'], successorId);
+        expect(options.extra['exom.auth.expectedOwner'], 'owner-1');
+        expect(options.queryParameters, {
+          'date': date,
+          'training_session_id': execution,
+        });
+        if (options.headers['x-exom-revision'] != 7) {
+          handler.reject(DioException.badResponse(
+            statusCode: 409,
+            requestOptions: options,
+            response: Response(requestOptions: options, statusCode: 409,
+              data: {'code': 'PROGRESS_VERSION_CONFLICT'}),
+          ));
+          return;
+        }
+        handler.resolve(Response(requestOptions: options, statusCode: 200,
+          data: {
+            'date': date,
+            'operation_revision': 8,
+            'sync_revision': 8,
+            'training_sessions': confirmed['training_sessions'],
+            'exercises_completed': <Map<String, dynamic>>[],
+            'meals_completed': <String>[],
+          },
+        ));
+      }), storage,
+      isAuthenticated: () => true,
+      authenticationChanges: const Stream<bool>.empty(),
+      connectivityChanges: const Stream<bool>.empty(),
+    );
+    try {
+      final replay = service.syncPendingActions();
+      await firstRequestStarted.future;
+      expect(revisions, [5]);
+      expect(storage.actions, hasLength(2));
+      expect(storage.actions.last, containsPair('expected_revision', 7));
+      expect(storage.actions.last, containsPair('predecessor_id', predecessorId));
+      for (final key in ['server_progress_$date', 'day_progress_$date', 'home_progress_$date']) {
+        expect(storage.getCachedMap(key), confirmed, reason: key);
+      }
+      releaseFirstAck.complete();
+      await replay;
+      expect(revisions, [5, 7], reason: 'A stale ACK must not lower B persisted revision');
+      expect(storage.actions, isEmpty, reason: 'Only correct ACKs retire A and B');
+      expect(storage.executionStatuses[execution], 'confirmed');
+      expect(storage.getCachedMap('server_progress_$date')?['sync_revision'], 8);
+    } finally {
+      if (!releaseFirstAck.isCompleted) releaseFirstAck.complete();
+      await service.dispose();
+    }
+  }
+
+  test('stale completion receipt does not lower already persisted successor revision', () async {
+    await checkPersistedSuccessorRevision(includeSyncRevision: true);
+    await checkPersistedSuccessorRevision(includeSyncRevision: false);
+  });
+
   test('keeps completion cached while the server response is stale', () async {
     final storage = FakeSyncStorage(
       actions: [
@@ -1208,7 +1465,13 @@ class FakeSyncStorage extends LocalStorage {
   FakeSyncStorage({
     List<Map<String, dynamic>>? actions,
     this.feedback = const [],
-  }) : actions = actions ?? [];
+    String? owner,
+  }) : actions = actions ?? [],
+       super(
+         currentSession: owner == null
+             ? null
+             : () => LocalAuthSession(uid: owner),
+       );
 
   List<Map<String, dynamic>> actions;
   List<Map<String, dynamic>> feedback;

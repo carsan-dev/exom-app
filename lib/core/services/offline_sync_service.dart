@@ -878,9 +878,12 @@ class OfflineSyncService {
       queue.removeWhere((entry) => entry['id'] == id);
       for (var index = 0; index < queue.length; index++) {
         if (queue[index]['predecessor_id'] != id) continue;
+        final persistedRevision = queue[index]['expected_revision'];
         queue[index] = {
           ...queue[index],
-          if (revision is int) 'expected_revision': revision,
+          if (revision is int &&
+              (persistedRevision is! int || persistedRevision < revision))
+            'expected_revision': revision,
         }..remove('predecessor_id');
       }
       await _persistQueue(queue);
@@ -1147,12 +1150,33 @@ class OfflineSyncService {
     }
 
     final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-    final revision = inner['operation_revision'] ?? inner['sync_revision'];
-    if (acknowledgedId != null && revision is! int) {
+    final receiptRevision = inner['operation_revision'] ?? inner['sync_revision'];
+    if (acknowledgedId != null && receiptRevision is! int) {
       throw StateError('progress_receipt_missing');
+    }
+    final responseRevision = inner['sync_revision'] is int
+        ? inner['sync_revision'] as int
+        : inner['operation_revision'];
+    final server = _localStorage.getCachedMap('server_progress_$date');
+    final day = _localStorage.getCachedMap('day_progress_$date');
+    Map<String, dynamic>? confirmed;
+    int? confirmedRevision;
+    for (final candidate in [server, day]) {
+      if (candidate?['date'] != date) continue;
+      final revision = candidate?['sync_revision'];
+      if (revision is int &&
+          (confirmedRevision == null || revision > confirmedRevision)) {
+        confirmed = candidate;
+        confirmedRevision = revision;
+      }
+    }
+    if (confirmed != null &&
+        (responseRevision is! int || confirmedRevision! > responseRevision)) {
+      // Keep the newer snapshot, but advance the queue using this operation's receipt.
+      return receiptRevision is int ? receiptRevision : null;
     }
     await _localStorage.cacheData('server_progress_$date', inner);
     await _saveProgressCache(date, inner, acknowledgedId: acknowledgedId);
-    return revision is int ? revision : null;
+    return receiptRevision is int ? receiptRevision : null;
   }
 }

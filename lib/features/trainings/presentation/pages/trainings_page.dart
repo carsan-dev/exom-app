@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -40,6 +43,31 @@ class _TrainingsView extends StatefulWidget {
 }
 
 class _TrainingsViewState extends State<_TrainingsView> {
+  StreamSubscription<void>? _syncChanges;
+  String? _mountedSessionStamp;
+
+  @override
+  void initState() {
+    super.initState();
+    final storage = sl<LocalStorage>();
+    _mountedSessionStamp = storage.sessionStamp;
+    if (_mountedSessionStamp != null &&
+        _mountedSessionStamp!.isNotEmpty &&
+        sl.isRegistered<OfflineSyncService>()) {
+      _syncChanges = sl<OfflineSyncService>().changes.listen((_) {
+        if (!mounted || storage.sessionStamp != _mountedSessionStamp) return;
+        // The pending execution list reads owner-scoped storage directly.
+        setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _syncChanges?.cancel();
+    super.dispose();
+  }
+
   String? get selectedDate => widget.selectedDate;
 
   String _dateLabel(BuildContext context, String resolvedDate) {

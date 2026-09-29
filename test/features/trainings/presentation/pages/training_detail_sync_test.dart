@@ -120,6 +120,7 @@ class _Repository extends Fake implements TrainingRepository {
   int completions = 0;
   bool requireSets = false;
   bool includeProgress = true;
+  void Function()? onComplete;
   @override
   Future<TrainingEntity> getTraining(String id, {String? date}) async =>
       TrainingEntity(id: 'training-1', name: 'Training', types: const ['FUERZA'],
@@ -140,7 +141,10 @@ class _Repository extends Fake implements TrainingRepository {
       List<String> exerciseIds, String beforeDate) async => {};
   @override
   Future<void> completeTraining(String date, {required String trainingId,
-      String? sessionId, int? rpe, String? notes}) async { completions++; }
+      String? sessionId, int? rpe, String? notes}) async {
+    completions++;
+    onComplete?.call();
+  }
 }
 
 void main() {
@@ -483,6 +487,85 @@ void main() {
       await sl.reset();
     });
   }
+  testWidgets('mounted detail retains completed exercise checks through pending sync and ACK', (tester) async {
+    await sl.reset();
+    final storage = _FilteredStorage()..status = 'pending'..actionStatus = null;
+    final sync = _Sync(storage);
+    final repository = _Repository()..requireSets = true
+      ..onComplete = (() {
+        storage.status = 'pending-sync';
+        storage.actionStatus = 'queued';
+      });
+    sl.registerSingleton<LocalStorage>(storage);
+    sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('es'),
+      localizationsDelegates: const [AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date,
+        selectedExecutionId: _session),
+    ));
+    await tester.pumpAndSettle();
+    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
+    expect(find.text('1/1 $label'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('complete-training-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('completion-rpe-8')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('confirm-complete-training')));
+    await tester.pumpAndSettle();
+    expect(repository.completions, 1);
+    expect(storage.completionDrafts[_session]?['rpe'], 8);
+    expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
+    expect(find.text('Pending sync'), findsOneWidget);
+    expect(find.text('1/1 $label'), findsOneWidget);
+
+    storage.status = 'confirmed';
+    storage.actionStatus = null;
+    storage.stamp = 'another-owner:2:test';
+    sync.notify();
+    await tester.pumpAndSettle();
+    expect(find.text('Pending sync'), findsOneWidget,
+      reason: 'a foreign session event cannot apply the ACK to this mounted page');
+    storage.stamp = 'owner:1:test';
+    sync.notify();
+    await tester.pumpAndSettle();
+    expect(find.text('Pending sync'), findsNothing);
+    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
+    expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
+    expect(repository.completions, 1);
+
+    storage.conflictActions = [
+      {'type': 'complete_training', 'training_id': 'training-1', 'date': _date,
+        'training_session_id': _otherSession, 'status': 'queued'},
+    ];
+    sync.notify();
+    await tester.pumpAndSettle();
+    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
+    expect(find.text('Pending sync'), findsNothing,
+      reason: 'another execution queued for the same training/date must not affect the selected ACK');
+    expect(find.text('Conflict: review required'), findsNothing);
+    expect(repository.completions, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await sync.closeEvents();
+    await sl.reset();
+  });
+
   for (final outcome in ['ack', 'legacy ack', 'failed']) {
     testWidgets('mounted detail reacts to pending sync -> $outcome without re-prompting RPE', (tester) async {
       await sl.reset();

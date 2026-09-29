@@ -812,6 +812,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       if (_sameSession) {
         setState(() {
           _locallyConfirmedSessionId = sessionId;
+          _displaySessionId = sessionId;
           _sessionId = null;
         });
       }
@@ -853,12 +854,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       action['type'] == 'complete_training' &&
       action['training_id'] == training.id &&
       action['date'] == widget.state.selectedDate).toList();
+    final selectedCompletionId = widget.selectedExecutionId ?? _sessionId ??
+        _locallyConfirmedSessionId ?? _displaySessionId;
     final pendingSync = completionActions.any((action) =>
       const ['queued', 'uploading'].contains(action['status']) &&
-      (_sessionId == null || action['training_session_id'] == _sessionId));
+      action['training_session_id'] == selectedCompletionId);
     final executions = storage.getTrainingExecutions(
       training.id, widget.state.selectedDate);
-    final selectedCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
     final needsConflictReview = completionActions.any((action) =>
       action['last_error'] == 'progress_conflict_review_required' &&
       (selectedCompletionId == null ||
@@ -868,9 +870,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final hasFailedExecution = executions.any((entry) =>
       entry['status'] == 'failed' &&
       (_sessionId == null || entry['id'] == _sessionId));
-    final locallyCompleted = selectedCompletionId != null && executions.any((entry) =>
-      const ['completed', 'confirmed'].contains(entry['status']) &&
-      entry['id'] == selectedCompletionId);
+    final writableCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
+    final locallyCompleted = writableCompletionId != null &&
+        storage.getConfirmedTrainingExecutions(training.id, widget.state.selectedDate)
+            .any((entry) => entry['id'] == writableCompletionId &&
+                const ['completed', 'confirmed'].contains(entry['status']));
     final remaining = training.remainingProgress(
       _progress.ids,
     );

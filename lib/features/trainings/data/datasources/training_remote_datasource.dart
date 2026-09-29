@@ -534,12 +534,37 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         final data = response.data;
         if (data is Map<String, dynamic>) {
           final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+          final cachedProgress = _localStorage.getCachedMap('day_progress_$targetDate');
+          // An absent or invalid date is not proof that this response belongs
+          // to the requested day, even when its revision is newer.
+          if (inner['date'] != targetDate) {
+            final confirmedCache = cachedProgress?['date'] == targetDate
+                ? cachedProgress!
+                : <String, dynamic>{'exercises_completed': <dynamic>[]};
+            return parseTrainingDayProgress(
+              overlayPendingProgressActions(
+                progress: confirmedCache,
+                actions: _localStorage.getPendingSyncActions(),
+                date: targetDate,
+              ),
+            );
+          }
+          final responseRevision = inner['sync_revision'] is int
+              ? inner['sync_revision'] as int
+              : inner['operation_revision'];
+          final cachedRevision = cachedProgress?['sync_revision'] is int
+              ? cachedProgress!['sync_revision'] as int
+              : cachedProgress?['operation_revision'];
+          final isStale = cachedProgress?['date'] == targetDate &&
+              cachedRevision is int &&
+              (responseRevision is! int || cachedRevision > responseRevision);
           final merged = overlayPendingProgressActions(
-            progress: inner,
+            progress: isStale ? cachedProgress! : inner,
             actions: _localStorage.getPendingSyncActions(),
             date: targetDate,
           );
           final progress = parseTrainingDayProgress(merged);
+          if (isStale) return progress;
           await _localStorage.cacheData(cacheKey, progress.ids.toList());
           await _localStorage.cacheData('day_progress_$targetDate', merged);
           await _localStorage.cacheData('home_progress_$targetDate', merged);

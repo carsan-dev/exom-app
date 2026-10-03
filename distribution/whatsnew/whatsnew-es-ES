@@ -1,4 +1,4 @@
-- Confirma cada entrenamiento con una valoración RPE del 1 al 10 y, si quieres, una nota de sesión.
-- Recupera entrenamientos pendientes tras una interrupción; tu progreso sin conexión se guarda y sincroniza al volver la conexión.
-- Registra por separado distintas ejecuciones del mismo entrenamiento, con sus propias series y valoraciones.
-- Consulta el contexto de cada sesión y el historial de series, incluidos ejercicios medidos en segundos.
+- Los ejercicios completados siguen marcados tras sincronizar, sin recargar la pantalla.
+- Distingue las confirmaciones pendientes de los errores al guardar tu entrenamiento.
+- Reintenta las confirmaciones pendientes sin duplicar tu valoración RPE ni tu nota de sesión.
+- Tu progreso y la sesión seleccionada se mantienen al recibir actualizaciones anteriores.

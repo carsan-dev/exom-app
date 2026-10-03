@@ -18,6 +18,14 @@ class _FeedbackDependencyPending implements Exception {
 
 enum SyncForDateResult { confirmed, pendingSync }
 
+enum CompletionSyncBlockerKind { failed, conflict, receiptMissing, feedbackWaiting, feedbackMissing, feedbackFailed }
+
+class CompletionSyncBlocker {
+  const CompletionSyncBlocker(this.kind, {this.retryActionId});
+  final CompletionSyncBlockerKind kind;
+  final String? retryActionId;
+}
+
 class OfflineSyncService {
   static const _markExerciseCompleted = 'mark_exercise_completed';
   static const _unmarkExerciseCompleted = 'unmark_exercise_completed';
@@ -321,7 +329,8 @@ class OfflineSyncService {
         await _recordReplayFailure(
           id,
           action,
-          error.toString(),
+          error is StateError && error.message == 'progress_receipt_missing'
+              ? 'progress_receipt_missing' : error.toString(),
           retryable: false,
         );
       }
@@ -505,6 +514,7 @@ class OfflineSyncService {
     bool retryIndefinitely = false,
     String? failureCode,
   }) {
+    action = {...action, 'retryable': retryable};
     final attempts = (action['attempts'] as int? ?? 0) + 1;
     if (!retryable || (!retryIndefinitely && attempts >= 5)) {
       return {
@@ -556,22 +566,33 @@ class OfflineSyncService {
     _changes.add(null);
   }
 
-  Future<void> retryAction(String id) async {
+  bool _receiptMissing(Map<String, dynamic> action) =>
+      const ['progress_receipt_missing', 'Bad state: progress_receipt_missing']
+          .contains(action['last_error']);
+
+  bool _canRetryFailure(Map<String, dynamic> action) =>
+      action['status'] == 'failed' &&
+      action['last_error'] != 'progress_conflict_review_required' &&
+      (action['retryable'] == true || _receiptMissing(action));
+
+  Future<void> retryAction(String id) => _localStorage.withSession(() async {
+    if (!_isAuthenticated()) return;
+    final session = _localStorage.sessionStamp;
     await _mutateById(id, (action) {
-      if (action['status'] != 'failed' ||
-          action['last_error'] == 'progress_conflict_review_required') {
+      if (_localStorage.sessionStamp != session || !_isAuthenticated() ||
+          !_localStorage.ownsEntry(action) || !_canRetryFailure(action)) {
         return action;
       }
       return {
         ...action,
         'status': 'queued',
         'attempts': 0,
-        'next_attempt_at': DateTime.now().toUtc().toIso8601String(),
-        'last_error': null,
-      };
+      }..remove('next_attempt_at')..remove('last_error')..remove('failure_code');
     });
-    await syncPendingActions();
-  }
+    if (_localStorage.sessionStamp == session && _isAuthenticated()) {
+      await syncPendingActions();
+    }
+  });
 
   Future<void> discardAction(String id) => _localStorage.withSession(() async {
     String? date;
@@ -820,6 +841,57 @@ class OfflineSyncService {
         priorSession != candidateSession;
   }
 
+  Iterable<Map<String, dynamic>> _orderedPredecessors(
+    List<Map<String, dynamic>> queue, Map<String, dynamic> candidate,
+  ) => candidate['format_version'] != 2 ? const [] : queue
+      .takeWhile((entry) => entry['id'] != candidate['id'])
+      .where((entry) => _localStorage.ownsEntry(entry) &&
+          entry['date'] == candidate['date'] &&
+          !_isIndependentOfRejectedHistory(entry, candidate));
+
+  /// Read-only diagnosis uses precisely the replay head-of-day rule. Feedback
+  /// completion proves only its dependency, never a training acknowledgement.
+  CompletionSyncBlocker? completionBlocker(
+    String trainingId, String date, String? sessionId,
+  ) {
+    final queue = pendingActions.where(_localStorage.ownsEntry).toList();
+    final completion = queue.where((entry) =>
+        entry['type'] == _completeTraining && entry['training_id'] == trainingId &&
+        entry['date'] == date && entry['training_session_id'] == sessionId).firstOrNull;
+    if (completion == null || completion['format_version'] != 2) return null;
+    for (final action in [..._orderedPredecessors(queue, completion), completion]) {
+      if (action['last_error'] == 'progress_conflict_review_required') {
+        return const CompletionSyncBlocker(CompletionSyncBlockerKind.conflict);
+      }
+      if (action['status'] == 'failed') {
+        return CompletionSyncBlocker(
+          _receiptMissing(action) ? CompletionSyncBlockerKind.receiptMissing
+              : CompletionSyncBlockerKind.failed,
+          retryActionId: _canRetryFailure(action) ? action['id'] as String? : null);
+      }
+      final dependencies = <String>{
+        ...((action['depends_on_feedback_ids'] as List?) ?? const []).whereType<String>(),
+        if (action['last_set_feedback_client_upload_id'] is String)
+          action['last_set_feedback_client_upload_id'] as String,
+      };
+      if (dependencies.isEmpty) continue;
+      final feedback = _localStorage.getFeedbackUploadQueue();
+      for (final id in dependencies) {
+        final row = feedback.where((item) => item['id'] == id).firstOrNull;
+        if (row == null) {
+          return const CompletionSyncBlocker(CompletionSyncBlockerKind.feedbackMissing);
+        }
+        if (row['status'] == 'failed') {
+          return const CompletionSyncBlocker(CompletionSyncBlockerKind.feedbackFailed);
+        }
+        if (row['status'] != 'completed') {
+          return const CompletionSyncBlocker(CompletionSyncBlockerKind.feedbackWaiting);
+        }
+      }
+    }
+    return null;
+  }
+
   Future<Map<String, dynamic>?> _claimNextAction(Set<String> excludedIds) {
     return _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
@@ -827,11 +899,7 @@ class OfflineSyncService {
         if (!_localStorage.ownsEntry(action)) return false;
         if (excludedIds.contains(action['id'])) return false;
         if (action['status'] != 'queued') return false;
-        if (action['format_version'] == 2 &&
-            queue
-                .takeWhile((entry) => entry['id'] != action['id'])
-                .any((entry) => entry['date'] == action['date'] &&
-                    !_isIndependentOfRejectedHistory(entry, action))) {
+        if (_orderedPredecessors(queue, action).isNotEmpty) {
           return false;
         }
         final next = DateTime.tryParse(
@@ -878,9 +946,12 @@ class OfflineSyncService {
       queue.removeWhere((entry) => entry['id'] == id);
       for (var index = 0; index < queue.length; index++) {
         if (queue[index]['predecessor_id'] != id) continue;
+        final persistedRevision = queue[index]['expected_revision'];
         queue[index] = {
           ...queue[index],
-          if (revision is int) 'expected_revision': revision,
+          if (revision is int &&
+              (persistedRevision is! int || persistedRevision < revision))
+            'expected_revision': revision,
         }..remove('predecessor_id');
       }
       await _persistQueue(queue);
@@ -1147,12 +1218,33 @@ class OfflineSyncService {
     }
 
     final inner = (data['data'] as Map<String, dynamic>?) ?? data;
-    final revision = inner['operation_revision'] ?? inner['sync_revision'];
-    if (acknowledgedId != null && revision is! int) {
+    final receiptRevision = inner['operation_revision'] ?? inner['sync_revision'];
+    if (acknowledgedId != null && receiptRevision is! int) {
       throw StateError('progress_receipt_missing');
+    }
+    final responseRevision = inner['sync_revision'] is int
+        ? inner['sync_revision'] as int
+        : inner['operation_revision'];
+    final server = _localStorage.getCachedMap('server_progress_$date');
+    final day = _localStorage.getCachedMap('day_progress_$date');
+    Map<String, dynamic>? confirmed;
+    int? confirmedRevision;
+    for (final candidate in [server, day]) {
+      if (candidate?['date'] != date) continue;
+      final revision = candidate?['sync_revision'];
+      if (revision is int &&
+          (confirmedRevision == null || revision > confirmedRevision)) {
+        confirmed = candidate;
+        confirmedRevision = revision;
+      }
+    }
+    if (confirmed != null &&
+        (responseRevision is! int || confirmedRevision! > responseRevision)) {
+      // Keep the newer snapshot, but advance the queue using this operation's receipt.
+      return receiptRevision is int ? receiptRevision : null;
     }
     await _localStorage.cacheData('server_progress_$date', inner);
     await _saveProgressCache(date, inner, acknowledgedId: acknowledgedId);
-    return revision is int ? revision : null;
+    return receiptRevision is int ? receiptRevision : null;
   }
 }

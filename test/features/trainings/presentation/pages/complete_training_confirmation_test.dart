@@ -1,11 +1,88 @@
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
+import 'package:dio/dio.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
+import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_previous_exercise_performances_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_today_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/injection_container.dart';
+import '../../../../core/services/offline_sync_service_test.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final (error, label, retry) in [
+    ('Bad state: progress_receipt_missing', 'Confirmation missing: retry sync', true),
+    ('INVALID_EXERCISE', 'Sync blocked: action failed', false),
+    ('progress_conflict_review_required', 'Conflict: review required', false),
+  ]) {
+  testWidgets('selected queued completion exposes $error without false pending state', (tester) async {
+    await sl.reset();
+    final store = _CompletionStorage(actions: [
+      {'id': 'exercise-op', 'type': 'mark_exercise_completed', 'date': '2026-10-01',
+        'training_exercise_id': 'te', 'exercise_id': 'e', 'format_version': 2,
+        'training_session_id': 'execution', 'status': 'failed',
+        'last_error': error, 'expected_revision': 0},
+      {'id': 'complete-op', 'type': 'complete_training', 'training_id': 'training',
+        'date': '2026-10-01', 'training_session_id': 'execution',
+        'format_version': 2, 'status': 'queued', 'predecessor_id': 'exercise-op'},
+    ]);
+    final sync = OfflineSyncService(respondingClient((options, handler) {
+      handler.reject(DioException.connectionError(requestOptions: options, reason: 'offline'));
+    }), store, isAuthenticated: () => true);
+    final repository = _CompletionRepository();
+    sl.registerSingleton<LocalStorage>(store);
+    sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('es'), localizationsDelegates: const [
+        AppLocalizations.delegate, GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const TrainingDetailPage(trainingId: 'training', selectedDate: '2026-10-01',
+        selectedExecutionId: 'execution'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text(label), findsOneWidget);
+    expect(find.text('Pending sync'), findsNothing);
+    final button = find.byKey(const Key('complete-training-button'));
+    expect(tester.widget<ElevatedButton>(button).onPressed, retry ? isNotNull : isNull);
+    if (retry) {
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+    expect(store.actions.first['status'], retry ? 'queued' : 'failed');
+    expect(store.actions.first['id'], 'exercise-op');
+    expect(store.actions.first['expected_revision'], 0);
+    expect(store.actions.last['predecessor_id'], 'exercise-op');
+    expect(repository.completions, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await sync.dispose();
+    await sl.reset();
+  });
+  }
   TrainingCompletionInput? dialogResult;
   final storage = _DraftStorage();
 
@@ -119,6 +196,43 @@ void main() {
     );
     expect(Theme.of(context).brightness, Brightness.dark);
   });
+}
+
+class _CompletionStorage extends FakeSyncStorage {
+  _CompletionStorage({required super.actions});
+  @override
+  List<Map<String, dynamic>> getPendingTrainingExecutions() => [];
+  @override
+  bool get hasQuarantinedWorkoutDrafts => false;
+  @override
+  List<Map<String, dynamic>> getTrainingExecutions(String trainingId, String date) => [];
+  @override
+  List<Map<String, dynamic>> getConfirmedTrainingExecutions(String trainingId, String date) => [];
+  @override
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) => null;
+  @override
+  ActiveWorkoutHiveModel? recoverableLegacyWorkout(String trainingId, String exerciseId, String date) => null;
+  @override
+  ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
+      ValueNotifier<Box<ActiveWorkoutHiveModel>>(_CompletionBox());
+}
+class _CompletionBox extends Fake implements Box<ActiveWorkoutHiveModel> {}
+
+class _CompletionRepository extends Fake implements TrainingRepository {
+  int completions = 0;
+  @override
+  Future<TrainingEntity> getTraining(String id, {String? date}) async =>
+      TrainingEntity(id: 'training', name: 'Synthetic Thursday',
+        types: ['FUERZA'], level: 'INTERMEDIATE', tags: [], exercises: []);
+  @override
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
+      const TrainingDayProgress();
+  @override
+  Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
+      List<String> exerciseIds, String beforeDate) async => {};
+  @override
+  Future<void> completeTraining(String date, {required String trainingId,
+      String? sessionId, int? rpe, String? notes}) async { completions++; }
 }
 
 class _DraftStorage extends LocalStorage {

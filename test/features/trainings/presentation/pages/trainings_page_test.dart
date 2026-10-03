@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -44,6 +48,8 @@ class _PendingStorage extends LocalStorage {
   @override
   List<Map<String, dynamic>> getPendingSyncActions() => [];
   @override
+  List<Map<String, dynamic>> getConfirmedTrainingExecutions(String trainingId, String date) => [];
+  @override
   Map<String, dynamic>? getTrainingCompletionDraft(String trainingId, String date, String executionId) => null;
   @override
   bool hasCompletedTrainingExecution(String trainingId, String date) => false;
@@ -54,6 +60,30 @@ class _PendingStorage extends LocalStorage {
   @override
   ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
       ValueNotifier<Box<ActiveWorkoutHiveModel>>(_EmptyBox());
+}
+
+class _AckStorage extends _PendingStorage {
+  final pendingByOwner = <String, List<Map<String, dynamic>>>{
+    'A:1:test': [
+      {'id': 'ack-one', 'training_id': 'sync', 'training_name': 'Recovery',
+       'assignment_date': '2026-09-06', 'status': 'pending-sync'},
+    ],
+  };
+
+  @override
+  List<Map<String, dynamic>> getPendingTrainingExecutions() =>
+      pendingByOwner[stamp] ?? [];
+}
+
+class _Sync extends OfflineSyncService {
+  _Sync(LocalStorage storage) : super(ApiClient(useAuth: false), storage);
+
+  final events = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get changes => events.stream;
+
+  void notify() => events.add(null);
 }
 
 class _EmptyBox extends Fake implements Box<ActiveWorkoutHiveModel> {}
@@ -78,6 +108,57 @@ class _Repository extends Fake implements TrainingRepository {
 }
 
 void main() {
+  testWidgets('visible training list refreshes pending sync after ACK without navigation', (tester) async {
+    await sl.reset();
+    final storage = _AckStorage();
+    final sync = _Sync(storage);
+    final repository = _Repository();
+    sl.registerSingleton<LocalStorage>(storage);
+    sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    final router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: TrainingsPage())),
+    ]);
+    try {
+      await tester.pumpWidget(MaterialApp.router(
+        routerConfig: router,
+        locale: const Locale('es'),
+        localizationsDelegates: const [AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byType(TrainingsPage), findsOneWidget);
+      expect(find.textContaining('Recovery · 2026-09-06'), findsOneWidget);
+      expect(find.textContaining('Pendiente de sincronización'), findsOneWidget);
+
+      // ACK removes the owner-scoped pending execution while the page stays mounted.
+      storage.pendingByOwner['A:1:test'] = [];
+      sync.notify();
+      await tester.pumpAndSettle();
+      expect(find.byType(TrainingsPage), findsOneWidget);
+      expect(find.textContaining('Recovery · 2026-09-06'), findsNothing);
+      expect(find.textContaining('Pendiente de sincronización'), findsNothing);
+      expect(repository.requests, isEmpty, reason: 'no detail navigation occurred');
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      router.dispose();
+      await sync.events.close();
+      await sync.dispose();
+      await sl.reset();
+    }
+  });
+
   testWidgets('global pending list distinguishes executions and does not offer RPE for sync',
       (tester) async {
     final selected = <String>[];

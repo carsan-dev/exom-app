@@ -812,6 +812,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       if (_sameSession) {
         setState(() {
           _locallyConfirmedSessionId = sessionId;
+          _displaySessionId = sessionId;
           _sessionId = null;
         });
       }
@@ -853,12 +854,27 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       action['type'] == 'complete_training' &&
       action['training_id'] == training.id &&
       action['date'] == widget.state.selectedDate).toList();
+    final selectedCompletionId = widget.selectedExecutionId ?? _sessionId ??
+        _locallyConfirmedSessionId ?? _displaySessionId;
+    final sync = sl.isRegistered<OfflineSyncService>() ? sl<OfflineSyncService>() : null;
+    final blocker = sync?.completionBlocker(training.id,
+      widget.state.selectedDate, selectedCompletionId);
+    final retryId = blocker?.retryActionId;
+    final blockerLabel = switch (blocker?.kind) {
+      CompletionSyncBlockerKind.conflict => 'Conflict: review required',
+      CompletionSyncBlockerKind.receiptMissing => 'Confirmation missing: retry sync',
+      CompletionSyncBlockerKind.failed => retryId == null
+          ? 'Sync blocked: action failed' : 'Sync failed: retry sync',
+      CompletionSyncBlockerKind.feedbackMissing => 'Feedback proof missing: review required',
+      CompletionSyncBlockerKind.feedbackFailed => 'Feedback failed: review upload',
+      CompletionSyncBlockerKind.feedbackWaiting => 'Waiting for feedback confirmation',
+      null => null,
+    };
     final pendingSync = completionActions.any((action) =>
       const ['queued', 'uploading'].contains(action['status']) &&
-      (_sessionId == null || action['training_session_id'] == _sessionId));
+      action['training_session_id'] == selectedCompletionId);
     final executions = storage.getTrainingExecutions(
       training.id, widget.state.selectedDate);
-    final selectedCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
     final needsConflictReview = completionActions.any((action) =>
       action['last_error'] == 'progress_conflict_review_required' &&
       (selectedCompletionId == null ||
@@ -868,9 +884,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final hasFailedExecution = executions.any((entry) =>
       entry['status'] == 'failed' &&
       (_sessionId == null || entry['id'] == _sessionId));
-    final locallyCompleted = selectedCompletionId != null && executions.any((entry) =>
-      const ['completed', 'confirmed'].contains(entry['status']) &&
-      entry['id'] == selectedCompletionId);
+    final writableCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
+    final locallyCompleted = writableCompletionId != null &&
+        storage.getConfirmedTrainingExecutions(training.id, widget.state.selectedDate)
+            .any((entry) => entry['id'] == writableCompletionId &&
+                const ['completed', 'confirmed'].contains(entry['status']));
     final remaining = training.remainingProgress(
       _progress.ids,
     );
@@ -1363,8 +1381,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           key: const Key('complete-training-button'),
-                          onPressed: widget.state.isCompleting || pendingSync || needsConflictReview || locallyCompleted
-                              ? null : _completeSelectedTraining,
+                          onPressed: widget.state.isCompleting || !_sameSession
+                              ? null
+                              : retryId != null && !locallyCompleted
+                                  ? () async {
+                                      if (!_sameSession) return;
+                                      await sync!.retryAction(retryId);
+                                      if (mounted && _sameSession) setState(() {});
+                                    }
+                                  : pendingSync || blocker != null || needsConflictReview || locallyCompleted
+                                      ? null : _completeSelectedTraining,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: allDone ? semantic.success : color,
                             foregroundColor: allDone
@@ -1381,9 +1407,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             size: 18,
                           ),
                           label: Text(
-                            needsConflictReview ? 'Conflict: review required' : pendingSync ? 'Pending sync' : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? 'Retry completion' : allDone && _sessionId != null
+                            blockerLabel ?? (needsConflictReview ? 'Conflict: review required' : pendingSync ? 'Pending sync' : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? 'Retry completion' : allDone && _sessionId != null
                                 ? l10n.workoutCompletedMessage
-                                : l10n.completeTrainingConfirmAction,
+                                : l10n.completeTrainingConfirmAction),
                           ),
                         ),
                       ),

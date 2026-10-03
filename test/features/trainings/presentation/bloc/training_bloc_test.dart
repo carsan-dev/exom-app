@@ -240,8 +240,8 @@ void main() {
   });
   testWidgets('queued offline completion shows pending sync and never asks for RPE again', (tester) async {
     await sl.reset();
-    final repository = _DelayedCompletionRepository();
     final storage = _PageStorage();
+    final repository = _QueuedCompletionRepository(storage);
     sl.registerSingleton<LocalStorage>(storage);
     sl.registerFactory<TrainingBloc>(() => TrainingBloc(
       getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
@@ -862,6 +862,24 @@ class _DelayedCompletionRepository extends _FailingCompletionRepository {
   }
 }
 
+class _QueuedCompletionRepository extends _DelayedCompletionRepository {
+  _QueuedCompletionRepository(this.storage);
+  final _PageStorage storage;
+
+  @override
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
+      storage.queued && date == '2026-09-05'
+          ? parseTrainingDayProgress({
+              'training_sessions': [
+                {'training_session_id': 'execution-test', 'training_id': 'training-1'},
+              ],
+              'exercises_completed': [
+                {'training_exercise_id': 'te-1', 'training_session_id': 'execution-test'},
+              ],
+            })
+          : const TrainingDayProgress();
+}
+
 class _SessionProgressRepository extends _DelayedCompletionRepository {
   @override
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
@@ -920,7 +938,13 @@ class _PageStorage extends LocalStorage {
           .map((entry) => {...entry, 'status': 'completed'})
           .toList();
   @override
-  List<Map<String, dynamic>> getPendingTrainingExecutions() => pending;
+  List<Map<String, dynamic>> getPendingTrainingExecutions() => [
+    ...pending,
+    if (queued) {
+      'id': 'execution-test', 'training_id': 'training-1',
+      'assignment_date': '2026-09-05', 'status': 'pending-sync',
+    },
+  ];
   @override
   Future<String> createTrainingExecution(String trainingId, String date, {String? trainingName}) async => 'execution-test';
   @override

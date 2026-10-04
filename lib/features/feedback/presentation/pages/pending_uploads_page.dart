@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
 
 import 'package:flutter/material.dart';
@@ -8,7 +9,9 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 
 class PendingUploadsPage extends StatefulWidget {
-  const PendingUploadsPage({super.key});
+  const PendingUploadsPage({super.key, this.exerciseNames = const {}});
+
+  final Map<String, String> exerciseNames;
 
   @override
   State<PendingUploadsPage> createState() => _PendingUploadsPageState();
@@ -19,15 +22,19 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
   OfflineSyncService get _offlineSync => sl<OfflineSyncService>();
   StreamSubscription<FeedbackUploadNotice>? _uploadSubscription;
   StreamSubscription<void>? _syncSubscription;
+  late final String? _sessionStamp;
+  bool get _sameSession => mounted && _sessionStamp != null &&
+      sl<LocalStorage>().sessionStamp == _sessionStamp;
 
   @override
   void initState() {
     super.initState();
+    _sessionStamp = sl<LocalStorage>().sessionStamp;
     _uploadSubscription = _queue.notices.listen((_) {
-      if (mounted) setState(() {});
+      if (_sameSession) setState(() {});
     });
     _syncSubscription = _offlineSync.changes.listen((_) {
-      if (mounted) setState(() {});
+      if (_sameSession) setState(() {});
     });
   }
 
@@ -39,8 +46,16 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
   }
 
   Future<void> _retry(String id) async {
-    await _queue.retry(id);
-    if (mounted) setState(() {});
+    if (!_sameSession) return;
+    try {
+      await _queue.retry(id);
+    } catch (_) {
+      if (mounted && _sameSession) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).pendingFeedbackError)));
+      }
+    }
+    if (_sameSession) setState(() {});
   }
 
   Future<void> _discard(String id) async {
@@ -62,12 +77,13 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !_sameSession) return;
     await _queue.discard(id);
     if (mounted) setState(() {});
   }
 
   Future<void> _retrySync(String id) async {
+    if (!_sameSession) return;
     await _offlineSync.retryAction(id);
     if (mounted) setState(() {});
   }
@@ -91,7 +107,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !_sameSession) return;
     await _offlineSync.discardAction(id);
     if (mounted) setState(() {});
   }
@@ -99,8 +115,8 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final items = _queue.pendingItems;
-    final syncFailures = _offlineSync.pendingActions;
+    final items = _sameSession ? _queue.pendingItems : <Map<String, dynamic>>[];
+    final syncFailures = _sameSession ? _offlineSync.pendingActions : <Map<String, dynamic>>[];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.pendingUploadsTitle)),
       body: items.isEmpty && syncFailures.isEmpty
@@ -119,11 +135,15 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       progress: _queue.progressOf(item['id'] as String),
                     ),
                     attempts: item['attempts'] as int? ?? 0,
-                    lastError:
-                        item['last_error'] ==
-                            'progress_conflict_review_required'
-                        ? l10n.pendingSyncConflict
-                        : item['last_error'] as String?,
+                    description: [
+                      if (item['training_exercise_id'] != null || item['exercise_id'] != null)
+                        l10n.pendingEvidenceExercise(
+                          widget.exerciseNames[item['training_exercise_id']] ??
+                          item['exercise_name'] as String? ??
+                          (item['training_exercise_id'] ?? item['exercise_id']).toString()),
+                      if (item['assignment_date'] is String) item['assignment_date'] as String,
+                    ].join(' · '),
+                    lastError: _errorLabel(l10n, item, feedback: true),
                     onRetry: FeedbackUploadQueueService.canRetry(item)
                         ? () => _retry(item['id'] as String)
                         : null,
@@ -144,7 +164,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       icon: Icons.sync_problem_outlined,
                       title: _statusLabel(l10n, item['status'] as String?),
                       attempts: item['attempts'] as int? ?? 0,
-                      lastError: item['last_error'] as String?,
+                      lastError: _errorLabel(l10n, item),
                       onRetry:
                           item['status'] == 'failed' &&
                               item['last_error'] !=
@@ -162,9 +182,19 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     );
   }
 
+  String? _errorLabel(AppLocalizations l10n, Map<String, dynamic> item,
+      {bool feedback = false}) {
+    if (item['last_error'] == 'progress_conflict_review_required') {
+      return l10n.pendingSyncConflict;
+    }
+    if (item['status'] != 'failed' && item['last_error'] == null) return null;
+    return feedback ? l10n.pendingFeedbackError : l10n.pendingSyncFailedStatus;
+  }
+
   String _statusLabel(AppLocalizations l10n, String? status) {
     return switch (status) {
       'uploading' => l10n.pendingUploadUploadingStatus,
+      'processing' => l10n.pendingUploadProcessingStatus,
       'completed' => l10n.pendingUploadCompletedStatus,
       'failed' => l10n.pendingUploadFailedStatus,
       _ => l10n.pendingUploadQueuedStatus,
@@ -181,9 +211,11 @@ class _PendingItemTile extends StatelessWidget {
     required this.onRetry,
     required this.onDelete,
     this.uploadStatus,
+    this.description,
   });
 
   final Widget? uploadStatus;
+  final String? description;
   final IconData icon;
   final String title;
   final int attempts;
@@ -200,6 +232,7 @@ class _PendingItemTile extends StatelessWidget {
         title: uploadStatus ?? Text(title),
         subtitle: Text(
           [
+            if (description != null && description!.isNotEmpty) description!,
             l10n.pendingUploadAttempts(attempts),
             if (lastError != null && lastError!.trim().isNotEmpty) lastError!,
           ].join('\n'),

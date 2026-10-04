@@ -110,7 +110,8 @@ class _Repository extends Fake implements TrainingRepository {
 void main() {
   testWidgets('visible training list refreshes pending sync after ACK without navigation', (tester) async {
     await sl.reset();
-    final storage = _AckStorage();
+    final storage = _AckStorage()
+      ..pendingByOwner['A:1:test'] = _PendingStorage().getPendingTrainingExecutions();
     final sync = _Sync(storage);
     final repository = _Repository();
     sl.registerSingleton<LocalStorage>(storage);
@@ -139,6 +140,10 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.byType(TrainingsPage), findsOneWidget);
+      final pageHeight = tester.getSize(find.byType(TrainingsPage)).height;
+      expect(tester.getSize(find.byType(SingleChildScrollView).first).height,
+        lessThanOrEqualTo(pageHeight * .3),
+        reason: 'pending recovery must leave at least 70% for the workout list');
       expect(find.textContaining('Recovery · 2026-09-06'), findsOneWidget);
       expect(find.textContaining('Pendiente de sincronización'), findsOneWidget);
 
@@ -232,6 +237,8 @@ void main() {
     expect((detail.trainingId, detail.selectedDate, detail.selectedExecutionId, detail.finalizeSelected),
         ('same', '2026-08-12', 'one', false));
     router.pop();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('pending-finalize-two')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pending-finalize-two')));
     await tester.pumpAndSettle();

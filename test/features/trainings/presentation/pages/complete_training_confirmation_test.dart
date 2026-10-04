@@ -24,9 +24,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   for (final (error, label, retry) in [
-    ('Bad state: progress_receipt_missing', 'Confirmation missing: retry sync', true),
-    ('INVALID_EXERCISE', 'Sync blocked: action failed', false),
-    ('progress_conflict_review_required', 'Conflict: review required', false),
+    ('Bad state: progress_receipt_missing', 'Falta la confirmación: reintenta la sincronización', true),
+    ('INVALID_EXERCISE', 'Sincronización bloqueada: una acción ha fallado', false),
+    ('progress_conflict_review_required', 'Conflicto: requiere revisión', false),
   ]) {
   testWidgets('selected queued completion exposes $error without false pending state', (tester) async {
     await sl.reset();
@@ -65,7 +65,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text(label), findsOneWidget);
-    expect(find.text('Pending sync'), findsNothing);
+    expect(find.text('Pendiente de sincronización'), findsNothing);
     final button = find.byKey(const Key('complete-training-button'));
     expect(tester.widget<ElevatedButton>(button).onPressed, retry ? isNotNull : isNull);
     if (retry) {

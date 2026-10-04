@@ -272,12 +272,12 @@ void main() {
     storage.queued = true;
     repository.release.complete();
     await tester.pumpAndSettle();
-    expect(find.text('Pending sync'), findsOneWidget);
+    expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(page());
     await tester.pumpAndSettle();
-    expect(find.text('Pending sync'), findsOneWidget);
+    expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     expect(repository.calls, 1);
     await tester.pumpWidget(const SizedBox.shrink());

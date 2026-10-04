@@ -88,9 +88,11 @@ class _TrainingsViewState extends State<_TrainingsView> {
   Widget build(BuildContext context) {
     final storage = sl<LocalStorage>();
     final stamp = storage.sessionStamp;
-    return Column(children: [
+    return LayoutBuilder(builder: (context, constraints) => Column(children: [
       if (storage.getPendingTrainingExecutions().isNotEmpty)
-      Flexible(child: SingleChildScrollView(child: PendingTrainingExecutions(
+      ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: constraints.maxHeight * .3),
+        child: SingleChildScrollView(child: PendingTrainingExecutions(
         storage: storage,
         onSelect: (entry, action) async {
           if (stamp == null || storage.sessionStamp != stamp ||
@@ -148,7 +150,7 @@ class _TrainingsViewState extends State<_TrainingsView> {
         return const SizedBox.shrink();
       },
     )),
-    ]);
+    ]));
   }
 
   Widget _buildContent(
@@ -263,12 +265,13 @@ class PendingTrainingExecutions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entries = storage.getPendingTrainingExecutions();
+    final l10n = AppLocalizations.of(context);
     if (entries.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (entries.any((entry) => entry['status'] != 'pending-sync'))
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Tienes un entrenamiento pendiente de finalizar'),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(l10n.trainingPendingFinalizeNotice),
         ),
       for (final entry in entries)
         Card(child: Column(children: [
@@ -276,19 +279,19 @@ class PendingTrainingExecutions extends StatelessWidget {
             title: Text('${entry['training_name'] ?? entry['training_id']} · '
                 '${entry['assignment_date']}'),
             subtitle: Text('${entry['id']} · '
-                '${entry['status'] == 'pending-sync' ? 'Pendiente de sincronización' : entry['status'] == 'conflict' ? 'Conflicto: revisar' : 'Pendiente de finalizar'}'),
+                '${entry['status'] == 'pending-sync' ? l10n.trainingPendingSync : entry['status'] == 'conflict' ? l10n.trainingSyncConflict : l10n.trainingPendingFinalize}'),
           ),
           if (entry['status'] != 'pending-sync' && entry['status'] != 'conflict')
             Row(children: [
               TextButton(
                 key: Key('pending-continue-${entry['id']}'),
                 onPressed: () => onSelect(entry, 'continue'),
-                child: const Text('Continuar entrenando'),
+                child: Text(l10n.trainingContinue),
               ),
               TextButton(
                 key: Key('pending-finalize-${entry['id']}'),
                 onPressed: () => onSelect(entry, 'finalize'),
-                child: const Text('Finalizar'),
+                child: Text(l10n.trainingFinalize),
               ),
             ]),
         ])),

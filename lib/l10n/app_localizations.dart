@@ -4340,6 +4340,108 @@ abstract class AppLocalizations {
   /// **'Avisa antes de comenzar una última serie que requiere vídeo'**
   String get lastSetVideoReminderDescription;
 
+  /// No description provided for @trainingSyncConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Conflicto: requiere revisión'**
+  String get trainingSyncConflict;
+
+  /// No description provided for @trainingSyncReceiptMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la confirmación: reintenta la sincronización'**
+  String get trainingSyncReceiptMissing;
+
+  /// No description provided for @trainingSyncBlocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronización bloqueada: una acción ha fallado'**
+  String get trainingSyncBlocked;
+
+  /// No description provided for @trainingSyncFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'La sincronización ha fallado: reinténtala'**
+  String get trainingSyncFailed;
+
+  /// No description provided for @trainingFeedbackMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la evidencia del feedback: requiere revisión'**
+  String get trainingFeedbackMissing;
+
+  /// No description provided for @trainingFeedbackFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El feedback ha fallado: revisa la subida'**
+  String get trainingFeedbackFailed;
+
+  /// No description provided for @trainingFeedbackWaiting.
+  ///
+  /// In es, this message translates to:
+  /// **'Esperando la confirmación del feedback'**
+  String get trainingFeedbackWaiting;
+
+  /// No description provided for @trainingPendingSync.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de sincronización'**
+  String get trainingPendingSync;
+
+  /// No description provided for @trainingRetryCompletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar finalización'**
+  String get trainingRetryCompletion;
+
+  /// No description provided for @trainingPendingFinalizeNotice.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes un entrenamiento pendiente de finalizar'**
+  String get trainingPendingFinalizeNotice;
+
+  /// No description provided for @trainingPendingFinalize.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de finalizar'**
+  String get trainingPendingFinalize;
+
+  /// No description provided for @trainingContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar entrenando'**
+  String get trainingContinue;
+
+  /// No description provided for @trainingFinalize.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizar'**
+  String get trainingFinalize;
+
+  /// No description provided for @trainingDraftRecoveryFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo recuperar el borrador. Los datos guardados siguen disponibles.'**
+  String get trainingDraftRecoveryFailed;
+
+  /// No description provided for @trainingLastSetVideoRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa cada ejercicio y adjunta el vídeo de su última serie.'**
+  String get trainingLastSetVideoRequired;
+
+  /// No description provided for @pendingFeedbackError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.'**
+  String get pendingFeedbackError;
+
+  /// No description provided for @pendingEvidenceExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio: {exercise}'**
+  String pendingEvidenceExercise(String exercise);
+
   /// No description provided for @pendingUploadsOption.
   ///
   /// In es, this message translates to:

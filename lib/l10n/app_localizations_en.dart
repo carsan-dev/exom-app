@@ -2445,6 +2445,64 @@ class AppLocalizationsEn extends AppLocalizations {
       'Warn before starting a final set that requires video';
 
   @override
+  String get trainingSyncConflict => 'Conflict: review required';
+
+  @override
+  String get trainingSyncReceiptMissing => 'Confirmation missing: retry sync';
+
+  @override
+  String get trainingSyncBlocked => 'Sync blocked: action failed';
+
+  @override
+  String get trainingSyncFailed => 'Sync failed: retry sync';
+
+  @override
+  String get trainingFeedbackMissing =>
+      'Feedback proof missing: review required';
+
+  @override
+  String get trainingFeedbackFailed => 'Feedback failed: review upload';
+
+  @override
+  String get trainingFeedbackWaiting => 'Waiting for feedback confirmation';
+
+  @override
+  String get trainingPendingSync => 'Pending sync';
+
+  @override
+  String get trainingRetryCompletion => 'Retry completion';
+
+  @override
+  String get trainingPendingFinalizeNotice =>
+      'You have a workout pending completion';
+
+  @override
+  String get trainingPendingFinalize => 'Pending completion';
+
+  @override
+  String get trainingContinue => 'Continue training';
+
+  @override
+  String get trainingFinalize => 'Finish';
+
+  @override
+  String get trainingDraftRecoveryFailed =>
+      'Draft recovery failed. Saved data remains available.';
+
+  @override
+  String get trainingLastSetVideoRequired =>
+      'Complete each exercise and attach a video of its last set.';
+
+  @override
+  String get pendingFeedbackError =>
+      'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
+
+  @override
+  String pendingEvidenceExercise(String exercise) {
+    return 'Exercise: $exercise';
+  }
+
+  @override
   String get pendingUploadsOption => 'Pending uploads';
 
   @override

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
@@ -116,6 +118,24 @@ class _Sync extends OfflineSyncService {
   Future<void> closeEvents() => events.close();
 }
 
+class _FeedbackQueue extends Fake implements FeedbackUploadQueueService {
+  final events = StreamController<FeedbackUploadNotice>.broadcast();
+  @override
+  Stream<FeedbackUploadNotice> get notices => events.stream;
+  @override
+  List<Map<String, dynamic>> get pendingItems => [];
+}
+
+class _FeedbackSync extends _Sync {
+  _FeedbackSync(super.storage);
+  CompletionSyncBlockerKind? kind = CompletionSyncBlockerKind.feedbackFailed;
+  @override
+  CompletionSyncBlocker? completionBlocker(String trainingId, String date, String? sessionId) =>
+      kind == null ? null : CompletionSyncBlocker(kind!);
+  @override
+  List<Map<String, dynamic>> get pendingActions => [];
+}
+
 class _Repository extends Fake implements TrainingRepository {
   int completions = 0;
   bool requireSets = false;
@@ -148,6 +168,61 @@ class _Repository extends Fake implements TrainingRepository {
 }
 
 void main() {
+  testWidgets('feedback recovery is reachable and queue notices refresh mounted detail with session guard', (tester) async {
+    await sl.reset();
+    final storage = _Storage();
+    final sync = _FeedbackSync(storage);
+    final queue = _FeedbackQueue();
+    final repository = _Repository()..requireSets = true;
+    sl.registerSingleton<LocalStorage>(storage);
+    sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerSingleton<FeedbackUploadQueueService>(queue);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('es'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date,
+        selectedExecutionId: _session),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Feedback failed: review upload'), findsNothing);
+    final button = find.byKey(const Key('complete-training-button'));
+    expect(tester.widget<ElevatedButton>(button).onPressed, isNotNull);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byType(PendingUploadsPage), findsOneWidget);
+    expect(tester.widget<PendingUploadsPage>(find.byType(PendingUploadsPage)).exerciseNames,
+      {'te-1': 'Exercise'});
+    Navigator.of(tester.element(find.byType(PendingUploadsPage))).pop();
+    await tester.pumpAndSettle();
+    expect(queue.events.hasListener, isTrue);
+    final previousLabel = tester.widget<Text>(find.descendant(of: button, matching: find.byType(Text))).data;
+    sync.kind = null;
+    storage.stamp = 'other:2:test';
+    queue.events.add(const FeedbackUploadNotice('retained-operation', FeedbackUploadNoticeKind.completed));
+    await tester.pumpAndSettle();
+    expect(find.text(previousLabel!), findsOneWidget);
+    storage.stamp = 'owner:1:test';
+    queue.events.add(const FeedbackUploadNotice('retained-operation', FeedbackUploadNoticeKind.completed));
+    await tester.pumpAndSettle();
+    expect(find.text(previousLabel), findsNothing);
+    expect(repository.completions, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(queue.events.hasListener, isFalse);
+    await queue.events.close();
+    await sync.closeEvents();
+    await sl.reset();
+  });
   for (final status in ['pending-sync', 'confirmed']) {
     testWidgets('$status execution requires explicit New when opening an exercise', (tester) async {
       await sl.reset();
@@ -342,7 +417,7 @@ void main() {
     final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
     expect(find.text('1/1 $label'), findsOneWidget);
     expect(repository.completions, 0);
-    expect(find.text('Pending sync'), findsOneWidget);
+    expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
     expect(repository.completions, 0);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -530,7 +605,7 @@ void main() {
     expect(repository.completions, 1);
     expect(storage.completionDrafts[_session]?['rpe'], 8);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
-    expect(find.text('Pending sync'), findsOneWidget);
+    expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(find.text('1/1 $label'), findsOneWidget);
 
     storage.status = 'confirmed';
@@ -538,12 +613,12 @@ void main() {
     storage.stamp = 'another-owner:2:test';
     sync.notify();
     await tester.pumpAndSettle();
-    expect(find.text('Pending sync'), findsOneWidget,
+    expect(find.text('Pendiente de sincronización'), findsOneWidget,
       reason: 'a foreign session event cannot apply the ACK to this mounted page');
     storage.stamp = 'owner:1:test';
     sync.notify();
     await tester.pumpAndSettle();
-    expect(find.text('Pending sync'), findsNothing);
+    expect(find.text('Pendiente de sincronización'), findsNothing);
     expect(find.text('1/1 $label'), findsOneWidget);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
@@ -557,7 +632,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1/1 $label'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
-    expect(find.text('Pending sync'), findsNothing,
+    expect(find.text('Pendiente de sincronización'), findsNothing,
       reason: 'another execution queued for the same training/date must not affect the selected ACK');
     expect(find.text('Conflict: review required'), findsNothing);
     expect(repository.completions, 1);
@@ -594,7 +669,7 @@ void main() {
           selectedExecutionId: _session),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Pending sync'), findsOneWidget);
+      expect(find.text('Pendiente de sincronización'), findsOneWidget);
       expect(sync.events.hasListener, isTrue);
       expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
       storage.actionStatus = null;
@@ -602,18 +677,18 @@ void main() {
       storage.stamp = 'another-owner:2:test';
       sync.notify();
       await tester.pumpAndSettle();
-      expect(find.text('Pending sync'), findsOneWidget,
+      expect(find.text('Pendiente de sincronización'), findsOneWidget,
         reason: 'events from a different session cannot refresh this page');
       storage.stamp = 'owner:1:test';
       sync.notify();
       await tester.pumpAndSettle();
-      expect(find.text('Pending sync'), findsNothing);
+      expect(find.text('Pendiente de sincronización'), findsNothing);
       if (outcome != 'failed') {
         expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
         expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
         expect(repository.completions, 0);
       } else {
-        expect(find.text('Retry completion'), findsOneWidget);
+        expect(find.text('Reintentar finalización'), findsOneWidget);
         await tester.tap(find.byKey(const Key('complete-training-button')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);

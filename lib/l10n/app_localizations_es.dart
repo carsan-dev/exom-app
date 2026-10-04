@@ -2472,6 +2472,68 @@ class AppLocalizationsEs extends AppLocalizations {
       'Avisa antes de comenzar una última serie que requiere vídeo';
 
   @override
+  String get trainingSyncConflict => 'Conflicto: requiere revisión';
+
+  @override
+  String get trainingSyncReceiptMissing =>
+      'Falta la confirmación: reintenta la sincronización';
+
+  @override
+  String get trainingSyncBlocked =>
+      'Sincronización bloqueada: una acción ha fallado';
+
+  @override
+  String get trainingSyncFailed => 'La sincronización ha fallado: reinténtala';
+
+  @override
+  String get trainingFeedbackMissing =>
+      'Falta la evidencia del feedback: requiere revisión';
+
+  @override
+  String get trainingFeedbackFailed =>
+      'El feedback ha fallado: revisa la subida';
+
+  @override
+  String get trainingFeedbackWaiting =>
+      'Esperando la confirmación del feedback';
+
+  @override
+  String get trainingPendingSync => 'Pendiente de sincronización';
+
+  @override
+  String get trainingRetryCompletion => 'Reintentar finalización';
+
+  @override
+  String get trainingPendingFinalizeNotice =>
+      'Tienes un entrenamiento pendiente de finalizar';
+
+  @override
+  String get trainingPendingFinalize => 'Pendiente de finalizar';
+
+  @override
+  String get trainingContinue => 'Continuar entrenando';
+
+  @override
+  String get trainingFinalize => 'Finalizar';
+
+  @override
+  String get trainingDraftRecoveryFailed =>
+      'No se pudo recuperar el borrador. Los datos guardados siguen disponibles.';
+
+  @override
+  String get trainingLastSetVideoRequired =>
+      'Completa cada ejercicio y adjunta el vídeo de su última serie.';
+
+  @override
+  String get pendingFeedbackError =>
+      'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.';
+
+  @override
+  String pendingEvidenceExercise(String exercise) {
+    return 'Ejercicio: $exercise';
+  }
+
+  @override
   String get pendingUploadsOption => 'Subidas pendientes';
 
   @override

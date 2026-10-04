@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -566,6 +568,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   String? _displaySessionId;
   String? _locallyConfirmedSessionId;
   StreamSubscription<void>? _syncChanges;
+  StreamSubscription<FeedbackUploadNotice>? _feedbackChanges;
 
   @override
   void initState() {
@@ -583,6 +586,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           }
         }
         setState(() {});
+      });
+    }
+    if (sl.isRegistered<FeedbackUploadQueueService>()) {
+      _feedbackChanges = sl<FeedbackUploadQueueService>().notices.listen((_) {
+        if (_sameSession) setState(() {});
       });
     }
     final id = widget.selectedExecutionId;
@@ -720,8 +728,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               : selected;
     } catch (_) {
       if (mounted && _sameSession) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Draft recovery failed. Saved data remains available.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).trainingDraftRecoveryFailed),
         ));
       }
       return null;
@@ -781,8 +789,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           const ['queued', 'uploading', 'processing', 'completed']
               .contains(item['status'])))) {
       setState(() => _completeConfirmationOpen = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Completa cada ejercicio y adjunta el vídeo de su última serie.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n.trainingLastSetVideoRequired)));
       return;
     }
     final saved = storage.getTrainingCompletionDraft(
@@ -824,6 +832,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   @override
   void dispose() {
     _syncChanges?.cancel();
+    _feedbackChanges?.cancel();
     _notesController.dispose();
     super.dispose();
   }
@@ -861,13 +870,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       widget.state.selectedDate, selectedCompletionId);
     final retryId = blocker?.retryActionId;
     final blockerLabel = switch (blocker?.kind) {
-      CompletionSyncBlockerKind.conflict => 'Conflict: review required',
-      CompletionSyncBlockerKind.receiptMissing => 'Confirmation missing: retry sync',
+      CompletionSyncBlockerKind.conflict => l10n.trainingSyncConflict,
+      CompletionSyncBlockerKind.receiptMissing => l10n.trainingSyncReceiptMissing,
       CompletionSyncBlockerKind.failed => retryId == null
-          ? 'Sync blocked: action failed' : 'Sync failed: retry sync',
-      CompletionSyncBlockerKind.feedbackMissing => 'Feedback proof missing: review required',
-      CompletionSyncBlockerKind.feedbackFailed => 'Feedback failed: review upload',
-      CompletionSyncBlockerKind.feedbackWaiting => 'Waiting for feedback confirmation',
+          ? l10n.trainingSyncBlocked : l10n.trainingSyncFailed,
+      CompletionSyncBlockerKind.feedbackMissing => l10n.trainingFeedbackMissing,
+      CompletionSyncBlockerKind.feedbackFailed => l10n.trainingFeedbackFailed,
+      CompletionSyncBlockerKind.feedbackWaiting => l10n.trainingFeedbackWaiting,
       null => null,
     };
     final pendingSync = completionActions.any((action) =>
@@ -1383,6 +1392,20 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                           key: const Key('complete-training-button'),
                           onPressed: widget.state.isCompleting || !_sameSession
                               ? null
+                              : blocker?.kind == CompletionSyncBlockerKind.feedbackFailed &&
+                                  sl.isRegistered<FeedbackUploadQueueService>()
+                                  ? () async {
+                                      if (!_sameSession) return;
+                                      await Navigator.of(context).push<void>(MaterialPageRoute(
+                                        builder: (_) => PendingUploadsPage(
+                                          exerciseNames: {
+                                            for (final exercise in training.exercises)
+                                              exercise.id: exercise.exercise.name,
+                                          },
+                                        ),
+                                      ));
+                                      if (_sameSession) setState(() {});
+                                    }
                               : retryId != null && !locallyCompleted
                                   ? () async {
                                       if (!_sameSession) return;
@@ -1407,7 +1430,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                             size: 18,
                           ),
                           label: Text(
-                            blockerLabel ?? (needsConflictReview ? 'Conflict: review required' : pendingSync ? 'Pending sync' : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? 'Retry completion' : allDone && _sessionId != null
+                            blockerLabel ?? (needsConflictReview ? l10n.trainingSyncConflict : pendingSync ? l10n.trainingPendingSync : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? l10n.trainingRetryCompletion : allDone && _sessionId != null
                                 ? l10n.workoutCompletedMessage
                                 : l10n.completeTrainingConfirmAction),
                           ),

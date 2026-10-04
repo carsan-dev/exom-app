@@ -9,6 +9,56 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get trainingDiscardPending => 'Discard this pending session';
+
+  @override
+  String get trainingDiscardTitle => 'Discard this local session?';
+
+  @override
+  String trainingDiscardIdentity(String name, String date, String id) {
+    return 'Training: $name\nDate: $date\nSession ID: $id';
+  }
+
+  @override
+  String get trainingDiscardExplanation =>
+      'Only this pending local session will be discarded. Its pending completion, RPE and note will not be sent. Exercises saved on the server, other confirmed sessions and unrelated data will not change. This is a logical discard: original local records are retained, not permanently physically erased.';
+
+  @override
+  String get trainingDiscardConfirm => 'Discard local session';
+
+  @override
+  String get trainingDiscardSuccess =>
+      'Local session discarded. Other sessions are retained.';
+
+  @override
+  String get trainingDiscardOwner =>
+      'Cannot discard: the account or session has changed. Reopen the list with the corresponding account.';
+
+  @override
+  String get trainingDiscardIdentityChanged =>
+      'Cannot discard: this session is no longer available or its identity has changed. Check the refreshed list.';
+
+  @override
+  String get trainingDiscardUnknownOwner =>
+      'Cannot discard: ownership of the local data cannot be verified.';
+
+  @override
+  String get trainingDiscardConfirmed =>
+      'Cannot discard: this session is already confirmed on the server.';
+
+  @override
+  String get trainingDiscardInFlight =>
+      'Cannot discard while a send is in progress for this session. Wait for it to finish and check its status.';
+
+  @override
+  String get trainingDiscardDependencies =>
+      'Cannot discard: unsent exercises or evidence are linked to this session. They are retained to prevent data loss.';
+
+  @override
+  String get trainingDiscardFailure =>
+      'Could not save the local discard. Data is retained. Check its status before trying again.';
+
+  @override
   String get weeklyHunger => 'Weekly hunger (optional)';
 
   @override

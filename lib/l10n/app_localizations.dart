@@ -98,6 +98,84 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
+  /// No description provided for @trainingDiscardPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar esta sesión pendiente'**
+  String get trainingDiscardPending;
+
+  /// No description provided for @trainingDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta sesión local?'**
+  String get trainingDiscardTitle;
+
+  /// No description provided for @trainingDiscardIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento: {name}\nFecha: {date}\nID de sesión: {id}'**
+  String trainingDiscardIdentity(String name, String date, String id);
+
+  /// No description provided for @trainingDiscardExplanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se descartará esta sesión local pendiente. Su cierre pendiente, RPE y nota no se enviarán. Los ejercicios guardados en el servidor, las otras sesiones confirmadas y los datos no relacionados no se modificarán. Es un descarte lógico: los registros locales originales se conservan; no es un borrado físico permanente.'**
+  String get trainingDiscardExplanation;
+
+  /// No description provided for @trainingDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar sesión local'**
+  String get trainingDiscardConfirm;
+
+  /// No description provided for @trainingDiscardSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión local descartada. Las demás sesiones se conservan.'**
+  String get trainingDiscardSuccess;
+
+  /// No description provided for @trainingDiscardOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: ha cambiado la cuenta o la sesión. Vuelve a abrir la lista con la cuenta correspondiente.'**
+  String get trainingDiscardOwner;
+
+  /// No description provided for @trainingDiscardIdentityChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: esta sesión ya no está disponible o su identidad ha cambiado. Revisa la lista actualizada.'**
+  String get trainingDiscardIdentityChanged;
+
+  /// No description provided for @trainingDiscardUnknownOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: no se puede verificar a quién pertenecen los datos locales.'**
+  String get trainingDiscardUnknownOwner;
+
+  /// No description provided for @trainingDiscardConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: esta sesión ya está confirmada en el servidor.'**
+  String get trainingDiscardConfirmed;
+
+  /// No description provided for @trainingDiscardInFlight.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar mientras hay un envío en curso para esta sesión. Espera a que termine y revisa su estado.'**
+  String get trainingDiscardInFlight;
+
+  /// No description provided for @trainingDiscardDependencies.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: hay ejercicios o evidencias pendientes de enviar vinculados a esta sesión. Se conservan para evitar pérdida de datos.'**
+  String get trainingDiscardDependencies;
+
+  /// No description provided for @trainingDiscardFailure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el descarte local. Los datos se conservan. Revisa el estado antes de intentarlo de nuevo.'**
+  String get trainingDiscardFailure;
+
   /// No description provided for @weeklyHunger.
   ///
   /// In es, this message translates to:

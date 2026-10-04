@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import '../widgets/pending_training_executions.dart';
+export '../widgets/pending_training_executions.dart';
+
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -94,6 +97,10 @@ class _TrainingsViewState extends State<_TrainingsView> {
         constraints: BoxConstraints(maxHeight: constraints.maxHeight * .3),
         child: SingleChildScrollView(child: PendingTrainingExecutions(
         storage: storage,
+        inspectDiscard: sl.isRegistered<OfflineSyncService>()
+            ? sl<OfflineSyncService>().inspectTrainingExecutionDiscard : null,
+        discard: sl.isRegistered<OfflineSyncService>()
+            ? sl<OfflineSyncService>().discardTrainingExecution : null,
         onSelect: (entry, action) async {
           if (stamp == null || storage.sessionStamp != stamp ||
               !storage.getPendingTrainingExecutions().any((candidate) =>
@@ -252,50 +259,6 @@ class _TrainingsViewState extends State<_TrainingsView> {
         ],
       ),
     );
-  }
-}
-
-/// Global, owner-scoped recovery list independent of the visible calendar month.
-class PendingTrainingExecutions extends StatelessWidget {
-  const PendingTrainingExecutions({super.key, required this.storage, required this.onSelect});
-
-  final LocalStorage storage;
-  final void Function(Map<String, dynamic> entry, String action) onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = storage.getPendingTrainingExecutions();
-    final l10n = AppLocalizations.of(context);
-    if (entries.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (entries.any((entry) => entry['status'] != 'pending-sync'))
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(l10n.trainingPendingFinalizeNotice),
-        ),
-      for (final entry in entries)
-        Card(child: Column(children: [
-          ListTile(
-            title: Text('${entry['training_name'] ?? entry['training_id']} · '
-                '${entry['assignment_date']}'),
-            subtitle: Text('${entry['id']} · '
-                '${entry['status'] == 'pending-sync' ? l10n.trainingPendingSync : entry['status'] == 'conflict' ? l10n.trainingSyncConflict : l10n.trainingPendingFinalize}'),
-          ),
-          if (entry['status'] != 'pending-sync' && entry['status'] != 'conflict')
-            Row(children: [
-              TextButton(
-                key: Key('pending-continue-${entry['id']}'),
-                onPressed: () => onSelect(entry, 'continue'),
-                child: Text(l10n.trainingContinue),
-              ),
-              TextButton(
-                key: Key('pending-finalize-${entry['id']}'),
-                onPressed: () => onSelect(entry, 'finalize'),
-                child: Text(l10n.trainingFinalize),
-              ),
-            ]),
-        ])),
-    ]);
   }
 }
 

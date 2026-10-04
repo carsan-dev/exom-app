@@ -9,6 +9,56 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get trainingDiscardPending => 'Descartar esta sesión pendiente';
+
+  @override
+  String get trainingDiscardTitle => '¿Descartar esta sesión local?';
+
+  @override
+  String trainingDiscardIdentity(String name, String date, String id) {
+    return 'Entrenamiento: $name\nFecha: $date\nID de sesión: $id';
+  }
+
+  @override
+  String get trainingDiscardExplanation =>
+      'Solo se descartará esta sesión local pendiente. Su cierre pendiente, RPE y nota no se enviarán. Los ejercicios guardados en el servidor, las otras sesiones confirmadas y los datos no relacionados no se modificarán. Es un descarte lógico: los registros locales originales se conservan; no es un borrado físico permanente.';
+
+  @override
+  String get trainingDiscardConfirm => 'Descartar sesión local';
+
+  @override
+  String get trainingDiscardSuccess =>
+      'Sesión local descartada. Las demás sesiones se conservan.';
+
+  @override
+  String get trainingDiscardOwner =>
+      'No se puede descartar: ha cambiado la cuenta o la sesión. Vuelve a abrir la lista con la cuenta correspondiente.';
+
+  @override
+  String get trainingDiscardIdentityChanged =>
+      'No se puede descartar: esta sesión ya no está disponible o su identidad ha cambiado. Revisa la lista actualizada.';
+
+  @override
+  String get trainingDiscardUnknownOwner =>
+      'No se puede descartar: no se puede verificar a quién pertenecen los datos locales.';
+
+  @override
+  String get trainingDiscardConfirmed =>
+      'No se puede descartar: esta sesión ya está confirmada en el servidor.';
+
+  @override
+  String get trainingDiscardInFlight =>
+      'No se puede descartar mientras hay un envío en curso para esta sesión. Espera a que termine y revisa su estado.';
+
+  @override
+  String get trainingDiscardDependencies =>
+      'No se puede descartar: hay ejercicios o evidencias pendientes de enviar vinculados a esta sesión. Se conservan para evitar pérdida de datos.';
+
+  @override
+  String get trainingDiscardFailure =>
+      'No se pudo guardar el descarte local. Los datos se conservan. Revisa el estado antes de intentarlo de nuevo.';
+
+  @override
   String get weeklyHunger => 'Hambre semanal (opcional)';
 
   @override

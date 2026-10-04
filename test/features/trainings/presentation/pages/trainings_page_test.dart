@@ -176,10 +176,12 @@ void main() {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: PendingTrainingExecutions(
+      // Match the production scroll container now that each card also offers
+      // an execution-specific discard action. Keep all recovery assertions.
+      home: Scaffold(body: SingleChildScrollView(child: PendingTrainingExecutions(
         storage: _PendingStorage(),
         onSelect: (entry, action) => selected.add('${entry['id']}:$action'),
-      )),
+      ))),
     ));
     expect(find.text('Tienes un entrenamiento pendiente de finalizar'), findsOneWidget);
     expect(find.textContaining('Strength · 2026-08-12'), findsNWidgets(2));

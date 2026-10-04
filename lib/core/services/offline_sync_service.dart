@@ -1,5 +1,6 @@
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'dart:async';
+import 'package:exom_app/core/models/training_execution_discard.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
@@ -115,7 +116,7 @@ class OfflineSyncService {
     String? trainingId,
     String? sessionId,
     String? operationId,
-  }) async {
+  }) => _localStorage.sessionTask(() async {
     await _enqueueAction({
       'training_session_id': ?sessionId,
       'type': completed ? _markExerciseCompleted : _unmarkExerciseCompleted,
@@ -143,7 +144,7 @@ class OfflineSyncService {
         )) {
       unawaited(syncPendingActions());
     }
-  }
+  });
 
   Future<void> queueTrainingCompletion(
     String date, {
@@ -151,7 +152,7 @@ class OfflineSyncService {
     String? sessionId,
     int? rpe,
     String? notes,
-  }) async {
+  }) => _localStorage.sessionTask(() async {
     final dependencies = _localStorage
         .getFeedbackUploadQueue()
         .where(
@@ -212,7 +213,7 @@ class OfflineSyncService {
         )) {
       unawaited(syncPendingActions());
     }
-  }
+  });
 
   Future<void> queueMealCompletion(
     String mealId,
@@ -438,6 +439,7 @@ class OfflineSyncService {
   }) async {
     var enqueued = false;
     await _queueMutex.protect(() async {
+      _localStorage.guardTrainingExecution(action['training_session_id'] as String?);
       final queue = _localStorage.getPendingSyncActions();
       final existingForDate = queue
           .where((entry) => entry['date'] == action['date'])
@@ -594,6 +596,114 @@ class OfflineSyncService {
     }
   });
 
+  /// Read-only explanation for an execution-specific confirmation UI. The
+  /// command rechecks everything; an eligible inspection is not a reservation.
+  TrainingExecutionDiscardResult inspectTrainingExecutionDiscard(
+      TrainingExecutionDiscardRequest request) {
+    TrainingExecutionDiscardResult result(TrainingExecutionDiscardReason reason) =>
+        TrainingExecutionDiscardResult(reason);
+    if (_localStorage.ownerId == null || request.ownerId.isEmpty ||
+        _localStorage.ownerId != request.ownerId) {
+      return result(TrainingExecutionDiscardReason.wrongOwner);
+    }
+    if (_localStorage.sessionStamp != request.sessionStamp) {
+      return result(TrainingExecutionDiscardReason.staleSession);
+    }
+    if (request.executionId.isEmpty || request.trainingId.isEmpty || request.date.isEmpty) {
+      return result(TrainingExecutionDiscardReason.identityMismatch);
+    }
+    if (_localStorage.isTrainingExecutionDiscarded(request.executionId)) {
+      final marker = _localStorage.getCachedMap(
+        'training_execution_discard:${request.executionId}')!;
+      return result(marker['training_id'] == request.trainingId &&
+          marker['assignment_date'] == request.date
+          ? TrainingExecutionDiscardReason.alreadyDiscarded
+          : TrainingExecutionDiscardReason.identityMismatch);
+    }
+    // Namespace ownership, not a guessed legacy owner, proves registry origin.
+    final entries = (_localStorage.getCachedList('training_executions') ?? const [])
+        .whereType<Map>().where((entry) => entry['id'] == request.executionId).toList();
+    if (entries.isEmpty) return result(TrainingExecutionDiscardReason.notFound);
+    if (entries.length != 1 || entries.single['training_id'] != request.trainingId ||
+        entries.single['assignment_date'] != request.date) {
+      return result(TrainingExecutionDiscardReason.identityMismatch);
+    }
+    if (const ['confirmed', 'completed'].contains(entries.single['status'])) {
+      return result(TrainingExecutionDiscardReason.confirmed);
+    }
+    if (!const ['pending', 'pending-finalize', 'pending-sync', 'failed', 'conflict']
+        .contains(entries.single['status'])) {
+      return result(TrainingExecutionDiscardReason.identityMismatch);
+    }
+    final rawQueue = (_localStorage.getCachedList('offline_sync_actions') ?? const [])
+        .whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    final target = rawQueue.where((e) => e['training_session_id'] == request.executionId);
+    if (target.any((e) => !_localStorage.ownsEntry(e))) {
+      return result(TrainingExecutionDiscardReason.unknownOwnership);
+    }
+    if (target.any((e) => e['status'] == 'uploading')) {
+      return result(TrainingExecutionDiscardReason.inFlight);
+    }
+    if (target.any((e) => e['type'] == _completeTraining &&
+        (e['training_id'] != request.trainingId || e['date'] != request.date))) {
+      return result(TrainingExecutionDiscardReason.identityMismatch);
+    }
+    // Unbound same-day exercise work cannot safely be attributed to another
+    // execution. Keep it (and every file) intact and explain the refusal.
+    if (rawQueue.any((e) =>
+        (e['training_session_id'] == request.executionId && e['type'] != _completeTraining) ||
+        (e['training_session_id'] == null && e['date'] == request.date &&
+         const [_markExerciseCompleted, _unmarkExerciseCompleted].contains(e['type'])))) {
+      return result(TrainingExecutionDiscardReason.unsentDependencies);
+    }
+    // Draft set data has no durable server receipt here. Do not hide potentially
+    // unsent performance/evidence merely because its queue entry is absent.
+    if (_localStorage.getActiveWorkouts().any((draft) =>
+        (draft.sessionId == request.executionId ||
+         (draft.sessionId == null && draft.trainingId == request.trainingId &&
+          draft.exerciseId.endsWith(':${request.date}'))) &&
+        (draft.completedSets > 0 || draft.completedSetData.isNotEmpty ||
+         draft.completionOperationId != null || draft.lastSetFeedbackClientUploadId != null))) {
+      return result(TrainingExecutionDiscardReason.unsentDependencies);
+    }
+    final feedback = (_localStorage.getCachedList('feedback_upload_queue') ?? const [])
+        .whereType<Map>().toList();
+    final dependencyIds = target.expand((e) =>
+        ((e['depends_on_feedback_ids'] as List?) ?? const []).whereType<String>()).toSet();
+    if (feedback.any((e) => e['status'] != 'completed' &&
+        (e['training_session_id'] == request.executionId ||
+         dependencyIds.contains(e['id']) ||
+         (e['training_session_id'] == null && e['assignment_date'] == request.date &&
+          (e['training_id'] == request.trainingId || e['training_id'] == null)))) ||
+        dependencyIds.any((id) => !feedback.any((e) => e['id'] == id &&
+            e['status'] == 'completed' && _localStorage.ownsEntry(Map<String, dynamic>.from(e))))) {
+      return result(TrainingExecutionDiscardReason.unsentDependencies);
+    }
+    return result(TrainingExecutionDiscardReason.eligible);
+  }
+
+  /// Explicit LOCAL discard only. Never calls HTTP, generic discardAction,
+  /// cache rebasing, evidence cleanup or same-day invalidation.
+  Future<TrainingExecutionDiscardResult> discardTrainingExecution(
+      TrainingExecutionDiscardRequest request) async {
+    final initial = inspectTrainingExecutionDiscard(request);
+    if (!initial.canDiscard) return initial; // in-flight refusal must not wait
+    try {
+      return await _localStorage.sessionTask(() => _syncMutex.protect(() =>
+          _queueMutex.protect(() async {
+        final checked = inspectTrainingExecutionDiscard(request);
+        if (!checked.canDiscard) return checked;
+        await _localStorage.persistTrainingExecutionDiscard(request);
+        _changes.add(null);
+        return const TrainingExecutionDiscardResult(TrainingExecutionDiscardReason.discarded);
+      })));
+    } on LocalSessionChanged {
+      return const TrainingExecutionDiscardResult(TrainingExecutionDiscardReason.staleSession);
+    } catch (_) {
+      return const TrainingExecutionDiscardResult(TrainingExecutionDiscardReason.storageFailure);
+    }
+  }
+
   Future<void> discardAction(String id) => _localStorage.withSession(() async {
     String? date;
     await _queueMutex.protect(() async {
@@ -640,7 +750,7 @@ class OfflineSyncService {
   }
 
   Future<int?> _replayAction(Map<String, dynamic> action) async {
-    _localStorage.guardSession();
+    _localStorage.guardTrainingExecution(action['training_session_id'] as String?);
     final options = action['format_version'] == 2
         ? Options(
             headers: {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:exom_app/core/models/training_execution_discard.dart';
 import 'store_process_lock.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
@@ -154,6 +155,35 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     await clearAuth();
   }
 
+  static const _executionDiscardPrefix = 'training_execution_discard:';
+
+  bool isTrainingExecutionDiscarded(String? id) => id != null &&
+      getCachedMap('$_executionDiscardPrefix$id') != null;
+
+  void guardTrainingExecution(String? id) {
+    guardSession();
+    if (isTrainingExecutionDiscarded(id)) {
+      throw StateError('Training execution was locally discarded');
+    }
+  }
+
+  /// One owner-scoped Hive record is the commit point. No multi-key cleanup is
+  /// needed: consumers project this tombstone over queue, registry and drafts.
+  /// Raw records and files remain retained, never turned into cleanup work.
+  /// Call only from the service's sync -> queue critical section after guards.
+  Future<void> persistTrainingExecutionDiscard(
+      TrainingExecutionDiscardRequest request) => sessionTask(() async {
+    guardTrainingExecution(request.executionId);
+    if (ownerId != request.ownerId || sessionStamp != request.sessionStamp) {
+      throw const LocalSessionChanged();
+    }
+    await cacheData('$_executionDiscardPrefix${request.executionId}', {
+      'owner_id': request.ownerId, 'environment': environment,
+      'execution_id': request.executionId, 'training_id': request.trainingId,
+      'assignment_date': request.date, 'format_version': 1,
+    });
+  });
+
   // An acknowledged execution remains final. Until then the durable, owned
   // completion action is authoritative across a crash between queue and registry writes.
   Map<String, dynamic> _effectiveTrainingExecution(
@@ -186,7 +216,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
         .whereType<Map>()
         .map((entry) => _effectiveTrainingExecution(
             Map<String, dynamic>.from(entry), actions))
-        .where((entry) => entry['training_id'] == trainingId &&
+        .where((entry) => !isTrainingExecutionDiscarded(entry['id'] as String?) &&
+            entry['training_id'] == trainingId &&
             entry['assignment_date'] == date &&
             const ['pending', 'pending-finalize', 'failed', 'conflict']
                 .contains(entry['status']))
@@ -224,7 +255,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
         .map((entry) => _effectiveTrainingExecution(
             Map<String, dynamic>.from(entry), actions))
         .where((entry) =>
-            entry['id'] is String && (entry['id'] as String).isNotEmpty &&
+            entry['id'] is String && !isTrainingExecutionDiscarded(entry['id'] as String) &&
+            (entry['id'] as String).isNotEmpty &&
             entry['training_id'] is String &&
             entry['assignment_date'] is String &&
             const ['pending', 'pending-finalize', 'pending-sync', 'failed', 'conflict']
@@ -293,6 +325,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Map<String, dynamic>? getTrainingCompletionDraft(
       String trainingId, String date, String executionId) {
+    if (isTrainingExecutionDiscarded(executionId)) return null;
     final draft = getCachedMap(_completionDraftsKey)?[executionId];
     if (draft is! Map || draft['training_id'] != trainingId ||
         draft['assignment_date'] != date) {
@@ -303,6 +336,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> saveTrainingCompletionDraft(String trainingId, String date,
       String executionId, {int? rpe, String? notes}) => sessionTask(() async {
+    guardTrainingExecution(executionId);
     if (rpe != null && (rpe < 1 || rpe > 10)) {
       throw RangeError.range(rpe, 1, 10, 'rpe');
     }
@@ -325,6 +359,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
         final trainingId = action['training_id'] as String?;
         final date = action['date'] as String?;
         if (id == null || trainingId == null || date == null) return;
+        guardTrainingExecution(id);
         final drafts = getCachedMap(_completionDraftsKey) ?? <String, dynamic>{};
         drafts[id] = {
           'training_id': trainingId,
@@ -338,6 +373,7 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> setTrainingExecutionStatus(String id, String status) =>
       sessionTask(() async {
+        guardTrainingExecution(id);
         if (!const ['pending-finalize', 'pending-sync', 'failed', 'conflict',
           'confirmed'].contains(status)) {
           throw ArgumentError.value(status, 'status');
@@ -412,7 +448,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     // Cache clearing never discards queues, evidence or active workouts.
     final keys = _cache.keys
         .whereType<String>()
-        .where((key) => key.startsWith(prefix) && !preserved.contains(key))
+        .where((key) => key.startsWith(prefix) && !preserved.contains(key) &&
+            !key.startsWith(_key(_executionDiscardPrefix)))
         .toList();
     await _cache.deleteAll(keys);
   }
@@ -427,6 +464,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
         .whereType<Map>()
         .map((entry) => Map<String, dynamic>.from(entry))
         .where(ownsEntry)
+        .where((entry) => entry['type'] != 'complete_training' ||
+            !isTrainingExecutionDiscarded(entry['training_session_id'] as String?))
         .toList(growable: true);
   }
 
@@ -519,8 +558,22 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     List<Map<String, dynamic>> entries,
     bool Function(Map<String, dynamic>) owns,
   ) {
+    // New unsent training work cannot be attached to a locally discarded
+    // execution. Completed feedback and every independent queue remain intact.
+    if (key == _pendingSyncKey || key == _feedbackUploadQueueKey) {
+      for (final entry in entries) {
+        if (key == _pendingSyncKey || entry['status'] != 'completed') {
+          guardTrainingExecution(entry['training_session_id'] as String?);
+        }
+      }
+    }
+    // Queue consumers see a tombstone-filtered projection. Preserve the raw
+    // discarded closures when persisting that projection, just as we preserve
+    // foreign/unowned records; unrelated enqueue/ACK must not erase history.
     final quarantined = (getCachedList(key) ?? const []).where(
-      (entry) => entry is! Map<String, dynamic> || !owns(entry),
+      (entry) => entry is! Map<String, dynamic> || !owns(entry) ||
+          (key == _pendingSyncKey && entry['type'] == 'complete_training' &&
+              isTrainingExecutionDiscarded(entry['training_session_id'] as String?)),
     );
     return _cache.put(_key(key), [...quarantined, ...entries]);
   }
@@ -608,13 +661,16 @@ class LocalStorage implements ActiveWorkoutLocalStore {
       _activeWorkouts.listenable();
 
   @override
-  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
-      _activeWorkouts.get(_key(exerciseId));
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) {
+    final workout = _activeWorkouts.get(_key(exerciseId));
+    return isTrainingExecutionDiscarded(workout?.sessionId) ? null : workout;
+  }
 
   List<ActiveWorkoutHiveModel> getActiveWorkouts() => _activeWorkouts.keys
       .whereType<String>()
       .where((key) => key.startsWith(_key('')))
       .map((key) => _activeWorkouts.get(key)!)
+      .where((workout) => !isTrainingExecutionDiscarded(workout.sessionId))
       .toList(growable: false);
 
   List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) {
@@ -624,8 +680,10 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   }
 
   @override
-  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) =>
-      _activeWorkouts.put(_key(workout.exerciseId), workout);
+  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) {
+    guardTrainingExecution(workout.sessionId);
+    return _activeWorkouts.put(_key(workout.exerciseId), workout);
+  }
 
   @override
   Future<void> removeActiveWorkout(String exerciseId) =>

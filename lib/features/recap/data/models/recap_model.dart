@@ -35,6 +35,9 @@ class RecapModel extends RecapEntity {
     super.clientFeedbackText,
     super.clientFeedbackSentAt,
     super.clientFeedbackReadAt,
+    super.publishedCoachSummary,
+    super.publishedChanges,
+    super.publishedNextWeekGoals,
     super.reviewedAt,
     required super.createdAt,
   });
@@ -79,6 +82,9 @@ class RecapModel extends RecapEntity {
               .toList() ??
           [],
       improvementFeedbackText: json['improvement_feedback_text'] as String?,
+      publishedCoachSummary: json['published_coach_summary'] as String?,
+      publishedChanges: json['published_changes'] as String?,
+      publishedNextWeekGoals: json['published_next_week_goals'] as String?,
       clientFeedbackText: json['client_feedback_text'] as String?,
       clientFeedbackSentAt: json['client_feedback_sent_at'] != null
           ? DateTime.parse(json['client_feedback_sent_at'] as String)
@@ -93,8 +99,21 @@ class RecapModel extends RecapEntity {
     );
   }
 
+  static Map<String, dynamic> _clientFormPayload(
+    Map<String, dynamic> formData,
+  ) {
+    // Defense in depth: responses must never become client review writes.
+    return Map<String, dynamic>.from(formData)..removeWhere(
+      (key, _) =>
+          key.startsWith('published_') ||
+          key.startsWith('draft_') ||
+          key == 'admin_comments' ||
+          key == 'review_version',
+    );
+  }
+
   static Map<String, dynamic> toCreateJson(Map<String, dynamic> formData) {
-    final payload = Map<String, dynamic>.from(formData);
+    final payload = _clientFormPayload(formData);
 
     payload.removeWhere(
       (key, value) =>
@@ -125,9 +144,9 @@ class RecapModel extends RecapEntity {
   }
 
   static Map<String, dynamic> toUpdateJson(Map<String, dynamic> formData) {
-    final payload = Map<String, dynamic>.from(formData);
+    final payload = _clientFormPayload(formData);
 
-    for (final entry in formData.entries) {
+    for (final entry in payload.entries.toList()) {
       final value = entry.value;
       if (value is String && value.trim().isEmpty) {
         payload[entry.key] = null;

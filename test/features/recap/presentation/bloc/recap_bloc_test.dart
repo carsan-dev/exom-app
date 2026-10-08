@@ -134,11 +134,56 @@ void main() {
     },
   );
 
-  test('signed-out detail does not start a request', () async {
+  test('signed-out detail ends in a safe error without requests', () async {
     session = null;
     bloc.add(const RecapDetailRequested('A'));
     await flushRecapEvents();
     expect(repository.details, isEmpty);
+    expect(repository.sessionKeys, isEmpty);
+    expect(repository.readCalls, isEmpty);
+    expect(repository.writes, isEmpty);
+    expect(bloc.state, isA<RecapDetailError>());
+  });
+
+  test(
+    'signed-out detail clears previously loaded recap without requests',
+    () async {
+      bloc.add(const RecapDetailRequested('A'));
+      await flushRecapEvents();
+      repository.details['A']!.complete(
+        recapFixture(extra: {'client_feedback_text': 'Legacy'}),
+      );
+      await flushRecapEvents();
+      expect(bloc.state, isA<RecapDetailLoaded>());
+
+      session = null;
+      bloc.add(const RecapDetailRequested('B'));
+      await flushRecapEvents();
+      bloc.add(const RecapFeedbackMarkReadRequested('A'));
+      await flushRecapEvents();
+      expect(repository.details.keys, ['A']);
+      expect(repository.sessionKeys, ['synthetic-A:1']);
+      expect(repository.readCalls, isEmpty);
+      expect(repository.writes, isEmpty);
+      expect(bloc.state, isA<RecapDetailError>());
+    },
+  );
+
+  test('late detail cannot replace a newer signed-out error', () async {
+    bloc.add(const RecapDetailRequested('A'));
+    await flushRecapEvents();
+    session = null;
+    bloc.add(const RecapDetailRequested('B'));
+    await flushRecapEvents();
+    expect(bloc.state, isA<RecapDetailError>());
+
+    session = const LocalAuthSession(uid: 'synthetic-A', generation: 1);
+    repository.details['A']!.complete(recapFixture());
+    await flushRecapEvents();
+    expect(bloc.state, isA<RecapDetailError>());
+    expect(repository.details.keys, ['A']);
+    expect(repository.sessionKeys, ['synthetic-A:1']);
+    expect(repository.readCalls, isEmpty);
   });
 
   test('late detail A cannot replace the more recent detail B', () async {

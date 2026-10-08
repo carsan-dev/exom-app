@@ -182,7 +182,10 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     final stamp = _localStorage.sessionStamp;
     _detailSessionStamp = stamp;
     emit(const RecapDetailLoading());
-    if (stamp == null) return;
+    if (stamp == null) {
+      emit(const RecapDetailError('Inicia sesión para ver el recap.'));
+      return;
+    }
     try {
       final recap = await _localStorage.sessionTask(
         () => _getRecapDetailUseCase(event.recapId),

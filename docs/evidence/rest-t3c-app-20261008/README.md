@@ -3,7 +3,7 @@
 > Copia saneada para entrega: ubicaciones normalizadas; resultados, fechas y hashes conservan su significado histórico y corresponden al snapshot privado original, no a esta copia. WORKSPACE_ROOT identifica la coordinación; SDK_ROOT el SDK instalado; RUNTIME_ROOT las herramientas locales; TEST_ARTIFACT_ROOT los recursos privados retenidos, no publicados.
 
 
-Date: 2026-10-08. Bounded implementation and independent checks complete; formal native RDD is enabled, but native review and commit are still pending. Platform smoke remains separate. This receipt does not close P5 or REST-T3C3.
+Date: 2026-10-08. **REST-T3C2 DONE locally** in `afb7230cb365c8ae67a085e81cc1e44440327a6f`: native SUCCESS and exact ACK CONSUMED, with independent functional evidence preserved. The passive receipt commit is pending parent disposition. Platform smoke remains separate; P5 and integrated REST-T3C3 acceptance are not closed.
 
 ## Scope and identity
 
@@ -79,10 +79,36 @@ Historical test/config/harness hashes and exact writer snapshots remain in `chec
 
 `recap_ui_harness.dart` is a prepared synthetic entrypoint rendering only the new card in incumbent light/dark themes. It imports no real main/bootstrap, service locator, Firebase or HTTP. Synthetic Android debug build **PASS** in the independent receipt above; installation/device smoke **NOT_RUN**. Simulated iOS ThemeData does not prove native iOS execution. Parent read-only auth-flow challenge found that normal flow emits `AuthLoading` and triggers GoRouter redirect before account B becomes active. This does not test immediate outgoing-page visual removal, nor guarantee removal for external identity replacement. Already-displayed state removal remains owned by the incumbent auth/router lifecycle; this correction specifically suppresses late responses and feedback operations from previous sessions, not a global auth redesign.
 
-## Native tooling blocker — REST-T3C2-NATIVE-01
+## Historical native tooling blocker — REST-T3C2-NATIVE-01 (workflow resolved below)
 
 2026-10-08, parent-reported evidence: **BLOCKED maintenance/tooling; root cause unproven**, REST-T3C2 remains IN_PROGRESS, not approved or committed. First native INSPECT failed with fatal Go runtime panic (`unknown caller pc`/`gopark`), exit2, empty output and incomplete inventory; no mutation. Separate verifier identified native4.0.0 at `${RUNTIME_ROOT}/go/bin/gentle-ai.exe`, built go1.27.1 Windows/amd64 CGO0. These identities are discoveries, not proof of a causal Go bug. A fresh facade INSPECT then succeeded with complete inventory, offering `review-8c4ca87e51b17324`, candidate `ada53b37aaf4ae38d612df7c8d847dfe43180877`, target `sha256:57db1f24df9338f3794344dd971ac02435a437368f0521a523462826dc483b0e`; START failed `native-operation-failed`, `lineage_created=false`, mutation=false. The next fresh INSPECT repeated panic/incomplete inventory. No actual review lineage exists; the offered ID is not an active review.
 
 Independent focused34/full536/analyze0/synthetic debug APK PASS remain intact; this tooling failure does not downgrade them or establish an App defect. No STATUS of the offered ID, recover/reset, RDD disabling, installation, GOGC workaround or further START until native inventory is complete. Parent must obtain user authorization before bounded global tooling repair or disposition to leave native review pending; neither is authorized by this receipt. No commit/push, P5 DONE or external delivery. Platform installation/smoke and native iOS remain unproven.
 
-Current recovery checkpoint `checkpoint/native-blocked/manifest.json` manually preserves all 13 authored current files as complete `.snapshot` bytes, SHA256/Git blob IDs and tracked patch against App HEAD `db72c7feee2c3ba91bc71068a7918903179ca78d`, including this incident-updated README. It records dated non-Git coordination hashes before/after. Original checkpoints, generated logs and APK remain unchanged in place; no bulk artifact copies. This is writer bookkeeping, not independent validation or a native receipt. API `2860703` original probe and Admin `2e5d43d` unchanged; root plan and CURRENT task retain acceptance unchanged. Next action is the user's tooling/review disposition, not another start retry or automatic next feature.
+Historical recovery checkpoint `checkpoint/native-blocked/manifest.json` manually preserves all 13 authored current files as complete `.snapshot` bytes, SHA256/Git blob IDs and tracked patch against App HEAD `db72c7feee2c3ba91bc71068a7918903179ca78d`, including this incident-updated README. It records dated non-Git coordination hashes before/after. Original checkpoints, generated logs and APK remain unchanged in place; no bulk artifact copies. This is writer bookkeeping, not independent validation or a native receipt. API `2860703` original probe and Admin `2e5d43d` unchanged; root plan and CURRENT task retain acceptance unchanged. At that historical checkpoint, the next action was the user's tooling/review disposition, not another start retry or automatic next feature.
+
+## Passive local closure — 2026-10-08
+
+This section supersedes only the earlier pending review/commit and tooling workflow status, not historical failed logs, acceptance criteria or platform limits. Source of native/precommit facts: the parent's observed completed transaction; this documentation writer did not invoke native tooling or mutate Git.
+
+| Closure fact | Evidence / origin |
+| --- | --- |
+| Implementation commit | Parent-created `afb7230cb365c8ae67a085e81cc1e44440327a6f`, `feat(app): muestra revisiones publicadas de recap`; base `db72c7feee2c3ba91bc71068a7918903179ca78d` |
+| Commit tree | `0320bc1436ca2c4c81594ef7e8cce2bf90b85a7e`, read-only HEAD verification; parent confirms exact native-approved/staged equality, base tree `048461adcbd1d250b89ac7c54f807028967a6a03` |
+| Approved scope / precommit | 13 paths, 889 insertions / 13 deletions (902 lines); parent-observed 13/13 raw and Git-filtered hashes, tree equality and staged diff-check PASS; empty indexes, no native hooks/gitattrs, autocrlf=false |
+| Native review | `review-750eefe2e019f358` SUCCESS; medium risk, one consolidated `review-reliability` review |
+| Exact acknowledgement | CONSUMED, revision `sha256:e7e32bbc5598ddba3ef34825fa3b83c7f20994bef85decbb1dcd1cb5a6f06c32` |
+| Burn evidence | `gentle-ai.review-acknowledged/v1`, target `sha256:1e4c6f3822358f023020420431ec06330f09031cf402987a62c0229be421a662`; authority burned, no subsequent STATUS/CLI/facade/advisory reopening/correction |
+| Tooling issue | REST-T3C2-NATIVE-01 RESOLVED for workflow following user-owned repair and successful review; root cause remains unproven, new binary metadata NOT_CHECKED |
+| Evidence applicability | Independent focused34/full536/analyze0/synthetic APK PASS logs reread; 9/9 product/test SHA256 hashes match writer-final manifest and current committed bytes. No tests/build rerun for passive text |
+| Worktree | App clean before receipt edit, branch/upstream `fix/scoped-training-discard` / `origin/fix/scoped-training-discard`; API `2860703` only original probe, Admin `2e5d43d` clean, observed read-only at `2026-10-08T11:18:28+02:00` |
+
+Initial global Go1.27.1 diagnosis does not prove causality. Later parent evidence distinguishes bundled Go1.27.1 from global Go1.26.8 but does not certify the actual failed executable path. No tooling repair root cause or new Go binary identity is claimed. Earlier panics/START failures remain dated FAIL evidence.
+
+Separate informational follow-up: **`R3-signed-out-loading` OPEN**, reliability WARNING at exact source `lib/features/recap/presentation/bloc/recap_bloc.dart:185`, assigned to REST-T3D. Obtain the full finding, reproduce/dispose and add regression coverage if applicable; no fabricated diagnosis or full finding text. Native approval stands; no correction opened.
+
+The user's resumed P5 authorization supersedes the night pause, not scope/criteria. REST-T3C3 is IN_PROGRESS for integrated acceptance mapping only: publication/last published version during draft, nullable/legacy privacy, identity/generation/late responses and complete private-safe printing, including missing-submission/archived cases. New integrated checks NOT_RUN. Existing Admin browser14/14 and actual PDF10/10 PASS remain bounded evidence; parent visually inspected three pages, not all 68. REST-T3D remains PENDING; REST-P5-FINAL/P5 remain in progress. P5-04 Dashboard parity remains deferred to P6 PENDING, not PASS; no P6 implementation or remote delivery started. REST-DELIVERY-01 remains authorized only after P5 closure.
+
+Synthetic APK remains 172772119 bytes, SHA256 `b1e89b6a2bbb8b63c8eec707c581f24d87249c4800f1800d0a5d61835cb69cfb`; synthetic entrypoint has no Firebase/bootstrap/HTTP integration. No real installation/device smoke/native iOS/live Firebase/JWT integration/user visual approval is claimed.
+
+Recovery: new ignored LOCAL_ONLY `checkpoint/committed-afb7230/manifest.json`, `root-before.json` and `root-after.json` record dated path/SHA256 snapshots, complete before/after `.snapshot` copies of task/plan/receipt, observed commit/tree and parent-sourced consumed-authority facts. Previous checkpoint directories/logs/APK remain untouched; no `.gitignore` edit. Root is non-Git, no initialization. This README update is passive text only (meaningful behavioral RED/GREEN NOT_APPLICABLE); a separate documentation-only commit belongs to the parent and is **PENDING**, with no future SHA invented.

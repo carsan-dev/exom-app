@@ -3,9 +3,11 @@
 > Copia saneada para entrega: ubicaciones normalizadas; resultados, fechas y hashes conservan su significado histórico y corresponden al snapshot privado original, no a esta copia. WORKSPACE_ROOT identifica la coordinación; SDK_ROOT el SDK instalado; RUNTIME_ROOT las herramientas locales; TEST_ARTIFACT_ROOT los recursos privados retenidos, no publicados.
 
 
-**Cobertura funcional PASS; candidato local sin commit/revisión. P5 continúa pendiente.** P5-02 recibe una prueba nueva del consumo App, no una certificación integral API/Admin/App. Solo test y este recibo; sin cambios runtime.
+**REST-T3C3B DONE local: verificación independiente PASS, native aprobado/ACK consumido y commit del padre `e5c7fa9`. P5 y REST-T3D continúan pendientes.** P5-02 recibe una prueba nueva del consumo App, no una certificación integral API/Admin/App. Solo test y este recibo; sin cambios runtime.
 
-## Base y alcance
+## Base y alcance (historia del escritor, antes del cierre)
+
+Los estados sin commit/revisión y controles pendientes de esta sección y de la verificación del escritor son históricos; quedan sustituidos solo para estado actual por el recibo final inferior.
 
 Raíz de coordinación: `${WORKSPACE_ROOT}/` (sin Git utilizable según checkpoint del padre). Seguimiento autoritativo: `odd/tasks/progress-remaining-phases.md`, reanudación REST-T3C3B ACTIVE; snapshot previo del padre: `docs/evidence/progress-remaining-20261008/checkpoint/t3c3b-resume/before.json`. No se modifica seguimiento ni espejo pendiente.
 
@@ -19,7 +21,7 @@ Estado inicial observado: App/Admin limpios; API solo `scripts/probe-client-dele
 
 Test: `test/features/recap/data/datasources/recap_remote_datasource_test.dart`, 114 líneas legibles (objetivo ≤100 advisory excedido para conservar detalle/lista y seis fechas sin comprimir). Cuatro casos: tres publicaciones String completas, parciales, null y ausentes legacy. Cada uno usa ApiClient real sin auth, adapter público de Dio, HTTP200 JSON serializado con content-type JSON y envelope `{success:true,data,timestamp:ISO}`. Datasource/repositorio/modelo reales decodifican detalle y lista nested `data.data`; asserts de GET/URI prefijada/query vacía, publicaciones, seis fechas UTC con timestamps/milisegundos y campos legacy independientes.
 
-## Verificación nueva
+## Verificación del escritor (histórica)
 
 Todos los comandos siguientes se ejecutaron secuencialmente en foreground desde `exom-app`, Windows, runner instalado; resultados completados antes de **2026-10-08T11:30:27Z**. Sin `pub`, instalaciones ni auto-fix. Salida reproducible mediante estos comandos; sin logs locales adicionales.
 
@@ -63,6 +65,17 @@ Test nuevo: `929294e15a7ac0b36a6c2133ff711876c87aada91d5286b38eb196189e49f0ae`.
 | Admin src/lib/api-utils.ts | d08ec01d2a7f3ea1d86141b73e8cd75022f361c17886534315da3f8760069a1d |
 | Admin docs/evidence/rest-t3c-admin-20261007/browser/fixture-api.ts | f5f163c66677144acd719fa478cb410f86f37df7305ed2de9a48e58340019e81 |
 
-## Límite recuperable y siguiente control
+## Recibo final — independiente, native y commit del padre
 
-Inventario/rollback exclusivo de esta unidad: test nuevo citado y `docs/evidence/rest-t3c3b-app-20261008/README.md`. No producto alterado; retirar solo esos dos archivos mediante una decisión posterior autorizada revierte la unidad sin cambiar fuentes ni evidencia previa. Hash del recibo se entrega al padre, no autorreferenciado. Archivos nuevos sin commit; checkpoint final, revisión del candidato, seguimiento y eventual commit corresponden al padre. REST-T3D/P5/P6 permanecen fuera de esta unidad.
+**REST-T3C3B DONE local**, no aceptación integral P5. Fuente de los resultados funcionales/nativos/precommit: padre; esta normalización posterior solo documental no repite runners ni invoca revisión.
+
+- Independiente UTC **2026-10-08T11:33:47Z–11:37:17Z**: focal4/full540/analyze0 PASS; hashes before/after coinciden con escritor e inventario2/+179. Nuevos archivos `no-index --check` sin diagnósticos whitespace, exit1 esperado por diferencias. Test SHA256 superior intacto; sin cambios fuente después de checks. API probe original SHA256 `8b5ba61a1cf147c643727dbfb2f7139126e6f08647906bb7cf5ad9004ddc8ac4` preservado y Admin limpio. Log fullsuite `${RUNTIME_ROOT}/AppData/Local/Temp/pi-bash-38cd4fac6f9e9c36.log` **LOCAL_ONLY**, no disponible en fresh clone.
+- Native nuevo **`review-e1d922e0e5a04693` aprobado**, medium/una lente `review-reliability`. ACK exacto **CONSUMED**: revisión `sha256:f99823b82bac345328bc73ee6d905a3f3ab37f53f0252f8d29066bdaddb3a980`, target `sha256:320446dc8730862bca0f3288bc12bf0cee1877194e288c37ef07af8560eaf39a`; autoridad quemada `gentle-ai.review-acknowledged/v1`. Sin STATUS después ni segunda revisión. Facade no expuso advisories/detalles del verdict: no se afirma que no existan.
+- Commit implementación **`e5c7fa913ef6db12a3a072f237e01f99c21d2418`**, `test(app): cubre contrato serializado de recap`; base `e8d6a6f1f0b6c3331a0255907b5190248b47f4e3`, rama `fix/scoped-training-discard`, dos archivos/+179/−0. Árbol aprobado=staged=commit `ef01b37e303d73fd4ad3df109972fe2907d6ad4c`, baseTree `b314bb4166502d8e576715fbc5003aeb1f53a4aa`. Precommit del padre: 2/2 hashes raw/blobs Git filtrados/modo100644 iguales al aprobado; índice vacío previo, staging exacto, cached diff-check y write-tree igualdad PASS; sin hooks activos/custom. App limpia postcommit, antes de esta edición pasiva.
+- ASSESS postcommit committed-range desde `e8d6a6f`: medium179/2, `reviewDue=false`/`under_budget`; `candidate.kind=base-diff`, `consumed=false`, native outcome unknown, writer fallback small → plan high-risk. La verificación independiente ya completada de los mismos bytes cubre fallback. Este selector distinto **no invalida** ACK workspace observado ni autoriza reapertura; revisiones anteriores consumidas intactas.
+
+## Recuperación y siguiente límite
+
+Unidad implementada recuperable desde el commit superior: test citado y este recibo pre-normalización. [Checkpoint raíz LOCAL_ONLY](../../../../docs/evidence/progress-remaining-20261008/checkpoint/t3c3b-close/manifest.json): snapshots completos tareas/README before/after, UTC/hashes, tres identidades Git y probe original sin copia fuente masiva. Raíz no Git/no init; AGENTS/plan/handoff preservados. Este recibo pasivo aún corresponde a futuro commit del padre, **SHA desconocido**; no exige reruns funcionales ni altera el test congelado.
+
+REST-T3C3/task21 **IN_PROGRESS**, A/B internas DONE, 14 históricas/10 DONE intactas. Reconciliación final REST-T3D y P5 pendientes; T3D solo tras nueva autorización, no iniciada. P5-04 diferido a P6 PENDING/no PASS. Espejo íntegro Engram539 PENDING por herramientas de memoria del hijo no disponibles: preservar539 histórico; observaciones acotadas del padre921–924 no equivalen al espejo completo. Ninguna fase ni entrega remota nueva autorizada.

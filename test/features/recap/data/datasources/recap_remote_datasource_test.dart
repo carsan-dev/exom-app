@@ -37,6 +37,51 @@ class _RecapAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+const publicationPayload = <String, Object?>{
+  'id': "recap-1",
+  'client_id': "client-1",
+  'week_start_date': "2026-10-05T00:00:00.000Z",
+  'week_end_date': "2026-10-11T00:00:00.000Z",
+  'submitted_at': "2026-10-08T09:00:00.000Z",
+  'created_at': "2026-10-05T09:15:30.123Z",
+  'updated_at': "2026-10-09T11:00:00.000Z",
+  'reviewed_at': "2026-10-08T10:20:30.456Z",
+  'archived_at': null,
+  'status': "REVIEWED",
+  'client_feedback_sent_at': "2026-10-08T10:21:30.000Z",
+  'client_feedback_read_at': "2026-10-08T10:22:30.000Z",
+  'client_feedback_text': "Legacy feedback",
+  'training_sessions': 3,
+  'general_notes': "Client notes",
+  'hydration_enabled': false,
+  'stress_enabled': false,
+  'muscle_pain_zones': [],
+  'improvement_areas': [],
+  'training_effort': null,
+  'average_daily_steps': null,
+  'training_progress': null,
+  'training_notes': null,
+  'nutrition_quality': null,
+  'hydration_level': null,
+  'food_quality': null,
+  'nutrition_notes': null,
+  'sleep_hours_range': null,
+  'fatigue_level': null,
+  'pain_intensity': null,
+  'recovery_notes': null,
+  'mood': null,
+  'stress_level': null,
+  'hunger_level': null,
+  'energy_level': null,
+  'digestion_level': null,
+  'improvement_app_rating': null,
+  'improvement_service_rating': null,
+  'improvement_feedback_text': null,
+  'published_coach_summary': "Resumen ñ",
+  'published_changes': "Cambios",
+  'published_next_week_goals': "Objetivos",
+};
+
 void main() {
   const keys = [
     'published_coach_summary',
@@ -53,20 +98,20 @@ void main() {
   for (final entry in cases.entries) {
     test('${entry.key} publication survives serialized detail and list', () async {
       final adapter = _RecapAdapter({
-        'id': 'recap-1',
-        'week_start_date': '2026-10-05T00:00:00.000Z',
-        'week_end_date': '2026-10-11T00:00:00.000Z',
-        'created_at': '2026-10-05T09:15:30.123Z',
-        'reviewed_at': '2026-10-08T10:20:30.456Z',
-        'client_feedback_sent_at': '2026-10-08T10:21:30.000Z',
-        'client_feedback_read_at': '2026-10-08T10:22:30.000Z',
-        'status': 'REVIEWED',
-        'client_feedback_text': 'Legacy feedback',
-        'training_sessions': 3,
-        'general_notes': 'Client notes',
+        ...publicationPayload,
+        'admin_comments': 'PRIVATE_INTERNAL_SENTINEL',
+        'draft_coach_summary': 'PRIVATE_NEW_SUMMARY_SENTINEL',
+        'draft_changes': 'PRIVATE_NEW_CHANGES_SENTINEL',
+        'draft_next_week_goals': 'PRIVATE_NEW_GOALS_SENTINEL',
+        'review_version': 9,
         if (entry.key != 'absent legacy')
           for (var i = 0; i < keys.length; i++) keys[i]: entry.value[i],
       });
+      if (entry.key == 'absent legacy') {
+        for (final key in keys) {
+          adapter.recap.remove(key);
+        }
+      }
       final api = ApiClient(
         useAuth: false,
         baseUrl: 'https://exom.test.invalid/api/v1',
@@ -82,6 +127,7 @@ void main() {
           recap.publishedChanges,
           recap.publishedNextWeekGoals,
         ], entry.value);
+        expect(recap.hasPublishedReview, entry.value.any((value) => value != null));
         expect(recap.id, 'recap-1');
         expect(recap.status, 'REVIEWED');
         expect(recap.clientFeedbackText, 'Legacy feedback');

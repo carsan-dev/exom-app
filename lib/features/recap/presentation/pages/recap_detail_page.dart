@@ -11,6 +11,7 @@ import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_published_review_card.dart';
 import 'package:exom_app/injection_container.dart';
 
 class RecapDetailPage extends StatelessWidget {
@@ -290,6 +291,11 @@ class _RecapDetailContent extends StatelessWidget {
         ),
 
         const SizedBox(height: 16),
+
+        if (recap.hasPublishedReview) ...[
+          RecapPublishedReviewCard(recap: recap),
+          const SizedBox(height: 16),
+        ],
 
         // Trainer feedback
         if (recap.hasClientFeedback) ...[

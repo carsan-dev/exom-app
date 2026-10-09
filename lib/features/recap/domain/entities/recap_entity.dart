@@ -51,6 +51,11 @@ class RecapEntity {
   final DateTime? clientFeedbackSentAt;
   final DateTime? clientFeedbackReadAt;
 
+  // Read-only coach review: only the last explicit publication is client-visible.
+  final String? publishedCoachSummary;
+  final String? publishedChanges;
+  final String? publishedNextWeekGoals;
+
   // Dates
   final DateTime? reviewedAt;
   final DateTime createdAt;
@@ -89,6 +94,9 @@ class RecapEntity {
     this.clientFeedbackText,
     this.clientFeedbackSentAt,
     this.clientFeedbackReadAt,
+    this.publishedCoachSummary,
+    this.publishedChanges,
+    this.publishedNextWeekGoals,
     this.reviewedAt,
     required this.createdAt,
   });
@@ -99,6 +107,12 @@ class RecapEntity {
 
   bool get hasClientFeedback =>
       clientFeedbackText != null && clientFeedbackText!.trim().isNotEmpty;
+
+  bool get hasPublishedReview => [
+    publishedCoachSummary,
+    publishedChanges,
+    publishedNextWeekGoals,
+  ].any((value) => value != null && value.trim().isNotEmpty);
 
   bool get hasUnreadClientFeedback =>
       hasClientFeedback && clientFeedbackReadAt == null;
@@ -138,6 +152,9 @@ class RecapEntity {
       clientFeedbackText: clientFeedbackText,
       clientFeedbackSentAt: clientFeedbackSentAt,
       clientFeedbackReadAt: clientFeedbackReadAt ?? this.clientFeedbackReadAt,
+      publishedCoachSummary: publishedCoachSummary,
+      publishedChanges: publishedChanges,
+      publishedNextWeekGoals: publishedNextWeekGoals,
       reviewedAt: reviewedAt,
       createdAt: createdAt,
     );

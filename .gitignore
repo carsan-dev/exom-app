@@ -64,3 +64,8 @@ app.*.map.json
 # Local Pi skills
 /.pi/skills/
 /skills-lock.json
+
+# REST-T3C2 generated verification/recovery bundles (LOCAL_ONLY).
+# Log files already use the incumbent *.log rule.
+/docs/evidence/rest-t3c-app-20261008/run-*/
+/docs/evidence/rest-t3c-app-20261008/checkpoint/

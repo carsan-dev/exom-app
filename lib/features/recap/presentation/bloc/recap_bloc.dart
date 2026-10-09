@@ -1,4 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/injection_container.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/domain/usecases/get_my_recaps_usecase.dart';
@@ -12,6 +14,10 @@ part 'recap_event.dart';
 part 'recap_state.dart';
 
 class RecapBloc extends Bloc<RecapEvent, RecapState> {
+  final LocalStorage _localStorage;
+  int _detailEpoch = 0;
+  String? _detailSessionStamp;
+
   final GetMyRecapsUseCase _getMyRecapsUseCase;
   final CreateRecapUseCase _createRecapUseCase;
   final UpdateRecapUseCase _updateRecapUseCase;
@@ -26,7 +32,9 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     required SubmitRecapUseCase submitRecapUseCase,
     required GetRecapDetailUseCase getRecapDetailUseCase,
     required MarkRecapFeedbackReadUseCase markRecapFeedbackReadUseCase,
-  }) : _getMyRecapsUseCase = getMyRecapsUseCase,
+    LocalStorage? localStorage,
+  }) : _localStorage = localStorage ?? sl<LocalStorage>(),
+       _getMyRecapsUseCase = getMyRecapsUseCase,
        _createRecapUseCase = createRecapUseCase,
        _updateRecapUseCase = updateRecapUseCase,
        _submitRecapUseCase = submitRecapUseCase,
@@ -170,30 +178,60 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     RecapDetailRequested event,
     Emitter<RecapState> emit,
   ) async {
+    final epoch = ++_detailEpoch;
+    final stamp = _localStorage.sessionStamp;
+    _detailSessionStamp = stamp;
     emit(const RecapDetailLoading());
+    if (stamp == null) {
+      emit(const RecapDetailError('Inicia sesión para ver el recap.'));
+      return;
+    }
     try {
-      final recap = await _getRecapDetailUseCase(event.recapId);
-      emit(RecapDetailLoaded(recap));
+      final recap = await _localStorage.sessionTask(
+        () => _getRecapDetailUseCase(event.recapId),
+      );
+      if (_matchesDetail(epoch, stamp) && state is RecapDetailLoading) {
+        emit(RecapDetailLoaded(recap));
+      }
     } catch (e) {
-      emit(RecapDetailError(e.toString()));
+      if (_matchesDetail(epoch, stamp) && state is RecapDetailLoading) {
+        emit(RecapDetailError(e.toString()));
+      }
     }
   }
+
+  bool _matchesDetail(int epoch, String? stamp) =>
+      epoch == _detailEpoch &&
+      stamp != null &&
+      stamp == _localStorage.sessionStamp;
 
   Future<void> _onFeedbackMarkReadRequested(
     RecapFeedbackMarkReadRequested event,
     Emitter<RecapState> emit,
   ) async {
-    final currentState = state;
+    final epoch = _detailEpoch;
+    final stamp = _detailSessionStamp;
+    final before = state;
+    if (!_matchesDetail(epoch, stamp) ||
+        before is! RecapDetailLoaded ||
+        before.recap.id != event.recapId ||
+        !before.recap.hasUnreadClientFeedback) {
+      return;
+    }
 
     try {
-      await _markRecapFeedbackReadUseCase(event.recapId);
+      await _localStorage.sessionTask(
+        () => _markRecapFeedbackReadUseCase(event.recapId),
+      );
 
-      if (currentState is RecapDetailLoaded &&
-          currentState.recap.id == event.recapId &&
-          currentState.recap.hasUnreadClientFeedback) {
+      final current = state;
+      if (_matchesDetail(epoch, stamp) &&
+          current is RecapDetailLoaded &&
+          current.recap.id == event.recapId &&
+          current.recap.hasUnreadClientFeedback) {
         emit(
           RecapDetailLoaded(
-            currentState.recap.copyWith(clientFeedbackReadAt: DateTime.now()),
+            current.recap.copyWith(clientFeedbackReadAt: DateTime.now()),
           ),
         );
       }

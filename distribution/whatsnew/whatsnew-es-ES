@@ -1,5 +1,5 @@
-- Consulta la revisión publicada de tu recap: resumen del coach, cambios y objetivos para la próxima semana.
-- Los ejercicios completados siguen marcados tras sincronizar, sin recargar la pantalla.
-- Distingue las confirmaciones pendientes de los errores al guardar tu entrenamiento.
-- Reintenta las confirmaciones pendientes sin duplicar tu valoración RPE ni tu nota de sesión.
-- Tu progreso y la sesión seleccionada se mantienen al recibir actualizaciones anteriores.
+- Vuelve automáticamente al inicio actualizado cuando se confirme que has completado tu entrenamiento.
+- Registra directamente en minutos los ejercicios prescritos en minutos.
+- Prepárate con una cuenta atrás animada de cinco segundos antes de iniciar un ejercicio por tiempo.
+- Escucha un único tono cuando se agote el tiempo de un ejercicio, también en segundo plano si el sistema lo permite.
+- Cancela, vuelve atrás o interrumpe la preparación sin iniciar el ejercicio por accidente.

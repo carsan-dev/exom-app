@@ -1,8 +1,42 @@
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('unaligned saved minutes use seconds for a lossless edit', () {
+    final unit = timePerformanceUnitForInput(TimePerformanceUnit.minutes, 90);
+    expect(unit, TimePerformanceUnit.seconds);
+    final value = timeInputFromSeconds(90, unit);
+    expect(value, 90);
+    expect(secondsFromTimeInput(value, unit), 90);
+    expect(
+      timePerformanceUnitForInput(TimePerformanceUnit.minutes, 600),
+      TimePerformanceUnit.minutes,
+    );
+    expect(
+      timePerformanceUnitForInput(TimePerformanceUnit.minutes, null),
+      TimePerformanceUnit.minutes,
+    );
+    expect(timePerformanceUnitForInput(null, null), isNull);
+  });
+  test('structured minutes use minute input while storage remains seconds', () {
+    const exercise = TrainingExerciseEntity(
+      id: 'timed',
+      order: 0,
+      sets: 1,
+      repsOrDuration: '600s',
+      measureType: ExerciseMeasureType.seconds,
+      targetValue: 600,
+      timedPrescription: TimedPrescription(unit: TimeDisplayUnit.minutes),
+      restSeconds: 0,
+      exercise: ExerciseEntity(id: 'exercise', name: 'Walk', muscleGroups: []),
+    );
+    final unit = timePerformanceUnitForExercise(exercise);
+    expect(unit, TimePerformanceUnit.minutes);
+    expect(secondsFromTimeInput(10, unit), 600);
+    expect(timeInputFromSeconds(600, unit), 10);
+  });
   test('detects time based prescriptions', () {
     expect(isTimeBasedPrescription('40 seg'), isTrue);
     expect(isTimeBasedPrescription('1 min'), isTrue);

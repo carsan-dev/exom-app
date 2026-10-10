@@ -129,9 +129,17 @@ class _FeedbackQueue extends Fake implements FeedbackUploadQueueService {
 class _FeedbackSync extends _Sync {
   _FeedbackSync(super.storage);
   CompletionSyncBlockerKind? kind = CompletionSyncBlockerKind.feedbackFailed;
+  String? retryId;
+  int retries = 0;
+  void Function()? onRetry;
+  @override
+  Future<void> retryAction(String id) async {
+    retries++;
+    onRetry?.call();
+  }
   @override
   CompletionSyncBlocker? completionBlocker(String trainingId, String date, String? sessionId) =>
-      kind == null ? null : CompletionSyncBlocker(kind!);
+      kind == null ? null : CompletionSyncBlocker(kind!, retryActionId: retryId);
   @override
   List<Map<String, dynamic>> get pendingActions => [];
 }
@@ -168,6 +176,185 @@ class _Repository extends Fake implements TrainingRepository {
 }
 
 void main() {
+  for (final scenario in [
+    'ack',
+    'immediate ack',
+    'retry ack',
+    'action retry ack',
+    'historic',
+    'legacy completed',
+    'failed',
+    'conflict',
+    'blocker',
+    'foreign owner',
+    'foreign execution',
+    'foreign training',
+    'foreign date',
+    'pending action',
+    'save error',
+  ]) {
+    testWidgets(
+      'routable completion returns only for owned confirmed intent: $scenario',
+      (tester) async {
+        await sl.reset();
+        final storage = _Storage()
+          ..status = scenario == 'historic'
+              ? 'confirmed'
+              : scenario == 'retry ack'
+              ? 'failed'
+              : 'pending'
+          ..actionStatus = null;
+        final sync = _FeedbackSync(storage)..kind = null;
+        if (scenario == 'action retry ack') {
+          storage.status = 'failed';
+          sync.kind = CompletionSyncBlockerKind.failed;
+          sync.retryId = 'retry-action';
+          sync.onRetry = () {
+            storage.status = 'pending-sync';
+            storage.actionStatus = 'queued';
+            sync.kind = null;
+            sync.notify();
+          };
+        }
+        final repository = _Repository()
+          ..onComplete = (() {
+            if (scenario == 'save error') throw StateError('save failed');
+            storage.status = scenario == 'immediate ack'
+                ? 'confirmed'
+                : 'pending-sync';
+            storage.actionStatus = scenario == 'immediate ack'
+                ? null
+                : 'queued';
+          });
+        sl.registerSingleton<LocalStorage>(storage);
+        sl.registerSingleton<OfflineSyncService>(sync);
+        sl.registerFactory<TrainingBloc>(
+          () => TrainingBloc(
+            getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+            getTrainingsUseCase: GetTrainingsUseCase(repository),
+            getTrainingUseCase: GetTrainingUseCase(repository),
+            markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(
+              repository,
+            ),
+            unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(
+              repository,
+            ),
+            completeTrainingUseCase: CompleteTrainingUseCase(repository),
+            getCompletedExercisesUseCase: GetCompletedExercisesUseCase(
+              repository,
+            ),
+            getPreviousExercisePerformancesUseCase:
+                GetPreviousExercisePerformancesUseCase(repository),
+          ),
+        );
+        var homeVisits = 0;
+        Object? refresh;
+        final router = GoRouter(
+          initialLocation: '/detail',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, state) {
+                homeVisits++;
+                refresh = state.extra;
+                return const Scaffold(body: Text('Home destination'));
+              },
+            ),
+            GoRoute(
+              path: '/detail',
+              builder: (_, _) => const TrainingDetailPage(
+                trainingId: 'training-1',
+                selectedDate: _date,
+                selectedExecutionId: _session,
+              ),
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('es'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (scenario != 'historic') {
+          await tester.tap(find.byKey(const Key('complete-training-button')));
+          await tester.pumpAndSettle();
+          if (scenario != 'retry ack' && scenario != 'action retry ack') {
+            await tester.tap(find.byKey(const Key('completion-rpe-8')));
+            await tester.pump();
+            await tester.tap(
+              find.byKey(const Key('confirm-complete-training')),
+            );
+            await tester.pumpAndSettle();
+          }
+          expect(
+            repository.completions,
+            scenario == 'action retry ack' ? 0 : 1,
+          );
+          expect(sync.retries, scenario == 'action retry ack' ? 1 : 0);
+        }
+        if (scenario != 'immediate ack') {
+          expect(
+            homeVisits,
+            0,
+            reason: 'local queue acceptance is not server acknowledgement',
+          );
+          storage.status = switch (scenario) {
+            'failed' => 'failed',
+            'conflict' => 'conflict',
+            'legacy completed' => 'completed',
+            _ => 'confirmed',
+          };
+          storage.actionStatus = scenario == 'pending action' ? 'queued' : null;
+          if (scenario == 'blocker') {
+            sync.kind = CompletionSyncBlockerKind.feedbackWaiting;
+          }
+          if (scenario == 'foreign owner') storage.stamp = 'other-owner:2:test';
+          if (scenario.startsWith('foreign ') && scenario != 'foreign owner') {
+            storage.executions = [
+              {
+                'id': scenario == 'foreign execution'
+                    ? _otherSession
+                    : _session,
+                'training_id': scenario == 'foreign training'
+                    ? 'training-2'
+                    : 'training-1',
+                'assignment_date': scenario == 'foreign date'
+                    ? '2026-09-06'
+                    : _date,
+                'status': 'confirmed',
+              },
+            ];
+          }
+          sync.notify();
+          await tester.pumpAndSettle();
+        }
+        final shouldReturn = [
+          'ack',
+          'immediate ack',
+          'retry ack',
+          'action retry ack',
+        ].contains(scenario);
+        expect(homeVisits, shouldReturn ? 1 : 0);
+        if (shouldReturn) {
+          expect(refresh, isNotNull);
+          expect(find.byType(TrainingDetailPage), findsNothing);
+          sync.notify();
+          await tester.pumpAndSettle();
+          expect(homeVisits, 1);
+        } else {
+          expect(find.byType(TrainingDetailPage), findsOneWidget);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        router.dispose();
+        await sync.closeEvents();
+        await sl.reset();
+      },
+    );
+  }
   testWidgets('feedback recovery is reachable and queue notices refresh mounted detail with session guard', (tester) async {
     await sl.reset();
     final storage = _Storage();

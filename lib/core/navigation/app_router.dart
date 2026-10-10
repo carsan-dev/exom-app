@@ -260,8 +260,14 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HomePage()),
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: HomePage(
+                completionRefresh: switch (state.extra) {
+                  HomeCompletionRefresh refresh => refresh,
+                  _ => null,
+                },
+              ),
+            ),
           ),
           GoRoute(
             path: AppRoutes.trainings,

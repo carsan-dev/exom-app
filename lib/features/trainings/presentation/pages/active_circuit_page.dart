@@ -709,14 +709,22 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     TrainingExerciseEntity trainingExercise,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final valueController = TextEditingController();
     final currentPerformance = performanceForSet(
       _performances[trainingExercise.id],
       _currentRound,
     );
     final previousWeight = _performances[trainingExercise.id]?.last.weightKg;
-    final timeUnit = timePerformanceUnitForExercise(trainingExercise);
+    final timeUnit = timePerformanceUnitForInput(
+      timePerformanceUnitForExercise(trainingExercise),
+      currentPerformance?.seconds,
+    );
     final timeBased = timeUnit != null;
+    final currentValue = timeBased
+        ? timeInputFromSeconds(currentPerformance?.seconds, timeUnit)
+        : currentPerformance?.reps;
+    final valueController = TextEditingController(
+      text: currentValue?.toString() ?? '',
+    );
     final previousPerformance = performanceForSet(
       widget.args.previousPerformances[trainingExercise.id],
       _currentRound,
@@ -731,9 +739,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       text: currentPerformance?.rir?.toString() ?? '',
     );
     String? error;
-    final result =
-        await showDialog<({SetPerformance? performance, bool skipped})>(
+    final dialogRoute =
+        DialogRoute<({SetPerformance? performance, bool skipped})>(
           context: context,
+          themes: InheritedTheme.capture(
+            from: context,
+            to: Navigator.of(context, rootNavigator: true).context,
+          ),
           builder: (dialogContext) => StatefulBuilder(
             builder: (dialogContext, setDialogState) => AlertDialog(
               title: Text(l10n.setPerformanceTitle(_currentRound)),
@@ -863,6 +875,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
             ),
           ),
         );
+    final result = await Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(dialogRoute);
+    // Route results arrive before the closing animation releases its fields.
+    await dialogRoute.completed;
     valueController.dispose();
     weightController.dispose();
     rirController.dispose();

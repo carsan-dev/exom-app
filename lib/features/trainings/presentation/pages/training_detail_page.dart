@@ -27,6 +27,7 @@ import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/features/home/presentation/pages/home_page.dart';
 
 bool _hasRequiredSetPerformance(
   TrainingExerciseEntity exercise,
@@ -567,6 +568,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   String? _sessionId;
   String? _displaySessionId;
   String? _locallyConfirmedSessionId;
+  String? _completionReturnSessionId;
+  bool _completionAccepted = false;
   StreamSubscription<void>? _syncChanges;
   StreamSubscription<FeedbackUploadNotice>? _feedbackChanges;
 
@@ -586,11 +589,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           }
         }
         setState(() {});
+        _returnAfterConfirmedCompletion();
       });
     }
     if (sl.isRegistered<FeedbackUploadQueueService>()) {
       _feedbackChanges = sl<FeedbackUploadQueueService>().notices.listen((_) {
-        if (_sameSession) setState(() {});
+        if (_sameSession) {
+          setState(() {});
+          _returnAfterConfirmedCompletion();
+        }
       });
     }
     final id = widget.selectedExecutionId;
@@ -750,6 +757,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       _sessionId = null;
       _displaySessionId = null;
       _locallyConfirmedSessionId = null;
+      _completionReturnSessionId = null;
+      _completionAccepted = false;
       _hydrateSoleExecution();
     }
   }
@@ -812,21 +821,62 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     setState(() => _completeConfirmationOpen = false);
     if (!_sameSession || input == null) return;
     final completion = Completer<void>();
+    _completionReturnSessionId = sessionId;
+    _completionAccepted = false;
     context.read<TrainingBloc>().add(CompleteTrainingRequested(
       sessionId: sessionId, sessionStamp: widget.sessionStamp,
       completion: completion, notes: input.notes, rpe: input.rpe));
     try {
       await completion.future;
       if (_sameSession) {
+        _completionAccepted = true;
         setState(() {
           _locallyConfirmedSessionId = sessionId;
           _displaySessionId = sessionId;
           _sessionId = null;
         });
+        _returnAfterConfirmedCompletion();
       }
     } catch (_) {
+      _completionReturnSessionId = null;
+      _completionAccepted = false;
       // The bloc exposes the save error; retain the execution for retry.
     }
+  }
+
+  void _returnAfterConfirmedCompletion() {
+    final executionId = _completionReturnSessionId;
+    if (!_sameSession || !_completionAccepted || executionId == null) return;
+    final storage = sl<LocalStorage>();
+    final trainingId = widget.state.training.id;
+    final date = widget.state.selectedDate;
+    final confirmed = storage
+        .getConfirmedTrainingExecutions(trainingId, date)
+        .any(
+          (entry) =>
+              entry['id'] == executionId &&
+              entry['training_id'] == trainingId &&
+              entry['assignment_date'] == date &&
+              entry['status'] == 'confirmed',
+        );
+    if (!confirmed ||
+        storage.getPendingSyncActions().any(
+          (action) =>
+              action['training_id'] == trainingId &&
+              action['date'] == date &&
+              action['training_session_id'] == executionId,
+        )) {
+      return;
+    }
+    final sync = sl.isRegistered<OfflineSyncService>()
+        ? sl<OfflineSyncService>()
+        : null;
+    if (sync?.completionBlocker(trainingId, date, executionId) != null) return;
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return;
+    _completionReturnSessionId = null;
+    _completionAccepted = false;
+    router.go(AppRoutes.home, extra: HomeCompletionRefresh());
   }
 
   @override
@@ -1409,8 +1459,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               : retryId != null && !locallyCompleted
                                   ? () async {
                                       if (!_sameSession) return;
+                                      _completionReturnSessionId = selectedCompletionId;
+                                      _completionAccepted = false;
                                       await sync!.retryAction(retryId);
-                                      if (mounted && _sameSession) setState(() {});
+                                      if (_sameSession) {
+                                        _completionAccepted = true;
+                                        setState(() {});
+                                        _returnAfterConfirmedCompletion();
+                                      }
                                     }
                                   : pendingSync || blocker != null || needsConflictReview || locallyCompleted
                                       ? null : _completeSelectedTraining,

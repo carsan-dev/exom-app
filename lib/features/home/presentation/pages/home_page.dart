@@ -17,8 +17,39 @@ import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class HomeCompletionRefresh {
+  const HomeCompletionRefresh();
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key, this.completionRefresh});
+
+  final HomeCompletionRefresh? completionRefresh;
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshCompletion();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.completionRefresh, oldWidget.completionRefresh)) {
+      _refreshCompletion();
+    }
+  }
+
+  void _refreshCompletion() {
+    if (widget.completionRefresh != null) {
+      context.read<HomeBloc>().add(const HomeLoadRequested());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

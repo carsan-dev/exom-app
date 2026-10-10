@@ -128,7 +128,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _reminderShown = false;
   bool _lastSetVideoPromptOpen = false;
   String? _preparedLastSetFeedbackId;
-  _SetPerformanceResult? _pendingLastSetPerformance;
+  SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
 
   @override
@@ -269,7 +269,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         : null;
     final performance =
         savedPerformance ??
-        await _showSetPerformanceSheet(
+        await showSetPerformanceSheet(
           context,
           l10n,
           setNumber: state.currentSet,
@@ -1224,7 +1224,7 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-typedef _SetPerformanceResult = ({
+typedef SetPerformanceResult = ({
   int? reps,
   int? seconds,
   double? weight,
@@ -1232,7 +1232,8 @@ typedef _SetPerformanceResult = ({
   bool skipped,
 });
 
-Future<_SetPerformanceResult?> _showSetPerformanceSheet(
+@visibleForTesting
+Future<SetPerformanceResult?> showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
   required int setNumber,
@@ -1245,7 +1246,7 @@ Future<_SetPerformanceResult?> _showSetPerformanceSheet(
 }) async {
   final palette = context.exomPalette;
   final sheetDisposed = Completer<void>();
-  final result = await showModalBottomSheet<_SetPerformanceResult>(
+  final result = await showModalBottomSheet<SetPerformanceResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: palette.surface,
@@ -1308,6 +1309,10 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
   String? _error;
 
   bool get _timeBased => widget.timeUnit != null;
+  TimePerformanceUnit? get _timeUnit => timePerformanceUnitForInput(
+    widget.timeUnit,
+    widget.currentPerformance?.seconds,
+  );
 
   @override
   void initState() {
@@ -1315,7 +1320,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
     final currentValue = _timeBased
         ? timeInputFromSeconds(
             widget.currentPerformance?.seconds,
-            widget.timeUnit,
+            _timeUnit,
           )
         : widget.currentPerformance?.reps;
     final weight = widget.currentPerformance?.weightKg ?? widget.previousWeight;
@@ -1369,7 +1374,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
 
     final reps = _timeBased ? null : value;
     final seconds = _timeBased
-        ? secondsFromTimeInput(value, widget.timeUnit)
+        ? secondsFromTimeInput(value, _timeUnit)
         : null;
     final weightText = _weightController.text.trim();
     final weight = weightText.isEmpty
@@ -1465,8 +1470,8 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
                 style: TextStyle(color: palette.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: _timeBased
-                      ? widget.timeUnit == TimePerformanceUnit.minutes
-                            ? 'Minutos'
+                      ? _timeUnit == TimePerformanceUnit.minutes
+                            ? l10n.setPerformanceMinutes
                             : l10n.setPerformanceSeconds
                       : l10n.setPerformanceReps,
                   errorText: _error,

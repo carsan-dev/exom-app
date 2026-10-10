@@ -2876,4 +2876,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progressPhotosDiscardConfirm => 'Discard';
+
+  @override
+  String get executionPrepareTitle => 'Get ready';
+
+  @override
+  String get executionPrepareBody =>
+      'Your exercise timer starts after the countdown.';
+
+  @override
+  String executionPrepareCountdown(int seconds) {
+    return 'Starting in $seconds seconds';
+  }
+
+  @override
+  String get executionPrepareCancel => 'Cancel';
 }

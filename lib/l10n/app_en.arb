@@ -972,5 +972,16 @@
   "progressPhotosDiscard": "Discard",
   "progressPhotosDiscardTitle": "Discard retained local photo?",
   "progressPhotosDiscardMessage": "This permanently removes the retained local photo and stops its upload. This cannot be undone.",
-  "progressPhotosDiscardConfirm": "Discard"
+  "progressPhotosDiscardConfirm": "Discard",
+  "executionPrepareTitle": "Get ready",
+  "executionPrepareBody": "Your exercise timer starts after the countdown.",
+  "executionPrepareCountdown": "Starting in {seconds} seconds",
+  "executionPrepareCancel": "Cancel",
+  "@executionPrepareCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

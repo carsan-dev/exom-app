@@ -1,3 +1,5 @@
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -137,6 +139,23 @@ import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.d
 
 final sl = GetIt.instance;
 
+void handleExecutionTimerSessionState(AuthState state) {
+  final gate = sl<ValidatedSessionGate>();
+  gate.handle(state);
+  sl<ExecutionTimerCoordinator>().updateOwner(
+    gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null,
+  );
+}
+
+bool isExecutionTimerOwnerCurrent(
+  String? ownerSession,
+  int sessionRevision,
+) =>
+    ownerSession != null &&
+    sl<ValidatedSessionGate>().isAuthenticated &&
+    sl<ExecutionTimerCoordinator>().sessionRevision == sessionRevision &&
+    sl<LocalStorage>().sessionStamp == ownerSession;
+
 Future<void> initDependencies() async {
   final packageInfo = await PackageInfo.fromPlatform();
 
@@ -175,6 +194,13 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton<LocalNotificationService>(
     () => LocalNotificationService(),
+  );
+
+  sl.registerLazySingleton<ExecutionTimerCoordinator>(
+    () => ExecutionTimerCoordinator(
+      soundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
+      isAuthorized: () => sl<ValidatedSessionGate>().isAuthenticated,
+    )..updateOwner(sl<LocalStorage>().sessionStamp),
   );
 
   sl.registerLazySingleton<RestTimerCoordinator>(
@@ -216,7 +242,7 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AuthBloc(
-      onSessionStateChanged: sl<ValidatedSessionGate>().handle,
+      onSessionStateChanged: handleExecutionTimerSessionState,
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),

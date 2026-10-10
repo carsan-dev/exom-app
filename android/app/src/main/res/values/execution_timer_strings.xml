@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="execution_timer_title">Exercise timer</string>
+    <string name="execution_timer_countdown">%2$s remaining</string>
+    <string name="execution_timer_finished_title">Exercise time finished</string>
+    <string name="execution_timer_finished_body">Record the set when you are ready.</string>
+    <string name="execution_timer_channel_name">Exercise timers</string>
+    <string name="execution_timer_channel_description">Timers for active exercises</string>
+    <string name="execution_timer_finished_channel_name">Exercise time finished</string>
+    <string name="execution_timer_finished_channel_description">Notifications when exercise time ends</string>
+</resources>

@@ -2911,4 +2911,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get progressPhotosDiscardConfirm => 'Descartar';
+
+  @override
+  String get executionPrepareTitle => 'Prepárate';
+
+  @override
+  String get executionPrepareBody =>
+      'El tiempo del ejercicio empieza al terminar la cuenta atrás.';
+
+  @override
+  String executionPrepareCountdown(int seconds) {
+    return 'Empieza en $seconds segundos';
+  }
+
+  @override
+  String get executionPrepareCancel => 'Cancelar';
 }

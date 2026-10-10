@@ -1007,5 +1007,16 @@
   "progressPhotosDiscard": "Descartar",
   "progressPhotosDiscardTitle": "¿Descartar la foto local conservada?",
   "progressPhotosDiscardMessage": "Se elimina permanentemente la foto local conservada y se detiene su subida. Esta acción no se puede deshacer.",
-  "progressPhotosDiscardConfirm": "Descartar"
+  "progressPhotosDiscardConfirm": "Descartar",
+  "executionPrepareTitle": "Prepárate",
+  "executionPrepareBody": "El tiempo del ejercicio empieza al terminar la cuenta atrás.",
+  "executionPrepareCountdown": "Empieza en {seconds} segundos",
+  "executionPrepareCancel": "Cancelar",
+  "@executionPrepareCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

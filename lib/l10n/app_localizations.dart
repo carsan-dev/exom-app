@@ -5089,6 +5089,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descartar'**
   String get progressPhotosDiscardConfirm;
+
+  /// No description provided for @executionPrepareTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prepárate'**
+  String get executionPrepareTitle;
+
+  /// No description provided for @executionPrepareBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El tiempo del ejercicio empieza al terminar la cuenta atrás.'**
+  String get executionPrepareBody;
+
+  /// No description provided for @executionPrepareCountdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Empieza en {seconds} segundos'**
+  String executionPrepareCountdown(int seconds);
+
+  /// No description provided for @executionPrepareCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get executionPrepareCancel;
 }
 
 class _AppLocalizationsDelegate

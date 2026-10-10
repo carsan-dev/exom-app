@@ -1,3 +1,4 @@
+import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
@@ -185,6 +186,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   final Map<String, Map<String, dynamic>> _completionActions = {};
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
   final String? _ownerSession = sl<LocalStorage>().sessionStamp;
+  late final int _timerSessionRevision =
+      sl<ExecutionTimerCoordinator>().sessionRevision;
 
   String get _stateKey {
     final userId = sl<FirebaseAuthService>().currentUser?.uid ?? 'anonymous';
@@ -1176,6 +1179,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                                   trainingId: widget.trainingId,
                                   date: widget.args.assignmentDate,
                                   round: _currentRound,
+                                  runKey: (widget.args.sessionId, widget.args.blockId),
+                                  coordinator: sl<ExecutionTimerCoordinator>(),
+                                  isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                                    _ownerSession,
+                                    _timerSessionRevision,
+                                  ),
                                 ),
                               const SizedBox(height: 16),
                               LinearProgressIndicator(

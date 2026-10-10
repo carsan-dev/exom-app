@@ -1,3 +1,4 @@
+import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
 import 'dart:io';
@@ -121,6 +122,8 @@ class _ActiveExerciseView extends StatefulWidget {
 
 class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   final String? _ownerSession = sl<LocalStorage>().sessionStamp;
+  late final int _timerSessionRevision =
+      sl<ExecutionTimerCoordinator>().sessionRevision;
   bool _bootstrapped = false;
   bool _handledCompletion = false;
   bool _allowPop = false;
@@ -779,7 +782,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                     ),
                                     if (state.isExecuting &&
                                         state.timedTotalSeconds != null)
-                                      ExecutionTimer(state: state),
+                                      ExecutionTimer(
+                                        state: state,
+                                        coordinator: sl<ExecutionTimerCoordinator>(),
+                                        isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                                          _ownerSession,
+                                          _timerSessionRevision,
+                                        ),
+                                        runKey: (widget.trainingId, widget.exerciseId,
+                                            widget.args.assignmentDate, widget.args.sessionId),
+                                      ),
                                     if (previousPerformanceLabel != null &&
                                         previousPerformanceLabel
                                             .isNotEmpty) ...[

@@ -49,6 +49,34 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.exommethod.exom/execution_timer")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        requestNotificationPermissionIfNeeded()
+                        val intent = Intent(this, ExecutionTimerService::class.java).apply {
+                            action = RestTimerService.ACTION_START
+                            putExtra(RestTimerService.EXTRA_SESSION_ID, call.argument<String>("id"))
+                            // Notification content deliberately excludes exercise/user identifiers.
+                            putExtra(RestTimerService.EXTRA_EXERCISE_NAME, "")
+                            putExtra(RestTimerService.EXTRA_DURATION_SECONDS, call.argument<Int>("durationSeconds") ?: 0)
+                            putExtra(RestTimerService.EXTRA_ENDS_AT_MILLIS, call.argument<Number>("endsAtMillis")?.toLong() ?: 0L)
+                            putExtra(RestTimerService.EXTRA_SOUND_ENABLED, call.argument<Boolean>("soundEnabled") ?: true)
+                        }
+                        ContextCompat.startForegroundService(this, intent)
+                        result.success(null)
+                    }
+                    "cancel" -> {
+                        val intent = Intent(this, ExecutionTimerService::class.java).apply {
+                            action = RestTimerService.ACTION_CANCEL
+                            putExtra(RestTimerService.EXTRA_SESSION_ID, call.argument<String>("id"))
+                        }
+                        startService(intent)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appSettingsChannelName)
             .setMethodCallHandler { call, result ->
                 if (call.method != "open") {

@@ -57,7 +57,13 @@ class _ExecutionStartCountdownState extends State<ExecutionStartCountdown>
     _stop();
     // Back starts the reverse transition before this widget is disposed.
     // Never let a late deadline or lifecycle callback pop the workout below it.
-    if (route != null && route.isCurrent) route.navigator?.pop(start);
+    if (route == null || !route.isActive) return;
+    if (route.isCurrent) {
+      route.navigator?.pop(start);
+    } else {
+      // A covered preparation is interrupted, never a successful start.
+      route.navigator?.removeRoute(route, false);
+    }
   }
 
   @override

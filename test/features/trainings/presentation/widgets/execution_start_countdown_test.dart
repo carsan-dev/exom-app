@@ -153,6 +153,109 @@ void main() {
     );
   }
 
+  for (final interruption in [
+    'deadline',
+    'cancel',
+    'background',
+    'stale owner',
+  ]) {
+    testWidgets(
+      'covered preparation cancels only its own route: $interruption',
+      (tester) async {
+        var now = DateTime(2026, 10, 11);
+        var valid = true;
+        var completed = false;
+        var started = false;
+        bool? result;
+        late ModalRoute<void> workoutRoute;
+        late DialogRoute<void> cover;
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  child: const Text('Workout'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) {
+                        workoutRoute = ModalRoute.of<void>(context)!;
+                        return Scaffold(
+                          body: TextButton(
+                            child: const Text('Prepare'),
+                            onPressed: () async {
+                              final route = DialogRoute<bool>(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => ExecutionStartCountdown(
+                                  now: () => now,
+                                  isValid: () => valid,
+                                ),
+                              );
+                              result = await Navigator.of(context).push(route);
+                              await route.completed;
+                              completed = true;
+                              started =
+                                  result == true &&
+                                  workoutRoute.isCurrent &&
+                                  valid;
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Workout'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Prepare'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        final cancel = tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Cancel'))
+            .onPressed!;
+        final context = tester.element(find.byType(ExecutionStartCountdown));
+        cover = DialogRoute<void>(
+          context: context,
+          builder: (_) => const Dialog(child: Text('Cover')),
+        );
+        Navigator.of(context).push(cover);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        if (interruption == 'deadline') {
+          now = now.add(const Duration(seconds: 5));
+        } else if (interruption == 'cancel') {
+          cancel();
+        } else if (interruption == 'background') {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+        } else {
+          valid = false;
+        }
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(cover.isCurrent, isTrue);
+        expect(workoutRoute.isActive, isTrue);
+        expect(completed, isTrue);
+        expect(result, isFalse);
+        expect(started, isFalse);
+        cover.navigator!.pop();
+        await tester.pumpAndSettle();
+        expect(workoutRoute.isCurrent, isTrue);
+        expect(find.byType(ExecutionStartCountdown), findsNothing);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      },
+    );
+  }
+
   testWidgets('large text, reduced motion and localized live semantics', (
     tester,
   ) async {

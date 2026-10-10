@@ -1,5 +1,5 @@
-- See your coach's published recap review: summary, changes and goals for next week.
-- Completed exercises stay marked after syncing, without reloading the screen.
-- Tell pending confirmations apart from errors when saving your workout.
-- Retry pending confirmations without duplicating your RPE rating or session note.
-- Your progress and selected session are preserved when older updates arrive.
+- Return automatically to a refreshed Home once your workout completion is confirmed.
+- Record exercises prescribed in minutes directly in minutes.
+- Get ready with an animated five-second countdown before starting a timed exercise.
+- Hear a single tone when an exercise timer expires, including in the background when your system allows it.
+- Cancel, go back or interrupt preparation without accidentally starting the exercise.

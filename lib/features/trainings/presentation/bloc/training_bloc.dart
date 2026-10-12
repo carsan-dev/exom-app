@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/normalize_training_progress.dart';
 import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
@@ -156,6 +158,23 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
           completedExerciseIds: normalizedProgress.ids,
           exerciseWeights: normalizedProgress.weights,
           currentPerformances: normalizedProgress.performances,
+          sessionProgress: {
+            for (final sessionId in progress.sessions.keys)
+              sessionId: () {
+                final scoped = progress.forSession(sessionId, training.id);
+                final normalized = normalizeTrainingProgress(
+                  training: training,
+                  rawIds: scoped.ids,
+                  rawWeights: scoped.weights,
+                  rawPerformances: scoped.performances,
+                );
+                return TrainingDayProgress(
+                  ids: normalized.ids,
+                  weights: normalized.weights,
+                  performances: normalized.performances,
+                );
+              }(),
+          },
           previousPerformances: previousPerformances,
           selectedDate: targetDate,
           clientNote: progress.note,
@@ -168,10 +187,17 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     }
   }
 
+  bool _matchesSession(String? stamp) =>
+      stamp == null || sl<LocalStorage>().sessionStamp == stamp;
+
   Future<void> _onMarkExerciseCompleted(
     MarkExerciseCompleted event,
     Emitter<TrainingState> emit,
   ) async {
+    if (event.sessionStamp == null || !_matchesSession(event.sessionStamp)) {
+      event.completion?.completeError(const LocalSessionChanged());
+      return;
+    }
     final current = state;
     if (current is TrainingDetailLoaded) {
       final previous = Set<String>.from(current.completedExerciseIds);
@@ -198,11 +224,32 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         updatedWeights.remove(event.trainingExerciseId);
         updatedPerformances.remove(event.trainingExerciseId);
       }
+      final previousSessionProgress = current.sessionProgress;
+      final scoped = event.sessionId == null ? null :
+          current.sessionProgress[event.sessionId] ?? const TrainingDayProgress();
+      Map<String, TrainingDayProgress>? updatedSessions;
+      if (scoped != null) {
+        final ids = Set<String>.from(scoped.ids);
+        final weights = Map<String, double>.from(scoped.weights);
+        final performances = Map<String, List<SetPerformance>>.from(scoped.performances);
+        if (event.completed) {
+          ids.add(event.trainingExerciseId);
+          if (event.weightUsed != null) weights[event.trainingExerciseId] = event.weightUsed!;
+          if (event.sets != null) performances[event.trainingExerciseId] = event.sets!;
+        } else {
+          ids.remove(event.trainingExerciseId);
+          weights.remove(event.trainingExerciseId);
+          performances.remove(event.trainingExerciseId);
+        }
+        updatedSessions = {...current.sessionProgress, event.sessionId!: TrainingDayProgress(
+          ids: ids, weights: weights, performances: performances)};
+      }
       emit(
         current.copyWith(
           completedExerciseIds: updated,
           exerciseWeights: updatedWeights,
           currentPerformances: updatedPerformances,
+          sessionProgress: updatedSessions,
         ),
       );
 
@@ -217,17 +264,28 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
             sets: event.sets,
             lastSetFeedbackClientUploadId: event.lastSetFeedbackClientUploadId,
             trainingId: current.training.id,
+            sessionId: event.sessionId,
+            operationId: event.operationId,
           );
         } else {
-          await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date);
+          await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date, sessionId: event.sessionId);
+        }
+        if (!_matchesSession(event.sessionStamp)) {
+          event.completion?.completeError(const LocalSessionChanged());
+          return;
         }
         event.completion?.complete();
       } catch (e) {
+        if (!_matchesSession(event.sessionStamp)) {
+          event.completion?.completeError(const LocalSessionChanged());
+          return;
+        }
         emit(
           current.copyWith(
             completedExerciseIds: previous,
             exerciseWeights: previousWeights,
             currentPerformances: previousPerformances,
+            sessionProgress: previousSessionProgress,
             errorMessage:
                 ApiException.maybeFrom(e)?.message ??
                 'No se pudo guardar el progreso. Inténtalo de nuevo.',
@@ -243,7 +301,12 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     Emitter<TrainingState> emit,
   ) async {
     final current = state;
+    if (event.sessionStamp == null || !_matchesSession(event.sessionStamp)) {
+      event.completion?.completeError(const LocalSessionChanged());
+      return;
+    }
     if (current is! TrainingDetailLoaded || current.isCompleting) {
+      event.completion?.completeError(StateError('Training completion unavailable'));
       return;
     }
 
@@ -256,8 +319,15 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
       await _completeTrainingUseCase(
         current.selectedDate,
         trainingId: current.training.id,
+        sessionId: event.sessionId,
+        rpe: event.rpe,
         notes: event.notes,
       );
+      if (!_matchesSession(event.sessionStamp)) {
+        event.completion?.completeError(const LocalSessionChanged());
+        return;
+      }
+      event.completion?.complete();
       final latest = state;
       if (latest is TrainingDetailLoaded &&
           latest.training.id == current.training.id &&
@@ -265,11 +335,22 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
         emit(
           latest.copyWith(
             completedExerciseIds: allExerciseIds,
+            sessionProgress: event.sessionId == null ? null : {
+              ...latest.sessionProgress,
+              event.sessionId!: TrainingDayProgress(ids: allExerciseIds,
+                weights: latest.sessionProgress[event.sessionId]?.weights ?? const {},
+                performances: latest.sessionProgress[event.sessionId]?.performances ?? const {}),
+            },
             isCompleting: false,
           ),
         );
       }
     } catch (error) {
+      if (!_matchesSession(event.sessionStamp)) {
+        event.completion?.completeError(const LocalSessionChanged());
+        return;
+      }
+      event.completion?.completeError(error);
       final latest = state;
       if (latest is! TrainingDetailLoaded ||
           latest.training.id != current.training.id ||

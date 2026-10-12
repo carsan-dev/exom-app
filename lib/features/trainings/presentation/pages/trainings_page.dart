@@ -1,5 +1,12 @@
+import 'dart:async';
+
+import '../widgets/pending_training_executions.dart';
+export '../widgets/pending_training_executions.dart';
+
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -29,10 +36,42 @@ class TrainingsPage extends StatelessWidget {
   }
 }
 
-class _TrainingsView extends StatelessWidget {
+class _TrainingsView extends StatefulWidget {
   const _TrainingsView({this.selectedDate});
 
   final String? selectedDate;
+
+  @override
+  State<_TrainingsView> createState() => _TrainingsViewState();
+}
+
+class _TrainingsViewState extends State<_TrainingsView> {
+  StreamSubscription<void>? _syncChanges;
+  String? _mountedSessionStamp;
+
+  @override
+  void initState() {
+    super.initState();
+    final storage = sl<LocalStorage>();
+    _mountedSessionStamp = storage.sessionStamp;
+    if (_mountedSessionStamp != null &&
+        _mountedSessionStamp!.isNotEmpty &&
+        sl.isRegistered<OfflineSyncService>()) {
+      _syncChanges = sl<OfflineSyncService>().changes.listen((_) {
+        if (!mounted || storage.sessionStamp != _mountedSessionStamp) return;
+        // The pending execution list reads owner-scoped storage directly.
+        setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _syncChanges?.cancel();
+    super.dispose();
+  }
+
+  String? get selectedDate => widget.selectedDate;
 
   String _dateLabel(BuildContext context, String resolvedDate) {
     final l10n = AppLocalizations.of(context);
@@ -50,7 +89,38 @@ class _TrainingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TrainingBloc, TrainingState>(
+    final storage = sl<LocalStorage>();
+    final stamp = storage.sessionStamp;
+    return LayoutBuilder(builder: (context, constraints) => Column(children: [
+      if (storage.getPendingTrainingExecutions().isNotEmpty)
+      ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: constraints.maxHeight * .3),
+        child: SingleChildScrollView(child: PendingTrainingExecutions(
+        storage: storage,
+        inspectDiscard: sl.isRegistered<OfflineSyncService>()
+            ? sl<OfflineSyncService>().inspectTrainingExecutionDiscard : null,
+        discard: sl.isRegistered<OfflineSyncService>()
+            ? sl<OfflineSyncService>().discardTrainingExecution : null,
+        onSelect: (entry, action) async {
+          if (stamp == null || storage.sessionStamp != stamp ||
+              !storage.getPendingTrainingExecutions().any((candidate) =>
+                  candidate['id'] == entry['id'] &&
+                  candidate['training_id'] == entry['training_id'] &&
+                  candidate['assignment_date'] == entry['assignment_date'] &&
+                  candidate['status'] == entry['status'])) {
+            return;
+          }
+          final uri = Uri(path: '/trainings/${entry['training_id']}',
+              queryParameters: {
+                'date': entry['assignment_date'] as String,
+                'execution': entry['id'] as String,
+                if (action == 'finalize') 'action': 'finalize',
+              });
+          await context.push(uri.toString());
+          if (mounted && storage.sessionStamp == stamp) setState(() {});
+        },
+      ))),
+      Expanded(child: BlocBuilder<TrainingBloc, TrainingState>(
       builder: (context, state) {
         if (state is TrainingLoading || state is TrainingInitial) {
           return const _TrainingsLoadingView();
@@ -86,7 +156,8 @@ class _TrainingsView extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
-    );
+    )),
+    ]));
   }
 
   Widget _buildContent(

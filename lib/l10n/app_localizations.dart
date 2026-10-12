@@ -98,6 +98,132 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
+  /// No description provided for @trainingDiscardPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar esta sesión pendiente'**
+  String get trainingDiscardPending;
+
+  /// No description provided for @trainingDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta sesión local?'**
+  String get trainingDiscardTitle;
+
+  /// No description provided for @trainingDiscardIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento: {name}\nFecha: {date}\nID de sesión: {id}'**
+  String trainingDiscardIdentity(String name, String date, String id);
+
+  /// No description provided for @trainingDiscardExplanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo se descartará esta sesión local pendiente. Su cierre pendiente, RPE y nota no se enviarán. Los ejercicios guardados en el servidor, las otras sesiones confirmadas y los datos no relacionados no se modificarán. Es un descarte lógico: los registros locales originales se conservan; no es un borrado físico permanente.'**
+  String get trainingDiscardExplanation;
+
+  /// No description provided for @trainingDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar sesión local'**
+  String get trainingDiscardConfirm;
+
+  /// No description provided for @trainingDiscardSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión local descartada. Las demás sesiones se conservan.'**
+  String get trainingDiscardSuccess;
+
+  /// No description provided for @trainingDiscardOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: ha cambiado la cuenta o la sesión. Vuelve a abrir la lista con la cuenta correspondiente.'**
+  String get trainingDiscardOwner;
+
+  /// No description provided for @trainingDiscardIdentityChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: esta sesión ya no está disponible o su identidad ha cambiado. Revisa la lista actualizada.'**
+  String get trainingDiscardIdentityChanged;
+
+  /// No description provided for @trainingDiscardUnknownOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: no se puede verificar a quién pertenecen los datos locales.'**
+  String get trainingDiscardUnknownOwner;
+
+  /// No description provided for @trainingDiscardConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: esta sesión ya está confirmada en el servidor.'**
+  String get trainingDiscardConfirmed;
+
+  /// No description provided for @trainingDiscardInFlight.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar mientras hay un envío en curso para esta sesión. Espera a que termine y revisa su estado.'**
+  String get trainingDiscardInFlight;
+
+  /// No description provided for @trainingDiscardDependencies.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede descartar: hay ejercicios o evidencias pendientes de enviar vinculados a esta sesión. Se conservan para evitar pérdida de datos.'**
+  String get trainingDiscardDependencies;
+
+  /// No description provided for @trainingDiscardFailure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el descarte local. Los datos se conservan. Revisa el estado antes de intentarlo de nuevo.'**
+  String get trainingDiscardFailure;
+
+  /// No description provided for @weeklyHunger.
+  ///
+  /// In es, this message translates to:
+  /// **'Hambre semanal (opcional)'**
+  String get weeklyHunger;
+
+  /// No description provided for @weeklyHungerScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = nada de hambre · 10 = hambre extrema. Valora tu semana.'**
+  String get weeklyHungerScale;
+
+  /// No description provided for @weeklyEnergy.
+  ///
+  /// In es, this message translates to:
+  /// **'Energía semanal (opcional)'**
+  String get weeklyEnergy;
+
+  /// No description provided for @weeklyEnergyScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = sin energía · 10 = mucha energía. Valora tu semana.'**
+  String get weeklyEnergyScale;
+
+  /// No description provided for @weeklyDigestion.
+  ///
+  /// In es, this message translates to:
+  /// **'Digestión semanal (opcional)'**
+  String get weeklyDigestion;
+
+  /// No description provided for @weeklyDigestionScale.
+  ///
+  /// In es, this message translates to:
+  /// **'1 = muy mala, muchas molestias · 10 = muy buena, sin molestias.'**
+  String get weeklyDigestionScale;
+
+  /// No description provided for @weeklyStressScale.
+  ///
+  /// In es, this message translates to:
+  /// **'0 = sin estrés · 5 = estrés máximo. Escala histórica del recap.'**
+  String get weeklyStressScale;
+
+  /// No description provided for @optionalRatingNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin dato'**
+  String get optionalRatingNoData;
+
   /// No description provided for @appTagline.
   ///
   /// In es, this message translates to:
@@ -835,6 +961,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tu nota'**
   String get yourTrainingNote;
+
+  /// No description provided for @historicalDayNoteUnattributed.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota histórica del día · Ejecución no identificada'**
+  String get historicalDayNoteUnattributed;
 
   /// No description provided for @trainerReply.
   ///
@@ -3230,6 +3362,18 @@ abstract class AppLocalizations {
   /// **'Se marcarán como completados todos los ejercicios pendientes. Esta acción respetará los registros y evidencias obligatorios.'**
   String get completeTrainingConfirmMessage;
 
+  /// No description provided for @completeTrainingRpeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'RPE (obligatorio, 1–10)'**
+  String get completeTrainingRpeLabel;
+
+  /// No description provided for @completeTrainingRpeExplanation.
+  ///
+  /// In es, this message translates to:
+  /// **'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'**
+  String get completeTrainingRpeExplanation;
+
   /// No description provided for @completeTrainingConfirmAction.
   ///
   /// In es, this message translates to:
@@ -4274,6 +4418,108 @@ abstract class AppLocalizations {
   /// **'Avisa antes de comenzar una última serie que requiere vídeo'**
   String get lastSetVideoReminderDescription;
 
+  /// No description provided for @trainingSyncConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Conflicto: requiere revisión'**
+  String get trainingSyncConflict;
+
+  /// No description provided for @trainingSyncReceiptMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la confirmación: reintenta la sincronización'**
+  String get trainingSyncReceiptMissing;
+
+  /// No description provided for @trainingSyncBlocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronización bloqueada: una acción ha fallado'**
+  String get trainingSyncBlocked;
+
+  /// No description provided for @trainingSyncFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'La sincronización ha fallado: reinténtala'**
+  String get trainingSyncFailed;
+
+  /// No description provided for @trainingFeedbackMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la evidencia del feedback: requiere revisión'**
+  String get trainingFeedbackMissing;
+
+  /// No description provided for @trainingFeedbackFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El feedback ha fallado: revisa la subida'**
+  String get trainingFeedbackFailed;
+
+  /// No description provided for @trainingFeedbackWaiting.
+  ///
+  /// In es, this message translates to:
+  /// **'Esperando la confirmación del feedback'**
+  String get trainingFeedbackWaiting;
+
+  /// No description provided for @trainingPendingSync.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de sincronización'**
+  String get trainingPendingSync;
+
+  /// No description provided for @trainingRetryCompletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar finalización'**
+  String get trainingRetryCompletion;
+
+  /// No description provided for @trainingPendingFinalizeNotice.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes un entrenamiento pendiente de finalizar'**
+  String get trainingPendingFinalizeNotice;
+
+  /// No description provided for @trainingPendingFinalize.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de finalizar'**
+  String get trainingPendingFinalize;
+
+  /// No description provided for @trainingContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar entrenando'**
+  String get trainingContinue;
+
+  /// No description provided for @trainingFinalize.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizar'**
+  String get trainingFinalize;
+
+  /// No description provided for @trainingDraftRecoveryFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo recuperar el borrador. Los datos guardados siguen disponibles.'**
+  String get trainingDraftRecoveryFailed;
+
+  /// No description provided for @trainingLastSetVideoRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa cada ejercicio y adjunta el vídeo de su última serie.'**
+  String get trainingLastSetVideoRequired;
+
+  /// No description provided for @pendingFeedbackError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.'**
+  String get pendingFeedbackError;
+
+  /// No description provided for @pendingEvidenceExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio: {exercise}'**
+  String pendingEvidenceExercise(String exercise);
+
   /// No description provided for @pendingUploadsOption.
   ///
   /// In es, this message translates to:
@@ -4579,6 +4825,294 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.'**
   String get pendingSyncConflict;
+
+  /// No description provided for @progressPhotosTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de progreso'**
+  String get progressPhotosTitle;
+
+  /// No description provided for @progressPhotosEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotos de progreso'**
+  String get progressPhotosEntry;
+
+  /// No description provided for @progressPhotosLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando fotos de progreso'**
+  String get progressPhotosLoading;
+
+  /// No description provided for @progressPhotosLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las fotos de progreso'**
+  String get progressPhotosLoadError;
+
+  /// No description provided for @progressPhotosRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get progressPhotosRetry;
+
+  /// No description provided for @progressPhotosRecoveryError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo recuperar la foto seleccionada. Selecciónala de nuevo.'**
+  String get progressPhotosRecoveryError;
+
+  /// No description provided for @progressPhotosEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay sesiones de fotos de progreso'**
+  String get progressPhotosEmpty;
+
+  /// No description provided for @progressPhotosNewSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva sesión'**
+  String get progressPhotosNewSession;
+
+  /// No description provided for @progressPhotosCreateSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear sesión incompleta'**
+  String get progressPhotosCreateSession;
+
+  /// No description provided for @progressPhotosLoadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más'**
+  String get progressPhotosLoadMore;
+
+  /// No description provided for @progressPhotosLoadingMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando más…'**
+  String get progressPhotosLoadingMore;
+
+  /// No description provided for @progressPhotosChooseSource.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el origen de la imagen'**
+  String get progressPhotosChooseSource;
+
+  /// No description provided for @progressPhotosCamera.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara'**
+  String get progressPhotosCamera;
+
+  /// No description provided for @progressPhotosGallery.
+  ///
+  /// In es, this message translates to:
+  /// **'Galería'**
+  String get progressPhotosGallery;
+
+  /// No description provided for @progressPhotosFront.
+  ///
+  /// In es, this message translates to:
+  /// **'Frontal'**
+  String get progressPhotosFront;
+
+  /// No description provided for @progressPhotosLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'Lateral izquierda'**
+  String get progressPhotosLeft;
+
+  /// No description provided for @progressPhotosRight.
+  ///
+  /// In es, this message translates to:
+  /// **'Lateral derecha'**
+  String get progressPhotosRight;
+
+  /// No description provided for @progressPhotosBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Espalda'**
+  String get progressPhotosBack;
+
+  /// No description provided for @progressPhotosComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa'**
+  String get progressPhotosComplete;
+
+  /// No description provided for @progressPhotosIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión incompleta'**
+  String get progressPhotosIncomplete;
+
+  /// No description provided for @progressPhotosMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get progressPhotosMissing;
+
+  /// No description provided for @progressPhotosAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir {view}'**
+  String progressPhotosAdd(String view);
+
+  /// No description provided for @progressPhotosReplace.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituir {view}'**
+  String progressPhotosReplace(String view);
+
+  /// No description provided for @progressPhotosReplaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Sustituir la foto activa?'**
+  String get progressPhotosReplaceTitle;
+
+  /// No description provided for @progressPhotosReplaceMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto activa {view} solo se sustituirá si sigue siendo la actual.'**
+  String progressPhotosReplaceMessage(String view);
+
+  /// No description provided for @progressPhotosReplaceConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituir'**
+  String get progressPhotosReplaceConfirm;
+
+  /// No description provided for @progressPhotosPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Subida pendiente'**
+  String get progressPhotosPending;
+
+  /// No description provided for @progressPhotosSynchronizing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando'**
+  String get progressPhotosSynchronizing;
+
+  /// No description provided for @progressPhotosConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmada'**
+  String get progressPhotosConfirmed;
+
+  /// No description provided for @progressPhotosConfirmedCleanup.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmada; limpiando la copia local'**
+  String get progressPhotosConfirmedCleanup;
+
+  /// No description provided for @progressPhotosFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Falló la subida; se conserva la foto local'**
+  String get progressPhotosFailed;
+
+  /// No description provided for @progressPhotosConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'La sustitución requiere revisión; se conserva la foto local'**
+  String get progressPhotosConflict;
+
+  /// No description provided for @progressPhotosEnlarge.
+  ///
+  /// In es, this message translates to:
+  /// **'Ampliar {view}'**
+  String progressPhotosEnlarge(String view);
+
+  /// No description provided for @progressPhotosCloseImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar imagen'**
+  String get progressPhotosCloseImage;
+
+  /// No description provided for @progressPhotosCreateError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo crear la sesión de fotos'**
+  String get progressPhotosCreateError;
+
+  /// No description provided for @progressPhotosRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar fotos de progreso'**
+  String get progressPhotosRefresh;
+
+  /// No description provided for @progressPhotosReviewReplacement.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar sustitución'**
+  String get progressPhotosReviewReplacement;
+
+  /// No description provided for @progressPhotosRebaseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Usar la foto activa actual?'**
+  String get progressPhotosRebaseTitle;
+
+  /// No description provided for @progressPhotosRebaseMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto local conservada sustituirá la foto activa actual solo si sigue siendo la actual. No se creará una nueva subida.'**
+  String get progressPhotosRebaseMessage;
+
+  /// No description provided for @progressPhotosRebaseConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Reasignar sustitución'**
+  String get progressPhotosRebaseConfirm;
+
+  /// No description provided for @progressPhotosDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get progressPhotosDiscard;
+
+  /// No description provided for @progressPhotosDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar la foto local conservada?'**
+  String get progressPhotosDiscardTitle;
+
+  /// No description provided for @progressPhotosDiscardMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Se elimina permanentemente la foto local conservada y se detiene su subida. Esta acción no se puede deshacer.'**
+  String get progressPhotosDiscardMessage;
+
+  /// No description provided for @progressPhotosDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get progressPhotosDiscardConfirm;
+
+  /// No description provided for @executionPrepareTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prepárate'**
+  String get executionPrepareTitle;
+
+  /// No description provided for @executionPrepareBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El tiempo del ejercicio empieza al terminar la cuenta atrás.'**
+  String get executionPrepareBody;
+
+  /// No description provided for @executionPrepareCountdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Empieza en {seconds} segundos'**
+  String executionPrepareCountdown(int seconds);
+
+  /// No description provided for @executionPrepareCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get executionPrepareCancel;
 }
 
 class _AppLocalizationsDelegate

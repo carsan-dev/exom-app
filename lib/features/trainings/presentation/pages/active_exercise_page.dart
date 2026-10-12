@@ -1,3 +1,4 @@
+import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
 import 'dart:io';
@@ -26,6 +27,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 
 class ActiveExercisePageArgs {
   final TrainingBloc trainingBloc;
+  final String? sessionId;
   final TrainingExerciseEntity trainingExercise;
   final String trainingName;
   final List<String> trainingTypes;
@@ -39,6 +41,7 @@ class ActiveExercisePageArgs {
 
   const ActiveExercisePageArgs({
     required this.trainingBloc,
+    this.sessionId,
     required this.trainingExercise,
     required this.trainingName,
     required this.trainingTypes,
@@ -119,6 +122,8 @@ class _ActiveExerciseView extends StatefulWidget {
 
 class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   final String? _ownerSession = sl<LocalStorage>().sessionStamp;
+  late final int _timerSessionRevision =
+      sl<ExecutionTimerCoordinator>().sessionRevision;
   bool _bootstrapped = false;
   bool _handledCompletion = false;
   bool _allowPop = false;
@@ -126,7 +131,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _reminderShown = false;
   bool _lastSetVideoPromptOpen = false;
   String? _preparedLastSetFeedbackId;
-  _SetPerformanceResult? _pendingLastSetPerformance;
+  SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
 
   @override
@@ -197,6 +202,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         trainingId: widget.trainingId,
         exerciseId: widget.exerciseId,
         assignmentDate: widget.args.assignmentDate,
+        sessionId: widget.args.sessionId,
       ),
     );
 
@@ -208,6 +214,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     });
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
     _scheduleLastSetVideoPreparation(activeState);
+    if (activeState.isDone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _beginCompletion(activeState);
+      });
+    }
   }
 
   Future<bool> _confirmExit() async {
@@ -261,7 +272,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         : null;
     final performance =
         savedPerformance ??
-        await _showSetPerformanceSheet(
+        await showSetPerformanceSheet(
           context,
           l10n,
           setNumber: state.currentSet,
@@ -327,6 +338,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     });
   }
 
+  void _beginCompletion(ActiveExerciseState state) {
+    // This page owns the persisted sets; never replay them in a later session.
+    if (_handledCompletion || _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return;
+    }
+    _handledCompletion = true;
+    unawaited(_persistCompletionAndClose(state));
+  }
+
   Future<void> _persistCompletionAndClose(ActiveExerciseState state) async {
     final completion = Completer<void>();
     context.read<TrainingBloc>().add(
@@ -337,12 +358,25 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         weightUsed: state.weightKg,
         sets: state.setPerformances,
         lastSetFeedbackClientUploadId: state.lastSetFeedbackClientUploadId,
+        sessionId: state.sessionId,
+        operationId: state.completionOperationId,
+        sessionStamp: _ownerSession,
         completion: completion,
       ),
     );
 
     try {
       await completion.future;
+      final storage = sl<LocalStorage>();
+      if (storage.sessionStamp != _ownerSession) return;
+      if (state.completionOperationId != null) {
+        for (final draft in storage.getActiveWorkouts()) {
+          if (draft.trainingId == widget.trainingId &&
+              draft.completionOperationId == state.completionOperationId) {
+            await storage.removeActiveWorkout(draft.exerciseId);
+          }
+        }
+      }
       if (mounted) _popOnce();
     } catch (_) {
       _handledCompletion = false;
@@ -472,7 +506,10 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         ],
       ),
     );
-    if (confirmed != true) return null;
+    if (confirmed != true || !mounted || !context.mounted || _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return null;
+    }
     notes = notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
       expectedSession: _ownerSession,
@@ -485,6 +522,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       trainingId: widget.trainingId,
       trainingExerciseId: widget.args.trainingExercise.id,
       assignmentDate: widget.args.assignmentDate,
+      sessionId: context.read<ActiveExerciseBloc>().state.sessionId,
     );
   }
 
@@ -575,10 +613,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
 
-        if (!_handledCompletion && state.isDone) {
-          _handledCompletion = true;
-          unawaited(_persistCompletionAndClose(state));
-        }
+        if (state.isDone) _beginCompletion(state);
       },
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(
         builder: (context, state) {
@@ -747,7 +782,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                                     ),
                                     if (state.isExecuting &&
                                         state.timedTotalSeconds != null)
-                                      ExecutionTimer(state: state),
+                                      ExecutionTimer(
+                                        state: state,
+                                        coordinator: sl<ExecutionTimerCoordinator>(),
+                                        isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                                          _ownerSession,
+                                          _timerSessionRevision,
+                                        ),
+                                        runKey: (widget.trainingId, widget.exerciseId,
+                                            widget.args.assignmentDate, widget.args.sessionId),
+                                      ),
                                     if (previousPerformanceLabel != null &&
                                         previousPerformanceLabel
                                             .isNotEmpty) ...[
@@ -1192,7 +1236,7 @@ class _RestingFooterState extends State<_RestingFooter> {
   }
 }
 
-typedef _SetPerformanceResult = ({
+typedef SetPerformanceResult = ({
   int? reps,
   int? seconds,
   double? weight,
@@ -1200,7 +1244,8 @@ typedef _SetPerformanceResult = ({
   bool skipped,
 });
 
-Future<_SetPerformanceResult?> _showSetPerformanceSheet(
+@visibleForTesting
+Future<SetPerformanceResult?> showSetPerformanceSheet(
   BuildContext context,
   AppLocalizations l10n, {
   required int setNumber,
@@ -1213,7 +1258,7 @@ Future<_SetPerformanceResult?> _showSetPerformanceSheet(
 }) async {
   final palette = context.exomPalette;
   final sheetDisposed = Completer<void>();
-  final result = await showModalBottomSheet<_SetPerformanceResult>(
+  final result = await showModalBottomSheet<SetPerformanceResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: palette.surface,
@@ -1276,6 +1321,10 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
   String? _error;
 
   bool get _timeBased => widget.timeUnit != null;
+  TimePerformanceUnit? get _timeUnit => timePerformanceUnitForInput(
+    widget.timeUnit,
+    widget.currentPerformance?.seconds,
+  );
 
   @override
   void initState() {
@@ -1283,7 +1332,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
     final currentValue = _timeBased
         ? timeInputFromSeconds(
             widget.currentPerformance?.seconds,
-            widget.timeUnit,
+            _timeUnit,
           )
         : widget.currentPerformance?.reps;
     final weight = widget.currentPerformance?.weightKg ?? widget.previousWeight;
@@ -1337,7 +1386,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
 
     final reps = _timeBased ? null : value;
     final seconds = _timeBased
-        ? secondsFromTimeInput(value, widget.timeUnit)
+        ? secondsFromTimeInput(value, _timeUnit)
         : null;
     final weightText = _weightController.text.trim();
     final weight = weightText.isEmpty
@@ -1433,8 +1482,8 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
                 style: TextStyle(color: palette.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: _timeBased
-                      ? widget.timeUnit == TimePerformanceUnit.minutes
-                            ? 'Minutos'
+                      ? _timeUnit == TimePerformanceUnit.minutes
+                            ? l10n.setPerformanceMinutes
                             : l10n.setPerformanceSeconds
                       : l10n.setPerformanceReps,
                   errorText: _error,

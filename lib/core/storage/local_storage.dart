@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:exom_app/core/models/training_execution_discard.dart';
 import 'store_process_lock.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
+import 'package:exom_app/core/utils/operation_id.dart';
 
 class LocalStorage implements ActiveWorkoutLocalStore {
   LocalStorage({
@@ -31,6 +33,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   }
 
   static final Object _sessionZone = Object();
+  // Shared by all store instances using this process's Hive boxes.
+  static final Map<String, Future<void>> _legacyRecoveryLocks = {};
   static final Object _authSessionZone = Object();
   static String? get requestSessionKey =>
       Zone.current[_authSessionZone] as String?;
@@ -94,14 +98,19 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   // Recovery requires explicit ownership verification; logging in is insufficient.
   bool get hasUnattributedData =>
       _cache.containsKey(_pendingSyncKey) ||
-      _cache.containsKey(_feedbackUploadQueueKey);
+      _cache.containsKey(_feedbackUploadQueueKey) ||
+      _cache.containsKey(_progressPhotoUploadQueueKey);
 
   static const _authBox = 'auth_box';
   static const _cacheBox = 'cache_box';
   static const _settingsBox = 'settings_box';
   static const _activeWorkoutBox = 'active_workout_box';
   static const _pendingSyncKey = 'offline_sync_actions';
+  static const _trainingExecutionsKey = 'training_executions';
+  static const _completionDraftsKey = 'training_completion_drafts';
   static const _feedbackUploadQueueKey = 'feedback_upload_queue';
+  static const _progressPhotoUploadQueueKey = 'progress_photo_upload_queue';
+  static const _progressPhotoPickerIntentKey = 'progress_photo_picker_intent';
   static const _themeModeKey = 'theme_mode';
   static const _localeKey = 'locale';
   static const _unitSystemKey = 'unit_system';
@@ -146,6 +155,255 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     await clearAuth();
   }
 
+  static const _executionDiscardPrefix = 'training_execution_discard:';
+
+  bool isTrainingExecutionDiscarded(String? id) => id != null &&
+      getCachedMap('$_executionDiscardPrefix$id') != null;
+
+  void guardTrainingExecution(String? id) {
+    guardSession();
+    if (isTrainingExecutionDiscarded(id)) {
+      throw StateError('Training execution was locally discarded');
+    }
+  }
+
+  /// One owner-scoped Hive record is the commit point. No multi-key cleanup is
+  /// needed: consumers project this tombstone over queue, registry and drafts.
+  /// Raw records and files remain retained, never turned into cleanup work.
+  /// Call only from the service's sync -> queue critical section after guards.
+  Future<void> persistTrainingExecutionDiscard(
+      TrainingExecutionDiscardRequest request) => sessionTask(() async {
+    guardTrainingExecution(request.executionId);
+    if (ownerId != request.ownerId || sessionStamp != request.sessionStamp) {
+      throw const LocalSessionChanged();
+    }
+    await cacheData('$_executionDiscardPrefix${request.executionId}', {
+      'owner_id': request.ownerId, 'environment': environment,
+      'execution_id': request.executionId, 'training_id': request.trainingId,
+      'assignment_date': request.date, 'format_version': 1,
+    });
+  });
+
+  // An acknowledged execution remains final. Until then the durable, owned
+  // completion action is authoritative across a crash between queue and registry writes.
+  Map<String, dynamic> _effectiveTrainingExecution(
+      Map<String, dynamic> entry, List<Map<String, dynamic>> actions) {
+    if (const ['confirmed', 'completed'].contains(entry['status'])) return entry;
+    final matches = actions.where((action) =>
+        action['type'] == 'complete_training' &&
+        action['training_session_id'] == entry['id'] &&
+        entry['id'] is String && (entry['id'] as String).isNotEmpty &&
+        action['training_id'] == entry['training_id'] &&
+        action['date'] == entry['assignment_date']);
+    if (matches.any((action) => action['last_error'] ==
+        'progress_conflict_review_required')) {
+      return {...entry, 'status': 'conflict'};
+    }
+    if (matches.any((action) =>
+        const ['queued', 'uploading'].contains(action['status']))) {
+      return {...entry, 'status': 'pending-sync'};
+    }
+    if (matches.any((action) => action['status'] == 'failed')) {
+      return {...entry, 'status': 'failed'};
+    }
+    return entry;
+  }
+
+  // Execution registry is owner-scoped and never reconstructed from a retry.
+  List<Map<String, dynamic>> getTrainingExecutions(String trainingId, String date) {
+    final actions = getPendingSyncActions();
+    final registered = (getCachedList(_trainingExecutionsKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => _effectiveTrainingExecution(
+            Map<String, dynamic>.from(entry), actions))
+        .where((entry) => !isTrainingExecutionDiscarded(entry['id'] as String?) &&
+            entry['training_id'] == trainingId &&
+            entry['assignment_date'] == date &&
+            const ['pending', 'pending-finalize', 'failed', 'conflict']
+                .contains(entry['status']))
+        .toList();
+    final recordedIds = (getCachedList(_trainingExecutionsKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => entry['id'])
+        .toSet();
+    // Recover drafts written by the earlier date-keyed schema even if the
+    // registry was never populated. Never adopt an unbound legacy draft.
+    for (final draft in getActiveWorkouts()) {
+      final id = draft.sessionId;
+      if (draft.trainingId == trainingId && id != null &&
+          (draft.exerciseId.endsWith(':$date') ||
+           draft.exerciseId.endsWith(':$date:$id')) &&
+          !recordedIds.contains(id) &&
+          !registered.any((entry) => entry['id'] == id)) {
+        registered.add({
+          'id': id, 'training_id': trainingId,
+          'assignment_date': date, 'status': 'pending',
+        });
+      }
+    }
+    return registered;
+  }
+
+  // Only entries in the current owner/environment namespace are visible.
+  // The registry retains pending-sync entries even when their date is no longer
+  // displayed; unbound legacy data is deliberately not adopted here.
+  List<Map<String, dynamic>> getPendingTrainingExecutions() {
+    if (_currentSession != null && ownerId == null) return [];
+    final actions = getPendingSyncActions();
+    final entries = (getCachedList(_trainingExecutionsKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => _effectiveTrainingExecution(
+            Map<String, dynamic>.from(entry), actions))
+        .where((entry) =>
+            entry['id'] is String && !isTrainingExecutionDiscarded(entry['id'] as String) &&
+            (entry['id'] as String).isNotEmpty &&
+            entry['training_id'] is String &&
+            entry['assignment_date'] is String &&
+            const ['pending', 'pending-finalize', 'pending-sync', 'failed', 'conflict']
+                .contains(entry['status']))
+        .toList();
+    final registered = (getCachedList(_trainingExecutionsKey) ?? const [])
+        .whereType<Map>().map((entry) => entry['id']).toSet();
+    // Recover only drafts with a verifiable date/session suffix in this scope.
+    for (final draft in getActiveWorkouts()) {
+      final id = draft.sessionId;
+      if (id == null || registered.contains(id)) continue;
+      final match = RegExp(r':(\d{4}-\d{2}-\d{2}):').firstMatch('${draft.exerciseId}:');
+      if (match == null ||
+          !draft.exerciseId.endsWith(':${match.group(1)}') &&
+          !draft.exerciseId.endsWith(':${match.group(1)}:$id')) {
+        continue;
+      }
+      entries.add({
+        'id': id, 'training_id': draft.trainingId,
+        'assignment_date': match.group(1), 'status': 'pending',
+      });
+      registered.add(id);
+    }
+    return entries;
+  }
+
+  // Display-only: acknowledged executions stay in the scoped registry, but
+  // must never re-enter the pending execution selector used for writes.
+  List<Map<String, dynamic>> getConfirmedTrainingExecutions(
+      String trainingId, String date) {
+    if (_currentSession != null && ownerId == null) return [];
+    return (getCachedList(_trainingExecutionsKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .where((entry) =>
+            entry['id'] is String && (entry['id'] as String).isNotEmpty &&
+            entry['training_id'] == trainingId &&
+            entry['assignment_date'] == date &&
+            const ['confirmed', 'completed'].contains(entry['status']))
+        .toList();
+  }
+
+  bool hasCompletedTrainingExecution(String trainingId, String date) =>
+      (getCachedList(_trainingExecutionsKey) ?? const []).whereType<Map>().any(
+        (entry) => entry['training_id'] == trainingId &&
+            entry['assignment_date'] == date &&
+            const ['completed', 'confirmed'].contains(entry['status']));
+
+  Future<String> createTrainingExecution(String trainingId, String date,
+      {String? trainingName}) =>
+      sessionTask(() async {
+        final id = newOperationId();
+        final executions = List<dynamic>.from(
+          getCachedList(_trainingExecutionsKey) ?? const [],
+        );
+        executions.add({
+          'id': id,
+          'training_id': trainingId,
+          'assignment_date': date,
+          'training_name': ?trainingName,
+          'status': 'pending-finalize',
+        });
+        await cacheData(_trainingExecutionsKey, executions);
+        return id;
+      });
+
+  Map<String, dynamic>? getTrainingCompletionDraft(
+      String trainingId, String date, String executionId) {
+    if (isTrainingExecutionDiscarded(executionId)) return null;
+    final draft = getCachedMap(_completionDraftsKey)?[executionId];
+    if (draft is! Map || draft['training_id'] != trainingId ||
+        draft['assignment_date'] != date) {
+      return null;
+    }
+    return Map<String, dynamic>.from(draft);
+  }
+
+  Future<void> saveTrainingCompletionDraft(String trainingId, String date,
+      String executionId, {int? rpe, String? notes}) => sessionTask(() async {
+    guardTrainingExecution(executionId);
+    if (rpe != null && (rpe < 1 || rpe > 10)) {
+      throw RangeError.range(rpe, 1, 10, 'rpe');
+    }
+    final drafts = getCachedMap(_completionDraftsKey) ?? <String, dynamic>{};
+    drafts[executionId] = {
+      if (drafts[executionId] is Map &&
+          (drafts[executionId] as Map)['discarded_action'] != null)
+        'discarded_action': (drafts[executionId] as Map)['discarded_action'],
+      'training_id': trainingId,
+      'assignment_date': date,
+      'rpe': ?rpe,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    };
+    await cacheData(_completionDraftsKey, drafts);
+  });
+
+  Future<void> preserveDiscardedTrainingCompletion(Map<String, dynamic> action) =>
+      sessionTask(() async {
+        final id = action['training_session_id'] as String?;
+        final trainingId = action['training_id'] as String?;
+        final date = action['date'] as String?;
+        if (id == null || trainingId == null || date == null) return;
+        guardTrainingExecution(id);
+        final drafts = getCachedMap(_completionDraftsKey) ?? <String, dynamic>{};
+        drafts[id] = {
+          'training_id': trainingId,
+          'assignment_date': date,
+          if (action['rpe'] != null) 'rpe': action['rpe'],
+          if (action['notes'] != null) 'notes': action['notes'],
+          'discarded_action': Map<String, dynamic>.from(action),
+        };
+        await cacheData(_completionDraftsKey, drafts);
+      });
+
+  Future<void> setTrainingExecutionStatus(String id, String status) =>
+      sessionTask(() async {
+        guardTrainingExecution(id);
+        if (!const ['pending-finalize', 'pending-sync', 'failed', 'conflict',
+          'confirmed'].contains(status)) {
+          throw ArgumentError.value(status, 'status');
+        }
+        final executions = (getCachedList(_trainingExecutionsKey) ?? const [])
+            .whereType<Map>()
+            .map((entry) => Map<String, dynamic>.from(entry))
+            .toList();
+        for (final entry in executions) {
+          if (entry['id'] == id &&
+              entry['status'] != 'confirmed') {
+            entry['status'] = status;
+            await cacheData(_trainingExecutionsKey, executions);
+            return;
+          }
+        }
+        // A legacy execution may have a draft but no registry row.
+        if (status == 'confirmed') {
+          executions.add({'id': id, 'status': status});
+          await cacheData(_trainingExecutionsKey, executions);
+        }
+      });
+
+  Future<void> completeTrainingExecution(String id) => sessionTask(() async {
+    await setTrainingExecutionStatus(id, 'confirmed');
+    final drafts = getCachedMap(_completionDraftsKey) ?? <String, dynamic>{};
+    drafts.remove(id);
+    await cacheData(_completionDraftsKey, drafts);
+  });
+
   // Cache
   Future<void> cacheData(String key, dynamic value) =>
       _cache.put(_key(key), value);
@@ -180,11 +438,18 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> clearCache() async {
     final prefix = _key('');
-    final preserved = {_key(_pendingSyncKey), _key(_feedbackUploadQueueKey)};
+    final preserved = {
+      _key(_pendingSyncKey),
+      _key(_trainingExecutionsKey),
+      _key(_completionDraftsKey),
+      _key(_feedbackUploadQueueKey),
+      _key(_progressPhotoUploadQueueKey),
+    };
     // Cache clearing never discards queues, evidence or active workouts.
     final keys = _cache.keys
         .whereType<String>()
-        .where((key) => key.startsWith(prefix) && !preserved.contains(key))
+        .where((key) => key.startsWith(prefix) && !preserved.contains(key) &&
+            !key.startsWith(_key(_executionDiscardPrefix)))
         .toList();
     await _cache.deleteAll(keys);
   }
@@ -199,6 +464,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
         .whereType<Map>()
         .map((entry) => Map<String, dynamic>.from(entry))
         .where(ownsEntry)
+        .where((entry) => entry['type'] != 'complete_training' ||
+            !isTrainingExecutionDiscarded(entry['training_session_id'] as String?))
         .toList(growable: true);
   }
 
@@ -218,9 +485,95 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> saveFeedbackUploadQueue(List<Map<String, dynamic>> queue) =>
       _saveQueue(_feedbackUploadQueueKey, queue);
 
-  Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) {
+  /// Progress-photo evidence has an independent versioned format. Unknown,
+  /// foreign and unattributed records remain in Hive but are never adopted.
+  Map<String, Object?> get progressPhotoQueueIdentity => {
+    'format_version': 1,
+    'owner_id': ownerId,
+    'environment': _environment,
+  };
+
+  bool ownsProgressPhotoQueueEntry(Map<String, dynamic> item) =>
+      _currentSession == null ||
+      (ownerId != null &&
+          item['owner_id'] == ownerId &&
+          item['environment'] == _environment &&
+          item['format_version'] == 1);
+
+  List<Map<String, dynamic>> getProgressPhotoUploadQueue() {
+    return (getCachedList(_progressPhotoUploadQueueKey) ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .where(ownsProgressPhotoQueueEntry)
+        .toList(growable: true);
+  }
+
+  Future<void> saveProgressPhotoUploadQueue(
+    List<Map<String, dynamic>> queue,
+  ) => _saveQueueFor(
+    _progressPhotoUploadQueueKey,
+    queue,
+    ownsProgressPhotoQueueEntry,
+  );
+
+  /// Android picker recovery is deliberately isolated from upload queue data.
+  /// The record can only be read in the same owner/environment/version scope.
+  Future<void> saveProgressPhotoPickerIntent(Map<String, dynamic> intent) async {
+    final session = sessionStamp;
+    if (session == null) throw const LocalSessionChanged();
+    await saveSetting(_progressPhotoPickerIntentStorageKey(), {
+      ...intent,
+      'format_version': 1,
+      'owner_id': ownerId,
+      'environment': environment,
+      'session_stamp': session,
+    });
+    guardSession();
+  }
+
+  Map<String, dynamic>? getProgressPhotoPickerIntent() {
+    final value = getSetting<dynamic>(_progressPhotoPickerIntentStorageKey());
+    if (value is! Map) return null;
+    final intent = Map<String, dynamic>.from(value);
+    return intent['format_version'] == 1 &&
+            intent['owner_id'] == ownerId &&
+            intent['environment'] == environment
+        ? intent
+        : null;
+  }
+
+  Future<void> clearProgressPhotoPickerIntent() =>
+      _settings.delete(_progressPhotoPickerIntentStorageKey());
+
+  String _progressPhotoPickerIntentStorageKey() {
+    final scope = base64Url.encode(utf8.encode(jsonEncode([1, environment, ownerId])));
+    return '$_progressPhotoPickerIntentKey:$scope';
+  }
+
+  Future<void> _saveQueue(String key, List<Map<String, dynamic>> entries) =>
+      _saveQueueFor(key, entries, ownsEntry);
+
+  Future<void> _saveQueueFor(
+    String key,
+    List<Map<String, dynamic>> entries,
+    bool Function(Map<String, dynamic>) owns,
+  ) {
+    // New unsent training work cannot be attached to a locally discarded
+    // execution. Completed feedback and every independent queue remain intact.
+    if (key == _pendingSyncKey || key == _feedbackUploadQueueKey) {
+      for (final entry in entries) {
+        if (key == _pendingSyncKey || entry['status'] != 'completed') {
+          guardTrainingExecution(entry['training_session_id'] as String?);
+        }
+      }
+    }
+    // Queue consumers see a tombstone-filtered projection. Preserve the raw
+    // discarded closures when persisting that projection, just as we preserve
+    // foreign/unowned records; unrelated enqueue/ACK must not erase history.
     final quarantined = (getCachedList(key) ?? const []).where(
-      (entry) => entry is! Map<String, dynamic> || !ownsEntry(entry),
+      (entry) => entry is! Map<String, dynamic> || !owns(entry) ||
+          (key == _pendingSyncKey && entry['type'] == 'complete_training' &&
+              isTrainingExecutionDiscarded(entry['training_session_id'] as String?)),
     );
     return _cache.put(_key(key), [...quarantined, ...entries]);
   }
@@ -228,18 +581,96 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   ActiveWorkoutLocalStore bindActiveWorkoutStore() =>
       _SessionWorkoutStore(this, sessionStamp);
 
+  // Legacy workouts have no owner field. Only a v2 key written in the
+  // authenticated owner/environment namespace can prove their provenance.
+  ActiveWorkoutHiveModel? recoverableLegacyWorkout(
+    String trainingId, String exerciseId, String date,
+  ) {
+    if (ownerId == null || sessionStamp == null) return null;
+    final key = '$exerciseId:$date';
+    final draft = getActiveWorkout(key);
+    return draft != null && draft.exerciseId == key &&
+            draft.trainingId == trainingId && draft.sessionId == null
+        ? draft
+        : null;
+  }
+
+  bool get hasQuarantinedWorkoutDrafts {
+    final prefix = _key('');
+    return _activeWorkouts.keys.whereType<String>().any((key) =>
+        !key.startsWith('v2:') ||
+        (key.startsWith(prefix) &&
+            _activeWorkouts.get(key)?.sessionId == null &&
+            !_activeWorkouts.get(key)!.exerciseId.contains(':')));
+  }
+
+  Future<String> recoverLegacyWorkout(
+    String trainingId, String exerciseId, String date,
+  ) => sessionTask(() async {
+    final recoveryKey = '$exerciseId:$date';
+    final scopedKey = _key(recoveryKey);
+    final previous = _legacyRecoveryLocks[scopedKey];
+    final release = Completer<void>();
+    final tail = release.future;
+    _legacyRecoveryLocks[scopedKey] = tail;
+    try {
+      if (previous != null) await previous;
+      guardSession();
+      final draft = recoverableLegacyWorkout(trainingId, exerciseId, date);
+      final executions = List<dynamic>.from(
+        getCachedList(_trainingExecutionsKey) ?? const [],
+      );
+      final existing = executions.whereType<Map>().where((entry) =>
+          entry['legacy_draft_key'] == recoveryKey &&
+          entry['training_id'] == trainingId &&
+          entry['assignment_date'] == date).toList();
+      final id = existing.isEmpty ? null : existing.first['id'] as String;
+      if (draft == null) {
+        if (id != null && getActiveWorkout('$recoveryKey:$id') != null) return id;
+        throw StateError('Legacy workout cannot be attributed');
+      }
+      final executionId = id ?? newOperationId();
+      if (id == null) {
+        executions.add({
+          'id': executionId, 'training_id': trainingId,
+          'assignment_date': date, 'status': 'pending',
+          'legacy_draft_key': recoveryKey,
+        });
+        await cacheData(_trainingExecutionsKey, executions);
+      }
+      guardSession();
+      final target = '$recoveryKey:$executionId';
+      // Write first. A retry after a crash resumes the same execution without
+      // replacing its potentially newer draft or deleting the older evidence.
+      if (getActiveWorkout(target) != null) return executionId;
+      await saveActiveWorkout(draft.copyWith(exerciseId: target, sessionId: executionId));
+      guardSession();
+      await removeActiveWorkout(draft.exerciseId);
+      guardSession();
+      return executionId;
+    } finally {
+      if (identical(_legacyRecoveryLocks[scopedKey], tail)) {
+        _legacyRecoveryLocks.remove(scopedKey);
+      }
+      release.complete();
+    }
+  });
+
   // Active workout
   ValueListenable<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
       _activeWorkouts.listenable();
 
   @override
-  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
-      _activeWorkouts.get(_key(exerciseId));
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) {
+    final workout = _activeWorkouts.get(_key(exerciseId));
+    return isTrainingExecutionDiscarded(workout?.sessionId) ? null : workout;
+  }
 
   List<ActiveWorkoutHiveModel> getActiveWorkouts() => _activeWorkouts.keys
       .whereType<String>()
       .where((key) => key.startsWith(_key('')))
       .map((key) => _activeWorkouts.get(key)!)
+      .where((workout) => !isTrainingExecutionDiscarded(workout.sessionId))
       .toList(growable: false);
 
   List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) {
@@ -249,8 +680,10 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   }
 
   @override
-  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) =>
-      _activeWorkouts.put(_key(workout.exerciseId), workout);
+  Future<void> saveActiveWorkout(ActiveWorkoutHiveModel workout) {
+    guardTrainingExecution(workout.sessionId);
+    return _activeWorkouts.put(_key(workout.exerciseId), workout);
+  }
 
   @override
   Future<void> removeActiveWorkout(String exerciseId) =>

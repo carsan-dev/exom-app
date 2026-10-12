@@ -1,3 +1,5 @@
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -106,6 +108,10 @@ import 'package:exom_app/features/feedback/domain/usecases/create_feedback_useca
 import 'package:exom_app/features/feedback/domain/usecases/upload_feedback_media_usecase.dart';
 import 'package:exom_app/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/progress_photos/data/datasources/progress_photo_remote_datasource.dart';
+import 'package:exom_app/features/progress_photos/data/repositories/progress_photo_repository_impl.dart';
+import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
+import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
 
 // Services
 import 'package:exom_app/core/services/fcm_service.dart';
@@ -132,6 +138,23 @@ import 'package:exom_app/features/notifications/presentation/bloc/notifications_
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 
 final sl = GetIt.instance;
+
+void handleExecutionTimerSessionState(AuthState state) {
+  final gate = sl<ValidatedSessionGate>();
+  gate.handle(state);
+  sl<ExecutionTimerCoordinator>().updateOwner(
+    gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null,
+  );
+}
+
+bool isExecutionTimerOwnerCurrent(
+  String? ownerSession,
+  int sessionRevision,
+) =>
+    ownerSession != null &&
+    sl<ValidatedSessionGate>().isAuthenticated &&
+    sl<ExecutionTimerCoordinator>().sessionRevision == sessionRevision &&
+    sl<LocalStorage>().sessionStamp == ownerSession;
 
 Future<void> initDependencies() async {
   final packageInfo = await PackageInfo.fromPlatform();
@@ -173,6 +196,13 @@ Future<void> initDependencies() async {
     () => LocalNotificationService(),
   );
 
+  sl.registerLazySingleton<ExecutionTimerCoordinator>(
+    () => ExecutionTimerCoordinator(
+      soundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
+      isAuthorized: () => sl<ValidatedSessionGate>().isAuthenticated,
+    )..updateOwner(sl<LocalStorage>().sessionStamp),
+  );
+
   sl.registerLazySingleton<RestTimerCoordinator>(
     () => PlatformRestTimerCoordinator(
       notificationSoundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
@@ -212,7 +242,7 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AuthBloc(
-      onSessionStateChanged: sl<ValidatedSessionGate>().handle,
+      onSessionStateChanged: handleExecutionTimerSessionState,
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
@@ -444,6 +474,21 @@ Future<void> initDependencies() async {
       getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
       createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
       uploadFeedbackMediaUseCase: sl<UploadFeedbackMediaUseCase>(),
+    ),
+  );
+
+  // ── Progress photos (queue only; UI/picker is P2-T5) ────────────────────
+  sl.registerLazySingleton<ProgressPhotoRemoteDataSource>(
+    () => ProgressPhotoRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<ProgressPhotoRepository>(
+    () => ProgressPhotoRepositoryImpl(sl<ProgressPhotoRemoteDataSource>()),
+  );
+  sl.registerLazySingleton(
+    () => ProgressPhotoUploadQueueService(
+      sl<ProgressPhotoRepository>(),
+      sl<LocalStorage>(),
+      isAuthenticated: () => sl<ValidatedSessionGate>().isAuthenticated,
     ),
   );
 

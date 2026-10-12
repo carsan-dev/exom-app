@@ -23,6 +23,7 @@ import UserNotifications
         _ = self?.playRestTimerSound()
       }
     )
+    ExecutionTimerCoordinator.register(with: engineBridge.applicationRegistrar.messenger())
     let settingsChannel = FlutterMethodChannel(
       name: "com.exommethod.exom/app_settings",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
@@ -63,7 +64,12 @@ import UserNotifications
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    if notification.request.identifier.hasPrefix("exom.rest.") {
+    if notification.request.identifier.hasPrefix("exom.execution.") {
+      guard ExecutionTimerCoordinator.shouldPresentForegroundNotification(
+        identifier: notification.request.identifier
+      ) else { completionHandler([]); return }
+      completionHandler(notification.request.content.sound == nil ? [.banner] : [.banner, .sound])
+    } else if notification.request.identifier.hasPrefix("exom.rest.") {
       guard RestTimerCoordinator.shouldPresentForegroundNotification(
         identifier: notification.request.identifier
       ) else {

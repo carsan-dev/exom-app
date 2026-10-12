@@ -42,6 +42,7 @@ abstract class FeedbackRepository {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   });
   Future<ManagedFeedbackUpload> uploadMedia(
     File file,

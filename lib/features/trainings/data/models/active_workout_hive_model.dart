@@ -15,6 +15,7 @@ class ActiveWorkoutHiveModel {
   final int? timedTotalSeconds;
   final TimedPrescription? timedPrescription;
   final String trainingId;
+  final String? sessionId;
   final String exerciseId;
   final int currentSet;
   final int completedSets;
@@ -22,6 +23,7 @@ class ActiveWorkoutHiveModel {
   final double? lastWeightKg;
   final List<Map<String, dynamic>> completedSetData;
   final String? lastSetFeedbackClientUploadId;
+  final String? completionOperationId;
 
   const ActiveWorkoutHiveModel({
     this.timedElapsedMs = 0,
@@ -29,6 +31,7 @@ class ActiveWorkoutHiveModel {
     this.timedTotalSeconds,
     this.timedPrescription,
     required this.trainingId,
+    this.sessionId,
     required this.exerciseId,
     required this.currentSet,
     required this.completedSets,
@@ -36,10 +39,12 @@ class ActiveWorkoutHiveModel {
     this.lastWeightKg,
     this.completedSetData = const [],
     this.lastSetFeedbackClientUploadId,
+    this.completionOperationId,
   });
 
   ActiveWorkoutHiveModel copyWith({
     String? trainingId,
+    String? sessionId,
     String? exerciseId,
     int? currentSet,
     int? completedSets,
@@ -47,6 +52,7 @@ class ActiveWorkoutHiveModel {
     Object? lastWeightKg = _sentinel,
     List<Map<String, dynamic>>? completedSetData,
     Object? lastSetFeedbackClientUploadId = _sentinel,
+    String? completionOperationId,
   }) {
     return ActiveWorkoutHiveModel(
       timedElapsedMs: timedElapsedMs,
@@ -54,6 +60,7 @@ class ActiveWorkoutHiveModel {
       timedTotalSeconds: timedTotalSeconds,
       timedPrescription: timedPrescription,
       trainingId: trainingId ?? this.trainingId,
+      sessionId: sessionId ?? this.sessionId,
       exerciseId: exerciseId ?? this.exerciseId,
       currentSet: currentSet ?? this.currentSet,
       completedSets: completedSets ?? this.completedSets,
@@ -68,6 +75,7 @@ class ActiveWorkoutHiveModel {
           identical(lastSetFeedbackClientUploadId, _sentinel)
           ? this.lastSetFeedbackClientUploadId
           : lastSetFeedbackClientUploadId as String?,
+      completionOperationId: completionOperationId ?? this.completionOperationId,
     );
   }
 }
@@ -91,6 +99,7 @@ class ActiveWorkoutHiveModelAdapter
       timedTotalSeconds: fields[10] as int?,
       timedPrescription: TimedPrescription.tryParse(fields[11]),
       trainingId: fields[0] as String? ?? '',
+      sessionId: fields[12] as String?,
       exerciseId: fields[1] as String? ?? '',
       currentSet: fields[2] as int? ?? 1,
       completedSets: fields[3] as int? ?? 0,
@@ -100,13 +109,14 @@ class ActiveWorkoutHiveModelAdapter
           .map((value) => Map<String, dynamic>.from(value as Map))
           .toList(),
       lastSetFeedbackClientUploadId: fields[7] as String?,
+      completionOperationId: fields[13] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.trainingId)
       ..writeByte(1)
@@ -130,7 +140,11 @@ class ActiveWorkoutHiveModelAdapter
       ..writeByte(10)
       ..write(obj.timedTotalSeconds)
       ..writeByte(11)
-      ..write(obj.timedPrescription?.toJson());
+      ..write(obj.timedPrescription?.toJson())
+      ..writeByte(12)
+      ..write(obj.sessionId)
+      ..writeByte(13)
+      ..write(obj.completionOperationId);
   }
 }
 

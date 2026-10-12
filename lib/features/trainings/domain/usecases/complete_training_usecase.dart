@@ -5,6 +5,6 @@ class CompleteTrainingUseCase {
 
   const CompleteTrainingUseCase(this._repository);
 
-  Future<void> call(String date, {required String trainingId, String? notes}) =>
-      _repository.completeTraining(date, trainingId: trainingId, notes: notes);
+  Future<void> call(String date, {required String trainingId, String? sessionId, int? rpe, String? notes}) =>
+      _repository.completeTraining(date, trainingId: trainingId, sessionId: sessionId, rpe: rpe, notes: notes);
 }

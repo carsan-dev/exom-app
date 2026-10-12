@@ -1,4 +1,5 @@
-- Consulta los tiempos de tus ejercicios en minutos o segundos.
-- Sigue intervalos temporizados y alterna entre sus tramos, también en circuitos.
-- Pausa y retoma el temporizador conservando tu avance al reabrir la app.
-- Conserva las prescripciones y evidencias de entrenamientos anteriores aunque cambie la rutina.
+- Vuelve automáticamente al inicio actualizado cuando se confirme que has completado tu entrenamiento.
+- Registra directamente en minutos los ejercicios prescritos en minutos.
+- Prepárate con una cuenta atrás animada de cinco segundos antes de iniciar un ejercicio por tiempo.
+- Escucha un único tono cuando se agote el tiempo de un ejercicio, también en segundo plano si el sistema lo permite.
+- Cancela, vuelve atrás o interrumpe la preparación sin iniciar el ejercicio por accidente.

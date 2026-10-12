@@ -83,6 +83,101 @@ void main() {
       expect(bloc.state.restEndsAt, isNull);
     });
 
+    test('execution identity survives draft persistence and restart', () async {
+      final store = _FakeStore();
+      final first = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+      first.add(const StartExercise(
+        trainingId: 't-1',
+        exerciseId: 'ex-1',
+        assignmentDate: '2026-09-24',
+        sessionId: 'execution-one',
+      ));
+      await pumpEventQueue();
+      expect(store.getActiveWorkout('ex-1:2026-09-24:execution-one')?.sessionId,
+          'execution-one');
+      await first.close();
+
+      final restarted = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+      restarted.add(const StartExercise(
+        trainingId: 't-1',
+        exerciseId: 'ex-1',
+        assignmentDate: '2026-09-24',
+        sessionId: 'execution-one',
+      ));
+      await pumpEventQueue();
+      expect(restarted.state.sessionId, 'execution-one');
+      await restarted.close();
+    });
+
+    test('a distinct execution never replaces an existing same-day draft', () async {
+      final store = _FakeStore();
+      await store.saveActiveWorkout(const ActiveWorkoutHiveModel(
+        trainingId: 't-1',
+        sessionId: 'first',
+        exerciseId: 'ex-1:2026-09-24',
+        currentSet: 2,
+        completedSets: 1,
+      ));
+      final bloc = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(),
+      );
+      bloc.add(const StartExercise(
+        trainingId: 't-1',
+        exerciseId: 'ex-1',
+        assignmentDate: '2026-09-24',
+        sessionId: 'second',
+      ));
+      await pumpEventQueue();
+      expect(store.getActiveWorkout('ex-1:2026-09-24')?.sessionId, 'first');
+      expect(bloc.state.sessionId, 'second');
+      expect(store.getActiveWorkout('ex-1:2026-09-24:second')?.sessionId, 'second');
+      await bloc.close();
+    });
+
+    test('upgrades a same-execution date-keyed draft without losing sets', () async {
+      final store = _FakeStore();
+      await store.saveActiveWorkout(const ActiveWorkoutHiveModel(
+        trainingId: 't-1', sessionId: 'execution-one',
+        exerciseId: 'ex-1:2026-09-24', currentSet: 2, completedSets: 1,
+      ));
+      final bloc = ActiveExerciseBloc(
+        localStorage: store, trainingExercise: _trainingExercise());
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1',
+          assignmentDate: '2026-09-24', sessionId: 'execution-one'));
+      await pumpEventQueue();
+      expect(bloc.state.completedSets, 1);
+      expect(store.getActiveWorkout('ex-1:2026-09-24:execution-one')?.completedSets, 1);
+      expect(store.getActiveWorkout('ex-1:2026-09-24'), isNull);
+      await bloc.close();
+    });
+
+    test('two same-day executions keep independent resumable set drafts', () async {
+      final store = _FakeStore();
+      for (final id in ['execution-one', 'execution-two']) {
+        final bloc = ActiveExerciseBloc(
+          localStorage: store,
+          trainingExercise: _trainingExercise(),
+        );
+        bloc.add(StartExercise(
+          trainingId: 't-1', exerciseId: 'ex-1',
+          assignmentDate: '2026-09-24', sessionId: id,
+        ));
+        await pumpEventQueue();
+        bloc.add(const CompleteSet(reps: 10));
+        await pumpEventQueue();
+        await bloc.close();
+      }
+      expect(store.getActiveWorkout('ex-1:2026-09-24:execution-one')?.completedSets, 1);
+      expect(store.getActiveWorkout('ex-1:2026-09-24:execution-two')?.completedSets, 1);
+    });
+
     test('StartExercise without saved data persists initial state', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(
@@ -312,7 +407,7 @@ void main() {
       expect(bloc.state.restEndsAt, isNull);
     });
 
-    test('CompleteSet on last set enters finalResting then clears', () async {
+    test('CompleteSet on last set retains finalResting draft until enqueue', () async {
       final store = _FakeStore();
       final bloc = ActiveExerciseBloc(
         localStorage: store,
@@ -338,7 +433,34 @@ void main() {
       await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.done);
-      expect(store.getActiveWorkout('ex-1'), isNull);
+      expect(store.getActiveWorkout('ex-1')?.completedSets, 2);
+      expect(store.getActiveWorkout('ex-1')?.completionOperationId,
+          bloc.state.completionOperationId);
+    });
+
+    test('failed enqueue leaves final sets recoverable on restart', () async {
+      final store = _FakeStore();
+      final first = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(sets: 1, restSeconds: 0),
+      );
+      first.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      first.add(const CompleteSet(reps: 12, weightKg: 70));
+      await pumpEventQueue();
+      expect(first.state.isDone, isTrue);
+      // The page's enqueue fails before a durable queue write, then the app exits.
+      await first.close();
+      final restarted = ActiveExerciseBloc(
+        localStorage: store,
+        trainingExercise: _trainingExercise(sets: 1, restSeconds: 0),
+      );
+      restarted.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      expect(restarted.state.isDone, isTrue);
+      expect(restarted.state.setPerformances.single.reps, 12);
+      expect(store.getActiveWorkout('ex-1')?.completedSetData.single['reps'], 12);
+      await restarted.close();
     });
 
     test('last set with zero rest completes immediately', () async {
@@ -354,7 +476,8 @@ void main() {
       await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.done);
-      expect(store.getActiveWorkout('ex-1'), isNull);
+      expect(store.getActiveWorkout('ex-1')?.completionOperationId,
+          bloc.state.completionOperationId);
     });
 
     test('restores pending final rest', () async {
@@ -382,7 +505,7 @@ void main() {
       expect(store.getActiveWorkout('ex-1'), isNotNull);
     });
 
-    test('expired final rest restores done and clears storage', () async {
+    test('expired final rest restores done without deleting draft', () async {
       final store = _FakeStore();
       await store.saveActiveWorkout(
         ActiveWorkoutHiveModel(
@@ -402,7 +525,8 @@ void main() {
       await pumpEventQueue();
 
       expect(bloc.state.status, ActiveExerciseStatus.done);
-      expect(store.getActiveWorkout('ex-1'), isNull);
+      expect(store.getActiveWorkout('ex-1')?.completionOperationId,
+          bloc.state.completionOperationId);
     });
 
     test('SkipRest transitions back to executing', () async {

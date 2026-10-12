@@ -17,7 +17,22 @@ import androidx.core.app.NotificationCompat
 import java.util.Locale
 import kotlin.math.ceil
 
-class RestTimerService : Service() {
+open class RestTimerService : Service() {
+    protected open val ongoingChannelId = ONGOING_CHANNEL_ID
+    protected open val finishedChannelId = FINISHED_CHANNEL_ID
+    protected open val ongoingNotificationId = ONGOING_NOTIFICATION_ID
+    protected open val finishedNotificationId = FINISHED_NOTIFICATION_ID
+    protected open val titleResource = R.string.rest_timer_title
+    protected open val countdownResource = R.string.rest_timer_countdown
+    protected open val finishedTitleResource = R.string.rest_timer_finished_title
+    protected open val finishedBodyResource = R.string.rest_timer_finished_body
+    protected open val channelNameResource = R.string.rest_timer_channel_name
+    protected open val channelDescriptionResource = R.string.rest_timer_channel_description
+    protected open val finishedChannelNameResource = R.string.rest_timer_finished_channel_name
+    protected open val finishedChannelDescriptionResource = R.string.rest_timer_finished_channel_description
+    protected open val soundResource = R.raw.exom_rest_finished
+    protected open val removeLegacyRestChannels = true
+    protected open val suppressExpiredStart = false
     private val handler = Handler(Looper.getMainLooper())
     private var sessionId: String? = null
     private var endsAtMillis = 0L
@@ -38,7 +53,7 @@ class RestTimerService : Service() {
             }
 
             getSystemService(NotificationManager::class.java).notify(
-                ONGOING_NOTIFICATION_ID,
+                ongoingNotificationId,
                 buildOngoingNotification(),
             )
             handler.postDelayed(this, 1_000L)
@@ -51,6 +66,15 @@ class RestTimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_CANCEL) {
+            if (intent.getStringExtra(EXTRA_SESSION_ID) == sessionId || sessionId == null) {
+                timerFinished = true
+                handler.removeCallbacks(tickRunnable)
+                releaseCompletionPlayer()
+                stopTimerService()
+            }
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_FINISH) {
             val finished = finishTimer(intent.getStringExtra(EXTRA_SESSION_ID))
             if (!finished && sessionId == null) stopSelf(startId)
@@ -66,13 +90,13 @@ class RestTimerService : Service() {
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0)
         soundEnabled = intent.getBooleanExtra(EXTRA_SOUND_ENABLED, true)
         if (endsAtMillis <= System.currentTimeMillis() || durationSeconds <= 0) {
-            finishTimer()
+            if (suppressExpiredStart) stopTimerService() else finishTimer()
             return START_NOT_STICKY
         }
 
         handler.removeCallbacks(tickRunnable)
         startForeground(
-            ONGOING_NOTIFICATION_ID,
+            ongoingNotificationId,
             buildOngoingNotification(),
         )
         handler.postDelayed(tickRunnable, 1_000L)
@@ -88,12 +112,12 @@ class RestTimerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildOngoingNotification() =
-        NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
+        NotificationCompat.Builder(this, ongoingChannelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.rest_timer_title))
+            .setContentTitle(getString(titleResource))
             .setContentText(
                 getString(
-                    R.string.rest_timer_countdown,
+                    countdownResource,
                     exerciseName,
                     formatRemainingTime(),
                 ),
@@ -124,10 +148,10 @@ class RestTimerService : Service() {
     }
 
     private fun showFinishedNotification() {
-        val builder = NotificationCompat.Builder(this, FINISHED_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, finishedChannelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.rest_timer_finished_title))
-            .setContentText(getString(R.string.rest_timer_finished_body))
+            .setContentTitle(getString(finishedTitleResource))
+            .setContentText(getString(finishedBodyResource))
             .setContentIntent(openAppIntent())
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -135,7 +159,7 @@ class RestTimerService : Service() {
             .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
         getSystemService(NotificationManager::class.java).notify(
-            FINISHED_NOTIFICATION_ID,
+            finishedNotificationId,
             builder.build(),
         )
     }
@@ -164,7 +188,7 @@ class RestTimerService : Service() {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         val player = try {
-            MediaPlayer.create(this, R.raw.exom_rest_finished, attributes, 0)
+            MediaPlayer.create(this, soundResource, attributes, 0)
         } catch (_: RuntimeException) {
             null
         }
@@ -259,23 +283,25 @@ class RestTimerService : Service() {
     private fun createChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java)
-        manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_ID)
-        manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_V2_ID)
-        manager.deleteNotificationChannel(LEGACY_SILENT_FINISHED_CHANNEL_ID)
+        if (removeLegacyRestChannels) {
+            manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_ID)
+            manager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_V2_ID)
+            manager.deleteNotificationChannel(LEGACY_SILENT_FINISHED_CHANNEL_ID)
+        }
         manager.createNotificationChannel(
             NotificationChannel(
-                ONGOING_CHANNEL_ID,
-                getString(R.string.rest_timer_channel_name),
+                ongoingChannelId,
+                getString(channelNameResource),
                 NotificationManager.IMPORTANCE_LOW,
-            ).apply { description = getString(R.string.rest_timer_channel_description) },
+            ).apply { description = getString(channelDescriptionResource) },
         )
         manager.createNotificationChannel(
             NotificationChannel(
-                FINISHED_CHANNEL_ID,
-                getString(R.string.rest_timer_finished_channel_name),
+                finishedChannelId,
+                getString(finishedChannelNameResource),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = getString(R.string.rest_timer_finished_channel_description)
+                description = getString(finishedChannelDescriptionResource)
                 enableVibration(true)
                 vibrationPattern = FINISHED_VIBRATION_PATTERN
                 setSound(null, null)
@@ -284,6 +310,7 @@ class RestTimerService : Service() {
     }
 
     companion object {
+        const val ACTION_CANCEL = "com.exommethod.exom.action.CANCEL_TIMER"
         const val ACTION_START = "com.exommethod.exom.action.START_REST_TIMER"
         const val ACTION_FINISH = "com.exommethod.exom.action.FINISH_REST_TIMER"
         const val EXTRA_SESSION_ID = "session_id"

@@ -25,10 +25,23 @@ TimePerformanceUnit? timePerformanceUnitForExercise(
 ) {
   return switch (exercise.measureType) {
     ExerciseMeasureType.reps => null,
-    ExerciseMeasureType.seconds => TimePerformanceUnit.seconds,
+    ExerciseMeasureType.seconds =>
+      exercise.timedPrescription?.unit == TimeDisplayUnit.minutes
+          ? TimePerformanceUnit.minutes
+          : TimePerformanceUnit.seconds,
     null => timePerformanceUnit(exercise.repsOrDuration),
   };
 }
+
+TimePerformanceUnit? timePerformanceUnitForInput(
+  TimePerformanceUnit? prescribedUnit,
+  int? savedSeconds,
+) =>
+    prescribedUnit == TimePerformanceUnit.minutes &&
+        savedSeconds != null &&
+        savedSeconds % 60 != 0
+    ? TimePerformanceUnit.seconds
+    : prescribedUnit;
 
 String formatExercisePrescription(
   TrainingExerciseEntity exercise, {

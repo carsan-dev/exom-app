@@ -10,6 +10,40 @@ import 'package:exom_app/features/feedback/services/feedback_upload_queue_servic
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('manual retry keeps evidence and operation identity while authentication is paused', () async {
+    final original = <String, dynamic>{
+      'id': 'retained-upload', 'status': 'failed', 'attempts': 5,
+      'last_error': 'upload_failed', 'file_path': 'retained-local-evidence.mp4',
+      'training_id': 'training-1', 'training_exercise_id': 'te-1',
+      'exercise_id': 'ex-1', 'training_session_id': 'execution-one',
+      'assignment_date': '2026-09-05', 'owner_id': 'owner-one',
+    };
+    final storage = FakeFeedbackQueueStorage([original]);
+    final repository = FakeFeedbackRepository();
+    final offline = FakeOfflineSyncService(storage);
+    final service = FeedbackUploadQueueService(repository, storage, offline,
+      isAuthenticated: () => false,
+      deleteFile: (_) async => fail('retry must retain evidence while paused'));
+    final notices = <FeedbackUploadNotice>[];
+    final subscription = service.notices.listen(notices.add);
+    await service.retry('retained-upload');
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.queue, hasLength(1));
+    final retried = storage.queue.single;
+    for (final field in original.keys.where((field) =>
+        !['status', 'attempts', 'last_error'].contains(field))) {
+      expect(retried[field], original[field], reason: '$field must survive retry');
+    }
+    expect(retried['status'], 'queued');
+    expect(retried['attempts'], 0);
+    expect(retried['last_error'], isNull);
+    expect(notices.single.kind, FeedbackUploadNoticeKind.queued);
+    expect(repository.uploadCalls, 0);
+    expect(repository.createCalls, 0);
+    await subscription.cancel();
+    await service.dispose();
+    await offline.dispose();
+  });
   test(
     'does not create feedback or delete evidence after validation is revoked during upload',
     () async {
@@ -47,6 +81,26 @@ void main() {
       expect(storage.queue.single['status'], 'queued');
     },
   );
+  test('replayed LAST_SET feedback retains its execution identity', () async {
+    final directory = await Directory.systemTemp.createTemp('exom-last-set-');
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/evidence.mp4');
+    await file.writeAsBytes([0]);
+    final storage = FakeFeedbackQueueStorage([{
+      'id': 'last-set-id', 'file_path': file.path,
+      'content_type': 'video/mp4', 'media_type': 'VIDEO',
+      'feedback_kind': 'LAST_SET', 'training_session_id': 'execution-one',
+      'status': 'queued', 'attempts': 0,
+    }]);
+    final repository = FakeFeedbackRepository();
+    final service = FeedbackUploadQueueService(repository, storage,
+      FakeOfflineSyncService(storage), isAuthenticated: () => true);
+    await service.processQueue();
+    expect(repository.createdSessionId, 'execution-one');
+  });
+
   test('discard deletes the physical file and its dependent action', () async {
     final directory = await Directory.systemTemp.createTemp(
       'exom-feedback-queue-',
@@ -342,6 +396,7 @@ class FakeFeedbackRepository implements FeedbackRepository {
   Object? createError;
   int uploadCalls = 0;
   int createCalls = 0;
+  String? createdSessionId;
 
   @override
   Future<FeedbackEntity> createFeedback({
@@ -355,7 +410,9 @@ class FakeFeedbackRepository implements FeedbackRepository {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   }) async {
+    createdSessionId = sessionId;
     createCalls++;
     if (createError case final error?) throw error;
     return FeedbackEntity(

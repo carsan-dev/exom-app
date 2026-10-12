@@ -22,6 +22,9 @@ List<Map<String, dynamic>> _mergePendingSets(
   ];
 }
 
+String? _sessionId(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;
+
 Map<String, dynamic> overlayPendingProgressActions({
   required Map<String, dynamic> progress,
   required Iterable<Map<String, dynamic>> actions,
@@ -51,11 +54,14 @@ Map<String, dynamic> overlayPendingProgressActions({
 
         // The overlay has no authoritative assignment context. It cannot
         // promote unattributed history or choose between duplicate records.
-        bool matches(Map<String, dynamic> entry) => trainingExerciseId != null
-            ? entry['training_exercise_id'] == trainingExerciseId
-            : entry['training_exercise_id'] == null &&
-                  exerciseId != null &&
-                  entry['exercise_id'] == exerciseId;
+        final sessionId = _sessionId(action['training_session_id']);
+        bool matches(Map<String, dynamic> entry) =>
+            _sessionId(entry['training_session_id']) == sessionId &&
+            (trainingExerciseId != null
+                ? entry['training_exercise_id'] == trainingExerciseId
+                : entry['training_exercise_id'] == null &&
+                      exerciseId != null &&
+                      entry['exercise_id'] == exerciseId);
         if (exercises.where(matches).length > 1) continue;
         final existingIndex = exercises.indexWhere(matches);
         final existing = existingIndex < 0
@@ -65,6 +71,7 @@ Map<String, dynamic> overlayPendingProgressActions({
           ...existing,
           'training_exercise_id': ?trainingExerciseId,
           'exercise_id': ?exerciseId,
+          'training_session_id': ?sessionId,
           if (action['weight_used'] != null)
             'weight_used': action['weight_used'],
           if (action['sets'] != null)
@@ -79,9 +86,11 @@ Map<String, dynamic> overlayPendingProgressActions({
             action['training_exercise_id'] as String? ??
             action['exercise_id'] as String?;
         if (id == null) continue;
+        final sessionId = _sessionId(action['training_session_id']);
         exercises.removeWhere(
           (entry) =>
-              entry['training_exercise_id'] == id || entry['exercise_id'] == id,
+              _sessionId(entry['training_session_id']) == sessionId &&
+              (entry['training_exercise_id'] == id || entry['exercise_id'] == id),
         );
       case 'complete_training':
         final trainingId = action['training_id'] as String?;

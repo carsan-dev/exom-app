@@ -11,6 +11,7 @@ import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_feedback_card.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_published_review_card.dart';
 import 'package:exom_app/injection_container.dart';
 
 class RecapDetailPage extends StatelessWidget {
@@ -291,6 +292,11 @@ class _RecapDetailContent extends StatelessWidget {
 
         const SizedBox(height: 16),
 
+        if (recap.hasPublishedReview) ...[
+          RecapPublishedReviewCard(recap: recap),
+          const SizedBox(height: 16),
+        ],
+
         // Trainer feedback
         if (recap.hasClientFeedback) ...[
           RecapFeedbackCard(recap: recap),
@@ -360,9 +366,27 @@ class _RecapDetailContent extends StatelessWidget {
             _Item('Estado de ánimo', _opt(recap.mood)),
             _Item(
               'Estrés',
-              recap.stressEnabled
-                  ? '${recap.stressLevel ?? 0}/5'
+              recap.stressEnabled && recap.stressLevel != null
+                  ? '${recap.stressLevel}/5'
                   : 'No valorado',
+            ),
+            _Item(
+              l10n.weeklyHunger,
+              recap.hungerLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.hungerLevel}/10',
+            ),
+            _Item(
+              l10n.weeklyEnergy,
+              recap.energyLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.energyLevel}/10',
+            ),
+            _Item(
+              l10n.weeklyDigestion,
+              recap.digestionLevel == null
+                  ? l10n.optionalRatingNoData
+                  : '${recap.digestionLevel}/10',
             ),
             _Item('Notas', recap.generalNotes ?? '—'),
           ],

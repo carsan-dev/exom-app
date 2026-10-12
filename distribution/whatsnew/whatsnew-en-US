@@ -1,4 +1,5 @@
-- View exercise durations in minutes or seconds.
-- Follow timed intervals and alternate between segments, including in circuits.
-- Pause and resume the timer, keeping your progress when you reopen the app.
-- Keep past workout prescriptions and evidence even when your routine changes.
+- Return automatically to a refreshed Home once your workout completion is confirmed.
+- Record exercises prescribed in minutes directly in minutes.
+- Get ready with an animated five-second countdown before starting a timed exercise.
+- Hear a single tone when an exercise timer expires, including in the background when your system allows it.
+- Cancel, go back or interrupt preparation without accidentally starting the exercise.

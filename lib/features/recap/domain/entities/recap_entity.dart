@@ -35,6 +35,9 @@ class RecapEntity {
   final String? mood;
   final bool stressEnabled;
   final int? stressLevel;
+  final int? hungerLevel;
+  final int? energyLevel;
+  final int? digestionLevel;
   final String? generalNotes;
 
   // Improvement
@@ -47,6 +50,11 @@ class RecapEntity {
   final String? clientFeedbackText;
   final DateTime? clientFeedbackSentAt;
   final DateTime? clientFeedbackReadAt;
+
+  // Read-only coach review: only the last explicit publication is client-visible.
+  final String? publishedCoachSummary;
+  final String? publishedChanges;
+  final String? publishedNextWeekGoals;
 
   // Dates
   final DateTime? reviewedAt;
@@ -75,6 +83,9 @@ class RecapEntity {
     this.mood,
     this.stressEnabled = false,
     this.stressLevel,
+    this.hungerLevel,
+    this.energyLevel,
+    this.digestionLevel,
     this.generalNotes,
     this.improvementAppRating,
     this.improvementServiceRating,
@@ -83,6 +94,9 @@ class RecapEntity {
     this.clientFeedbackText,
     this.clientFeedbackSentAt,
     this.clientFeedbackReadAt,
+    this.publishedCoachSummary,
+    this.publishedChanges,
+    this.publishedNextWeekGoals,
     this.reviewedAt,
     required this.createdAt,
   });
@@ -93,6 +107,12 @@ class RecapEntity {
 
   bool get hasClientFeedback =>
       clientFeedbackText != null && clientFeedbackText!.trim().isNotEmpty;
+
+  bool get hasPublishedReview => [
+    publishedCoachSummary,
+    publishedChanges,
+    publishedNextWeekGoals,
+  ].any((value) => value != null && value.trim().isNotEmpty);
 
   bool get hasUnreadClientFeedback =>
       hasClientFeedback && clientFeedbackReadAt == null;
@@ -121,6 +141,9 @@ class RecapEntity {
       mood: mood,
       stressEnabled: stressEnabled,
       stressLevel: stressLevel,
+      hungerLevel: hungerLevel,
+      energyLevel: energyLevel,
+      digestionLevel: digestionLevel,
       generalNotes: generalNotes,
       improvementAppRating: improvementAppRating,
       improvementServiceRating: improvementServiceRating,
@@ -129,6 +152,9 @@ class RecapEntity {
       clientFeedbackText: clientFeedbackText,
       clientFeedbackSentAt: clientFeedbackSentAt,
       clientFeedbackReadAt: clientFeedbackReadAt ?? this.clientFeedbackReadAt,
+      publishedCoachSummary: publishedCoachSummary,
+      publishedChanges: publishedChanges,
+      publishedNextWeekGoals: publishedNextWeekGoals,
       reviewedAt: reviewedAt,
       createdAt: createdAt,
     );

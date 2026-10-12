@@ -5,6 +5,6 @@ class UnmarkExerciseCompletedUseCase {
 
   const UnmarkExerciseCompletedUseCase(this._repository);
 
-  Future<void> call(String trainingExerciseId, String date) =>
-      _repository.unmarkExerciseCompleted(trainingExerciseId, date);
+  Future<void> call(String trainingExerciseId, String date, {String? sessionId}) =>
+      _repository.unmarkExerciseCompleted(trainingExerciseId, date, sessionId: sessionId);
 }

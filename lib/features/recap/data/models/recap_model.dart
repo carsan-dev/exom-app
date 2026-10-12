@@ -24,6 +24,9 @@ class RecapModel extends RecapEntity {
     super.mood,
     super.stressEnabled,
     super.stressLevel,
+    super.hungerLevel,
+    super.energyLevel,
+    super.digestionLevel,
     super.generalNotes,
     super.improvementAppRating,
     super.improvementServiceRating,
@@ -32,6 +35,9 @@ class RecapModel extends RecapEntity {
     super.clientFeedbackText,
     super.clientFeedbackSentAt,
     super.clientFeedbackReadAt,
+    super.publishedCoachSummary,
+    super.publishedChanges,
+    super.publishedNextWeekGoals,
     super.reviewedAt,
     required super.createdAt,
   });
@@ -64,6 +70,9 @@ class RecapModel extends RecapEntity {
       mood: json['mood'] as String?,
       stressEnabled: json['stress_enabled'] as bool? ?? false,
       stressLevel: json['stress_level'] as int?,
+      hungerLevel: json['hunger_level'] as int?,
+      energyLevel: json['energy_level'] as int?,
+      digestionLevel: json['digestion_level'] as int?,
       generalNotes: json['general_notes'] as String?,
       improvementAppRating: json['improvement_app_rating'] as int?,
       improvementServiceRating: json['improvement_service_rating'] as int?,
@@ -73,6 +82,9 @@ class RecapModel extends RecapEntity {
               .toList() ??
           [],
       improvementFeedbackText: json['improvement_feedback_text'] as String?,
+      publishedCoachSummary: json['published_coach_summary'] as String?,
+      publishedChanges: json['published_changes'] as String?,
+      publishedNextWeekGoals: json['published_next_week_goals'] as String?,
       clientFeedbackText: json['client_feedback_text'] as String?,
       clientFeedbackSentAt: json['client_feedback_sent_at'] != null
           ? DateTime.parse(json['client_feedback_sent_at'] as String)
@@ -87,8 +99,21 @@ class RecapModel extends RecapEntity {
     );
   }
 
+  static Map<String, dynamic> _clientFormPayload(
+    Map<String, dynamic> formData,
+  ) {
+    // Defense in depth: responses must never become client review writes.
+    return Map<String, dynamic>.from(formData)..removeWhere(
+      (key, _) =>
+          key.startsWith('published_') ||
+          key.startsWith('draft_') ||
+          key == 'admin_comments' ||
+          key == 'review_version',
+    );
+  }
+
   static Map<String, dynamic> toCreateJson(Map<String, dynamic> formData) {
-    final payload = Map<String, dynamic>.from(formData);
+    final payload = _clientFormPayload(formData);
 
     payload.removeWhere(
       (key, value) =>
@@ -119,9 +144,9 @@ class RecapModel extends RecapEntity {
   }
 
   static Map<String, dynamic> toUpdateJson(Map<String, dynamic> formData) {
-    final payload = Map<String, dynamic>.from(formData);
+    final payload = _clientFormPayload(formData);
 
-    for (final entry in formData.entries) {
+    for (final entry in payload.entries.toList()) {
       final value = entry.value;
       if (value is String && value.trim().isEmpty) {
         payload[entry.key] = null;

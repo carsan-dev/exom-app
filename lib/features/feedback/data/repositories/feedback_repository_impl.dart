@@ -24,6 +24,7 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
     String? trainingId,
     String? trainingExerciseId,
     String? assignmentDate,
+    String? sessionId,
   }) => _remoteDataSource.createFeedback(
     mediaType: mediaType,
     mediaUrl: mediaUrl,
@@ -35,6 +36,7 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
     trainingId: trainingId,
     trainingExerciseId: trainingExerciseId,
     assignmentDate: assignmentDate,
+    sessionId: sessionId,
   );
 
   @override

@@ -13,11 +13,15 @@ abstract class TrainingRepository {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   });
-  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId});
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   });
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date});

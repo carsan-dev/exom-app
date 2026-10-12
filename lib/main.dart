@@ -25,6 +25,7 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_service_starter.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
 
 @pragma('vm:entry-point')
@@ -88,6 +89,14 @@ Future<void> _initializeFeedbackUploads() async {
     await sl<FeedbackUploadQueueService>().init();
   } catch (error) {
     debugPrint('[FEEDBACK] Queue initialization failed: $error');
+  }
+}
+
+Future<void> _initializeProgressPhotoUploads() async {
+  try {
+    await sl<ProgressPhotoUploadQueueService>().init();
+  } catch (error) {
+    debugPrint('[PROGRESS_PHOTOS] Queue initialization failed: $error');
   }
 }
 
@@ -227,6 +236,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
       _initializeFcm,
       _initializeOfflineSync,
       _initializeFeedbackUploads,
+      _initializeProgressPhotoUploads,
     ]);
     _feedbackSubscription = sl<FeedbackUploadQueueService>().notices.listen(
       _showFeedbackNotice,

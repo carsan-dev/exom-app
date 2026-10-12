@@ -20,11 +20,15 @@ abstract class TrainingRemoteDataSource {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   });
-  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date);
+  Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId});
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   });
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date});
@@ -78,6 +82,23 @@ TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
   final ids = <String>{};
   final weights = <String, double>{};
   final performances = <String, List<SetPerformance>>{};
+  final claims = <String, String>{};
+  final conflicting = <String>{};
+  for (final claim in (json['training_sessions'] as List? ?? const []).whereType<Map>()) {
+    final sessionId = claim['training_session_id'];
+    final trainingId = claim['training_id'];
+    if (sessionId is! String || sessionId.isEmpty || trainingId is! String || trainingId.isEmpty) continue;
+    if (claims.containsKey(sessionId) && claims[sessionId] != trainingId) conflicting.add(sessionId);
+    claims[sessionId] = trainingId;
+  }
+  final sessionEntries = <String, List<Map<String, dynamic>>>{};
+  for (final entry in list.whereType<Map>()) {
+    final sessionId = entry['training_session_id'];
+    if (sessionId is! String || sessionId.isEmpty) continue;
+    sessionEntries.putIfAbsent(sessionId, () => []).add(
+      Map<String, dynamic>.from(entry)..remove('training_session_id'),
+    );
+  }
 
   for (final entry in list.whereType<Map>()) {
     final id = (entry['training_exercise_id'] ?? entry['exercise_id'])
@@ -118,6 +139,12 @@ TrainingDayProgress parseTrainingDayProgress(Map<String, dynamic> json) {
     ids: ids,
     weights: weights,
     performances: performances,
+    sessions: {
+      for (final entry in sessionEntries.entries)
+        if (!conflicting.contains(entry.key))
+          entry.key: parseTrainingDayProgress({'exercises_completed': entry.value}),
+    },
+    sessionTrainings: claims,
     note: json['notes'] as String?,
     adminReplyText: json['admin_reply_text'] as String?,
     adminReplySentAt: DateTime.tryParse(
@@ -427,6 +454,8 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId,
     String? trainingId,
+    String? sessionId,
+    String? operationId,
   }) async {
     return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
@@ -438,23 +467,26 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         sets: sets,
         lastSetFeedbackClientUploadId: lastSetFeedbackClientUploadId,
         trainingId: trainingId,
+        sessionId: sessionId,
+        operationId: operationId,
       );
-      await _offlineSyncService.syncForDate(date);
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
   }
 
   @override
   Future<void> unmarkExerciseCompleted(
     String trainingExerciseId,
-    String date,
+    String date, {String? sessionId}
   ) async {
     return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
         trainingExerciseId,
         date,
         completed: false,
+        sessionId: sessionId,
       );
-      await _offlineSyncService.syncForDate(date);
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
   }
 
@@ -462,16 +494,54 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
   Future<void> completeTraining(
     String date, {
     required String trainingId,
+    String? sessionId,
+    int? rpe,
     String? notes,
   }) async {
     return _localStorage.sessionTask(() async {
+      if (sessionId != null &&
+          _localStorage.getTrainingCompletionDraft(trainingId, date, sessionId) == null) {
+        await _localStorage.saveTrainingCompletionDraft(trainingId, date,
+          sessionId, rpe: rpe, notes: notes);
+      }
       await _offlineSyncService.queueTrainingCompletion(
         date,
         trainingId: trainingId,
+        sessionId: sessionId,
+        rpe: rpe,
         notes: notes,
       );
-      await _offlineSyncService.syncForDate(date);
+      if (sessionId != null) {
+        await _localStorage.setTrainingExecutionStatus(sessionId, 'pending-sync');
+      }
+      // Replay may have already acknowledged during enqueue (dependency wakeup).
+      // Only the sync service can confirm after a successful server response.
+      await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });
+  }
+
+  // Only civil dates and the API's UTC-midnight serialization prove a day.
+  Map<String, dynamic>? _confirmedDayProgress(
+    Map<String, dynamic>? progress,
+    String targetDate,
+  ) {
+    final value = progress?['date'];
+    if (progress == null || value is! String) return null;
+    final match = RegExp(
+      r'^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00\.000Z)?$',
+    ).firstMatch(value);
+    if (match == null) return null;
+    final year = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final day = int.parse(match.group(3)!);
+    final parsed = DateTime.utc(year, month, day);
+    // DateTime rolls invalid calendar components forward; reject that rollover.
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      return null;
+    }
+    final civilDate = value.substring(0, 10);
+    if (civilDate != targetDate) return null;
+    return {...progress, 'date': civilDate};
   }
 
   @override
@@ -487,13 +557,43 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         );
         final data = response.data;
         if (data is Map<String, dynamic>) {
-          final inner = (data['data'] as Map<String, dynamic>?) ?? data;
+          final inner = _confirmedDayProgress(
+            (data['data'] as Map<String, dynamic>?) ?? data,
+            targetDate,
+          );
+          final cachedProgress = _confirmedDayProgress(
+            _localStorage.getCachedMap('day_progress_$targetDate'),
+            targetDate,
+          );
+          // An absent or invalid date is not proof that this response belongs
+          // to the requested day, even when its revision is newer.
+          if (inner == null) {
+            final confirmedCache = cachedProgress ??
+                <String, dynamic>{'exercises_completed': <dynamic>[]};
+            return parseTrainingDayProgress(
+              overlayPendingProgressActions(
+                progress: confirmedCache,
+                actions: _localStorage.getPendingSyncActions(),
+                date: targetDate,
+              ),
+            );
+          }
+          final responseRevision = inner['sync_revision'] is int
+              ? inner['sync_revision'] as int
+              : inner['operation_revision'];
+          final cachedRevision = cachedProgress?['sync_revision'] is int
+              ? cachedProgress!['sync_revision'] as int
+              : cachedProgress?['operation_revision'];
+          final isStale = cachedProgress != null &&
+              cachedRevision is int &&
+              (responseRevision is! int || cachedRevision > responseRevision);
           final merged = overlayPendingProgressActions(
-            progress: inner,
+            progress: isStale ? cachedProgress : inner,
             actions: _localStorage.getPendingSyncActions(),
             date: targetDate,
           );
           final progress = parseTrainingDayProgress(merged);
+          if (isStale) return progress;
           await _localStorage.cacheData(cacheKey, progress.ids.toList());
           await _localStorage.cacheData('day_progress_$targetDate', merged);
           await _localStorage.cacheData('home_progress_$targetDate', merged);
@@ -502,8 +602,9 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         return const TrainingDayProgress();
       } catch (error) {
         if (isOfflineError(error)) {
-          final cachedProgress = _localStorage.getCachedMap(
-            'day_progress_$targetDate',
+          final cachedProgress = _confirmedDayProgress(
+            _localStorage.getCachedMap('day_progress_$targetDate'),
+            targetDate,
           );
           if (cachedProgress != null) {
             return parseTrainingDayProgress(

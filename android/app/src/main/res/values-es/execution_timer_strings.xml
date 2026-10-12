@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="execution_timer_title">Tiempo del ejercicio</string>
+    <string name="execution_timer_countdown">Quedan %2$s</string>
+    <string name="execution_timer_finished_title">Tiempo del ejercicio finalizado</string>
+    <string name="execution_timer_finished_body">Registra la serie cuando estés listo.</string>
+    <string name="execution_timer_channel_name">Tiempo de ejercicios</string>
+    <string name="execution_timer_channel_description">Temporizadores de ejercicios activos</string>
+    <string name="execution_timer_finished_channel_name">Tiempo del ejercicio finalizado</string>
+    <string name="execution_timer_finished_channel_description">Avisos al terminar el tiempo del ejercicio</string>
+</resources>

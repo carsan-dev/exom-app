@@ -9,6 +9,84 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get trainingDiscardPending => 'Discard this pending session';
+
+  @override
+  String get trainingDiscardTitle => 'Discard this local session?';
+
+  @override
+  String trainingDiscardIdentity(String name, String date, String id) {
+    return 'Training: $name\nDate: $date\nSession ID: $id';
+  }
+
+  @override
+  String get trainingDiscardExplanation =>
+      'Only this pending local session will be discarded. Its pending completion, RPE and note will not be sent. Exercises saved on the server, other confirmed sessions and unrelated data will not change. This is a logical discard: original local records are retained, not permanently physically erased.';
+
+  @override
+  String get trainingDiscardConfirm => 'Discard local session';
+
+  @override
+  String get trainingDiscardSuccess =>
+      'Local session discarded. Other sessions are retained.';
+
+  @override
+  String get trainingDiscardOwner =>
+      'Cannot discard: the account or session has changed. Reopen the list with the corresponding account.';
+
+  @override
+  String get trainingDiscardIdentityChanged =>
+      'Cannot discard: this session is no longer available or its identity has changed. Check the refreshed list.';
+
+  @override
+  String get trainingDiscardUnknownOwner =>
+      'Cannot discard: ownership of the local data cannot be verified.';
+
+  @override
+  String get trainingDiscardConfirmed =>
+      'Cannot discard: this session is already confirmed on the server.';
+
+  @override
+  String get trainingDiscardInFlight =>
+      'Cannot discard while a send is in progress for this session. Wait for it to finish and check its status.';
+
+  @override
+  String get trainingDiscardDependencies =>
+      'Cannot discard: unsent exercises or evidence are linked to this session. They are retained to prevent data loss.';
+
+  @override
+  String get trainingDiscardFailure =>
+      'Could not save the local discard. Data is retained. Check its status before trying again.';
+
+  @override
+  String get weeklyHunger => 'Weekly hunger (optional)';
+
+  @override
+  String get weeklyHungerScale =>
+      '1 = no hunger · 10 = extreme hunger. Rate your week.';
+
+  @override
+  String get weeklyEnergy => 'Weekly energy (optional)';
+
+  @override
+  String get weeklyEnergyScale =>
+      '1 = no energy · 10 = high energy. Rate your week.';
+
+  @override
+  String get weeklyDigestion => 'Weekly digestion (optional)';
+
+  @override
+  String get weeklyDigestionScale =>
+      '1 = very poor, much discomfort · 10 = very good, no discomfort.';
+
+  @override
+  String get weeklyStressScale =>
+      '0 = no stress · 5 = maximum stress. Original recap scale.';
+
+  @override
+  String get optionalRatingNoData => 'No data';
+
+  @override
   String get appTagline => 'Your personal coach, always with you';
 
   @override
@@ -402,6 +480,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yourTrainingNote => 'Your note';
+
+  @override
+  String get historicalDayNoteUnattributed =>
+      'Historical day note · Execution attribution unavailable';
 
   @override
   String get trainerReply => 'Your trainer\'s reply';
@@ -1725,6 +1807,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'All pending exercises will be marked as completed. Required tracking and evidence will still be enforced.';
 
   @override
+  String get completeTrainingRpeLabel => 'RPE (required, 1–10)';
+
+  @override
+  String get completeTrainingRpeExplanation =>
+      'RPE measures how hard the workout felt to you: 1 is very easy, 10 is your maximum effort.';
+
+  @override
   String get completeTrainingConfirmAction => 'Complete all';
 
   @override
@@ -2406,6 +2495,64 @@ class AppLocalizationsEn extends AppLocalizations {
       'Warn before starting a final set that requires video';
 
   @override
+  String get trainingSyncConflict => 'Conflict: review required';
+
+  @override
+  String get trainingSyncReceiptMissing => 'Confirmation missing: retry sync';
+
+  @override
+  String get trainingSyncBlocked => 'Sync blocked: action failed';
+
+  @override
+  String get trainingSyncFailed => 'Sync failed: retry sync';
+
+  @override
+  String get trainingFeedbackMissing =>
+      'Feedback proof missing: review required';
+
+  @override
+  String get trainingFeedbackFailed => 'Feedback failed: review upload';
+
+  @override
+  String get trainingFeedbackWaiting => 'Waiting for feedback confirmation';
+
+  @override
+  String get trainingPendingSync => 'Pending sync';
+
+  @override
+  String get trainingRetryCompletion => 'Retry completion';
+
+  @override
+  String get trainingPendingFinalizeNotice =>
+      'You have a workout pending completion';
+
+  @override
+  String get trainingPendingFinalize => 'Pending completion';
+
+  @override
+  String get trainingContinue => 'Continue training';
+
+  @override
+  String get trainingFinalize => 'Finish';
+
+  @override
+  String get trainingDraftRecoveryFailed =>
+      'Draft recovery failed. Saved data remains available.';
+
+  @override
+  String get trainingLastSetVideoRequired =>
+      'Complete each exercise and attach a video of its last set.';
+
+  @override
+  String get pendingFeedbackError =>
+      'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
+
+  @override
+  String pendingEvidenceExercise(String exercise) {
+    return 'Exercise: $exercise';
+  }
+
+  @override
   String get pendingUploadsOption => 'Pending uploads';
 
   @override
@@ -2585,4 +2732,163 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pendingSyncConflict =>
       'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
+
+  @override
+  String get progressPhotosTitle => 'Progress photos';
+
+  @override
+  String get progressPhotosEntry => 'Progress photos';
+
+  @override
+  String get progressPhotosLoading => 'Loading progress photos';
+
+  @override
+  String get progressPhotosLoadError => 'Could not load progress photos';
+
+  @override
+  String get progressPhotosRetry => 'Try again';
+
+  @override
+  String get progressPhotosRecoveryError =>
+      'We could not recover the selected photo. Try selecting it again.';
+
+  @override
+  String get progressPhotosEmpty => 'No progress photo sessions yet';
+
+  @override
+  String get progressPhotosNewSession => 'New session';
+
+  @override
+  String get progressPhotosCreateSession => 'Create incomplete session';
+
+  @override
+  String get progressPhotosLoadMore => 'Load more';
+
+  @override
+  String get progressPhotosLoadingMore => 'Loading more…';
+
+  @override
+  String get progressPhotosChooseSource => 'Choose image source';
+
+  @override
+  String get progressPhotosCamera => 'Camera';
+
+  @override
+  String get progressPhotosGallery => 'Gallery';
+
+  @override
+  String get progressPhotosFront => 'Front';
+
+  @override
+  String get progressPhotosLeft => 'Left side';
+
+  @override
+  String get progressPhotosRight => 'Right side';
+
+  @override
+  String get progressPhotosBack => 'Back';
+
+  @override
+  String get progressPhotosComplete => 'Complete';
+
+  @override
+  String get progressPhotosIncomplete => 'Incomplete session';
+
+  @override
+  String get progressPhotosMissing => 'Missing';
+
+  @override
+  String progressPhotosAdd(String view) {
+    return 'Add $view';
+  }
+
+  @override
+  String progressPhotosReplace(String view) {
+    return 'Replace $view';
+  }
+
+  @override
+  String get progressPhotosReplaceTitle => 'Replace active photo?';
+
+  @override
+  String progressPhotosReplaceMessage(String view) {
+    return 'The active $view photo will be replaced only if it is still current.';
+  }
+
+  @override
+  String get progressPhotosReplaceConfirm => 'Replace';
+
+  @override
+  String get progressPhotosPending => 'Pending upload';
+
+  @override
+  String get progressPhotosSynchronizing => 'Synchronizing';
+
+  @override
+  String get progressPhotosConfirmed => 'Confirmed';
+
+  @override
+  String get progressPhotosConfirmedCleanup => 'Confirmed; cleaning local copy';
+
+  @override
+  String get progressPhotosFailed => 'Upload failed; local photo retained';
+
+  @override
+  String get progressPhotosConflict =>
+      'Replacement needs review; local photo retained';
+
+  @override
+  String progressPhotosEnlarge(String view) {
+    return 'Enlarge $view';
+  }
+
+  @override
+  String get progressPhotosCloseImage => 'Close image';
+
+  @override
+  String get progressPhotosCreateError => 'Could not create the photo session';
+
+  @override
+  String get progressPhotosRefresh => 'Refresh progress photos';
+
+  @override
+  String get progressPhotosReviewReplacement => 'Review replacement';
+
+  @override
+  String get progressPhotosRebaseTitle => 'Use the current active photo?';
+
+  @override
+  String get progressPhotosRebaseMessage =>
+      'Your retained local photo will replace the current active photo only if it is still current. No new upload will be created.';
+
+  @override
+  String get progressPhotosRebaseConfirm => 'Rebase replacement';
+
+  @override
+  String get progressPhotosDiscard => 'Discard';
+
+  @override
+  String get progressPhotosDiscardTitle => 'Discard retained local photo?';
+
+  @override
+  String get progressPhotosDiscardMessage =>
+      'This permanently removes the retained local photo and stops its upload. This cannot be undone.';
+
+  @override
+  String get progressPhotosDiscardConfirm => 'Discard';
+
+  @override
+  String get executionPrepareTitle => 'Get ready';
+
+  @override
+  String get executionPrepareBody =>
+      'Your exercise timer starts after the countdown.';
+
+  @override
+  String executionPrepareCountdown(int seconds) {
+    return 'Starting in $seconds seconds';
+  }
+
+  @override
+  String get executionPrepareCancel => 'Cancel';
 }

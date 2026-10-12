@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:exom_app/injection_container.dart';
 
@@ -122,12 +123,16 @@ void main() {
           {'id': 'pending', 'status': 'queued', 'attempts': 4},
         ]);
         final offline = fixtures.FakeOfflineSyncService(storage);
+        final repository = fixtures.FakeFeedbackRepository();
         final queue = FeedbackUploadQueueService(
-          fixtures.FakeFeedbackRepository(),
+          repository,
           storage,
           offline,
           isAuthenticated: () => false,
         );
+        // Share the queue's isolated store so the page's session guard uses
+        // LocalStorage's real test-session semantics while auth stays paused.
+        sl.registerSingleton<LocalStorage>(storage);
         sl.registerSingleton<FeedbackUploadQueueService>(queue);
         sl.registerSingleton<OfflineSyncService>(offline);
         addTearDown(() async {
@@ -158,6 +163,10 @@ void main() {
         });
         await tester.pump();
         expect(storage.queue.single['status'], 'queued');
+        expect(storage.queue.single['id'], 'pending');
+        expect(repository.uploadCalls, 0);
+        expect(repository.createCalls, 0);
+        await tester.pumpWidget(const SizedBox.shrink());
       },
     );
 

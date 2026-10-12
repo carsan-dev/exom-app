@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
@@ -77,8 +78,19 @@ class _TrainingRepository extends Fake implements TrainingRepository {
       throw error;
 }
 
+class _EmptyLocalStorage extends LocalStorage {
+  @override
+  String? get sessionStamp => 'isolated';
+
+  @override
+  List<Map<String, dynamic>> getPendingTrainingExecutions() => [];
+}
+
 void main() {
-  setUp(() async => sl.reset());
+  setUp(() async {
+    await sl.reset();
+    sl.registerSingleton<LocalStorage>(_EmptyLocalStorage());
+  });
   tearDown(() async => sl.reset());
   for (final pageName in ['diets', 'meal', 'trainings', 'training']) {
     for (final status in [403, 401, 404, 423, 500, 0, -1]) {

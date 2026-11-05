@@ -27,7 +27,10 @@ class _Repository implements HomeRepository {
   bool completed = false;
 
   @override
-  Future<HomeSummaryEntity> getHomeSummary({DateTime? date}) async {
+  Future<HomeSummaryEntity> getHomeSummary({
+    DateTime? date,
+    bool includeSharedData = true,
+  }) async {
     loads++;
     return HomeSummaryEntity(
       trainingId: 'training',

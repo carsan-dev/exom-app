@@ -64,4 +64,36 @@ class HomeSummaryEntity {
     this.lastWeightDate,
     this.lastSleepHours,
   });
+
+  /// Returns a copy that takes the date-independent profile fields (streak,
+  /// name, avatar, latest weight and sleep) from [source].
+  HomeSummaryEntity withSharedFieldsFrom(HomeSummaryEntity source) {
+    return HomeSummaryEntity(
+      trainingId: trainingId,
+      trainingName: trainingName,
+      trainingTypes: trainingTypes,
+      trainingAccentColor: trainingAccentColor,
+      trainingDurationMin: trainingDurationMin,
+      remainingTrainingDurationMin: remainingTrainingDurationMin,
+      trainingCompleted: trainingCompleted,
+      trainings: trainings,
+      exercisesCompleted: exercisesCompleted,
+      totalExercises: totalExercises,
+      dietId: dietId,
+      dietName: dietName,
+      nextMealId: nextMealId,
+      nextMealName: nextMealName,
+      totalCalories: totalCalories,
+      remainingCalories: remainingCalories,
+      mealsCompleted: mealsCompleted,
+      totalMeals: totalMeals,
+      isRestDay: isRestDay,
+      streakDays: source.streakDays,
+      clientName: source.clientName,
+      avatarUrl: source.avatarUrl,
+      lastWeightKg: source.lastWeightKg,
+      lastWeightDate: source.lastWeightDate,
+      lastSleepHours: source.lastSleepHours,
+    );
+  }
 }

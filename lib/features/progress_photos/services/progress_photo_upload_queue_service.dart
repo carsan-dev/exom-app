@@ -8,6 +8,7 @@ import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/services/managed_upload.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/utils/async_mutex.dart';
+import 'package:exom_app/core/utils/feedback_preparation_files.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -115,6 +116,7 @@ class ProgressPhotoUploadQueueService {
     final identity = Map<String, Object?>.from(_storage.progressPhotoQueueIdentity);
     final queueId = newOperationId();
     final root = await _applicationSupportDirectory();
+    await FeedbackPreparationFiles.rejectSource(file, support: root);
     _requireSession(session);
     final directory = Directory(
       '${root.path}/progress_photo_uploads/v1/${_ownerScope(identity)}',
@@ -176,11 +178,28 @@ class ProgressPhotoUploadQueueService {
       if (session == null) throw const LocalSessionChanged();
       await _stageAndPromote(id, session);
     } else {
-      await _mutate(id, (item) => {
-        ...item,
-        'status': 'queued',
-        'next_attempt_at': DateTime.now().toUtc().toIso8601String(),
-        'last_error': null,
+      await _mutate(id, (item) {
+        // The conflicting `<operation>:<generation>` is permanent on the
+        // server, so an explicit retry starts a new generation and bound.
+        final conflicted =
+            item['status'] == 'failed' &&
+            _confirmedManagedUploadId(item) == null &&
+            (item['last_error'] == managedUploadOperationConflict ||
+                item['last_error'] == managedUploadConflictExhausted);
+        Map<String, dynamic>? checkpoint;
+        if (conflicted) {
+          checkpoint = Map<String, dynamic>.from(
+            item['upload_checkpoint'] as Map? ?? const {},
+          )..[managedUploadConflictRenewalsKey] = 0;
+          renewManagedUploadAfterConflict(checkpoint);
+        }
+        return {
+          ...item,
+          'status': 'queued',
+          'next_attempt_at': DateTime.now().toUtc().toIso8601String(),
+          'last_error': null,
+          'upload_checkpoint': ?checkpoint,
+        };
       });
     }
     await processQueue();
@@ -257,11 +276,16 @@ class ProgressPhotoUploadQueueService {
       _requireSession(session);
       while (current()) {
         final item = await _claimNext();
+        if (!current()) break;
         if (item == null) break;
         final id = item['id'] as String;
         final confirmedUploadId = _confirmedManagedUploadId(item);
         final file = File(item['file_path'] as String);
-        if (confirmedUploadId == null && !await file.exists()) {
+        final knownUploadId = (item['upload_checkpoint'] as Map?)?['upload_id'] as String?;
+        final exists = await file.exists();
+        if (!current()) break;
+        if (confirmedUploadId == null &&
+            (knownUploadId == null || knownUploadId.isEmpty) && !exists) {
           await _fail(id, item, 'progress_photo_file_missing', retryable: false);
           continue;
         }
@@ -299,6 +323,7 @@ class ProgressPhotoUploadQueueService {
                 'file_url': upload.fileUrl,
               },
             });
+            if (!current()) break;
             await _associate(item, sessionId, upload.uploadId, current);
           }
           if (!current()) break;
@@ -316,6 +341,34 @@ class ProgressPhotoUploadQueueService {
           if (!current()) break;
           final persisted = _find(id);
           if (persisted?['status'] == 'completed') continue;
+          if (error is DioException &&
+              error.response?.statusCode == 409 &&
+              _errorCode(error) == 'UPLOAD_EXPIRED') {
+            await _mutate(id, (saved) {
+              final checkpoint = Map<String, dynamic>.from(
+                saved['upload_checkpoint'] as Map? ?? const {},
+              );
+              checkpoint
+                ..['generation'] = (checkpoint['generation'] as int? ?? 0) + 1
+                ..['phase'] = 'session_expired'
+                ..remove('upload_id')
+                ..remove('file_url')
+                ..remove('session_attempted')
+                ..remove('prepared_content_type')
+                ..remove('prepared_bytes');
+              return {
+                ...saved,
+                'upload_checkpoint': checkpoint,
+                'status': 'queued',
+                'last_error': 'UPLOAD_EXPIRED',
+                'next_attempt_at': DateTime.now().toUtc().add(
+                  _backoff(saved['attempts'] as int? ?? 1),
+                ).toIso8601String(),
+              };
+            }, session: session);
+            if (!current()) break;
+            continue;
+          }
           await _fail(id, persisted ?? item, error, retryable: _isRetryable(error));
         }
       }
@@ -361,6 +414,7 @@ class ProgressPhotoUploadQueueService {
       ...saved,
       'association_checkpoint': {'state': 'associating'},
     });
+    if (!current()) throw const LocalSessionChanged();
     final photo = await _repository.associatePhoto(
       sessionId: sessionId,
       uploadId: uploadId,

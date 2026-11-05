@@ -485,6 +485,76 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> saveFeedbackUploadQueue(List<Map<String, dynamic>> queue) =>
       _saveQueue(_feedbackUploadQueueKey, queue);
 
+  int rawFeedbackOperationCount(String id) =>
+      (getCachedList(_feedbackUploadQueueKey) ?? const [])
+          .whereType<Map>()
+          .where((row) => row['id'] == id)
+          .length;
+
+  /// Raw media/sync references can veto orphan reclamation, never authorize it.
+  /// Include foreign, old and unknown rows without adopting or modifying them.
+  Iterable<String> mediaQueueReferenceValues({
+    ({String id, String path})? retiringPrepared,
+  }) sync* {
+    guardSession();
+    Iterable<String> strings(Object? value) sync* {
+      if (value is String) {
+        if (value.contains('/') || value.contains(r'\')) yield value;
+      } else if (value is List) {
+        for (final child in value) {
+          yield* strings(child);
+        }
+      } else if (value is Map) {
+        for (final child in value.values) {
+          yield* strings(child);
+        }
+      }
+    }
+
+    const keys = {
+      _feedbackUploadQueueKey,
+      _progressPhotoUploadQueueKey,
+      _pendingSyncKey,
+    };
+    final retiringKey = retiringPrepared == null
+        ? null
+        : _key(_feedbackUploadQueueKey);
+    for (final key in _cache.keys.whereType<String>()) {
+      if (!keys.contains(key) &&
+          !(key.startsWith('v2:') && keys.contains(key.split(':').last))) {
+        continue;
+      }
+      final value = _cache.get(key);
+      if (key != retiringKey || value is! List || retiringPrepared == null) {
+        yield* strings(value);
+        continue;
+      }
+      for (final row in value) {
+        if (row is! Map ||
+            row['id'] != retiringPrepared.id ||
+            row['owner_id'] != ownerId ||
+            row['environment'] != environment ||
+            row['format_version'] != 2) {
+          yield* strings(row);
+          continue;
+        }
+        for (final field in row.entries) {
+          final checkpoint = field.value;
+          if (field.key != 'upload_checkpoint' || checkpoint is! Map) {
+            yield* strings(checkpoint);
+            continue;
+          }
+          for (final entry in checkpoint.entries) {
+            if (entry.key != 'prepared_path' ||
+                entry.value != retiringPrepared.path) {
+              yield* strings(entry.value);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /// Progress-photo evidence has an independent versioned format. Unknown,
   /// foreign and unattributed records remain in Hive but are never adopted.
   Map<String, Object?> get progressPhotoQueueIdentity => {

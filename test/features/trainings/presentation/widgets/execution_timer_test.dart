@@ -95,6 +95,7 @@ void main() {
       );
       await tester.pump();
       Widget app() => MaterialApp(
+        locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(
@@ -124,7 +125,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(Dialog), findsOneWidget);
       expect(bloc.state.timedStartedAt, isNull);
-      if (scenario == 'cancel') await tester.tap(find.text('Cancel'));
+      if (scenario == 'cancel') await tester.tap(find.text('Cancelar'));
       if (scenario == 'back') await tester.binding.handlePopRoute();
       if (scenario == 'background') {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -172,6 +173,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlocProvider.value(
@@ -236,6 +238,7 @@ void main() {
     (tester) async {
       final store = _Store();
       Widget app(int round) => MaterialApp(
+        locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -303,6 +306,7 @@ void main() {
         await tester.pump();
         await tester.pumpWidget(
           MaterialApp(
+        locale: const Locale('es'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider.value(
@@ -363,6 +367,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           theme: AppTheme.dark,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -441,6 +446,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           theme: AppTheme.dark,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

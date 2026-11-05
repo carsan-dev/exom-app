@@ -12,6 +12,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import '../bloc/auth_state.dart';
 import '../widgets/social_login_button.dart';
 
@@ -157,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(authErrorText(AppLocalizations.of(context), state.message)),
               backgroundColor: palette.error,
             ),
           );
@@ -432,3 +433,28 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+
+/// Maps an [AuthError] message to localized text. Raw Firebase/server text is
+/// never shown: unknown messages fall back to a generic localized one.
+String authErrorText(AppLocalizations l10n, String message) {
+  switch (message) {
+    case AuthErrorMessages.userDisabled:
+      return l10n.authUserDisabled;
+    case AuthErrorMessages.credentialAlreadyInUse:
+      return l10n.authCredentialAlreadyInUse;
+    case AuthErrorMessages.noCurrentUser:
+      return l10n.authNoCurrentUser;
+    case AuthErrorMessages.invalidCredential:
+      return l10n.authInvalidCredential;
+    case AuthErrorMessages.linkRequestExpired:
+      return l10n.authLinkRequestExpired;
+    default:
+      final provider = AuthErrorMessages.missingEmailProvider(message);
+      if (provider != null) return l10n.authMissingEmailForLink(provider);
+      return localizedErrorText(
+        l10n,
+        message,
+        fallback: l10n.authOperationError,
+      );
+  }
+}

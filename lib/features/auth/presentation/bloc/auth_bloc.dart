@@ -75,15 +75,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   String _firebaseAuthMessage(FirebaseAuthException error) {
     switch (error.code) {
       case 'user-disabled':
-        return 'Tu cuenta ha sido dada de baja por un administrador. Contacta con tu entrenador.';
+        return AuthErrorMessages.userDisabled;
       case 'credential-already-in-use':
-        return 'Este acceso social ya está vinculado a otra cuenta. Inicia sesión con tu método original o revisa la configuración de Firebase antes de volver a intentarlo.';
+        return AuthErrorMessages.credentialAlreadyInUse;
       case 'no-current-user':
-        return 'No hemos podido mantener tu sesión para completar la vinculación. Vuelve a intentarlo.';
+        return AuthErrorMessages.noCurrentUser;
       case 'invalid-credential':
-        return 'La credencial social ha caducado. Repite el proceso de vinculación.';
+        return AuthErrorMessages.invalidCredential;
       default:
-        return error.message ?? error.code;
+        // Unknown Firebase codes stay opaque; the login UI shows a generic
+        // localized message instead of the raw SDK text.
+        return AuthErrorMessages.unknown;
     }
   }
 
@@ -120,9 +122,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (normalizedEmail == null || normalizedEmail.isEmpty) {
       _clearPendingLink();
       emit(
-        AuthError(
-          'No hemos podido identificar el correo de esta cuenta ${_providerLabel(provider)}. Inicia sesión con tu método actual y vuelve a intentarlo.',
-        ),
+        AuthError(AuthErrorMessages.missingEmail(_providerLabel(provider))),
       );
       return;
     }
@@ -297,9 +297,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         pendingEmail == null ||
         pendingProvider == null) {
       emit(
-        const AuthError(
-          'La solicitud de vinculación ha caducado. Vuelve a intentarlo.',
-        ),
+        const AuthError(AuthErrorMessages.linkRequestExpired),
       );
       return;
     }

@@ -40,11 +40,16 @@ class _OnboardingViewState extends State<_OnboardingView> {
   final _pageController = PageController();
 
   void _goToPage(int page) {
-    _pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final state = context.read<OnboardingBloc>().state;
+      if (state is! OnboardingStepActive || state.currentStep != page) return;
+      _pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override

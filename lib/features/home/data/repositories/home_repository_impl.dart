@@ -8,8 +8,14 @@ class HomeRepositoryImpl implements HomeRepository {
   const HomeRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<HomeSummaryEntity> getHomeSummary({DateTime? date}) async {
-    final model = await _remoteDataSource.getHomeSummary(date: date);
+  Future<HomeSummaryEntity> getHomeSummary({
+    DateTime? date,
+    bool includeSharedData = true,
+  }) async {
+    final model = await _remoteDataSource.getHomeSummary(
+      date: date,
+      includeSharedData: includeSharedData,
+    );
     return HomeSummaryEntity(
       trainingId: model.trainingId,
       trainingName: model.trainingName,

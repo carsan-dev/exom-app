@@ -601,7 +601,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get helpCenterDescription =>
-      'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo offline y vías de contacto.';
+      'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo sin conexión y vías de contacto.';
 
   @override
   String get sendQuestionOrIssue => 'Enviar duda o incidencia';
@@ -635,7 +635,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get creditsDescription =>
-      'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con app móvil en Flutter y backend en NestJS.';
+      'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con aplicación móvil en Flutter y servidor en NestJS.';
 
   @override
   String get developer => 'Desarrollador';
@@ -658,21 +658,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get markWorkoutExplanation =>
-      'Entra en el entrenamiento del día desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.';
+      'Entra en el entrenamiento del día desde Inicio o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.';
 
   @override
   String get markMealCompleted => '¿Cómo marco una comida como completada?';
 
   @override
   String get markMealExplanation =>
-      'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. El Home y el Calendario reflejará el avance real del día.';
+      'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. Inicio y Calendario reflejarán el avance real del día.';
 
   @override
   String get useAppOffline => '¿Puedo usar la app sin conexión?';
 
   @override
   String get useAppOfflineExplanation =>
-      'Sí. La app conserva en caché el último Home, Perfil, Calendario, Dieta, Entreno y Métricas cargados. Sin conexión puedes consultar esos datos, aunque no se enviarán cambios al servidor.';
+      'Sí. La app conserva en caché los últimos datos cargados de Inicio, Perfil, Calendario, Dieta, Entreno y Métricas. Sin conexión puedes consultarlos, aunque no se enviarán cambios al servidor.';
 
   @override
   String get weeklyRecapPurpose => '¿Para qué sirve el ReCap semanal?';
@@ -714,7 +714,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get maintainGoal => 'Mantener';
 
   @override
-  String get improveFitnessGoal => 'Mejorar fitness';
+  String get improveFitnessGoal => 'Mejorar la condición física';
 
   @override
   String get updateWeightButton => 'Actualizar peso';
@@ -1041,7 +1041,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get useThisSpaceToSummarizeYourWeek =>
-      'Usa este espacio para resumir tu semana y dar contexto útil a tu coach.';
+      'Usa este espacio para resumir tu semana y dar contexto útil a tu entrenador.';
 
   @override
   String get createMyFirstRecap => 'Crear mi primer recap';
@@ -1133,7 +1133,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get closeTheWeekWithWhatMattersForYourCoach =>
-      'Cierra la semana con lo más relevante para tu coach.';
+      'Cierra la semana con lo más relevante para tu entrenador.';
 
   @override
   String get shareAnyRelevantDetailFromYourWeek =>
@@ -1214,7 +1214,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addContextSoYourCoachCanReviewYourWeekBetter =>
-      'Añade contexto para que el coach revise mejor tu semana.';
+      'Añade contexto para que el entrenador revise mejor tu semana.';
 
   @override
   String get recapTrainingObservations => 'Observaciones';
@@ -1450,18 +1450,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dataAndSupportTitle => 'Datos y soporte';
 
   @override
-  String get offlineModeOption => 'Modo offline';
+  String get offlineModeOption => 'Modo sin conexión';
 
   @override
   String get offlineModeDescription =>
-      'La app conserva el ultimo Home, Perfil, Calendario, Dieta y Entreno cargados';
+      'La app conserva los últimos datos cargados de Inicio, Perfil, Calendario, Dieta y Entreno';
 
   @override
   String get clearCacheOption => 'Borrar caché local';
 
   @override
   String get clearCacheDescription =>
-      'Elimina datos offline guardados en este dispositivo';
+      'Elimina los datos sin conexión guardados en este dispositivo';
 
   @override
   String get sendFeedbackOption => 'Enviar feedback';
@@ -1471,11 +1471,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Comparte dudas, incidencias o feedback técnico';
 
   @override
-  String get helpAndFaqOption => 'Ayuda y FAQ';
+  String get helpAndFaqOption => 'Ayuda y preguntas frecuentes';
 
   @override
   String get helpAndFaqDescription =>
-      'Preguntas frecuentes, uso offline y soporte';
+      'Preguntas frecuentes, uso sin conexión y soporte';
 
   @override
   String get applicationSettingsTitle => 'Aplicación';
@@ -1484,7 +1484,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get versionOption => 'Versión';
 
   @override
-  String get versionDescription => 'Build actual del cliente móvil';
+  String get versionDescription => 'Compilación actual del cliente móvil';
 
   @override
   String get recommendedUpdateTitle => 'Nueva versión disponible';
@@ -1504,7 +1504,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get creditsOption => 'Créditos';
 
   @override
-  String get creditsOptionDescription => 'Tecnología y stack del producto';
+  String get creditsOptionDescription =>
+      'Tecnología y herramientas del producto';
 
   @override
   String get logOutButton => 'Cerrar sesión';
@@ -1552,7 +1553,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Notificaciones desactivadas en este dispositivo';
 
   @override
-  String get cacheDeletedMessage => 'Caché offline borrada correctamente';
+  String get cacheDeletedMessage => 'Caché sin conexión borrada correctamente';
 
   @override
   String get retry => 'Reintentar';
@@ -1933,7 +1934,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get contactSupportButton => 'Contactar soporte';
 
   @override
-  String get viewOfflineButton => 'Ver offline';
+  String get viewOfflineButton => 'Ver sin conexión';
 
   @override
   String get goToCalendarButton => 'Ir al calendario';
@@ -2122,7 +2123,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Ya tienes un recap subido esta semana';
 
   @override
-  String get tutorialPromptTitle => '¿Quieres un tour rápido?';
+  String get tutorialPromptTitle => '¿Quieres un recorrido rápido?';
 
   @override
   String get tutorialPromptDescription =>
@@ -2926,4 +2927,352 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get executionPrepareCancel => 'Cancelar';
+
+  @override
+  String inputExample(String value) {
+    return 'P. ej.: $value';
+  }
+
+  @override
+  String get activeCircuitContextMissing =>
+      'No se pudo abrir el circuito. Vuelve al entrenamiento e inténtalo de nuevo.';
+
+  @override
+  String get activeExerciseContextMissing =>
+      'No se pudo abrir el ejercicio. Vuelve al entrenamiento e inténtalo de nuevo.';
+
+  @override
+  String get selectTrainingExecution =>
+      'Selecciona una sesión de entrenamiento';
+
+  @override
+  String get recoverSavedExerciseDraft => 'Recuperar el borrador del ejercicio';
+
+  @override
+  String get restoreSavedSetsNewExecution =>
+      'Recupera las series guardadas en una sesión nueva';
+
+  @override
+  String get newTrainingExecution => 'Nueva sesión';
+
+  @override
+  String get quarantinedWorkoutNotice =>
+      'En este dispositivo se conservan datos de un entrenamiento cuya cuenta o fecha se desconoce. No se pueden recuperar automáticamente. Contacta con soporte para recuperarlos.';
+
+  @override
+  String get notificationChannelName => 'Notificaciones de EXOM';
+
+  @override
+  String get bootstrapErrorMessage =>
+      'No se pudo iniciar la app. Inténtalo de nuevo.';
+
+  @override
+  String get errorRequestFailed =>
+      'No se pudo completar la solicitud. Inténtalo de nuevo.';
+
+  @override
+  String get errorBadRequest =>
+      'Los datos enviados no son válidos. Revísalos e inténtalo de nuevo.';
+
+  @override
+  String get errorConflict =>
+      'Los datos han cambiado desde otro lugar. Actualiza e inténtalo de nuevo.';
+
+  @override
+  String get errorRateLimited =>
+      'Demasiados intentos. Espera un momento e inténtalo de nuevo.';
+
+  @override
+  String get errorSyncConflictReview =>
+      'Hay cambios en conflicto que requieren tu revisión antes de sincronizar.';
+
+  @override
+  String get errorSyncVersionConflict =>
+      'Tu progreso se modificó en otro dispositivo. Revisa los datos antes de continuar.';
+
+  @override
+  String get errorSyncHistoryAmbiguous =>
+      'No se pudo determinar a qué entrenamiento pertenece este progreso. Tus datos se conservan para revisarlos.';
+
+  @override
+  String get errorSyncReceiptMissing =>
+      'El servidor no confirmó el guardado. Tus datos se conservan; vuelve a intentarlo.';
+
+  @override
+  String get errorFeedbackDiscarded =>
+      'El material adjunto se descartó antes de enviarse.';
+
+  @override
+  String get errorSyncFailed =>
+      'No se pudo sincronizar. Tus datos se conservan en este dispositivo.';
+
+  @override
+  String get errorCompressionCancelled =>
+      'La preparación del archivo se canceló.';
+
+  @override
+  String get errorCompressionInvalidInput =>
+      'El archivo seleccionado no se puede procesar.';
+
+  @override
+  String get errorCompressionTimeout =>
+      'La preparación del archivo tardó demasiado. Inténtalo de nuevo.';
+
+  @override
+  String get errorCompressionBusy =>
+      'Ya se está preparando otro archivo. Espera a que termine.';
+
+  @override
+  String get errorCompressionFailed =>
+      'No se pudo preparar el archivo. Inténtalo de nuevo.';
+
+  @override
+  String get errorUploadExpired => 'La subida caducó. Vuelve a intentarlo.';
+
+  @override
+  String get errorUploadObjectMissing =>
+      'El archivo no llegó al servidor. Vuelve a subirlo.';
+
+  @override
+  String get errorUploadSessionChanged =>
+      'La cuenta cambió durante la subida. Inicia sesión con la cuenta original para continuar.';
+
+  @override
+  String get errorUploadOperationConflict =>
+      'Hay otra subida en curso para este elemento. Inténtalo más tarde.';
+
+  @override
+  String get authOperationError =>
+      'No se pudo completar la operación de la cuenta. Vuelve a intentarlo.';
+
+  @override
+  String get authUserDisabled =>
+      'Tu cuenta ha sido dada de baja por un administrador. Contacta con tu entrenador.';
+
+  @override
+  String get authCredentialAlreadyInUse =>
+      'Este acceso social ya está vinculado a otra cuenta. Inicia sesión con tu método original e inténtalo de nuevo.';
+
+  @override
+  String get authNoCurrentUser =>
+      'No hemos podido mantener tu sesión para completar la vinculación. Vuelve a intentarlo.';
+
+  @override
+  String get authInvalidCredential =>
+      'La credencial social ha caducado. Repite el proceso de vinculación.';
+
+  @override
+  String get homeLoadError =>
+      'No se pudo cargar el resumen. Vuelve a intentarlo.';
+
+  @override
+  String get metricsSaveError =>
+      'No se pudieron guardar las medidas. Vuelve a intentarlo.';
+
+  @override
+  String get feedbackOperationError =>
+      'No se pudo completar la operación. Vuelve a intentarlo.';
+
+  @override
+  String get notificationsLoadError =>
+      'No se pudieron cargar las notificaciones. Inténtalo de nuevo.';
+
+  @override
+  String get profileOperationError =>
+      'No se pudo completar la operación del perfil. Inténtalo de nuevo.';
+
+  @override
+  String get recapSaveError =>
+      'No se pudo guardar el resumen semanal. Inténtalo de nuevo.';
+
+  @override
+  String get recapLoadError =>
+      'No se pudieron cargar los resúmenes semanales. Inténtalo de nuevo.';
+
+  @override
+  String get recapDetailLoadError =>
+      'No se pudo cargar el resumen semanal. Inténtalo de nuevo.';
+
+  @override
+  String get activeExerciseSaveError =>
+      'No se pudieron guardar los datos del ejercicio. Inténtalo de nuevo.';
+
+  @override
+  String get trainingProgressSaveError =>
+      'No se pudo guardar el progreso del entrenamiento. Inténtalo de nuevo.';
+
+  @override
+  String get notificationChannelDescription =>
+      'Alertas y recordatorios importantes de EXOM';
+
+  @override
+  String optionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count opciones',
+      one: '$count opción',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chooseAnOption => 'Elige una opción';
+
+  @override
+  String streakDaysLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'días de racha',
+      one: 'día de racha',
+      zero: 'días de racha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recapDetailTitle => 'Detalle del recap';
+
+  @override
+  String recapReviewedOn(String date) {
+    return 'Revisado el $date';
+  }
+
+  @override
+  String get recapNewCoachComment => 'Nuevo comentario de tu entrenador';
+
+  @override
+  String get recapCoachCommentTitle => 'Comentario de tu entrenador';
+
+  @override
+  String get recapBadgeNew => 'Nuevo';
+
+  @override
+  String recapFeedbackSentOn(String date) {
+    return 'Enviado el $date';
+  }
+
+  @override
+  String get recapFeedbackPendingRead => 'Pendiente de lectura';
+
+  @override
+  String recapFeedbackReadOn(String date) {
+    return 'Leído el $date';
+  }
+
+  @override
+  String todayWithLabel(String label) {
+    return 'Hoy: $label';
+  }
+
+  @override
+  String get errorTitle => 'Error';
+
+  @override
+  String get completeLastSetOpenExercise =>
+      'Abre el ejercicio para completar la última serie y adjuntar su vídeo.';
+
+  @override
+  String circuitSummary(int rounds, int exerciseCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rounds,
+      locale: localeName,
+      other: '$rounds rondas',
+      one: '$rounds ronda',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      exerciseCount,
+      locale: localeName,
+      other: '$exerciseCount ejercicios',
+      one: '$exerciseCount ejercicio',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get registeredSetsToday => 'Series registradas hoy';
+
+  @override
+  String get editData => 'Editar datos';
+
+  @override
+  String get timerFinished => 'Tiempo finalizado';
+
+  @override
+  String timerNowAction(String action) {
+    return 'Ahora: $action';
+  }
+
+  @override
+  String get timerLogSetWhenDone => 'Registra la serie cuando termines.';
+
+  @override
+  String timerSegmentRemaining(String segment, String total) {
+    return 'Tramo: $segment · Total restante: $total';
+  }
+
+  @override
+  String timerNextAction(String action) {
+    return 'Siguiente: $action';
+  }
+
+  @override
+  String get timerRunning => 'En marcha';
+
+  @override
+  String get timerPaused => 'En pausa';
+
+  @override
+  String get timerReady => 'Preparado';
+
+  @override
+  String get timerPause => 'Pausar';
+
+  @override
+  String get timerResume => 'Reanudar';
+
+  @override
+  String get timerStart => 'Iniciar tiempo';
+
+  @override
+  String get timerReset => 'Reiniciar tiempo';
+
+  @override
+  String get streakMsgStart => '¡Empieza tu racha hoy!';
+
+  @override
+  String get streakMsgFirstDay => '¡Primer día completado! Sigue así';
+
+  @override
+  String get streakMsgGoingWell => '¡Vas muy bien! No lo detengas';
+
+  @override
+  String get streakMsgWeek => '¡Una semana seguida! Increíble';
+
+  @override
+  String streakMsgMachine(int days) {
+    return '¡Eres una máquina! Más de $days días';
+  }
+
+  @override
+  String streakMsgLegend(int days) {
+    return '¡Leyenda viva! $days días de racha';
+  }
+
+  @override
+  String get recapSignInRequired => 'Inicia sesión para ver el recap.';
+
+  @override
+  String authMissingEmailForLink(String provider) {
+    return 'No hemos podido identificar el correo de esta cuenta $provider. Inicia sesión con tu método actual y vuelve a intentarlo.';
+  }
+
+  @override
+  String get authLinkRequestExpired =>
+      'La solicitud de vinculación ha caducado. Vuelve a intentarlo.';
+
+  @override
+  String get activeExerciseOtherExecution =>
+      'Hay un entrenamiento guardado que pertenece a otra sesión. Elige cuál conservar antes de continuar.';
 }

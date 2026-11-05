@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -85,7 +86,7 @@ class _RecapViewState extends State<_RecapView> {
         if (state is RecapError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.recapSaveError)),
               backgroundColor: palette.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -280,7 +281,7 @@ class _RecapViewState extends State<_RecapView> {
               ),
               const SizedBox(height: 8),
               Text(
-                state.message,
+                localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.recapLoadError),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: palette.textSecondary),
               ),
@@ -701,7 +702,7 @@ class _RecapHistoryCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Nuevo comentario de tu entrenador',
+                            AppLocalizations.of(context).recapNewCoachComment,
                             style: TextStyle(
                               color: palette.primary,
                               fontSize: 11,

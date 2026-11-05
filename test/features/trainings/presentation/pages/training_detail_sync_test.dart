@@ -448,11 +448,11 @@ void main() {
           matching: find.byType(Scrollable)).first);
       await tester.tap(openExercise);
       await tester.pumpAndSettle();
-      expect(find.text('Select training execution'), findsOneWidget);
+      expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
       expect(find.text(_session), findsNothing,
         reason: 'in-flight or confirmed execution must not be offered for writes');
       expect(storage.creations, 0);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.text('Cancelar'));
       await tester.pumpAndSettle();
       expect(storage.creations, 0);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -487,14 +487,14 @@ void main() {
     final button = find.byKey(const Key('complete-training-button'));
     await tester.tap(button);
     await tester.pumpAndSettle();
-    expect(find.text('Select training execution'), findsOneWidget);
+    expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
     expect(storage.creations, 0);
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
     expect(storage.creations, 0);
     await tester.tap(button);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New execution'));
+    await tester.tap(find.text('Nueva sesión'));
     await tester.pumpAndSettle();
     expect(storage.creations, 1);
     expect(storage.getPendingTrainingExecutions().single['id'], _session);
@@ -531,7 +531,7 @@ void main() {
     expect(repository.completions, 0);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('Select training execution'), findsOneWidget);
+    expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
     expect(storage.creations, 0);
     await tester.pumpWidget(const SizedBox.shrink());
     await sl.reset();

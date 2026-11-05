@@ -1,9 +1,30 @@
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:video_compress/video_compress.dart';
 
 class VideoCompressor {
-  static Future<File> compress(File file) async {
+  static const _androidChannel = MethodChannel(
+    'com.exommethod.exom/video_compression',
+  );
+
+  static Future<File> compress(
+    File file, {
+    String? preparationToken,
+    bool ownedOutput = false,
+  }) async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final path = await _androidChannel.invokeMethod<String>('compress', {
+        'path': file.path,
+        'token': ?preparationToken,
+        if (ownedOutput) 'ownedOutput': true,
+      });
+      if (path == null || path.trim().isEmpty) {
+        throw PlatformException(code: 'compression_failed');
+      }
+      return File(path);
+    }
+
     final info = await VideoCompress.compressVideo(
       file.path,
       quality: VideoQuality.Res1280x720Quality,

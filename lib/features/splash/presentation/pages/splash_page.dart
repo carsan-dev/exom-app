@@ -24,8 +24,9 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   static const _entryDuration = Duration(milliseconds: 2100);
-  static const _holdDuration = Duration(milliseconds: 250);
-  static const _exitDuration = Duration(milliseconds: 650);
+  // Single short exit transition; there is no minimum dwell time.
+  static const _exitDuration = Duration(milliseconds: 250);
+  static const _gateTimeout = Duration(seconds: 6);
 
   late final AnimationController _entry;
   late final AnimationController _pulse;
@@ -98,27 +99,42 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           ),
         );
 
-    _entry.forward().whenComplete(_holdThenExit);
+    _entry.forward();
+    _exitWhenGatesResolve();
   }
 
-  Future<void> _holdThenExit() async {
-    await Future<void>.delayed(_holdDuration);
-    if (!mounted) return;
+  /// Waits for the real gates (auth status and update decision) and leaves the
+  /// splash as soon as both are resolved. The entry animation never delays it.
+  Future<void> _exitWhenGatesResolve() async {
+    final authSettled = _waitForAuthToSettle(context.read<AuthBloc>());
 
     final shouldContinue = await _handlePendingUpdate();
     if (!mounted || !shouldContinue) return;
+    await authSettled;
+    if (!mounted) return;
 
     await _exit.reverse(from: 1.0);
     if (!mounted) return;
     _navigate();
   }
 
+  Future<void> _waitForAuthToSettle(AuthBloc authBloc) async {
+    bool pending(AuthState state) =>
+        state is AuthInitial || state is AuthLoading;
+    if (!pending(authBloc.state)) return;
+    try {
+      await authBloc.stream
+          .firstWhere((state) => !pending(state))
+          .timeout(_gateTimeout);
+    } catch (error) {
+      debugPrint('[SPLASH] Auth status still pending: $error');
+    }
+  }
+
   Future<bool> _handlePendingUpdate() async {
     final AppUpdateDecision decision;
     try {
-      decision = await _updateDecisionFuture.timeout(
-        const Duration(seconds: 6),
-      );
+      decision = await _updateDecisionFuture.timeout(_gateTimeout);
     } catch (error) {
       debugPrint('[SPLASH] Skipping update gate: $error');
       return mounted;

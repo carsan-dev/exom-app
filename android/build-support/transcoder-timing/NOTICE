@@ -1,0 +1,5 @@
+Local modification of Transcoder 0.10.5 (deepmedia/Transcoder; formerly natario1/Transcoder).
+Source URL and exact installed artifact identities are retained in PROVENANCE.txt.
+Modified DecoderDropper.input on 2026-11-04 to preserve maximum renderable PTS.
+Modified Pipeline.execute on 2026-11-04 to drain available encoder output before VideoPublisher swaps buffers.
+No upstream NOTICE was present in the installed AAR; repository NOTICE retrieval was unavailable.

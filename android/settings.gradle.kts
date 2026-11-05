@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-support/transcoder-timing")
     val flutterSdkPath =
         run {
             val properties = java.util.Properties()

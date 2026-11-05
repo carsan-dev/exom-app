@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -74,7 +75,7 @@ class _HomeView extends StatelessWidget {
 
     if (state is HomeError) {
       return ErrorWidget2(
-        message: state.message,
+        message: localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.homeLoadError),
         onRetry: () => context.read<HomeBloc>().add(const HomeLoadRequested()),
       );
     }

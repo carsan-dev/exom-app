@@ -1181,7 +1181,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpCenterDescription.
   ///
   /// In es, this message translates to:
-  /// **'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo offline y vías de contacto.'**
+  /// **'Todo lo importante para usar EXOM en tu día a día: métricas, entrenamientos, dieta, modo sin conexión y vías de contacto.'**
   String get helpCenterDescription;
 
   /// No description provided for @sendQuestionOrIssue.
@@ -1241,7 +1241,7 @@ abstract class AppLocalizations {
   /// No description provided for @creditsDescription.
   ///
   /// In es, this message translates to:
-  /// **'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con app móvil en Flutter y backend en NestJS.'**
+  /// **'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con aplicación móvil en Flutter y servidor en NestJS.'**
   String get creditsDescription;
 
   /// No description provided for @developer.
@@ -1277,7 +1277,7 @@ abstract class AppLocalizations {
   /// No description provided for @markWorkoutExplanation.
   ///
   /// In es, this message translates to:
-  /// **'Entra en el entrenamiento del día desde Home o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.'**
+  /// **'Entra en el entrenamiento del día desde Inicio o desde Entrenamientos. Puedes marcar ejercicios uno a uno o completar la sesión completa desde el resumen final.'**
   String get markWorkoutExplanation;
 
   /// No description provided for @markMealCompleted.
@@ -1289,7 +1289,7 @@ abstract class AppLocalizations {
   /// No description provided for @markMealExplanation.
   ///
   /// In es, this message translates to:
-  /// **'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. El Home y el Calendario reflejará el avance real del día.'**
+  /// **'Abre la dieta del día, entra en la comida correspondiente y pulsa el botón de completado. Inicio y Calendario reflejarán el avance real del día.'**
   String get markMealExplanation;
 
   /// No description provided for @useAppOffline.
@@ -1301,7 +1301,7 @@ abstract class AppLocalizations {
   /// No description provided for @useAppOfflineExplanation.
   ///
   /// In es, this message translates to:
-  /// **'Sí. La app conserva en caché el último Home, Perfil, Calendario, Dieta, Entreno y Métricas cargados. Sin conexión puedes consultar esos datos, aunque no se enviarán cambios al servidor.'**
+  /// **'Sí. La app conserva en caché los últimos datos cargados de Inicio, Perfil, Calendario, Dieta, Entreno y Métricas. Sin conexión puedes consultarlos, aunque no se enviarán cambios al servidor.'**
   String get useAppOfflineExplanation;
 
   /// No description provided for @weeklyRecapPurpose.
@@ -1379,7 +1379,7 @@ abstract class AppLocalizations {
   /// No description provided for @improveFitnessGoal.
   ///
   /// In es, this message translates to:
-  /// **'Mejorar fitness'**
+  /// **'Mejorar la condición física'**
   String get improveFitnessGoal;
 
   /// No description provided for @updateWeightButton.
@@ -1979,7 +1979,7 @@ abstract class AppLocalizations {
   /// No description provided for @useThisSpaceToSummarizeYourWeek.
   ///
   /// In es, this message translates to:
-  /// **'Usa este espacio para resumir tu semana y dar contexto útil a tu coach.'**
+  /// **'Usa este espacio para resumir tu semana y dar contexto útil a tu entrenador.'**
   String get useThisSpaceToSummarizeYourWeek;
 
   /// No description provided for @createMyFirstRecap.
@@ -2141,7 +2141,7 @@ abstract class AppLocalizations {
   /// No description provided for @closeTheWeekWithWhatMattersForYourCoach.
   ///
   /// In es, this message translates to:
-  /// **'Cierra la semana con lo más relevante para tu coach.'**
+  /// **'Cierra la semana con lo más relevante para tu entrenador.'**
   String get closeTheWeekWithWhatMattersForYourCoach;
 
   /// No description provided for @shareAnyRelevantDetailFromYourWeek.
@@ -2279,7 +2279,7 @@ abstract class AppLocalizations {
   /// No description provided for @addContextSoYourCoachCanReviewYourWeekBetter.
   ///
   /// In es, this message translates to:
-  /// **'Añade contexto para que el coach revise mejor tu semana.'**
+  /// **'Añade contexto para que el entrenador revise mejor tu semana.'**
   String get addContextSoYourCoachCanReviewYourWeekBetter;
 
   /// No description provided for @recapTrainingObservations.
@@ -2693,13 +2693,13 @@ abstract class AppLocalizations {
   /// No description provided for @offlineModeOption.
   ///
   /// In es, this message translates to:
-  /// **'Modo offline'**
+  /// **'Modo sin conexión'**
   String get offlineModeOption;
 
   /// No description provided for @offlineModeDescription.
   ///
   /// In es, this message translates to:
-  /// **'La app conserva el ultimo Home, Perfil, Calendario, Dieta y Entreno cargados'**
+  /// **'La app conserva los últimos datos cargados de Inicio, Perfil, Calendario, Dieta y Entreno'**
   String get offlineModeDescription;
 
   /// No description provided for @clearCacheOption.
@@ -2711,7 +2711,7 @@ abstract class AppLocalizations {
   /// No description provided for @clearCacheDescription.
   ///
   /// In es, this message translates to:
-  /// **'Elimina datos offline guardados en este dispositivo'**
+  /// **'Elimina los datos sin conexión guardados en este dispositivo'**
   String get clearCacheDescription;
 
   /// No description provided for @sendFeedbackOption.
@@ -2729,13 +2729,13 @@ abstract class AppLocalizations {
   /// No description provided for @helpAndFaqOption.
   ///
   /// In es, this message translates to:
-  /// **'Ayuda y FAQ'**
+  /// **'Ayuda y preguntas frecuentes'**
   String get helpAndFaqOption;
 
   /// No description provided for @helpAndFaqDescription.
   ///
   /// In es, this message translates to:
-  /// **'Preguntas frecuentes, uso offline y soporte'**
+  /// **'Preguntas frecuentes, uso sin conexión y soporte'**
   String get helpAndFaqDescription;
 
   /// No description provided for @applicationSettingsTitle.
@@ -2753,7 +2753,7 @@ abstract class AppLocalizations {
   /// No description provided for @versionDescription.
   ///
   /// In es, this message translates to:
-  /// **'Build actual del cliente móvil'**
+  /// **'Compilación actual del cliente móvil'**
   String get versionDescription;
 
   /// No description provided for @recommendedUpdateTitle.
@@ -2789,7 +2789,7 @@ abstract class AppLocalizations {
   /// No description provided for @creditsOptionDescription.
   ///
   /// In es, this message translates to:
-  /// **'Tecnología y stack del producto'**
+  /// **'Tecnología y herramientas del producto'**
   String get creditsOptionDescription;
 
   /// No description provided for @logOutButton.
@@ -2861,7 +2861,7 @@ abstract class AppLocalizations {
   /// No description provided for @cacheDeletedMessage.
   ///
   /// In es, this message translates to:
-  /// **'Caché offline borrada correctamente'**
+  /// **'Caché sin conexión borrada correctamente'**
   String get cacheDeletedMessage;
 
   /// No description provided for @retry.
@@ -3545,7 +3545,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewOfflineButton.
   ///
   /// In es, this message translates to:
-  /// **'Ver offline'**
+  /// **'Ver sin conexión'**
   String get viewOfflineButton;
 
   /// No description provided for @goToCalendarButton.
@@ -3899,7 +3899,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialPromptTitle.
   ///
   /// In es, this message translates to:
-  /// **'¿Quieres un tour rápido?'**
+  /// **'¿Quieres un recorrido rápido?'**
   String get tutorialPromptTitle;
 
   /// No description provided for @tutorialPromptDescription.
@@ -5113,6 +5113,510 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cancelar'**
   String get executionPrepareCancel;
+
+  /// No description provided for @inputExample.
+  ///
+  /// In es, this message translates to:
+  /// **'P. ej.: {value}'**
+  String inputExample(String value);
+
+  /// No description provided for @activeCircuitContextMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el circuito. Vuelve al entrenamiento e inténtalo de nuevo.'**
+  String get activeCircuitContextMissing;
+
+  /// No description provided for @activeExerciseContextMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el ejercicio. Vuelve al entrenamiento e inténtalo de nuevo.'**
+  String get activeExerciseContextMissing;
+
+  /// No description provided for @selectTrainingExecution.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona una sesión de entrenamiento'**
+  String get selectTrainingExecution;
+
+  /// No description provided for @recoverSavedExerciseDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Recuperar el borrador del ejercicio'**
+  String get recoverSavedExerciseDraft;
+
+  /// No description provided for @restoreSavedSetsNewExecution.
+  ///
+  /// In es, this message translates to:
+  /// **'Recupera las series guardadas en una sesión nueva'**
+  String get restoreSavedSetsNewExecution;
+
+  /// No description provided for @newTrainingExecution.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva sesión'**
+  String get newTrainingExecution;
+
+  /// No description provided for @quarantinedWorkoutNotice.
+  ///
+  /// In es, this message translates to:
+  /// **'En este dispositivo se conservan datos de un entrenamiento cuya cuenta o fecha se desconoce. No se pueden recuperar automáticamente. Contacta con soporte para recuperarlos.'**
+  String get quarantinedWorkoutNotice;
+
+  /// No description provided for @notificationChannelName.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones de EXOM'**
+  String get notificationChannelName;
+
+  /// No description provided for @bootstrapErrorMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo iniciar la app. Inténtalo de nuevo.'**
+  String get bootstrapErrorMessage;
+
+  /// No description provided for @errorRequestFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la solicitud. Inténtalo de nuevo.'**
+  String get errorRequestFailed;
+
+  /// No description provided for @errorBadRequest.
+  ///
+  /// In es, this message translates to:
+  /// **'Los datos enviados no son válidos. Revísalos e inténtalo de nuevo.'**
+  String get errorBadRequest;
+
+  /// No description provided for @errorConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Los datos han cambiado desde otro lugar. Actualiza e inténtalo de nuevo.'**
+  String get errorConflict;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos. Espera un momento e inténtalo de nuevo.'**
+  String get errorRateLimited;
+
+  /// No description provided for @errorSyncConflictReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay cambios en conflicto que requieren tu revisión antes de sincronizar.'**
+  String get errorSyncConflictReview;
+
+  /// No description provided for @errorSyncVersionConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu progreso se modificó en otro dispositivo. Revisa los datos antes de continuar.'**
+  String get errorSyncVersionConflict;
+
+  /// No description provided for @errorSyncHistoryAmbiguous.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo determinar a qué entrenamiento pertenece este progreso. Tus datos se conservan para revisarlos.'**
+  String get errorSyncHistoryAmbiguous;
+
+  /// No description provided for @errorSyncReceiptMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'El servidor no confirmó el guardado. Tus datos se conservan; vuelve a intentarlo.'**
+  String get errorSyncReceiptMissing;
+
+  /// No description provided for @errorFeedbackDiscarded.
+  ///
+  /// In es, this message translates to:
+  /// **'El material adjunto se descartó antes de enviarse.'**
+  String get errorFeedbackDiscarded;
+
+  /// No description provided for @errorSyncFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo sincronizar. Tus datos se conservan en este dispositivo.'**
+  String get errorSyncFailed;
+
+  /// No description provided for @errorCompressionCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'La preparación del archivo se canceló.'**
+  String get errorCompressionCancelled;
+
+  /// No description provided for @errorCompressionInvalidInput.
+  ///
+  /// In es, this message translates to:
+  /// **'El archivo seleccionado no se puede procesar.'**
+  String get errorCompressionInvalidInput;
+
+  /// No description provided for @errorCompressionTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'La preparación del archivo tardó demasiado. Inténtalo de nuevo.'**
+  String get errorCompressionTimeout;
+
+  /// No description provided for @errorCompressionBusy.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya se está preparando otro archivo. Espera a que termine.'**
+  String get errorCompressionBusy;
+
+  /// No description provided for @errorCompressionFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo preparar el archivo. Inténtalo de nuevo.'**
+  String get errorCompressionFailed;
+
+  /// No description provided for @errorUploadExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La subida caducó. Vuelve a intentarlo.'**
+  String get errorUploadExpired;
+
+  /// No description provided for @errorUploadObjectMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'El archivo no llegó al servidor. Vuelve a subirlo.'**
+  String get errorUploadObjectMissing;
+
+  /// No description provided for @errorUploadSessionChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'La cuenta cambió durante la subida. Inicia sesión con la cuenta original para continuar.'**
+  String get errorUploadSessionChanged;
+
+  /// No description provided for @errorUploadOperationConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay otra subida en curso para este elemento. Inténtalo más tarde.'**
+  String get errorUploadOperationConflict;
+
+  /// No description provided for @authOperationError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la operación de la cuenta. Vuelve a intentarlo.'**
+  String get authOperationError;
+
+  /// No description provided for @authUserDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta ha sido dada de baja por un administrador. Contacta con tu entrenador.'**
+  String get authUserDisabled;
+
+  /// No description provided for @authCredentialAlreadyInUse.
+  ///
+  /// In es, this message translates to:
+  /// **'Este acceso social ya está vinculado a otra cuenta. Inicia sesión con tu método original e inténtalo de nuevo.'**
+  String get authCredentialAlreadyInUse;
+
+  /// No description provided for @authNoCurrentUser.
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido mantener tu sesión para completar la vinculación. Vuelve a intentarlo.'**
+  String get authNoCurrentUser;
+
+  /// No description provided for @authInvalidCredential.
+  ///
+  /// In es, this message translates to:
+  /// **'La credencial social ha caducado. Repite el proceso de vinculación.'**
+  String get authInvalidCredential;
+
+  /// No description provided for @homeLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el resumen. Vuelve a intentarlo.'**
+  String get homeLoadError;
+
+  /// No description provided for @metricsSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar las medidas. Vuelve a intentarlo.'**
+  String get metricsSaveError;
+
+  /// No description provided for @feedbackOperationError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la operación. Vuelve a intentarlo.'**
+  String get feedbackOperationError;
+
+  /// No description provided for @notificationsLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las notificaciones. Inténtalo de nuevo.'**
+  String get notificationsLoadError;
+
+  /// No description provided for @profileOperationError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar la operación del perfil. Inténtalo de nuevo.'**
+  String get profileOperationError;
+
+  /// No description provided for @recapSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el resumen semanal. Inténtalo de nuevo.'**
+  String get recapSaveError;
+
+  /// No description provided for @recapLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los resúmenes semanales. Inténtalo de nuevo.'**
+  String get recapLoadError;
+
+  /// No description provided for @recapDetailLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el resumen semanal. Inténtalo de nuevo.'**
+  String get recapDetailLoadError;
+
+  /// No description provided for @activeExerciseSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar los datos del ejercicio. Inténtalo de nuevo.'**
+  String get activeExerciseSaveError;
+
+  /// No description provided for @trainingProgressSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el progreso del entrenamiento. Inténtalo de nuevo.'**
+  String get trainingProgressSaveError;
+
+  /// No description provided for @notificationChannelDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Alertas y recordatorios importantes de EXOM'**
+  String get notificationChannelDescription;
+
+  /// No description provided for @optionsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} opción} other{{count} opciones}}'**
+  String optionsCount(int count);
+
+  /// No description provided for @chooseAnOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una opción'**
+  String get chooseAnOption;
+
+  /// No description provided for @streakDaysLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{días de racha} =1{día de racha} other{días de racha}}'**
+  String streakDaysLabel(int count);
+
+  /// No description provided for @recapDetailTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle del recap'**
+  String get recapDetailTitle;
+
+  /// No description provided for @recapReviewedOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisado el {date}'**
+  String recapReviewedOn(String date);
+
+  /// No description provided for @recapNewCoachComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo comentario de tu entrenador'**
+  String get recapNewCoachComment;
+
+  /// No description provided for @recapCoachCommentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentario de tu entrenador'**
+  String get recapCoachCommentTitle;
+
+  /// No description provided for @recapBadgeNew.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo'**
+  String get recapBadgeNew;
+
+  /// No description provided for @recapFeedbackSentOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviado el {date}'**
+  String recapFeedbackSentOn(String date);
+
+  /// No description provided for @recapFeedbackPendingRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de lectura'**
+  String get recapFeedbackPendingRead;
+
+  /// No description provided for @recapFeedbackReadOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Leído el {date}'**
+  String recapFeedbackReadOn(String date);
+
+  /// No description provided for @todayWithLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy: {label}'**
+  String todayWithLabel(String label);
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Error'**
+  String get errorTitle;
+
+  /// No description provided for @completeLastSetOpenExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre el ejercicio para completar la última serie y adjuntar su vídeo.'**
+  String get completeLastSetOpenExercise;
+
+  /// No description provided for @circuitSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{rounds, plural, one{{rounds} ronda} other{{rounds} rondas}} · {exerciseCount, plural, one{{exerciseCount} ejercicio} other{{exerciseCount} ejercicios}}'**
+  String circuitSummary(int rounds, int exerciseCount);
+
+  /// No description provided for @registeredSetsToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Series registradas hoy'**
+  String get registeredSetsToday;
+
+  /// No description provided for @editData.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar datos'**
+  String get editData;
+
+  /// No description provided for @timerFinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo finalizado'**
+  String get timerFinished;
+
+  /// No description provided for @timerNowAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora: {action}'**
+  String timerNowAction(String action);
+
+  /// No description provided for @timerLogSetWhenDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra la serie cuando termines.'**
+  String get timerLogSetWhenDone;
+
+  /// No description provided for @timerSegmentRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Tramo: {segment} · Total restante: {total}'**
+  String timerSegmentRemaining(String segment, String total);
+
+  /// No description provided for @timerNextAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: {action}'**
+  String timerNextAction(String action);
+
+  /// No description provided for @timerRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'En marcha'**
+  String get timerRunning;
+
+  /// No description provided for @timerPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'En pausa'**
+  String get timerPaused;
+
+  /// No description provided for @timerReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparado'**
+  String get timerReady;
+
+  /// No description provided for @timerPause.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get timerPause;
+
+  /// No description provided for @timerResume.
+  ///
+  /// In es, this message translates to:
+  /// **'Reanudar'**
+  String get timerResume;
+
+  /// No description provided for @timerStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar tiempo'**
+  String get timerStart;
+
+  /// No description provided for @timerReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Reiniciar tiempo'**
+  String get timerReset;
+
+  /// No description provided for @streakMsgStart.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Empieza tu racha hoy!'**
+  String get streakMsgStart;
+
+  /// No description provided for @streakMsgFirstDay.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Primer día completado! Sigue así'**
+  String get streakMsgFirstDay;
+
+  /// No description provided for @streakMsgGoingWell.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Vas muy bien! No lo detengas'**
+  String get streakMsgGoingWell;
+
+  /// No description provided for @streakMsgWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Una semana seguida! Increíble'**
+  String get streakMsgWeek;
+
+  /// No description provided for @streakMsgMachine.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Eres una máquina! Más de {days} días'**
+  String streakMsgMachine(int days);
+
+  /// No description provided for @streakMsgLegend.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Leyenda viva! {days} días de racha'**
+  String streakMsgLegend(int days);
+
+  /// No description provided for @recapSignInRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión para ver el recap.'**
+  String get recapSignInRequired;
+
+  /// No description provided for @authMissingEmailForLink.
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido identificar el correo de esta cuenta {provider}. Inicia sesión con tu método actual y vuelve a intentarlo.'**
+  String authMissingEmailForLink(String provider);
+
+  /// No description provided for @authLinkRequestExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'La solicitud de vinculación ha caducado. Vuelve a intentarlo.'**
+  String get authLinkRequestExpired;
+
+  /// No description provided for @activeExerciseOtherExecution.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay un entrenamiento guardado que pertenece a otra sesión. Elige cuál conservar antes de continuar.'**
+  String get activeExerciseOtherExecution;
 }
 
 class _AppLocalizationsDelegate

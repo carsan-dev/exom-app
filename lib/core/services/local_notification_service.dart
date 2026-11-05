@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
 import 'package:exom_app/core/navigation/notification_route_utils.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
 typedef LocalNotificationTapHandler =
     void Function(String? notificationId, String? route);
@@ -21,12 +23,21 @@ class LocalNotificationService {
 
   static const channelId = 'exom_high_importance';
 
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    channelId,
-    'EXOM Notifications',
-    description: 'Alertas y recordatorios importantes de EXOM',
-    importance: Importance.max,
-  );
+  // Android channel labels are created outside the widget tree, so they follow
+  // the device language (Spanish when it is not a supported locale).
+  static AndroidNotificationChannel get _channel {
+    final deviceLocale = PlatformDispatcher.instance.locale;
+    final locale = AppLocalizations.delegate.isSupported(deviceLocale)
+        ? deviceLocale
+        : const Locale('es');
+    final l10n = lookupAppLocalizations(locale);
+    return AndroidNotificationChannel(
+      channelId,
+      l10n.notificationChannelName,
+      description: l10n.notificationChannelDescription,
+      importance: Importance.max,
+    );
+  }
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();

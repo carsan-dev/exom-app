@@ -474,6 +474,8 @@ Future<void> initDependencies() async {
       getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
       createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
       uploadFeedbackMediaUseCase: sl<UploadFeedbackMediaUseCase>(),
+      uploadNotices: sl<FeedbackUploadQueueService>().notices,
+      localStorage: sl<LocalStorage>(),
     ),
   );
 

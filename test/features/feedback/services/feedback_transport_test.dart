@@ -38,107 +38,193 @@ void main() {
   tearDown(() async {
     await dir.delete(recursive: true);
   });
+  for (final compress in [false, true]) {
+    test(
+      'lost confirmation reuses prepared media without another PUT (compressed=$compress)',
+      () async {
+        final api = ApiClient(useAuth: false, baseUrl: 'https://api.exom.test');
+        final transfer = Dio();
+        final adapter = ByteTransferAdapter();
+        transfer.httpClientAdapter = adapter;
+        var completedCalls = 0;
+        final keys = <String>[];
+        final checkpoints = <Map<String, dynamic>>[];
+        final progress = <int>[];
+        final stages = <String>[];
+        var preparations = 0;
+        final uploadBytes = compress ? 8192 : 16384;
+        api.dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              if (options.path == '/uploads/sessions') {
+                keys.add(
+                  (options.data as Map)['client_operation_id'] as String,
+                );
+                handler.resolve(
+                  Response(
+                    requestOptions: options,
+                    statusCode: 200,
+                    data: {
+                      'upload_id': 'one',
+                      'upload_url': 'https://storage.exom.test/one',
+                    },
+                  ),
+                );
+              } else {
+                completedCalls++;
+                if (completedCalls <= 2) {
+                  final code = completedCalls == 1 ? 404 : 503;
+                  handler.reject(
+                    DioException.badResponse(
+                      statusCode: code,
+                      requestOptions: options,
+                      response: Response(
+                        requestOptions: options,
+                        statusCode: code,
+                        data: {
+                          'code': completedCalls == 1
+                              ? 'UPLOAD_OBJECT_MISSING'
+                              : 'UPLOAD_INSPECTION_UNAVAILABLE',
+                        },
+                      ),
+                    ),
+                  );
+                } else {
+                  handler.resolve(
+                    Response(
+                      requestOptions: options,
+                      statusCode: 200,
+                      data: {'file_url': 'r2://one'},
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        );
+        final source = FeedbackRemoteDataSourceImpl(
+          api,
+          prepareFile: (f, _) async {
+            expect(stages.last, 'preparing');
+            preparations++;
+            return compress
+                ? File(
+                    '${dir.path}/compressed.mp4',
+                  ).writeAsBytes(List.filled(uploadBytes, preparations))
+                : f;
+          },
+          transferClient: transfer,
+        );
+        FeedbackUploadContext context() => FeedbackUploadContext(
+          operationId: 'stable',
+          checkpoint: checkpoints.isEmpty ? {} : checkpoints.last,
+          saveCheckpoint: (value) async => checkpoints.add(value),
+          isCurrent: () => true,
+          onPreparing: () => stages.add('preparing'),
+          onProcessing: () => stages.add('processing'),
+          onProgress: (sent, total) {
+            stages.add('sending');
+            expect(total, uploadBytes);
+            progress.add(sent);
+          },
+        );
+        await expectLater(
+          source.uploadMedia(file, 'video/mp4', context: context()),
+          throwsA(isA<DioException>()),
+        );
+        final result = await source.uploadMedia(
+          file,
+          'video/mp4',
+          context: context(),
+        );
+        expect(result.uploadId, 'one');
+        expect(adapter.calls, 1);
+        expect(adapter.bytes, uploadBytes);
+        expect(progress.last, uploadBytes);
+        expect(preparations, 1);
+        expect(checkpoints.first['prepared_path'], isNotNull);
+        final prepared = File(checkpoints.last['prepared_path'] as String);
+        expect(await prepared.readAsBytes(), List.filled(uploadBytes, 1));
+        expect(stages.first, 'preparing');
+        expect(stages.last, 'processing');
+        expect(
+          stages.indexOf('sending'),
+          greaterThan(stages.indexOf('preparing')),
+        );
+        // A persisted upload ID is reconciled without replaying session creation.
+        expect(keys, ['stable:0']);
+        expect(completedCalls, 3);
+        expect(await file.exists(), true);
+      },
+    );
+  }
   test(
-    'lost confirmation response reconciles the existing object without another PUT; byte progress is real',
+    'preparation retains a renewed generation across a cold-start timeout',
     () async {
       final api = ApiClient(useAuth: false, baseUrl: 'https://api.exom.test');
-      final transfer = Dio();
-      final adapter = ByteTransferAdapter();
-      transfer.httpClientAdapter = adapter;
-      var completedCalls = 0;
       final keys = <String>[];
-      final checkpoints = <Map<String, dynamic>>[];
-      final progress = <int>[];
-      final stages = <String>[];
+      final sizes = <int>[];
+      var preparations = 0;
+      Map<String, dynamic> saved = {'generation': 3};
       api.dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
             if (options.path == '/uploads/sessions') {
-              keys.add((options.data as Map)['client_operation_id'] as String);
-              handler.resolve(
-                Response(
-                  requestOptions: options,
-                  statusCode: 200,
-                  data: {
-                    'upload_id': 'one',
-                    'upload_url': 'https://storage.exom.test/one',
-                  },
-                ),
-              );
-            } else {
-              completedCalls++;
-              if (completedCalls <= 2) {
-                final code = completedCalls == 1 ? 404 : 503;
+              final data = options.data as Map;
+              keys.add(data['client_operation_id'] as String);
+              sizes.add(data['bytes'] as int);
+              if (keys.length == 1) {
                 handler.reject(
-                  DioException.badResponse(
-                    statusCode: code,
+                  DioException(
                     requestOptions: options,
-                    response: Response(
-                      requestOptions: options,
-                      statusCode: code,
-                      data: {
-                        'code': completedCalls == 1
-                            ? 'UPLOAD_OBJECT_MISSING'
-                            : 'UPLOAD_INSPECTION_UNAVAILABLE',
-                      },
-                    ),
+                    type: DioExceptionType.receiveTimeout,
                   ),
                 );
               } else {
                 handler.resolve(
                   Response(
                     requestOptions: options,
-                    statusCode: 200,
-                    data: {'file_url': 'r2://one'},
+                    data: {'upload_id': 'renewed'},
                   ),
                 );
               }
+            } else {
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  data: {'file_url': 'r2://renewed'},
+                ),
+              );
             }
           },
         ),
       );
       final source = FeedbackRemoteDataSourceImpl(
         api,
-        prepareFile: (f, _) async {
-          expect(stages.last, 'preparing');
-          return f;
+        prepareFile: (_, _) async {
+          preparations++;
+          return File(
+            '${dir.path}/compressed.mp4',
+          ).writeAsBytes(List.filled(8192 + preparations, 1));
         },
-        transferClient: transfer,
       );
       FeedbackUploadContext context() => FeedbackUploadContext(
         operationId: 'stable',
-        checkpoint: checkpoints.isEmpty ? {} : checkpoints.last,
-        saveCheckpoint: (value) async => checkpoints.add(value),
+        checkpoint: saved,
+        saveCheckpoint: (value) async => saved = value,
         isCurrent: () => true,
-        onPreparing: () => stages.add('preparing'),
-        onProcessing: () => stages.add('processing'),
-        onProgress: (sent, total) {
-          stages.add('sending');
-          expect(total, 16384);
-          progress.add(sent);
-        },
       );
       await expectLater(
         source.uploadMedia(file, 'video/mp4', context: context()),
         throwsA(isA<DioException>()),
       );
-      final result = await source.uploadMedia(
-        file,
-        'video/mp4',
-        context: context(),
-      );
-      expect(result.uploadId, 'one');
-      expect(adapter.calls, 1);
-      expect(adapter.bytes, 16384);
-      expect(progress.last, 16384);
-      expect(stages.first, 'preparing');
-      expect(stages.last, 'processing');
-      expect(
-        stages.indexOf('sending'),
-        greaterThan(stages.indexOf('preparing')),
-      );
-      expect(keys, ['stable:0', 'stable:0']);
-      expect(await file.exists(), true);
+      await source.uploadMedia(file, 'video/mp4', context: context());
+      expect(keys, ['stable:3', 'stable:3']);
+      expect(sizes, [8193, 8193]);
+      expect(preparations, 1);
+      expect(saved['generation'], 3);
+      expect(saved['phase'], 'completion_confirmed');
+      expect(await file.exists(), isTrue);
     },
   );
   test(

@@ -1,3 +1,4 @@
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'execution_start_countdown.dart';
@@ -210,6 +211,7 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = widget.state;
     final total = state.timedTotalSeconds!;
     final config =
@@ -224,22 +226,25 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            done ? 'Tiempo finalizado' : 'Ahora: ${phase.action}',
+            done ? l10n.timerFinished : l10n.timerNowAction(phase.action),
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           Text(
             done
-                ? 'Registra la serie cuando termines.'
-                : 'Tramo: ${clock(phase.remainingMilliseconds)} · Total restante: ${clock(phase.totalRemainingMilliseconds)}',
+                ? l10n.timerLogSetWhenDone
+                : l10n.timerSegmentRemaining(
+                    clock(phase.remainingMilliseconds),
+                    clock(phase.totalRemainingMilliseconds),
+                  ),
           ),
-          if (phase.nextAction != null) Text('Siguiente: ${phase.nextAction}'),
+          if (phase.nextAction != null) Text(l10n.timerNextAction(phase.nextAction!)),
           if (!done)
             Text(
               running
-                  ? 'En marcha'
+                  ? l10n.timerRunning
                   : state.timedElapsedMs > 0
-                  ? 'En pausa'
-                  : 'Preparado',
+                  ? l10n.timerPaused
+                  : l10n.timerReady,
             ),
           Wrap(
             spacing: 8,
@@ -249,17 +254,17 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
                   onPressed: _toggle,
                   child: Text(
                     running
-                        ? 'Pausar'
+                        ? l10n.timerPause
                         : state.timedElapsedMs > 0
-                        ? 'Reanudar'
-                        : 'Iniciar tiempo',
+                        ? l10n.timerResume
+                        : l10n.timerStart,
                   ),
                 ),
               TextButton(
                 onPressed: () => context.read<ActiveExerciseBloc>().add(
                   const ResetExecutionTimer(),
                 ),
-                child: const Text('Reiniciar tiempo'),
+                child: Text(l10n.timerReset),
               ),
             ],
           ),

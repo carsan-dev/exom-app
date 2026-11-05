@@ -678,7 +678,7 @@ class _CreditsSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Créditos',
+              AppLocalizations.of(context).creditsOption,
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: palette.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -686,7 +686,7 @@ class _CreditsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'EXOM es un producto de valor añadido para clientes, desarrollado por Carlos Sánchez Román con app móvil en Flutter y backend en NestJS.',
+              AppLocalizations.of(context).creditsDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: palette.textSecondary,
                 height: 1.5,

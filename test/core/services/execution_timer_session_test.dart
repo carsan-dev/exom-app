@@ -149,6 +149,7 @@ void main() {
       await tester.pump();
       final owner = storage.sessionStamp;
       Widget app(int revision) => MaterialApp(
+        locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(

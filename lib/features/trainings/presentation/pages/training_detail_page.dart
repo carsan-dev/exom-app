@@ -255,7 +255,7 @@ class _TrainingDetailView extends StatelessWidget {
         if (state is TrainingDetailLoaded && state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage!),
+              content: Text(localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError)),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -271,7 +271,7 @@ class _TrainingDetailView extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               surfaceTintColor: Colors.transparent,
-              title: const Text('Error'),
+              title: Text(AppLocalizations.of(context).errorTitle),
             ),
             body: ErrorWidget2(
               message: state.apiException != null
@@ -690,12 +690,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       entry['training_id'] == training.id && entry['assignment_date'] == date &&
       entry['status'] == 'pending-sync');
     final hasCompleted = storage.hasCompletedTrainingExecution(training.id, date);
+    final l10n = AppLocalizations.of(context);
     String? selected;
     if (pending.isNotEmpty || legacy || hasPendingSync || hasCompleted) {
       selected = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Select training execution'),
+          title: Text(l10n.selectTrainingExecution),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -708,17 +709,17 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               if (legacy)
                 ListTile(
                   key: const Key('recover-legacy-workout'),
-                  title: const Text('Recover saved exercise draft'),
-                  subtitle: const Text('Restore saved sets in a new execution'),
+                  title: Text(l10n.recoverSavedExerciseDraft),
+                  subtitle: Text(l10n.restoreSavedSetsNewExecution),
                   onTap: () => Navigator.of(dialogContext).pop('recover'),
                 ),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel')),
+                child: Text(l10n.cancel)),
             FilledButton(onPressed: () => Navigator.of(dialogContext).pop('new'),
-                child: const Text('New execution')),
+                child: Text(l10n.newTrainingExecution)),
           ],
         ),
       );
@@ -895,6 +896,244 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     );
   }
 
+  TrainingEntity? _groupedTraining;
+  List<_ExerciseRowGroup> _groups = const [];
+
+  /// Groups consecutive circuit members once per training revision instead of
+  /// rescanning every exercise for each circuit on every build.
+  List<_ExerciseRowGroup> _exerciseGroups(TrainingEntity training) {
+    if (identical(_groupedTraining, training)) return _groups;
+    final membersByBlock = <String, List<TrainingExerciseEntity>>{};
+    final blockIds = <String?>[];
+    for (final exercise in training.exercises) {
+      final blockId = exercise.blockId;
+      blockIds.add(blockId);
+      if (blockId != null) {
+        (membersByBlock[blockId] ??= <TrainingExerciseEntity>[]).add(exercise);
+      }
+    }
+    for (final members in membersByBlock.values) {
+      members.sort(
+        (left, right) => (left.positionInBlock ?? left.order).compareTo(
+          right.positionInBlock ?? right.order,
+        ),
+      );
+    }
+    final groups = <_ExerciseRowGroup>[];
+    String? currentBlockId;
+    for (var index = 0; index < training.exercises.length; index++) {
+      final exercise = training.exercises[index];
+      final blockId = blockIds[index];
+      if (blockId == null) {
+        groups.add(_ExerciseRowGroup(exercise));
+        continue;
+      }
+      if (blockId == currentBlockId) continue;
+      currentBlockId = blockId;
+      groups.add(_ExerciseRowGroup(exercise, membersByBlock[blockId]));
+    }
+    _groupedTraining = training;
+    return _groups = List<_ExerciseRowGroup>.unmodifiable(groups);
+  }
+
+  Widget _buildCircuitRow(
+    BuildContext context,
+    TrainingEntity training,
+    Color color,
+    TrainingExerciseEntity ex,
+    List<TrainingExerciseEntity> blockExercises,
+  ) {
+                          final completedCount = blockExercises
+                              .where(
+                                (blockExercise) => _progress.ids.contains(blockExercise.id),
+                              )
+                              .length;
+                          final blockId = ex.blockId!;
+                          return _CircuitCard(
+                              name: ex.blockName ?? 'Circuito',
+                              rounds: ex.blockRounds ?? 1,
+                              restBetweenRoundsSeconds:
+                                  ex.restBetweenRoundsSeconds ?? 60,
+                              exerciseCount: blockExercises.length,
+                              completedCount: completedCount,
+                              color: color,
+                              onFeedback: () {
+                                context.push(
+                                  AppRoutes.feedback,
+                                  extra: FeedbackPageArgs.circuit(
+                                    circuitName: ex.blockName ?? 'Circuito',
+                                    circuitExercises: blockExercises
+                                        .map(
+                                          (blockExercise) =>
+                                              FeedbackExerciseTarget(
+                                                key: blockExercise.id,
+                                                exerciseId:
+                                                    blockExercise.exercise.id,
+                                                exerciseName:
+                                                    blockExercise.exercise.name,
+                                              ),
+                                        )
+                                        .toList(growable: false),
+                                  ),
+                                );
+                              },
+                              onStart: () async {
+                                final sessionId = await _selectExecution(
+                                  training, widget.state.selectedDate);
+                                if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+                                context.push(
+                                  AppRoutes.activeCircuitPath(
+                                    training.id,
+                                    blockId,
+                                  ),
+                                  extra: ActiveCircuitPageArgs(
+                                    trainingBloc: context.read<TrainingBloc>(),
+                                    sessionId: sessionId,
+                                    trainingName: training.name,
+                                    trainingTypes: training.types,
+                                    accentColorHex: training.accentColor,
+                                    trainingLevel: training.level,
+                                    blockId: blockId,
+                                    blockName: ex.blockName ?? 'Circuito',
+                                    rounds: ex.blockRounds ?? 1,
+                                    restBetweenRoundsSeconds:
+                                        ex.restBetweenRoundsSeconds ?? 60,
+                                    exercises: blockExercises,
+                                    previousPerformances: {
+                                      for (final blockExercise
+                                          in blockExercises)
+                                        if (widget
+                                                .state
+                                                .previousPerformances[blockExercise
+                                                .id] !=
+                                            null)
+                                          blockExercise.id:
+                                              widget
+                                                  .state
+                                                  .previousPerformances[blockExercise
+                                                  .id]!,
+                                    },
+                                    requiresLastSetVideo:
+                                        training.requiresLastSetVideo,
+                                    assignmentDate: widget.state.selectedDate,
+                                  ),
+                                );
+                              },
+                              onMarkPending:
+                                  completedCount == blockExercises.length
+                                  ? () async {
+                                      final sessionId = await _selectExecution(
+                                        training, widget.state.selectedDate);
+                                      if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+                                      for (final blockExercise
+                                          in blockExercises) {
+                                        context.read<TrainingBloc>().add(
+                                          MarkExerciseCompleted(
+                                            sessionId: sessionId,
+                                            sessionStamp: widget.sessionStamp,
+                                            trainingExerciseId:
+                                                blockExercise.id,
+                                            exerciseId:
+                                                blockExercise.exercise.id,
+                                            completed: false,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  : null,
+                          );
+  }
+
+  Widget _buildExerciseRow(
+    BuildContext context,
+    TrainingEntity training,
+    Color color,
+    TrainingExerciseEntity ex,
+  ) {
+    final l10n = AppLocalizations.of(context);
+                        final isCompleted = _progress.ids.contains(ex.id);
+                        final storage = sl<LocalStorage>();
+                        final activeWorkout = _progressSessionId == null
+                            ? storage.recoverableLegacyWorkout(
+                                training.id, ex.id, widget.state.selectedDate)
+                            : storage.getActiveWorkout(
+                                '${ex.id}:${widget.state.selectedDate}:$_progressSessionId');
+                        final partialProgress =
+                            activeWorkout?.trainingId == training.id
+                            ? activeWorkout
+                            : null;
+                        final effectiveWeight =
+                            _progress.weights[ex.id] ??
+                            partialProgress?.lastWeightKg;
+                        final partialProgressLabel =
+                            !isCompleted &&
+                                partialProgress != null &&
+                                partialProgress.completedSets > 0
+                            ? l10n.exerciseSeriesProgress(
+                                partialProgress.completedSets,
+                                ex.sets,
+                              )
+                            : null;
+
+                        return _ExerciseCard(
+                            trainingExercise: ex,
+                            trainingTypes: training.types,
+                            accentColorHex: training.accentColor,
+                            trainingLevel: training.level,
+                            isCompleted: isCompleted,
+                            weightUsed: effectiveWeight,
+                            currentPerformances:
+                                _progress.performances[ex.id],
+                            partialProgressLabel: partialProgressLabel,
+                            onOpenActive: () async {
+                              final sessionId = await _selectExecution(
+                                training, widget.state.selectedDate,
+                                legacyExerciseId: ex.id);
+                              if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+                              final selectedProgress = widget.state.sessionProgress[sessionId]
+                                  ?? const TrainingDayProgress();
+                              context.push(
+                                AppRoutes.activeExercisePath(
+                                  training.id,
+                                  ex.id,
+                                ),
+                                extra: ActiveExercisePageArgs(
+                                  trainingBloc: context.read<TrainingBloc>(),
+                                  sessionId: sessionId,
+                                  trainingExercise: ex,
+                                  trainingName: training.name,
+                                  trainingTypes: training.types,
+                                  accentColorHex: training.accentColor,
+                                  trainingLevel: training.level,
+                                  initialWeightKg: selectedProgress.weights[ex.id],
+                                  currentPerformances:
+                                      selectedProgress.performances[ex.id],
+                                  previousPerformances:
+                                      widget.state.previousPerformances[ex.id],
+                                  requiresLastSetVideo:
+                                      training.requiresLastSetVideo,
+                                  assignmentDate: widget.state.selectedDate,
+                                ),
+                              );
+                            },
+                            onToggle: (val, {double? weightUsed}) {
+                              if (val && training.requiresLastSetVideo) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(context)
+                                          .completeLastSetOpenExercise,
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              // Direct toggles still belong to a durable execution.
+                              _toggleExercise(training, ex, val, weightUsed);
+                            },
+                        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final training = widget.state.training;
@@ -951,6 +1190,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final remaining = training.remainingProgress(
       _progress.ids,
     );
+    final activeWorkouts = sl<LocalStorage>().watchActiveWorkouts();
 
     return ExomStaticBackground(
       child: Scaffold(
@@ -1090,11 +1330,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   // Unscoped drafts are retained in Hive but never displayed as
                   // this account's progress or submitted under its credentials.
                   if (sl<LocalStorage>().hasQuarantinedWorkoutDrafts)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'Saved workout data from an unknown account or date is kept on this device. It cannot be restored automatically; contact support to recover it.',
-                        key: Key('quarantined-workout-notice'),
+                        AppLocalizations.of(context).quarantinedWorkoutNotice,
+                        key: const Key('quarantined-workout-notice'),
                       ),
                     ),
                   // Exercises section
@@ -1104,227 +1344,22 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     color: color,
                     trailing: '$total ${l10n.exercises}',
                   ),
-                  ValueListenableBuilder(
-                    valueListenable: sl<LocalStorage>().watchActiveWorkouts(),
-                    builder: (context, box, _) {
-                      final cards = <Widget>[];
-                      String? currentBlockId;
-                      for (
-                        var index = 0;
-                        index < training.exercises.length;
-                        index++
-                      ) {
-                        final ex = training.exercises[index];
-                        if (ex.blockId != null) {
-                          if (ex.blockId == currentBlockId) {
-                            continue;
-                          }
-                          currentBlockId = ex.blockId;
-                          final blockExercises =
-                              training.exercises
-                                  .where(
-                                    (candidate) =>
-                                        candidate.blockId == ex.blockId,
-                                  )
-                                  .toList()
-                                ..sort(
-                                  (left, right) =>
-                                      (left.positionInBlock ?? left.order)
-                                          .compareTo(
-                                            right.positionInBlock ??
-                                                right.order,
-                                          ),
-                                );
-                          final completedCount = blockExercises
-                              .where(
-                                (blockExercise) => _progress.ids.contains(blockExercise.id),
-                              )
-                              .length;
-                          final blockId = ex.blockId!;
-                          cards.add(
-                            _CircuitCard(
-                              name: ex.blockName ?? 'Circuito',
-                              rounds: ex.blockRounds ?? 1,
-                              restBetweenRoundsSeconds:
-                                  ex.restBetweenRoundsSeconds ?? 60,
-                              exerciseCount: blockExercises.length,
-                              completedCount: completedCount,
-                              color: color,
-                              onFeedback: () {
-                                context.push(
-                                  AppRoutes.feedback,
-                                  extra: FeedbackPageArgs.circuit(
-                                    circuitName: ex.blockName ?? 'Circuito',
-                                    circuitExercises: blockExercises
-                                        .map(
-                                          (blockExercise) =>
-                                              FeedbackExerciseTarget(
-                                                key: blockExercise.id,
-                                                exerciseId:
-                                                    blockExercise.exercise.id,
-                                                exerciseName:
-                                                    blockExercise.exercise.name,
-                                              ),
-                                        )
-                                        .toList(growable: false),
-                                  ),
-                                );
-                              },
-                              onStart: () async {
-                                final sessionId = await _selectExecution(
-                                  training, widget.state.selectedDate);
-                                if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                                context.push(
-                                  AppRoutes.activeCircuitPath(
-                                    training.id,
-                                    blockId,
-                                  ),
-                                  extra: ActiveCircuitPageArgs(
-                                    trainingBloc: context.read<TrainingBloc>(),
-                                    sessionId: sessionId,
-                                    trainingName: training.name,
-                                    trainingTypes: training.types,
-                                    accentColorHex: training.accentColor,
-                                    trainingLevel: training.level,
-                                    blockId: blockId,
-                                    blockName: ex.blockName ?? 'Circuito',
-                                    rounds: ex.blockRounds ?? 1,
-                                    restBetweenRoundsSeconds:
-                                        ex.restBetweenRoundsSeconds ?? 60,
-                                    exercises: blockExercises,
-                                    previousPerformances: {
-                                      for (final blockExercise
-                                          in blockExercises)
-                                        if (widget
-                                                .state
-                                                .previousPerformances[blockExercise
-                                                .id] !=
-                                            null)
-                                          blockExercise.id:
-                                              widget
-                                                  .state
-                                                  .previousPerformances[blockExercise
-                                                  .id]!,
-                                    },
-                                    requiresLastSetVideo:
-                                        training.requiresLastSetVideo,
-                                    assignmentDate: widget.state.selectedDate,
-                                  ),
-                                );
-                              },
-                              onMarkPending:
-                                  completedCount == blockExercises.length
-                                  ? () async {
-                                      final sessionId = await _selectExecution(
-                                        training, widget.state.selectedDate);
-                                      if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                                      for (final blockExercise
-                                          in blockExercises) {
-                                        context.read<TrainingBloc>().add(
-                                          MarkExerciseCompleted(
-                                            sessionId: sessionId,
-                                            sessionStamp: widget.sessionStamp,
-                                            trainingExerciseId:
-                                                blockExercise.id,
-                                            exerciseId:
-                                                blockExercise.exercise.id,
-                                            completed: false,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  : null,
-                            ),
-                          );
-                          continue;
-                        }
-                        final isCompleted = _progress.ids.contains(ex.id);
-                        final storage = sl<LocalStorage>();
-                        final activeWorkout = _progressSessionId == null
-                            ? storage.recoverableLegacyWorkout(
-                                training.id, ex.id, widget.state.selectedDate)
-                            : storage.getActiveWorkout(
-                                '${ex.id}:${widget.state.selectedDate}:$_progressSessionId');
-                        final partialProgress =
-                            activeWorkout?.trainingId == training.id
-                            ? activeWorkout
-                            : null;
-                        final effectiveWeight =
-                            _progress.weights[ex.id] ??
-                            partialProgress?.lastWeightKg;
-                        final partialProgressLabel =
-                            !isCompleted &&
-                                partialProgress != null &&
-                                partialProgress.completedSets > 0
-                            ? l10n.exerciseSeriesProgress(
-                                partialProgress.completedSets,
-                                ex.sets,
-                              )
-                            : null;
-
-                        cards.add(
-                          _ExerciseCard(
-                            trainingExercise: ex,
-                            trainingTypes: training.types,
-                            accentColorHex: training.accentColor,
-                            trainingLevel: training.level,
-                            isCompleted: isCompleted,
-                            weightUsed: effectiveWeight,
-                            currentPerformances:
-                                _progress.performances[ex.id],
-                            partialProgressLabel: partialProgressLabel,
-                            onOpenActive: () async {
-                              final sessionId = await _selectExecution(
-                                training, widget.state.selectedDate,
-                                legacyExerciseId: ex.id);
-                              if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                              final selectedProgress = widget.state.sessionProgress[sessionId]
-                                  ?? const TrainingDayProgress();
-                              context.push(
-                                AppRoutes.activeExercisePath(
-                                  training.id,
-                                  ex.id,
-                                ),
-                                extra: ActiveExercisePageArgs(
-                                  trainingBloc: context.read<TrainingBloc>(),
-                                  sessionId: sessionId,
-                                  trainingExercise: ex,
-                                  trainingName: training.name,
-                                  trainingTypes: training.types,
-                                  accentColorHex: training.accentColor,
-                                  trainingLevel: training.level,
-                                  initialWeightKg: selectedProgress.weights[ex.id],
-                                  currentPerformances:
-                                      selectedProgress.performances[ex.id],
-                                  previousPerformances:
-                                      widget.state.previousPerformances[ex.id],
-                                  requiresLastSetVideo:
-                                      training.requiresLastSetVideo,
-                                  assignmentDate: widget.state.selectedDate,
-                                ),
+                  for (final group in _exerciseGroups(training))
+                    ValueListenableBuilder(
+                      valueListenable: activeWorkouts,
+                      builder: (context, box, _) {
+                        final circuit = group.blockExercises;
+                        return circuit == null
+                            ? _buildExerciseRow(context, training, color, group.leader)
+                            : _buildCircuitRow(
+                                context,
+                                training,
+                                color,
+                                group.leader,
+                                circuit,
                               );
-                            },
-                            onToggle: (val, {double? weightUsed}) {
-                              if (val && training.requiresLastSetVideo) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Abre el ejercicio para completar la última serie y adjuntar su vídeo.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              // Direct toggles still belong to a durable execution.
-                              _toggleExercise(training, ex, val, weightUsed);
-                            },
-                          ),
-                        );
-                      }
-
-                      return Column(children: cards);
-                    },
-                  ),
+                      },
+                    ),
 
                   // Cooldown
                   if (training.cooldownDescription != null) ...[
@@ -1780,7 +1815,7 @@ class _CircuitCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$rounds rondas · $exerciseCount ${l10n.exercises}',
+                      l10n.circuitSummary(rounds, exerciseCount),
                       style: TextStyle(
                         color: palette.textSecondary,
                         fontSize: 12,
@@ -2527,7 +2562,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Series registradas hoy',
+                  AppLocalizations.of(context).registeredSetsToday,
                   style: TextStyle(
                     color: palette.textPrimary,
                     fontSize: 13,
@@ -2591,7 +2626,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               icon: const Icon(Icons.edit_note_rounded, size: 20),
-              label: const Text('Editar datos'),
+              label: Text(AppLocalizations.of(context).editData),
             ),
           ),
           const SizedBox(height: 10),
@@ -2837,4 +2872,13 @@ class _VisibleDetailSection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// One scroll row of the exercise list: a single exercise, or the first
+/// member of a circuit together with all of its sorted members.
+class _ExerciseRowGroup {
+  const _ExerciseRowGroup(this.leader, [this.blockExercises]);
+
+  final TrainingExerciseEntity leader;
+  final List<TrainingExerciseEntity>? blockExercises;
 }

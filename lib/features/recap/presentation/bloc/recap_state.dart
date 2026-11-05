@@ -45,6 +45,9 @@ class RecapDetailLoaded extends RecapState {
 }
 
 class RecapDetailError extends RecapState {
+  /// Stable value; the detail page maps it to localized text.
+  static const signInRequiredMessage = 'Inicia sesión para ver el recap.';
+
   final String message;
 
   const RecapDetailError(this.message);

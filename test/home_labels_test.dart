@@ -308,6 +308,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Ver offline'), findsOneWidget);
+    expect(find.text('Ver sin conexión'), findsOneWidget);
   });
 }

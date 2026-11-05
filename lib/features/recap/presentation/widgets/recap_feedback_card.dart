@@ -1,3 +1,4 @@
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -39,7 +40,7 @@ class RecapFeedbackCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Comentario de tu entrenador',
+                  AppLocalizations.of(context).recapCoachCommentTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: palette.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -57,7 +58,7 @@ class RecapFeedbackCard extends StatelessWidget {
                     borderRadius: 999,
                   ),
                   child: Text(
-                    'Nuevo',
+                    AppLocalizations.of(context).recapBadgeNew,
                     style: TextStyle(
                       color: palette.primary,
                       fontSize: 10,
@@ -78,7 +79,9 @@ class RecapFeedbackCard extends StatelessWidget {
           if (recap.clientFeedbackSentAt != null) ...[
             const SizedBox(height: 10),
             Text(
-              'Enviado el ${_formatDate(recap.clientFeedbackSentAt!)}',
+              AppLocalizations.of(context).recapFeedbackSentOn(
+                _formatDate(recap.clientFeedbackSentAt!),
+              ),
               style: TextStyle(color: palette.textSecondary, fontSize: 12),
             ),
           ],
@@ -89,7 +92,7 @@ class RecapFeedbackCard extends StatelessWidget {
                 Icon(Icons.schedule_outlined, size: 13, color: palette.primary),
                 const SizedBox(width: 4),
                 Text(
-                  'Pendiente de lectura',
+                  AppLocalizations.of(context).recapFeedbackPendingRead,
                   style: TextStyle(
                     color: palette.primary,
                     fontSize: 12,
@@ -110,7 +113,9 @@ class RecapFeedbackCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Leído el ${_formatDate(recap.clientFeedbackReadAt!)}',
+                  AppLocalizations.of(context).recapFeedbackReadOn(
+                    _formatDate(recap.clientFeedbackReadAt!),
+                  ),
                   style: TextStyle(color: semantic.success, fontSize: 12),
                 ),
               ],

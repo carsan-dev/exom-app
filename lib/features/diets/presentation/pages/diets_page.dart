@@ -810,7 +810,9 @@ class _MealCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              '${meal.variants.length + 1} opciones',
+                              AppLocalizations.of(context).optionsCount(
+                                  meal.variants.length + 1,
+                                ),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: color,
                                 fontSize: 9,

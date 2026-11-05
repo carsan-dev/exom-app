@@ -1,5 +1,5 @@
-- Return automatically to a refreshed Home once your workout completion is confirmed.
-- Record exercises prescribed in minutes directly in minutes.
-- Get ready with an animated five-second countdown before starting a timed exercise.
-- Hear a single tone when an exercise timer expires, including in the background when your system allows it.
-- Cancel, go back or interrupt preparation without accidentally starting the exercise.
+- Feedback with a photo or video that failed to upload now recovers on its own and when you retry.
+- Videos are prepared and uploaded more reliably and take up less space.
+- The app opens instantly, with no wait at startup.
+- Home, Trainings and training details load faster.
+- Clearer error messages throughout the app.

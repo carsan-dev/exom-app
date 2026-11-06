@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
@@ -74,9 +75,9 @@ class ActiveExercisePage extends StatelessWidget {
       return ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: const Center(
+          body: Center(
             child: ErrorWidget2(
-              message: 'Missing active exercise context',
+              message: AppLocalizations.of(context).activeExerciseContextMissing,
               onRetry: null,
             ),
           ),
@@ -610,7 +611,15 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          ).showSnackBar(SnackBar(content: Text(
+              state.errorMessage == ActiveExerciseState.otherExecutionMessage
+                  ? AppLocalizations.of(context).activeExerciseOtherExecution
+                  : localizedErrorTextOf(
+                      context,
+                      state.errorMessage,
+                      fallback: (l10n) => l10n.activeExerciseSaveError,
+                    ),
+            )));
         }
 
         if (state.isDone) _beginCompletion(state);
@@ -1463,7 +1472,7 @@ class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
               if (currentLabel != null && currentLabel.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Hoy: $currentLabel',
+                  AppLocalizations.of(context).todayWithLabel(currentLabel),
                   style: TextStyle(color: palette.textSecondary, fontSize: 13),
                 ),
               ],

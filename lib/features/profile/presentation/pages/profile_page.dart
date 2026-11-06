@@ -1,3 +1,5 @@
+import 'package:exom_app/core/formatters/input_example.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:math' as math;
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -71,7 +73,7 @@ class _ProfileView extends StatelessWidget {
         }
         if (state is ProfileError) {
           return ErrorWidget2(
-            message: state.message,
+            message: localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.profileOperationError),
             onRetry: () =>
                 context.read<ProfileBloc>().add(const ProfileLoadRequested()),
           );
@@ -1192,9 +1194,10 @@ class _IndicatorCards extends StatelessWidget {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: TextStyle(color: palette.textPrimary),
             decoration: InputDecoration(
-              hintText: unitSystem == UnitSystem.imperial
-                  ? 'Eg: 75.0'
-                  : 'Eg: 34.0',
+              hintText: localizedInputExample(
+                AppLocalizations.of(context),
+                unitSystem == UnitSystem.imperial ? 75.0 : 34.0,
+              ),
               suffixText: weightUnitSymbol(unitSystem),
             ),
           ),

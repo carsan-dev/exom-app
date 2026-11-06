@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:exom_app/core/utils/feedback_preparation_files.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 
 class ManagedFeedbackUpload {
@@ -17,6 +18,12 @@ class FeedbackUploadContext {
   final void Function(int sent, int total)? onProgress;
   final void Function()? onPreparing;
   final void Function()? onProcessing;
+  final ({String owner, String environment})? preparationIdentity;
+  final Future<void> Function(FeedbackPreparationAttempt attempt)?
+  recordPreparation;
+  final Future<void> Function(FeedbackPreparationAttempt attempt)?
+  adoptPreparation;
+  final Future<void> Function(String path)? verifyPreparedReference;
 
   const FeedbackUploadContext({
     required this.operationId,
@@ -26,6 +33,10 @@ class FeedbackUploadContext {
     this.onProgress,
     this.onPreparing,
     this.onProcessing,
+    this.preparationIdentity,
+    this.recordPreparation,
+    this.adoptPreparation,
+    this.verifyPreparedReference,
   });
 }
 

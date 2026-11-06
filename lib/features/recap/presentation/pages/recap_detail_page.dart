@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -49,7 +50,7 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Detalle del recap'),
+          title: Text(AppLocalizations.of(context).recapDetailTitle),
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
         ),
@@ -79,12 +80,14 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
                       Icon(Icons.error_outline, color: palette.error, size: 42),
                       const SizedBox(height: 16),
                       Text(
-                        'No se pudo cargar el recap',
+                        AppLocalizations.of(context).couldNotLoadRecap,
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        state.message,
+                        state.message == RecapDetailError.signInRequiredMessage
+                            ? AppLocalizations.of(context).recapSignInRequired
+                            : localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.recapDetailLoadError),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: palette.textSecondary),
                       ),
@@ -93,7 +96,7 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
                         onPressed: () => context.read<RecapBloc>().add(
                           RecapDetailRequested(widget.recapId),
                         ),
-                        child: const Text('Reintentar'),
+                        child: Text(AppLocalizations.of(context).retry),
                       ),
                     ],
                   ),
@@ -283,7 +286,9 @@ class _RecapDetailContent extends StatelessWidget {
               const SizedBox(height: 6),
               if (recap.reviewedAt != null)
                 Text(
-                  'Revisado el ${fmt.format(recap.reviewedAt!.toLocal())}',
+                  AppLocalizations.of(context).recapReviewedOn(
+                    fmt.format(recap.reviewedAt!.toLocal()),
+                  ),
                   style: TextStyle(color: palette.textSecondary, fontSize: 13),
                 ),
             ],
@@ -415,7 +420,7 @@ class _RecapDetailContent extends StatelessWidget {
                   ? 'Sin áreas destacadas'
                   : recap.improvementAreas.map(_opt).join(', '),
             ),
-            _Item('Feedback', recap.improvementFeedbackText ?? '—'),
+            _Item(AppLocalizations.of(context).feedback, recap.improvementFeedbackText ?? '—'),
           ],
         ),
       ],

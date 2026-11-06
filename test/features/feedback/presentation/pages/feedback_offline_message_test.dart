@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
@@ -36,6 +37,8 @@ void main() {
             getMyFeedbackUseCase: GetMyFeedbackUseCase(repository),
             createFeedbackUseCase: CreateFeedbackUseCase(repository),
             uploadFeedbackMediaUseCase: UploadFeedbackMediaUseCase(repository),
+            uploadNotices: queue.notices,
+            localStorage: storage,
           ),
         );
         addTearDown(() async {
@@ -90,6 +93,8 @@ void main() {
       getMyFeedbackUseCase: GetMyFeedbackUseCase(repository),
       createFeedbackUseCase: CreateFeedbackUseCase(repository),
       uploadFeedbackMediaUseCase: UploadFeedbackMediaUseCase(repository),
+      uploadNotices: const Stream.empty(),
+      localStorage: LocalStorage(),
     );
     addTearDown(bloc.close);
     final failure = bloc.stream.firstWhere((state) => state is FeedbackError);

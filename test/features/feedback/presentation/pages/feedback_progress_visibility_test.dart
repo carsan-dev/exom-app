@@ -51,6 +51,8 @@ void main() {
             getMyFeedbackUseCase: GetMyFeedbackUseCase(repo),
             createFeedbackUseCase: CreateFeedbackUseCase(repo),
             uploadFeedbackMediaUseCase: UploadFeedbackMediaUseCase(repo),
+            uploadNotices: queue.notices,
+            localStorage: storage,
           ),
         );
         addTearDown(() async {

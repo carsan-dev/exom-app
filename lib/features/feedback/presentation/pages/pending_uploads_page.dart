@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:async';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
@@ -188,6 +189,8 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       return l10n.pendingSyncConflict;
     }
     if (item['status'] != 'failed' && item['last_error'] == null) return null;
+    final knownCode = localizedErrorCode(l10n, item['last_error'] as String?);
+    if (knownCode != null) return knownCode;
     return feedback ? l10n.pendingFeedbackError : l10n.pendingSyncFailedStatus;
   }
 

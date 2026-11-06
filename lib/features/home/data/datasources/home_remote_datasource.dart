@@ -5,7 +5,10 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/home/data/models/home_summary_model.dart';
 
 abstract class HomeRemoteDataSource {
-  Future<HomeSummaryModel> getHomeSummary({DateTime? date});
+  Future<HomeSummaryModel> getHomeSummary({
+    DateTime? date,
+    bool includeSharedData = true,
+  });
 }
 
 class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
@@ -17,16 +20,19 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   const HomeRemoteDataSourceImpl(this._apiClient, this._localStorage);
 
   @override
-  Future<HomeSummaryModel> getHomeSummary({DateTime? date}) async {
+  Future<HomeSummaryModel> getHomeSummary({
+    DateTime? date,
+    bool includeSharedData = true,
+  }) async {
     return _localStorage.sessionTask(() async {
       final dateKey = _dateKey(date ?? DateTime.now());
 
       final results = await Future.wait<Map<String, dynamic>?>(([
         _getTrainingToday(date: date, cacheKey: 'home_training_$dateKey'),
         _getDietToday(date: date, cacheKey: 'home_diet_$dateKey'),
-        _getStreak(),
-        _getProfile(),
-        _getLatestMetric(),
+        includeSharedData ? _getStreak() : Future.value(),
+        includeSharedData ? _getProfile() : Future.value(),
+        includeSharedData ? _getLatestMetric() : Future.value(),
         _getDayProgress(date: date, cacheKey: 'home_progress_$dateKey'),
       ]));
 

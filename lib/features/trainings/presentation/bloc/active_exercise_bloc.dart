@@ -68,6 +68,10 @@ class AbandonExercise extends ActiveExerciseEvent {
 }
 
 class ActiveExerciseState {
+  /// Stable value; the page maps it to localized text.
+  static const otherExecutionMessage =
+      'Existing workout belongs to another execution';
+
   static const _unset = Object();
 
   final int timedElapsedMs;
@@ -298,7 +302,7 @@ class ActiveExerciseBloc
       _exerciseId = null;
       emit(
         state.copyWith(
-          errorMessage: 'Existing workout belongs to another execution',
+          errorMessage: ActiveExerciseState.otherExecutionMessage,
         ),
       );
       return;

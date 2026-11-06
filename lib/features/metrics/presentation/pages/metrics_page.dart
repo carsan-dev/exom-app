@@ -1,3 +1,5 @@
+import 'package:exom_app/core/formatters/input_example.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -210,12 +212,20 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  String _weightHint(UnitSystem unitSystem) {
-    return unitSystem == UnitSystem.imperial ? 'Eg: 166.4' : 'Eg: 75.5';
+  String _weightHint(AppLocalizations l10n, UnitSystem unitSystem) {
+    return localizedInputExample(
+      l10n,
+      unitSystem == UnitSystem.imperial ? 166.4 : 75.5,
+    );
   }
 
-  String _heightHint(UnitSystem unitSystem) {
-    return unitSystem == UnitSystem.imperial ? 'Eg: 70.9' : 'Eg: 180';
+  String _heightHint(AppLocalizations l10n, UnitSystem unitSystem) {
+    final imperial = unitSystem == UnitSystem.imperial;
+    return localizedInputExample(
+      l10n,
+      imperial ? 70.9 : 180,
+      decimals: imperial ? 1 : 0,
+    );
   }
 
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
@@ -976,7 +986,7 @@ class _MetricsViewState extends State<_MetricsView> {
         if (state is MetricsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.metricsSaveError)),
               backgroundColor: palette.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -1067,7 +1077,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                   ),
                               style: TextStyle(color: palette.textPrimary),
                               decoration: InputDecoration(
-                                hintText: _heightHint(unitSystem),
+                                hintText: _heightHint(AppLocalizations.of(context), unitSystem),
                                 suffixText: lengthUnitSymbol(unitSystem),
                                 suffixStyle: TextStyle(
                                   color: palette.textSecondary,
@@ -1125,7 +1135,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                     ),
                                 style: TextStyle(color: palette.textPrimary),
                                 decoration: InputDecoration(
-                                  hintText: _weightHint(unitSystem),
+                                  hintText: _weightHint(AppLocalizations.of(context), unitSystem),
                                   suffixText: weightUnitSymbol(unitSystem),
                                   suffixStyle: TextStyle(
                                     color: palette.textSecondary,
@@ -1209,9 +1219,12 @@ class _MetricsViewState extends State<_MetricsView> {
                                   ),
                               style: TextStyle(color: palette.textPrimary),
                               decoration: InputDecoration(
-                                hintText: unitSystem == UnitSystem.imperial
-                                    ? 'Eg: 71.7'
-                                    : 'Eg: 32.5',
+                                hintText: localizedInputExample(
+                                  AppLocalizations.of(context),
+                                  unitSystem == UnitSystem.imperial
+                                      ? 71.7
+                                      : 32.5,
+                                ),
                                 suffixText: weightUnitSymbol(unitSystem),
                                 suffixStyle: TextStyle(
                                   color: palette.textSecondary,
@@ -1310,7 +1323,10 @@ class _MetricsViewState extends State<_MetricsView> {
                                   ),
                               style: TextStyle(color: palette.textPrimary),
                               decoration: InputDecoration(
-                                hintText: 'Eg: 7.5',
+                                hintText: localizedInputExample(
+                                  AppLocalizations.of(context),
+                                  7.5,
+                                ),
                                 suffixText: 'h',
                                 suffixStyle: TextStyle(
                                   color: palette.textSecondary,

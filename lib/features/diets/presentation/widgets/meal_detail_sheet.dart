@@ -540,7 +540,7 @@ class _VariantSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Elige una opción',
+          AppLocalizations.of(context).chooseAnOption,
           style: TextStyle(
             color: palette.textSecondary,
             fontSize: 13,

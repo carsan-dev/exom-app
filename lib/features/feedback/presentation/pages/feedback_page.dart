@@ -1,3 +1,4 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:io';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
@@ -103,7 +104,7 @@ class FeedbackPage extends StatelessWidget {
                       content: Text(
                         state.isOffline
                             ? l10n.feedbackOfflineMessage
-                            : state.message,
+                            : localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.feedbackOperationError),
                       ),
                       backgroundColor: state.isOffline
                           ? palette.surfaceElevated

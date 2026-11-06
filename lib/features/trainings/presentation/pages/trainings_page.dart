@@ -242,7 +242,25 @@ class _TrainingsViewState extends State<_TrainingsView> {
                     },
             ),
           ),
-          if (state.history.isEmpty)
+          if (state.isHistoryLoading) ...const [
+            _TrainingHistorySkeletonCard(),
+            _TrainingHistorySkeletonCard(),
+            _TrainingHistorySkeletonCard(),
+          ] else if (state.historyFailed)
+            EmptyWidget(
+              message: l10n.errorServer,
+              icon: Icons.cloud_off_outlined,
+              action: TextButton(
+                onPressed: () => context.read<TrainingBloc>().add(
+                  TrainingsLoadRequested(
+                    date: state.selectedDate,
+                    historyDate: state.historyDate,
+                  ),
+                ),
+                child: Text(l10n.retryButton),
+              ),
+            )
+          else if (state.history.isEmpty)
             EmptyWidget(
               message: l10n.noActivitiesThisMonth,
               subtitle: l10n.noActivitiesThisMonthSubtitle,

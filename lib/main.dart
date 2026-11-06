@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -139,7 +140,17 @@ class ExomBootstrapApp extends StatelessWidget {
 class ExomBootstrapErrorApp extends StatelessWidget {
   const ExomBootstrapErrorApp({super.key, required this.error});
 
+  /// Technical detail; logged by the caller and never rendered.
   final String error;
+
+  /// The bootstrap UI has no selected locale yet, so it follows the device.
+  String _bootstrapMessage() {
+    final deviceLocale = PlatformDispatcher.instance.locale;
+    final locale = AppLocalizations.delegate.isSupported(deviceLocale)
+        ? deviceLocale
+        : const Locale('es');
+    return lookupAppLocalizations(locale).bootstrapErrorMessage;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,22 +172,14 @@ class ExomBootstrapErrorApp extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'No se pudo iniciar la app.',
+              Text(
+                _bootstrapMessage(),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFFB8AE9F), fontSize: 12),
               ),
             ],
           ),

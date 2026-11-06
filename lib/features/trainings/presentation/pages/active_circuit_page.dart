@@ -150,7 +150,11 @@ class ActiveCircuitPage extends StatelessWidget {
       return ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: const Center(child: Text('Missing active circuit context')),
+          body: Center(
+            child: Text(
+              AppLocalizations.of(context).activeCircuitContextMissing,
+            ),
+          ),
         ),
       );
     }

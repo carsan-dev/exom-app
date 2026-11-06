@@ -2891,4 +2891,350 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get executionPrepareCancel => 'Cancel';
+
+  @override
+  String inputExample(String value) {
+    return 'Eg: $value';
+  }
+
+  @override
+  String get activeCircuitContextMissing =>
+      'The circuit could not be opened. Go back to the workout and try again.';
+
+  @override
+  String get activeExerciseContextMissing =>
+      'The exercise could not be opened. Go back to the workout and try again.';
+
+  @override
+  String get selectTrainingExecution => 'Select training execution';
+
+  @override
+  String get recoverSavedExerciseDraft => 'Recover saved exercise draft';
+
+  @override
+  String get restoreSavedSetsNewExecution =>
+      'Restore saved sets in a new execution';
+
+  @override
+  String get newTrainingExecution => 'New execution';
+
+  @override
+  String get quarantinedWorkoutNotice =>
+      'Saved workout data from an unknown account or date is kept on this device. It cannot be restored automatically; contact support to recover it.';
+
+  @override
+  String get notificationChannelName => 'EXOM Notifications';
+
+  @override
+  String get bootstrapErrorMessage =>
+      'The app could not start. Please try again.';
+
+  @override
+  String get errorRequestFailed =>
+      'The request could not be completed. Please try again.';
+
+  @override
+  String get errorBadRequest =>
+      'The data sent is not valid. Check it and try again.';
+
+  @override
+  String get errorConflict =>
+      'The data was changed elsewhere. Refresh and try again.';
+
+  @override
+  String get errorRateLimited =>
+      'Too many attempts. Wait a moment and try again.';
+
+  @override
+  String get errorSyncConflictReview =>
+      'Conflicting changes need your review before syncing.';
+
+  @override
+  String get errorSyncVersionConflict =>
+      'Your progress was changed on another device. Review the data before continuing.';
+
+  @override
+  String get errorSyncHistoryAmbiguous =>
+      'We could not determine which workout this progress belongs to. Your data is kept for review.';
+
+  @override
+  String get errorSyncReceiptMissing =>
+      'The server did not confirm the save. Your data is kept; please try again.';
+
+  @override
+  String get errorFeedbackDiscarded =>
+      'The attached material was discarded before it was sent.';
+
+  @override
+  String get errorSyncFailed =>
+      'Sync failed. Your data is kept on this device.';
+
+  @override
+  String get errorCompressionCancelled => 'Preparing the file was cancelled.';
+
+  @override
+  String get errorCompressionInvalidInput =>
+      'The selected file cannot be processed.';
+
+  @override
+  String get errorCompressionTimeout =>
+      'Preparing the file took too long. Please try again.';
+
+  @override
+  String get errorCompressionBusy =>
+      'Another file is already being prepared. Wait for it to finish.';
+
+  @override
+  String get errorCompressionFailed =>
+      'The file could not be prepared. Please try again.';
+
+  @override
+  String get errorUploadExpired => 'The upload expired. Please try again.';
+
+  @override
+  String get errorUploadObjectMissing =>
+      'The file did not reach the server. Upload it again.';
+
+  @override
+  String get errorUploadSessionChanged =>
+      'The account changed during the upload. Sign in with the original account to continue.';
+
+  @override
+  String get errorUploadOperationConflict =>
+      'Another upload is in progress for this item. Try again later.';
+
+  @override
+  String get authOperationError =>
+      'The account operation could not be completed. Please try again.';
+
+  @override
+  String get authUserDisabled =>
+      'Your account has been deactivated by an administrator. Contact your coach.';
+
+  @override
+  String get authCredentialAlreadyInUse =>
+      'This social sign-in is already linked to another account. Sign in with your original method and try again.';
+
+  @override
+  String get authNoCurrentUser =>
+      'We could not keep your session to complete the link. Please try again.';
+
+  @override
+  String get authInvalidCredential =>
+      'The social credential has expired. Repeat the linking process.';
+
+  @override
+  String get homeLoadError =>
+      'The summary could not be loaded. Please try again.';
+
+  @override
+  String get metricsSaveError =>
+      'The measurements could not be saved. Please try again.';
+
+  @override
+  String get feedbackOperationError =>
+      'The operation could not be completed. Please try again.';
+
+  @override
+  String get notificationsLoadError =>
+      'Notifications could not be loaded. Please try again.';
+
+  @override
+  String get profileOperationError =>
+      'The profile operation could not be completed. Please try again.';
+
+  @override
+  String get recapSaveError =>
+      'The weekly recap could not be saved. Please try again.';
+
+  @override
+  String get recapLoadError =>
+      'Weekly recaps could not be loaded. Please try again.';
+
+  @override
+  String get recapDetailLoadError =>
+      'The weekly recap could not be loaded. Please try again.';
+
+  @override
+  String get activeExerciseSaveError =>
+      'The exercise data could not be saved. Please try again.';
+
+  @override
+  String get trainingProgressSaveError =>
+      'The workout progress could not be saved. Please try again.';
+
+  @override
+  String get notificationChannelDescription =>
+      'Important EXOM alerts and reminders';
+
+  @override
+  String optionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count options',
+      one: '$count option',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chooseAnOption => 'Choose an option';
+
+  @override
+  String streakDaysLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'day streak',
+      one: 'day streak',
+      zero: 'day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recapDetailTitle => 'Recap details';
+
+  @override
+  String recapReviewedOn(String date) {
+    return 'Reviewed on $date';
+  }
+
+  @override
+  String get recapNewCoachComment => 'New comment from your coach';
+
+  @override
+  String get recapCoachCommentTitle => 'Comment from your coach';
+
+  @override
+  String get recapBadgeNew => 'New';
+
+  @override
+  String recapFeedbackSentOn(String date) {
+    return 'Sent on $date';
+  }
+
+  @override
+  String get recapFeedbackPendingRead => 'Pending read';
+
+  @override
+  String recapFeedbackReadOn(String date) {
+    return 'Read on $date';
+  }
+
+  @override
+  String todayWithLabel(String label) {
+    return 'Today: $label';
+  }
+
+  @override
+  String get errorTitle => 'Error';
+
+  @override
+  String get completeLastSetOpenExercise =>
+      'Open the exercise to complete the last set and attach its video.';
+
+  @override
+  String circuitSummary(int rounds, int exerciseCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rounds,
+      locale: localeName,
+      other: '$rounds rounds',
+      one: '$rounds round',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      exerciseCount,
+      locale: localeName,
+      other: '$exerciseCount exercises',
+      one: '$exerciseCount exercise',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get registeredSetsToday => 'Sets logged today';
+
+  @override
+  String get editData => 'Edit data';
+
+  @override
+  String get timerFinished => 'Time is up';
+
+  @override
+  String timerNowAction(String action) {
+    return 'Now: $action';
+  }
+
+  @override
+  String get timerLogSetWhenDone => 'Log the set when you finish.';
+
+  @override
+  String timerSegmentRemaining(String segment, String total) {
+    return 'Segment: $segment · Total remaining: $total';
+  }
+
+  @override
+  String timerNextAction(String action) {
+    return 'Next: $action';
+  }
+
+  @override
+  String get timerRunning => 'Running';
+
+  @override
+  String get timerPaused => 'Paused';
+
+  @override
+  String get timerReady => 'Ready';
+
+  @override
+  String get timerPause => 'Pause';
+
+  @override
+  String get timerResume => 'Resume';
+
+  @override
+  String get timerStart => 'Start timer';
+
+  @override
+  String get timerReset => 'Reset timer';
+
+  @override
+  String get streakMsgStart => 'Start your streak today!';
+
+  @override
+  String get streakMsgFirstDay => 'First day done! Keep it up';
+
+  @override
+  String get streakMsgGoingWell => 'You are doing great! Do not stop';
+
+  @override
+  String get streakMsgWeek => 'A full week in a row! Incredible';
+
+  @override
+  String streakMsgMachine(int days) {
+    return 'You are a machine! Over $days days';
+  }
+
+  @override
+  String streakMsgLegend(int days) {
+    return 'Living legend! $days-day streak';
+  }
+
+  @override
+  String get recapSignInRequired => 'Sign in to view the recap.';
+
+  @override
+  String authMissingEmailForLink(String provider) {
+    return 'We could not identify the email of this $provider account. Sign in with your current method and try again.';
+  }
+
+  @override
+  String get authLinkRequestExpired =>
+      'The linking request has expired. Please try again.';
+
+  @override
+  String get activeExerciseOtherExecution =>
+      'A saved workout belongs to another execution. Choose which one to keep before continuing.';
 }

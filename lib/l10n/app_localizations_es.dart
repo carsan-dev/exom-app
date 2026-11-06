@@ -2841,6 +2841,12 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get progressPhotosAddShort => 'Añadir';
+
+  @override
+  String get progressPhotosReplaceShort => 'Sustituir';
+
+  @override
   String get progressPhotosReplaceTitle => '¿Sustituir la foto activa?';
 
   @override

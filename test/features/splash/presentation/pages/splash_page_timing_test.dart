@@ -141,7 +141,27 @@ void main() {
     // ignore: avoid_print
     print('SPLASH_MS_TO_NAVIGATION=$elapsed');
     expect(find.text('login-route'), findsOneWidget);
-    expect(elapsed, lessThanOrEqualTo(300));
+    // Entry (2100 ms) + exit (650 ms) = 2750 ms; never before entry completes.
+    expect(elapsed, greaterThanOrEqualTo(2100));
+    expect(elapsed, inInclusiveRange(2700, 2800));
+  });
+
+  testWidgets('does not navigate before the entry animation completes', (
+    tester,
+  ) async {
+    sl.registerSingleton<AppUpdateService>(
+      _UpdateService(Future.value(_upToDate)),
+    );
+    final bloc = _authBloc()..add(const AuthCheckStatusRequested());
+    addTearDown(bloc.close);
+    await _mount(tester, bloc);
+    await _pumpFor(tester, 2000);
+    expect(find.text('login-route'), findsNothing);
+    await _pumpFor(tester, 100);
+    // Exit has started at 2100 ms but navigation waits for it to finish.
+    expect(find.text('login-route'), findsNothing);
+    await _pumpFor(tester, 800);
+    expect(find.text('login-route'), findsOneWidget);
   });
 
   testWidgets('does not navigate while auth is unresolved', (tester) async {
@@ -156,7 +176,8 @@ void main() {
     bloc.add(const AuthCheckStatusRequested());
     final elapsed = await _pumpUntilLogin(tester);
     expect(find.text('login-route'), findsOneWidget);
-    expect(elapsed, lessThanOrEqualTo(300));
+    // Exit (650 ms) starts when auth resolves; no extra hold.
+    expect(elapsed, inInclusiveRange(600, 700));
   });
 
   testWidgets('does not navigate while the update gate is pending', (
@@ -172,7 +193,7 @@ void main() {
     decision.complete(_upToDate);
     final elapsed = await _pumpUntilLogin(tester);
     expect(find.text('login-route'), findsOneWidget);
-    expect(elapsed, lessThanOrEqualTo(300));
+    expect(elapsed, inInclusiveRange(600, 700));
   });
 
   testWidgets('blocking update keeps the splash and never navigates', (

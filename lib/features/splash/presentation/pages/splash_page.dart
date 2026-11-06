@@ -24,8 +24,7 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   static const _entryDuration = Duration(milliseconds: 2100);
-  // Single short exit transition; there is no minimum dwell time.
-  static const _exitDuration = Duration(milliseconds: 250);
+  static const _exitDuration = Duration(milliseconds: 650);
   static const _gateTimeout = Duration(seconds: 6);
 
   late final AnimationController _entry;
@@ -99,23 +98,30 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           ),
         );
 
-    _entry.forward();
-    _exitWhenGatesResolve();
+    _exitWhenReady(_entry.forward().orCancel);
   }
 
-  /// Waits for the real gates (auth status and update decision) and leaves the
-  /// splash as soon as both are resolved. The entry animation never delays it.
-  Future<void> _exitWhenGatesResolve() async {
-    final authSettled = _waitForAuthToSettle(context.read<AuthBloc>());
+  /// Waits for the real gates (auth status and update decision), which run in
+  /// parallel with the entry animation, then for the entry animation to
+  /// complete, and only then plays the exit and navigates.
+  Future<void> _exitWhenReady(Future<void> entryDone) async {
+    try {
+      final authSettled = _waitForAuthToSettle(context.read<AuthBloc>());
 
-    final shouldContinue = await _handlePendingUpdate();
-    if (!mounted || !shouldContinue) return;
-    await authSettled;
-    if (!mounted) return;
+      final shouldContinue = await _handlePendingUpdate();
+      if (!mounted || !shouldContinue) return;
+      await authSettled;
+      if (!mounted) return;
 
-    await _exit.reverse(from: 1.0);
-    if (!mounted) return;
-    _navigate();
+      await entryDone;
+      if (!mounted) return;
+
+      await _exit.reverse(from: 1.0);
+      if (!mounted) return;
+      _navigate();
+    } on TickerCanceled {
+      // Page disposed while an animation was running; nothing to navigate.
+    }
   }
 
   Future<void> _waitForAuthToSettle(AuthBloc authBloc) async {

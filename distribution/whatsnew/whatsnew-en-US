@@ -1,5 +1,2 @@
-- Feedback with a photo or video that failed to upload now recovers on its own and when you retry.
-- Videos are prepared and uploaded more reliably and take up less space.
-- The app opens instantly, with no wait at startup.
-- Home, Trainings and training details load faster.
-- Clearer error messages throughout the app.
+- The app's full opening animation is back.
+- Progress photos now display in full in their cards, without being squashed.

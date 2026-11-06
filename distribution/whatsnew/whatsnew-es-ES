@@ -1,5 +1,2 @@
-- Los envíos de feedback con foto o vídeo que fallaban ahora se recuperan solos y al reintentarlos.
-- Los vídeos se preparan y suben de forma más fiable y ocupan menos espacio.
-- La app se abre al momento, sin esperas al arrancar.
-- Inicio, Entrenamientos y el detalle de cada entrenamiento cargan más rápido.
-- Mensajes de error más claros y más textos traducidos al español.
+- Vuelve la animación completa de apertura de la app.
+- Las fotos de progreso se ven completas en sus tarjetas, sin aplastarse.

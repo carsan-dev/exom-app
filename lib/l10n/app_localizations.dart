@@ -4964,6 +4964,18 @@ abstract class AppLocalizations {
   /// **'Sustituir {view}'**
   String progressPhotosReplace(String view);
 
+  /// Short visible label of the add-photo button on a progress photo tile; the full progressPhotosAdd text is its accessible label and tooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir'**
+  String get progressPhotosAddShort;
+
+  /// Short visible label of the replace-photo button on a progress photo tile; the full progressPhotosReplace text is its accessible label and tooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituir'**
+  String get progressPhotosReplaceShort;
+
   /// No description provided for @progressPhotosReplaceTitle.
   ///
   /// In es, this message translates to:

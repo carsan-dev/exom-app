@@ -128,14 +128,14 @@ void main() {
 
     expect(repository.history, hasLength(2)); // Independent incomplete sessions remain distinct.
 
-    await tester.tap(find.text('Add Front').first);
+    await tester.tap(find.byTooltip('Add Front').first);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Camera'));
     await pumpPage(tester);
     expect(sources, [ImageSource.camera]);
     expect(queue.enqueues.single.view, 'FRONT');
 
-    await tester.tap(find.text('Add Left side').first);
+    await tester.tap(find.byTooltip('Add Left side').first);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Gallery'));
     await pumpPage(tester);
@@ -159,12 +159,12 @@ void main() {
     expect(find.text('Confirmed; cleaning local copy'), findsWidgets);
     expect(find.text('Replacement needs review; local photo retained'), findsWidgets);
 
-    await tester.tap(find.text('Replace Front'));
+    await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Camera'));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Replace active photo?'), findsOneWidget);
-    await tester.tap(find.text('Replace'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
     await pumpPage(tester);
     expect(queue.enqueues.last.replacesPhotoId, 'active');
 
@@ -175,7 +175,7 @@ void main() {
     await pumpPage(tester);
 
     queue.enqueues.clear();
-    await tester.tap(find.text('Replace Front'));
+    await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Camera'));
     await tester.pump(const Duration(milliseconds: 100));
@@ -251,7 +251,7 @@ void main() {
     expect(find.text('Replace active photo?'), findsOneWidget);
     expect(queue.enqueues, isEmpty);
 
-    await tester.tap(find.text('Replace'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
     await pumpPage(tester);
 
     expect(queue.enqueues.single.replacesPhotoId, 'active-front');
@@ -299,7 +299,7 @@ void main() {
 
     expect(find.text('Replace active photo?'), findsOneWidget);
     session = 'account-b:1';
-    await tester.tap(find.text('Replace'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
     await pumpPage(tester);
 
     expect(queue.enqueues, isEmpty);
@@ -378,7 +378,7 @@ void main() {
     ));
     await pumpPage(tester);
 
-    await tester.tap(find.text('Add Left side'));
+    await tester.tap(find.byTooltip('Add Left side'));
     await tester.pump();
     await tester.tap(find.text('Camera'));
     await tester.pump();
@@ -395,14 +395,14 @@ void main() {
       picker: (_) => replacementPicked.future,
     ));
     await pumpPage(tester);
-    await tester.tap(find.text('Replace Front'));
+    await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump();
     await tester.tap(find.text('Camera'));
     replacementPicked.complete(XFile(image.path));
     await tester.pump();
     expect(find.text('Replace active photo?'), findsOneWidget);
     session = 'account-b:1';
-    await tester.tap(find.text('Replace'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
     await pumpPage(tester);
 
     expect(queue.enqueues, isEmpty);
@@ -764,7 +764,7 @@ void main() {
       picker: (_) async => throw PlatformException(code: 'permission_denied'),
     ));
     await pumpPage(tester);
-    await tester.tap(find.text('Add Front'));
+    await tester.tap(find.byTooltip('Add Front'));
     await tester.pump();
     await tester.tap(find.text('Camera'));
     await tester.pump();
@@ -789,7 +789,7 @@ void main() {
       },
     ));
     await pumpPage(tester);
-    await tester.tap(find.text('Add Front'));
+    await tester.tap(find.byTooltip('Add Front'));
     await tester.pump();
     await tester.tap(find.text('Camera'));
     await tester.pump();
@@ -800,7 +800,7 @@ void main() {
     queue.enqueues.clear();
     attempts = 0;
     sources.clear();
-    await tester.tap(find.text('Add Left side'));
+    await tester.tap(find.byTooltip('Add Left side'));
     await tester.pump();
     await tester.tap(find.text('Camera'));
     await tester.pump();
@@ -817,7 +817,7 @@ void main() {
       pollInterval: const Duration(milliseconds: 1),
     ));
     await pumpPage(tester);
-    await tester.tap(find.text('Add Front'));
+    await tester.tap(find.byTooltip('Add Front'));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Camera'));
     await tester.pump(const Duration(milliseconds: 100));

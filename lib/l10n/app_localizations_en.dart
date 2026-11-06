@@ -2808,6 +2808,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get progressPhotosAddShort => 'Add';
+
+  @override
+  String get progressPhotosReplaceShort => 'Replace';
+
+  @override
   String get progressPhotosReplaceTitle => 'Replace active photo?';
 
   @override

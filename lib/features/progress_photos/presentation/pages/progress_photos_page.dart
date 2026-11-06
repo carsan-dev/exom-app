@@ -646,31 +646,64 @@ class _SessionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(dateText, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700))),
-              Text(session.isComplete ? AppLocalizations.of(context).progressPhotosComplete : AppLocalizations.of(context).progressPhotosIncomplete, style: TextStyle(color: palette.textSecondary)),
+              Expanded(
+                child: Text(
+                  dateText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  session.isComplete ? AppLocalizations.of(context).progressPhotosComplete : AppLocalizations.of(context).progressPhotosIncomplete,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: palette.textSecondary),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            childAspectRatio: 0.88,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            children: views.map((view) {
-              final active = session.photos.where((photo) => photo.view == view.apiValue).firstOrNull;
-              return _ViewTile(
-                session: session,
-                view: view,
-                active: active,
-                pending: pendingFor(session.id, view.apiValue),
-                onAdd: onAdd,
-                onRetry: onRetry,
-                onReviewReplacement: onReviewReplacement,
-                onDiscard: onDiscard,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tileWidth = (constraints.maxWidth - 10) / 2;
+              final tiles = views.map((view) {
+                final active = session.photos.where((photo) => photo.view == view.apiValue).firstOrNull;
+                return _ViewTile(
+                  session: session,
+                  view: view,
+                  active: active,
+                  pending: pendingFor(session.id, view.apiValue),
+                  tileWidth: tileWidth,
+                  onAdd: onAdd,
+                  onRetry: onRetry,
+                  onReviewReplacement: onReviewReplacement,
+                  onDiscard: onDiscard,
+                );
+              }).toList(growable: false);
+              // Rows of two tiles sized to their content: IntrinsicHeight
+              // gives both tiles of a row the height of the taller one so the
+              // actions line up at the bottom.
+              return Column(
+                children: [
+                  for (var index = 0; index < tiles.length; index += 2) ...[
+                    if (index > 0) const SizedBox(height: 10),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: tiles[index]),
+                          const SizedBox(width: 10),
+                          Expanded(child: index + 1 < tiles.length ? tiles[index + 1] : const SizedBox.shrink()),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               );
-            }).toList(growable: false),
+            },
           ),
         ],
       ),
@@ -684,6 +717,7 @@ class _ViewTile extends StatelessWidget {
     required this.view,
     required this.active,
     required this.pending,
+    required this.tileWidth,
     required this.onAdd,
     required this.onRetry,
     required this.onReviewReplacement,
@@ -694,10 +728,16 @@ class _ViewTile extends StatelessWidget {
   final _CanonicalView view;
   final ProgressPhoto? active;
   final Map<String, dynamic>? pending;
+  final double tileWidth;
   final Future<void> Function(ProgressPhotoSession session, _CanonicalView view, {ProgressPhoto? replacement}) onAdd;
   final Future<void> Function(Map<String, dynamic> item) onRetry;
   final Future<void> Function(Map<String, dynamic> item) onReviewReplacement;
   final Future<void> Function(Map<String, dynamic> item) onDiscard;
+
+  static final _compactAction = TextButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    visualDensity: VisualDensity.compact,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -706,69 +746,166 @@ class _ViewTile extends StatelessWidget {
     final viewLabel = view.label(l10n);
     final status = _status(l10n, pending);
     final staleReplacement = _isStaleReplacement(pending);
+    final actionLabel = active != null ? l10n.progressPhotosReplace(viewLabel) : l10n.progressPhotosAdd(viewLabel);
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: GlassDecoration.elevated(borderRadius: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(viewLabel, style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Expanded(
-            child: active == null
-                ? Center(child: Text(status ?? l10n.progressPhotosMissing, textAlign: TextAlign.center, style: TextStyle(color: palette.textSecondary)))
-                : Semantics(
-                    button: true,
-                    label: l10n.progressPhotosEnlarge(viewLabel),
-                    child: InkWell(
-                      onTap: () => _showEnlarged(context, active!, view),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: CachedNetworkImage(
-                          imageUrl: active!.imageUrl,
-                          useOldImageOnUrlChange: true,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorWidget: (_, _, _) => Icon(view.icon, color: palette.textSecondary),
-                        ),
-                      ),
-                    ),
-                  ),
+          Text(
+            viewLabel,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w700),
           ),
-          if (active != null) ...[
-            IconButton(
-              tooltip: l10n.progressPhotosEnlarge(viewLabel),
-              icon: const Icon(Icons.zoom_in),
-              onPressed: () => _showEnlarged(context, active!, view),
+          const SizedBox(height: 8),
+          AspectRatio(
+            aspectRatio: 3 / 4,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: active == null
+                  ? _missingPhoto(palette, status ?? l10n.progressPhotosMissing)
+                  : _photo(context, palette, l10n.progressPhotosEnlarge(viewLabel)),
             ),
-            TextButton(
-              onPressed: () => onAdd(session, view, replacement: active),
-              child: Text(l10n.progressPhotosReplace(viewLabel)),
-            ),
-          ] else
-            TextButton(onPressed: () => onAdd(session, view), child: Text(l10n.progressPhotosAdd(viewLabel))),
-          if (pending?['status'] == 'failed') ...[
-            if (staleReplacement)
-              TextButton(
-                onPressed: () => onReviewReplacement(pending!),
-                child: Text(l10n.progressPhotosReviewReplacement),
-              )
-            else
-              TextButton(
-                onPressed: () => onRetry(pending!),
-                child: Text(l10n.retry),
-              ),
-            TextButton(
-              onPressed: () => onDiscard(pending!),
-              child: Text(l10n.progressPhotosDiscard),
+          ),
+          if (status != null && active != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              status,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: palette.textSecondary),
             ),
           ],
-          if (status != null) Text(status, style: TextStyle(color: palette.textSecondary, fontSize: 11)),
+          const Spacer(),
+          // Short visible label; the full "Replace/Add <view>" text stays the
+          // accessible label and the tooltip.
+          Tooltip(
+            message: actionLabel,
+            excludeFromSemantics: true,
+            child: TextButton.icon(
+              style: _compactAction,
+              onPressed: active != null ? () => onAdd(session, view, replacement: active) : () => onAdd(session, view),
+              icon: Icon(active != null ? Icons.swap_horiz : Icons.add, size: 18),
+              label: Text(
+                active != null ? l10n.progressPhotosReplaceShort : l10n.progressPhotosAddShort,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                semanticsLabel: actionLabel,
+              ),
+            ),
+          ),
+          if (pending?['status'] == 'failed')
+            Wrap(
+              spacing: 4,
+              runSpacing: 0,
+              children: [
+                if (staleReplacement)
+                  TextButton(
+                    style: _compactAction,
+                    onPressed: () => onReviewReplacement(pending!),
+                    child: Text(l10n.progressPhotosReviewReplacement),
+                  )
+                else
+                  TextButton(
+                    style: _compactAction,
+                    onPressed: () => onRetry(pending!),
+                    child: Text(l10n.retry),
+                  ),
+                TextButton(
+                  style: _compactAction,
+                  onPressed: () => onDiscard(pending!),
+                  child: Text(l10n.progressPhotosDiscard),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
+
+  Widget _photo(BuildContext context, ExomThemePalette palette, String enlargeLabel) {
+    final photo = active!;
+    return Tooltip(
+      message: enlargeLabel,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: enlargeLabel,
+        child: InkWell(
+          onTap: () => _showEnlarged(context, photo, view),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: photo.imageUrl,
+                useOldImageOnUrlChange: true,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                width: double.infinity,
+                height: double.infinity,
+                memCacheWidth: (tileWidth * MediaQuery.devicePixelRatioOf(context)).round(),
+                placeholder: (_, _) => ColoredBox(
+                  color: palette.surface,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, _, _) => ColoredBox(
+                  color: palette.surface,
+                  child: Center(child: Icon(view.icon, color: palette.textSecondary)),
+                ),
+              ),
+              Positioned(
+                right: 6,
+                bottom: 6,
+                child: ExcludeSemantics(
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(color: Color(0x8C000000), shape: BoxShape.circle),
+                    child: const Icon(Icons.zoom_in, size: 18, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _missingPhoto(ExomThemePalette palette, String message) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: palette.surface,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: palette.borderSoft),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(8),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(view.icon, color: palette.textSecondary),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: palette.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   bool _isStaleReplacement(Map<String, dynamic>? item) {
     final error = item?['last_error'] as String? ?? '';

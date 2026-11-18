@@ -24,6 +24,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/repositories/home_repository.dart';
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
@@ -291,12 +292,18 @@ Widget _app(ThemeData theme, double textScale, Widget home) {
     locale: const Locale('es'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
-      child: child!,
-    ),
+    builder: (context, child) {
+      // Mirrors lib/main.dart: static GlassDecoration factories read the
+      // active brightness. Without this the light scenes painted the dark
+      // tokens (hidden while they were translucent; opaque since L1).
+      GlassDecoration.brightness = Theme.of(context).brightness;
+      return MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      );
+    },
     home: home,
   );
 }
@@ -317,20 +324,31 @@ class _FakeTrainingBloc extends Fake implements TrainingBloc {}
 
 bool _fontsLoaded = false;
 
-/// Loads the bundled CabinetGrotesk files (the Android/default family of
-/// AppTheme) and the SDK Material Icons so layouts are realistic instead of
-/// Ahem boxes. Reads files from disk; pubspec.yaml is not touched. If the SDK
-/// icon font cannot be located the icons stay as Ahem boxes.
+/// Loads the bundled font families used by AppTheme (L1: DMSans by default,
+/// BarlowCondensed for display/headline slots; CabinetGrotesk is still bundled
+/// and kept loaded) and the SDK Material Icons so layouts are realistic instead
+/// of Ahem boxes. Reads files from disk; pubspec.yaml is the source of the
+/// family names. If the SDK icon font cannot be located the icons stay as Ahem
+/// boxes.
 Future<void> loadRedesignFonts() async {
   if (_fontsLoaded) return;
   _fontsLoaded = true;
-  final cabinet = FontLoader('CabinetGrotesk');
-  for (final file in Directory('assets/fonts').listSync().whereType<File>()) {
-    if (file.path.endsWith('.ttf')) {
-      cabinet.addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
+  const families = <String, String>{
+    'CabinetGrotesk': 'CabinetGrotesk-',
+    'DMSans': 'dm-sans-',
+    'BarlowCondensed': 'barlow-condensed-',
+  };
+  final files = Directory('assets/fonts').listSync().whereType<File>().toList();
+  for (final family in families.entries) {
+    final loader = FontLoader(family.key);
+    for (final file in files) {
+      final name = file.uri.pathSegments.last;
+      if (name.startsWith(family.value) && name.endsWith('.ttf')) {
+        loader.addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
+      }
     }
+    await loader.load();
   }
-  await cabinet.load();
   final icons = _findMaterialIcons();
   if (icons != null) {
     final loader = FontLoader('MaterialIcons')
@@ -373,6 +391,7 @@ Future<SceneHandle> pumpRedesignScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   await loadRedesignFonts();
   await initializeDateFormatting('es');
   await sl.reset();

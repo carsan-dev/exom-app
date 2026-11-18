@@ -136,3 +136,13 @@ flutter:
           weight: 800
         - asset: assets/fonts/CabinetGrotesk-Black.ttf
           weight: 900
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/dm-sans-400.ttf
+          weight: 400
+        - asset: assets/fonts/dm-sans-600.ttf
+          weight: 600
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/barlow-condensed-800.ttf
+          weight: 800

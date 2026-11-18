@@ -94,8 +94,11 @@ const _inicioWeekSelectorBelow48 = <String>[
 
 // L3 (training_detail_page.dart): leading IconButton has no tooltip/semantic label.
 // Seen in: detalle/dark/labeledTapTarget, detalle/light/labeledTapTarget.
+// L2: same defect; the rect moved 0.2 px down (was 3.8-51.8): the old
+// GlassAppBar Container took its 0.5 px bottom border as padding, shrinking the
+// 56 px row to 55.5; the flat bar paints its 1 px rule without padding.
 const _detailBackButtonUnlabeled = <String>[
-  'missing-label rect=(16.0, 3.8, 64.0, 51.8)',
+  'missing-label rect=(16.0, 4.0, 64.0, 52.0)',
 ];
 
 // L3 (active_exercise_page.dart _CircleIconButton): close button is 44x44; L3 criterion: close >= 48.

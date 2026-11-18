@@ -59,7 +59,7 @@ class ErrorWidget2 extends StatelessWidget {
             children: [
               _StateIconBadge(
                 icon: Icons.error_outline,
-                color: AppColors.error,
+                color: palette.error,
               ),
               const SizedBox(height: 16),
               Text(
@@ -180,7 +180,7 @@ class ServerErrorWidget extends StatelessWidget {
             children: [
               _StateIconBadge(
                 icon: Icons.cloud_off_outlined,
-                color: AppColors.error,
+                color: palette.error,
               ),
               const SizedBox(height: 20),
               Text(
@@ -257,7 +257,7 @@ class NoConnectionWidget extends StatelessWidget {
             children: [
               _StateIconBadge(
                 icon: Icons.wifi_off_outlined,
-                color: AppColors.warning,
+                color: context.exomSemantic.warning,
               ),
               const SizedBox(height: 20),
               Text(
@@ -397,14 +397,9 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final baseColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.05),
-      AppColors.glassBackgroundElevated,
-    );
-    final highlightColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.12),
-      const Color(0x33FFF7DB),
-    );
+    // V4 tokens: raised panel with a panel-coloured sweep, in both themes.
+    final baseColor = palette.surfaceElevated;
+    final highlightColor = palette.surface;
 
     return Shimmer.fromColors(
       baseColor: baseColor,

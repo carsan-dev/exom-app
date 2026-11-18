@@ -5629,6 +5629,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hay un entrenamiento guardado que pertenece a otra sesión. Elige cuál conservar antes de continuar.'**
   String get activeExerciseOtherExecution;
+
+  /// No description provided for @navTabChallengesA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Retos'**
+  String get navTabChallengesA11y;
+
+  /// No description provided for @navTabTrainingsA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenar'**
+  String get navTabTrainingsA11y;
+
+  /// No description provided for @navTabHomeA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get navTabHomeA11y;
+
+  /// No description provided for @navTabDietsA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Dietas'**
+  String get navTabDietsA11y;
+
+  /// No description provided for @navTabCalendarA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Calendario'**
+  String get navTabCalendarA11y;
+
+  /// No description provided for @navTabChallengesLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Retos'**
+  String get navTabChallengesLabel;
+
+  /// No description provided for @navTabTrainingsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenar'**
+  String get navTabTrainingsLabel;
+
+  /// No description provided for @navTabHomeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get navTabHomeLabel;
+
+  /// No description provided for @navTabDietsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Dietas'**
+  String get navTabDietsLabel;
+
+  /// No description provided for @navTabCalendarLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Calendario'**
+  String get navTabCalendarLabel;
+
+  /// No description provided for @shellMenuTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Menú'**
+  String get shellMenuTooltip;
+
+  /// No description provided for @syncStatusSavedOnDevice.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardada en este móvil'**
+  String get syncStatusSavedOnDevice;
+
+  /// No description provided for @syncStatusPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de sincronizar'**
+  String get syncStatusPending;
+
+  /// No description provided for @syncStatusSending.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviando'**
+  String get syncStatusSending;
+
+  /// No description provided for @syncStatusConfirmed.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmada'**
+  String get syncStatusConfirmed;
+
+  /// No description provided for @syncStatusFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo sincronizar'**
+  String get syncStatusFailed;
+
+  /// No description provided for @buttonBusyA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'En curso'**
+  String get buttonBusyA11y;
+
+  /// No description provided for @sheetBarrierA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar hoja'**
+  String get sheetBarrierA11y;
 }
 
 class _AppLocalizationsDelegate

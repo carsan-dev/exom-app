@@ -1,12 +1,12 @@
-import 'dart:ui';
-import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
-/// Frosted glass app bar with real BackdropFilter blur.
+/// Flat V4 app bar (redesign L2). The name is kept for source compatibility:
+/// there is no blur any more.
 ///
-/// Uses ClipRect + BackdropFilter for a true frosted glass effect.
-/// Safe for performance since the app bar area is small.
+/// Opaque theme background with a 1 px `rule` at the bottom. Content sits in a
+/// [SafeArea] (top only) row of [height]; actions should be at least 48x48
+/// (e.g. [IconButton], whose default tap target is 48).
 class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   const GlassAppBar({
     super.key,
@@ -27,17 +27,10 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final blurSigma = PerformanceProfile.blurSigma(context, 20);
-    final content = Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.headerGlass : AppColors.headerGlassLightTheme,
-        border: Border(
-          bottom: BorderSide(
-            color: palette.glassBorder.withValues(alpha: isDark ? 0.15 : 0.10),
-            width: 0.5,
-          ),
-        ),
+        color: palette.background,
+        border: Border(bottom: BorderSide(color: palette.borderSoft, width: 1)),
       ),
       child: SafeArea(
         bottom: false,
@@ -53,9 +46,10 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                   Expanded(
                     child: DefaultTextStyle(
                       style: TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
                         color: palette.textPrimary,
                         fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                       child: Align(
                         alignment: Alignment.centerLeft,
@@ -68,17 +62,6 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         ),
-      ),
-    );
-
-    if (blurSigma == 0) {
-      return content;
-    }
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: content,
       ),
     );
   }

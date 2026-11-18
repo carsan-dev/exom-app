@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
 import 'package:exom_app/core/widgets/tutorial_prompt_dialog.dart';
@@ -490,12 +491,6 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
-  String _brandLogo(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
-        ? 'assets/images/logo_dark.svg'
-        : 'assets/images/logo.svg';
-  }
-
   int _currentIndex(String location) {
     if (location == '/') return 2; // Home is center
     if (location.startsWith('/challenges')) return 0;
@@ -582,6 +577,7 @@ class _MainShellState extends State<MainShell> {
 
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final topInset = mediaQuery.padding.top + kToolbarHeight;
     final bottomInset = GlassBottomNav.reservedHeight(context);
@@ -600,12 +596,13 @@ class _MainShellState extends State<MainShell> {
             extendBodyBehindAppBar: true,
             extendBody: true,
             appBar: GlassAppBar(
-              title: SvgPicture.asset(_brandLogo(context), height: 28),
+              title: const ExomBrandLogo(height: 28),
               actions: [
                 BlocBuilder<NotificationsBloc, NotificationsState>(
                   builder: (context, state) {
                     final unread = state.unreadCount;
                     return IconButton(
+                      tooltip: l10n.notificationsTitle,
                       onPressed: () async {
                         await context.push(AppRoutes.notifications);
                         if (!mounted) return;
@@ -616,56 +613,16 @@ class _MainShellState extends State<MainShell> {
                       icon: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: palette.glassBackground,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: palette.glassBorder.withValues(
-                                  alpha: 0.15,
-                                ),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.notifications_outlined,
-                              color: palette.textPrimary,
-                              size: 18,
-                            ),
+                          Icon(
+                            Icons.notifications_outlined,
+                            color: palette.textPrimary,
+                            size: 24,
                           ),
                           if (unread > 0)
                             Positioned(
-                              right: -2,
-                              top: -2,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 1,
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.primary,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: palette.glassBackground,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ),
+                              right: -8,
+                              top: -7,
+                              child: ShellUnreadBadge(count: unread),
                             ),
                         ],
                       ),
@@ -673,37 +630,28 @@ class _MainShellState extends State<MainShell> {
                   },
                 ),
                 IconButton(
+                  tooltip: l10n.profileMenuItem,
                   onPressed: () => context.push(AppRoutes.profile),
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: palette.glassBackground,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: palette.glassBorder.withValues(alpha: 0.15),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.person_outline,
-                      color: palette.textPrimary,
-                      size: 18,
-                    ),
+                  icon: Icon(
+                    Icons.person_outline,
+                    color: palette.textPrimary,
+                    size: 24,
                   ),
                 ),
                 Builder(
                   builder: (ctx) => IconButton(
+                    tooltip: l10n.shellMenuTooltip,
                     onPressed: () => Scaffold.of(ctx).openEndDrawer(),
                     icon: Icon(
                       Icons.menu,
                       color: palette.textPrimary,
-                      size: 26,
+                      size: 24,
                     ),
                   ),
                 ),
               ],
             ),
-            endDrawer: _AppDrawer(drawerItemKeys: _drawerItemKeys),
+            endDrawer: AppDrawer(drawerItemKeys: _drawerItemKeys),
             body: ExomStaticBackground(
               child: Padding(
                 padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
@@ -734,52 +682,94 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-// ─── App Drawer ────────────────────────────────────────────────────────────────
+// ─── Shell badge ───────────────────────────────────────────────────────────────
 
-class _AppDrawer extends StatelessWidget {
-  final List<GlobalKey> drawerItemKeys;
+/// Unread counter of the shell's notification bell (V4, redesign L2): `text`
+/// fill with the background colour as label, DM Sans 600 13 (was 9 px).
+/// Its text scale is capped at 1.0 so it stays inside the 48x48 button.
+@visibleForTesting
+class ShellUnreadBadge extends StatelessWidget {
+  const ShellUnreadBadge({super.key, required this.count});
 
-  const _AppDrawer({required this.drawerItemKeys});
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final palette = context.exomPalette;
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.0,
+      child: Container(
+        height: 19,
+        constraints: const BoxConstraints(minWidth: 19),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: palette.textPrimary,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          count > 99 ? '99+' : '$count',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: AppTheme.bodyFontFamily,
+            color: palette.background,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            height: 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── App Drawer ────────────────────────────────────────────────────────────────
+
+/// End drawer of [MainShell]. Item labels carry [drawerItemKeys] (in order:
+/// profile, challenges, weekly recap, feedback, settings, help, log out) that
+/// the tutorial overlay uses to locate them.
+///
+/// [displayName] is a test seam: when null the name is read from Firebase.
+@visibleForTesting
+class AppDrawer extends StatelessWidget {
+  final List<GlobalKey> drawerItemKeys;
+  final String? displayName;
+
+  const AppDrawer({
+    super.key,
+    required this.drawerItemKeys,
+    this.displayName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final name = user?.displayName ?? l10n.userDefaultName;
+    final name =
+        displayName ??
+        FirebaseAuth.instance.currentUser?.displayName ??
+        l10n.userDefaultName;
     final theme = Theme.of(context);
     final palette = context.exomPalette;
 
     return Drawer(
-      backgroundColor: Colors.transparent,
-      child: Container(
+      backgroundColor: palette.background,
+      shape: const RoundedRectangleBorder(),
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [palette.gradientStart, palette.gradientEnd],
+          color: palette.background,
+          border: Border(
+            left: BorderSide(color: palette.borderSoft, width: 1),
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header with gradient
               Container(
                 padding: const EdgeInsets.all(24),
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      palette.primary.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
                   border: Border(
-                    bottom: BorderSide(
-                      color: palette.glassBorder.withValues(alpha: 0.15),
-                      width: 0.5,
-                    ),
+                    bottom: BorderSide(color: palette.borderSoft, width: 1),
                   ),
                 ),
                 child: Column(
@@ -875,7 +865,7 @@ class _AppDrawer extends StatelessWidget {
                       icon: Icons.logout,
                       label: l10n.logOutMenuItem,
                       labelKey: drawerItemKeys[6],
-                      color: AppColors.error,
+                      color: palette.error,
                       onTap: () {
                         Navigator.pop(context);
                         context.read<AuthBloc>().add(
@@ -919,7 +909,7 @@ class _DrawerItem extends StatelessWidget {
         label,
         style: TextStyle(
           color: itemColor,
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
       ),

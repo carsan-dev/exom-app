@@ -3243,4 +3243,58 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get activeExerciseOtherExecution =>
       'A saved workout belongs to another execution. Choose which one to keep before continuing.';
+
+  @override
+  String get navTabChallengesA11y => 'Challenges';
+
+  @override
+  String get navTabTrainingsA11y => 'Train';
+
+  @override
+  String get navTabHomeA11y => 'Home';
+
+  @override
+  String get navTabDietsA11y => 'Diets';
+
+  @override
+  String get navTabCalendarA11y => 'Calendar';
+
+  @override
+  String get navTabChallengesLabel => 'Challenges';
+
+  @override
+  String get navTabTrainingsLabel => 'Train';
+
+  @override
+  String get navTabHomeLabel => 'Home';
+
+  @override
+  String get navTabDietsLabel => 'Diets';
+
+  @override
+  String get navTabCalendarLabel => 'Calendar';
+
+  @override
+  String get shellMenuTooltip => 'Menu';
+
+  @override
+  String get syncStatusSavedOnDevice => 'Saved on this phone';
+
+  @override
+  String get syncStatusPending => 'Waiting to sync';
+
+  @override
+  String get syncStatusSending => 'Sending';
+
+  @override
+  String get syncStatusConfirmed => 'Confirmed';
+
+  @override
+  String get syncStatusFailed => 'Could not sync';
+
+  @override
+  String get buttonBusyA11y => 'In progress';
+
+  @override
+  String get sheetBarrierA11y => 'Close sheet';
 }

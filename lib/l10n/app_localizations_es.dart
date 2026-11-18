@@ -3281,4 +3281,58 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get activeExerciseOtherExecution =>
       'Hay un entrenamiento guardado que pertenece a otra sesión. Elige cuál conservar antes de continuar.';
+
+  @override
+  String get navTabChallengesA11y => 'Retos';
+
+  @override
+  String get navTabTrainingsA11y => 'Entrenar';
+
+  @override
+  String get navTabHomeA11y => 'Inicio';
+
+  @override
+  String get navTabDietsA11y => 'Dietas';
+
+  @override
+  String get navTabCalendarA11y => 'Calendario';
+
+  @override
+  String get navTabChallengesLabel => 'Retos';
+
+  @override
+  String get navTabTrainingsLabel => 'Entrenar';
+
+  @override
+  String get navTabHomeLabel => 'Inicio';
+
+  @override
+  String get navTabDietsLabel => 'Dietas';
+
+  @override
+  String get navTabCalendarLabel => 'Calendario';
+
+  @override
+  String get shellMenuTooltip => 'Menú';
+
+  @override
+  String get syncStatusSavedOnDevice => 'Guardada en este móvil';
+
+  @override
+  String get syncStatusPending => 'Pendiente de sincronizar';
+
+  @override
+  String get syncStatusSending => 'Enviando';
+
+  @override
+  String get syncStatusConfirmed => 'Confirmada';
+
+  @override
+  String get syncStatusFailed => 'No se pudo sincronizar';
+
+  @override
+  String get buttonBusyA11y => 'En curso';
+
+  @override
+  String get sheetBarrierA11y => 'Cerrar hoja';
 }

@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -21,12 +22,14 @@ import 'package:exom_app/features/diets/domain/usecases/mark_meal_completed_usec
 import 'package:exom_app/features/diets/domain/usecases/unmark_meal_completed_usecase.dart';
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/pages/diets_page.dart';
+import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 const _date = '2026-11-18';
 
@@ -39,10 +42,12 @@ MealEntity _meal(
   double? carbs,
   List<String> badges = const [],
   List<MealEntity> variants = const [],
+  String? imageUrl,
 }) => MealEntity(
   id: id,
   type: type,
   name: name,
+  imageUrl: imageUrl,
   calories: calories,
   proteinG: protein,
   carbsG: carbs,
@@ -200,6 +205,8 @@ Future<_Harness> _mount(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   await sl.reset();
+  // A fresh tree per mount, so repeated mounts in one test do not reuse state.
+  await tester.pumpWidget(const SizedBox());
   final repository = _Repository(diet: diet, completed: completed);
   final storage = _Storage()..actions = [...actions];
   final sync = _Sync(storage);
@@ -217,6 +224,11 @@ Future<_Harness> _mount(
       getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
     ),
   );
+  // The meal detail sheet is router-aware; the router itself stays unused.
+  final router = GoRouter(
+    routes: [GoRoute(path: '/', builder: (context, state) => const SizedBox())],
+  );
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     MaterialApp(
       theme: theme ?? AppTheme.dark,
@@ -227,7 +239,7 @@ Future<_Harness> _mount(
         data: MediaQuery.of(
           context,
         ).copyWith(textScaler: TextScaler.linear(textScale)),
-        child: child!,
+        child: InheritedGoRouter(goRouter: router, child: child!),
       ),
       home: const Scaffold(body: DietsPage(selectedDate: _date)),
     ),
@@ -759,5 +771,325 @@ void main() {
         );
       }
     }
+  });
+
+  group('B layout: photo left, text centre, mark right', () {
+    final photoDiet = DietEntity(
+      id: 'diet-2',
+      name: 'Definición',
+      totalCalories: 2150,
+      meals: [
+        _meal(
+          'm-breakfast',
+          'BREAKFAST',
+          'Avena, yogur griego y fruta',
+          calories: 520,
+          imageUrl: 'https://example.invalid/breakfast.jpg',
+        ),
+        _meal('m-lunch', 'LUNCH', 'Arroz, pollo y verduras', calories: 780),
+      ],
+    );
+    Finder thumb(String id) => find.byKey(Key('meal-thumb-$id'));
+    Finder inRow(String id, Finder matching) => find.descendant(
+      of: find.byKey(Key('meal-row-$id')),
+      matching: matching,
+    );
+
+    testWidgets('order is thumb < text < mark, all 64/48 dp', (tester) async {
+      await _mount(tester, diet: photoDiet);
+      for (final entry in {
+        'm-breakfast': 'Avena, yogur griego y fruta',
+        'm-lunch': 'Arroz, pollo y verduras',
+      }.entries) {
+        final t = tester.getRect(thumb(entry.key));
+        final text = tester.getRect(inRow(entry.key, find.text(entry.value)));
+        final mark = tester.getRect(_toggle(entry.key));
+        expect(t.right, lessThanOrEqualTo(text.left), reason: entry.key);
+        expect(text.right, lessThanOrEqualTo(mark.left), reason: entry.key);
+        expect(t.size, const Size(64, 64), reason: entry.key);
+        expect(mark.size, const Size(48, 48), reason: entry.key);
+        expect(mark.center.dy, closeTo(t.center.dy, 0.5), reason: entry.key);
+      }
+    });
+
+    testWidgets('photo uses CachedNetworkImage, no photo shows the icon box', (
+      tester,
+    ) async {
+      await _mount(tester, diet: photoDiet);
+      expect(
+        find.descendant(
+          of: thumb('m-breakfast'),
+          matching: find.byType(CachedNetworkImage),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: thumb('m-lunch'),
+          matching: find.byType(CachedNetworkImage),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: thumb('m-lunch'),
+          matching: find.byIcon(Icons.restaurant_outlined),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    DietEntity oneMeal(
+      String type, {
+      String? imageUrl,
+      String name = 'Plato',
+    }) => DietEntity(
+      id: 'diet-x',
+      name: 'X',
+      meals: [_meal('m-x', type, name, imageUrl: imageUrl)],
+    );
+
+    testWidgets('blank or whitespace-only image url means no photo', (
+      tester,
+    ) async {
+      for (final url in ['', '   ', ' \t ']) {
+        await _mount(tester, diet: oneMeal('LUNCH', imageUrl: url));
+        expect(
+          find.descendant(
+            of: thumb('m-x'),
+            matching: find.byType(CachedNetworkImage),
+          ),
+          findsNothing,
+          reason: 'url "$url"',
+        );
+        expect(
+          find.descendant(
+            of: thumb('m-x'),
+            matching: find.byIcon(Icons.restaurant_outlined),
+          ),
+          findsOneWidget,
+          reason: 'url "$url"',
+        );
+      }
+    });
+
+    testWidgets('loading and error states show the icon box, not a gap', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        diet: oneMeal('LUNCH', imageUrl: 'https://example.invalid/a.jpg'),
+      );
+      final image = tester.widget<CachedNetworkImage>(
+        find.descendant(
+          of: thumb('m-x'),
+          matching: find.byType(CachedNetworkImage),
+        ),
+      );
+      expect(image.placeholder, isNotNull);
+      expect(image.errorWidget, isNotNull);
+      final url = image.imageUrl;
+      final states = <String, Widget Function(BuildContext)>{
+        'placeholder': (context) => image.placeholder!(context, url),
+        'error': (context) => image.errorWidget!(context, url, Exception('x')),
+      };
+      for (final entry in states.entries) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: Scaffold(body: Builder(builder: entry.value)),
+          ),
+        );
+        expect(
+          find.byIcon(Icons.restaurant_outlined),
+          findsOneWidget,
+          reason: entry.key,
+        );
+        expect(
+          find.ancestor(
+            of: find.byIcon(Icons.restaurant_outlined),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  (w is ColoredBox && w.color == AppColors.surfaceElevated) ||
+                  (w is DecoratedBox &&
+                      w.decoration is BoxDecoration &&
+                      (w.decoration as BoxDecoration).color ==
+                          AppColors.surfaceElevated),
+            ),
+          ),
+          findsOneWidget,
+          reason: entry.key,
+        );
+      }
+    });
+
+    testWidgets('icon box has a 1 px rule border like the sketch', (
+      tester,
+    ) async {
+      await _mount(tester, diet: oneMeal('LUNCH'));
+      final decorated = find.descendant(
+        of: thumb('m-x'),
+        matching: find.byWidgetPredicate((w) {
+          if (w is! DecoratedBox) return false;
+          final d = w.decoration;
+          if (d is! BoxDecoration) return false;
+          final b = d.border;
+          return b is Border &&
+              b.top.width == 1 &&
+              b.top.color == AppColors.borderSoft;
+        }),
+      );
+      expect(decorated, findsOneWidget);
+    });
+
+    testWidgets('meal types map to distinct icons, unknown to the default', (
+      tester,
+    ) async {
+      final icons = <String, IconData>{};
+      for (final type in ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER', 'OTHER']) {
+        await _mount(tester, diet: oneMeal(type));
+        final icon = tester.widget<Icon>(
+          find.descendant(of: thumb('m-x'), matching: find.byType(Icon)),
+        );
+        icons[type] = icon.icon!;
+      }
+      expect(icons['BREAKFAST'], Icons.wb_sunny_outlined);
+      expect(icons['LUNCH'], Icons.restaurant_outlined);
+      expect(icons['SNACK'], Icons.local_cafe_outlined);
+      expect(icons['DINNER'], Icons.nights_stay_outlined);
+      expect(icons['OTHER'], Icons.restaurant_outlined);
+      expect(
+        {
+          icons['BREAKFAST'],
+          icons['LUNCH'],
+          icons['SNACK'],
+          icons['DINNER'],
+        }.length,
+        4,
+      );
+    });
+
+    testWidgets('completed description is struck through, open is not', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        diet: oneMeal('LUNCH', name: 'Arroz con pollo'),
+        completed: {'m-x'},
+      );
+      TextDecoration? deco() =>
+          tester.widget<Text>(find.text('Arroz con pollo')).style?.decoration;
+      expect(deco(), TextDecoration.lineThrough);
+      await _mount(tester, diet: oneMeal('LUNCH', name: 'Arroz con pollo'));
+      expect(deco(), isNot(TextDecoration.lineThrough));
+    });
+
+    testWidgets('long description is capped at 2 lines, label stays full', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final long = List.filled(40, 'verduras').join(' ');
+      await _mount(
+        tester,
+        diet: oneMeal('LUNCH', name: long),
+        size: const Size(320, 1600),
+      );
+      final text = tester.widget<Text>(find.text(long));
+      expect(text.maxLines, 2);
+      expect(text.overflow, TextOverflow.ellipsis);
+      final lineHeight = 14 * 1.35;
+      expect(
+        tester.getSize(find.text(long)).height,
+        lessThanOrEqualTo(lineHeight * 2 + 1),
+      );
+      expect(
+        find.semantics.byLabel(RegExp(RegExp.escape(long))),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('meal rows have no chevron, the shopping row keeps it', (
+      tester,
+    ) async {
+      await _mount(tester, diet: _diet);
+      for (final id in ['m-breakfast', 'm-lunch', 'm-snack', 'm-dinner']) {
+        expect(inRow(id, find.byIcon(Icons.chevron_right)), findsNothing);
+      }
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('diet-shopping-list-row')),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('completed meal dims the thumb to 0.45, open meal does not', (
+      tester,
+    ) async {
+      await _mount(tester, diet: photoDiet, completed: {'m-lunch'});
+      double opacity(String id) => tester
+          .widget<Opacity>(
+            find.descendant(of: thumb(id), matching: find.byType(Opacity)),
+          )
+          .opacity;
+      expect(opacity('m-lunch'), closeTo(0.45, 0.001));
+      expect(opacity('m-breakfast'), 1.0);
+    });
+
+    testWidgets('row tap opens the detail, mark tap only emits one event', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final h = await _mount(tester, diet: _diet);
+      await tester.ensureVisible(_toggle('m-snack'));
+      expect(
+        tester.getSemantics(_toggle('m-snack')),
+        matchesSemantics(
+          label: 'Marcar Snack como completada',
+          isButton: true,
+          hasTapAction: true,
+          hasCheckedState: true,
+          isChecked: false,
+        ),
+      );
+      await tester.tap(_toggle('m-snack'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(h.repository.marked, ['m-snack@$_date']);
+      expect(find.byType(MealDetailSheet), findsNothing);
+      await tester.tap(find.text('Arroz, pollo y verduras'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(MealDetailSheet), findsOneWidget);
+      expect(h.repository.marked, ['m-snack@$_date']);
+      semantics.dispose();
+    });
+
+    testWidgets('photo tap also opens the detail', (tester) async {
+      await _mount(tester, diet: photoDiet);
+      await tester.tap(thumb('m-lunch'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(MealDetailSheet), findsOneWidget);
+    });
+
+    testWidgets('320 dp at 1.3x with sync line and chips does not overflow', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        diet: _diet,
+        completed: {'m-breakfast'},
+        actions: [_action('m-breakfast')],
+        size: const Size(320, 1600),
+        textScale: 1.3,
+      );
+      expect(tester.takeException(), isNull);
+      final row = tester.getRect(find.byKey(const Key('meal-row-m-breakfast')));
+      expect(row.height, greaterThan(64));
+      _expectNoTextBelow13(tester);
+    });
   });
 }

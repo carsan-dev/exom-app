@@ -209,10 +209,15 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
   @override
   Widget build(BuildContext context) {
     final dayFormat = DateFormat.EEEE(widget.locale);
+    // The sheet measures its content (title + list + button) up to 85 % of
+    // the screen; only beyond that does the list scroll under a fixed button.
     return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.85,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 8, 8),
@@ -231,8 +236,9 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                 ],
               ),
             ),
-            Expanded(
+            Flexible(
               child: ListView(
+                shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
                   for (final day in widget.week.days)
@@ -252,6 +258,7 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: DropdownButtonFormField<String>(
+                              isExpanded: true,
                               initialValue:
                                   _selectedIds[WeeklyMealSelection.selectionKey(
                                     day.date,
@@ -263,12 +270,24 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                                     meal.type,
                                 border: const OutlineInputBorder(),
                               ),
+                              itemHeight: null,
+                              selectedItemBuilder: (context) => [
+                                Text(
+                                  '${widget.mainLabel}: ${meal.name}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                for (final variant in meal.variants)
+                                  Text(
+                                    variant.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
                               items: [
                                 DropdownMenuItem(
                                   value: meal.id,
-                                  child: Text(
-                                    '${widget.mainLabel}: ${meal.name}',
-                                  ),
+                                  child: Text('${widget.mainLabel}: ${meal.name}'),
                                 ),
                                 ...meal.variants.map(
                                   (variant) => DropdownMenuItem(

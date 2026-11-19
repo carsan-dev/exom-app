@@ -188,15 +188,15 @@ class _MealRowSkeleton extends StatelessWidget {
         ),
       ),
       child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
             ShimmerCard(
-              height: 48,
-              width: 48,
+              height: 64,
+              width: 64,
               borderRadius: BorderRadius.all(Radius.circular(4)),
             ),
-            SizedBox(width: 14),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,6 +214,12 @@ class _MealRowSkeleton extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            SizedBox(width: 12),
+            ShimmerCard(
+              height: 48,
+              width: 48,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
             ),
           ],
         ),
@@ -623,9 +629,11 @@ class _MacroStat extends StatelessWidget {
   }
 }
 
-/// Meal row (sketch `.meal`): square 48 dp mark on the left, the rest of the
-/// row opens the meal detail. Completed = filled mark with a check and a
-/// struck-through name (never colour alone); a queued change adds the
+/// Meal row (sketch B `.mealx`): 64 dp photo on the left, text in the centre,
+/// square 48 dp mark on the right; the photo and text open the meal detail.
+/// The description is capped at two lines (the full text is in the detail and
+/// in the semantics label). Completed = filled mark with a check and a
+/// struck-through description (never colour alone); a queued change adds the
 /// "pending to sync" line with its clock icon.
 class _MealRow extends StatelessWidget {
   const _MealRow({
@@ -687,18 +695,6 @@ class _MealRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MealMark(
-              key: Key('meal-toggle-${meal.id}'),
-              isCompleted: isCompleted,
-              label: isCompleted
-                  ? l10n.mealMarkUncompleteLabel(_mealLabel(context, meal.type))
-                  : l10n.mealMarkCompleteLabel(_mealLabel(context, meal.type)),
-              onTap: () => onToggle(
-                !isCompleted,
-                isCompleted ? completedMealId ?? meal.id : meal.id,
-              ),
-            ),
-            const SizedBox(width: 14),
             Expanded(
               child: Semantics(
                 button: true,
@@ -715,124 +711,205 @@ class _MealRow extends StatelessWidget {
                       );
                     }
                   },
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _mealLabel(context, meal.type),
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: palette.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _MealThumb(
+                        key: Key('meal-thumb-${meal.id}'),
+                        imageUrl: imageUrl,
+                        mealType: meal.type,
+                        dimmed: isCompleted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _mealLabel(context, meal.type),
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: palette.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
                               ),
-                              Hero(
-                                tag: 'meal-${meal.id}-title',
-                                flightShuttleBuilder:
-                                    (flightCtx, anim, dir, fromCtx, toCtx) {
-                                      return Material(
-                                        color: Colors.transparent,
-                                        child: Text(
-                                          meal.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.titleLarge
-                                              ?.copyWith(
-                                                color: palette.textPrimary,
-                                                fontSize: 19,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: -0.374,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: Text(
-                                    meal.name,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: palette.textSecondary,
-                                      fontSize: 14,
-                                      height: 1.35,
-                                      decoration: isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      decorationColor: palette.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (metrics.isNotEmpty)
-                                Text(
-                                  metrics,
+                            ),
+                            Hero(
+                              tag: 'meal-${meal.id}-title',
+                              flightShuttleBuilder:
+                                  (flightCtx, anim, dir, fromCtx, toCtx) {
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: Text(
+                                        meal.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleLarge
+                                            ?.copyWith(
+                                              color: palette.textPrimary,
+                                              fontSize: 19,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: -0.374,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Text(
+                                  meal.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: palette.textSecondary,
                                     fontSize: 14,
                                     height: 1.35,
+                                    decoration: isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    decorationColor: palette.textSecondary,
                                   ),
                                 ),
-                              if (syncState != null) ...[
-                                const SizedBox(height: 4),
-                                ExomSyncStatus(state: syncState),
-                              ],
-                              if (tags.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [
-                                    for (final tag in tags)
-                                      _MealTag(label: tag),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        if (imageUrl != null) ...[
-                          const SizedBox(width: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                              memCacheWidth: PerformanceProfile.imageCacheWidth(
-                                context,
-                                56,
                               ),
-                              placeholder: (context, url) =>
-                                  const SizedBox(width: 56, height: 56),
-                              errorWidget: (context, url, error) =>
-                                  const SizedBox(width: 56, height: 56),
                             ),
-                          ),
-                        ],
-                        const SizedBox(width: 8),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: ExcludeSemantics(
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 22,
-                              color: palette.textSecondary,
-                            ),
-                          ),
+                            if (metrics.isNotEmpty)
+                              Text(
+                                metrics,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: palette.textSecondary,
+                                  fontSize: 14,
+                                  height: 1.35,
+                                ),
+                              ),
+                            if (syncState != null) ...[
+                              const SizedBox(height: 4),
+                              ExomSyncStatus(state: syncState),
+                            ],
+                            if (tags.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  for (final tag in tags) _MealTag(label: tag),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              height: _MealThumb.size,
+              child: Center(
+                child: _MealMark(
+                  key: Key('meal-toggle-${meal.id}'),
+                  isCompleted: isCompleted,
+                  label: isCompleted
+                      ? l10n.mealMarkUncompleteLabel(
+                          _mealLabel(context, meal.type),
+                        )
+                      : l10n.mealMarkCompleteLabel(
+                          _mealLabel(context, meal.type),
+                        ),
+                  onTap: () => onToggle(
+                    !isCompleted,
+                    isCompleted ? completedMealId ?? meal.id : meal.id,
                   ),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 64 dp thumbnail (sketch `.th64`): the meal photo, or a raised-surface box
+/// with the linear icon of the meal type when there is no photo, while it
+/// loads, or if it fails. A completed meal dims it to 45 %.
+class _MealThumb extends StatelessWidget {
+  const _MealThumb({
+    super.key,
+    required this.imageUrl,
+    required this.mealType,
+    required this.dimmed,
+  });
+
+  static const double size = 64;
+
+  final String? imageUrl;
+  final String mealType;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl?.trim();
+    final fallback = _MealIconFallback(icon: _mealIcon(mealType));
+    return Opacity(
+      opacity: dimmed ? 0.45 : 1.0,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: url == null || url.isEmpty
+              ? fallback
+              : CachedNetworkImage(
+                  imageUrl: url,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  memCacheWidth: PerformanceProfile.imageCacheWidth(
+                    context,
+                    size,
+                  ),
+                  placeholder: (context, url) => fallback,
+                  errorWidget: (context, url, error) => fallback,
+                ),
+        ),
+      ),
+    );
+  }
+
+  static IconData _mealIcon(String type) {
+    switch (type.toUpperCase()) {
+      case 'BREAKFAST':
+        return Icons.wb_sunny_outlined;
+      case 'LUNCH':
+        return Icons.restaurant_outlined;
+      case 'SNACK':
+        return Icons.local_cafe_outlined;
+      case 'DINNER':
+        return Icons.nights_stay_outlined;
+      default:
+        return Icons.restaurant_outlined;
+    }
+  }
+}
+
+class _MealIconFallback extends StatelessWidget {
+  const _MealIconFallback({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.surfaceElevated,
+        border: Border.all(color: palette.borderSoft),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Center(
+        child: ExcludeSemantics(
+          child: Icon(icon, size: 28, color: palette.textSecondary),
         ),
       ),
     );

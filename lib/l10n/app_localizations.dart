@@ -2864,6 +2864,24 @@ abstract class AppLocalizations {
   /// **'Caché sin conexión borrada correctamente'**
   String get cacheDeletedMessage;
 
+  /// No description provided for @clearCacheActiveWorkTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar la caché local?'**
+  String get clearCacheActiveWorkTitle;
+
+  /// No description provided for @clearCacheActiveWorkMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes un circuito sin terminar en este dispositivo. Si borras la caché, se perderá su progreso y no podrás retomarlo.'**
+  String get clearCacheActiveWorkMessage;
+
+  /// No description provided for @clearCacheConfirmButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar caché'**
+  String get clearCacheConfirmButton;
+
   /// No description provided for @retry.
   ///
   /// In es, this message translates to:

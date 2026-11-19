@@ -9,6 +9,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
@@ -1252,7 +1253,6 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
     final weightText = WeightText.of(context);
     final resting = _isResting;
     final restEndsAt = _restEndsAt;
@@ -1291,12 +1291,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               ],
             ),
           ),
-          bottomNavigationBar: DecoratedBox(
-            decoration: BoxDecoration(
-              color: palette.background,
-              border: Border(top: BorderSide(color: palette.borderSoft)),
-            ),
-            child: Padding(
+          bottomNavigationBar: ExomPinnedFooter(
               padding: EdgeInsets.fromLTRB(
                 20,
                 12,
@@ -1348,7 +1343,6 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                         ),
                       ),
               ),
-            ),
           ),
         ),
       ),

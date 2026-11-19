@@ -1535,6 +1535,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cacheDeletedMessage => 'Offline cache cleared successfully';
 
   @override
+  String get clearCacheActiveWorkTitle => 'Clear local cache?';
+
+  @override
+  String get clearCacheActiveWorkMessage =>
+      'You have an unfinished circuit on this device. Clearing the cache will discard its progress and you will not be able to resume it.';
+
+  @override
+  String get clearCacheConfirmButton => 'Clear cache';
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -3725,7 +3735,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String circuitRoundRestAfter(int seconds) {
-    return 'Round rest after: $seconds s';
+    return 'Round rest afterwards: $seconds s';
   }
 
   @override
@@ -3759,7 +3769,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get circuitAfterRestEnd => 'After: end of the circuit';
+  String get circuitAfterRestEnd => 'Then: end of the circuit';
 
   @override
   String get circuitFinishButton => 'Finish circuit';

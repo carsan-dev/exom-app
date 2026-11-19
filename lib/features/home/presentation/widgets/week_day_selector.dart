@@ -23,10 +23,16 @@ class WeekDaySelector extends StatelessWidget {
 
   static const double _pageMargin = 20;
 
+  /// Local midnight of the Monday of [today]'s week. Calendar arithmetic, not
+  /// a `Duration` subtracted from a local `DateTime`: around a clock change
+  /// that can shift the result by an hour.
+  static DateTime weekStartOf(DateTime today) =>
+      DateTime(today.year, today.month, today.day - (today.weekday - 1));
+
   @override
   Widget build(BuildContext context) {
     final today = HomeClock.todayOf(context);
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final weekStart = weekStartOf(today);
     final l10n = AppLocalizations.of(context);
     final languageCode = Localizations.localeOf(context).languageCode;
 

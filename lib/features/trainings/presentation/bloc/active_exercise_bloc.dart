@@ -158,6 +158,36 @@ class ActiveExerciseState {
     );
   }
 
+  /// Sets counted in [completedSets] whose stored entry is not registered
+  /// (RIR-only sets of drafts from earlier versions, see
+  /// [isRegisteredSetJson]). They are not done: each one is pending again,
+  /// in order, before the sets after [completedSets] (unless a completion
+  /// identity already froze the content, see `_restoreState`).
+  Set<int> get unregisteredSets => unregisteredSetNumbers(
+    completedSets,
+    setPerformances.map((set) => set.toJson()),
+  );
+
+  /// Sets really done: [completedSets] without [unregisteredSets].
+  int get registeredSets => completedSets - unregisteredSets.length;
+
+  /// Stored RIR of [currentSet] when it is a pending unregistered set; the
+  /// sheet preselects it instead of the target.
+  int? get currentUnregisteredRir {
+    if (!unregisteredSets.contains(currentSet)) return null;
+    for (final set in setPerformances.reversed) {
+      if (set.setNumber == currentSet) return set.rir;
+    }
+    return null;
+  }
+
+  /// Cursor written to the draft. While unregistered sets are pending it
+  /// keeps the meaning it had for earlier versions (the set after
+  /// [completedSets]), so restoring never rewrites the draft.
+  int get persistedCurrentSet => unregisteredSets.isEmpty
+      ? currentSet
+      : (completedSets + 1).clamp(1, totalSets);
+
   bool get isExecuting => status == ActiveExerciseStatus.executing;
   bool get isResting =>
       status == ActiveExerciseStatus.resting ||
@@ -380,26 +410,47 @@ class ActiveExerciseBloc
     if (_exerciseId == null || !state.isExecuting) return;
 
     final setBase = state.copyWith(timedElapsedMs: 0, timedStartedAt: null);
-    final nextCompletedSets = state.completedSets + 1;
-    final nextWeight = event.weightKg ?? state.weightKg;
-    final nextPerformances =
+    final noValues =
         event.reps == null &&
-            event.seconds == null &&
-            event.weightKg == null &&
-            event.rir == null
-        ? state.setPerformances
-        : [
-            ...state.setPerformances,
-            SetPerformance(
-              setNumber: nextCompletedSets,
-              reps: event.reps,
-              seconds: event.seconds,
-              weightKg: event.weightKg,
-              rir: event.rir,
-            ),
-          ];
+        event.seconds == null &&
+        event.weightKg == null &&
+        event.rir == null;
+    // Saving a pending unregistered set replaces its stored entry in place
+    // (or drops it when completed without values); it was already counted.
+    final filling = state.unregisteredSets.contains(state.currentSet);
+    final nextCompletedSets =
+        filling ? state.completedSets : state.completedSets + 1;
+    final nextWeight = event.weightKg ?? state.weightKg;
+    final setNumber = filling ? state.currentSet : nextCompletedSets;
+    final saved = SetPerformance(
+      setNumber: setNumber,
+      reps: event.reps,
+      seconds: event.seconds,
+      weightKg: event.weightKg,
+      rir: event.rir,
+    );
+    final List<SetPerformance> nextPerformances;
+    if (filling) {
+      nextPerformances = <SetPerformance>[];
+      var replaced = false;
+      for (final set in state.setPerformances) {
+        if (set.setNumber != setNumber) {
+          nextPerformances.add(set);
+        } else if (!replaced) {
+          replaced = true;
+          if (!noValues) nextPerformances.add(saved);
+        }
+      }
+    } else {
+      nextPerformances =
+          noValues ? state.setPerformances : [...state.setPerformances, saved];
+    }
+    final pending = unregisteredSetNumbers(
+      nextCompletedSets,
+      nextPerformances.map((set) => set.toJson()),
+    );
 
-    if (nextCompletedSets >= state.totalSets) {
+    if (nextCompletedSets >= state.totalSets && pending.isEmpty) {
       if (state.restSeconds > 0) {
         final finalRestingState = setBase.copyWith(
           completedSets: state.totalSets,
@@ -437,7 +488,9 @@ class ActiveExerciseBloc
       return;
     }
 
-    final nextSet = nextCompletedSets + 1;
+    final nextSet = pending.isEmpty
+        ? nextCompletedSets + 1
+        : pending.reduce((a, b) => a < b ? a : b);
     if (state.restSeconds <= 0) {
       final executingState = setBase.copyWith(
         completedSets: nextCompletedSets,
@@ -560,7 +613,17 @@ class ActiveExerciseBloc
     final now = _now();
     final hasPendingRest =
         saved.restEndsAt != null && saved.restEndsAt!.isAfter(now);
-    final currentSet = hasPendingRest
+    // Repair on read (P3): an unregistered (RIR-only) set is pending again,
+    // the first one in order is in progress; the draft itself is unchanged.
+    // A completion identity freezes the content: that draft completes as it
+    // is and the replay leaves the set out of the request.
+    final pending = saved.completionOperationId != null
+        ? const <int>{}
+        : unregisteredSetNumbers(completedSets, saved.completedSetData);
+    final finished = completedSets >= totalSets && pending.isEmpty;
+    final currentSet = pending.isNotEmpty
+        ? pending.reduce((a, b) => a < b ? a : b)
+        : hasPendingRest
         ? saved.currentSet.clamp(1, totalSets)
         : (completedSets + 1).clamp(1, totalSets);
 
@@ -595,7 +658,7 @@ class ActiveExerciseBloc
       restSeconds: _trainingExercise.restSeconds < 0
           ? 0
           : _trainingExercise.restSeconds,
-      status: completedSets >= totalSets
+      status: finished
           ? hasPendingRest
                 ? ActiveExerciseStatus.finalResting
                 : ActiveExerciseStatus.done
@@ -605,8 +668,7 @@ class ActiveExerciseBloc
       restEndsAt: hasPendingRest ? saved.restEndsAt : null,
       lastSetFeedbackClientUploadId: saved.lastSetFeedbackClientUploadId,
       completionOperationId: saved.completionOperationId ??
-          (completedSets >= totalSets && !hasPendingRest
-              ? newOperationId() : null),
+          (finished && !hasPendingRest ? newOperationId() : null),
     );
   }
 
@@ -650,7 +712,7 @@ class ActiveExerciseBloc
           trainingId: trainingId,
           sessionId: nextState.sessionId,
           exerciseId: exerciseId,
-          currentSet: nextState.currentSet,
+          currentSet: nextState.persistedCurrentSet,
           completedSets: nextState.completedSets,
           restEndsAt: nextState.isResting ? nextState.restEndsAt : null,
           lastWeightKg: nextState.weightKg,

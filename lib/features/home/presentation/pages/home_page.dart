@@ -69,7 +69,9 @@ class _HomePageState extends State<HomePage> {
 
 /// Reloads [date] and completes when the bloc emits its next settled state
 /// (loaded, rest day or error), or after [HomePage.refreshTimeout]. Subscribes
-/// before dispatching so a fast emission is never missed.
+/// before dispatching so a fast emission is never missed. A failed reload with
+/// content on screen arrives as that content flagged with its error: the wait
+/// ends and the load error is shown, the data stays.
 Future<void> _refreshHome(BuildContext context, DateTime date) async {
   final bloc = context.read<HomeBloc>();
   final settled = bloc.stream.firstWhere(
@@ -77,7 +79,25 @@ Future<void> _refreshHome(BuildContext context, DateTime date) async {
   );
   bloc.add(HomeLoadRequested(date: date));
   try {
-    await settled.timeout(HomePage.refreshTimeout);
+    final state = await settled.timeout(HomePage.refreshTimeout);
+    final refreshError = switch (state) {
+      HomeLoaded(:final refreshError) => refreshError,
+      HomeRestDay(:final refreshError) => refreshError,
+      _ => null,
+    };
+    if (refreshError != null && context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            localizedErrorTextOf(
+              context,
+              refreshError,
+              fallback: (l10n) => l10n.homeLoadError,
+            ),
+          ),
+        ),
+      );
+    }
   } on TimeoutException {
     // The reload may still land later; the indicator just stops waiting.
   } on StateError {

@@ -32,7 +32,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final today = DateTime.utc(now.year, now.month, now.day);
     // Initial load, retry, pull-to-refresh and post-action refreshes always
     // refetch the shared fields.
-    await _loadForDate(event.date ?? today, emit, reuseShared: false);
+    await _loadForDate(
+      event.date ?? today,
+      emit,
+      reuseShared: false,
+      reportFailureOverContent: true,
+    );
   }
 
   Future<void> _onDateSelected(
@@ -46,6 +51,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     DateTime date,
     Emitter<HomeState> emit, {
     required bool reuseShared,
+    bool reportFailureOverContent = false,
   }) async {
     final epoch = ++_requestEpoch;
     // A full refresh invalidates the cache so later date requests fetch it
@@ -80,6 +86,26 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (epoch != _requestEpoch) return;
       if (!hasContent) {
         emit(HomeError(e.toString()));
+      } else if (reportFailureOverContent) {
+        // Same content again, flagged: lets a pull-to-refresh stop waiting
+        // and report the failure without replacing what is on screen.
+        if (previousState is HomeLoaded) {
+          emit(
+            HomeLoaded(
+              previousState.summary,
+              selectedDate: previousState.selectedDate,
+              refreshError: e.toString(),
+            ),
+          );
+        } else if (previousState is HomeRestDay) {
+          emit(
+            HomeRestDay(
+              previousState.summary,
+              selectedDate: previousState.selectedDate,
+              refreshError: e.toString(),
+            ),
+          );
+        }
       }
     }
   }

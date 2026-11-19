@@ -110,7 +110,41 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) setState(() => _lastSetReminderEnabled = enabled);
   }
 
+  Future<bool> _confirmClearActiveWork() async {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.clearCacheActiveWorkTitle),
+        content: Text(l10n.clearCacheActiveWorkMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.error,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.clearCacheConfirmButton),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
   Future<void> _clearOfflineCache() async {
+    // An unfinished circuit lives only in this cache: warn before losing it.
+    if (sl<LocalStorage>().hasActiveCircuitState) {
+      final confirmed = await _confirmClearActiveWork();
+      // The session may have ended while the dialog was open; never clear
+      // the cache of whoever owns the storage now.
+      if (!confirmed || !mounted) return;
+    }
     await sl<LocalStorage>().clearCache();
     if (!mounted) return;
 

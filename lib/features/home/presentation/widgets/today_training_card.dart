@@ -6,6 +6,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/date_utils.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
@@ -264,7 +265,6 @@ class HomeSessionAction extends StatelessWidget {
     final plan = HomeSessionPlan.of(summary);
     if (!plan.hasTraining) return const SizedBox.shrink();
 
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final isToday = HomeClock.isToday(context, selectedDate);
 
@@ -297,15 +297,9 @@ class HomeSessionAction extends StatelessWidget {
       );
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.background,
-        border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-        child: button,
-      ),
+    return ExomPinnedFooter(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: button,
     );
   }
 }

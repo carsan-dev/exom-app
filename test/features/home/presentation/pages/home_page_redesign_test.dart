@@ -16,6 +16,7 @@ import 'package:exom_app/features/home/domain/repositories/home_repository.dart'
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/pages/home_page.dart';
+import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -635,6 +636,32 @@ void main() {
       expect(find.text('PIERNA FUERZA'), findsOneWidget);
     });
 
+    testWidgets('a failed pull to refresh ends at once, says so and keeps '
+        'the data on screen', (tester) async {
+      final harness = await _pumpHome(
+        tester,
+        repository: _Repository((_) => _training),
+      );
+      harness.repository.error = Exception('boom');
+
+      await tester.fling(find.text('PIERNA FUERZA'), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(harness.repository.loads, 2);
+      // Well under HomePage.refreshTimeout: the failure ends the wait.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
+      expect(
+        find.text('No se pudo cargar el resumen. Vuelve a intentarlo.'),
+        findsOneWidget,
+      );
+      expect(find.text('PIERNA FUERZA'), findsOneWidget);
+      expect(find.byType(ErrorWidget2), findsNothing);
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+    });
+
     testWidgets('pull to refresh gives up after the timeout', (tester) async {
       final harness = await _pumpHome(
         tester,
@@ -691,5 +718,31 @@ void main() {
         expect(find.text('EMPEZAR SESIÓN').hitTestable(), findsOneWidget);
       });
     }
+  });
+
+  testWidgets('L3b P5c: at 320x568 and 2.0x the pinned action is bounded and '
+      'the content stays reachable', (tester) async {
+    await _pumpHome(
+      tester,
+      repository: _Repository(
+        (_) => _summary(
+          trainingName: 'Pierna y glúteo con cadena posterior',
+          nextMealId: null,
+        ),
+      ),
+      size: const Size(320, 568),
+      textScale: 2.0,
+    );
+    expect(tester.takeException(), isNull);
+
+    final footer = tester.getRect(find.byType(HomeSessionAction));
+    expect(footer.height, lessThanOrEqualTo(568 * 0.4 + 0.5));
+    expect(find.text('EMPEZAR SESIÓN').hitTestable(), findsOneWidget);
+    expect(find.text('PIERNA Y GLÚTEO CON CADENA POSTERIOR'), findsWidgets);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Sueño'), findsWidgets);
   });
 }

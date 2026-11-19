@@ -1556,6 +1556,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cacheDeletedMessage => 'Caché sin conexión borrada correctamente';
 
   @override
+  String get clearCacheActiveWorkTitle => '¿Borrar la caché local?';
+
+  @override
+  String get clearCacheActiveWorkMessage =>
+      'Tienes un circuito sin terminar en este dispositivo. Si borras la caché, se perderá su progreso y no podrás retomarlo.';
+
+  @override
+  String get clearCacheConfirmButton => 'Borrar caché';
+
+  @override
   String get retry => 'Reintentar';
 
   @override

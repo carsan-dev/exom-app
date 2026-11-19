@@ -436,6 +436,15 @@ class LocalStorage implements ActiveWorkoutLocalStore {
 
   Future<void> removeCachedData(String key) => _cache.delete(_key(key));
 
+  /// True when the current owner has an unfinished circuit persisted in the
+  /// cache (`active_circuit:*`, written by the active circuit page and removed
+  /// when it finishes). `clearCache` would destroy it; exercise drafts live in
+  /// their own box and are not touched by it.
+  bool get hasActiveCircuitState {
+    final prefix = _key('active_circuit:');
+    return _cache.keys.whereType<String>().any((key) => key.startsWith(prefix));
+  }
+
   Future<void> clearCache() async {
     final prefix = _key('');
     final preserved = {

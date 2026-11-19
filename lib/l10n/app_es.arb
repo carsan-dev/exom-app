@@ -554,6 +554,9 @@
   "notificationsEnabledMessage": "Notificaciones activadas para este dispositivo",
   "notificationsDisabledMessage": "Notificaciones desactivadas en este dispositivo",
   "cacheDeletedMessage": "Caché sin conexión borrada correctamente",
+  "clearCacheActiveWorkTitle": "¿Borrar la caché local?",
+  "clearCacheActiveWorkMessage": "Tienes un circuito sin terminar en este dispositivo. Si borras la caché, se perderá su progreso y no podrás retomarlo.",
+  "clearCacheConfirmButton": "Borrar caché",
 
   "retry": "Reintentar",
   "cancel": "Cancelar",

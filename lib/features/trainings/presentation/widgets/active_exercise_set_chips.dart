@@ -22,10 +22,15 @@ class ActiveExerciseSetChips extends StatelessWidget {
     required this.performances,
     required this.targetLabel,
     required this.weightText,
+    this.unregisteredSets = const {},
   });
 
   final int totalSets;
   final int completedSets;
+
+  /// Sets within [completedSets] that are not registered (RIR-only sets of
+  /// earlier drafts): shown as pending, not as done.
+  final Set<int> unregisteredSets;
 
   /// Set in progress, or null while resting or done.
   final int? currentSet;
@@ -86,7 +91,7 @@ class ActiveExerciseSetChips extends StatelessWidget {
     Duration duration,
   ) {
     final palette = context.exomPalette;
-    final done = set <= completedSets;
+    final done = set <= completedSets && !unregisteredSets.contains(set);
     final current = !done && set == currentSet;
     final String value;
     final String semantics;

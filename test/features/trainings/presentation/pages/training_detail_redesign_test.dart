@@ -475,6 +475,33 @@ void main() {
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
   });
 
+  testWidgets('a draft set with only RIR is not counted as done in the row', (
+    tester,
+  ) async {
+    await _mount(
+      tester,
+      completed: const {},
+      size: const Size(390, 1600),
+      seed: (storage) => storage.drafts['te-5:$_date:$_execution'] =
+          ActiveWorkoutHiveModel(
+            trainingId: _trainingId,
+            exerciseId: 'te-5:$_date:$_execution',
+            currentSet: 3,
+            completedSets: 2,
+            lastWeightKg: 40,
+            completedSetData: const [
+              {'set_number': 1, 'rir': 2},
+              {'set_number': 2, 'reps': 8, 'weight_kg': 40.0},
+            ],
+          ),
+    );
+    final l10n = _l10n(tester);
+    expect(
+      find.text('${l10n.trainingDetailSetsProgress(1, 3)} · 40 kg'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('rows show each exercise sync state from the queue', (
     tester,
   ) async {
@@ -690,5 +717,47 @@ void main() {
     expect(text.maxLines, isNull);
     expect(text.overflow, isNot(TextOverflow.ellipsis));
     expect(tester.getSize(find.text(longName)).height, greaterThan(30));
+  });
+
+  testWidgets('L3b P5c: at 320x568 and 2.0x the pinned actions are bounded '
+      'and the list stays reachable', (tester) async {
+    await _mount(
+      tester,
+      training: TrainingEntity(
+        id: _trainingId,
+        name: 'Entrenamiento de fuerza con nombre extraordinariamente largo',
+        types: const ['FUERZA', 'HIPERTROFIA'],
+        level: 'INTERMEDIATE',
+        estimatedDurationMin: 55,
+        tags: const ['pierna', 'gimnasio'],
+        exercises: [
+          _exercise(1, 'Sentadilla búlgara con mancuernas y pausa isométrica'),
+          _exercise(2, 'Peso muerto rumano'),
+          _exercise(3, 'Elevación de gemelos en máquina sentado'),
+        ],
+      ),
+      completed: {'te-1'},
+      actions: [_action('te-1', 'queued')],
+      size: const Size(320, 568),
+      textScale: 2.0,
+    );
+    expect(tester.takeException(), isNull);
+
+    // The first pinned button starts below 60 % of the screen: the footer
+    // (12 dp of padding above it) takes at most 40 %.
+    final next = find.byKey(const Key('training-next-button'));
+    expect(tester.getRect(next).top, greaterThanOrEqualTo(568 * 0.6));
+
+    final scrollable = find.byType(Scrollable).first;
+    await tester.dragUntilVisible(
+      find.text('Elevación de gemelos en máquina sentado').hitTestable(),
+      scrollable,
+      const Offset(0, -200),
+    );
+    expect(tester.takeException(), isNull);
+    expect(
+      find.text('Elevación de gemelos en máquina sentado').hitTestable(),
+      findsOneWidget,
+    );
   });
 }

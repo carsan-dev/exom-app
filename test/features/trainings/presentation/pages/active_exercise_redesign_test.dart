@@ -17,6 +17,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bl
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -550,9 +551,16 @@ void main() {
     expect(h.draft!.completedSetData.single, {'set_number': 1, 'seconds': 45});
   });
 
+  // Contract changed by the owner's P3 decision («reparar al leer, sin
+  // migración», 2026-11-19). Before, the RIR-only set 1 was restored as done
+  // and the page resumed at set 3, but the API rejects that set with a 400.
+  // Now it is restored as not registered: it is the set in progress again
+  // with its RIR kept, the Hive draft is not rewritten on restore, the valid
+  // set 2 (with its RIR 8) stays done and untouched, and saving set 1 replaces
+  // only that entry. Same fixture and the same coverage of the older draft.
   testWidgets(
-    'restores a draft written by the pre-L3 app (RIR-only set, RIR 8) '
-    'and keeps its sets unchanged',
+    'restores a draft written by the pre-L3 app (RIR-only set, RIR 8): the '
+    'RIR-only set is pending again and the valid one is kept unchanged',
     (tester) async {
       final legacySets = [
         {'set_number': 1, 'rir': 2},
@@ -580,24 +588,63 @@ void main() {
           completedSetData: legacySets,
         ),
       );
-      expect(find.text('SERIE 3 DE 4'), findsOneWidget);
+      final l10n = _l10n(tester);
+      expect(find.text('SERIE 1 DE 4'), findsOneWidget);
+      expect(find.text(l10n.activeExerciseSetNow), findsOneWidget);
       expect(find.text('RIR 2'), findsWidgets);
       expect(find.text('8 × 60'), findsOneWidget);
       expect(find.text('Tu peso: 60 kg'), findsOneWidget);
 
+      expect(
+        find.text(l10n.activeExerciseSetSavedStatus(
+          1, l10n.syncStatusSavedOnDevice)),
+        findsOneWidget,
+      );
+      final restored = h.draft!;
+      expect(restored.completedSets, 2);
+      expect(restored.currentSet, 3);
+      expect(restored.completedSetData, legacySets);
+
       await _openSheet(tester);
+      expect(
+        tester.widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
+            .initialRir,
+        2,
+      );
       await _saveSheet(tester);
       final saved = h.draft!;
-      expect(saved.completedSets, 3);
-      expect(saved.completedSetData.take(2).toList(), legacySets);
-      expect(saved.completedSetData.last, {
-        'set_number': 3,
-        'reps': 8,
-        'weight_kg': 60.0,
-        'rir': 2,
-      });
+      expect(saved.completedSets, 2);
+      expect(saved.completedSetData, [
+        {'set_number': 1, 'reps': 8, 'weight_kg': 60.0, 'rir': 2},
+        legacySets[1],
+      ]);
+      expect(_state(tester).currentSet, 3);
     },
   );
+
+  testWidgets('the sheet of a restored RIR-only set preselects its stored RIR',
+      (tester) async {
+    await _pumpPage(
+      tester,
+      seed: ActiveWorkoutHiveModel(
+        trainingId: _trainingId,
+        exerciseId: _draftKey,
+        currentSet: 2,
+        completedSets: 1,
+        lastWeightKg: 60.0,
+        completedSetData: const [
+          {'set_number': 1, 'rir': 4},
+        ],
+      ),
+    );
+    expect(find.text('SERIE 1 DE 3'), findsOneWidget);
+    await _openSheet(tester);
+    expect(
+      tester.widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
+          .initialRir,
+      4,
+    );
+  });
 
   testWidgets('restores a rest extended beyond the prescription', (
     tester,
@@ -816,5 +863,36 @@ void main() {
     await tester.tap(find.byKey(const Key('active-exercise-technique')));
     await tester.pumpAndSettle();
     expect(find.text('Pie trasero apoyado en el banco.'), findsOneWidget);
+  });
+
+  testWidgets('L3b P5c: at 320x568 and 2.0x the footer is bounded in '
+      'executing and rest and the page stays reachable', (tester) async {
+    await _pumpPage(
+      tester,
+      width: 320,
+      height: 568,
+      textScale: 2.0,
+      initialWeightKg: 62.5,
+      previous: const [
+        SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+      ],
+    );
+    expect(tester.takeException(), isNull);
+    final executing = find.byKey(const ValueKey('footer-executing'));
+    expect(tester.getRect(executing).top, greaterThanOrEqualTo(568 * 0.6));
+    expect(executing.hitTestable(), findsOneWidget);
+    // The content above the footer still scrolls to its end.
+    await tester.drag(find.byType(SingleChildScrollView).first,
+        const Offset(0, -3000));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    await _openSheet(tester);
+    await _saveSheet(tester);
+    expect(tester.takeException(), isNull);
+    expect(_state(tester).isResting, isTrue);
+    final skip = find.byKey(const Key('active-exercise-rest-skip'));
+    expect(tester.getRect(skip).top, greaterThanOrEqualTo(568 * 0.6));
+    expect(skip.hitTestable(), findsOneWidget);
   });
 }

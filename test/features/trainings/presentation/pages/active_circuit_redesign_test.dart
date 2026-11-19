@@ -1003,4 +1003,44 @@ void main() {
       handle.dispose();
     });
   });
+
+  testWidgets('L3b P5c: at 320x568 and 2.0x the footer is bounded in '
+      'executing and rest and the round list stays reachable', (tester) async {
+    final long = circuitExercise(
+      'a',
+      'Press militar con mancuernas sentado en banco inclinado',
+      targetRir: 2,
+      restSeconds: 30,
+    );
+    await pumpCircuit(
+      tester,
+      exercises: [long, _b],
+      rounds: 1,
+      width: 320,
+      height: 568,
+      textScale: 2.0,
+      blockName: 'Circuito metabólico de tren inferior y core',
+      previous: {
+        'a': const [SetPerformance(setNumber: 1, reps: 12, weightKg: 62.5, rir: 2)],
+      },
+    );
+    expect(tester.takeException(), isNull);
+    expect(tester.getRect(find.byKey(_footer)).top, greaterThanOrEqualTo(568 * 0.6));
+    expect(find.byKey(_footer).hitTestable(), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('circuit-round-list')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.takeException(), isNull);
+
+    await _openSheet(tester);
+    await _saveSheet(tester);
+    expect(tester.takeException(), isNull);
+    final skip = find.byKey(const Key('circuit-rest-skip'));
+    final extend = find.byKey(const Key('circuit-rest-extend'));
+    expect(tester.getRect(extend).top, greaterThanOrEqualTo(568 * 0.6));
+    expect(skip.hitTestable(), findsOneWidget);
+    expect(extend.hitTestable(), findsOneWidget);
+  });
 }

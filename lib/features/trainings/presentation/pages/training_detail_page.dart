@@ -18,6 +18,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -1137,8 +1138,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final todaySets = _progress.performances[ex.id];
     final String? todayLabel;
     if (hasPartialProgress) {
-      final sets = l10n.trainingDetailSetsProgress(
-        partialProgress.completedSets, ex.sets);
+      // RIR-only sets of earlier drafts are not registered (P3).
+      final registered = partialProgress.completedSets -
+          unregisteredSetNumbers(partialProgress.completedSets,
+              partialProgress.completedSetData).length;
+      final sets = l10n.trainingDetailSetsProgress(registered, ex.sets);
       todayLabel = effectiveWeight == null
           ? sets
           : '$sets · ${weightText(effectiveWeight)}';
@@ -1404,15 +1408,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
       // Pinned thumb-zone actions: the next exercise (lime) and the session
       // completion, which becomes the lime action once every exercise is done.
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: palette.background,
-          border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
-          child: Column(
+      bottomNavigationBar: ExomPinnedFooter(
+        padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1446,7 +1445,6 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               ),
             ],
           ),
-        ),
       ),
     );
   }

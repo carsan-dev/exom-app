@@ -907,6 +907,11 @@ class OfflineSyncService {
     }
   }
 
+  /// Every `/progress/exercises/complete` request is built here, so this is
+  /// where legacy sets are repaired on read. A set that is not registered
+  /// ([isRegisteredSetJson]: a RIR-only set from drafts of earlier versions)
+  /// is rejected by the API with a non-retryable 400; it is left out of the
+  /// request while the queued action keeps it as written.
   List<Map<String, dynamic>>? _setPerformancesForReplay(Object? value) {
     if (value == null) return null;
     if (value is! List) {
@@ -923,6 +928,7 @@ class OfflineSyncService {
           if (normalized['rir'] == null) normalized.remove('rir');
           return normalized;
         })
+        .where(isRegisteredSetJson)
         .toList(growable: false);
   }
 

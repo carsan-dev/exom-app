@@ -15,6 +15,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -244,7 +245,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.activeExerciseCloseTitle),
         content: Text(
-          l10n.activeExerciseCloseMessage(state.completedSets, state.totalSets),
+          l10n.activeExerciseCloseMessage(state.registeredSets, state.totalSets),
         ),
         actions: [
           TextButton(
@@ -316,7 +317,9 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               ? null
               : state.setPerformances.last,
           targetCount: _target(state).count,
-          targetRir: widget.args.trainingExercise.targetRir,
+          // A restored RIR-only set (P3) keeps its stored RIR preselected.
+          targetRir: state.currentUnregisteredRir ??
+              widget.args.trainingExercise.targetRir,
           timeUnit: timeUnit,
           repsRequired: widget.args.trainingExercise.requestSetTracking,
           unitSystem: weightText.unitSystem,
@@ -761,14 +764,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                     ],
                   ),
                 ),
-                bottomNavigationBar: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: palette.background,
-                    border: Border(
-                      top: BorderSide(color: palette.borderSoft),
-                    ),
-                  ),
-                  child: Padding(
+                bottomNavigationBar: ExomPinnedFooter(
                     padding: EdgeInsets.fromLTRB(
                       20,
                       12,
@@ -847,7 +843,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         ),
                       },
                     ),
-                  ),
                 ),
               ),
             ),
@@ -895,11 +890,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       performances: state.setPerformances,
       targetLabel: targetLabel,
       weightText: weightText,
+      unregisteredSets: state.unregisteredSets,
     );
     // The bloc emits before the Hive write; a failed write emits an error
     // message, so «saved on this phone» is shown only without one. Never
     // «synced»: sets travel in the exercise completion, not one by one.
-    final savedStatus = state.completedSets > 0 && state.errorMessage == null
+    final savedStatus = state.registeredSets > 0 && state.errorMessage == null
         ? Semantics(
             container: true,
             liveRegion: true,
@@ -907,7 +903,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               key: const Key('active-exercise-set-status'),
               state: ExomSyncState.guardadaEnMovil,
               label: l10n.activeExerciseSetSavedStatus(
-                state.completedSets,
+                state.registeredSets,
                 l10n.syncStatusSavedOnDevice,
               ),
             ),

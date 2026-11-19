@@ -56,6 +56,35 @@ class SetPerformance {
     if (weightKg != null) 'weight_kg': weightKg,
     if (rir != null) 'rir': rir,
   };
+
+  bool get isRegistered => isRegisteredSetJson(toJson());
+}
+
+/// The single rule for a registered set: it has reps, seconds or weight.
+/// A set with only RIR (stored by earlier versions) or with nothing is not
+/// registered: the API rejects it (400) and the app treats it as not done
+/// while keeping the stored value (owner decision P3, repair on read).
+bool isRegisteredSetJson(Map<dynamic, dynamic> set) =>
+    set['reps'] != null || set['seconds'] != null || set['weight_kg'] != null;
+
+/// Set numbers within the first [completedSets] whose latest stored entry is
+/// not registered (see [isRegisteredSetJson]).
+Set<int> unregisteredSetNumbers(
+  int completedSets,
+  Iterable<Map<dynamic, dynamic>> sets,
+) {
+  final latest = <int, Map<dynamic, dynamic>>{};
+  for (final set in sets) {
+    final number = set['set_number'];
+    if (number is num) latest[number.toInt()] = set;
+  }
+  return {
+    for (final entry in latest.entries)
+      if (entry.key >= 1 &&
+          entry.key <= completedSets &&
+          !isRegisteredSetJson(entry.value))
+        entry.key,
+  };
 }
 
 typedef CompletedExerciseProgress = ({

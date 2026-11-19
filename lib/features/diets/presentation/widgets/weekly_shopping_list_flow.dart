@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
@@ -206,12 +207,25 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
           ),
   ];
 
+  // Open-menu entry: full name on several lines with 8 dp above and below.
+  Widget _menuText(String text) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: ExomSpacing.sm),
+    child: Text(text),
+  );
+
   @override
   Widget build(BuildContext context) {
     final dayFormat = DateFormat.EEEE(widget.locale);
     // The sheet measures its content (title + list + button) up to 85 % of
     // the screen; only beyond that does the list scroll under a fixed button.
+    // SafeArea would read MediaQuery.padding, which the main shell inflates
+    // with the height of its bottom bar; the real system inset is viewPadding.
+    final media = MediaQuery.of(context);
+    final bottomInset = media.viewPadding.bottom > media.viewInsets.bottom
+        ? media.viewPadding.bottom
+        : media.viewInsets.bottom;
     return SafeArea(
+      bottom: false,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.85,
@@ -287,12 +301,14 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                               items: [
                                 DropdownMenuItem(
                                   value: meal.id,
-                                  child: Text('${widget.mainLabel}: ${meal.name}'),
+                                  child: _menuText(
+                                    '${widget.mainLabel}: ${meal.name}',
+                                  ),
                                 ),
                                 ...meal.variants.map(
                                   (variant) => DropdownMenuItem(
                                     value: variant.id,
-                                    child: Text(variant.name),
+                                    child: _menuText(variant.name),
                                   ),
                                 ),
                               ],
@@ -313,7 +329,12 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: EdgeInsets.fromLTRB(
+                ExomSpacing.lg,
+                ExomSpacing.sm,
+                ExomSpacing.lg,
+                ExomSpacing.lg + bottomInset,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(

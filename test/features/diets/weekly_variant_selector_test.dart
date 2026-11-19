@@ -78,6 +78,8 @@ Future<_Opened> _open(
   DietPeriodEntity period, {
   Size size = const Size(390, 800),
   double textScale = 1.0,
+  double viewPaddingBottom = 0,
+  double shellPaddingBottom = 0,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -88,9 +90,13 @@ Future<_Opened> _open(
     MaterialApp(
       theme: AppTheme.dark,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScale),
+          // The main shell reserves its bottom bar in `padding` (the sheet
+          // inherits it) while `viewPadding` keeps the real system inset.
+          padding: EdgeInsets.only(bottom: shellPaddingBottom),
+          viewPadding: EdgeInsets.only(bottom: viewPaddingBottom),
+        ),
         child: child!,
       ),
       home: Scaffold(
@@ -244,5 +250,62 @@ void main() {
     await tester.tap(generate);
     await tester.pump(const Duration(milliseconds: 500));
     expect(opened.result!.map((s) => s.selectedMealId), ['vb']);
+  });
+
+  for (final viewPadding in [0.0, 24.0]) {
+    for (final meals in [1, 20]) {
+      testWidgets(
+        'bottom gap under button <= 16 + viewPadding ($viewPadding), '
+        '$meals meal(s), shell reserves 89 dp',
+        (tester) async {
+          await _open(
+            tester,
+            _period(meals),
+            size: const Size(411, 914),
+            viewPaddingBottom: viewPadding,
+            shellPaddingBottom: 89,
+          );
+          expect(tester.takeException(), isNull);
+          final gap =
+              tester.getRect(sheet).bottom -
+              tester.getRect(find.byType(FilledButton)).bottom;
+          expect(gap, lessThanOrEqualTo(16 + viewPadding + 1));
+          expect(gap, greaterThanOrEqualTo(16));
+        },
+      );
+    }
+  }
+
+  testWidgets('open menu: items >= 48 dp, 8 dp vertical padding around text', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      _periodWithLongVariants(),
+      size: const Size(320, 640),
+      textScale: 1.3,
+    );
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.takeException(), isNull);
+    final items = find.byType(DropdownMenuItem<String>);
+    expect(items, findsNWidgets(3));
+    for (final name in [_longA, _longB]) {
+      final item = find.ancestor(
+        of: find.text(name).last,
+        matching: find.byType(DropdownMenuItem<String>),
+      );
+      final itemRect = tester.getRect(item.last);
+      final textRect = tester.getRect(find.text(name).last);
+      expect(itemRect.height, greaterThanOrEqualTo(48), reason: name);
+      expect(textRect.top - itemRect.top, greaterThanOrEqualTo(8));
+      expect(itemRect.bottom - textRect.bottom, greaterThanOrEqualTo(8));
+      expect(textRect.height, greaterThan(30), reason: 'multi-line: $name');
+    }
+    for (final item in items.evaluate()) {
+      final rect = tester.getRect(find.byWidget(item.widget));
+      expect(rect.height, greaterThanOrEqualTo(48));
+    }
   });
 }

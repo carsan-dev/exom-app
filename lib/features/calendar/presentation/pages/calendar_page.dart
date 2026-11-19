@@ -610,6 +610,7 @@ class _CalendarViewState extends State<_CalendarView> {
           context,
           period: period,
           calendarMonth: exportPeriod == _DietExportPeriod.month,
+          skipSelectorWithoutVariants: true,
           mealTypes: labels.mealTypes,
         );
         if (result == null) return;

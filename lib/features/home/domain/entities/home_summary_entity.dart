@@ -3,10 +3,14 @@ class HomeTrainingItemEntity {
   final String name;
   final bool completed;
 
+  /// L4b-D1: thumbnail of its first exercise that has one, if any.
+  final String? thumbnailUrl;
+
   const HomeTrainingItemEntity({
     required this.id,
     required this.name,
     required this.completed,
+    this.thumbnailUrl,
   });
 }
 
@@ -37,6 +41,18 @@ class HomeSummaryEntity {
   final DateTime? lastWeightDate;
   final double? lastSleepHours;
 
+  /// L4b: program week and training day of the selected date (`null` when
+  /// the API does not send them). Day data, never shared between dates.
+  final int? programWeek;
+  final int? programDay;
+
+  /// L4b-D5: planned sets of every training of the day.
+  final int totalSets;
+
+  /// L4b-D1: photo of the primary training, for summaries without
+  /// [trainings]; otherwise each item carries its own.
+  final String? trainingThumbnailUrl;
+
   const HomeSummaryEntity({
     this.trainingId,
     this.trainingName,
@@ -63,6 +79,10 @@ class HomeSummaryEntity {
     this.lastWeightKg,
     this.lastWeightDate,
     this.lastSleepHours,
+    this.programWeek,
+    this.programDay,
+    this.totalSets = 0,
+    this.trainingThumbnailUrl,
   });
 
   /// Returns a copy that takes the date-independent profile fields (streak,
@@ -94,6 +114,10 @@ class HomeSummaryEntity {
       lastWeightKg: source.lastWeightKg,
       lastWeightDate: source.lastWeightDate,
       lastSleepHours: source.lastSleepHours,
+      programWeek: programWeek,
+      programDay: programDay,
+      totalSets: totalSets,
+      trainingThumbnailUrl: trainingThumbnailUrl,
     );
   }
 }

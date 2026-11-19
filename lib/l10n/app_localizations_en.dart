@@ -3397,6 +3397,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeFactSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeProgramWeek(int week) {
+    return 'week $week';
+  }
+
+  @override
+  String homeProgramWeekDay(int week, int day) {
+    return 'week $week, day $day';
+  }
+
+  @override
   String homeMealsDone(int done, int total) {
     String _temp0 = intl.Intl.pluralLogic(
       total,
@@ -3432,6 +3453,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String homeWeekDayDone(String day) {
     return '$day, session done';
+  }
+
+  @override
+  String homeWeekDayPending(String day) {
+    return '$day, session pending';
+  }
+
+  @override
+  String homeWeekDayMissed(String day) {
+    return '$day, session not done';
   }
 
   @override

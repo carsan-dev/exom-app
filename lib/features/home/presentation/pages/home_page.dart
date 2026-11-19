@@ -177,7 +177,10 @@ class _HomeContent extends StatelessWidget {
                     selectedDate: selectedDate,
                   )
                 else
-                  HomeRestDayHeader(selectedDate: selectedDate),
+                  HomeRestDayHeader(
+                    selectedDate: selectedDate,
+                    programWeek: summary.programWeek,
+                  ),
                 const SizedBox(height: 24),
                 const WeekDaySelector(),
                 const SizedBox(height: 24),

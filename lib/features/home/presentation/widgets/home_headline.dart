@@ -43,19 +43,38 @@ class HomeTitle extends StatelessWidget {
 
 /// Muted date line under the title: localized weekday, day and month. For a
 /// day other than today it starts with the relative label («Mañana · …»).
+/// L4b: ends with the program week («· semana 3, día 2», or «· semana 3»
+/// without a training day) when the API sends it. It wraps freely: never
+/// clipped or ellipsised.
 class HomeDateLine extends StatelessWidget {
-  const HomeDateLine({super.key, required this.date});
+  const HomeDateLine({
+    super.key,
+    required this.date,
+    this.programWeek,
+    this.programDay,
+  });
 
   final DateTime date;
+  final int? programWeek;
+  final int? programDay;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final dateText = homeLongDate(context, date);
     final today = HomeClock.todayOf(context);
-    final text = isSameDay(today, date)
-        ? dateText
-        : '${homeRelativeLabel(context, date, today: today)} · $dateText';
+    final week = programWeek;
+    final day = programDay;
+    final text = [
+      if (!isSameDay(today, date))
+        homeRelativeLabel(context, date, today: today),
+      dateText,
+      if (week != null)
+        day != null
+            ? l10n.homeProgramWeekDay(week, day)
+            : l10n.homeProgramWeek(week),
+    ].join(' · ');
     return Text(
       text,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(

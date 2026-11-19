@@ -25,6 +25,7 @@ import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/planned_sets.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
@@ -1658,8 +1659,16 @@ class _DetailHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final totalSets =
-        training.exercises.fold<int>(0, (sum, item) => sum + item.sets);
+    // Same rule as Inicio (circuit exercises weigh sets x rounds).
+    final totalSets = tallyPlannedSets(
+      training.exercises,
+      plannedSets: (item) => plannedSetsOf(
+        sets: item.sets,
+        inBlock: item.blockId != null,
+        blockRounds: item.blockRounds,
+      ),
+      isCompleted: (_) => false,
+    ).total;
     final duration = training.estimatedDurationMin;
     final kind = [
       ...trainingTypeLabels(context, training.types),

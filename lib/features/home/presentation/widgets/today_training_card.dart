@@ -12,6 +12,7 @@ import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
 
 /// Opens a training of the selected day and reloads Home on return, exactly
 /// as the previous card did: `/trainings/<id>?date=<assignmentDate>`.
@@ -38,6 +39,7 @@ class HomeSessionPlan {
     required this.heroId,
     required this.heroName,
     required this.heroCompleted,
+    required this.heroThumbnailUrl,
     required this.others,
   });
 
@@ -51,6 +53,7 @@ class HomeSessionPlan {
         heroId: hero.id,
         heroName: hero.name,
         heroCompleted: hero.completed,
+        heroThumbnailUrl: hero.thumbnailUrl,
         others: summary.trainings
             .where((training) => !identical(training, hero))
             .toList(growable: false),
@@ -60,6 +63,7 @@ class HomeSessionPlan {
       heroId: summary.trainingId,
       heroName: summary.trainingName,
       heroCompleted: summary.trainingCompleted,
+      heroThumbnailUrl: summary.trainingThumbnailUrl,
       others: const [],
     );
   }
@@ -67,6 +71,9 @@ class HomeSessionPlan {
   final String? heroId;
   final String? heroName;
   final bool heroCompleted;
+
+  /// L4b-D1: photo of the hero session (first exercise with a thumbnail).
+  final String? heroThumbnailUrl;
   final List<HomeTrainingItemEntity> others;
 
   bool get hasTraining => heroId != null;
@@ -101,6 +108,8 @@ class TodayTrainingCard extends StatelessWidget {
                 summary.totalExercises,
               )
             : l10n.homeFactExercises(summary.totalExercises),
+      // L4b-D5: planned sets of the day, circuits counted by rounds.
+      if (summary.totalSets > 0) l10n.homeFactSets(summary.totalSets),
       if (inProgress && summary.remainingTrainingDurationMin != null)
         l10n.remainingTrainingMinutes(summary.remainingTrainingDurationMin!)
       else if (!summary.trainingCompleted &&
@@ -120,6 +129,7 @@ class TodayTrainingCard extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final facts = _facts(l10n, plan);
+    final photoUrl = plan.heroThumbnailUrl;
 
     final hero = MergeSemantics(
       child: Semantics(
@@ -132,32 +142,54 @@ class TodayTrainingCard extends StatelessWidget {
               trainingId: plan.heroId!,
               selectedDate: selectedDate,
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HomeTitle(plan.heroName ?? l10n.trainingUntitledLabel),
-                  const SizedBox(height: 12),
-                  HomeDateLine(date: selectedDate),
-                  if (plan.heroCompleted) ...[
-                    const SizedBox(height: 12),
-                    HomeDoneStatus(label: l10n.homeSessionDone),
-                  ],
-                  if (facts.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      facts.join(' · '),
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        height: 1.3,
+            // L4b-I9: the photo runs edge to edge, so the 20 dp margin is
+            // applied to the text blocks around it instead of the whole
+            // column.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HomeTitle(plan.heroName ?? l10n.trainingUntitledLabel),
+                      const SizedBox(height: 12),
+                      HomeDateLine(
+                        date: selectedDate,
+                        programWeek: summary.programWeek,
+                        programDay: summary.programDay,
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
+                ),
+                if (photoUrl != null && photoUrl.isNotEmpty)
+                  HomeSessionPhoto(url: photoUrl),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (plan.heroCompleted) ...[
+                        const SizedBox(height: 12),
+                        HomeDoneStatus(label: l10n.homeSessionDone),
+                      ],
+                      if (facts.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          facts.join(' · '),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: palette.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -197,9 +229,16 @@ class TodayTrainingCard extends StatelessWidget {
 /// «DESCANSO», date line, one line of copy and a secondary button to the
 /// calendar. There is no lime action: the day has no next step.
 class HomeRestDayHeader extends StatelessWidget {
-  const HomeRestDayHeader({super.key, required this.selectedDate});
+  const HomeRestDayHeader({
+    super.key,
+    required this.selectedDate,
+    this.programWeek,
+  });
 
   final DateTime selectedDate;
+
+  /// L4b-I5: program week of the day; the date line shows it without a day.
+  final int? programWeek;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +254,7 @@ class HomeRestDayHeader extends StatelessWidget {
         children: [
           HomeTitle(l10n.homeRestDayTitle),
           const SizedBox(height: 12),
-          HomeDateLine(date: selectedDate),
+          HomeDateLine(date: selectedDate, programWeek: programWeek),
           const SizedBox(height: 12),
           Text(
             isToday ? l10n.homeRestDayToday : l10n.homeRestDayOther,

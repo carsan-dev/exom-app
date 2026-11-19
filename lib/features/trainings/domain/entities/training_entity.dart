@@ -1,4 +1,5 @@
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
+import 'package:exom_app/features/trainings/domain/planned_sets.dart';
 
 class ExerciseEntity {
   final String id;
@@ -239,30 +240,28 @@ class RemainingTrainingProgress {
 
 extension RemainingTrainingProgressCalculation on TrainingEntity {
   RemainingTrainingProgress remainingProgress(Set<String> completedIds) {
-    final completedExercises = exercises
-        .where(
-          (item) =>
-              completedIds.contains(item.id) ||
-              completedIds.contains(item.exercise.id),
-        )
-        .toList(growable: false);
-    final totalSets = exercises.fold<int>(0, (sum, item) => sum + item.sets);
-    final completedSets = completedExercises.fold<int>(
-      0,
-      (sum, item) => sum + item.sets,
+    bool isCompleted(TrainingExerciseEntity item) =>
+        completedIds.contains(item.id) ||
+        completedIds.contains(item.exercise.id);
+    final completedExercises = exercises.where(isCompleted).length;
+    // L4b-D5: the shared rule (circuit exercises weigh sets x rounds).
+    final sets = tallyPlannedSets(
+      exercises,
+      plannedSets: (item) => plannedSetsOf(
+        sets: item.sets,
+        inBlock: item.blockId != null,
+        blockRounds: item.blockRounds,
+      ),
+      isCompleted: isCompleted,
     );
-    final remainingSets = (totalSets - completedSets).clamp(0, totalSets);
-    final duration = estimatedDurationMin;
 
     return RemainingTrainingProgress(
-      remainingExercises: (exercises.length - completedExercises.length).clamp(
+      remainingExercises: (exercises.length - completedExercises).clamp(
         0,
         exercises.length,
       ),
-      remainingSets: remainingSets,
-      remainingDurationMin: duration == null || totalSets <= 0
-          ? null
-          : (duration * remainingSets / totalSets).round().clamp(0, duration),
+      remainingSets: sets.remaining,
+      remainingDurationMin: sets.remainingMinutes(estimatedDurationMin),
     );
   }
 }

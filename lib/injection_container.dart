@@ -264,7 +264,11 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetHomeSummaryUseCase(sl<HomeRepository>()));
 
   sl.registerFactory(
-    () => HomeBloc(getHomeSummaryUseCase: sl<GetHomeSummaryUseCase>()),
+    () => HomeBloc(
+      getHomeSummaryUseCase: sl<GetHomeSummaryUseCase>(),
+      // L4b-D4: week strip marks from the Calendar use case and its cache.
+      getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
+    ),
   );
 
   // ── Trainings ─────────────────────────────────────────────────────────────

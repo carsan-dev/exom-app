@@ -760,4 +760,55 @@ void main() {
       findsOneWidget,
     );
   });
+
+  group('header total of sets (shared planned-sets rule, as Inicio)', () {
+    TrainingExerciseEntity circuitMember(int order, int position) =>
+        TrainingExerciseEntity(
+          id: 'te-$order',
+          order: order,
+          sets: 1,
+          repsOrDuration: '10',
+          restSeconds: 30,
+          blockId: 'block-1',
+          positionInBlock: position,
+          blockName: 'Circuito',
+          blockRounds: 3,
+          restBetweenRoundsSeconds: 45,
+          exercise: ExerciseEntity(
+            id: 'ex-$order',
+            name: 'Ejercicio $order',
+            muscleGroups: const [],
+          ),
+        );
+
+    TrainingEntity session(List<TrainingExerciseEntity> exercises) =>
+        TrainingEntity(
+          id: _trainingId,
+          name: 'Mixto',
+          types: const ['FUERZA'],
+          level: 'INTERMEDIATE',
+          tags: const [],
+          exercises: exercises,
+        );
+
+    testWidgets('a circuit counts sets x rounds, like Inicio', (tester) async {
+      await _mount(
+        tester,
+        training: session([
+          for (var i = 0; i < 4; i++) circuitMember(i + 1, i),
+          _exercise(5, 'Remo'),
+          _exercise(6, 'Press'),
+        ]),
+      );
+      expect(find.textContaining('6 ejercicios · 18 series'), findsOneWidget);
+    });
+
+    testWidgets('without circuits the total is the plain sum', (tester) async {
+      await _mount(
+        tester,
+        training: session([_exercise(1, 'Remo'), _exercise(2, 'Press')]),
+      );
+      expect(find.textContaining('2 ejercicios · 6 series'), findsOneWidget);
+    });
+  });
 }

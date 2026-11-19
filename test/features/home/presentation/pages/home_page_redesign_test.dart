@@ -4,21 +4,30 @@
 // Wednesday 18 Nov 2026 and a real HomeBloc over a fake repository, inside a
 // GoRouter so navigation and reload-on-return are observed end to end.
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
+import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
+import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/repositories/home_repository.dart';
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/pages/home_page.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -60,6 +69,46 @@ class _Repository implements HomeRepository {
   }
 }
 
+/// L4b: `/calendar/month` stand-in. [days] by `yyyy-mm-dd`; [error] makes
+/// every month fail.
+class _Calendar implements CalendarRepository {
+  _Calendar(this.days, {this.error});
+
+  final Map<String, CalendarDayEntity> days;
+  final Object? error;
+  final months = <String>[];
+
+  static CalendarDayEntity day(
+    String date, {
+    bool training = true,
+    bool done = false,
+    bool rest = false,
+  }) => CalendarDayEntity(
+    date: DateTime.parse(date),
+    hasTraining: training,
+    hasDiet: false,
+    isRestDay: rest,
+    trainingCompleted: done,
+    dietCompleted: false,
+  );
+
+  @override
+  Future<List<CalendarDayEntity>> getMonthCalendar(int year, int month) async {
+    months.add('$year-$month');
+    final failure = error;
+    if (failure != null) throw failure;
+    final prefix = '$year-${month.toString().padLeft(2, '0')}-';
+    return [
+      for (final entry in days.entries)
+        if (entry.key.startsWith(prefix)) entry.value,
+    ];
+  }
+
+  @override
+  Future<WeekSummaryEntity> getWeekSummary(String weekStart) =>
+      throw UnimplementedError();
+}
+
 const _training = HomeSummaryEntity(
   trainingId: 'training-1',
   trainingName: 'Pierna fuerza',
@@ -94,6 +143,7 @@ HomeSummaryEntity _summary({
   String? dietId = 'diet-1',
   String? nextMealId,
   bool isRestDay = false,
+  int? programWeek,
 }) {
   return HomeSummaryEntity(
     trainingId: trainingId,
@@ -122,6 +172,7 @@ HomeSummaryEntity _summary({
     mealsCompleted: 1,
     totalMeals: dietId == null ? 0 : 4,
     isRestDay: isRestDay,
+    programWeek: programWeek,
     streakDays: 12,
     lastWeightKg: 62.5,
     lastSleepHours: 7.5,
@@ -145,6 +196,7 @@ Future<_Harness> _pumpHome(
   ThemeData? theme,
   bool settle = true,
   Locale locale = const Locale('es'),
+  _Calendar? calendar,
 }) async {
   await initializeDateFormatting('es');
   tester.view.physicalSize = size;
@@ -154,6 +206,9 @@ Future<_Harness> _pumpHome(
   final preferences = AppPreferencesCubit(_PreferencesStorage());
   final bloc = HomeBloc(
     getHomeSummaryUseCase: GetHomeSummaryUseCase(repository),
+    getMonthCalendarUseCase: calendar == null
+        ? null
+        : GetMonthCalendarUseCase(calendar),
   )..add(HomeLoadRequested(date: date ?? _wednesday));
   late final _Harness harness;
   Widget destination(String label, GoRouterState state) {
@@ -226,8 +281,7 @@ Future<_Harness> _pumpHome(
 Finder _limeFills() => find.byWidgetPredicate((widget) {
   if (widget is DecoratedBox) {
     final decoration = widget.decoration;
-    return decoration is BoxDecoration &&
-        decoration.color == AppColors.primary;
+    return decoration is BoxDecoration && decoration.color == AppColors.primary;
   }
   if (widget is Material) return widget.color == AppColors.primary;
   if (widget is Container) return widget.color == AppColors.primary;
@@ -428,7 +482,10 @@ void main() {
       expect(harness.bloc.state, isA<HomeRestDay>());
 
       expect(find.text('DESCANSO'), findsOneWidget);
-      expect(find.text('Hoy no tienes entrenamiento asignado.'), findsOneWidget);
+      expect(
+        find.text('Hoy no tienes entrenamiento asignado.'),
+        findsOneWidget,
+      );
       expect(find.byType(ExomPrimaryButton), findsNothing);
       expect(_limeFills(), findsNothing);
       expect(find.text('Definición'), findsNothing);
@@ -496,9 +553,7 @@ void main() {
       );
     });
 
-    testWidgets('week strip: labels, selection and day change', (
-      tester,
-    ) async {
+    testWidgets('week strip: labels, selection and day change', (tester) async {
       final semantics = tester.ensureSemantics();
       final harness = await _pumpHome(
         tester,
@@ -542,8 +597,7 @@ void main() {
         final finder = find.byWidgetPredicate(
           (widget) =>
               widget is Semantics &&
-              (widget.properties.label?.contains('$day de noviembre') ??
-                  false),
+              (widget.properties.label?.contains('$day de noviembre') ?? false),
         );
         final size = tester.getSize(finder);
         expect(size.width, greaterThanOrEqualTo(48));
@@ -566,8 +620,7 @@ void main() {
         final slot = find.byWidgetPredicate(
           (widget) =>
               widget is Semantics &&
-              (widget.properties.label?.contains('$day de noviembre') ??
-                  false),
+              (widget.properties.label?.contains('$day de noviembre') ?? false),
         );
         final slotRect = tester.getRect(slot);
         expect(slotRect.width, greaterThanOrEqualTo(48));
@@ -623,7 +676,11 @@ void main() {
       );
       harness.repository.gate = Completer();
 
-      await tester.fling(find.text('PIERNA FUERZA'), const Offset(0, 400), 1000);
+      await tester.fling(
+        find.text('PIERNA FUERZA'),
+        const Offset(0, 400),
+        1000,
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
@@ -644,7 +701,11 @@ void main() {
       );
       harness.repository.error = Exception('boom');
 
-      await tester.fling(find.text('PIERNA FUERZA'), const Offset(0, 400), 1000);
+      await tester.fling(
+        find.text('PIERNA FUERZA'),
+        const Offset(0, 400),
+        1000,
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
@@ -670,7 +731,11 @@ void main() {
       final gate = Completer<void>();
       harness.repository.gate = gate;
 
-      await tester.fling(find.text('PIERNA FUERZA'), const Offset(0, 400), 1000);
+      await tester.fling(
+        find.text('PIERNA FUERZA'),
+        const Offset(0, 400),
+        1000,
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(RefreshProgressIndicator), findsOneWidget);
@@ -698,9 +763,7 @@ void main() {
           ),
           size: const Size(320, 640),
           textScale: 1.6,
-          theme: brightness == Brightness.dark
-              ? AppTheme.dark
-              : AppTheme.light,
+          theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
         );
         expect(tester.takeException(), isNull);
 
@@ -745,4 +808,738 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.textContaining('Sueño'), findsWidgets);
   });
+
+  group('L4b', () {
+    HomeSummaryEntity l4b({
+      int? week,
+      int? day,
+      int totalExercises = 6,
+      int totalSets = 0,
+      String? photo,
+      List<HomeTrainingItemEntity>? trainings,
+      bool completed = false,
+      String name = 'Pierna fuerza',
+    }) => HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: name,
+      trainingTypes: const ['FUERZA'],
+      trainingDurationMin: 55,
+      remainingTrainingDurationMin: 55,
+      trainingCompleted: completed,
+      trainings:
+          trainings ??
+          [
+            HomeTrainingItemEntity(
+              id: 'training-1',
+              name: name,
+              completed: completed,
+              thumbnailUrl: photo,
+            ),
+          ],
+      exercisesCompleted: completed ? totalExercises : 0,
+      totalExercises: totalExercises,
+      totalSets: totalSets,
+      programWeek: week,
+      programDay: day,
+      trainingThumbnailUrl: photo,
+      dietId: 'diet-1',
+      dietName: 'Definición',
+      remainingCalories: 1500,
+      mealsCompleted: 1,
+      totalMeals: 4,
+      streakDays: 12,
+      lastWeightKg: 62.5,
+      lastSleepHours: 7.5,
+    );
+
+    group('program week in the date line', () {
+      testWidgets('week and day', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(week: 3, day: 2)),
+        );
+        expect(
+          find.text('Miércoles 18 de noviembre · semana 3, día 2'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('week only', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => l4b(week: 3)));
+        expect(
+          find.text('Miércoles 18 de noviembre · semana 3'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a day without a week shows the date alone', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => l4b(day: 2)));
+        expect(find.text('Miércoles 18 de noviembre'), findsOneWidget);
+      });
+
+      testWidgets('no week shows the date alone', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => l4b()));
+        expect(find.text('Miércoles 18 de noviembre'), findsOneWidget);
+      });
+
+      testWidgets('another day keeps its relative label first', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(week: 3, day: 1)),
+          date: DateTime(2026, 11, 17),
+        );
+        expect(
+          find.text('Ayer · Martes 17 de noviembre · semana 3, día 1'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('English', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(week: 3, day: 2)),
+          locale: const Locale('en'),
+        );
+        expect(
+          find.text('Wednesday November 18 · week 3, day 2'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('English, week only', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(week: 3)),
+          locale: const Locale('en'),
+        );
+        expect(find.text('Wednesday November 18 · week 3'), findsOneWidget);
+      });
+    });
+
+    group('program week on a rest day', () {
+      HomeSummaryEntity rest({int? week}) => _summary(
+        trainingId: null,
+        dietId: null,
+        isRestDay: true,
+        programWeek: week,
+      );
+
+      testWidgets('date line carries the week, without a day', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(tester, repository: _Repository((_) => rest(week: 3)));
+        expect(find.text('DESCANSO'), findsOneWidget);
+        expect(
+          find.text('Miércoles 18 de noviembre · semana 3'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp('Miércoles 18 de noviembre · semana 3')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('another rest day keeps its relative label', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => rest(week: 3)),
+          date: DateTime(2026, 11, 17),
+        );
+        expect(
+          find.text('Ayer · Martes 17 de noviembre · semana 3'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('English', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => rest(week: 3)),
+          locale: const Locale('en'),
+        );
+        expect(find.text('Wednesday November 18 · week 3'), findsOneWidget);
+      });
+
+      testWidgets('no week shows the date alone', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => rest()));
+        expect(find.text('Miércoles 18 de noviembre'), findsOneWidget);
+      });
+    });
+
+    group('fact line with total sets', () {
+      testWidgets('exercises, sets and minutes', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(totalSets: 22)),
+        );
+        expect(
+          find.text('6 ejercicios · 22 series · 55 min aprox.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('one set uses the singular', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(totalExercises: 1, totalSets: 1)),
+        );
+        expect(
+          find.text('1 ejercicio · 1 serie · 55 min aprox.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('without sets the piece is omitted', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => l4b()));
+        expect(find.text('6 ejercicios · 55 min aprox.'), findsOneWidget);
+      });
+
+      testWidgets('English', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(totalSets: 22)),
+          locale: const Locale('en'),
+        );
+        expect(
+          find.text('6 exercises · 22 sets · About 55 min'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('session done: exercises and sets, no minutes', (
+        tester,
+      ) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(totalSets: 22, completed: true)),
+        );
+        expect(find.text('6 ejercicios · 22 series'), findsOneWidget);
+      });
+    });
+
+    group('session photo', () {
+      const url = 'https://cdn.exom.test/hero.jpg';
+
+      testWidgets('with a thumbnail: decorative, between date and facts', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(totalSets: 22, photo: url)),
+        );
+        final photo = find.byType(HomeSessionPhoto);
+        expect(photo, findsOneWidget);
+        final image = tester.widget<CachedNetworkImage>(
+          find.descendant(of: photo, matching: find.byType(CachedNetworkImage)),
+        );
+        expect(image.imageUrl, url);
+        expect(image.memCacheWidth, isNotNull);
+        expect(
+          find.descendant(of: photo, matching: find.byType(ExcludeSemantics)),
+          findsWidgets,
+        );
+        final dateLine = tester.getRect(find.text('Miércoles 18 de noviembre'));
+        final facts = tester.getRect(
+          find.text('6 ejercicios · 22 series · 55 min aprox.'),
+        );
+        final photoRect = tester.getRect(photo);
+        expect(photoRect.top, greaterThanOrEqualTo(dateLine.bottom));
+        expect(photoRect.bottom, lessThanOrEqualTo(facts.top));
+        expect(tester.takeException(), isNull);
+        semantics.dispose();
+      });
+
+      testWidgets('without a thumbnail there is no photo', (tester) async {
+        await _pumpHome(tester, repository: _Repository((_) => l4b()));
+        expect(find.byType(HomeSessionPhoto), findsNothing);
+        expect(find.byType(CachedNetworkImage), findsNothing);
+      });
+
+      testWidgets('the photo is the one of the hero session', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository(
+            (_) => l4b(
+              trainings: const [
+                HomeTrainingItemEntity(
+                  id: 'training-1',
+                  name: 'Movilidad',
+                  completed: true,
+                  thumbnailUrl: 'https://cdn.exom.test/movilidad.jpg',
+                ),
+                HomeTrainingItemEntity(
+                  id: 'training-2',
+                  name: 'Torso',
+                  completed: false,
+                  thumbnailUrl: 'https://cdn.exom.test/torso.jpg',
+                ),
+              ],
+            ),
+          ),
+        );
+        expect(find.text('TORSO'), findsOneWidget);
+        expect(
+          tester
+              .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
+              .imageUrl,
+          'https://cdn.exom.test/torso.jpg',
+        );
+      });
+
+      testWidgets('a hero without a thumbnail shows none', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository(
+            (_) => l4b(
+              trainings: const [
+                HomeTrainingItemEntity(
+                  id: 'training-1',
+                  name: 'Movilidad',
+                  completed: true,
+                  thumbnailUrl: 'https://cdn.exom.test/movilidad.jpg',
+                ),
+                HomeTrainingItemEntity(
+                  id: 'training-2',
+                  name: 'Torso',
+                  completed: false,
+                ),
+              ],
+            ),
+          ),
+        );
+        expect(find.byType(HomeSessionPhoto), findsNothing);
+      });
+
+      Future<void> pumpBuilt(
+        WidgetTester tester,
+        Widget Function(BuildContext context) build,
+      ) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: Scaffold(
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Builder(builder: build),
+                  const Text('after'),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      CachedNetworkImage imageOf(WidgetTester tester) =>
+          tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+
+      testWidgets('loading: a raised box of the same size, no spinner', (
+        tester,
+      ) async {
+        await pumpBuilt(tester, (_) => const HomeSessionPhoto(url: url));
+        final image = imageOf(tester);
+        await pumpBuilt(tester, (context) => image.placeholder!(context, url));
+        final box = find.byKey(HomeSessionPhoto.placeholderKey);
+        expect(tester.getSize(box), const Size(390, HomeSessionPhoto.height));
+        final context = tester.element(box);
+        expect(
+          tester.widget<ColoredBox>(box).color,
+          context.exomPalette.surfaceElevated,
+        );
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      });
+
+      testWidgets('loaded: 200 high, full width, cover', (tester) async {
+        await pumpBuilt(tester, (_) => const HomeSessionPhoto(url: url));
+        final image = imageOf(tester);
+        await pumpBuilt(
+          tester,
+          (context) => image.imageBuilder!(context, MemoryImage(_onePixelPng)),
+        );
+        final picture = find.byKey(HomeSessionPhoto.imageKey);
+        expect(
+          tester.getSize(picture),
+          const Size(390, HomeSessionPhoto.height),
+        );
+        expect(tester.widget<Image>(picture).fit, BoxFit.cover);
+      });
+
+      testWidgets('on Inicio the photo bleeds edge to edge, square', (
+        tester,
+      ) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(photo: url)),
+        );
+        final photo = find.byType(HomeSessionPhoto);
+        final rect = tester.getRect(photo);
+        expect(rect.left, 0);
+        expect(rect.width, 390);
+        expect(rect.height, HomeSessionPhoto.height + ExomSpacing.lg);
+        expect(
+          find.descendant(of: photo, matching: find.byType(ClipRRect)),
+          findsNothing,
+        );
+        // The rest of the block keeps its 20 dp margin.
+        expect(tester.getTopLeft(find.text('PIERNA FUERZA')).dx, 20);
+        expect(
+          tester.getTopLeft(find.text('6 ejercicios · 55 min aprox.')).dx,
+          20,
+        );
+      });
+
+      testWidgets('loaded photo is square and as wide as the screen', (
+        tester,
+      ) async {
+        await pumpBuilt(tester, (_) => const HomeSessionPhoto(url: url));
+        final image = imageOf(tester);
+        await pumpBuilt(
+          tester,
+          (context) => image.imageBuilder!(context, MemoryImage(_onePixelPng)),
+        );
+        final picture = find.byKey(HomeSessionPhoto.imageKey);
+        expect(tester.getSize(picture).width, 390);
+        expect(tester.getTopLeft(picture).dx, 0);
+        expect(find.byType(ClipRRect), findsNothing);
+      });
+
+      testWidgets('load error or expired URL: no gap and no exception', (
+        tester,
+      ) async {
+        await pumpBuilt(tester, (_) => const HomeSessionPhoto(url: url));
+        final image = imageOf(tester);
+        await pumpBuilt(
+          tester,
+          (context) => image.errorWidget!(context, url, Exception('403')),
+        );
+        // Nothing above the next widget: the slot and its gap collapse.
+        expect(tester.getTopLeft(find.text('after')).dy, 0);
+        expect(find.byType(Icon), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('week strip marks', () {
+      Finder mark(String kind, int day) =>
+          find.byKey(ValueKey('home-week-mark-$kind-$day'));
+
+      testWidgets('dot for pending, check for done, nothing otherwise', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        final calendar = _Calendar({
+          '2026-11-16': _Calendar.day('2026-11-16', done: true),
+          '2026-11-18': _Calendar.day('2026-11-18'),
+          '2026-11-20': _Calendar.day('2026-11-20'),
+          '2026-11-21': _Calendar.day(
+            '2026-11-21',
+            training: false,
+            rest: true,
+          ),
+        });
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          calendar: calendar,
+        );
+        expect(calendar.months, ['2026-11']);
+
+        expect(mark('done', 16), findsOneWidget);
+        final check = tester.widget<Icon>(mark('done', 16));
+        expect(check.icon, Icons.check);
+        expect(check.size, 12);
+
+        expect(mark('pending', 20), findsOneWidget);
+        expect(tester.getSize(mark('pending', 20)), const Size(6, 6));
+        final palette = tester.element(mark('pending', 20)).exomPalette;
+        final dot = tester.widget<DecoratedBox>(
+          find.descendant(
+            of: mark('pending', 20),
+            matching: find.byType(DecoratedBox),
+          ),
+        );
+        expect((dot.decoration as BoxDecoration).color, palette.textSecondary);
+        // Today, selected: pending from its own summary.
+        expect(mark('pending', 18), findsOneWidget);
+        for (final day in [17, 19, 21, 22]) {
+          expect(mark('pending', day), findsNothing);
+          expect(mark('done', day), findsNothing);
+        }
+
+        expect(
+          find.bySemanticsLabel('Lunes 16 de noviembre, sesión hecha'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('Viernes 20 de noviembre, sesión pendiente'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            'Miércoles 18 de noviembre, hoy, sesión pendiente',
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Martes 17 de noviembre'), findsOneWidget);
+        expect(find.bySemanticsLabel('Sábado 21 de noviembre'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('a past day with a session not done is a hollow ring', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          calendar: _Calendar({
+            '2026-11-16': _Calendar.day('2026-11-16'),
+            '2026-11-17': _Calendar.day('2026-11-17', done: true),
+            '2026-11-20': _Calendar.day('2026-11-20'),
+          }),
+        );
+        expect(mark('missed', 16), findsOneWidget);
+        expect(mark('pending', 16), findsNothing);
+        expect(tester.getSize(mark('missed', 16)), const Size(6, 6));
+        final palette = tester.element(mark('missed', 16)).exomPalette;
+        final ring =
+            tester
+                    .widget<DecoratedBox>(
+                      find.descendant(
+                        of: mark('missed', 16),
+                        matching: find.byType(DecoratedBox),
+                      ),
+                    )
+                    .decoration
+                as BoxDecoration;
+        expect(ring.shape, BoxShape.circle);
+        expect(ring.color, isNull);
+        expect(ring.border, isNotNull);
+        expect(ring.border!.top.color, palette.textPrimary);
+
+        // Done stays a check; today/future pending stays a filled dot.
+        expect(mark('done', 17), findsOneWidget);
+        expect(mark('missed', 17), findsNothing);
+        expect(mark('pending', 18), findsOneWidget);
+        expect(mark('pending', 20), findsOneWidget);
+        expect(mark('missed', 18), findsNothing);
+        expect(mark('missed', 20), findsNothing);
+        // Days without a session carry no mark at all.
+        expect(mark('missed', 19), findsNothing);
+        expect(mark('pending', 19), findsNothing);
+
+        expect(
+          find.bySemanticsLabel('Lunes 16 de noviembre, sesión no hecha'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('Viernes 20 de noviembre, sesión pendiente'),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('the ring reads on the selected (dark) day', (tester) async {
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          calendar: _Calendar({'2026-11-16': _Calendar.day('2026-11-16')}),
+        );
+        await tester.tap(find.bySemanticsLabel(RegExp('Lunes 16')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(mark('missed', 16), findsOneWidget);
+        final palette = tester.element(mark('missed', 16)).exomPalette;
+        final ring =
+            tester
+                    .widget<DecoratedBox>(
+                      find.descendant(
+                        of: mark('missed', 16),
+                        matching: find.byType(DecoratedBox),
+                      ),
+                    )
+                    .decoration
+                as BoxDecoration;
+        expect(ring.border!.top.color, palette.background);
+      });
+
+      testWidgets('English missed label', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          locale: const Locale('en'),
+          calendar: _Calendar({'2026-11-16': _Calendar.day('2026-11-16')}),
+        );
+        expect(
+          find.bySemanticsLabel('Monday November 16, session not done'),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('English labels', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          locale: const Locale('en'),
+          calendar: _Calendar({
+            '2026-11-16': _Calendar.day('2026-11-16', done: true),
+            '2026-11-20': _Calendar.day('2026-11-20'),
+          }),
+        );
+        expect(
+          find.bySemanticsLabel('Monday November 16, session done'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('Friday November 20, session pending'),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('today uses the local state over the calendar', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(completed: true)),
+          calendar: _Calendar({'2026-11-18': _Calendar.day('2026-11-18')}),
+        );
+        expect(mark('done', 18), findsOneWidget);
+        expect(mark('pending', 18), findsNothing);
+        expect(
+          find.bySemanticsLabel('Miércoles 18 de noviembre, hoy, sesión hecha'),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('changing day in the week does not ask the calendar again', (
+        tester,
+      ) async {
+        final calendar = _Calendar({
+          '2026-11-16': _Calendar.day('2026-11-16', done: true),
+        });
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b()),
+          calendar: calendar,
+        );
+        await tester.tap(find.bySemanticsLabel(RegExp('Jueves 19')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(calendar.months, ['2026-11']);
+        expect(mark('done', 16), findsOneWidget);
+      });
+
+      testWidgets('calendar failure: the strip stays as before', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpHome(
+          tester,
+          repository: _Repository((_) => l4b(completed: true)),
+          calendar: _Calendar(const {}, error: Exception('boom')),
+        );
+        expect(find.byType(ErrorWidget2), findsNothing);
+        expect(find.text('PIERNA FUERZA'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget.key is ValueKey<String> &&
+                (widget.key! as ValueKey<String>).value.startsWith(
+                  'home-week-mark-',
+                ),
+          ),
+          findsNothing,
+        );
+        // Pre-L4b behaviour: only the selected, finished day has a check.
+        expect(
+          find.bySemanticsLabel('Miércoles 18 de noviembre, hoy, sesión hecha'),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Lunes 16 de noviembre'), findsOneWidget);
+        semantics.dispose();
+      });
+    });
+
+    group('320 dp with large text', () {
+      for (final locale in const [Locale('es'), Locale('en')]) {
+        for (final scale in const [1.3, 1.6]) {
+          testWidgets('${locale.languageCode} at ${scale}x: nothing clipped', (
+            tester,
+          ) async {
+            await _pumpHome(
+              tester,
+              repository: _Repository(
+                (_) => l4b(
+                  week: 12,
+                  day: 3,
+                  totalSets: 22,
+                  photo: 'https://cdn.exom.test/hero.jpg',
+                  name: 'Pierna y glúteo con cadena posterior',
+                ),
+              ),
+              date: DateTime(2026, 11, 19),
+              size: const Size(320, 640),
+              textScale: scale,
+              locale: locale,
+              calendar: _Calendar({
+                '2026-11-16': _Calendar.day('2026-11-16', done: true),
+                '2026-11-19': _Calendar.day('2026-11-19'),
+                '2026-11-20': _Calendar.day('2026-11-20'),
+              }),
+            );
+            expect(tester.takeException(), isNull);
+
+            final expected = locale.languageCode == 'es'
+                ? 'Mañana · Jueves 19 de noviembre · semana 12, día 3'
+                : 'Tomorrow · Thursday November 19 · week 12, day 3';
+            final line = find.text(expected);
+            expect(line, findsOneWidget);
+            final paragraph = tester.renderObject<RenderParagraph>(line);
+            expect(paragraph.didExceedMaxLines, isFalse);
+            expect(
+              tester.widget<Text>(line).overflow,
+              isNot(TextOverflow.ellipsis),
+            );
+            expect(tester.getRect(line).right, lessThanOrEqualTo(320));
+
+            final facts = find.text(
+              locale.languageCode == 'es'
+                  ? '6 ejercicios · 22 series · 55 min aprox.'
+                  : '6 exercises · 22 sets · About 55 min',
+            );
+            expect(facts, findsOneWidget);
+            expect(
+              tester.renderObject<RenderParagraph>(facts).didExceedMaxLines,
+              isFalse,
+            );
+
+            await tester.drag(find.byType(ListView), const Offset(0, -2000));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    });
+  });
 }
+
+/// A valid 1x1 transparent PNG.
+final _onePixelPng = Uint8List.fromList(const [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, //
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, //
+  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, //
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, //
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]);

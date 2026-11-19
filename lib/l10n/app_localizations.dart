@@ -5840,6 +5840,24 @@ abstract class AppLocalizations {
   /// **'{minutes} min aprox.'**
   String homeFactDuration(int minutes);
 
+  /// No description provided for @homeFactSets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 serie} other{{count} series}}'**
+  String homeFactSets(int count);
+
+  /// No description provided for @homeProgramWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'semana {week}'**
+  String homeProgramWeek(int week);
+
+  /// No description provided for @homeProgramWeekDay.
+  ///
+  /// In es, this message translates to:
+  /// **'semana {week}, día {day}'**
+  String homeProgramWeekDay(int week, int day);
+
   /// No description provided for @homeMealsDone.
   ///
   /// In es, this message translates to:
@@ -5869,6 +5887,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{day}, sesión hecha'**
   String homeWeekDayDone(String day);
+
+  /// No description provided for @homeWeekDayPending.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, sesión pendiente'**
+  String homeWeekDayPending(String day);
+
+  /// No description provided for @homeWeekDayMissed.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, sesión no hecha'**
+  String homeWeekDayMissed(String day);
 
   /// No description provided for @trainingDetailExercises.
   ///

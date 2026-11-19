@@ -277,4 +277,104 @@ void main() {
       });
     }
   });
+
+  // L3 additions (active exercise sheet): focus control, keyboard action, a
+  // stable handle on the inner field and a full-width field error. All are
+  // optional; the L2 behaviour above is unchanged when they are not given.
+  group('ExomStepper L3 additions', () {
+    Widget typed({
+      FocusNode? focusNode,
+      bool autofocus = false,
+      String? errorText,
+      bool errorBelowRow = false,
+      TextEditingController? controller,
+    }) => Padding(
+      padding: const EdgeInsets.all(20),
+      child: ExomStepper<String>(
+        key: const Key('stepper'),
+        value: controller?.text ?? '',
+        formatValue: (v) => v,
+        label: 'Peso',
+        decrementLabel: 'Restar 2,5 kg',
+        incrementLabel: 'Sumar 2,5 kg',
+        onDecrement: null,
+        onIncrement: null,
+        textController: controller ?? TextEditingController(text: '62,5'),
+        focusNode: focusNode,
+        autofocus: autofocus,
+        textInputAction: TextInputAction.next,
+        textFieldKey: const Key('stepper-field'),
+        errorText: errorText,
+        errorBelowRow: errorBelowRow,
+        errorIcon: Icons.error_outline,
+      ),
+    );
+
+    testWidgets('honours focus node, key and input action; no autofocus', (
+      tester,
+    ) async {
+      final focus = FocusNode();
+      addTearDown(focus.dispose);
+      await pumpComponent(tester, typed(focusNode: focus));
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('stepper-field')),
+      );
+      expect(field.focusNode, same(focus));
+      expect(field.autofocus, isFalse);
+      expect(field.textInputAction, TextInputAction.next);
+      expect(focus.hasFocus, isFalse);
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasFocus, isTrue);
+    });
+
+    testWidgets('autofocus is passed through when asked', (tester) async {
+      await pumpComponent(tester, typed(autofocus: true));
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('stepper-field')),
+      );
+      expect(field.autofocus, isTrue);
+    });
+
+    testWidgets('errorBelowRow paints the error under the whole row with an '
+        'icon and marks the control invalid', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(
+        tester,
+        typed(errorText: 'No entiendo', errorBelowRow: true),
+        width: 320,
+        textScale: 1.6,
+      );
+      final message = find.text('No entiendo');
+      expect(message, findsOneWidget);
+      final row = tester.getRect(find.byKey(const Key('stepper')));
+      // Starts at the left edge of the control, not between the ± buttons.
+      expect(tester.getRect(message).left, lessThan(row.left + 56));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('stepper')),
+          matching: find.byIcon(Icons.error_outline),
+        ),
+        findsOneWidget,
+      );
+      final node = tester.getSemantics(find.bySemanticsLabel(RegExp('^Peso')));
+      expect(
+        node.getSemanticsData().validationResult,
+        SemanticsValidationResult.invalid,
+      );
+      expectNoOverflow(tester);
+      handle.dispose();
+    });
+
+    testWidgets('without errorBelowRow the L2 error stays in the field', (
+      tester,
+    ) async {
+      await pumpComponent(tester, typed(errorText: 'Mal'));
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('stepper-field')),
+      );
+      expect(field.decoration?.errorText, 'Mal');
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+  });
 }

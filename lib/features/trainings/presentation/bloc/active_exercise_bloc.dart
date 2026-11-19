@@ -59,8 +59,24 @@ class SkipRest extends ActiveExerciseEvent {
   const SkipRest();
 }
 
+/// The rest reached its end. [restEndsAt] identifies which rest ended: when
+/// set and different from the current one (the rest was extended meanwhile),
+/// the event is stale and ignored. `const FinishRest()` keeps the original,
+/// unconditional semantics.
 class FinishRest extends ActiveExerciseEvent {
-  const FinishRest();
+  final DateTime? restEndsAt;
+
+  const FinishRest({this.restEndsAt});
+}
+
+/// «+30 s» (decision D7): moves the current rest's end [seconds] later, only
+/// while it has not ended yet, capped at now + [maxAhead].
+class ExtendRest extends ActiveExerciseEvent {
+  final int seconds;
+
+  static const Duration maxAhead = Duration(minutes: 30);
+
+  const ExtendRest([this.seconds = 30]);
 }
 
 class AbandonExercise extends ActiveExerciseEvent {
@@ -209,6 +225,12 @@ class ActiveExerciseBloc
   String? _trainingId;
   String? _exerciseId;
 
+  /// Native session id of the rest in progress (memory only). An extension
+  /// reuses it so the coordinator replaces the native timer with a single
+  /// `start` instead of `cancel` + `start`; after a restore it is rebuilt from
+  /// the persisted `restEndsAt`.
+  String? _nativeRestId;
+
   ActiveExerciseBloc({
     required ActiveWorkoutLocalStore localStorage,
     required TrainingExerciseEntity trainingExercise,
@@ -255,6 +277,8 @@ class ActiveExerciseBloc
         await _onSkipRest(event, emit);
       } else if (event is FinishRest) {
         await _onFinishRest(event, emit);
+      } else if (event is ExtendRest) {
+        await _onExtendRest(event, emit);
       } else if (event is AbandonExercise) {
         await _onAbandonExercise(event, emit);
       }
@@ -454,7 +478,36 @@ class ActiveExerciseBloc
     FinishRest event,
     Emitter<ActiveExerciseState> emit,
   ) async {
+    // A tick of a rest that was extended meanwhile (outgoing footer during its
+    // cross-fade, or a tick queued behind ExtendRest) must not end the new one.
+    final endedRest = event.restEndsAt;
+    if (endedRest != null && endedRest != state.restEndsAt) return;
     await _leaveRest(emit, finishedNaturally: true);
+  }
+
+  Future<void> _onExtendRest(
+    ExtendRest event,
+    Emitter<ActiveExerciseState> emit,
+  ) async {
+    final currentEnd = state.restEndsAt;
+    final now = _now();
+    // An expired rest is not extended: its FinishRest follows.
+    if (_exerciseId == null ||
+        !state.isResting ||
+        currentEnd == null ||
+        !now.isBefore(currentEnd) ||
+        event.seconds <= 0) {
+      return;
+    }
+    final cap = now.add(ExtendRest.maxAhead);
+    var nextEnd = currentEnd.add(Duration(seconds: event.seconds));
+    if (nextEnd.isAfter(cap)) nextEnd = cap;
+    if (!nextEnd.isAfter(currentEnd)) return;
+
+    final next = state.copyWith(restEndsAt: nextEnd, errorMessage: null);
+    emit(next);
+    await _persistState(next, emit);
+    await _startNativeRest(next, sessionId: _nativeRestId);
   }
 
   Future<void> _leaveRest(
@@ -463,6 +516,7 @@ class ActiveExerciseBloc
   }) async {
     if (!state.isResting) return;
 
+    _nativeRestId = null;
     if (finishedNaturally) {
       await _restTimerCoordinator.finish();
     } else {
@@ -494,6 +548,7 @@ class ActiveExerciseBloc
     Emitter<ActiveExerciseState> emit,
   ) async {
     if (state.isDone) return;
+    _nativeRestId = null;
     await _restTimerCoordinator.cancel();
     await _persistState(state.copyWith(errorMessage: null), emit);
   }
@@ -555,12 +610,19 @@ class ActiveExerciseBloc
     );
   }
 
-  Future<void> _startNativeRest(ActiveExerciseState restState) {
+  Future<void> _startNativeRest(
+    ActiveExerciseState restState, {
+    String? sessionId,
+  }) {
     final exerciseId = _exerciseId ?? _trainingExercise.exercise.id;
+    // The completed set disambiguates equal deadlines and survives restore.
+    final id =
+        sessionId ??
+        '${_trainingId ?? ''}:$exerciseId:${restState.completedSets}:${restState.restEndsAt!.millisecondsSinceEpoch}';
+    _nativeRestId = id;
     return _restTimerCoordinator.start(
       RestTimerSession(
-        // The completed set disambiguates equal deadlines and survives restore.
-        id: '${_trainingId ?? ''}:$exerciseId:${restState.completedSets}:${restState.restEndsAt!.millisecondsSinceEpoch}',
+        id: id,
         exerciseName: _trainingExercise.exercise.name,
         durationSeconds: restState.restSeconds,
         endsAt: restState.restEndsAt!,

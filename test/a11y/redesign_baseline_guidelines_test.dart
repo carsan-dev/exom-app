@@ -1,7 +1,9 @@
 // Redesign L0 accessibility guideline INVENTORY (plan: docs/plans/rediseno-exom-app.md, L0).
 //
-// Pumps the same five scenes as the golden baseline (Inicio, Detalle, Ejercicio
-// activo, Hoja de serie, Descanso) in the light and dark theme and evaluates
+// Pumps the same scenes as the golden baseline (Inicio, Inicio descanso,
+// Detalle, Detalle en curso, Detalle hecho, Ejercicio activo, Hoja de serie,
+// Descanso, Hoja de serie con error, Descanso +30 s and, since L3 unit 4, the
+// four active circuit scenes) in the light and dark theme and evaluates
 // androidTapTargetGuideline, iOSTapTargetGuideline, labeledTapTargetGuideline and
 // textContrastGuideline with `guideline.evaluate(tester)`.
 //
@@ -27,8 +29,8 @@
 // reported; «Pie trasero…» is newly reported in ejercicio_activo dark and
 // descanso dark). The sampled and resolved values are printed as informational
 // lines.
-// Inicio reads DateTime.now() (week selector, relative date label); signatures
-// therefore drop day names/numbers.
+// Inicio: since L3 (decision D10) the scenes fix HomePage's clock to Wednesday
+// 18 Nov 2026, so every Inicio cell is asserted like the other scenes.
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -80,58 +82,24 @@ List<String> violationSignature(String? reason) {
   return signature;
 }
 
-// L3 (week_day_selector.dart): day buttons are 44x44; L3 must reach 48x48.
-// Seen in: inicio/dark/androidTapTarget, inicio/light/androidTapTarget.
-const _inicioWeekSelectorBelow48 = <String>[
-  'tap-target rect=(121.9, 112.0, 165.9, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(173.0, 112.0, 217.0, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(19.6, 112.0, 63.6, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(224.1, 112.0, 268.1, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(275.3, 112.0, 319.3, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(326.4, 112.0, 370.4, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-  'tap-target rect=(70.7, 112.0, 114.7, 156.0) min=48.0, 48.0 found=44.0, 44.0',
-];
-
-// L3 (training_detail_page.dart): leading IconButton has no tooltip/semantic label.
-// Seen in: detalle/dark/labeledTapTarget, detalle/light/labeledTapTarget.
-// L2: same defect; the rect moved 0.2 px down (was 3.8-51.8): the old
-// GlassAppBar Container took its 0.5 px bottom border as padding, shrinking the
-// 56 px row to 55.5; the flat bar paints its 1 px rule without padding.
-const _detailBackButtonUnlabeled = <String>[
-  'missing-label rect=(16.0, 4.0, 64.0, 52.0)',
-];
-
-// L3 (active_exercise_page.dart _CircleIconButton): close button is 44x44; L3 criterion: close >= 48.
-// Seen in: ejercicio_activo/dark/androidTapTarget, ejercicio_activo/light/androidTapTarget, descanso/dark/androidTapTarget, descanso/light/androidTapTarget.
-const _activeExerciseCloseButton44 = <String>[
-  'tap-target rect=(16.0, 12.5, 60.0, 56.5) min=48.0, 48.0 found=44.0, 44.0',
-];
-
-// L3 (active_exercise_page.dart _CircleIconButton): close button has no semantic label.
-// Seen in: ejercicio_activo/dark/labeledTapTarget, ejercicio_activo/light/labeledTapTarget, descanso/dark/labeledTapTarget, descanso/light/labeledTapTarget.
-const _activeExerciseCloseButtonUnlabeled = <String>[
-  'missing-label rect=(16.0, 12.5, 60.0, 56.5)',
-];
-
 /// Violations observed on the unmodified origin/develop baseline.
 /// L1 (V4 tokens) removed every textContrast pin of L0 (Detalle claro,
 /// Ejercicio activo claro/oscuro, Descanso claro/oscuro): those cells must now
 /// pass, so a contrast regression fails this test.
+/// L3 (Inicio) removed the two `inicio/*/androidTapTarget` pins: the week
+/// strip slots now measure at least 48x48.
+/// L3 (Detalle) removed the two `detalle/*/labeledTapTarget` pins: the back
+/// button now carries the localized back tooltip as its label. The detail
+/// scenes «en curso» and «hecho» added in L3 must pass every guideline.
+/// L3 (Ejercicio activo) removed the eight `ejercicio_activo/*` and
+/// `descanso/*` close-button pins (44x44 and unlabeled): the close button is
+/// now a 48x48 IconButton whose tooltip «Cerrar ejercicio» is its label. The
+/// scenes «hoja_serie_error» and «descanso_mas_30» added then must pass
+/// every guideline.
+/// L3 (Circuito activo) added «circuito_activo», «hoja_circuito»,
+/// «descanso_circuito» and «circuito_listo»: they must pass every guideline.
 /// Key: `<scene>/<theme>/<guideline>`. Anything not listed must pass.
-const knownBaselineFailures = <String, List<String>>{
-  'inicio/dark/androidTapTarget': _inicioWeekSelectorBelow48,
-  'inicio/light/androidTapTarget': _inicioWeekSelectorBelow48,
-  'detalle/dark/labeledTapTarget': _detailBackButtonUnlabeled,
-  'detalle/light/labeledTapTarget': _detailBackButtonUnlabeled,
-  'ejercicio_activo/dark/androidTapTarget': _activeExerciseCloseButton44,
-  'ejercicio_activo/light/androidTapTarget': _activeExerciseCloseButton44,
-  'descanso/dark/androidTapTarget': _activeExerciseCloseButton44,
-  'descanso/light/androidTapTarget': _activeExerciseCloseButton44,
-  'ejercicio_activo/dark/labeledTapTarget': _activeExerciseCloseButtonUnlabeled,
-  'ejercicio_activo/light/labeledTapTarget': _activeExerciseCloseButtonUnlabeled,
-  'descanso/dark/labeledTapTarget': _activeExerciseCloseButtonUnlabeled,
-  'descanso/light/labeledTapTarget': _activeExerciseCloseButtonUnlabeled,
-};
+const knownBaselineFailures = <String, List<String>>{};
 
 // Labels the sampler reported as artefacts on 2026-11-18 (documentation only,
 // NOT asserted): hoja_serie «Objetivo: 8 · RIR 2», «kg», «Anterior: 8 reps ·
@@ -251,19 +219,10 @@ List<_Resolved> _resolvedTextContrast(
 
 final _contrastEntry = RegExp(r'^contrast label="(.*)" min=\S+ found=(\S+) size=');
 
-/// Cells printed but NOT asserted.
-///  - Inicio (all cells except androidTapTarget): its styling depends on the
-///    weekday (isPast/isToday) because home_page.dart and week_day_selector.dart
-///    use DateTime.now(). Observed passing on 2026-11-18 (miércoles) for
-///    iOSTapTarget, labeledTapTarget and textContrast. The weekday-independent
-///    pin (7 day buttons at 44x44 for androidTapTarget) stays asserted.
-bool _isInformational(String key) {
-  final parts = key.split('/');
-  final scene = parts[0];
-  final guideline = parts[2];
-  if (scene == 'inicio' && guideline != 'androidTapTarget') return true;
-  return false;
-}
+/// Cells printed but NOT asserted. Empty since L3: the Inicio cells were
+/// informational while HomePage read DateTime.now(); with the fixed scene
+/// clock (decision D10) they are asserted like every other scene.
+bool _isInformational(String key) => false;
 
 void main() {
   for (final scene in RedesignScene.values) {

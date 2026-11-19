@@ -52,15 +52,9 @@ class ExerciseVideoPreview extends StatelessWidget {
                         placeholder: (context, imageUrl) =>
                             Container(color: palette.surfaceVariant),
                         errorWidget: (context, imageUrl, error) =>
-                            _PreviewPlaceholder(
-                              title: title,
-                              description: l10n.activeExerciseNoVideo,
-                            ),
+                            _PreviewPlaceholder(showIcon: !canOpenVideo),
                       )
-                    : _PreviewPlaceholder(
-                        title: title,
-                        description: l10n.activeExerciseNoVideo,
-                      ),
+                    : _PreviewPlaceholder(showIcon: !canOpenVideo),
               ),
               Positioned.fill(
                 child: DecoratedBox(
@@ -128,11 +122,8 @@ class ExerciseVideoPreview extends StatelessWidget {
                             canOpenVideo
                                 ? l10n.video
                                 : l10n.activeExerciseNoVideo,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -148,11 +139,15 @@ class ExerciseVideoPreview extends StatelessWidget {
   }
 }
 
+/// Background of a preview without a usable thumbnail: only an icon. The
+/// exercise name and the "no video" notice are painted once, by the bottom
+/// overlay of [ExerciseVideoPreview] (L0 finding: they used to be painted
+/// twice, overlapping). [showIcon] is false when the play circle is shown,
+/// so the icon does not peek above it (L3 review S2).
 class _PreviewPlaceholder extends StatelessWidget {
-  final String title;
-  final String description;
+  const _PreviewPlaceholder({required this.showIcon});
 
-  const _PreviewPlaceholder({required this.title, required this.description});
+  final bool showIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -160,31 +155,11 @@ class _PreviewPlaceholder extends StatelessWidget {
 
     return Container(
       color: palette.surfaceVariant,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.fitness_center, color: palette.textDisabled, size: 42),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.textSecondary, fontSize: 12),
-          ),
-        ],
-      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.only(bottom: 48),
+      child: showIcon
+          ? Icon(Icons.fitness_center, color: palette.textDisabled, size: 42)
+          : null,
     );
   }
 }

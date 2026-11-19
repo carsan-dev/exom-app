@@ -16,6 +16,14 @@ const Map<String, String> identicalValueAllowlist = {
   'ingredientUnitG': 'Unit symbol "g".',
   'ingredientUnitMl': 'Unit symbol "ml".',
   'errorTitle': 'Cognate "Error" is the same word in both languages.',
+  // L3 unit 3 (active exercise): unit symbols and the RIR acronym.
+  'activeExerciseUnitReps': 'Abbreviation "reps" shared by both languages.',
+  'activeExerciseUnitSeconds': 'Unit symbol "s".',
+  'activeExerciseUnitMinutes': 'Unit symbol "min".',
+  'activeExerciseRir': 'Acronym "RIR" with a number, same in both languages.',
+  'activeExerciseRestExtend': 'Symbol "+{seconds} s", same in both languages.',
+  'setSheetRirLabel': 'Acronym "RIR", same in both languages.',
+  'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',
 };
 
 /// English words that must not appear in Spanish values. "Feedback", "Recap"

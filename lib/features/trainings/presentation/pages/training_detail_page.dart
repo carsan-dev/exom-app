@@ -6,14 +6,19 @@ import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -25,6 +30,7 @@ import 'package:exom_app/features/trainings/presentation/pages/active_exercise_p
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/features/home/presentation/pages/home_page.dart';
@@ -303,13 +309,7 @@ class _TrainingDetailLoadingScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: GlassAppBar(
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: context.exomPalette.textPrimary,
-            ),
-            onPressed: () => context.pop(),
-          ),
+          leading: _DetailBackButton(onPressed: () => context.pop()),
           title: const ShimmerCard(
             height: 18,
             width: 164,
@@ -888,16 +888,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     super.dispose();
   }
 
-  Color _trainingColor(BuildContext context, TrainingEntity training) {
-    return trainingAccentColor(
-      context,
-      accentColor: training.accentColor,
-      types: training.types,
-    );
-  }
-
   TrainingEntity? _groupedTraining;
   List<_ExerciseRowGroup> _groups = const [];
+  bool _openingNext = false;
 
   /// Groups consecutive circuit members once per training revision instead of
   /// rescanning every exercise for each circuit on every build.
@@ -936,219 +929,274 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     return _groups = List<_ExerciseRowGroup>.unmodifiable(groups);
   }
 
+  /// First exercise or circuit, in list order, that is not completed yet.
+  _ExerciseRowGroup? _firstUnfinished(List<_ExerciseRowGroup> groups) {
+    for (final group in groups) {
+      final members = group.blockExercises ?? [group.leader];
+      if (members.any((member) => !_progress.ids.contains(member.id))) {
+        return group;
+      }
+    }
+    return null;
+  }
+
+  /// Opens the active exercise exactly as the exercise sheet's start/resume
+  /// action does (same execution selection and route arguments). Completes
+  /// when that route is popped.
+  Future<void> _openActiveExercise(
+    BuildContext context,
+    TrainingEntity training,
+    TrainingExerciseEntity ex,
+  ) async {
+    final sessionId = await _selectExecution(
+      training, widget.state.selectedDate,
+      legacyExerciseId: ex.id);
+    if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+    final selectedProgress = widget.state.sessionProgress[sessionId]
+        ?? const TrainingDayProgress();
+    await context.push<void>(
+      AppRoutes.activeExercisePath(
+        training.id,
+        ex.id,
+      ),
+      extra: ActiveExercisePageArgs(
+        trainingBloc: context.read<TrainingBloc>(),
+        sessionId: sessionId,
+        trainingExercise: ex,
+        trainingName: training.name,
+        trainingTypes: training.types,
+        accentColorHex: training.accentColor,
+        trainingLevel: training.level,
+        initialWeightKg: selectedProgress.weights[ex.id],
+        currentPerformances:
+            selectedProgress.performances[ex.id],
+        previousPerformances:
+            widget.state.previousPerformances[ex.id],
+        requiresLastSetVideo:
+            training.requiresLastSetVideo,
+        assignmentDate: widget.state.selectedDate,
+      ),
+    );
+  }
+
+  /// Opens the active circuit exactly as the circuit row's start action does.
+  /// Completes when that route is popped.
+  Future<void> _startCircuit(
+    BuildContext context,
+    TrainingEntity training,
+    TrainingExerciseEntity ex,
+    List<TrainingExerciseEntity> blockExercises,
+  ) async {
+    final blockId = ex.blockId!;
+    final sessionId = await _selectExecution(
+      training, widget.state.selectedDate);
+    if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+    await context.push<void>(
+      AppRoutes.activeCircuitPath(
+        training.id,
+        blockId,
+      ),
+      extra: ActiveCircuitPageArgs(
+        trainingBloc: context.read<TrainingBloc>(),
+        sessionId: sessionId,
+        trainingName: training.name,
+        trainingTypes: training.types,
+        accentColorHex: training.accentColor,
+        trainingLevel: training.level,
+        blockId: blockId,
+        blockName: ex.blockName ?? 'Circuito',
+        rounds: ex.blockRounds ?? 1,
+        restBetweenRoundsSeconds:
+            ex.restBetweenRoundsSeconds ?? 60,
+        exercises: blockExercises,
+        previousPerformances: {
+          for (final blockExercise in blockExercises)
+            if (widget.state.previousPerformances[blockExercise.id] != null)
+              blockExercise.id:
+                  widget.state.previousPerformances[blockExercise.id]!,
+        },
+        requiresLastSetVideo:
+            training.requiresLastSetVideo,
+        assignmentDate: widget.state.selectedDate,
+      ),
+    );
+  }
+
+  /// Runs the pinned "next" action once: repeated taps while the execution is
+  /// being selected, or while the opened route is on top, are ignored.
+  Future<void> _runNext(Future<void> Function() action) async {
+    if (_openingNext) return;
+    setState(() => _openingNext = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _openingNext = false);
+    }
+  }
+
+  ExomSyncState? _exerciseSync(
+    List<Map<String, dynamic>> actions,
+    TrainingExerciseEntity ex, {
+    required bool hasLocalDraft,
+  }) {
+    return exerciseSyncState(
+      ownedActions: actions,
+      trainingId: widget.state.training.id,
+      date: widget.state.selectedDate,
+      trainingExerciseId: ex.id,
+      sessionId: _progressSessionId,
+      isCompleted: _progress.ids.contains(ex.id),
+      hasLocalDraft: hasLocalDraft,
+    );
+  }
+
   Widget _buildCircuitRow(
     BuildContext context,
     TrainingEntity training,
-    Color color,
     TrainingExerciseEntity ex,
     List<TrainingExerciseEntity> blockExercises,
+    List<Map<String, dynamic>> actions,
   ) {
-                          final completedCount = blockExercises
-                              .where(
-                                (blockExercise) => _progress.ids.contains(blockExercise.id),
-                              )
-                              .length;
-                          final blockId = ex.blockId!;
-                          return _CircuitCard(
-                              name: ex.blockName ?? 'Circuito',
-                              rounds: ex.blockRounds ?? 1,
-                              restBetweenRoundsSeconds:
-                                  ex.restBetweenRoundsSeconds ?? 60,
-                              exerciseCount: blockExercises.length,
-                              completedCount: completedCount,
-                              color: color,
-                              onFeedback: () {
-                                context.push(
-                                  AppRoutes.feedback,
-                                  extra: FeedbackPageArgs.circuit(
-                                    circuitName: ex.blockName ?? 'Circuito',
-                                    circuitExercises: blockExercises
-                                        .map(
-                                          (blockExercise) =>
-                                              FeedbackExerciseTarget(
-                                                key: blockExercise.id,
-                                                exerciseId:
-                                                    blockExercise.exercise.id,
-                                                exerciseName:
-                                                    blockExercise.exercise.name,
-                                              ),
-                                        )
-                                        .toList(growable: false),
-                                  ),
-                                );
-                              },
-                              onStart: () async {
-                                final sessionId = await _selectExecution(
-                                  training, widget.state.selectedDate);
-                                if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                                context.push(
-                                  AppRoutes.activeCircuitPath(
-                                    training.id,
-                                    blockId,
-                                  ),
-                                  extra: ActiveCircuitPageArgs(
-                                    trainingBloc: context.read<TrainingBloc>(),
-                                    sessionId: sessionId,
-                                    trainingName: training.name,
-                                    trainingTypes: training.types,
-                                    accentColorHex: training.accentColor,
-                                    trainingLevel: training.level,
-                                    blockId: blockId,
-                                    blockName: ex.blockName ?? 'Circuito',
-                                    rounds: ex.blockRounds ?? 1,
-                                    restBetweenRoundsSeconds:
-                                        ex.restBetweenRoundsSeconds ?? 60,
-                                    exercises: blockExercises,
-                                    previousPerformances: {
-                                      for (final blockExercise
-                                          in blockExercises)
-                                        if (widget
-                                                .state
-                                                .previousPerformances[blockExercise
-                                                .id] !=
-                                            null)
-                                          blockExercise.id:
-                                              widget
-                                                  .state
-                                                  .previousPerformances[blockExercise
-                                                  .id]!,
-                                    },
-                                    requiresLastSetVideo:
-                                        training.requiresLastSetVideo,
-                                    assignmentDate: widget.state.selectedDate,
-                                  ),
-                                );
-                              },
-                              onMarkPending:
-                                  completedCount == blockExercises.length
-                                  ? () async {
-                                      final sessionId = await _selectExecution(
-                                        training, widget.state.selectedDate);
-                                      if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                                      for (final blockExercise
-                                          in blockExercises) {
-                                        context.read<TrainingBloc>().add(
-                                          MarkExerciseCompleted(
-                                            sessionId: sessionId,
-                                            sessionStamp: widget.sessionStamp,
-                                            trainingExerciseId:
-                                                blockExercise.id,
-                                            exerciseId:
-                                                blockExercise.exercise.id,
-                                            completed: false,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  : null,
-                          );
+    final completedCount = blockExercises
+        .where((blockExercise) => _progress.ids.contains(blockExercise.id))
+        .length;
+    return _CircuitCard(
+      name: ex.blockName ?? 'Circuito',
+      rounds: ex.blockRounds ?? 1,
+      restBetweenRoundsSeconds: ex.restBetweenRoundsSeconds ?? 60,
+      exerciseCount: blockExercises.length,
+      completedCount: completedCount,
+      syncState: circuitSyncState(
+        [
+          for (final blockExercise in blockExercises)
+            _exerciseSync(actions, blockExercise, hasLocalDraft: false),
+        ],
+        allCompleted: completedCount == blockExercises.length,
+      ),
+      onFeedback: () {
+        context.push(
+          AppRoutes.feedback,
+          extra: FeedbackPageArgs.circuit(
+            circuitName: ex.blockName ?? 'Circuito',
+            circuitExercises: blockExercises
+                .map(
+                  (blockExercise) => FeedbackExerciseTarget(
+                    key: blockExercise.id,
+                    exerciseId: blockExercise.exercise.id,
+                    exerciseName: blockExercise.exercise.name,
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+      onStart: () => _startCircuit(context, training, ex, blockExercises),
+      onMarkPending: completedCount == blockExercises.length
+          ? () async {
+              final sessionId = await _selectExecution(
+                training, widget.state.selectedDate);
+              if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+              for (final blockExercise in blockExercises) {
+                context.read<TrainingBloc>().add(
+                  MarkExerciseCompleted(
+                    sessionId: sessionId,
+                    sessionStamp: widget.sessionStamp,
+                    trainingExerciseId: blockExercise.id,
+                    exerciseId: blockExercise.exercise.id,
+                    completed: false,
+                  ),
+                );
+              }
+            }
+          : null,
+    );
   }
 
   Widget _buildExerciseRow(
     BuildContext context,
     TrainingEntity training,
-    Color color,
     TrainingExerciseEntity ex,
+    List<Map<String, dynamic>> actions,
+    _WeightText weightText,
   ) {
     final l10n = AppLocalizations.of(context);
-                        final isCompleted = _progress.ids.contains(ex.id);
-                        final storage = sl<LocalStorage>();
-                        final activeWorkout = _progressSessionId == null
-                            ? storage.recoverableLegacyWorkout(
-                                training.id, ex.id, widget.state.selectedDate)
-                            : storage.getActiveWorkout(
-                                '${ex.id}:${widget.state.selectedDate}:$_progressSessionId');
-                        final partialProgress =
-                            activeWorkout?.trainingId == training.id
-                            ? activeWorkout
-                            : null;
-                        final effectiveWeight =
-                            _progress.weights[ex.id] ??
-                            partialProgress?.lastWeightKg;
-                        final partialProgressLabel =
-                            !isCompleted &&
-                                partialProgress != null &&
-                                partialProgress.completedSets > 0
-                            ? l10n.exerciseSeriesProgress(
-                                partialProgress.completedSets,
-                                ex.sets,
-                              )
-                            : null;
+    final isCompleted = _progress.ids.contains(ex.id);
+    final storage = sl<LocalStorage>();
+    final activeWorkout = _progressSessionId == null
+        ? storage.recoverableLegacyWorkout(
+            training.id, ex.id, widget.state.selectedDate)
+        : storage.getActiveWorkout(
+            '${ex.id}:${widget.state.selectedDate}:$_progressSessionId');
+    final partialProgress =
+        activeWorkout?.trainingId == training.id ? activeWorkout : null;
+    final effectiveWeight =
+        _progress.weights[ex.id] ?? partialProgress?.lastWeightKg;
+    final hasPartialProgress = !isCompleted &&
+        partialProgress != null &&
+        partialProgress.completedSets > 0;
+    final todaySets = _progress.performances[ex.id];
+    final String? todayLabel;
+    if (hasPartialProgress) {
+      final sets = l10n.trainingDetailSetsProgress(
+        partialProgress.completedSets, ex.sets);
+      todayLabel = effectiveWeight == null
+          ? sets
+          : '$sets · ${weightText(effectiveWeight)}';
+    } else {
+      final setsLabel = todaySets == null
+          ? null
+          : _todaySetsLabel(l10n, todaySets, weightText);
+      todayLabel = setsLabel ??
+          (isCompleted && effectiveWeight != null
+              ? l10n.trainingDetailToday(weightText(effectiveWeight))
+              : null);
+    }
 
-                        return _ExerciseCard(
-                            trainingExercise: ex,
-                            trainingTypes: training.types,
-                            accentColorHex: training.accentColor,
-                            trainingLevel: training.level,
-                            isCompleted: isCompleted,
-                            weightUsed: effectiveWeight,
-                            currentPerformances:
-                                _progress.performances[ex.id],
-                            partialProgressLabel: partialProgressLabel,
-                            onOpenActive: () async {
-                              final sessionId = await _selectExecution(
-                                training, widget.state.selectedDate,
-                                legacyExerciseId: ex.id);
-                              if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
-                              final selectedProgress = widget.state.sessionProgress[sessionId]
-                                  ?? const TrainingDayProgress();
-                              context.push(
-                                AppRoutes.activeExercisePath(
-                                  training.id,
-                                  ex.id,
-                                ),
-                                extra: ActiveExercisePageArgs(
-                                  trainingBloc: context.read<TrainingBloc>(),
-                                  sessionId: sessionId,
-                                  trainingExercise: ex,
-                                  trainingName: training.name,
-                                  trainingTypes: training.types,
-                                  accentColorHex: training.accentColor,
-                                  trainingLevel: training.level,
-                                  initialWeightKg: selectedProgress.weights[ex.id],
-                                  currentPerformances:
-                                      selectedProgress.performances[ex.id],
-                                  previousPerformances:
-                                      widget.state.previousPerformances[ex.id],
-                                  requiresLastSetVideo:
-                                      training.requiresLastSetVideo,
-                                  assignmentDate: widget.state.selectedDate,
-                                ),
-                              );
-                            },
-                            onToggle: (val, {double? weightUsed}) {
-                              if (val && training.requiresLastSetVideo) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(context)
-                                          .completeLastSetOpenExercise,
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              // Direct toggles still belong to a durable execution.
-                              _toggleExercise(training, ex, val, weightUsed);
-                            },
-                        );
+    return _ExerciseCard(
+      trainingExercise: ex,
+      trainingTypes: training.types,
+      accentColorHex: training.accentColor,
+      trainingLevel: training.level,
+      isCompleted: isCompleted,
+      weightUsed: effectiveWeight,
+      weightText: weightText,
+      currentPerformances: _progress.performances[ex.id],
+      previousLabel: _previousLabel(
+        l10n, widget.state.previousPerformances[ex.id], weightText),
+      todayLabel: todayLabel,
+      hasPartialProgress: hasPartialProgress,
+      syncState: _exerciseSync(
+        actions, ex, hasLocalDraft: hasPartialProgress),
+      onOpenActive: () => _openActiveExercise(context, training, ex),
+      onToggle: (val, {double? weightUsed}) {
+        if (val && training.requiresLastSetVideo) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).completeLastSetOpenExercise,
+              ),
+            ),
+          );
+          return;
+        }
+        // Direct toggles still belong to a durable execution.
+        _toggleExercise(training, ex, val, weightUsed);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final training = widget.state.training;
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final color = _trainingColor(context, training);
-    final solidColorStyle = trainingColorStyle(context, color);
-    final typeLabels = trainingTypeLabels(context, training.types);
+    final weightText = _WeightText.of(context);
     final completed = _progress.ids.length;
     final total = training.exercises.length;
-    final progress = total > 0 ? completed / total : 0.0;
     final allDone = total > 0 && completed == total;
     final storage = sl<LocalStorage>();
-    final completionActions = storage.getPendingSyncActions().where((action) =>
+    final pendingActions = storage.getPendingSyncActions();
+    final completionActions = pendingActions.where((action) =>
       action['type'] == 'complete_training' &&
       action['training_id'] == training.id &&
       action['date'] == widget.state.selectedDate).toList();
@@ -1187,349 +1235,214 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         storage.getConfirmedTrainingExecutions(training.id, widget.state.selectedDate)
             .any((entry) => entry['id'] == writableCompletionId &&
                 const ['completed', 'confirmed'].contains(entry['status']));
-    final remaining = training.remainingProgress(
-      _progress.ids,
-    );
     final activeWorkouts = sl<LocalStorage>().watchActiveWorkouts();
+    final groups = _exerciseGroups(training);
+    final next = _firstUnfinished(groups);
 
-    return ExomStaticBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
-            onPressed: () => context.pop(),
-          ),
-          title: Hero(
-            tag: 'training-${training.id}-title',
-            flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
-              return Material(
-                color: Colors.transparent,
-                child: Text(
-                  training.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.374,
+    // Status of the session completion next to its button (plan §6: pending
+    // is amber + clock, failure is error colour + icon). A conflict keeps
+    // today's treatment: only the button label.
+    final ExomSyncStatus? completionStatus;
+    if (needsConflictReview ||
+        blocker?.kind == CompletionSyncBlockerKind.conflict) {
+      completionStatus = null;
+    } else if (blocker?.kind == CompletionSyncBlockerKind.feedbackWaiting) {
+      completionStatus = const ExomSyncStatus(state: ExomSyncState.pendiente);
+    } else if (blocker != null ||
+        hasFailedExecution && !pendingSync && !locallyCompleted) {
+      completionStatus = const ExomSyncStatus(state: ExomSyncState.fallida);
+    } else if (pendingSync) {
+      completionStatus = ExomSyncStatus(
+        state: ExomSyncState.pendiente,
+        label: l10n.trainingDetailCompletionSavedPending,
+      );
+    } else {
+      completionStatus = null;
+    }
+
+    final completeOnPressed = widget.state.isCompleting || !_sameSession
+        ? null
+        : blocker?.kind == CompletionSyncBlockerKind.feedbackFailed &&
+            sl.isRegistered<FeedbackUploadQueueService>()
+            ? () async {
+                if (!_sameSession) return;
+                await Navigator.of(context).push<void>(MaterialPageRoute(
+                  builder: (_) => PendingUploadsPage(
+                    exerciseNames: {
+                      for (final exercise in training.exercises)
+                        exercise.id: exercise.exercise.name,
+                    },
                   ),
-                ),
-              );
-            },
-            child: Material(
-              color: Colors.transparent,
+                ));
+                if (_sameSession) setState(() {});
+              }
+        : retryId != null && !locallyCompleted
+            ? () async {
+                if (!_sameSession) return;
+                _completionReturnSessionId = selectedCompletionId;
+                _completionAccepted = false;
+                await sync!.retryAction(retryId);
+                if (_sameSession) {
+                  _completionAccepted = true;
+                  setState(() {});
+                  _returnAfterConfirmedCompletion();
+                }
+              }
+            : pendingSync || blocker != null || needsConflictReview || locallyCompleted
+                ? null : _completeSelectedTraining;
+    final completeLabel = blockerLabel ?? (needsConflictReview ? l10n.trainingSyncConflict : pendingSync ? l10n.trainingPendingSync : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? l10n.trainingRetryCompletion : allDone && _sessionId != null
+        ? l10n.workoutCompletedMessage
+        : l10n.completeTrainingConfirmAction);
+    // One lime action per state: "next" while work remains; once every
+    // exercise is done the completion button takes the primary style.
+    final completeIsPrimary = next == null;
+
+    return Scaffold(
+      backgroundColor: palette.background,
+      appBar: GlassAppBar(
+        leading: _DetailBackButton(onPressed: () => context.pop()),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          _DetailHeader(
+            training: training,
+            completedLabel: '$completed/$total ${l10n.completedExercisesLabel}',
+          ),
+
+          // Warmup
+          if (training.warmupDescription != null) ...[
+            _SectionTitle(title: l10n.warmUp),
+            _DescriptionText(text: training.warmupDescription!),
+          ],
+
+          // Unscoped drafts are retained in Hive but never displayed as
+          // this account's progress or submitted under its credentials.
+          if (sl<LocalStorage>().hasQuarantinedWorkoutDrafts)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Text(
-                training.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                AppLocalizations.of(context).quarantinedWorkoutNotice,
+                key: const Key('quarantined-workout-notice'),
+                style: TextStyle(
+                  fontFamily: AppTheme.bodyFontFamily,
+                  color: palette.textPrimary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          // Exercise list: rule-separated rows straight under the header
+          // (sketch «Detalle del entreno»); the header already counts them.
+          for (final group in groups)
+            ValueListenableBuilder(
+              valueListenable: activeWorkouts,
+              builder: (context, box, _) {
+                final circuit = group.blockExercises;
+                return circuit == null
+                    ? _buildExerciseRow(
+                        context, training, group.leader, pendingActions, weightText)
+                    : _buildCircuitRow(
+                        context,
+                        training,
+                        group.leader,
+                        circuit,
+                        pendingActions,
+                      );
+              },
+            ),
+          // Closing rule of the exercise list.
+          Divider(height: 1, thickness: 1, color: palette.borderSoft),
+
+          // Cooldown
+          if (training.cooldownDescription != null) ...[
+            _SectionTitle(title: l10n.cooldown),
+            _DescriptionText(text: training.cooldownDescription!),
+          ],
+
+          if (widget.state.clientNote != null ||
+              widget.state.adminReplyText != null)
+            TrainingNoteReplyCard(
+              note: widget.state.clientNote,
+              reply: widget.state.adminReplyText,
+              historicalDayNote: true,
+            ),
+
+          // Quick notes
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            child: TextField(
+              controller: _notesController,
+              maxLines: 3,
+              minLines: 2,
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                color: palette.textPrimary,
+                fontSize: 16,
+              ),
+              decoration: InputDecoration(
+                hintText: l10n.addQuickNoteOptional,
+                hintStyle: TextStyle(color: palette.textSecondary),
+                prefixIcon: Icon(
+                  Icons.edit_note,
+                  color: palette.textSecondary,
+                ),
+                filled: false,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  borderSide: BorderSide(color: palette.textPrimary, width: 1.5),
+                ),
               ),
             ),
           ),
+        ],
+      ),
+
+      // Pinned thumb-zone actions: the next exercise (lime) and the session
+      // completion, which becomes the lime action once every exercise is done.
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.background,
+          border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
         ),
-        body: SizedBox.expand(
-          child: Stack(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ListView(
-                padding: EdgeInsets.only(
-                  bottom: 160 + MediaQuery.of(context).padding.bottom,
+              if (completionStatus != null) ...[
+                Align(alignment: Alignment.centerLeft, child: completionStatus),
+                const SizedBox(height: 8),
+              ],
+              if (next != null) ...[
+                ExomPrimaryButton(
+                  key: const Key('training-next-button'),
+                  label: l10n.trainingDetailNextAction(
+                    next.blockExercises == null
+                        ? next.leader.exercise.name
+                        : next.leader.blockName ?? 'Circuito'),
+                  trailingIcon: Icons.arrow_forward,
+                  busy: _openingNext,
+                  onPressed: !_sameSession
+                      ? null
+                      : () => _runNext(() => next.blockExercises == null
+                          ? _openActiveExercise(context, training, next.leader)
+                          : _startCircuit(context, training, next.leader,
+                              next.blockExercises!)),
                 ),
-                children: [
-                  // Header card
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: GlassDecoration.accentCard(color),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: [
-                            ...typeLabels.map(
-                              (label) => _Badge(label: label, color: color),
-                            ),
-                            _Badge(
-                              label: training.level,
-                              color: palette.textSecondary,
-                            ),
-                            if (allDone)
-                              _Badge(
-                                label: l10n.completed,
-                                icon: Icons.check_circle_outline,
-                                color: semantic.success,
-                              )
-                            else ...[
-                              _Badge(
-                                label: l10n.remainingTrainingWork(
-                                  remaining.remainingExercises,
-                                  remaining.remainingSets,
-                                ),
-                                icon: Icons.fitness_center,
-                                color: color,
-                              ),
-                              if (remaining.remainingDurationMin != null)
-                                _Badge(
-                                  label: l10n.remainingTrainingMinutes(
-                                    remaining.remainingDurationMin!,
-                                  ),
-                                  icon: Icons.timer_outlined,
-                                  color: semantic.info,
-                                ),
-                            ],
-                            if (training.estimatedCalories != null)
-                              _Badge(
-                                label: '${training.estimatedCalories} kcal',
-                                icon: Icons.local_fire_department_outlined,
-                                color: semantic.calorie,
-                              ),
-                          ],
-                        ),
-                        if (training.tags.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 6,
-                            children: training.tags
-                                .map(
-                                  (t) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: palette.surfaceVariant,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '#$t',
-                                      style: TextStyle(
-                                        color: palette.textDisabled,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Warmup
-                  if (training.warmupDescription != null) ...[
-                    _SectionTitle(
-                      title: l10n.warmUp,
-                      icon: Icons.whatshot_outlined,
-                      color: semantic.warning,
-                    ),
-                    _DescriptionCard(text: training.warmupDescription!),
-                  ],
-
-                  // Unscoped drafts are retained in Hive but never displayed as
-                  // this account's progress or submitted under its credentials.
-                  if (sl<LocalStorage>().hasQuarantinedWorkoutDrafts)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        AppLocalizations.of(context).quarantinedWorkoutNotice,
-                        key: const Key('quarantined-workout-notice'),
-                      ),
-                    ),
-                  // Exercises section
-                  _SectionTitle(
-                    title: l10n.exercises,
-                    icon: Icons.fitness_center,
-                    color: color,
-                    trailing: '$total ${l10n.exercises}',
-                  ),
-                  for (final group in _exerciseGroups(training))
-                    ValueListenableBuilder(
-                      valueListenable: activeWorkouts,
-                      builder: (context, box, _) {
-                        final circuit = group.blockExercises;
-                        return circuit == null
-                            ? _buildExerciseRow(context, training, color, group.leader)
-                            : _buildCircuitRow(
-                                context,
-                                training,
-                                color,
-                                group.leader,
-                                circuit,
-                              );
-                      },
-                    ),
-
-                  // Cooldown
-                  if (training.cooldownDescription != null) ...[
-                    _SectionTitle(
-                      title: l10n.cooldown,
-                      icon: Icons.ac_unit_outlined,
-                      color: semantic.info,
-                    ),
-                    _DescriptionCard(text: training.cooldownDescription!),
-                  ],
-
-                  if (widget.state.clientNote != null ||
-                      widget.state.adminReplyText != null)
-                    TrainingNoteReplyCard(
-                      note: widget.state.clientNote,
-                      reply: widget.state.adminReplyText,
-                      historicalDayNote: true,
-                    ),
-
-                  // Quick notes
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: TextField(
-                      controller: _notesController,
-                      maxLines: 3,
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: l10n.addQuickNoteOptional,
-                        hintStyle: TextStyle(color: palette.textDisabled),
-                        prefixIcon: Icon(
-                          Icons.edit_note,
-                          color: palette.textDisabled,
-                        ),
-                        filled: true,
-                        fillColor: palette.surfaceVariant,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Bottom bar: progress + Completar button
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    16,
-                    16 + MediaQuery.of(context).padding.bottom,
-                  ),
-                  decoration: _trainingStickyBarDecoration(context),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '$completed/$total ${l10n.completedExercisesLabel}',
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            '${(progress * 100).round()}%',
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (allDone ? semantic.success : color)
-                                  .withValues(alpha: 0.20),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: palette.surfaceVariant,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              allDone ? semantic.success : color,
-                            ),
-                            minHeight: 8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          key: const Key('complete-training-button'),
-                          onPressed: widget.state.isCompleting || !_sameSession
-                              ? null
-                              : blocker?.kind == CompletionSyncBlockerKind.feedbackFailed &&
-                                  sl.isRegistered<FeedbackUploadQueueService>()
-                                  ? () async {
-                                      if (!_sameSession) return;
-                                      await Navigator.of(context).push<void>(MaterialPageRoute(
-                                        builder: (_) => PendingUploadsPage(
-                                          exerciseNames: {
-                                            for (final exercise in training.exercises)
-                                              exercise.id: exercise.exercise.name,
-                                          },
-                                        ),
-                                      ));
-                                      if (_sameSession) setState(() {});
-                                    }
-                              : retryId != null && !locallyCompleted
-                                  ? () async {
-                                      if (!_sameSession) return;
-                                      _completionReturnSessionId = selectedCompletionId;
-                                      _completionAccepted = false;
-                                      await sync!.retryAction(retryId);
-                                      if (_sameSession) {
-                                        _completionAccepted = true;
-                                        setState(() {});
-                                        _returnAfterConfirmedCompletion();
-                                      }
-                                    }
-                                  : pendingSync || blocker != null || needsConflictReview || locallyCompleted
-                                      ? null : _completeSelectedTraining,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: allDone ? semantic.success : color,
-                            foregroundColor: allDone
-                                ? palette.onPrimary
-                                : solidColorStyle.foreground,
-                            side: allDone
-                                ? null
-                                : BorderSide(color: solidColorStyle.border),
-                          ),
-                          icon: Icon(
-                            allDone
-                                ? Icons.check_circle_outline
-                                : Icons.done_outline,
-                            size: 18,
-                          ),
-                          label: Text(
-                            blockerLabel ?? (needsConflictReview ? l10n.trainingSyncConflict : pendingSync ? l10n.trainingPendingSync : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? l10n.trainingRetryCompletion : allDone && _sessionId != null
-                                ? l10n.workoutCompletedMessage
-                                : l10n.completeTrainingConfirmAction),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 8),
+              ],
+              _CompleteTrainingButton(
+                primary: completeIsPrimary,
+                label: completeLabel,
+                done: allDone,
+                onPressed: completeOnPressed,
               ),
             ],
           ),
@@ -1537,6 +1450,105 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       ),
     );
   }
+}
+
+/// Formats kilograms in the user's unit for display only («62,5 kg»,
+/// «137,79 lb»). Stored and sent values stay in kilograms (decision D5).
+class _WeightText {
+  const _WeightText(this.unitSystem, this.decimalSeparator);
+
+  final UnitSystem unitSystem;
+  final String decimalSeparator;
+
+  /// Reads the unit preference when an [AppPreferencesCubit] is provided (it
+  /// always is in the app, `lib/main.dart`); widget tests that pump the page
+  /// alone fall back to kilograms, today's only unit.
+  factory _WeightText.of(BuildContext context) {
+    UnitSystem unitSystem;
+    try {
+      unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+        (cubit) => cubit.state.unitSystem,
+      );
+    } on ProviderNotFoundException {
+      unitSystem = UnitSystem.metric;
+    }
+    return _WeightText(
+      unitSystem,
+      decimalSeparatorFor(Localizations.localeOf(context).languageCode),
+    );
+  }
+
+  String call(double kg) =>
+      '${formatWeightDisplay(kg, unitSystem, decimalSeparator: decimalSeparator)}'
+      '\u00A0${weightUnitSymbol(unitSystem)}';
+}
+
+/// «8 × 60 kg», «45 s · 20 kg», «12 reps.» for one logged set.
+String? _setValueLabel(
+  AppLocalizations l10n,
+  SetPerformance set,
+  _WeightText weightText,
+) {
+  final weight = set.weightKg == null ? null : weightText(set.weightKg!);
+  if (set.reps != null && weight != null) {
+    return '${set.reps} × $weight';
+  }
+  final parts = [
+    if (set.reps != null) l10n.trainingDetailReps(set.reps!),
+    if (set.seconds != null) '${set.seconds} s',
+    ?weight,
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// «Anterior 8 × 60 kg» from the first logged set of the previous session.
+String? _previousLabel(
+  AppLocalizations l10n,
+  List<SetPerformance>? previous,
+  _WeightText weightText,
+) {
+  if (previous == null || previous.isEmpty) return null;
+  final sorted = [...previous]
+    ..sort((a, b) => a.setNumber.compareTo(b.setNumber));
+  for (final set in sorted) {
+    final value = _setValueLabel(l10n, set, weightText);
+    if (value != null) return l10n.trainingDetailPrevious(value);
+  }
+  return null;
+}
+
+/// «Hoy 4 series · 8 reps. · 62,5 kg» when every set of today is equal,
+/// otherwise each set («Hoy 8 reps. · 60 kg | 6 reps. · 62,5 kg»).
+String? _todaySetsLabel(
+  AppLocalizations l10n,
+  List<SetPerformance> sets,
+  _WeightText weightText,
+) {
+  final labels = sets
+      .map((set) => _todaySetLabel(l10n, set, weightText))
+      .where((label) => label.isNotEmpty)
+      .toList(growable: false);
+  if (labels.isEmpty) return null;
+  if (labels.length > 1 && labels.every((label) => label == labels.first)) {
+    return l10n.trainingDetailToday(
+      '${l10n.trainingDetailSets(labels.length)} · ${labels.first}');
+  }
+  return l10n.trainingDetailToday(labels.join(' | '));
+}
+
+/// One registered set of today in the exercise sheet, in the user's unit.
+String _todaySetLabel(
+  AppLocalizations l10n,
+  SetPerformance set,
+  _WeightText weightText,
+) {
+  final parts = [
+    if (set.reps != null) l10n.trainingDetailReps(set.reps!),
+    if (set.seconds != null) '${set.seconds} s',
+    if (set.weightKg != null) weightText(set.weightKg!),
+    if (set.rir != null) 'RIR ${set.rir}',
+  ];
+  return parts.join(' · ');
 }
 
 class TrainingNoteReplyCard extends StatelessWidget {
@@ -1613,59 +1625,118 @@ class TrainingNoteReplyCard extends StatelessWidget {
 
 BoxDecoration _trainingStickyBarDecoration(BuildContext context) {
   final palette = context.exomPalette;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
   return BoxDecoration(
-    color: isDark ? AppColors.navBarGlass : AppColors.navBarGlassLightTheme,
-    border: Border(
-      top: BorderSide(
-        color: palette.glassBorder.withValues(alpha: isDark ? 0.18 : 0.10),
-        width: 0.6,
-      ),
-    ),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
-        blurRadius: 24,
-        offset: const Offset(0, -6),
-        spreadRadius: -14,
-      ),
-    ],
+    color: palette.background,
+    border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
   );
 }
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData? icon;
+/// Back button of the detail with the platform's localized tooltip, which is
+/// also its accessible label (L0 found it unlabeled).
+class _DetailBackButton extends StatelessWidget {
+  const _DetailBackButton({required this.onPressed});
 
-  const _Badge({required this.label, required this.color, this.icon});
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    return IconButton(
+      icon: Icon(Icons.arrow_back, color: context.exomPalette.textPrimary),
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+      onPressed: onPressed,
+    );
+  }
+}
+
+/// Flat top of the detail (sketch «Detalle del entreno»): training name in
+/// the display face, then muted meta lines and the progress line.
+class _DetailHeader extends StatelessWidget {
+  const _DetailHeader({required this.training, required this.completedLabel});
+
+  final TrainingEntity training;
+  final String completedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final totalSets =
+        training.exercises.fold<int>(0, (sum, item) => sum + item.sets);
+    final duration = training.estimatedDurationMin;
+    final kind = [
+      ...trainingTypeLabels(context, training.types),
+      if (training.level.trim().isNotEmpty)
+        _trainingLevelLabel(l10n, training.level),
+    ].join(' · ');
+    final volume = [
+      l10n.trainingDetailExercises(training.exercises.length),
+      l10n.trainingDetailSets(totalSets),
+      if (duration != null) l10n.trainingDetailDuration(duration),
+      if (training.estimatedCalories != null)
+        '${training.estimatedCalories} kcal',
+    ].join(' · ');
+    final mutedStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      color: palette.textSecondary,
+      fontSize: 14,
+      height: 1.4,
+    );
+    final titleStyle = TextStyle(
+      fontFamily: AppTheme.displayFontFamily,
+      fontSize: 44,
+      fontWeight: FontWeight.w800,
+      height: 0.95,
+      letterSpacing: -0.88,
+      color: palette.textPrimary,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) ...[
-            Icon(icon, color: color, size: 13),
-            const SizedBox(width: 4),
-          ],
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+          Hero(
+            tag: 'training-${training.id}-title',
+            flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
+              return Material(
+                color: Colors.transparent,
+                child: Text(
+                  training.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.374,
+                  ),
+                ),
+              );
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: Semantics(
+                header: true,
+                child: Text(training.name.toUpperCase(), style: titleStyle),
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (kind.isNotEmpty) Text(kind, style: mutedStyle),
+          Text(volume, style: mutedStyle),
+          if (training.tags.isNotEmpty)
+            Text(
+              training.tags.map((tag) => '#$tag').join(' '),
+              style: mutedStyle.copyWith(fontSize: 13),
+            ),
+          const SizedBox(height: 12),
+          Text(
+            completedLabel,
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              color: palette.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
           ),
         ],
@@ -1674,70 +1745,212 @@ class _Badge extends StatelessWidget {
   }
 }
 
+/// Session completion action. Keeps the [ElevatedButton] and the
+/// `complete-training-button` key the tests drive; it takes the primary
+/// (lime) look only when it is the next step, otherwise the outlined
+/// secondary look, so the screen never shows two lime actions.
+class _CompleteTrainingButton extends StatelessWidget {
+  const _CompleteTrainingButton({
+    required this.primary,
+    required this.label,
+    required this.done,
+    required this.onPressed,
+  });
+
+  final bool primary;
+  final String label;
+  final bool done;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(4)),
+    );
+    const textStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      letterSpacing: 0.32,
+    );
+    final style = primary
+        ? ElevatedButton.styleFrom(
+            elevation: 0,
+            shape: shape,
+            minimumSize: const Size.fromHeight(kExomButtonMinHeight),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            textStyle: textStyle,
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.textOnPrimary,
+            iconColor: AppColors.textOnPrimary,
+            disabledBackgroundColor: palette.borderSoft,
+            disabledForegroundColor:
+                isDark ? palette.textDisabled : palette.textSecondary,
+            disabledIconColor:
+                isDark ? palette.textDisabled : palette.textSecondary,
+            side: isDark || onPressed == null
+                ? null
+                : const BorderSide(color: AppColors.textOnPrimary, width: 1.5),
+          )
+        : ElevatedButton.styleFrom(
+            elevation: 0,
+            shape: shape,
+            minimumSize: const Size.fromHeight(kExomButtonMinHeight),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            textStyle: textStyle,
+            backgroundColor: Colors.transparent,
+            foregroundColor: palette.textPrimary,
+            iconColor: palette.textPrimary,
+            disabledBackgroundColor: Colors.transparent,
+            disabledForegroundColor: palette.textDisabled,
+            disabledIconColor: palette.textDisabled,
+            shadowColor: Colors.transparent,
+            side: BorderSide(
+              color: onPressed == null ? palette.borderSoft : palette.textPrimary,
+              width: 1.5,
+            ),
+          );
+    return ElevatedButton.icon(
+      key: const Key('complete-training-button'),
+      onPressed: onPressed,
+      style: style,
+      icon: Icon(
+        done ? Icons.check_circle_outline : Icons.done_outline,
+        size: 20,
+      ),
+      label: Text(label),
+    );
+  }
+}
+
+/// Section heading (warm-up, exercises, cool-down): display face, uppercase.
 class _SectionTitle extends StatelessWidget {
   final String title;
-  final IconData icon;
-  final Color color;
-  final String? trailing;
 
-  const _SectionTitle({
-    required this.title,
-    required this.icon,
-    required this.color,
-    this.trailing,
-  });
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Semantics(
+        header: true,
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontFamily: AppTheme.displayFontFamily,
+            color: palette.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
           ),
-          if (trailing != null) ...[
-            const Spacer(),
-            Text(
-              trailing!,
-              style: TextStyle(color: palette.textDisabled, fontSize: 12),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _DescriptionCard extends StatelessWidget {
+/// Warm-up / cool-down text, flat on the page (no card).
+class _DescriptionText extends StatelessWidget {
   final String text;
 
-  const _DescriptionCard({required this.text});
+  const _DescriptionText({required this.text});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: GlassDecoration.card(borderRadius: 14),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: Text(
         text,
-        style: theme.textTheme.bodyMedium?.copyWith(
+        style: TextStyle(
+          fontFamily: AppTheme.bodyFontFamily,
           color: palette.textSecondary,
-          fontSize: 14,
+          fontSize: 15,
           height: 1.5,
         ),
+      ),
+    );
+  }
+}
+
+/// Rule-separated list row: hairline on top, full-width tap target, at least
+/// 56 high. The list closes with a [Divider] after the last row.
+class _RuledRow extends StatelessWidget {
+  const _RuledRow({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: context.exomPalette.borderSoft),
+                ),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+TextStyle _rowNameStyle(BuildContext context, {required bool done}) =>
+    TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      color: done
+          ? context.exomPalette.textSecondary
+          : context.exomPalette.textPrimary,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      height: 1.3,
+    );
+
+TextStyle _rowLineStyle(BuildContext context, {Color? color}) => TextStyle(
+  fontFamily: AppTheme.bodyFontFamily,
+  color: color ?? context.exomPalette.textSecondary,
+  fontSize: 14,
+  height: 1.4,
+  fontFeatures: const [FontFeature.tabularFigures()],
+);
+
+/// Trailing mark of a row: a check in text colour when done (never lime), a
+/// chevron otherwise.
+class _RowTrailing extends StatelessWidget {
+  const _RowTrailing({required this.done});
+
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Icon(
+        done ? Icons.check_rounded : Icons.chevron_right_rounded,
+        color: done ? palette.textPrimary : palette.textSecondary,
+        size: 24,
       ),
     );
   }
@@ -1749,7 +1962,7 @@ class _CircuitCard extends StatelessWidget {
   final int restBetweenRoundsSeconds;
   final int exerciseCount;
   final int completedCount;
-  final Color color;
+  final ExomSyncState? syncState;
   final VoidCallback onFeedback;
   final VoidCallback onStart;
   final VoidCallback? onMarkPending;
@@ -1760,7 +1973,7 @@ class _CircuitCard extends StatelessWidget {
     required this.restBetweenRoundsSeconds,
     required this.exerciseCount,
     required this.completedCount,
-    required this.color,
+    required this.syncState,
     required this.onFeedback,
     required this.onStart,
     required this.onMarkPending,
@@ -1769,133 +1982,89 @@ class _CircuitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final solidColorStyle = trainingColorStyle(context, color);
     final isCompleted = exerciseCount > 0 && completedCount == exerciseCount;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: isCompleted
-          ? BoxDecoration(
-              color: semantic.success.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: semantic.success.withValues(alpha: 0.35),
-              ),
-            )
-          : GlassDecoration.card(borderRadius: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _RuledRow(
+          onTap: onStart,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+              SizedBox(
+                width: 36,
+                child: ExcludeSemantics(
+                  child: Icon(
+                    Icons.repeat_rounded,
+                    color: palette.textSecondary,
+                    size: 22,
+                  ),
                 ),
-                child: Icon(Icons.repeat_rounded, color: color, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(name, style: _rowNameStyle(context, done: isCompleted)),
+                    const SizedBox(height: 2),
                     Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isCompleted
-                            ? semantic.success
-                            : palette.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      '${l10n.circuitSummary(rounds, exerciseCount)} · '
+                      '${restBetweenRoundsSeconds}s ${l10n.rest}',
+                      style: _rowLineStyle(context),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.circuitSummary(rounds, exerciseCount),
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    if (syncState != null) ...[
+                      const SizedBox(height: 4),
+                      ExomSyncStatus(state: syncState!),
+                    ],
                   ],
                 ),
               ),
-              if (isCompleted)
-                Icon(Icons.check_circle_rounded, color: semantic.success)
-              else
-                Icon(Icons.play_circle_fill_rounded, color: color),
+              const SizedBox(width: 8),
+              Text(
+                '$completedCount/$exerciseCount',
+                style: _rowLineStyle(context, color: palette.textPrimary),
+              ),
+              _RowTrailing(done: isCompleted),
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(56, 0, 12, 8),
+          child: Row(
             children: [
-              _MiniStat(
-                icon: Icons.stacked_bar_chart_rounded,
-                label: '$completedCount/$exerciseCount',
-              ),
-              _MiniStat(
-                icon: Icons.timer_outlined,
-                label: '${restBetweenRoundsSeconds}s ${l10n.rest}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onStart,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted ? semantic.success : color,
-                    foregroundColor: isCompleted
-                        ? palette.onPrimary
-                        : solidColorStyle.foreground,
-                    side: isCompleted
-                        ? null
-                        : BorderSide(color: solidColorStyle.border),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+              Flexible(
+                child: TextButton.icon(
+                  key: const ValueKey('circuit-feedback-button'),
+                  onPressed: onFeedback,
+                  style: TextButton.styleFrom(
+                    foregroundColor: palette.textPrimary,
+                    minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
+                    textStyle: const TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: Text(
-                    isCompleted
-                        ? l10n.completeCircuitButton
-                        : l10n.startCircuitButton,
-                  ),
+                  icon: const Icon(Icons.video_library_outlined, size: 20),
+                  label: Text(l10n.circuitFeedbackAction),
                 ),
               ),
               if (onMarkPending != null) ...[
-                const SizedBox(width: 10),
-                IconButton.filledTonal(
+                const Spacer(),
+                IconButton(
                   onPressed: onMarkPending,
+                  color: palette.textPrimary,
                   icon: const Icon(Icons.radio_button_unchecked_rounded),
                   tooltip: l10n.markCircuitPendingButton,
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              key: const ValueKey('circuit-feedback-button'),
-              onPressed: onFeedback,
-              icon: const Icon(Icons.video_library_outlined, size: 19),
-              label: Text(l10n.circuitFeedbackAction),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1907,8 +2076,12 @@ class _ExerciseCard extends StatelessWidget {
   final String trainingLevel;
   final bool isCompleted;
   final double? weightUsed;
+  final _WeightText weightText;
   final List<SetPerformance>? currentPerformances;
-  final String? partialProgressLabel;
+  final String? previousLabel;
+  final String? todayLabel;
+  final bool hasPartialProgress;
+  final ExomSyncState? syncState;
   final VoidCallback onOpenActive;
   final void Function(bool completed, {double? weightUsed}) onToggle;
 
@@ -1918,172 +2091,94 @@ class _ExerciseCard extends StatelessWidget {
     required this.accentColorHex,
     required this.trainingLevel,
     required this.isCompleted,
+    required this.weightText,
     required this.onOpenActive,
     required this.onToggle,
     this.weightUsed,
     this.currentPerformances,
-    this.partialProgressLabel,
+    this.previousLabel,
+    this.todayLabel,
+    this.hasPartialProgress = false,
+    this.syncState,
   });
 
   @override
   Widget build(BuildContext context) {
     final ex = trainingExercise.exercise;
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final currentPerformanceLabel = currentPerformances?.isEmpty ?? true
-        ? null
-        : currentPerformances!.map(formatSetPerformance).join(' | ');
+    final thumbnailUrl = ex.thumbnailUrl?.trim();
+    final hasThumbnail = thumbnailUrl != null && thumbnailUrl.isNotEmpty;
+    const thumbnailSize = 56.0;
 
-    return GestureDetector(
+    return _RuledRow(
       onTap: () => _showExerciseDetail(context),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.all(14),
-        decoration: isCompleted
-            ? BoxDecoration(
-                color: semantic.success.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: semantic.success.withValues(alpha: 0.35),
-                ),
-              )
-            : GlassDecoration.card(),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Thumbnail or placeholder
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: ex.thumbnailUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: ex.thumbnailUrl!,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      memCacheWidth: PerformanceProfile.imageCacheWidth(
-                        context,
-                        60,
-                      ),
-                      placeholder: (context, imageUrl) =>
-                          _ExercisePlaceholder(),
-                      errorWidget: (context, imageUrl, error) =>
-                          _ExercisePlaceholder(),
-                    )
-                  : _ExercisePlaceholder(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 36,
+            child: Text(
+              '${trainingExercise.order}',
+              style: TextStyle(
+                fontFamily: AppTheme.displayFontFamily,
+                color: isCompleted ? palette.textSecondary : palette.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+              ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '${trainingExercise.order}.',
-                        style: TextStyle(
-                          color: palette.textDisabled,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          ex.name,
-                          style: TextStyle(
-                            color: isCompleted
-                                ? semantic.success
-                                : palette.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                            decorationColor: semantic.success,
-                          ),
-                        ),
-                      ),
-                    ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ex.name, style: _rowNameStyle(context, done: isCompleted)),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.trainingDetailPrescription(
+                    trainingExercise.sets,
+                    formatExercisePrescription(trainingExercise),
+                    trainingExercise.restSeconds,
                   ),
-                  if (ex.muscleGroups.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      ex.muscleGroups.join(', '),
-                      style: TextStyle(
-                        color: palette.textDisabled,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  LayoutBuilder(
-                    builder: (context, constraints) => Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        _MiniStat(
-                          icon: Icons.repeat,
-                          label:
-                              '${trainingExercise.sets} x ${formatExercisePrescription(trainingExercise)}',
-                        ),
-                        _MiniStat(
-                          icon: Icons.timer_outlined,
-                          label:
-                              '${trainingExercise.restSeconds}s ${l10n.rest}',
-                        ),
-                        if (partialProgressLabel != null)
-                          _MiniStat(
-                            icon: Icons.stacked_bar_chart_rounded,
-                            label: partialProgressLabel!,
-                          ),
-                        if (weightUsed != null) ...[
-                          _MiniStat(
-                            icon: Icons.fitness_center,
-                            label: l10n.weightBadgeLabel(
-                              weightUsed!.toStringAsFixed(
-                                weightUsed! % 1 == 0 ? 0 : 1,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (currentPerformanceLabel != null)
-                          _MiniStat(
-                            icon: Icons.edit_note_rounded,
-                            label: currentPerformanceLabel,
-                            maxWidth: constraints.maxWidth,
-                          ),
-                      ],
-                    ),
+                  style: _rowLineStyle(context),
+                ),
+                if (previousLabel != null)
+                  Text(previousLabel!, style: _rowLineStyle(context)),
+                if (todayLabel != null)
+                  Text(
+                    todayLabel!,
+                    style: _rowLineStyle(context, color: palette.textPrimary),
                   ),
+                if (syncState != null) ...[
+                  const SizedBox(height: 4),
+                  ExomSyncStatus(state: syncState!),
                 ],
-              ),
+              ],
             ),
+          ),
+          if (hasThumbnail) ...[
             const SizedBox(width: 12),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: isCompleted
-                    ? semantic.success
-                    : palette.surfaceVariant.withValues(alpha: 0.9),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isCompleted
-                      ? semantic.success
-                      : palette.textDisabled.withValues(alpha: 0.32),
-                  width: 1.5,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CachedNetworkImage(
+                imageUrl: thumbnailUrl,
+                width: thumbnailSize,
+                height: thumbnailSize,
+                fit: BoxFit.cover,
+                memCacheWidth: PerformanceProfile.imageCacheWidth(
+                  context,
+                  thumbnailSize,
                 ),
-              ),
-              child: Icon(
-                isCompleted ? Icons.check_rounded : Icons.chevron_right_rounded,
-                color: isCompleted ? Colors.white : palette.textDisabled,
-                size: 20,
+                placeholder: (context, imageUrl) => _ThumbnailBackground(),
+                errorWidget: (context, imageUrl, error) =>
+                    _ThumbnailBackground(),
               ),
             ),
           ],
-        ),
+          _RowTrailing(done: isCompleted),
+        ],
       ),
     );
   }
@@ -2095,7 +2190,7 @@ class _ExerciseCard extends StatelessWidget {
       backgroundColor: context.exomPalette.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
@@ -2108,10 +2203,11 @@ class _ExerciseCard extends StatelessWidget {
           scrollController: scrollController,
           isCompleted: isCompleted,
           weightUsed: weightUsed,
+          weightText: weightText,
           trainingTypes: trainingTypes,
           accentColorHex: accentColorHex,
           trainingLevel: trainingLevel,
-          hasPartialProgress: partialProgressLabel != null,
+          hasPartialProgress: hasPartialProgress,
           currentPerformances: currentPerformances,
         ),
       ),
@@ -2156,56 +2252,26 @@ class _SheetCompletionResult {
   });
 }
 
-class _ExercisePlaceholder extends StatelessWidget {
+/// Neutral square behind a loading or broken thumbnail.
+class _ThumbnailBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return Container(
-      width: 60,
-      height: 60,
-      color: palette.surfaceVariant,
-      child: Icon(Icons.fitness_center, color: palette.textDisabled, size: 24),
+    return ColoredBox(
+      color: context.exomPalette.surfaceVariant,
+      child: const SizedBox(width: 56, height: 56),
     );
   }
 }
 
-class _MiniStat extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final double? maxWidth;
-
-  const _MiniStat({required this.icon, required this.label, this.maxWidth});
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final content = Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: palette.textDisabled, size: 12),
-        const SizedBox(width: 3),
-        if (maxWidth == null)
-          Text(
-            label,
-            style: TextStyle(color: palette.textDisabled, fontSize: 11),
-          )
-        else
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: palette.textDisabled, fontSize: 11),
-            ),
-          ),
-      ],
-    );
-
-    if (maxWidth == null) return content;
-    return SizedBox(width: maxWidth, child: content);
-  }
-}
+/// Localized label of a training level as sent by the API (same values as
+/// onboarding: English enum or Spanish name); an unknown value is shown as is.
+String _trainingLevelLabel(AppLocalizations l10n, String level) =>
+    switch (level.trim().toUpperCase()) {
+      'BEGINNER' || 'PRINCIPIANTE' => l10n.beginnerLevel,
+      'INTERMEDIATE' || 'INTERMEDIO' => l10n.intermediateLevel,
+      'ADVANCED' || 'AVANZADO' => l10n.advancedLevel,
+      _ => level,
+    };
 
 class _ExerciseDetailSheet extends StatelessWidget {
   final ExerciseEntity exercise;
@@ -2213,6 +2279,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final ScrollController scrollController;
   final bool isCompleted;
   final double? weightUsed;
+  final _WeightText weightText;
   final List<String> trainingTypes;
   final String? accentColorHex;
   final String trainingLevel;
@@ -2224,6 +2291,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.trainingExercise,
     required this.scrollController,
     required this.isCompleted,
+    required this.weightText,
     required this.trainingTypes,
     required this.accentColorHex,
     required this.trainingLevel,
@@ -2310,10 +2378,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
     final typeColor = _typeColor(context);
-    final solidTypeStyle = trainingColorStyle(context, typeColor);
     final thumbnailUrl = exercise.thumbnailUrl?.trim();
     final videoUrl = exercise.videoUrl?.trim();
     final hasThumbnail = thumbnailUrl != null && thumbnailUrl.isNotEmpty;
@@ -2322,14 +2388,10 @@ class _ExerciseDetailSheet extends StatelessWidget {
         .map((group) => group.trim())
         .where((group) => group.isNotEmpty)
         .toList();
-    final weightLabel = weightUsed == null
-        ? null
-        : l10n.weightBadgeLabel(
-            weightUsed!.toStringAsFixed(weightUsed! % 1 == 0 ? 0 : 1),
-          );
+    final weightLabel = weightUsed == null ? null : weightText(weightUsed!);
     final currentPerformanceLabels =
         (currentPerformances ?? const <SetPerformance>[])
-            .map(formatSetPerformance)
+            .map((set) => _todaySetLabel(l10n, set, weightText))
             .where((label) => label.isNotEmpty)
             .toList(growable: false);
 
@@ -2343,19 +2405,12 @@ class _ExerciseDetailSheet extends StatelessWidget {
             alignment: Alignment.topCenter,
             children: [
               Container(
-                width: 72,
-                height: 6,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(top: 10),
                 decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: typeColor.withValues(alpha: 0.25),
-                      blurRadius: 14,
-                      spreadRadius: 1,
-                    ),
-                  ],
+                  color: palette.textSecondary,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Align(
@@ -2383,9 +2438,11 @@ class _ExerciseDetailSheet extends StatelessWidget {
         Text(
           exercise.name,
           style: TextStyle(
+            fontFamily: AppTheme.bodyFontFamily,
             color: palette.textPrimary,
             fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            height: 1.25,
           ),
         ),
         const SizedBox(height: 8),
@@ -2406,7 +2463,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
           children: [
             _InfoChip(
               icon: Icons.local_fire_department_outlined,
-              label: trainingLevel,
+              label: _trainingLevelLabel(l10n, trainingLevel),
               color: typeColor,
               emphasized: true,
             ),
@@ -2430,11 +2487,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: hasVideo
-                      ? typeColor.withValues(alpha: 0.18)
-                      : palette.divider,
-                ),
+                border: Border.all(color: palette.borderSoft),
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -2464,16 +2517,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                                   ),
                             )
                           : Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    palette.surfaceVariant,
-                                    palette.surface,
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                              ),
+                              color: palette.surfaceVariant,
                               alignment: Alignment.center,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -2497,42 +2541,19 @@ class _ExerciseDetailSheet extends StatelessWidget {
                             ),
                     ),
                   ),
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.black.withValues(alpha: 0.08),
-                            Colors.black.withValues(
-                              alpha: hasVideo ? 0.2 : 0.1,
-                            ),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                    ),
-                  ),
                   if (hasVideo)
                     Container(
-                      width: 88,
-                      height: 88,
+                      width: 72,
+                      height: 72,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: palette.surface,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        border: Border.all(color: palette.borderSoft),
                       ),
                       child: Icon(
                         Icons.play_arrow_rounded,
-                        color: typeColor,
-                        size: 54,
+                        color: palette.textPrimary,
+                        size: 44,
                       ),
                     ),
                 ],
@@ -2547,7 +2568,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
             child: _InfoChip(
               icon: Icons.fitness_center,
               label: weightLabel,
-              color: semantic.success,
+              color: palette.textPrimary,
               emphasized: true,
             ),
           ),
@@ -2615,65 +2636,36 @@ class _ExerciseDetailSheet extends StatelessWidget {
         ],
         if (isCompleted) ...[
           const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pop(const _SheetCompletionResult(openActiveExercise: true));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: typeColor,
-                foregroundColor: solidTypeStyle.foreground,
-                side: BorderSide(color: solidTypeStyle.border),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.edit_note_rounded, size: 20),
-              label: Text(AppLocalizations.of(context).editData),
-            ),
+          ExomSecondaryButton(
+            icon: Icons.edit_note_rounded,
+            label: AppLocalizations.of(context).editData,
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).pop(const _SheetCompletionResult(openActiveExercise: true));
+            },
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pop(const _SheetCompletionResult(markPending: true));
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: palette.textPrimary,
-                side: BorderSide(color: palette.divider),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.radio_button_unchecked_rounded, size: 18),
-              label: Text(l10n.markExercisePendingButton),
-            ),
+          const SizedBox(height: 8),
+          ExomQuietButton(
+            label: l10n.markExercisePendingButton,
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).pop(const _SheetCompletionResult(markPending: true));
+            },
           ),
         ] else ...[
           const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pop(const _SheetCompletionResult(openActiveExercise: true));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: typeColor,
-                foregroundColor: solidTypeStyle.foreground,
-                side: BorderSide(color: solidTypeStyle.border),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: Text(
-                hasPartialProgress
-                    ? l10n.resumeExerciseButton
-                    : l10n.startExerciseButton,
-              ),
-            ),
+          ExomSecondaryButton(
+            icon: Icons.play_arrow_rounded,
+            label: hasPartialProgress
+                ? l10n.resumeExerciseButton
+                : l10n.startExerciseButton,
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).pop(const _SheetCompletionResult(openActiveExercise: true));
+            },
           ),
         ],
         const SizedBox(height: 32),
@@ -2740,7 +2732,7 @@ class _SheetHeaderAction extends StatelessWidget {
                           color: highlighted
                               ? palette.textPrimary
                               : palette.textSecondary,
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2777,7 +2769,7 @@ class _InfoChip extends StatelessWidget {
       label,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
     );
 
     return Container(

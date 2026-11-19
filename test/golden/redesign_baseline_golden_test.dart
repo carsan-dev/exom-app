@@ -8,14 +8,18 @@
 // rasterisation differs per OS, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden
 //
-// Scenes: Detalle, Ejercicio activo, Hoja de serie, Descanso; light/dark and
+// Scenes: Inicio (day with a session), Inicio descanso (day without a
+// training), Detalle, Detalle en curso and Detalle hecho (L3: one exercise
+// confirmed, one pending sync and one saved on the phone; every exercise
+// done), Ejercicio activo, Hoja de serie, Descanso, and since L3 unit 3 Hoja
+// de serie with a field error and Descanso after «+30 s», and since L3 unit 4
+// the active circuit (executing, its set sheet, a round rest and ready to
+// finish); light/dark and
 // text scale 1.0/1.6 on a 390x844 surface at devicePixelRatio 1.0.
 //
-// Skipped scene: Inicio. HomePage (header "Hoy/hace N dias", WeekDaySelector
-// today/past styling and day letters) reads DateTime.now() directly with no
-// injectable clock, so its pixels change every day. Pinning it would need a
-// test-only hook in lib/, which L0 forbids. Inicio is still covered by the
-// accessibility inventory (test/a11y), which does not compare pixels.
+// Inicio was skipped in L0 because HomePage read DateTime.now() directly. L3
+// (decision D10) added an injectable clock to HomePage; the Inicio scenes fix
+// it to Wednesday 18 Nov 2026 (see redesign_scenes.dart).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,10 +27,20 @@ import 'redesign_scenes.dart';
 
 void main() {
   const scenes = [
+    RedesignScene.inicio,
+    RedesignScene.inicioDescanso,
     RedesignScene.detalle,
+    RedesignScene.detalleEnCurso,
+    RedesignScene.detalleHecho,
     RedesignScene.ejercicioActivo,
     RedesignScene.hojaSerie,
     RedesignScene.descanso,
+    RedesignScene.hojaSerieError,
+    RedesignScene.descansoMas30,
+    RedesignScene.circuitoActivo,
+    RedesignScene.hojaCircuito,
+    RedesignScene.descansoCircuito,
+    RedesignScene.circuitoListo,
   ];
   for (final scene in scenes) {
     for (final brightness in Brightness.values) {

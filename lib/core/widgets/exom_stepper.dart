@@ -1,5 +1,6 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 /// − value + stepper of the set sheet (sketch «A · Hoja de registro»).
@@ -36,6 +37,12 @@ class ExomStepper<T> extends StatelessWidget {
     this.errorText,
     this.increasedValue,
     this.decreasedValue,
+    this.focusNode,
+    this.autofocus = false,
+    this.textInputAction,
+    this.textFieldKey,
+    this.errorBelowRow = false,
+    this.errorIcon,
   });
 
   final T value;
@@ -62,6 +69,27 @@ class ExomStepper<T> extends StatelessWidget {
   final T? increasedValue;
   final T? decreasedValue;
 
+  /// Focus of the typed field (L3: the sheet moves focus to the first
+  /// invalid field). Only used with [textController].
+  final FocusNode? focusNode;
+
+  /// Whether the typed field takes focus when it appears. Off by default.
+  final bool autofocus;
+
+  /// Keyboard action of the typed field (e.g. next from reps to weight).
+  final TextInputAction? textInputAction;
+
+  /// Key of the inner [TextField], a stable handle for tests.
+  final Key? textFieldKey;
+
+  /// Paints [errorText] under the whole row (full width, never clipped
+  /// between the ± buttons) instead of inside the field. The field keeps its
+  /// error styling and the control is exposed as invalid to screen readers.
+  final bool errorBelowRow;
+
+  /// Icon shown before [errorText] when [errorBelowRow] is set.
+  final IconData? errorIcon;
+
   static const double buttonSize = 56;
 
   @override
@@ -75,10 +103,16 @@ class ExomStepper<T> extends StatelessWidget {
       color: palette.textPrimary,
     );
 
+    final error = errorText;
+    final errorOutside = errorBelowRow && error != null;
     final Widget centre;
     if (textController != null) {
       centre = TextField(
+        key: textFieldKey,
         controller: textController,
+        focusNode: focusNode,
+        autofocus: autofocus,
+        textInputAction: textInputAction,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onChanged: onTextChanged,
@@ -89,7 +123,9 @@ class ExomStepper<T> extends StatelessWidget {
           filled: false,
           isDense: true,
           labelText: null,
-          errorText: errorText,
+          errorText: errorOutside ? null : error,
+          // Keeps the field's error styling; the message is painted below.
+          error: errorOutside ? const SizedBox.shrink() : null,
           errorMaxLines: 3,
           suffixText: unit,
           suffixStyle: TextStyle(
@@ -108,6 +144,18 @@ class ExomStepper<T> extends StatelessWidget {
           focusedBorder: UnderlineInputBorder(
             borderSide: BorderSide(color: palette.textPrimary, width: 2),
           ),
+          // With the message below the row, the field keeps the underline
+          // shape in the error colour (not the theme's outlined error box).
+          errorBorder: errorOutside
+              ? UnderlineInputBorder(
+                  borderSide: BorderSide(color: palette.error, width: 1.5),
+                )
+              : null,
+          focusedErrorBorder: errorOutside
+              ? UnderlineInputBorder(
+                  borderSide: BorderSide(color: palette.error, width: 2),
+                )
+              : null,
         ),
       );
     } else {
@@ -134,13 +182,16 @@ class ExomStepper<T> extends StatelessWidget {
 
     final increased = increasedValue;
     final decreased = decreasedValue;
+    final formatted = formatValue(value);
+    // An empty value (an empty typed field) cannot be exposed with resulting
+    // values: the platform requires both or neither (framework assertion).
     final exposeValue =
+        formatted.isNotEmpty &&
         (onIncrement == null || increased != null) &&
         (onDecrement == null || decreased != null);
-    final formatted = formatValue(value);
-    return Semantics(
+    final control = Semantics(
       container: true,
-      label: exposeValue ? label : '$label, $formatted',
+      label: exposeValue || formatted.isEmpty ? label : '$label, $formatted',
       value: exposeValue ? formatted : null,
       increasedValue: exposeValue && onIncrement != null && increased != null
           ? formatValue(increased)
@@ -148,6 +199,9 @@ class ExomStepper<T> extends StatelessWidget {
       decreasedValue: exposeValue && onDecrement != null && decreased != null
           ? formatValue(decreased)
           : null,
+      validationResult: errorOutside
+          ? SemanticsValidationResult.invalid
+          : SemanticsValidationResult.none,
       onIncrease: onIncrement,
       onDecrease: onDecrement,
       child: Row(
@@ -171,6 +225,47 @@ class ExomStepper<T> extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (!errorOutside) return control;
+
+    final icon = errorIcon;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        control,
+        const SizedBox(height: 8),
+        Semantics(
+          container: true,
+          liveRegion: true,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (icon != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: ExcludeSemantics(
+                    child: Icon(icon, size: 18, color: palette.error),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  error,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                    color: palette.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

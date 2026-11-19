@@ -1,0 +1,694 @@
+// L3 unit 2: training detail on design A (rule rows, pinned next action,
+// per-exercise sync status, display-only weight unit).
+import 'dart:async';
+
+import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
+import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_completed_exercises_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_previous_exercise_performances_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_today_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_training_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
+import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
+import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
+import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
+import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
+
+const _date = '2026-09-05';
+const _execution = 'execution-1';
+const _trainingId = 'training-1';
+
+TrainingExerciseEntity _exercise(int order, String name, {int sets = 3}) =>
+    TrainingExerciseEntity(
+      id: 'te-$order',
+      order: order,
+      sets: sets,
+      repsOrDuration: '8',
+      targetRir: 2,
+      restSeconds: 90,
+      exercise: ExerciseEntity(id: 'ex-$order', name: name, muscleGroups: []),
+    );
+
+TrainingExerciseEntity _member(int order, String name, int position) =>
+    TrainingExerciseEntity(
+      id: 'te-$order',
+      order: order,
+      sets: 3,
+      repsOrDuration: '10',
+      restSeconds: 30,
+      blockId: 'block-1',
+      positionInBlock: position,
+      blockName: 'Circuito core',
+      blockRounds: 2,
+      restBetweenRoundsSeconds: 45,
+      exercise: ExerciseEntity(id: 'ex-$order', name: name, muscleGroups: []),
+    );
+
+final _training = TrainingEntity(
+  id: _trainingId,
+  name: 'Pierna fuerza',
+  types: const ['FUERZA'],
+  level: 'INTERMEDIATE',
+  estimatedDurationMin: 55,
+  tags: const [],
+  exercises: [
+    _exercise(1, 'Sentadilla búlgara', sets: 4),
+    _exercise(2, 'Peso muerto rumano'),
+    _exercise(3, 'Elevación de gemelos'),
+    _exercise(4, 'Plancha frontal'),
+    _exercise(5, 'Hip thrust'),
+  ],
+);
+
+final _circuitFirst = TrainingEntity(
+  id: _trainingId,
+  name: 'Core',
+  types: const ['FUERZA'],
+  level: 'INTERMEDIATE',
+  tags: const [],
+  exercises: [
+    _member(1, 'Crunch', 0),
+    _member(2, 'Plancha', 1),
+    _exercise(3, 'Remo'),
+  ],
+);
+
+const _previous = [
+  SetPerformance(setNumber: 2, reps: 8, weightKg: 62.5),
+  SetPerformance(setNumber: 1, reps: 8, weightKg: 60),
+];
+
+class _Storage extends LocalStorage {
+  _Storage({required this.unitSystem});
+
+  final UnitSystem unitSystem;
+  List<Map<String, dynamic>> actions = [];
+  final Map<String, ActiveWorkoutHiveModel> drafts = {};
+
+  @override
+  String? get sessionStamp => 'owner:1:test';
+  @override
+  bool get hasQuarantinedWorkoutDrafts => false;
+  @override
+  List<Map<String, dynamic>> getPendingSyncActions() => [...actions];
+  @override
+  List<Map<String, dynamic>> getTrainingExecutions(
+    String trainingId,
+    String date,
+  ) => const [];
+  @override
+  List<Map<String, dynamic>> getConfirmedTrainingExecutions(
+    String trainingId,
+    String date,
+  ) => const [];
+  @override
+  List<Map<String, dynamic>> getPendingTrainingExecutions() => const [
+    {
+      'id': _execution,
+      'training_id': _trainingId,
+      'assignment_date': _date,
+      'status': 'pending',
+    },
+  ];
+  @override
+  bool hasCompletedTrainingExecution(String trainingId, String date) => false;
+  @override
+  Map<String, dynamic>? getTrainingCompletionDraft(
+    String trainingId,
+    String date,
+    String executionId,
+  ) => null;
+  @override
+  Future<void> saveTrainingCompletionDraft(
+    String trainingId,
+    String date,
+    String executionId, {
+    int? rpe,
+    String? notes,
+  }) async {}
+  @override
+  List<Map<String, dynamic>> getFeedbackUploadQueue() => const [];
+  @override
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
+      drafts[exerciseId];
+  @override
+  ActiveWorkoutHiveModel? recoverableLegacyWorkout(
+    String trainingId,
+    String exerciseId,
+    String date,
+  ) => null;
+  @override
+  ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
+      ValueNotifier<Box<ActiveWorkoutHiveModel>>(_EmptyBox());
+  @override
+  ThemeMode getThemeModePreference() => ThemeMode.dark;
+  @override
+  Locale? getLocalePreference() => const Locale('es');
+  @override
+  UnitSystem getUnitSystemPreference() => unitSystem;
+}
+
+class _EmptyBox extends Fake implements Box<ActiveWorkoutHiveModel> {}
+
+class _Sync extends OfflineSyncService {
+  _Sync(LocalStorage storage) : super(ApiClient(useAuth: false), storage);
+  final controller = StreamController<void>.broadcast();
+  @override
+  Stream<void> get changes => controller.stream;
+  @override
+  CompletionSyncBlocker? completionBlocker(
+    String trainingId,
+    String date,
+    String? sessionId,
+  ) => null;
+}
+
+class _Repository extends Fake implements TrainingRepository {
+  _Repository(this.training, this.completed);
+  final TrainingEntity training;
+  final Set<String> completed;
+
+  @override
+  Future<TrainingEntity> getTraining(String id, {String? date}) async =>
+      training;
+  @override
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
+      TrainingDayProgress(
+        sessions: {
+          _execution: TrainingDayProgress(
+            ids: completed,
+            weights: {for (final id in completed) id: 62.5},
+          ),
+        },
+        sessionTrainings: const {_execution: _trainingId},
+      );
+  @override
+  Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
+    List<String> exerciseIds,
+    String beforeDate,
+  ) async => {'ex-1': _previous, 'ex-3': _previous};
+}
+
+Map<String, dynamic> _action(String exercise, String status) => {
+  'id': 'op-$exercise',
+  'type': 'mark_exercise_completed',
+  'date': _date,
+  'training_exercise_id': exercise,
+  'training_session_id': _execution,
+  'status': status,
+};
+
+Map<String, dynamic> _completionAction(String status) => {
+  'id': 'op-complete-training',
+  'type': 'complete_training',
+  'date': _date,
+  'training_id': _trainingId,
+  'training_session_id': _execution,
+  'status': status,
+};
+
+class _Harness {
+  _Harness(this.storage, this.sync, this.pushed, this.router);
+  final _Storage storage;
+  final _Sync sync;
+
+  /// `extra` of every build of a pushed route (a builder may run more than
+  /// once per push: use [pushedRoutes] to count pushes).
+  final List<Object?> pushed;
+  final GoRouter router;
+
+  int get pushedRoutes =>
+      router.routerDelegate.currentConfiguration.matches.length - 1;
+}
+
+Future<_Harness> _mount(
+  WidgetTester tester, {
+  TrainingEntity? training,
+  Set<String> completed = const {},
+  List<Map<String, dynamic>> actions = const [],
+  UnitSystem unitSystem = UnitSystem.metric,
+  ThemeData? theme,
+  Size size = const Size(390, 844),
+  double textScale = 1.0,
+  void Function(_Storage storage)? seed,
+  Locale locale = const Locale('es'),
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await sl.reset();
+  final storage = _Storage(unitSystem: unitSystem)..actions = [...actions];
+  seed?.call(storage);
+  final sync = _Sync(storage);
+  final repository = _Repository(training ?? _training, completed);
+  sl.registerSingleton<LocalStorage>(storage);
+  sl.registerSingleton<OfflineSyncService>(sync);
+  sl.registerFactory<TrainingBloc>(
+    () => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(
+        repository,
+      ),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase:
+          GetPreviousExercisePerformancesUseCase(repository),
+    ),
+  );
+  final preferences = AppPreferencesCubit(storage);
+  addTearDown(preferences.close);
+  final pushed = <Object?>[];
+  final router = GoRouter(
+    initialLocation: '/detail',
+    routes: [
+      GoRoute(
+        path: '/detail',
+        builder: (_, _) => const TrainingDetailPage(
+          trainingId: _trainingId,
+          selectedDate: _date,
+          selectedExecutionId: _execution,
+        ),
+      ),
+      GoRoute(
+        path: '/trainings/:training/exercises/:exercise',
+        builder: (_, state) {
+          pushed.add(state.extra);
+          return const Scaffold(body: Text('active-exercise-route'));
+        },
+      ),
+      GoRoute(
+        path: '/trainings/:training/circuits/:block',
+        builder: (_, state) {
+          pushed.add(state.extra);
+          return const Scaffold(body: Text('active-circuit-route'));
+        },
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    BlocProvider<AppPreferencesCubit>.value(
+      value: preferences,
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
+  return _Harness(storage, sync, pushed, router);
+}
+
+AppLocalizations _l10n(WidgetTester tester) =>
+    AppLocalizations.of(tester.element(find.byType(TrainingDetailPage)));
+
+Color? _background(WidgetTester tester, Finder button) => tester
+    .widget<ElevatedButton>(button)
+    .style
+    ?.backgroundColor
+    ?.resolve(const <WidgetState>{});
+
+void main() {
+  tearDown(sl.reset);
+
+  final completeButton = find.byKey(const Key('complete-training-button'));
+  final nextButton = find.byKey(const Key('training-next-button'));
+
+  testWidgets('back button carries the localized back label', (tester) async {
+    await _mount(tester);
+    final context = tester.element(find.byType(TrainingDetailPage));
+    expect(
+      find.byTooltip(MaterialLocalizations.of(context).backButtonTooltip),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('while work remains: lime next action, completion secondary', (
+    tester,
+  ) async {
+    await _mount(tester, completed: {'te-1'});
+    final l10n = _l10n(tester);
+    expect(nextButton, findsOneWidget);
+    expect(
+      find.text(
+        l10n.trainingDetailNextAction('Peso muerto rumano').toUpperCase(),
+      ),
+      findsOneWidget,
+    );
+    expect(completeButton, findsOneWidget);
+    expect(_background(tester, completeButton), Colors.transparent);
+    expect(
+      tester.widget<ElevatedButton>(completeButton).onPressed,
+      isNotNull,
+    );
+    expect(find.text(l10n.completeTrainingConfirmAction), findsOneWidget);
+  });
+
+  testWidgets('next opens the first unfinished exercise with its route args', (
+    tester,
+  ) async {
+    final harness = await _mount(tester, completed: {'te-1', 'te-2'});
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+    expect(find.text('active-exercise-route'), findsOneWidget);
+    final args = harness.pushed.last! as ActiveExercisePageArgs;
+    expect(args.trainingExercise.id, 'te-3');
+    expect(args.sessionId, _execution);
+    expect(args.assignmentDate, _date);
+    expect(args.trainingName, 'Pierna fuerza');
+    expect(args.initialWeightKg, isNull);
+    expect(args.previousPerformances, _previous);
+    expect(args.currentPerformances, isNull);
+  });
+
+  testWidgets('next passes today weight of a started exercise', (
+    tester,
+  ) async {
+    final harness = await _mount(
+      tester,
+      training: TrainingEntity(
+        id: _trainingId,
+        name: 'Pierna fuerza',
+        types: const ['FUERZA'],
+        level: 'INTERMEDIATE',
+        tags: const [],
+        exercises: [_exercise(1, 'Sentadilla búlgara', sets: 4)],
+      ),
+    );
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+    final args = harness.pushed.last! as ActiveExercisePageArgs;
+    expect(args.trainingExercise.id, 'te-1');
+    expect(args.previousPerformances, _previous);
+  });
+
+  testWidgets('next opens a circuit exactly as its row does', (tester) async {
+    final harness = await _mount(tester, training: _circuitFirst);
+    expect(
+      find.text(
+        _l10n(tester).trainingDetailNextAction('Circuito core').toUpperCase(),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+    expect(find.text('active-circuit-route'), findsOneWidget);
+    final args = harness.pushed.last! as ActiveCircuitPageArgs;
+    expect(args.blockId, 'block-1');
+    expect(args.sessionId, _execution);
+    expect(args.exercises.map((e) => e.id), ['te-1', 'te-2']);
+    expect(args.rounds, 2);
+    expect(args.restBetweenRoundsSeconds, 45);
+  });
+
+  testWidgets('a double tap on next pushes one route', (tester) async {
+    final harness = await _mount(tester);
+    await tester.tap(nextButton);
+    await tester.tap(nextButton, warnIfMissed: false);
+    await tester.pump();
+    await tester.tap(nextButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(harness.pushedRoutes, 1);
+  });
+
+  testWidgets('all done: completion is the only lime action and keeps its flow', (
+    tester,
+  ) async {
+    await _mount(
+      tester,
+      completed: {for (var i = 1; i <= 5; i++) 'te-$i'},
+    );
+    expect(nextButton, findsNothing);
+    expect(find.byType(ExomPrimaryButton), findsNothing);
+    expect(_background(tester, completeButton), AppColors.primary);
+    await tester.tap(completeButton);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
+    for (var value = 1; value <= 10; value++) {
+      expect(find.byKey(Key('completion-rpe-$value')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('completion-note')), findsOneWidget);
+    expect(find.byKey(const Key('confirm-complete-training')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('confirm-complete-training')))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byKey(const Key('completion-rpe-8')));
+    await tester.pump();
+    expect(find.byKey(const Key('completion-rpe-selected')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-complete-training')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
+  });
+
+  testWidgets('rows show each exercise sync state from the queue', (
+    tester,
+  ) async {
+    final harness = await _mount(
+      tester,
+      completed: {'te-1', 'te-2', 'te-3', 'te-4'},
+      size: const Size(390, 1600),
+      actions: [
+        _action('te-2', 'queued'),
+        _action('te-3', 'uploading'),
+        _action('te-4', 'failed'),
+      ],
+      seed: (storage) => storage.drafts['te-5:$_date:$_execution'] =
+          ActiveWorkoutHiveModel(
+            trainingId: _trainingId,
+            exerciseId: 'te-5:$_date:$_execution',
+            currentSet: 2,
+            completedSets: 1,
+            lastWeightKg: 40,
+          ),
+    );
+    final l10n = _l10n(tester);
+    expect(find.text(l10n.syncStatusConfirmed), findsOneWidget);
+    expect(find.text(l10n.syncStatusPending), findsOneWidget);
+    expect(find.text(l10n.syncStatusSending), findsOneWidget);
+    expect(find.text(l10n.syncStatusFailed), findsOneWidget);
+    expect(find.text(l10n.syncStatusSavedOnDevice), findsOneWidget);
+    expect(
+      find.text('${l10n.trainingDetailSetsProgress(1, 3)} · 40 kg'),
+      findsOneWidget,
+    );
+
+    // The queue acknowledges te-2: the mounted detail refreshes on changes.
+    harness.storage.actions = [
+      _action('te-3', 'uploading'),
+      _action('te-4', 'failed'),
+    ];
+    harness.sync.controller.add(null);
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(l10n.syncStatusPending), findsNothing);
+    expect(find.text(l10n.syncStatusConfirmed), findsNWidgets(2));
+  });
+
+  testWidgets('rows completed by "Completar todo" follow complete_training', (
+    tester,
+  ) async {
+    final all = {for (var i = 1; i <= 5; i++) 'te-$i'};
+    final harness = await _mount(
+      tester,
+      completed: all,
+      size: const Size(390, 1600),
+      actions: [_completionAction('queued')],
+    );
+    final l10n = _l10n(tester);
+    expect(find.text(l10n.syncStatusConfirmed), findsNothing);
+    expect(find.text(l10n.syncStatusPending), findsNWidgets(5));
+
+    Future<void> queue(List<Map<String, dynamic>> actions) async {
+      harness.storage.actions = actions;
+      harness.sync.controller.add(null);
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await queue([_completionAction('uploading')]);
+    expect(find.text(l10n.syncStatusConfirmed), findsNothing);
+    expect(find.text(l10n.syncStatusSending), findsNWidgets(5));
+
+    // A mark action of te-1 still decides that row.
+    await queue([_action('te-1', 'queued'), _completionAction('failed')]);
+    expect(find.text(l10n.syncStatusConfirmed), findsNothing);
+    expect(find.text(l10n.syncStatusPending), findsOneWidget);
+    expect(find.text(l10n.syncStatusFailed), findsNWidgets(4));
+
+    await queue(const []);
+    expect(find.text(l10n.syncStatusConfirmed), findsNWidgets(5));
+  });
+
+  for (final (locale, label) in const [
+    (Locale('es'), 'Intermedio'),
+    (Locale('en'), 'Intermediate'),
+  ]) {
+    testWidgets('the level is localized, not the raw enum (${locale.languageCode})', (
+      tester,
+    ) async {
+      // L3 review B-F6: «INTERMEDIATE» used to be shown as sent by the API.
+      await _mount(tester, locale: locale);
+      expect(find.textContaining(label), findsOneWidget);
+      expect(find.textContaining('INTERMEDIATE'), findsNothing);
+
+      await tester.tap(find.text('Peso muerto rumano'));
+      await tester.pumpAndSettle();
+      expect(find.text(label), findsOneWidget);
+      expect(find.textContaining('INTERMEDIATE'), findsNothing);
+    });
+  }
+
+  testWidgets('an unknown level falls back to its raw text', (tester) async {
+    await _mount(
+      tester,
+      training: TrainingEntity(
+        id: _trainingId,
+        name: 'Pierna fuerza',
+        types: const ['FUERZA'],
+        level: 'ELITE',
+        tags: const [],
+        exercises: [_exercise(1, 'Sentadilla búlgara')],
+      ),
+    );
+    expect(find.textContaining('ELITE'), findsOneWidget);
+  });
+
+  testWidgets('weights follow the unit preference for display only', (
+    tester,
+  ) async {
+    await _mount(tester, completed: {'te-1'});
+    final l10n = _l10n(tester);
+    expect(
+      find.text(l10n.trainingDetailPrevious('8 × 60 kg')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.text(l10n.trainingDetailToday('62,5 kg')),
+      findsOneWidget,
+    );
+
+    await _mount(tester, completed: {'te-1'}, unitSystem: UnitSystem.imperial);
+    expect(
+      find.text(l10n.trainingDetailPrevious('8 × 132,28 lb')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.text(l10n.trainingDetailToday('137,79 lb')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a completed row is done without lime: check and muted name', (
+    tester,
+  ) async {
+    await _mount(tester, completed: {'te-1'});
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    final name = tester.widget<Text>(find.text('Sentadilla búlgara'));
+    final palette = AppTheme.dark.extension<ExomThemePalette>()!;
+    expect(name.style?.color, palette.textSecondary);
+    expect(name.style?.color, isNot(AppColors.primary));
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('320 dp at 1.6x: no overflow, list scrolls, actions reachable '
+        '(${brightness.name})', (tester) async {
+      await _mount(
+        tester,
+        training: TrainingEntity(
+          id: _trainingId,
+          name: 'Entrenamiento de fuerza con nombre extraordinariamente largo',
+          types: const ['FUERZA', 'HIPERTROFIA'],
+          level: 'INTERMEDIATE',
+          estimatedDurationMin: 55,
+          tags: const ['pierna', 'gimnasio'],
+          exercises: [
+            _exercise(1, 'Sentadilla búlgara con mancuernas y pausa isométrica'),
+            _exercise(2, 'Peso muerto rumano'),
+            _exercise(3, 'Elevación de gemelos en máquina sentado'),
+          ],
+        ),
+        completed: {'te-1'},
+        actions: [_action('te-1', 'queued')],
+        theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+        size: const Size(320, 640),
+        textScale: 1.6,
+      );
+      expect(tester.takeException(), isNull);
+      expect(nextButton.hitTestable(), findsOneWidget);
+      expect(completeButton.hitTestable(), findsOneWidget);
+      final scrollable = find.byType(Scrollable).first;
+      // Drag until the row is hit-testable, not merely built inside the
+      // cache extent: with the shorter localized level (L3 review B-F6) the
+      // old finder stopped dragging while the row was not yet hit-testable.
+      await tester.dragUntilVisible(
+        find.text('Elevación de gemelos en máquina sentado').hitTestable(),
+        scrollable,
+        const Offset(0, -200),
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Elevación de gemelos en máquina sentado').hitTestable(),
+        findsOneWidget,
+      );
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    });
+  }
+
+  testWidgets('a long exercise name wraps instead of being ellipsised', (
+    tester,
+  ) async {
+    const longName = 'Sentadilla búlgara con mancuernas y pausa isométrica';
+    await _mount(
+      tester,
+      training: TrainingEntity(
+        id: _trainingId,
+        name: 'Pierna',
+        types: const ['FUERZA'],
+        level: 'INTERMEDIATE',
+        tags: const [],
+        exercises: [_exercise(1, longName)],
+      ),
+      size: const Size(320, 640),
+    );
+    final text = tester.widget<Text>(find.text(longName));
+    expect(text.maxLines, isNull);
+    expect(text.overflow, isNot(TextOverflow.ellipsis));
+    expect(tester.getSize(find.text(longName)).height, greaterThan(30));
+  });
+}

@@ -9,22 +9,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/formatters/weight_input.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/services/set_prefill.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
-import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_value_text.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+
+export 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart'
+    show SetPerformanceResult;
 
 class ActiveExercisePageArgs {
   final TrainingBloc trainingBloc;
@@ -135,18 +146,14 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
 
+  /// True from the tap on «Registrar serie» until the set is dispatched or
+  /// abandoned: repeated taps are ignored (motion card 8a).
+  bool _logging = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
-  }
-
-  Color _typeColor(BuildContext context) {
-    return trainingAccentColor(
-      context,
-      accentColor: widget.args.accentColorHex,
-      types: widget.args.trainingTypes,
-    );
   }
 
   void _popOnce() {
@@ -264,6 +271,21 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   Future<void> _onCompleteSetPressed(
     ActiveExerciseState state,
     AppLocalizations l10n,
+    WeightText weightText,
+  ) async {
+    if (_logging) return;
+    setState(() => _logging = true);
+    try {
+      await _logSet(state, l10n, weightText);
+    } finally {
+      if (mounted) setState(() => _logging = false);
+    }
+  }
+
+  Future<void> _logSet(
+    ActiveExerciseState state,
+    AppLocalizations l10n,
+    WeightText weightText,
   ) async {
     final timeUnit = timePerformanceUnitForExercise(
       widget.args.trainingExercise,
@@ -289,9 +311,18 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
             widget.args.previousPerformances,
             state.currentSet,
           ),
+          previousSession: widget.args.previousPerformances,
+          lastSetThisExecution: state.setPerformances.isEmpty
+              ? null
+              : state.setPerformances.last,
+          targetCount: _target(state).count,
+          targetRir: widget.args.trainingExercise.targetRir,
           timeUnit: timeUnit,
           repsRequired: widget.args.trainingExercise.requestSetTracking,
+          unitSystem: weightText.unitSystem,
+          decimalSeparator: weightText.decimalSeparator,
         );
+    // Null: dismissed, cancelled or a duplicate trigger. Nothing happened.
     if (!mounted || performance == null) return;
 
     String? feedbackId =
@@ -579,18 +610,81 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     );
   }
 
-  String _formatWeight(double weight) {
-    return weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1);
+  bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
+
+  bool get _hasVideo {
+    final url = widget.args.trainingExercise.exercise.videoUrl?.trim();
+    return url != null && url.isNotEmpty;
   }
 
-  bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
+  List<TechniqueSection> _techniqueSections(AppLocalizations l10n) {
+    final exercise = widget.args.trainingExercise.exercise;
+    return [
+      if (_hasContent(exercise.techniqueText))
+        (title: l10n.technique, text: exercise.techniqueText!.trim()),
+      if (_hasContent(exercise.commonErrorsText))
+        (title: l10n.commonMistakes, text: exercise.commonErrorsText!.trim()),
+      if (_hasContent(exercise.explanationText))
+        (title: l10n.explanation, text: exercise.explanationText!.trim()),
+    ];
+  }
+
+  Future<void> _openTechnique(AppLocalizations l10n) async {
+    final exercise = widget.args.trainingExercise.exercise;
+    await showExomSheet<void>(
+      context: context,
+      builder: (_) => ExerciseTechniqueSheet(
+        exerciseName: exercise.name,
+        hasVideo: _hasVideo,
+        videoUrl: exercise.videoUrl,
+        thumbnailUrl: exercise.thumbnailUrl,
+        onOpenVideo: _openVideoPlayer,
+        sections: _techniqueSections(l10n),
+      ),
+    );
+  }
+
+  /// «Ejercicio 2 de 6» from the training detail that opened this page, when
+  /// it is still the loaded state of the shared TrainingBloc.
+  String? _positionLabel(AppLocalizations l10n) {
+    final trainingState = widget.args.trainingBloc.state;
+    if (trainingState is! TrainingDetailLoaded ||
+        trainingState.training.id != widget.trainingId) {
+      return null;
+    }
+    final exercises = trainingState.training.exercises;
+    final index = exercises.indexWhere(
+      (item) => item.id == widget.args.trainingExercise.id,
+    );
+    if (index < 0) return null;
+    return l10n.activeExercisePosition(index + 1, exercises.length);
+  }
+
+  _PrescriptionTarget _target(ActiveExerciseState state) =>
+      _PrescriptionTarget.of(
+        widget.args.trainingExercise,
+        savedTotalSeconds: state.timedTotalSeconds,
+      );
+
+  double? _weightForSet(ActiveExerciseState state) => prefillWeightKg(
+    today: performanceForSet(widget.args.currentPerformances, state.currentSet),
+    sessionWeightKg: state.weightKg,
+    previous: widget.args.previousPerformances,
+    setNumber: state.currentSet,
+  );
+
+  Future<void> _close() async {
+    final shouldClose = await _confirmExit();
+    if (!mounted || !shouldClose) return;
+    _popOnce();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final exercise = widget.args.trainingExercise.exercise;
-    final typeColor = _typeColor(context);
-    final solidTypeStyle = trainingColorStyle(context, typeColor);
+    // Read here (this widget's build), not inside the BlocBuilder callback.
+    final weightText = WeightText.of(context);
 
     if (!_bootstrapped) {
       return ExomStaticBackground(
@@ -627,22 +721,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(
         builder: (context, state) {
           final palette = context.exomPalette;
-          final semantic = context.exomSemantic;
-          final targetPrescription = formatExercisePrescription(
-            widget.args.trainingExercise,
-            savedTotalSeconds: state.timedTotalSeconds,
-            savedTimedPrescription: state.timedPrescription,
-          );
-          final prescriptionLabel = state.weightKg == null
-              ? targetPrescription
-              : '$targetPrescription x ${_formatWeight(state.weightKg!)} kg';
-          final previousPerformance = performanceForSet(
-            widget.args.previousPerformances,
-            state.currentSet,
-          );
-          final previousPerformanceLabel = previousPerformance == null
-              ? null
-              : formatSetPerformance(previousPerformance);
+          final target = _target(state);
+          final position = _positionLabel(l10n);
 
           return PopScope<void>(
             canPop: _allowPop,
@@ -658,249 +738,51 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                 body: SafeArea(
                   bottom: false,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                        child: Row(
-                          children: [
-                            _CircleIconButton(
-                              icon: Icons.close_rounded,
-                              onTap: () async {
-                                final shouldClose = await _confirmExit();
-                                if (!context.mounted || !shouldClose) return;
-                                _popOnce();
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    widget.args.trainingName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: palette.textSecondary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    exercise.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: palette.textPrimary,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 56),
-                          ],
-                        ),
+                      _Header(
+                        exerciseName: exercise.name,
+                        position: position,
+                        closeTooltip: l10n.activeExerciseCloseA11y,
+                        onClose: _close,
                       ),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: 200,
-                                child: ExerciseVideoPreview(
-                                  title: exercise.name,
-                                  videoUrl: exercise.videoUrl,
-                                  thumbnailUrl: exercise.thumbnailUrl,
-                                  onTap: _openVideoPlayer,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Container(
-                                decoration: GlassDecoration.card(
-                                  borderRadius: 24,
-                                ),
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: typeColor.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              999,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            state.isResting
-                                                ? l10n.activeExerciseResting
-                                                : l10n.activeExerciseExecuting,
-                                            style: TextStyle(
-                                              color: typeColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          widget.args.trainingLevel,
-                                          style: TextStyle(
-                                            color: palette.textDisabled,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 18),
-                                    Text(
-                                      state.isFinalResting
-                                          ? l10n.exerciseCompleted
-                                          : l10n.exerciseSetProgress(
-                                              state.currentSet,
-                                              state.totalSets,
-                                            ),
-                                      style: TextStyle(
-                                        color: palette.textPrimary,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      prescriptionLabel,
-                                      style: TextStyle(
-                                        color: palette.textSecondary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (state.isExecuting &&
-                                        state.timedTotalSeconds != null)
-                                      ExecutionTimer(
-                                        state: state,
-                                        coordinator: sl<ExecutionTimerCoordinator>(),
-                                        isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
-                                          _ownerSession,
-                                          _timerSessionRevision,
-                                        ),
-                                        runKey: (widget.trainingId, widget.exerciseId,
-                                            widget.args.assignmentDate, widget.args.sessionId),
-                                      ),
-                                    if (previousPerformanceLabel != null &&
-                                        previousPerformanceLabel
-                                            .isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        l10n.setPerformancePrevious(
-                                          previousPerformanceLabel,
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textSecondary,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                    if (state.weightKg != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        l10n.activeExerciseLastWeight(
-                                          _formatWeight(state.weightKg!),
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textDisabled,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 16),
-                                    LinearProgressIndicator(
-                                      value: state.totalSets == 0
-                                          ? 0
-                                          : state.completedSets /
-                                                state.totalSets,
-                                      minHeight: 8,
-                                      backgroundColor: palette.surfaceVariant,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        state.isDone
-                                            ? semantic.success
-                                            : typeColor,
-                                      ),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      l10n.exerciseSeriesProgress(
-                                        state.completedSets,
-                                        state.totalSets,
-                                      ),
-                                      style: TextStyle(
-                                        color: palette.textSecondary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_hasContent(exercise.techniqueText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.technique,
-                                  text: exercise.techniqueText!,
-                                ),
-                              ],
-                              if (_hasContent(exercise.commonErrorsText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.commonMistakes,
-                                  text: exercise.commonErrorsText!,
-                                ),
-                              ],
-                              if (_hasContent(exercise.explanationText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.explanation,
-                                  text: exercise.explanationText!,
-                                ),
-                              ],
-                            ],
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          child: _body(
+                            context,
+                            l10n,
+                            state,
+                            target,
+                            weightText,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                bottomNavigationBar: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    8,
-                    16,
-                    trainingFooterBottomPadding(
-                      platform: defaultTargetPlatform,
-                      navigationInset: MediaQuery.viewPaddingOf(context).bottom,
-                      systemGestureInset: MediaQuery.systemGestureInsetsOf(
-                        context,
-                      ).bottom,
+                bottomNavigationBar: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: palette.background,
+                    border: Border(
+                      top: BorderSide(color: palette.borderSoft),
                     ),
                   ),
                   child: Padding(
-                    padding: EdgeInsets.zero,
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      12,
+                      20,
+                      trainingFooterBottomPadding(
+                        platform: defaultTargetPlatform,
+                        navigationInset: MediaQuery.viewPaddingOf(
+                          context,
+                        ).bottom,
+                        systemGestureInset: MediaQuery.systemGestureInsetsOf(
+                          context,
+                        ).bottom,
+                      ),
+                    ),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
                       switchInCurve: Curves.easeOutCubic,
@@ -909,68 +791,56 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         ActiveExerciseStatus.executing => SizedBox(
                           key: const ValueKey('footer-executing'),
                           width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _onCompleteSetPressed(state, l10n),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  state.currentSet == state.totalSets
-                                  ? semantic.success
-                                  : typeColor,
-                              foregroundColor:
-                                  state.currentSet == state.totalSets
-                                  ? palette.onPrimary
-                                  : solidTypeStyle.foreground,
-                              side: state.currentSet == state.totalSets
-                                  ? null
-                                  : BorderSide(color: solidTypeStyle.border),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            child: Text(l10n.completeSetButton.toUpperCase()),
+                          child: ExomPrimaryButton(
+                            label: l10n.activeExerciseLogSetButton,
+                            trailingIcon: Icons.arrow_forward,
+                            busy: _logging,
+                            onPressed: () =>
+                                _onCompleteSetPressed(state, l10n, weightText),
                           ),
                         ),
                         ActiveExerciseStatus.resting => _RestingFooter(
                           key: ValueKey(
                             'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
                           ),
-                          totalSeconds: state.restSeconds,
                           restEndsAt: state.restEndsAt!,
                           onSkip: () => context.read<ActiveExerciseBloc>().add(
                             const SkipRest(),
                           ),
-                          onFinished: () => context
+                          onExtend: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const FinishRest()),
+                              .add(const ExtendRest()),
+                          onFinished: (endsAt) => context
+                              .read<ActiveExerciseBloc>()
+                              .add(FinishRest(restEndsAt: endsAt)),
                         ),
                         ActiveExerciseStatus.finalResting => _RestingFooter(
                           key: ValueKey(
                             'footer-final-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
                           ),
-                          totalSeconds: state.restSeconds,
                           restEndsAt: state.restEndsAt!,
                           onSkip: () => context.read<ActiveExerciseBloc>().add(
                             const SkipRest(),
                           ),
-                          onFinished: () => context
+                          onExtend: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const FinishRest()),
+                              .add(const ExtendRest()),
+                          onFinished: (endsAt) => context
+                              .read<ActiveExerciseBloc>()
+                              .add(FinishRest(restEndsAt: endsAt)),
                         ),
-                        ActiveExerciseStatus.done => Container(
+                        ActiveExerciseStatus.done => SizedBox(
                           key: const ValueKey('footer-done'),
-                          decoration: GlassDecoration.card(borderRadius: 22),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.6,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                palette.primary,
+                          height: kExomButtonMinHeight,
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.6,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  palette.textPrimary,
+                                ),
                               ),
                             ),
                           ),
@@ -984,6 +854,200 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           );
         },
       ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    AppLocalizations l10n,
+    ActiveExerciseState state,
+    _PrescriptionTarget target,
+    WeightText weightText,
+  ) {
+    final palette = context.exomPalette;
+    final sectionStyle = TextStyle(
+      fontFamily: AppTheme.displayFontFamily,
+      fontSize: 22,
+      fontWeight: FontWeight.w800,
+      height: 1.0,
+      letterSpacing: -0.44,
+      color: palette.textPrimary,
+    );
+    final bigStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 18,
+      height: 1.4,
+      color: palette.textPrimary,
+    );
+    final mutedStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 14,
+      height: 1.4,
+      color: palette.textSecondary,
+    );
+
+    final weightKg = _weightForSet(state);
+    final targetLabel = target.shortLabel(l10n);
+    final chips = ActiveExerciseSetChips(
+      totalSets: state.totalSets,
+      completedSets: state.completedSets,
+      currentSet: state.isExecuting ? state.currentSet : null,
+      performances: state.setPerformances,
+      targetLabel: targetLabel,
+      weightText: weightText,
+    );
+    // The bloc emits before the Hive write; a failed write emits an error
+    // message, so «saved on this phone» is shown only without one. Never
+    // «synced»: sets travel in the exercise completion, not one by one.
+    final savedStatus = state.completedSets > 0 && state.errorMessage == null
+        ? Semantics(
+            container: true,
+            liveRegion: true,
+            child: ExomSyncStatus(
+              key: const Key('active-exercise-set-status'),
+              state: ExomSyncState.guardadaEnMovil,
+              label: l10n.activeExerciseSetSavedStatus(
+                state.completedSets,
+                l10n.syncStatusSavedOnDevice,
+              ),
+            ),
+          )
+        : null;
+    final sets = <Widget>[
+      const SizedBox(height: 28),
+      chips,
+      if (savedStatus != null) ...[const SizedBox(height: 10), savedStatus],
+    ];
+
+    if (state.isResting) {
+      final restEndsAt = state.restEndsAt!;
+      final next = state.isFinalResting
+          ? l10n.exerciseCompleted
+          : targetLabel == null
+          ? null
+          : weightKg == null
+          ? l10n.activeExerciseRestNext(state.currentSet, targetLabel)
+          : l10n.activeExerciseRestNextWithWeight(
+              state.currentSet,
+              targetLabel,
+              weightText(weightKg),
+            );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(l10n.restTimerTitle.toUpperCase(), style: sectionStyle),
+          ),
+          const SizedBox(height: 16),
+          RestCountdown(
+            key: ValueKey(
+              'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+            ),
+            restEndsAt: restEndsAt,
+            totalSeconds: state.restSeconds,
+          ),
+          if (next != null) ...[
+            const SizedBox(height: 16),
+            Text(next, style: bigStyle),
+          ],
+          ...sets,
+        ],
+      );
+    }
+
+    if (state.isDone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              l10n.exerciseCompleted.toUpperCase(),
+              style: sectionStyle,
+            ),
+          ),
+          ...sets,
+        ],
+      );
+    }
+
+    final previous = performanceForSet(
+      widget.args.previousPerformances,
+      state.currentSet,
+    );
+    final previousLabel = previous == null
+        ? null
+        : setValueLabel(l10n, previous, weightText, withRir: true);
+    final targetRir = widget.args.trainingExercise.targetRir;
+    final sections = _techniqueSections(l10n);
+    final hasTechnique = _hasVideo || sections.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(
+            l10n
+                .activeExerciseSetOf(state.currentSet, state.totalSets)
+                .toUpperCase(),
+            style: sectionStyle,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _PrescriptionHero(
+          target: target,
+          targetRir: targetRir,
+          prescription: formatExercisePrescription(
+            widget.args.trainingExercise,
+            savedTotalSeconds: state.timedTotalSeconds,
+            savedTimedPrescription: state.timedPrescription,
+          ),
+        ),
+        if (weightKg != null) ...[
+          const SizedBox(height: 24),
+          Text(
+            l10n.activeExerciseYourWeight(weightText(weightKg)),
+            key: const Key('active-exercise-your-weight'),
+            style: bigStyle,
+          ),
+        ],
+        SizedBox(height: weightKg == null ? 24 : 4),
+        Text(
+          previousLabel == null || previousLabel.isEmpty
+              ? l10n.activeExerciseNoPrevious
+              : l10n.setPerformancePrevious(previousLabel),
+          key: const Key('active-exercise-previous'),
+          style: mutedStyle,
+        ),
+        if (state.restSeconds > 0)
+          Text(
+            l10n.activeExerciseRestAfter(state.restSeconds),
+            style: mutedStyle,
+          ),
+        if (state.isExecuting && state.timedTotalSeconds != null)
+          ExecutionTimer(
+            state: state,
+            coordinator: sl<ExecutionTimerCoordinator>(),
+            isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+              _ownerSession,
+              _timerSessionRevision,
+            ),
+            runKey: (widget.trainingId, widget.exerciseId,
+                widget.args.assignmentDate, widget.args.sessionId),
+          ),
+        ...sets,
+        if (hasTechnique) ...[
+          const SizedBox(height: 20),
+          ExomSecondaryButton(
+            key: const Key('active-exercise-technique'),
+            label: l10n.activeExerciseTechniqueButton,
+            icon: _hasVideo ? Icons.play_arrow_rounded : null,
+            onPressed: () => _openTechnique(l10n),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1022,64 +1086,195 @@ double trainingFooterBottomPadding({
       : navigationInset.clamp(margin, double.infinity);
 }
 
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+/// Target of the prescription for the hero numeral, the set chips and the
+/// sheet prefill: a fixed value or a range, in reps or in time.
+class _PrescriptionTarget {
+  const _PrescriptionTarget({
+    required this.timeUnit,
+    this.value,
+    this.max,
+    this.seconds,
+  });
 
-  const _CircleIconButton({required this.icon, required this.onTap});
+  /// Null for reps.
+  final TimePerformanceUnit? timeUnit;
 
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
+  /// Number shown (reps, seconds or minutes); null when the prescription is
+  /// free text.
+  final int? value;
 
-    return Material(
-      color: palette.surfaceVariant.withValues(alpha: 0.92),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: palette.textPrimary, size: 20),
-        ),
-      ),
+  /// Upper end of a range («8–10»).
+  final int? max;
+
+  /// Timed prescriptions: total seconds (sheet prefill).
+  final int? seconds;
+
+  static final RegExp _leading = RegExp(r'^\s*(\d+)(?:\s*[-–]\s*(\d+))?');
+
+  factory _PrescriptionTarget.of(
+    TrainingExerciseEntity exercise, {
+    int? savedTotalSeconds,
+  }) {
+    final timeUnit = timePerformanceUnitForExercise(exercise);
+    final match = _leading.firstMatch(exercise.repsOrDuration);
+    final textValue = int.tryParse(match?.group(1) ?? '');
+    final textMax = int.tryParse(match?.group(2) ?? '');
+    if (timeUnit == null) {
+      if (exercise.targetValue != null) {
+        return _PrescriptionTarget(timeUnit: null, value: exercise.targetValue);
+      }
+      if (exercise.targetValueMin != null && exercise.targetValueMax != null) {
+        return _PrescriptionTarget(
+          timeUnit: null,
+          value: exercise.targetValueMin,
+          max: exercise.targetValueMax,
+        );
+      }
+      return _PrescriptionTarget(timeUnit: null, value: textValue, max: textMax);
+    }
+    final minutesText =
+        exercise.measureType == null && timeUnit == TimePerformanceUnit.minutes;
+    final total =
+        savedTotalSeconds ??
+        exercise.targetValue ??
+        (textValue == null ? null : textValue * (minutesText ? 60 : 1));
+    if (total == null) {
+      if (exercise.targetValueMin != null && exercise.targetValueMax != null) {
+        final inMinutes =
+            timeUnit == TimePerformanceUnit.minutes &&
+            exercise.targetValueMin! % 60 == 0 &&
+            exercise.targetValueMax! % 60 == 0;
+        return _PrescriptionTarget(
+          timeUnit: inMinutes
+              ? TimePerformanceUnit.minutes
+              : TimePerformanceUnit.seconds,
+          value: inMinutes
+              ? exercise.targetValueMin! ~/ 60
+              : exercise.targetValueMin,
+          max: inMinutes
+              ? exercise.targetValueMax! ~/ 60
+              : exercise.targetValueMax,
+          seconds: exercise.targetValueMin,
+        );
+      }
+      return _PrescriptionTarget(timeUnit: timeUnit);
+    }
+    final inMinutes = timeUnit == TimePerformanceUnit.minutes && total % 60 == 0;
+    return _PrescriptionTarget(
+      timeUnit: inMinutes
+          ? TimePerformanceUnit.minutes
+          : TimePerformanceUnit.seconds,
+      value: inMinutes ? total ~/ 60 : total,
+      seconds: total,
     );
+  }
+
+  /// Reps or seconds the sheet starts from when nothing else applies.
+  int? get count => timeUnit == null ? value : seconds;
+
+  /// «8», «8–10».
+  String? get numeral {
+    final v = value;
+    if (v == null) return null;
+    final m = max;
+    return m == null ? '$v' : '$v–$m';
+  }
+
+  String unitLabel(AppLocalizations l10n) => switch (timeUnit) {
+    null => l10n.activeExerciseUnitReps,
+    TimePerformanceUnit.seconds => l10n.activeExerciseUnitSeconds,
+    TimePerformanceUnit.minutes => l10n.activeExerciseUnitMinutes,
+  };
+
+  /// «8 reps», «45 s», «10 min»; null for free-text prescriptions.
+  String? shortLabel(AppLocalizations l10n) {
+    final n = numeral;
+    return n == null ? null : '$n ${unitLabel(l10n)}';
   }
 }
 
-class _DetailSection extends StatelessWidget {
-  final String title;
-  final String text;
+/// Hero of the executing state (sketch «A · Ejercicio activo»): the target in
+/// the display face up to 96 px, its unit and the target RIR beside it. Free
+/// text prescriptions are shown as they are.
+class _PrescriptionHero extends StatelessWidget {
+  const _PrescriptionHero({
+    required this.target,
+    required this.targetRir,
+    required this.prescription,
+  });
 
-  const _DetailSection({required this.title, required this.text});
+  final _PrescriptionTarget target;
+  final int? targetRir;
+  final String prescription;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
-
-    return Container(
-      width: double.infinity,
-      decoration: GlassDecoration.card(borderRadius: 20),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final numeral = target.numeral;
+    final display = TextStyle(
+      fontFamily: AppTheme.displayFontFamily,
+      fontWeight: FontWeight.w800,
+      color: palette.textPrimary,
+      letterSpacing: -0.44,
+      height: 1.0,
+    );
+    if (numeral == null) {
+      return Text(
+        prescription,
+        style: display.copyWith(fontSize: 44, height: 0.95),
+      );
+    }
+    final spoken = [
+      ?target.shortLabel(l10n),
+      if (targetRir != null) l10n.activeExerciseRir(targetRir!),
+    ].join(' · ');
+    return Semantics(
+      container: true,
+      label: l10n.activeExerciseTargetA11y(spoken),
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.end,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              numeral,
+              key: const Key('active-exercise-target'),
+              maxLines: 1,
+              style: display.copyWith(
+                fontSize: 96,
+                height: 0.9,
+                letterSpacing: -1.92,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            text,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.45,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target.unitLabel(l10n).toUpperCase(),
+                  style: display.copyWith(fontSize: 22),
+                ),
+                if (targetRir != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.activeExerciseRir(targetRir!),
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -1088,17 +1283,96 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
+/// Header of the active exercise: close (48x48, labelled; it goes through
+/// `_confirmExit` like system back), exercise name in the display face (wraps,
+/// never ellipsized) and «Ejercicio 2 de 6».
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.exerciseName,
+    required this.position,
+    required this.closeTooltip,
+    required this.onClose,
+  });
+
+  final String exerciseName;
+  final String? position;
+  final String closeTooltip;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 20, 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconButton(
+            key: const Key('active-exercise-close'),
+            icon: Icon(Icons.close, color: palette.textPrimary),
+            tooltip: closeTooltip,
+            onPressed: onClose,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      exerciseName.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: AppTheme.displayFontFamily,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.0,
+                        letterSpacing: -0.44,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (position != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      position!,
+                      style: TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        height: 1.4,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Footer of a rest: «+30 s» (secondary) and «Saltar descanso» (quiet),
+/// separated. It owns the timer that dispatches `FinishRest` when the rest
+/// reaches zero while mounted; callers key it by `restEndsAt` so each rest
+/// (and each extension) gets fresh state. [onFinished] receives the end it
+/// was built for, so a tick of an outgoing footer (after «+30 s») is stale
+/// for the bloc and ignored.
 class _RestingFooter extends StatefulWidget {
-  final int totalSeconds;
   final DateTime restEndsAt;
   final VoidCallback onSkip;
-  final VoidCallback onFinished;
+  final VoidCallback onExtend;
+  final ValueChanged<DateTime> onFinished;
 
   const _RestingFooter({
     super.key,
-    required this.totalSeconds,
     required this.restEndsAt,
     required this.onSkip,
+    required this.onExtend,
     required this.onFinished,
   });
 
@@ -1118,16 +1392,14 @@ class _RestingFooterState extends State<_RestingFooter> {
       if (_remainingSeconds <= 0 && !_didFinish) {
         _didFinish = true;
         _ticker?.cancel();
-        widget.onFinished();
-        return;
+        widget.onFinished(widget.restEndsAt);
       }
-      setState(() {});
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _remainingSeconds <= 0 && !_didFinish) {
         _didFinish = true;
         _ticker?.cancel();
-        widget.onFinished();
+        widget.onFinished(widget.restEndsAt);
       }
     });
   }
@@ -1146,113 +1418,44 @@ class _RestingFooterState extends State<_RestingFooter> {
     return (remainingMs / 1000).ceil();
   }
 
-  double get _progressValue {
-    if (widget.totalSeconds <= 0) return 0;
-    return _remainingSeconds.clamp(0, widget.totalSeconds) /
-        widget.totalSeconds;
-  }
-
-  String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (minutes == 0) {
-      return '${seconds}s';
-    }
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final remaining = _remainingSeconds;
-
-    return Container(
-      decoration: GlassDecoration.card(borderRadius: 22),
-      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 46,
-            height: 46,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: _progressValue,
-                    strokeWidth: 4,
-                    backgroundColor: palette.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
-                  ),
-                ),
-                Text(
-                  '$remaining',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.restTimerTitle,
-                  style: TextStyle(
-                    color: palette.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _formatTime(remaining),
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExomSecondaryButton(
+          key: const Key('active-exercise-rest-extend'),
+          label: l10n.activeExerciseRestExtend(30),
+          onPressed: widget.onExtend,
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: ExomQuietButton(
+            key: const Key('active-exercise-rest-skip'),
+            label: l10n.activeExerciseRestSkip,
             onPressed: widget.onSkip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: palette.primary,
-              foregroundColor: palette.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
-            child: Text(l10n.restTimerSkip.toUpperCase()),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-typedef SetPerformanceResult = ({
-  int? reps,
-  int? seconds,
-  double? weight,
-  int? rir,
-  bool skipped,
-});
-
+/// Opens the set sheet and returns its result only after the sheet subtree
+/// has been disposed (contract kept from the pre-L3 sheet: the caller cannot
+/// replace or pop the page while the sheet still owns inherited dependencies
+/// and text inputs). Null means nothing happened: dismissed, «Cancelar», or a
+/// repeated trigger while a sheet opened from [context] is still open
+/// (`showExomSheet`).
+///
+/// Prefill (D4) is resolved here with the pure functions of
+/// `set_prefill.dart`: weight = today's set → [previousWeight] (last weight of
+/// this execution, or the exercise's initial weight) → previous session's
+/// same set → its last weighted set; reps/seconds = today's set →
+/// [lastSetThisExecution] → [previousPerformance] → [targetCount]; RIR =
+/// today's set, or [targetRir] for a new set.
 @visibleForTesting
 Future<SetPerformanceResult?> showSetPerformanceSheet(
   BuildContext context,
@@ -1264,325 +1467,45 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
   double? previousWeight,
   SetPerformance? currentPerformance,
   SetPerformance? previousPerformance,
-}) async {
-  final palette = context.exomPalette;
-  final sheetDisposed = Completer<void>();
-  final result = await showModalBottomSheet<SetPerformanceResult>(
+  List<SetPerformance>? previousSession,
+  SetPerformance? lastSetThisExecution,
+  int? targetCount,
+  int? targetRir,
+  UnitSystem unitSystem = UnitSystem.metric,
+  String? decimalSeparator,
+}) {
+  final timed = timeUnit != null;
+  final separator =
+      decimalSeparator ??
+      decimalSeparatorFor(Localizations.localeOf(context).languageCode);
+  final initialCount = prefillCount(
+    today: currentPerformance,
+    lastThisExecution: lastSetThisExecution,
+    previousSameSet: previousPerformance,
+    target: targetCount,
+    timed: timed,
+  );
+  final initialWeightKg = prefillWeightKg(
+    today: currentPerformance,
+    sessionWeightKg: previousWeight,
+    previous: previousSession ??
+        (previousPerformance == null ? null : [previousPerformance]),
+    setNumber: setNumber,
+  );
+  return showExomSheet<SetPerformanceResult>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: palette.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => _SetPerformanceSheet(
-      l10n: l10n,
-      setNumber: setNumber,
-      prescribedReps: prescribedReps,
-      repsRequired: repsRequired,
+    builder: (_) => SetPerformanceSheet(
+      title: l10n.setPerformanceTitle(setNumber),
+      objective: prescribedReps,
       timeUnit: timeUnit,
-      previousWeight: previousWeight,
-      currentPerformance: currentPerformance,
-      previousPerformance: previousPerformance,
-      onDisposed: () {
-        if (!sheetDisposed.isCompleted) sheetDisposed.complete();
-      },
+      countRequired: repsRequired,
+      unitSystem: unitSystem,
+      decimalSeparator: separator,
+      initialCount: initialCount,
+      initialWeightKg: initialWeightKg,
+      initialRir: prefillRir(today: currentPerformance, targetRir: targetRir),
+      previous: previousPerformance,
+      today: currentPerformance,
     ),
   );
-
-  // Navigator completes the route result before its reverse transition and
-  // subtree disposal finish. Wait so the parent BLoC cannot replace/pop this
-  // page while the sheet still owns inherited dependencies and text inputs.
-  if (!sheetDisposed.isCompleted) await sheetDisposed.future;
-  return result;
-}
-
-class _SetPerformanceSheet extends StatefulWidget {
-  final AppLocalizations l10n;
-  final int setNumber;
-  final String prescribedReps;
-  final bool repsRequired;
-  final TimePerformanceUnit? timeUnit;
-  final double? previousWeight;
-  final SetPerformance? currentPerformance;
-  final SetPerformance? previousPerformance;
-  final VoidCallback onDisposed;
-
-  const _SetPerformanceSheet({
-    required this.l10n,
-    required this.setNumber,
-    required this.prescribedReps,
-    required this.repsRequired,
-    required this.timeUnit,
-    required this.previousWeight,
-    required this.currentPerformance,
-    required this.previousPerformance,
-    required this.onDisposed,
-  });
-
-  @override
-  State<_SetPerformanceSheet> createState() => _SetPerformanceSheetState();
-}
-
-class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
-  late final TextEditingController _valueController;
-  late final TextEditingController _weightController;
-  late final TextEditingController _rirController;
-  String? _error;
-
-  bool get _timeBased => widget.timeUnit != null;
-  TimePerformanceUnit? get _timeUnit => timePerformanceUnitForInput(
-    widget.timeUnit,
-    widget.currentPerformance?.seconds,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    final currentValue = _timeBased
-        ? timeInputFromSeconds(
-            widget.currentPerformance?.seconds,
-            _timeUnit,
-          )
-        : widget.currentPerformance?.reps;
-    final weight = widget.currentPerformance?.weightKg ?? widget.previousWeight;
-    _valueController = TextEditingController(
-      text: currentValue?.toString() ?? '',
-    );
-    _weightController = TextEditingController(
-      text: weight == null
-          ? ''
-          : weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1),
-    );
-    _rirController = TextEditingController(
-      text: widget.currentPerformance?.rir?.toString() ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _valueController.dispose();
-    _weightController.dispose();
-    _rirController.dispose();
-    widget.onDisposed();
-    super.dispose();
-  }
-
-  void _completeWithoutTracking() {
-    Navigator.of(
-      context,
-    ).pop((reps: null, seconds: null, weight: null, rir: null, skipped: true));
-  }
-
-  void _save() {
-    final l10n = widget.l10n;
-    final value = int.tryParse(_valueController.text.trim());
-    if (widget.repsRequired && (value == null || value < 1)) {
-      setState(
-        () => _error = _timeBased
-            ? l10n.setPerformanceSecondsError
-            : l10n.setPerformanceRepsError,
-      );
-      return;
-    }
-    if (value != null && value < 1) {
-      setState(
-        () => _error = _timeBased
-            ? l10n.setPerformanceSecondsError
-            : l10n.setPerformanceRepsError,
-      );
-      return;
-    }
-
-    final reps = _timeBased ? null : value;
-    final seconds = _timeBased
-        ? secondsFromTimeInput(value, _timeUnit)
-        : null;
-    final weightText = _weightController.text.trim();
-    final weight = weightText.isEmpty
-        ? null
-        : double.tryParse(weightText.replaceAll(',', '.'));
-    if (weight != null && weight < 0) {
-      setState(() => _error = l10n.setPerformanceWeightError);
-      return;
-    }
-    final rirText = _rirController.text.trim();
-    final rir = rirText.isEmpty ? null : int.tryParse(rirText);
-    if (rirText.isNotEmpty && (rir == null || rir < 0 || rir > 10)) {
-      setState(() => _error = l10n.setPerformanceRirError);
-      return;
-    }
-    if (reps == null && seconds == null && weight == null && rir == null) {
-      setState(() => _error = l10n.setPerformanceDataError);
-      return;
-    }
-
-    Navigator.of(context).pop((
-      reps: reps,
-      seconds: seconds,
-      weight: weight,
-      rir: rir,
-      skipped: false,
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = widget.l10n;
-    final currentLabel = widget.currentPerformance == null
-        ? null
-        : formatSetPerformance(widget.currentPerformance!);
-    final previousLabel = widget.previousPerformance == null
-        ? null
-        : formatSetPerformance(widget.previousPerformance!);
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: palette.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.setPerformanceTitle(widget.setNumber),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.setPerformancePrescription(widget.prescribedReps),
-                style: TextStyle(color: palette.textSecondary, fontSize: 13),
-              ),
-              if (currentLabel != null && currentLabel.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context).todayWithLabel(currentLabel),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-              ],
-              if (previousLabel != null && previousLabel.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l10n.setPerformancePrevious(previousLabel),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 12),
-              TextField(
-                controller: _valueController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: _timeBased
-                      ? _timeUnit == TimePerformanceUnit.minutes
-                            ? l10n.setPerformanceMinutes
-                            : l10n.setPerformanceSeconds
-                      : l10n.setPerformanceReps,
-                  errorText: _error,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _weightController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: l10n.setPerformanceWeightOptional,
-                  hintStyle: TextStyle(color: palette.textDisabled),
-                  suffixText: 'kg',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _rirController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: l10n.setPerformanceRirOptional,
-                  hintText: widget.currentPerformance?.rir?.toString(),
-                  hintStyle: TextStyle(color: palette.textDisabled),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Column(
-                children: [
-                  if (!widget.repsRequired) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: _completeWithoutTracking,
-                        child: Text(
-                          l10n.completeWithoutTracking,
-                          maxLines: 1,
-                          softWrap: false,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stackActions =
-                          constraints.maxWidth < 280 ||
-                          MediaQuery.textScalerOf(context).scale(1) > 1.3;
-                      final cancelButton = OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(l10n.cancel, maxLines: 1, softWrap: false),
-                      );
-                      final saveButton = ElevatedButton(
-                        onPressed: _save,
-                        child: Text(
-                          l10n.weightInputSave,
-                          maxLines: 1,
-                          softWrap: false,
-                        ),
-                      );
-
-                      if (stackActions) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            cancelButton,
-                            const SizedBox(height: 8),
-                            saveButton,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: cancelButton),
-                          const SizedBox(width: 12),
-                          Expanded(child: saveButton),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

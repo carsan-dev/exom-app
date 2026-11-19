@@ -1,23 +1,24 @@
 // Shared scene builders for the redesign L0 baseline (goldens and the
 // accessibility guideline inventory). Test-only: nothing here touches lib/.
 //
-// Known limit of the primary-button goldens: the labels «COMPLETAR SERIE» and
-// «SALTAR» render as boxes because active_exercise_page.dart:928-932 and
-// :1234-1240 pass a textStyle without fontFamily, which replaces (does not
-// merge) the theme style, so the label falls back to the test default font
-// (Ahem). In production on Android it falls back to the system font instead of
-// CabinetGrotesk. The fix belongs to lot L3; regenerate the goldens then.
+// L0 found the labels «COMPLETAR SERIE» and «SALTAR» rendered as boxes (a
+// textStyle without fontFamily). L3 unit 3 replaced both buttons with the
+// ExomPrimaryButton / ExomSecondaryButton / ExomQuietButton components, which
+// set the DM Sans family explicitly; the goldens were regenerated then.
 //
 // Every scene uses fixed fictitious data. The only clock-dependent code paths
 // are noted per scene:
-//  - Inicio: HomePage/WeekDaySelector read DateTime.now() directly (no
-//    injectable clock), so it cannot be a stable golden; it is still pumped for
-//    the accessibility inventory.
+//  - Inicio and Inicio descanso: since L3 (decision D10) HomePage takes an
+//    injectable clock; the scenes fix it to Wednesday 18 Nov 2026 and load the
+//    HomeBloc for that date, so they are stable goldens.
 //  - Descanso: the rest footer counts down from DateTime.now(). The saved rest
 //    ends exactly 90 s after "now", and the scene is captured without advancing
 //    real time, so the visible value is 90 for any machine speed below 1 s.
+//  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
+//    after "now" («1:00»).
 import 'dart:io';
 
+import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
@@ -25,6 +26,8 @@ import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/repositories/home_repository.dart';
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
@@ -42,10 +45,12 @@ import 'package:exom_app/features/trainings/domain/usecases/get_trainings_usecas
 import 'package:exom_app/features/trainings/domain/usecases/mark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_completed_usecase.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -55,16 +60,41 @@ import 'package:intl/date_symbol_data_local.dart';
 
 enum RedesignScene {
   inicio('inicio'),
+  inicioDescanso('inicio_descanso'),
   detalle('detalle'),
+  detalleEnCurso('detalle_en_curso'),
+  detalleHecho('detalle_hecho'),
   ejercicioActivo('ejercicio_activo'),
   hojaSerie('hoja_serie'),
-  descanso('descanso');
+  descanso('descanso'),
+
+  /// L3 unit 3: the set sheet after saving «62,5,5» (D3 field error).
+  hojaSerieError('hoja_serie_error'),
+
+  /// L3 unit 3: the rest after one «+30 s» (D7).
+  descansoMas30('descanso_mas_30'),
+
+  /// L3 unit 4: active circuit, second exercise of round 2.
+  circuitoActivo('circuito_activo'),
+
+  /// L3 unit 4: the shared set sheet opened from the circuit.
+  hojaCircuito('hoja_circuito'),
+
+  /// L3 unit 4: round rest after round 1.
+  descansoCircuito('descanso_circuito'),
+
+  /// L3 unit 4: every round logged, «Terminar circuito».
+  circuitoListo('circuito_listo');
 
   const RedesignScene(this.slug);
   final String slug;
 }
 
 const _date = '2026-09-05';
+
+/// Fixed clock of the Inicio scenes: Wednesday 18 November 2026, 09:00.
+final inicioSceneNow = DateTime(2026, 11, 18, 9);
+
 const _trainingId = 'training-1';
 const _exerciseKey = 'te-1';
 
@@ -128,18 +158,62 @@ const _fixtureTraining = TrainingEntity(
   ],
 );
 
+/// Execution of the in-progress / done detail scenes (L3).
+const _sceneExecution = 'execution-1';
+
+/// Detail «en curso» (L3): te-1 completed and acknowledged (no queue action),
+/// te-2 completed with its completion still queued, te-3 with one set saved
+/// only on this phone.
+final _inProgressActions = <Map<String, dynamic>>[
+  {
+    'id': 'op-te-2',
+    'type': 'mark_exercise_completed',
+    'date': _date,
+    'training_exercise_id': 'te-2',
+    'exercise_id': 'ex-2',
+    'training_id': _trainingId,
+    'training_session_id': _sceneExecution,
+    'status': 'queued',
+  },
+];
+
 class _SceneStorage extends LocalStorage {
-  _SceneStorage({this.savedWorkout});
+  _SceneStorage({
+    this.savedWorkout,
+    this.pendingActions = const [],
+    this.executions = const [],
+    this.drafts = const {},
+  });
 
   final ActiveWorkoutHiveModel? savedWorkout;
+  final List<Map<String, dynamic>> pendingActions;
+  final List<Map<String, dynamic>> executions;
+  final Map<String, ActiveWorkoutHiveModel> drafts;
   final _store = _SceneWorkoutStore();
+
+  /// L3 unit 4: state of the active circuit scenes (active_circuit keys
+  /// only; every other key keeps the base behaviour).
+  Map<String, dynamic>? circuitState;
+
+  @override
+  Map<String, dynamic>? getCachedMap(String key) =>
+      key.startsWith('active_circuit:') ? circuitState : super.getCachedMap(key);
+
+  @override
+  Future<void> cacheData(String key, dynamic value) async {
+    if (key.startsWith('active_circuit:')) {
+      circuitState = Map<String, dynamic>.from(value as Map);
+      return;
+    }
+    await super.cacheData(key, value);
+  }
 
   @override
   String? get sessionStamp => 'owner:1:test';
   @override
-  List<Map<String, dynamic>> getPendingSyncActions() => [];
+  List<Map<String, dynamic>> getPendingSyncActions() => [...pendingActions];
   @override
-  List<Map<String, dynamic>> getPendingTrainingExecutions() => [];
+  List<Map<String, dynamic>> getPendingTrainingExecutions() => [...executions];
   @override
   List<Map<String, dynamic>> getTrainingExecutions(
     String trainingId,
@@ -161,7 +235,8 @@ class _SceneStorage extends LocalStorage {
   @override
   bool hasCompletedTrainingExecution(String trainingId, String date) => false;
   @override
-  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) => null;
+  ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) =>
+      drafts[exerciseId];
   @override
   ActiveWorkoutHiveModel? recoverableLegacyWorkout(
     String trainingId,
@@ -214,13 +289,161 @@ class _SceneRestCoordinator implements RestTimerCoordinator {
   Future<void> cancel() async => activeSession = null;
 }
 
+class _SceneAuth extends Fake implements FirebaseAuthService {
+  @override
+  User? get currentUser => null;
+}
+
+class _SceneFeedbackQueue extends Fake implements FeedbackUploadQueueService {
+  @override
+  Stream<FeedbackUploadNotice> get notices => const Stream.empty();
+  @override
+  String? statusOf(String id) => null;
+}
+
+/// L3 unit 4 circuit: three members, three rounds, 60 s between rounds.
+const _circuitBlock = 'block-1';
+
+const _circuitExercises = [
+  TrainingExerciseEntity(
+    id: 'tc-1',
+    order: 4,
+    sets: 3,
+    repsOrDuration: '12',
+    measureType: ExerciseMeasureType.reps,
+    targetValue: 12,
+    targetRir: 2,
+    restSeconds: 30,
+    blockId: _circuitBlock,
+    exercise: ExerciseEntity(
+      id: 'exc-1',
+      name: 'Burpees',
+      muscleGroups: [],
+      techniqueText: 'Pecho al suelo y salto con palmada arriba.',
+    ),
+  ),
+  TrainingExerciseEntity(
+    id: 'tc-2',
+    order: 5,
+    sets: 3,
+    repsOrDuration: '15',
+    measureType: ExerciseMeasureType.reps,
+    targetValue: 15,
+    targetRir: 1,
+    restSeconds: 30,
+    blockId: _circuitBlock,
+    exercise: ExerciseEntity(
+      id: 'exc-2',
+      name: 'Sentadilla goblet',
+      muscleGroups: [],
+      techniqueText: 'Mancuerna pegada al pecho, codos por dentro.',
+    ),
+  ),
+  TrainingExerciseEntity(
+    id: 'tc-3',
+    order: 6,
+    sets: 3,
+    repsOrDuration: '10',
+    measureType: ExerciseMeasureType.reps,
+    targetValue: 10,
+    restSeconds: 0,
+    blockId: _circuitBlock,
+    exercise: ExerciseEntity(
+      id: 'exc-3',
+      name: 'Remo con mancuerna',
+      muscleGroups: [],
+    ),
+  ),
+];
+
+Map<String, dynamic> _circuitSceneState(RedesignScene scene) {
+  const round1 = <String, Map<String, Object>>{
+    'tc-1': {'set_number': 1, 'reps': 12},
+    'tc-2': {'set_number': 1, 'reps': 15, 'weight_kg': 16.0, 'rir': 1},
+    'tc-3': {'set_number': 1, 'reps': 10, 'weight_kg': 20.0},
+  };
+  return switch (scene) {
+    RedesignScene.descansoCircuito => {
+      'training_session_id': null,
+      'round': 1,
+      'exercise_index': 2,
+      'status': 'roundResting',
+      'rest_ends_at': DateTime.now()
+          .add(const Duration(seconds: 60))
+          .toIso8601String(),
+      'ready_to_finish': false,
+      'performances': {
+        for (final entry in round1.entries) entry.key: [entry.value],
+      },
+    },
+    RedesignScene.circuitoListo => {
+      'training_session_id': null,
+      'round': 3,
+      'exercise_index': 2,
+      'status': 'executing',
+      'rest_ends_at': null,
+      'ready_to_finish': true,
+      'performances': {
+        for (final entry in round1.entries)
+          entry.key: [
+            for (var round = 1; round <= 3; round++)
+              {...entry.value, 'set_number': round},
+          ],
+      },
+    },
+    _ => {
+      'training_session_id': null,
+      'round': 2,
+      'exercise_index': 1,
+      'status': 'executing',
+      'rest_ends_at': null,
+      'ready_to_finish': false,
+      'performances': {
+        'tc-1': [
+          round1['tc-1']!,
+          {'set_number': 2, 'reps': 11},
+        ],
+        'tc-2': [round1['tc-2']!],
+        'tc-3': [round1['tc-3']!],
+      },
+    },
+  };
+}
+
 class _SceneTrainingRepository extends Fake implements TrainingRepository {
+  _SceneTrainingRepository({this.completedIds = const {}});
+
+  /// Exercises completed in [_sceneExecution] (L3 detail scenes).
+  final Set<String> completedIds;
+
   @override
   Future<TrainingEntity> getTraining(String id, {String? date}) async =>
       _fixtureTraining;
   @override
-  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
-      const TrainingDayProgress();
+  Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async {
+    if (completedIds.isEmpty) return const TrainingDayProgress();
+    final session = TrainingDayProgress(
+      ids: completedIds,
+      weights: {
+        for (final id in completedIds) id: id == _exerciseKey ? 62.5 : 70,
+      },
+      performances: {
+        for (final id in completedIds)
+          id: [
+            for (var set = 1; set <= (id == _exerciseKey ? 4 : 3); set++)
+              SetPerformance(
+                setNumber: set,
+                reps: id == _exerciseKey ? 8 : 10,
+                weightKg: id == _exerciseKey ? 62.5 : 70,
+              ),
+          ],
+      },
+    );
+    return TrainingDayProgress(
+      sessions: {_sceneExecution: session},
+      sessionTrainings: const {_sceneExecution: _trainingId},
+    );
+  }
   @override
   Future<Map<String, List<SetPerformance>>> getPreviousExercisePerformances(
     List<String> exerciseIds,
@@ -229,36 +452,57 @@ class _SceneTrainingRepository extends Fake implements TrainingRepository {
 }
 
 class _SceneHomeRepository implements HomeRepository {
+  _SceneHomeRepository({required this.restDay});
+
+  /// Day with a diet and no training (sketch «Día sin asignación»).
+  final bool restDay;
+
   @override
   Future<HomeSummaryEntity> getHomeSummary({
     DateTime? date,
     bool includeSharedData = true,
-  }) async => const HomeSummaryEntity(
-    trainingId: _trainingId,
-    trainingName: 'Pierna fuerza',
-    trainingTypes: ['FUERZA'],
-    trainingDurationMin: 55,
-    remainingTrainingDurationMin: 55,
-    trainings: [
-      HomeTrainingItemEntity(
-        id: _trainingId,
-        name: 'Pierna fuerza',
-        completed: false,
-      ),
-    ],
-    exercisesCompleted: 0,
-    totalExercises: 3,
-    dietName: 'Definición',
-    nextMealName: 'Comida: arroz con pollo',
-    totalCalories: 2200,
-    remainingCalories: 1500,
-    mealsCompleted: 2,
-    totalMeals: 5,
-    streakDays: 4,
-    clientName: 'Lucía',
-    lastWeightKg: 62.5,
-    lastSleepHours: 7.5,
-  );
+  }) async => restDay
+      ? const HomeSummaryEntity(
+          dietId: 'diet-1',
+          dietName: 'Definición',
+          nextMealId: 'meal-1',
+          nextMealName: 'Desayuno: avena con yogur',
+          totalCalories: 2150,
+          remainingCalories: 2150,
+          mealsCompleted: 0,
+          totalMeals: 4,
+          streakDays: 12,
+          clientName: 'Lucía',
+          lastWeightKg: 62.5,
+          lastSleepHours: 7.5,
+        )
+      : const HomeSummaryEntity(
+          trainingId: _trainingId,
+          trainingName: 'Pierna fuerza',
+          trainingTypes: ['FUERZA'],
+          trainingDurationMin: 55,
+          remainingTrainingDurationMin: 55,
+          trainings: [
+            HomeTrainingItemEntity(
+              id: _trainingId,
+              name: 'Pierna fuerza',
+              completed: false,
+            ),
+          ],
+          exercisesCompleted: 0,
+          totalExercises: 3,
+          dietId: 'diet-1',
+          dietName: 'Definición',
+          nextMealName: 'Comida: arroz con pollo',
+          totalCalories: 2200,
+          remainingCalories: 1500,
+          mealsCompleted: 2,
+          totalMeals: 5,
+          streakDays: 4,
+          clientName: 'Lucía',
+          lastWeightKg: 62.5,
+          lastSleepHours: 7.5,
+        );
 }
 
 class _ScenePreferencesStorage extends LocalStorage {
@@ -320,7 +564,12 @@ TrainingBloc _trainingBloc(TrainingRepository repository) => TrainingBloc(
       GetPreviousExercisePerformancesUseCase(repository),
 );
 
-class _FakeTrainingBloc extends Fake implements TrainingBloc {}
+/// Only the state is read by the active exercise («Ejercicio 1 de 3»).
+class _FakeTrainingBloc extends Fake implements TrainingBloc {
+  @override
+  TrainingState get state =>
+      const TrainingDetailLoaded(_fixtureTraining, selectedDate: _date);
+}
 
 bool _fontsLoaded = false;
 
@@ -399,7 +648,8 @@ Future<SceneHandle> pumpRedesignScene(
   // Limit: the countdown shows 90 only if under 1 s of real time passes between
   // this seed and the build. Fake-async pumps do not advance DateTime.now, and
   // L0 allows no hook in lib/ to inject a clock.
-  final restSeed = scene == RedesignScene.descanso
+  final restSeed =
+      scene == RedesignScene.descanso || scene == RedesignScene.descansoMas30
       ? ActiveWorkoutHiveModel(
           trainingId: _trainingId,
           exerciseId: '$_exerciseKey:$_date',
@@ -412,17 +662,65 @@ Future<SceneHandle> pumpRedesignScene(
           ],
         )
       : null;
-  final storage = _SceneStorage(savedWorkout: restSeed);
+  final detailProgress = switch (scene) {
+    RedesignScene.detalleEnCurso => const {_exerciseKey, 'te-2'},
+    RedesignScene.detalleHecho => const {_exerciseKey, 'te-2', 'te-3'},
+    _ => const <String>{},
+  };
+  final storage = _SceneStorage(
+    savedWorkout: restSeed,
+    pendingActions: scene == RedesignScene.detalleEnCurso
+        ? _inProgressActions
+        : const [],
+    executions: detailProgress.isEmpty
+        ? const []
+        : const [
+            {
+              'id': _sceneExecution,
+              'training_id': _trainingId,
+              'assignment_date': _date,
+              'status': 'pending',
+            },
+          ],
+    drafts: scene == RedesignScene.detalleEnCurso
+        ? {
+            'te-3:$_date:$_sceneExecution': ActiveWorkoutHiveModel(
+              trainingId: _trainingId,
+              exerciseId: 'te-3:$_date:$_sceneExecution',
+              currentSet: 2,
+              completedSets: 1,
+              lastWeightKg: 20,
+              completedSetData: const [
+                {'set_number': 1, 'reps': 12, 'weight_kg': 20.0},
+              ],
+            ),
+          }
+        : const {},
+  );
+  final circuitScene = switch (scene) {
+    RedesignScene.circuitoActivo ||
+    RedesignScene.hojaCircuito ||
+    RedesignScene.descansoCircuito ||
+    RedesignScene.circuitoListo => true,
+    _ => false,
+  };
+  if (circuitScene) {
+    storage.circuitState = _circuitSceneState(scene);
+    sl.registerSingleton<FirebaseAuthService>(_SceneAuth());
+    sl.registerSingleton<FeedbackUploadQueueService>(_SceneFeedbackQueue());
+  }
   sl.registerSingleton<LocalStorage>(storage);
   sl.registerSingleton<RestTimerCoordinator>(_SceneRestCoordinator());
   sl.registerSingleton<ExecutionTimerCoordinator>(ExecutionTimerCoordinator());
 
   switch (scene) {
-    case RedesignScene.inicio:
+    case RedesignScene.inicio || RedesignScene.inicioDescanso:
       final preferences = AppPreferencesCubit(_ScenePreferencesStorage());
       final bloc = HomeBloc(
-        getHomeSummaryUseCase: GetHomeSummaryUseCase(_SceneHomeRepository()),
-      )..add(const HomeLoadRequested());
+        getHomeSummaryUseCase: GetHomeSummaryUseCase(
+          _SceneHomeRepository(restDay: scene == RedesignScene.inicioDescanso),
+        ),
+      )..add(HomeLoadRequested(date: inicioSceneNow));
       // Closed by the test framework teardown: awaiting close() inside the
       // fake-async test body never completes for these blocs.
       addTearDown(bloc.close);
@@ -436,14 +734,18 @@ Future<SceneHandle> pumpRedesignScene(
               BlocProvider<AppPreferencesCubit>.value(value: preferences),
               BlocProvider<HomeBloc>.value(value: bloc),
             ],
-            child: const Scaffold(body: HomePage()),
+            child: Scaffold(body: HomePage(now: () => inicioSceneNow)),
           ),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
-    case RedesignScene.detalle:
-      final repository = _SceneTrainingRepository();
+    case RedesignScene.detalle ||
+        RedesignScene.detalleEnCurso ||
+        RedesignScene.detalleHecho:
+      final repository = _SceneTrainingRepository(
+        completedIds: detailProgress,
+      );
       sl.registerFactory<TrainingBloc>(() => _trainingBloc(repository));
       await tester.pumpWidget(
         _app(
@@ -458,7 +760,9 @@ Future<SceneHandle> pumpRedesignScene(
       await tester.pumpAndSettle();
     case RedesignScene.ejercicioActivo ||
         RedesignScene.hojaSerie ||
-        RedesignScene.descanso:
+        RedesignScene.hojaSerieError ||
+        RedesignScene.descanso ||
+        RedesignScene.descansoMas30:
       await tester.pumpWidget(
         _app(
           theme,
@@ -484,8 +788,79 @@ Future<SceneHandle> pumpRedesignScene(
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 400));
-      if (scene == RedesignScene.hojaSerie) {
-        await tester.tap(find.byType(ElevatedButton).last);
+      if (scene == RedesignScene.hojaSerie ||
+          scene == RedesignScene.hojaSerieError) {
+        // L3: «Registrar serie» is an ExomPrimaryButton inside the
+        // `footer-executing` footer (was `find.byType(ElevatedButton).last`).
+        await tester.tap(
+          find.descendant(
+            of: find.byKey(const ValueKey('footer-executing')),
+            matching: find.byType(ExomPrimaryButton),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+      if (scene == RedesignScene.hojaSerieError) {
+        await tester.enterText(
+          find.byKey(const Key('set-sheet-weight-field')),
+          '62,5,5',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('set-sheet-save')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      if (scene == RedesignScene.descansoMas30) {
+        await tester.tap(find.byKey(const Key('active-exercise-rest-extend')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+    case RedesignScene.circuitoActivo ||
+        RedesignScene.hojaCircuito ||
+        RedesignScene.descansoCircuito ||
+        RedesignScene.circuitoListo:
+      await tester.pumpWidget(
+        _app(
+          theme,
+          textScale,
+          ActiveCircuitPage(
+            trainingId: _trainingId,
+            blockId: _circuitBlock,
+            args: ActiveCircuitPageArgs(
+              trainingBloc: _FakeTrainingBloc(),
+              trainingName: 'Pierna fuerza',
+              trainingTypes: const ['FUERZA'],
+              accentColorHex: null,
+              trainingLevel: 'INTERMEDIATE',
+              blockId: _circuitBlock,
+              blockName: 'Circuito metabólico',
+              rounds: 3,
+              restBetweenRoundsSeconds: 60,
+              exercises: _circuitExercises,
+              previousPerformances: const {
+                'tc-2': [
+                  SetPerformance(setNumber: 1, reps: 15, weightKg: 14),
+                  SetPerformance(setNumber: 2, reps: 14, weightKg: 14),
+                ],
+              },
+              assignmentDate: _date,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 400));
+      if (scene == RedesignScene.hojaCircuito) {
+        // The circuit primary is an ExomPrimaryButton inside the
+        // circuit-executing-footer key, like the active exercise's.
+        await tester.tap(
+          find.descendant(
+            of: find.byKey(const ValueKey('circuit-executing-footer')),
+            matching: find.byType(ExomPrimaryButton),
+          ),
+        );
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 600));
       }

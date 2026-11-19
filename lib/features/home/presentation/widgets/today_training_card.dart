@@ -5,11 +5,78 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/date_utils.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
 
+/// Opens a training of the selected day and reloads Home on return, exactly
+/// as the previous card did: `/trainings/<id>?date=<assignmentDate>`.
+Future<void> openHomeTraining(
+  BuildContext context, {
+  required String trainingId,
+  required DateTime selectedDate,
+}) async {
+  final assignmentDate = AppDateUtils.toIso(selectedDate);
+  await context.push('/trainings/$trainingId?date=$assignmentDate');
+  if (context.mounted) {
+    context.read<HomeBloc>().add(HomeLoadRequested(date: selectedDate));
+  }
+}
+
+/// Which session of the day leads Inicio, derived only from the summary that
+/// HomeBloc already exposes.
+///
+/// The hero is the first unfinished training of the day (or the first one if
+/// every training is done); the rest are listed below it. Summaries without
+/// the `trainings` list fall back to `trainingId`/`trainingName`.
+class HomeSessionPlan {
+  const HomeSessionPlan._({
+    required this.heroId,
+    required this.heroName,
+    required this.heroCompleted,
+    required this.others,
+  });
+
+  factory HomeSessionPlan.of(HomeSummaryEntity summary) {
+    if (summary.trainings.isNotEmpty) {
+      final hero = summary.trainings.firstWhere(
+        (training) => !training.completed,
+        orElse: () => summary.trainings.first,
+      );
+      return HomeSessionPlan._(
+        heroId: hero.id,
+        heroName: hero.name,
+        heroCompleted: hero.completed,
+        others: summary.trainings
+            .where((training) => !identical(training, hero))
+            .toList(growable: false),
+      );
+    }
+    return HomeSessionPlan._(
+      heroId: summary.trainingId,
+      heroName: summary.trainingName,
+      heroCompleted: summary.trainingCompleted,
+      others: const [],
+    );
+  }
+
+  final String? heroId;
+  final String? heroName;
+  final bool heroCompleted;
+  final List<HomeTrainingItemEntity> others;
+
+  bool get hasTraining => heroId != null;
+}
+
+/// Session block of Inicio (sketch «A «Sesión de hoy»»): the session name as
+/// the screen title, the date line, the quiet "done" status when it applies,
+/// the fact line and, when the day has several trainings, the others as
+/// rule-separated rows. Tapping the block opens the hero session.
+///
+/// Renders nothing when the day has no training.
 class TodayTrainingCard extends StatelessWidget {
   const TodayTrainingCard({
     super.key,
@@ -20,358 +87,225 @@ class TodayTrainingCard extends StatelessWidget {
   final HomeSummaryEntity summary;
   final DateTime selectedDate;
 
-  Color _trainingColor(BuildContext context) {
-    return trainingAccentColor(
-      context,
-      accentColor: summary.trainingAccentColor,
-      types: summary.trainingTypes,
-    );
-  }
-
-  String _typesLabel(BuildContext context) {
-    return trainingTypesSummaryLabel(context, summary.trainingTypes);
+  List<String> _facts(AppLocalizations l10n, HomeSessionPlan plan) {
+    final inProgress =
+        !summary.trainingCompleted && summary.exercisesCompleted > 0;
+    return [
+      if (plan.others.isNotEmpty)
+        l10n.homeFactSessions(summary.trainings.length),
+      if (summary.totalExercises > 0)
+        inProgress
+            ? l10n.homeFactExercisesProgress(
+                summary.exercisesCompleted,
+                summary.totalExercises,
+              )
+            : l10n.homeFactExercises(summary.totalExercises),
+      if (inProgress && summary.remainingTrainingDurationMin != null)
+        l10n.remainingTrainingMinutes(summary.remainingTrainingDurationMin!)
+      else if (!summary.trainingCompleted &&
+          summary.trainingDurationMin != null)
+        l10n.homeFactDuration(summary.trainingDurationMin!),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    if (summary.trainingId == null && summary.trainings.isEmpty) {
+    final plan = HomeSessionPlan.of(summary);
+    if (!plan.hasTraining) {
       return const SizedBox.shrink();
     }
 
-    final assignmentDate = AppDateUtils.toIso(selectedDate);
     final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final l10n = AppLocalizations.of(context);
-    final color = _trainingColor(context);
-    final solidColorStyle = trainingColorStyle(context, color);
-    final hasMultipleTrainings = summary.trainings.length > 1;
-    final cardTitle = hasMultipleTrainings
-        ? l10n.todaysTrainingsTitle
-        : l10n.todaysTrainingTitle;
-    final cardHeading = hasMultipleTrainings
-        ? l10n.assignedTrainingsCount(summary.trainings.length)
-        : summary.trainingName ?? l10n.trainingUntitledLabel;
+    final facts = _facts(l10n, plan);
 
-    return Semantics(
-      label: '$cardTitle: $cardHeading',
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: GlassDecoration.accentCard(color),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [color.withValues(alpha: 0.12), Colors.transparent],
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.25),
-                          blurRadius: 12,
-                          spreadRadius: -2,
-                        ),
-                      ],
-                    ),
-                    child: Icon(Icons.fitness_center, color: color, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cardTitle,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          cardHeading,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: palette.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 260),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _typesLabel(context),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: color,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    final hero = MergeSemantics(
+      child: Semantics(
+        button: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: () => openHomeTraining(
+              context,
+              trainingId: plan.heroId!,
+              selectedDate: selectedDate,
             ),
-            if (summary.trainings.length > 1)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Column(
-                  children: summary.trainings.indexed
-                      .map((entry) {
-                        final (index, training) = entry;
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () async {
-                            await context.push(
-                              '/trainings/${training.id}?date=$assignmentDate',
-                            );
-                            if (context.mounted) {
-                              context.read<HomeBloc>().add(
-                                HomeLoadRequested(date: selectedDate),
-                              );
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 24,
-                                  child: Text(
-                                    '${index + 1}.',
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                          color: palette.textSecondary,
-                                        ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    training.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Icon(
-                                  training.completed
-                                      ? Icons.check_circle
-                                      : Icons.chevron_right,
-                                  size: 20,
-                                  color: training.completed
-                                      ? semantic.success
-                                      : palette.textSecondary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  if (!summary.trainingCompleted &&
-                      summary.remainingTrainingDurationMin != null)
-                    _StatChip(
-                      icon: Icons.timer_outlined,
-                      label: l10n.remainingTrainingMinutes(
-                        summary.remainingTrainingDurationMin!,
-                      ),
-                      color: semantic.info,
-                    ),
-                  if (summary.trainingCompleted)
-                    _StatChip(
-                      icon: Icons.check_circle_outline,
-                      label: l10n.completed,
-                      color: semantic.success,
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          l10n.progress,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textSecondary,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          summary.totalExercises > 0
-                              ? '${summary.exercisesCompleted}/${summary.totalExercises} ${l10n.exercises}'
-                              : summary.trainingCompleted
-                              ? '100%'
-                              : '0%',
-                          textAlign: TextAlign.end,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.20),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: summary.totalExercises > 0
-                            ? summary.exercisesCompleted /
-                                  summary.totalExercises
-                            : (summary.trainingCompleted ? 1 : 0),
-                        backgroundColor: palette.surfaceVariant,
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                        minHeight: 6,
+                  HomeTitle(plan.heroName ?? l10n.trainingUntitledLabel),
+                  const SizedBox(height: 12),
+                  HomeDateLine(date: selectedDate),
+                  if (plan.heroCompleted) ...[
+                    const SizedBox(height: 12),
+                    HomeDoneStatus(label: l10n.homeSessionDone),
+                  ],
+                  if (facts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      facts.join(' · '),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: palette.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: summary.trainingId != null
-                      ? () async {
-                          HapticFeedback.selectionClick();
-                          await context.push(
-                            '/trainings/${summary.trainingId}?date=$assignmentDate',
-                          );
-                          if (context.mounted) {
-                            context.read<HomeBloc>().add(
-                              HomeLoadRequested(date: selectedDate),
-                            );
-                          }
-                        }
-                      : null,
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: Text(
-                    summary.trainingCompleted
-                        ? l10n.viewTrainingButton
-                        : summary.exercisesCompleted > 0
-                        ? l10n.continueTrainingButton
-                        : l10n.startTrainingButton,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
-                    foregroundColor: solidColorStyle.foreground,
-                    side: BorderSide(color: solidColorStyle.border),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+          ),
+        ),
+      ),
+    );
+
+    if (plan.others.isEmpty) return hero;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        hero,
+        const SizedBox(height: 16),
+        HomeRowGroup(
+          children: [
+            for (final training in plan.others)
+              HomeRow(
+                icon: Icons.fitness_center,
+                title: training.name,
+                trailing: training.completed
+                    ? HomeDoneStatus(label: l10n.homeSessionDone)
+                    : null,
+                onTap: () => openHomeTraining(
+                  context,
+                  trainingId: training.id,
+                  selectedDate: selectedDate,
                 ),
               ),
-            ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// Header of a day without training (sketch «Día sin asignación»): title
+/// «DESCANSO», date line, one line of copy and a secondary button to the
+/// calendar. There is no lime action: the day has no next step.
+class HomeRestDayHeader extends StatelessWidget {
+  const HomeRestDayHeader({super.key, required this.selectedDate});
+
+  final DateTime selectedDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final isToday = HomeClock.isToday(context, selectedDate);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HomeTitle(l10n.homeRestDayTitle),
+          const SizedBox(height: 12),
+          HomeDateLine(date: selectedDate),
+          const SizedBox(height: 12),
+          Text(
+            isToday ? l10n.homeRestDayToday : l10n.homeRestDayOther,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 18,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ExomSecondaryButton(
+            label: l10n.openCalendarButton,
+            icon: Icons.calendar_today_outlined,
+            onPressed: () => context.go('/calendar'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.color,
+/// Action pinned above the bottom navigation.
+///
+/// Today with an unfinished session: the single lime [ExomPrimaryButton]
+/// («Empezar sesión», or «Continuar sesión» when the summary reports completed
+/// exercises of a single training). A finished day, or a past or future day,
+/// gets the secondary «Ver entrenamiento» instead: lime only marks today's
+/// next step. Every variant opens the hero session like tapping it.
+///
+/// Renders nothing when the day has no training.
+class HomeSessionAction extends StatelessWidget {
+  const HomeSessionAction({
+    super.key,
+    required this.summary,
+    required this.selectedDate,
   });
 
-  final IconData icon;
-  final String label;
-  final Color color;
+  final HomeSummaryEntity summary;
+  final DateTime selectedDate;
+
+  /// Whether this summary/date pair shows any action at all.
+  static bool appliesTo(HomeSummaryEntity summary) =>
+      HomeSessionPlan.of(summary).hasTraining;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    final plan = HomeSessionPlan.of(summary);
+    if (!plan.hasTraining) return const SizedBox.shrink();
+
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final isToday = HomeClock.isToday(context, selectedDate);
+
+    void open() {
+      HapticFeedback.selectionClick();
+      openHomeTraining(
+        context,
+        trainingId: plan.heroId!,
+        selectedDate: selectedDate,
+      );
+    }
+
+    final Widget button;
+    if (isToday && !plan.heroCompleted) {
+      final continues =
+          plan.others.isEmpty &&
+          !summary.trainingCompleted &&
+          summary.exercisesCompleted > 0;
+      button = ExomPrimaryButton(
+        label: continues
+            ? l10n.homeContinueSessionButton
+            : l10n.homeStartSessionButton,
+        trailingIcon: Icons.arrow_forward,
+        onPressed: open,
+      );
+    } else {
+      button = ExomSecondaryButton(
+        label: l10n.viewTrainingButton,
+        onPressed: open,
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.background,
+        border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: button,
+      ),
     );
   }
 }

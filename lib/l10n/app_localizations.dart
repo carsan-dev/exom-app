@@ -5737,6 +5737,608 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar hoja'**
   String get sheetBarrierA11y;
+
+  /// No description provided for @homeStartSessionButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar sesión'**
+  String get homeStartSessionButton;
+
+  /// No description provided for @homeContinueSessionButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar sesión'**
+  String get homeContinueSessionButton;
+
+  /// No description provided for @homeSessionDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecha'**
+  String get homeSessionDone;
+
+  /// No description provided for @homeRestDayTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso'**
+  String get homeRestDayTitle;
+
+  /// No description provided for @homeRestDayToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy no tienes entrenamiento asignado.'**
+  String get homeRestDayToday;
+
+  /// No description provided for @homeRestDayOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Este día no tienes entrenamiento asignado.'**
+  String get homeRestDayOther;
+
+  /// No description provided for @homeFactSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 sesión} other{{count} sesiones}}'**
+  String homeFactSessions(int count);
+
+  /// No description provided for @homeFactExercises.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ejercicio} other{{count} ejercicios}}'**
+  String homeFactExercises(int count);
+
+  /// No description provided for @homeFactExercisesProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 ejercicio} other{{done} de {total} ejercicios}}'**
+  String homeFactExercisesProgress(int done, int total);
+
+  /// No description provided for @homeFactDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min aprox.'**
+  String homeFactDuration(int minutes);
+
+  /// No description provided for @homeMealsDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 comida hecha} other{{done} de {total} comidas hechas}}'**
+  String homeMealsDone(int done, int total);
+
+  /// No description provided for @homeRemainingKcal.
+  ///
+  /// In es, this message translates to:
+  /// **'{kcal} kcal restantes'**
+  String homeRemainingKcal(String kcal);
+
+  /// No description provided for @homeStreakRow.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin racha activa} =1{Racha de 1 día} other{Racha de {count} días}}'**
+  String homeStreakRow(int count);
+
+  /// No description provided for @homeWeekDayToday.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, hoy'**
+  String homeWeekDayToday(String day);
+
+  /// No description provided for @homeWeekDayDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, sesión hecha'**
+  String homeWeekDayDone(String day);
+
+  /// No description provided for @trainingDetailExercises.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ejercicio} other{{count} ejercicios}}'**
+  String trainingDetailExercises(int count);
+
+  /// No description provided for @trainingDetailSets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 serie} other{{count} series}}'**
+  String trainingDetailSets(int count);
+
+  /// No description provided for @trainingDetailDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min aprox.'**
+  String trainingDetailDuration(int minutes);
+
+  /// No description provided for @trainingDetailPrescription.
+  ///
+  /// In es, this message translates to:
+  /// **'{sets} × {prescription} · descanso {rest} s'**
+  String trainingDetailPrescription(int sets, String prescription, int rest);
+
+  /// No description provided for @trainingDetailPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'Anterior {value}'**
+  String trainingDetailPrevious(String value);
+
+  /// No description provided for @trainingDetailReps.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 rep.} other{{count} reps.}}'**
+  String trainingDetailReps(int count);
+
+  /// No description provided for @trainingDetailSetsProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 serie} other{{done} de {total} series}}'**
+  String trainingDetailSetsProgress(int done, int total);
+
+  /// No description provided for @trainingDetailToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy {value}'**
+  String trainingDetailToday(String value);
+
+  /// No description provided for @trainingDetailNextAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: {name}'**
+  String trainingDetailNextAction(String name);
+
+  /// No description provided for @trainingDetailCompletionSavedPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardada en este móvil · pendiente de sincronizar'**
+  String get trainingDetailCompletionSavedPending;
+
+  /// No description provided for @activeExerciseCloseA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar ejercicio'**
+  String get activeExerciseCloseA11y;
+
+  /// No description provided for @activeExercisePosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio {current} de {total}'**
+  String activeExercisePosition(int current, int total);
+
+  /// No description provided for @activeExerciseSetOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {current} de {total}'**
+  String activeExerciseSetOf(int current, int total);
+
+  /// No description provided for @activeExerciseUnitReps.
+  ///
+  /// In es, this message translates to:
+  /// **'reps'**
+  String get activeExerciseUnitReps;
+
+  /// No description provided for @activeExerciseUnitSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'s'**
+  String get activeExerciseUnitSeconds;
+
+  /// No description provided for @activeExerciseUnitMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'min'**
+  String get activeExerciseUnitMinutes;
+
+  /// No description provided for @activeExerciseRir.
+  ///
+  /// In es, this message translates to:
+  /// **'RIR {rir}'**
+  String activeExerciseRir(int rir);
+
+  /// No description provided for @activeExerciseTargetA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo: {target}'**
+  String activeExerciseTargetA11y(String target);
+
+  /// No description provided for @activeExerciseYourWeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu peso: {weight}'**
+  String activeExerciseYourWeight(String weight);
+
+  /// No description provided for @activeExerciseNoPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin datos anteriores'**
+  String get activeExerciseNoPrevious;
+
+  /// No description provided for @activeExerciseRestAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso después: {seconds} s'**
+  String activeExerciseRestAfter(int seconds);
+
+  /// No description provided for @activeExerciseSetsA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Series del ejercicio'**
+  String get activeExerciseSetsA11y;
+
+  /// No description provided for @activeExerciseSetNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora'**
+  String get activeExerciseSetNow;
+
+  /// No description provided for @activeExerciseSetDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecha'**
+  String get activeExerciseSetDone;
+
+  /// No description provided for @activeExerciseSetChipDoneA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber}: {value}, guardada en este móvil'**
+  String activeExerciseSetChipDoneA11y(int setNumber, String value);
+
+  /// No description provided for @activeExerciseSetChipNowA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber}, ahora'**
+  String activeExerciseSetChipNowA11y(int setNumber);
+
+  /// No description provided for @activeExerciseSetChipNextA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber}, {value}'**
+  String activeExerciseSetChipNextA11y(int setNumber, String value);
+
+  /// No description provided for @activeExerciseSetSavedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber} · {status}'**
+  String activeExerciseSetSavedStatus(int setNumber, String status);
+
+  /// No description provided for @activeExerciseTechniqueButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver técnica'**
+  String get activeExerciseTechniqueButton;
+
+  /// No description provided for @activeExerciseLogSetButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar serie'**
+  String get activeExerciseLogSetButton;
+
+  /// No description provided for @activeExerciseRestNext.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: Serie {setNumber} · {target}'**
+  String activeExerciseRestNext(int setNumber, String target);
+
+  /// No description provided for @activeExerciseRestNextWithWeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: Serie {setNumber} · {target} · tu peso {weight}'**
+  String activeExerciseRestNextWithWeight(
+    int setNumber,
+    String target,
+    String weight,
+  );
+
+  /// No description provided for @activeExerciseRestExtend.
+  ///
+  /// In es, this message translates to:
+  /// **'+{seconds} s'**
+  String activeExerciseRestExtend(int seconds);
+
+  /// No description provided for @activeExerciseRestSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Saltar descanso'**
+  String get activeExerciseRestSkip;
+
+  /// No description provided for @activeExerciseRestRemainingA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso, quedan {time}'**
+  String activeExerciseRestRemainingA11y(String time);
+
+  /// No description provided for @activeExerciseRestTenSecondsA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedan 10 segundos de descanso'**
+  String get activeExerciseRestTenSecondsA11y;
+
+  /// No description provided for @activeExerciseRestFinishedA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso terminado'**
+  String get activeExerciseRestFinishedA11y;
+
+  /// No description provided for @setSheetObjective.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo {objective}'**
+  String setSheetObjective(String objective);
+
+  /// No description provided for @setSheetObjectiveWithPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo {objective} — Anterior {previous}'**
+  String setSheetObjectiveWithPrevious(String objective, String previous);
+
+  /// No description provided for @setSheetSameAsPrevious.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual que la anterior · {value}'**
+  String setSheetSameAsPrevious(String value);
+
+  /// No description provided for @setSheetRepsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Repeticiones'**
+  String get setSheetRepsLabel;
+
+  /// No description provided for @setSheetSecondsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundos'**
+  String get setSheetSecondsLabel;
+
+  /// No description provided for @setSheetWeightLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso'**
+  String get setSheetWeightLabel;
+
+  /// No description provided for @setSheetWeightKgA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso en kilos'**
+  String get setSheetWeightKgA11y;
+
+  /// No description provided for @setSheetWeightLbA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso en libras'**
+  String get setSheetWeightLbA11y;
+
+  /// No description provided for @setSheetWeightHint.
+  ///
+  /// In es, this message translates to:
+  /// **'pasos de {step} · toca la cifra para escribir'**
+  String setSheetWeightHint(String step);
+
+  /// No description provided for @setSheetRirLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'RIR'**
+  String get setSheetRirLabel;
+
+  /// No description provided for @setSheetRirChipA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'RIR {value}'**
+  String setSheetRirChipA11y(int value);
+
+  /// No description provided for @setSheetRirFivePlusA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'RIR 5 o más'**
+  String get setSheetRirFivePlusA11y;
+
+  /// No description provided for @setSheetRepsDecrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Una repetición menos'**
+  String get setSheetRepsDecrement;
+
+  /// No description provided for @setSheetRepsIncrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Una repetición más'**
+  String get setSheetRepsIncrement;
+
+  /// No description provided for @setSheetSecondsDecrement.
+  ///
+  /// In es, this message translates to:
+  /// **'{step} segundos menos'**
+  String setSheetSecondsDecrement(int step);
+
+  /// No description provided for @setSheetSecondsIncrement.
+  ///
+  /// In es, this message translates to:
+  /// **'{step} segundos más'**
+  String setSheetSecondsIncrement(int step);
+
+  /// No description provided for @setSheetMinutesDecrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Un minuto menos'**
+  String get setSheetMinutesDecrement;
+
+  /// No description provided for @setSheetMinutesIncrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Un minuto más'**
+  String get setSheetMinutesIncrement;
+
+  /// No description provided for @setSheetWeightDecrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Restar {step}'**
+  String setSheetWeightDecrement(String step);
+
+  /// No description provided for @setSheetWeightIncrement.
+  ///
+  /// In es, this message translates to:
+  /// **'Sumar {step}'**
+  String setSheetWeightIncrement(String step);
+
+  /// No description provided for @setSheetSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar serie'**
+  String get setSheetSave;
+
+  /// No description provided for @setInputNotANumber.
+  ///
+  /// In es, this message translates to:
+  /// **'No entiendo «{value}». Escribe un número, por ejemplo {example}'**
+  String setInputNotANumber(String value, String example);
+
+  /// No description provided for @setInputWeightAmbiguous.
+  ///
+  /// In es, this message translates to:
+  /// **'«{value}» es ambiguo. Usa una sola coma decimal, por ejemplo {example}'**
+  String setInputWeightAmbiguous(String value, String example);
+
+  /// No description provided for @setInputTooManyDecimals.
+  ///
+  /// In es, this message translates to:
+  /// **'Como máximo dos decimales, por ejemplo {example}'**
+  String setInputTooManyDecimals(String example);
+
+  /// No description provided for @setInputNotInteger.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiene que ser un número entero, por ejemplo {example}'**
+  String setInputNotInteger(String example);
+
+  /// No description provided for @setInputAboveMax.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo {max}'**
+  String setInputAboveMax(String max);
+
+  /// No description provided for @circuitCloseA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar circuito'**
+  String get circuitCloseA11y;
+
+  /// No description provided for @circuitRoundOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Ronda {current} de {total}'**
+  String circuitRoundOf(int current, int total);
+
+  /// No description provided for @circuitThisRound.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta ronda'**
+  String get circuitThisRound;
+
+  /// No description provided for @circuitNotLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin registrar'**
+  String get circuitNotLogged;
+
+  /// No description provided for @circuitRowDoneA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: {value}, guardada en este móvil'**
+  String circuitRowDoneA11y(String name, String value);
+
+  /// No description provided for @circuitRowNotLoggedA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: sin registrar'**
+  String circuitRowNotLoggedA11y(String name);
+
+  /// No description provided for @circuitRowNowA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: ahora'**
+  String circuitRowNowA11y(String name);
+
+  /// No description provided for @circuitRowNextA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: después, {target}'**
+  String circuitRowNextA11y(String name, String target);
+
+  /// No description provided for @circuitRowLaterA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: después'**
+  String circuitRowLaterA11y(String name);
+
+  /// No description provided for @circuitRoundRestAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso de ronda después: {seconds} s'**
+  String circuitRoundRestAfter(int seconds);
+
+  /// No description provided for @circuitEndsAfter.
+  ///
+  /// In es, this message translates to:
+  /// **'Al terminar: fin del circuito'**
+  String get circuitEndsAfter;
+
+  /// No description provided for @circuitFinalRestTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Último descanso'**
+  String get circuitFinalRestTitle;
+
+  /// No description provided for @circuitRoundDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ronda {round} hecha'**
+  String circuitRoundDone(int round);
+
+  /// No description provided for @circuitNextExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: {name} · {target}'**
+  String circuitNextExercise(String name, String target);
+
+  /// No description provided for @circuitNextExerciseWithWeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: {name} · {target} · tu peso {weight}'**
+  String circuitNextExerciseWithWeight(
+    String name,
+    String target,
+    String weight,
+  );
+
+  /// No description provided for @circuitNextRound.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente: Ronda {round} · {name}'**
+  String circuitNextRound(int round, String name);
+
+  /// No description provided for @circuitAfterRestEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'Después: fin del circuito'**
+  String get circuitAfterRestEnd;
+
+  /// No description provided for @circuitFinishButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar circuito'**
+  String get circuitFinishButton;
+
+  /// No description provided for @circuitReadyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas las rondas hechas'**
+  String get circuitReadyTitle;
+
+  /// No description provided for @circuitSheetTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} · Ronda {round}'**
+  String circuitSheetTitle(String name, int round);
+
+  /// No description provided for @circuitSavedStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}, ronda {round} · {status}'**
+  String circuitSavedStatus(String name, int round, String status);
 }
 
 class _AppLocalizationsDelegate

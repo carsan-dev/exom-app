@@ -3335,4 +3335,484 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sheetBarrierA11y => 'Cerrar hoja';
+
+  @override
+  String get homeStartSessionButton => 'Empezar sesión';
+
+  @override
+  String get homeContinueSessionButton => 'Continuar sesión';
+
+  @override
+  String get homeSessionDone => 'Hecha';
+
+  @override
+  String get homeRestDayTitle => 'Descanso';
+
+  @override
+  String get homeRestDayToday => 'Hoy no tienes entrenamiento asignado.';
+
+  @override
+  String get homeRestDayOther => 'Este día no tienes entrenamiento asignado.';
+
+  @override
+  String homeFactSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones',
+      one: '1 sesión',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ejercicios',
+      one: '1 ejercicio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactExercisesProgress(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done de $total ejercicios',
+      one: '$done de 1 ejercicio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactDuration(int minutes) {
+    return '$minutes min aprox.';
+  }
+
+  @override
+  String homeMealsDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done de $total comidas hechas',
+      one: '$done de 1 comida hecha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeRemainingKcal(String kcal) {
+    return '$kcal kcal restantes';
+  }
+
+  @override
+  String homeStreakRow(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Racha de $count días',
+      one: 'Racha de 1 día',
+      zero: 'Sin racha activa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeWeekDayToday(String day) {
+    return '$day, hoy';
+  }
+
+  @override
+  String homeWeekDayDone(String day) {
+    return '$day, sesión hecha';
+  }
+
+  @override
+  String trainingDetailExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ejercicios',
+      one: '1 ejercicio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count series',
+      one: '1 serie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailDuration(int minutes) {
+    return '$minutes min aprox.';
+  }
+
+  @override
+  String trainingDetailPrescription(int sets, String prescription, int rest) {
+    return '$sets × $prescription · descanso $rest s';
+  }
+
+  @override
+  String trainingDetailPrevious(String value) {
+    return 'Anterior $value';
+  }
+
+  @override
+  String trainingDetailReps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reps.',
+      one: '1 rep.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailSetsProgress(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done de $total series',
+      one: '$done de 1 serie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailToday(String value) {
+    return 'Hoy $value';
+  }
+
+  @override
+  String trainingDetailNextAction(String name) {
+    return 'Siguiente: $name';
+  }
+
+  @override
+  String get trainingDetailCompletionSavedPending =>
+      'Guardada en este móvil · pendiente de sincronizar';
+
+  @override
+  String get activeExerciseCloseA11y => 'Cerrar ejercicio';
+
+  @override
+  String activeExercisePosition(int current, int total) {
+    return 'Ejercicio $current de $total';
+  }
+
+  @override
+  String activeExerciseSetOf(int current, int total) {
+    return 'Serie $current de $total';
+  }
+
+  @override
+  String get activeExerciseUnitReps => 'reps';
+
+  @override
+  String get activeExerciseUnitSeconds => 's';
+
+  @override
+  String get activeExerciseUnitMinutes => 'min';
+
+  @override
+  String activeExerciseRir(int rir) {
+    return 'RIR $rir';
+  }
+
+  @override
+  String activeExerciseTargetA11y(String target) {
+    return 'Objetivo: $target';
+  }
+
+  @override
+  String activeExerciseYourWeight(String weight) {
+    return 'Tu peso: $weight';
+  }
+
+  @override
+  String get activeExerciseNoPrevious => 'Sin datos anteriores';
+
+  @override
+  String activeExerciseRestAfter(int seconds) {
+    return 'Descanso después: $seconds s';
+  }
+
+  @override
+  String get activeExerciseSetsA11y => 'Series del ejercicio';
+
+  @override
+  String get activeExerciseSetNow => 'Ahora';
+
+  @override
+  String get activeExerciseSetDone => 'Hecha';
+
+  @override
+  String activeExerciseSetChipDoneA11y(int setNumber, String value) {
+    return 'Serie $setNumber: $value, guardada en este móvil';
+  }
+
+  @override
+  String activeExerciseSetChipNowA11y(int setNumber) {
+    return 'Serie $setNumber, ahora';
+  }
+
+  @override
+  String activeExerciseSetChipNextA11y(int setNumber, String value) {
+    return 'Serie $setNumber, $value';
+  }
+
+  @override
+  String activeExerciseSetSavedStatus(int setNumber, String status) {
+    return 'Serie $setNumber · $status';
+  }
+
+  @override
+  String get activeExerciseTechniqueButton => 'Ver técnica';
+
+  @override
+  String get activeExerciseLogSetButton => 'Registrar serie';
+
+  @override
+  String activeExerciseRestNext(int setNumber, String target) {
+    return 'Siguiente: Serie $setNumber · $target';
+  }
+
+  @override
+  String activeExerciseRestNextWithWeight(
+    int setNumber,
+    String target,
+    String weight,
+  ) {
+    return 'Siguiente: Serie $setNumber · $target · tu peso $weight';
+  }
+
+  @override
+  String activeExerciseRestExtend(int seconds) {
+    return '+$seconds s';
+  }
+
+  @override
+  String get activeExerciseRestSkip => 'Saltar descanso';
+
+  @override
+  String activeExerciseRestRemainingA11y(String time) {
+    return 'Descanso, quedan $time';
+  }
+
+  @override
+  String get activeExerciseRestTenSecondsA11y =>
+      'Quedan 10 segundos de descanso';
+
+  @override
+  String get activeExerciseRestFinishedA11y => 'Descanso terminado';
+
+  @override
+  String setSheetObjective(String objective) {
+    return 'Objetivo $objective';
+  }
+
+  @override
+  String setSheetObjectiveWithPrevious(String objective, String previous) {
+    return 'Objetivo $objective — Anterior $previous';
+  }
+
+  @override
+  String setSheetSameAsPrevious(String value) {
+    return 'Igual que la anterior · $value';
+  }
+
+  @override
+  String get setSheetRepsLabel => 'Repeticiones';
+
+  @override
+  String get setSheetSecondsLabel => 'Segundos';
+
+  @override
+  String get setSheetWeightLabel => 'Peso';
+
+  @override
+  String get setSheetWeightKgA11y => 'Peso en kilos';
+
+  @override
+  String get setSheetWeightLbA11y => 'Peso en libras';
+
+  @override
+  String setSheetWeightHint(String step) {
+    return 'pasos de $step · toca la cifra para escribir';
+  }
+
+  @override
+  String get setSheetRirLabel => 'RIR';
+
+  @override
+  String setSheetRirChipA11y(int value) {
+    return 'RIR $value';
+  }
+
+  @override
+  String get setSheetRirFivePlusA11y => 'RIR 5 o más';
+
+  @override
+  String get setSheetRepsDecrement => 'Una repetición menos';
+
+  @override
+  String get setSheetRepsIncrement => 'Una repetición más';
+
+  @override
+  String setSheetSecondsDecrement(int step) {
+    return '$step segundos menos';
+  }
+
+  @override
+  String setSheetSecondsIncrement(int step) {
+    return '$step segundos más';
+  }
+
+  @override
+  String get setSheetMinutesDecrement => 'Un minuto menos';
+
+  @override
+  String get setSheetMinutesIncrement => 'Un minuto más';
+
+  @override
+  String setSheetWeightDecrement(String step) {
+    return 'Restar $step';
+  }
+
+  @override
+  String setSheetWeightIncrement(String step) {
+    return 'Sumar $step';
+  }
+
+  @override
+  String get setSheetSave => 'Guardar serie';
+
+  @override
+  String setInputNotANumber(String value, String example) {
+    return 'No entiendo «$value». Escribe un número, por ejemplo $example';
+  }
+
+  @override
+  String setInputWeightAmbiguous(String value, String example) {
+    return '«$value» es ambiguo. Usa una sola coma decimal, por ejemplo $example';
+  }
+
+  @override
+  String setInputTooManyDecimals(String example) {
+    return 'Como máximo dos decimales, por ejemplo $example';
+  }
+
+  @override
+  String setInputNotInteger(String example) {
+    return 'Tiene que ser un número entero, por ejemplo $example';
+  }
+
+  @override
+  String setInputAboveMax(String max) {
+    return 'Máximo $max';
+  }
+
+  @override
+  String get circuitCloseA11y => 'Cerrar circuito';
+
+  @override
+  String circuitRoundOf(int current, int total) {
+    return 'Ronda $current de $total';
+  }
+
+  @override
+  String get circuitThisRound => 'Esta ronda';
+
+  @override
+  String get circuitNotLogged => 'Sin registrar';
+
+  @override
+  String circuitRowDoneA11y(String name, String value) {
+    return '$name: $value, guardada en este móvil';
+  }
+
+  @override
+  String circuitRowNotLoggedA11y(String name) {
+    return '$name: sin registrar';
+  }
+
+  @override
+  String circuitRowNowA11y(String name) {
+    return '$name: ahora';
+  }
+
+  @override
+  String circuitRowNextA11y(String name, String target) {
+    return '$name: después, $target';
+  }
+
+  @override
+  String circuitRowLaterA11y(String name) {
+    return '$name: después';
+  }
+
+  @override
+  String circuitRoundRestAfter(int seconds) {
+    return 'Descanso de ronda después: $seconds s';
+  }
+
+  @override
+  String get circuitEndsAfter => 'Al terminar: fin del circuito';
+
+  @override
+  String get circuitFinalRestTitle => 'Último descanso';
+
+  @override
+  String circuitRoundDone(int round) {
+    return 'Ronda $round hecha';
+  }
+
+  @override
+  String circuitNextExercise(String name, String target) {
+    return 'Siguiente: $name · $target';
+  }
+
+  @override
+  String circuitNextExerciseWithWeight(
+    String name,
+    String target,
+    String weight,
+  ) {
+    return 'Siguiente: $name · $target · tu peso $weight';
+  }
+
+  @override
+  String circuitNextRound(int round, String name) {
+    return 'Siguiente: Ronda $round · $name';
+  }
+
+  @override
+  String get circuitAfterRestEnd => 'Después: fin del circuito';
+
+  @override
+  String get circuitFinishButton => 'Terminar circuito';
+
+  @override
+  String get circuitReadyTitle => 'Todas las rondas hechas';
+
+  @override
+  String circuitSheetTitle(String name, int round) {
+    return '$name · Ronda $round';
+  }
+
+  @override
+  String circuitSavedStatus(String name, int round, String status) {
+    return '$name, ronda $round · $status';
+  }
 }

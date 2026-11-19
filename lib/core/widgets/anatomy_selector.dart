@@ -125,7 +125,7 @@ class _AnatomySelectorState extends State<AnatomySelector> {
                 width: 1.5,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             // Last resort for large text scales: shrink the label to fit
             // rather than wrap, ellipsize or clip it.
             child: FittedBox(

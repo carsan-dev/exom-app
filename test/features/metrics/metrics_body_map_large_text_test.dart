@@ -65,12 +65,16 @@ class _ProfileRepository extends Fake implements ProfileRepository {
 }
 
 class _Storage extends LocalStorage {
+  _Storage([this.unitSystem = UnitSystem.metric]);
+
+  final UnitSystem unitSystem;
+
   @override
   ThemeMode getThemeModePreference() => ThemeMode.dark;
   @override
   Locale? getLocalePreference() => null;
   @override
-  UnitSystem getUnitSystemPreference() => UnitSystem.metric;
+  UnitSystem getUnitSystemPreference() => unitSystem;
   @override
   Map<String, dynamic>? getCachedMap(String key) => null;
 }
@@ -88,13 +92,14 @@ Future<_Harness> _mount(
   Size size = const Size(390, 900),
   double textScale = 1.0,
   Locale locale = const Locale('es'),
+  UnitSystem unitSystem = UnitSystem.metric,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   await sl.reset();
-  final storage = _Storage();
+  final storage = _Storage(unitSystem);
   final repository = _Repository(latest);
   final profile = _ProfileRepository();
   sl.registerSingleton<LocalStorage>(storage);
@@ -325,6 +330,114 @@ void main() {
           final tops = rects.map((r) => r.top).toList()..sort();
           expect(tops.toSet().length, rects.length);
         });
+      }
+    }
+  });
+
+  group('L4-I14 measure hints follow the locale decimal separator', () {
+    Iterable<String?> hints(WidgetTester tester) => tester
+        .widgetList<TextField>(find.byType(TextField))
+        .map((field) => field.decoration?.hintText);
+
+    for (final (locale, imperial, metric) in const [
+      ('es', '0,0', '0'),
+      ('en', '0.0', '0'),
+    ]) {
+      testWidgets('$locale imperial hint is $imperial', (tester) async {
+        await _mount(
+          tester,
+          locale: Locale(locale),
+          unitSystem: UnitSystem.imperial,
+        );
+        await _openBodyMap(tester);
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MetricsFormPage)),
+        );
+        // A single field (neck) and a bilateral one (upper arm).
+        for (final zone in [BodyZone.neck, BodyZone.upperArm]) {
+          final label = zone.label(l10n);
+          await tester.ensureVisible(find.text(label));
+          await tester.pump();
+          await tester.tap(_zoneControl(label));
+          await tester.pump();
+          final found = hints(tester).whereType<String>().toList();
+          expect(found, contains(imperial), reason: '${zone.name}: $found');
+          expect(
+            found.where((h) => h == '0.0' || h == '0,0'),
+            everyElement(imperial),
+            reason: '${zone.name}: $found',
+          );
+        }
+      });
+
+      testWidgets('$locale metric hint stays $metric', (tester) async {
+        await _mount(tester, locale: Locale(locale));
+        await _openBodyMap(tester);
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MetricsFormPage)),
+        );
+        for (final zone in [BodyZone.neck, BodyZone.upperArm]) {
+          final label = zone.label(l10n);
+          await tester.ensureVisible(find.text(label));
+          await tester.pump();
+          await tester.tap(_zoneControl(label));
+          await tester.pump();
+          expect(hints(tester).whereType<String>(), contains(metric));
+        }
+      });
+    }
+  });
+
+  group('L4-I18 view tabs', () {
+    for (final locale in const ['es', 'en']) {
+      for (final width in const [360.0, 320.0]) {
+        for (final scale in const [1.0, 1.3, 1.6]) {
+          testWidgets('$locale ${width}dp x$scale', (tester) async {
+            await _mount(
+              tester,
+              latest: _metric,
+              size: Size(width, 900),
+              textScale: scale,
+              locale: Locale(locale),
+            );
+            await _openBodyMap(tester);
+            final l10n = AppLocalizations.of(
+              tester.element(find.byType(MetricsFormPage)),
+            );
+            for (final label in [l10n.frontViewLabel, l10n.backViewLabel]) {
+              final text = find.text(label);
+              await tester.ensureVisible(text);
+              await tester.pump();
+              final tab = find
+                  .ancestor(of: text, matching: find.byType(Container))
+                  .first;
+              final box = tester.getRect(tab);
+              final textRect = tester.getRect(text);
+              final paragraph = tester.renderObject<RenderParagraph>(text);
+              // Painted size: the FittedBox may shrink the label to fit.
+              final shrink = textRect.height / paragraph.size.height;
+              // 1.5 dp border + 4 dp padding between the border and the text.
+              const gap = 1.5 + 4;
+              expect(tester.takeException(), isNull, reason: label);
+              expect(box.height, greaterThanOrEqualTo(48), reason: label);
+              expect(
+                textRect.left - box.left,
+                greaterThanOrEqualTo(gap - 0.01),
+                reason: '$label touches the left edge of its tab',
+              );
+              expect(
+                box.right - textRect.right,
+                greaterThanOrEqualTo(gap - 0.01),
+                reason: '$label touches the right edge of its tab',
+              );
+              expect(
+                14 * scale * shrink,
+                greaterThanOrEqualTo(13),
+                reason: '$label is painted below 13 px',
+              );
+            }
+          });
+        }
       }
     }
   });

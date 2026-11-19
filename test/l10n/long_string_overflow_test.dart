@@ -1,8 +1,24 @@
+import 'dart:io';
+
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
+import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
+import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
+import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
+import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
+import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
+import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
+import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
+import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _codes = [
@@ -41,6 +57,91 @@ Future<void> _pump(WidgetTester tester, Widget Function(BuildContext) child) asy
     ),
   );
   await tester.pump();
+}
+
+final _metric = BodyMetricEntity(
+  id: 'metric-1',
+  date: DateTime(2026, 11, 18),
+  weightKg: 68.4,
+  heightCm: 180,
+  muscleMassKg: 32.5,
+  sleepHours: 7.5,
+  waistCm: 74,
+  chestCm: 100,
+  armLeftCm: 35,
+  armRightCm: 36,
+);
+
+class _MetricsRepository extends Fake implements MetricsRepository {
+  @override
+  Future<BodyMetricEntity?> getLatestMetric({String? date}) async => _metric;
+
+  @override
+  Future<BodyMetricEntity> saveMetric(Map<String, dynamic> data) async => _metric;
+}
+
+class _Profile extends Fake implements ProfileEntity {}
+
+class _ProfileRepository extends Fake implements ProfileRepository {
+  @override
+  Future<ProfileEntity> updateProfile(Map<String, dynamic> data) async => _Profile();
+}
+
+class _Storage extends LocalStorage {
+  _Storage(this.unitSystem);
+
+  final UnitSystem unitSystem;
+
+  @override
+  ThemeMode getThemeModePreference() => ThemeMode.light;
+  @override
+  Locale? getLocalePreference() => null;
+  @override
+  UnitSystem getUnitSystemPreference() => unitSystem;
+  @override
+  Map<String, dynamic>? getCachedMap(String key) => null;
+}
+
+/// Mounts the real metrics form (registered in `sl` with fakes) at [width]dp.
+Future<void> _pumpMetricsForm(
+  WidgetTester tester, {
+  required Locale locale,
+  required double width,
+  required double scale,
+  required UnitSystem unitSystem,
+}) async {
+  tester.view.physicalSize = Size(width, 900);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final storage = _Storage(unitSystem);
+  final repository = _MetricsRepository();
+  final profile = _ProfileRepository();
+  sl.registerSingleton<LocalStorage>(storage);
+  sl.registerFactory<MetricsBloc>(
+    () => MetricsBloc(
+      saveMetricUseCase: SaveMetricUseCase(repository),
+      metricsRepository: repository,
+      updateProfileUseCase: UpdateProfileUseCase(profile),
+    ),
+  );
+  await tester.pumpWidget(
+    BlocProvider<AppPreferencesCubit>(
+      create: (_) => AppPreferencesCubit(storage),
+      child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: AppTheme.light,
+        builder: (context, app) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+          child: app!,
+        ),
+        home: const MetricsFormPage(),
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
@@ -91,5 +192,79 @@ void main() {
       );
     });
     expect(tester.takeException(), isNull);
+  });
+
+  group('MetricsFormPage does not overflow', () {
+    // Real DM Sans face: the default test font (Ahem) fakes widths.
+    setUpAll(() async {
+      final loader = FontLoader(AppTheme.bodyFontFamily);
+      var loaded = 0;
+      for (final file in Directory('assets/fonts').listSync().whereType<File>()) {
+        final name = file.uri.pathSegments.last;
+        if (name.startsWith('dm-sans-') && name.endsWith('.ttf')) {
+          loader.addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
+          loaded++;
+        }
+      }
+      expect(loaded, greaterThan(0), reason: 'no dm-sans-*.ttf font found');
+      await loader.load();
+    });
+    setUp(sl.reset);
+    tearDown(sl.reset);
+
+    // Scrolls the whole form in steps (off-screen content is not laid out
+    // until reached) and checks for layout exceptions after every step.
+    Future<void> sweep(WidgetTester tester, String label) async {
+      final scrollable = find.byType(Scrollable).first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      await tester.drag(scrollable, const Offset(0, 100000));
+      await tester.pump();
+      expect(position.pixels, position.minScrollExtent, reason: label);
+      var steps = 0;
+      while (position.pixels < position.maxScrollExtent) {
+        await tester.drag(scrollable, const Offset(0, -250));
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: '$label step $steps');
+        expect(++steps, lessThan(200), reason: '$label never reaches the end');
+      }
+      expect(position.pixels, position.maxScrollExtent, reason: label);
+      expect(steps, greaterThan(0), reason: '$label is not scrollable');
+    }
+
+    for (final locale in const ['es', 'en']) {
+      for (final unit in UnitSystem.values) {
+        testWidgets('$locale ${unit.name} 320dp x1.3 full form', (tester) async {
+          await _pumpMetricsForm(
+            tester,
+            locale: Locale(locale),
+            width: 320,
+            scale: 1.3,
+            unitSystem: unit,
+          );
+          final l10n = AppLocalizations.of(tester.element(find.byType(MetricsFormPage)));
+          expect(find.byType(MetricsFormPage), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          // List mode of the measurements.
+          await sweep(tester, 'list');
+          expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
+          // Body-map mode, front and back views.
+          await tester.ensureVisible(find.text(l10n.bodyViewToggle));
+          await tester.pump();
+          await tester.tap(find.text(l10n.bodyViewToggle));
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          await sweep(tester, 'body map front');
+          final back = find.text(l10n.backViewLabel);
+          expect(back, findsOneWidget);
+          await tester.ensureVisible(back);
+          await tester.pump();
+          await tester.tap(back);
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          await sweep(tester, 'body map back');
+          expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
+        });
+      }
+    }
   });
 }

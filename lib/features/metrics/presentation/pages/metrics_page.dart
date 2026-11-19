@@ -1725,6 +1725,16 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+/// Placeholder of a measure field: «0» in metric, «0.0» in imperial with the
+/// decimal separator of the app locale (the one the field values use).
+String _measureHint(BuildContext context, UnitSystem unitSystem) =>
+    unitSystem == UnitSystem.imperial
+    ? '0.0'.replaceFirst(
+        '.',
+        decimalSeparatorFor(Localizations.localeOf(context).languageCode),
+      )
+    : '0';
+
 class _MeasureInput extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -1760,7 +1770,7 @@ class _MeasureInput extends StatelessWidget {
           style: TextStyle(color: palette.textPrimary, fontSize: 16),
           onChanged: onChanged,
           decoration: InputDecoration(
-            hintText: unitSystem == UnitSystem.imperial ? '0.0' : '0',
+            hintText: _measureHint(context, unitSystem),
             suffixText: lengthUnitSymbol(unitSystem),
             suffixStyle: TextStyle(color: palette.textSecondary, fontSize: 14),
             contentPadding: const EdgeInsets.symmetric(
@@ -1802,7 +1812,7 @@ class _BilateralMeasureInput extends StatelessWidget {
 
     InputDecoration decoration() {
       return InputDecoration(
-        hintText: unitSystem == UnitSystem.imperial ? '0.0' : '0',
+        hintText: _measureHint(context, unitSystem),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,

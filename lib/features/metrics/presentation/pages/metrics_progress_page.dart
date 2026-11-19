@@ -131,20 +131,8 @@ class _ProgressViewState extends State<_ProgressView> {
       ];
     }
     if (state is MetricsHistoryLoaded) {
-      // The metrics datasource swallows every error and returns [] / null, so
-      // "no history and no latest" may be a failed request, not an empty
-      // account. Do not claim the user has no data; offer a retry instead.
-      // Pending owner decision: let the datasource tell error from empty.
-      if (state.weightHistory.isEmpty && state.latest == null) {
-        return [
-          _HistoryMessage(
-            message: AppLocalizations.of(context).progressHistoryUnavailable,
-            onRetry: () => bloc.add(const MetricsHistoryRequested()),
-          ),
-          const SizedBox(height: 24),
-          const _PhotosRow(),
-        ];
-      }
+      // Network and server errors arrive as [MetricsHistoryFailure], so an
+      // empty history with no latest record is an account without records.
       final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
         (cubit) => cubit.state.unitSystem,
       );

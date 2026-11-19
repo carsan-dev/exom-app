@@ -7,6 +7,7 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
@@ -699,5 +700,64 @@ void main() {
         lessThan(top('Merluza, patata y ensalada')),
       );
     });
+  });
+
+  group('L4-I8 fixed history bar', () {
+    for (final width in [390.0, 320.0]) {
+      for (final scale in [1.0, 1.3]) {
+        testWidgets(
+          'at the end of the list nothing is under the bar (${width}dp, x$scale)',
+          (tester) async {
+            await _mount(
+              tester,
+              diet: _diet,
+              completed: {'m-lunch'},
+              actions: [_action('m-lunch')],
+              size: Size(width, 640),
+              textScale: scale,
+            );
+            final footer = find.byType(ExomPinnedFooter);
+            expect(footer, findsOneWidget);
+            expect(
+              find.descendant(
+                of: footer,
+                matching: find.text(_l10n(tester).dietHistoryTitle),
+              ),
+              findsOneWidget,
+            );
+            await tester.scrollUntilVisible(
+              find.byKey(const Key('diet-shopping-list-row')),
+              300,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.drag(
+              find.byType(Scrollable).first,
+              const Offset(0, -400),
+            );
+            await tester.pumpAndSettle();
+            final bar = tester.getRect(footer);
+            for (final finder in [
+              find.byKey(const Key('diet-shopping-list-row')),
+              find.byKey(const Key('meal-row-m-dinner')),
+            ]) {
+              final rect = tester.getRect(finder);
+              expect(
+                rect.bottom,
+                lessThanOrEqualTo(bar.top),
+                reason: 'row $rect under bar $bar',
+              );
+            }
+            expect(
+              tester
+                  .getRect(find.byKey(const Key('diet-shopping-list-row')))
+                  .bottom,
+              lessThanOrEqualTo(bar.top - 16),
+              reason: 'safety margin above the bar',
+            );
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
   });
 }

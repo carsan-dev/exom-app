@@ -6483,12 +6483,6 @@ abstract class AppLocalizations {
   /// **'No se pudo cargar tu progreso.'**
   String get progressHistoryError;
 
-  /// No description provided for @progressHistoryUnavailable.
-  ///
-  /// In es, this message translates to:
-  /// **'No hemos podido mostrar tus medidas ahora. Si ya tienes registros, vuelve a intentarlo.'**
-  String get progressHistoryUnavailable;
-
   /// No description provided for @progressHistoryOffline.
   ///
   /// In es, this message translates to:

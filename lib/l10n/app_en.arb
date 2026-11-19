@@ -1260,6 +1260,5 @@
   "progressMeasureSide": "{measure} · {side}",
   "progressLoading": "Loading your progress",
   "progressHistoryError": "We could not load your progress.",
-  "progressHistoryUnavailable": "We could not show your measurements right now. If you already have records, try again.",
   "progressHistoryOffline": "No connection. Connect to see your progress."
 }

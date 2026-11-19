@@ -3941,10 +3941,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get progressHistoryError => 'No se pudo cargar tu progreso.';
 
   @override
-  String get progressHistoryUnavailable =>
-      'No hemos podido mostrar tus medidas ahora. Si ya tienes registros, vuelve a intentarlo.';
-
-  @override
   String get progressHistoryOffline =>
       'Sin conexión. Conéctate para ver tu progreso.';
 }

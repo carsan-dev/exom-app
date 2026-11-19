@@ -9,6 +9,7 @@ import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
@@ -33,8 +34,16 @@ class DietsPage extends StatelessWidget {
       child: Column(
         children: [
           Expanded(child: _DietsView(selectedDate: selectedDate)),
-          DietHistoryButton(
-            load: () => sl<DietRepository>().getDietHistory(date: selectedDate),
+          // Pinned footer, separate from the list: the list viewport ends at
+          // its top edge, so scrolling to the end leaves every row above it.
+          ExomPinnedFooter(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Center(
+              child: DietHistoryButton(
+                load: () =>
+                    sl<DietRepository>().getDietHistory(date: selectedDate),
+              ),
+            ),
           ),
         ],
       ),

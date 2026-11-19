@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/network_utils.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -49,11 +51,41 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
       emit(MetricsHistoryLoaded(weightHistory: history, latest: latest));
     } catch (error) {
       if (epoch != _historyEpoch) return;
+      // Only the latest record failed and the history has weights: show them
+      // (latest: null). The history alone never claims that the failed half
+      // is empty; an empty history or a failed history stays a failure.
+      final history = _historyWithoutLatest(error);
+      if (history != null) {
+        emit(MetricsHistoryLoaded(weightHistory: history));
+        return;
+      }
       // A session change (LocalSessionChanged) is a failure too: the data
       // may belong to the previous owner and is never shown.
       emit(MetricsHistoryFailure(offline: _isOffline(error)));
     }
   }
+
+  static List<BodyMetricEntity>? _historyWithoutLatest(Object error) {
+    if (error is! ParallelWaitError<Object?, Object?>) return null;
+    if (error.errors case (
+      null,
+      final AsyncError latestError,
+    ) when !_isSessionChange(latestError.error)) {
+      if (error.values case (
+        final List<BodyMetricEntity> history,
+        _,
+      ) when history.any((metric) => metric.weightKg != null)) {
+        return history;
+      }
+    }
+    return null;
+  }
+
+  /// LocalSessionChanged, or a request the auth interceptor cancelled because
+  /// the session changed while it was in flight.
+  static bool _isSessionChange(Object error) =>
+      error is LocalSessionChanged ||
+      (error is DioException && error.type == DioExceptionType.cancel);
 
   static bool _isOffline(Object error) {
     if (error is ParallelWaitError<Object?, Object?>) {

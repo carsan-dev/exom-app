@@ -10,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/formatters/weight_input.dart'
+    show decimalSeparatorFor;
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -109,12 +111,23 @@ class _MetricsViewState extends State<_MetricsView> {
   @override
   void initState() {
     super.initState();
-    _populateFallbackValuesFromCachedProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadLatestMetric();
       }
     });
+  }
+
+  bool _fallbackPopulated = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Needs the locale (inherited), so it cannot run in initState.
+    if (!_fallbackPopulated) {
+      _fallbackPopulated = true;
+      _populateFallbackValuesFromCachedProfile();
+    }
   }
 
   @override
@@ -281,7 +294,7 @@ class _MetricsViewState extends State<_MetricsView> {
   void _setSleepValue(double value) {
     setState(() {
       _sleepHours = value;
-      _sleepController.text = value.toStringAsFixed(1);
+      _sleepController.text = _fieldNumber(value.toStringAsFixed(1));
       _sleepTouched = true;
     });
   }
@@ -300,12 +313,12 @@ class _MetricsViewState extends State<_MetricsView> {
     final weightKg = _cachedProfileNumber('current_weight');
 
     if (heightCm != null && _heightController.text.isEmpty) {
-      _heightController.text = formatLengthValue(heightCm, unitSystem);
+      _heightController.text = _lengthField(heightCm, unitSystem);
     }
 
     if (weightKg != null && _weightController.text.isEmpty) {
       _weight = weightKg.clamp(40.0, 160.0);
-      _weightController.text = formatWeightValue(weightKg, unitSystem);
+      _weightController.text = _weightField(weightKg, unitSystem);
       _useManualWeight = weightKg < 40.0 || weightKg > 160.0;
     }
   }
@@ -328,10 +341,10 @@ class _MetricsViewState extends State<_MetricsView> {
           (profileWeightKg < 40.0 || profileWeightKg > 160.0);
     });
     _heightController.text = profileHeightCm != null
-        ? formatLengthValue(profileHeightCm, unitSystem)
+        ? _lengthField(profileHeightCm, unitSystem)
         : '';
     _weightController.text = profileWeightKg != null
-        ? formatWeightValue(profileWeightKg, unitSystem)
+        ? _weightField(profileWeightKg, unitSystem)
         : '';
     _muscleMassController.clear();
     _sleepController.clear();
@@ -340,9 +353,136 @@ class _MetricsViewState extends State<_MetricsView> {
     }
   }
 
+  /// Horizontal and vertical room a zone control takes besides its text:
+  /// 8 dp of padding and the 1.5 dp border on each side.
+  static const double _zoneControlChromeWidth = 19;
+  static const double _zoneControlChromeHeight = 11;
+  static const double _bodyMapSelectorHeight = 440;
+
+  /// Whether the zone names and values fit the side columns of the body map
+  /// without splitting a word or outgrowing the body height. It depends only
+  /// on the available width, the text scale and the locale, never on what the
+  /// user typed, so the layout (and the editor under it) does not change while
+  /// typing.
+  bool _bodyMapFitsSideBySide(
+    BuildContext context,
+    double maxWidth,
+    UnitSystem unitSystem,
+  ) {
+    // The context below the page's Material, where the zone texts inherit
+    // their default style from.
+    final scaler = MediaQuery.textScalerOf(context);
+    final base = DefaultTextStyle.of(context).style;
+    final labelStyle = base.merge(
+      const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    );
+    final valueStyle = base.merge(const TextStyle(fontSize: 13));
+    final contentWidth =
+        (maxWidth - AnatomySelector.widthFor(_bodyMapSelectorHeight)) / 2 -
+        _zoneControlChromeWidth;
+    if (contentWidth <= 0) {
+      return false;
+    }
+    final unit = lengthUnitSymbol(unitSystem);
+    // Measures and releases the painter right away.
+    Size measure(String text, TextStyle style, double maxWidth) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: scaler,
+      );
+      try {
+        painter.layout(maxWidth: maxWidth);
+        return painter.size;
+      } finally {
+        painter.dispose();
+      }
+    }
+
+    final bodyHeight = AnatomySelector.bodyHeightFor(_bodyMapSelectorHeight);
+    for (final column in [_bodyMapLeftZones, _bodyMapRightZones]) {
+      var columnHeight = 0.0;
+      for (final zone in column) {
+        final label = measure(
+          _localizedZoneLabel(context, zone),
+          labelStyle,
+          double.infinity,
+        );
+        if (label.width > contentWidth) {
+          return false;
+        }
+        // Widest value the zone can show: two sides of three digits and a
+        // decimal for the bilateral zones.
+        final value = _measureZone(zone).isBilateral
+            ? '000.0 / 000.0 $unit'
+            : '000.0 $unit';
+        if (measure('000.0', valueStyle, double.infinity).width >
+            contentWidth) {
+          return false;
+        }
+        final valueHeight = measure(value, valueStyle, contentWidth).height;
+        columnHeight += math.max(
+          kExomMinTapTarget,
+          _zoneControlChromeHeight + label.height + valueHeight,
+        );
+      }
+      if (columnHeight > bodyHeight) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static const _bodyMapStackedZones = [
+    BodyZone.neck,
+    BodyZone.shoulders,
+    BodyZone.chest,
+    BodyZone.upperArm,
+    BodyZone.forearm,
+    BodyZone.waist,
+    BodyZone.hips,
+    BodyZone.thigh,
+    BodyZone.calf,
+  ];
+
   Widget _buildBodyMapMeasurements() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
-    const selectorHeight = 440.0;
+    return LayoutBuilder(
+      builder: (context, constraints) =>
+          _bodyMapFitsSideBySide(context, constraints.maxWidth, unitSystem)
+          ? _buildSideBySideBodyMap(unitSystem)
+          : _buildStackedBodyMap(unitSystem),
+    );
+  }
+
+  Widget _buildStackedBodyMap(UnitSystem unitSystem) {
+    const selectorHeight = _bodyMapSelectorHeight;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        Center(
+          child: AnatomySelector(
+            height: selectorHeight,
+            selectedZone: _selectedMeasure,
+            onZoneSelected: (zone) {
+              setState(() => _selectedMeasure = zone);
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final zone in _bodyMapStackedZones)
+          _zoneLabel(zone, unitSystem, stacked: true),
+        if (_selectedMeasure != null) ...[
+          const SizedBox(height: 16),
+          _buildMeasureEditor(context, _selectedMeasure!),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSideBySideBodyMap(UnitSystem unitSystem) {
+    const selectorHeight = _bodyMapSelectorHeight;
     final selectorBodyHeight = AnatomySelector.bodyHeightFor(selectorHeight);
 
     return Column(
@@ -421,10 +561,18 @@ class _MetricsViewState extends State<_MetricsView> {
     return Column(crossAxisAlignment: align, children: children);
   }
 
-  Widget _zoneLabel(BodyZone zone, UnitSystem unitSystem) {
+  Widget _zoneLabel(
+    BodyZone zone,
+    UnitSystem unitSystem, {
+    bool stacked = false,
+  }) {
     final palette = context.exomPalette;
     final val = _zoneValuePreview(zone);
     final isSelected = _selectedMeasure == zone;
+    // Stacked (large text): one line per text, scaled down as a last resort
+    // so a word is never split.
+    Widget fit(Widget text) =>
+        stacked ? FittedBox(fit: BoxFit.scaleDown, child: text) : text;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedMeasure = zone),
@@ -443,24 +591,30 @@ class _MetricsViewState extends State<_MetricsView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              _localizedZoneLabel(context, zone),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isSelected ? palette.textPrimary : palette.textSecondary,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-            if (val.isNotEmpty)
+            fit(
               Text(
-                '$val ${lengthUnitSymbol(unitSystem)}',
+                _localizedZoneLabel(context, zone),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isSelected
                       ? palette.textPrimary
                       : palette.textSecondary,
                   fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (val.isNotEmpty)
+              fit(
+                Text(
+                  '$val ${lengthUnitSymbol(unitSystem)}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected
+                        ? palette.textPrimary
+                        : palette.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ),
           ],
@@ -626,9 +780,23 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
+  /// Accepts «,» and «.» as the decimal separator in every locale.
   double? _parseDouble(String text) {
     return double.tryParse(text.trim().replaceAll(',', '.'));
   }
+
+  String _lengthField(double? centimeters, UnitSystem unitSystem) =>
+      _fieldNumber(formatLengthValue(centimeters, unitSystem));
+
+  String _weightField(double? kilograms, UnitSystem unitSystem) =>
+      _fieldNumber(formatWeightValue(kilograms, unitSystem));
+
+  /// A fixed-decimals number as text for a field, with the decimal separator
+  /// of the app locale («79,0» in Spanish, «79.0» in English).
+  String _fieldNumber(String fixed) => fixed.replaceFirst(
+    '.',
+    decimalSeparatorFor(Localizations.localeOf(context).languageCode),
+  );
 
   Map<String, dynamic>? _getCachedProfile() {
     return sl<LocalStorage>().getCachedMap('profile_me');
@@ -662,7 +830,7 @@ class _MetricsViewState extends State<_MetricsView> {
       text: _heightController.text.isNotEmpty
           ? _heightController.text
           : initialHeightCm != null
-          ? formatLengthValue(initialHeightCm, unitSystem)
+          ? _lengthField(initialHeightCm, unitSystem)
           : '',
     );
     final calfController = TextEditingController(
@@ -845,14 +1013,15 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    _controllerForField('calf_left_cm').text =
-                        formatLengthValue(calfCm, unitSystem);
-                    _controllerForField('calf_right_cm').text =
-                        formatLengthValue(calfCm, unitSystem);
-                    _heightController.text = formatLengthValue(
-                      heightCm,
+                    _controllerForField('calf_left_cm').text = _lengthField(
+                      calfCm,
                       unitSystem,
                     );
+                    _controllerForField('calf_right_cm').text = _lengthField(
+                      calfCm,
+                      unitSystem,
+                    );
+                    _heightController.text = _lengthField(heightCm, unitSystem);
                     _heightTouched = true;
                     _muscleMassTouched = true;
                     _markMeasureTouched('calf_left_cm');
@@ -879,15 +1048,16 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     setState(() {
-      _muscleMassController.text = formatWeightValue(
+      _muscleMassController.text = _weightField(
         estimate.estimatedAsmKg,
         unitSystem,
       );
     });
 
     final seenMsg = AppLocalizations.of(context).seenEstimateApplied(
-      formatWeight(estimate.estimatedAsmKg, unitSystem),
-      estimate.estimatedAsmiKgPerM2.toStringAsFixed(2),
+      '${_weightField(estimate.estimatedAsmKg, unitSystem)} '
+      '${weightUnitSymbol(unitSystem)}',
+      _fieldNumber(estimate.estimatedAsmiKgPerM2.toStringAsFixed(2)),
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(seenMsg), behavior: SnackBarBehavior.floating),
@@ -918,19 +1088,19 @@ class _MetricsViewState extends State<_MetricsView> {
       _touchedMeasures.clear();
     });
     _heightController.text = metric.heightCm != null
-        ? formatLengthValue(metric.heightCm, unitSystem)
+        ? _lengthField(metric.heightCm, unitSystem)
         : profileHeightCm != null
-        ? formatLengthValue(profileHeightCm, unitSystem)
+        ? _lengthField(profileHeightCm, unitSystem)
         : '';
     _weightController.text = metric.weightKg != null
-        ? formatWeightValue(metric.weightKg, unitSystem)
+        ? _weightField(metric.weightKg, unitSystem)
         : '';
     final sleepHours = metric.sleepHours;
     _sleepController.text = sleepHours != null
-        ? sleepHours.toStringAsFixed(1)
+        ? _fieldNumber(sleepHours.toStringAsFixed(1))
         : '';
     if (metric.muscleMassKg != null) {
-      _muscleMassController.text = formatWeightValue(
+      _muscleMassController.text = _weightField(
         metric.muscleMassKg,
         unitSystem,
       );
@@ -954,7 +1124,7 @@ class _MetricsViewState extends State<_MetricsView> {
     };
     for (final entry in map.entries) {
       if (entry.value != null) {
-        _controllerForField(entry.key).text = formatLengthValue(
+        _controllerForField(entry.key).text = _lengthField(
           entry.value,
           unitSystem,
         );
@@ -1162,7 +1332,9 @@ class _MetricsViewState extends State<_MetricsView> {
                                         child: FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
-                                            formatWeight(_weight, unitSystem),
+                                            _fieldNumber(
+                                              formatWeight(_weight, unitSystem),
+                                            ),
                                             style: TextStyle(
                                               fontFamily:
                                                   AppTheme.displayFontFamily,

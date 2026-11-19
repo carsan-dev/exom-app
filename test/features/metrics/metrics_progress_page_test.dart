@@ -56,6 +56,7 @@ class _Repository extends Fake implements MetricsRepository {
   List<BodyMetricEntity> history;
   BodyMetricEntity? latest;
   Object? historyError;
+  Object? latestError;
   int historyCalls = 0;
   final saved = <Map<String, dynamic>>[];
 
@@ -68,7 +69,11 @@ class _Repository extends Fake implements MetricsRepository {
   }
 
   @override
-  Future<BodyMetricEntity?> getLatestMetric({String? date}) async => latest;
+  Future<BodyMetricEntity?> getLatestMetric({String? date}) async {
+    final error = latestError;
+    if (error != null) throw error;
+    return latest;
+  }
 
   @override
   Future<BodyMetricEntity> saveMetric(Map<String, dynamic> data) async {
@@ -523,38 +528,75 @@ void main() {
       expect(_addMeasure(l10n), findsOneWidget);
     });
 
-    // Contract (review defect 1): the metrics datasource swallows errors and
-    // returns [] / null, so "no history and no latest" cannot be told apart
-    // from "request failed". The view must not claim the user has no data.
-    testWidgets(
-      'empty history and no latest: neutral text, no claim of no data',
-      (tester) async {
-        final repository = _Repository(history: const []);
-        await _mount(tester, repository: repository);
-        final l10n = _l10n(tester);
-        expect(find.text(l10n.progressWeightEmpty), findsNothing);
-        expect(find.text(l10n.progressMeasuresEmpty), findsNothing);
-        expect(find.text(l10n.progressChartEmpty), findsNothing);
-        expect(
-          find.text(
-            'No hemos podido mostrar tus medidas ahora. '
-            'Si ya tienes registros, vuelve a intentarlo.',
-          ),
-          findsOneWidget,
-        );
-        expect(_addMeasure(l10n), findsOneWidget);
-        expect(find.byKey(const Key('progress-photos-row')), findsOneWidget);
+    // L4-I1: the metrics datasource now throws on network and server errors,
+    // so an empty history with no latest record is a real empty account.
+    testWidgets('empty history and no latest is the real empty state', (
+      tester,
+    ) async {
+      final repository = _Repository(history: const []);
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text('Aún no has registrado tu peso.'), findsOneWidget);
+      expect(find.text('Aún no hay medidas registradas.'), findsOneWidget);
+      expect(find.text(l10n.progressChartEmpty), findsOneWidget);
+      expect(find.text(l10n.retry), findsNothing);
+      expect(find.text(l10n.progressHistoryError), findsNothing);
+      expect(_addMeasure(l10n), findsOneWidget);
+      expect(find.byKey(const Key('progress-photos-row')), findsOneWidget);
+    });
 
-        expect(repository.historyCalls, 1);
-        repository
-          ..history = _weekly
-          ..latest = _latest;
-        await tester.tap(find.text(l10n.retry));
-        await tester.pumpAndSettle();
-        expect(repository.historyCalls, 2);
-        expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
-      },
-    );
+    testWidgets('a failed latest record is an error, not the empty state', (
+      tester,
+    ) async {
+      final repository = _Repository(history: const [])
+        ..latestError = Exception('500');
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressHistoryError), findsOneWidget);
+      expect(find.text(l10n.progressWeightEmpty), findsNothing);
+      expect(find.text(l10n.progressMeasuresEmpty), findsNothing);
+
+      repository
+        ..latestError = null
+        ..history = _weekly
+        ..latest = _latest;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pumpAndSettle();
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+    });
+
+    testWidgets('a failed latest record offline has the offline message', (
+      tester,
+    ) async {
+      final repository = _Repository(history: const [])
+        ..latestError = DioException(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          type: DioExceptionType.receiveTimeout,
+        );
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressHistoryOffline), findsOneWidget);
+      expect(find.text(l10n.retry), findsOneWidget);
+      expect(find.text(l10n.progressWeightEmpty), findsNothing);
+    });
+
+    // Review 3, D4: offline with only the history cached, the weights are
+    // shown and nothing is claimed empty.
+    testWidgets('a failed latest record keeps the weight history', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly)
+        ..latestError = DioException(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          type: DioExceptionType.connectionError,
+        );
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+      expect(find.text(l10n.progressHistoryOffline), findsNothing);
+      expect(find.text(l10n.progressWeightEmpty), findsNothing);
+      expect(find.text(l10n.progressMeasuresEmpty), findsNothing);
+    });
 
     testWidgets('latest without history is real data, not the neutral text', (
       tester,

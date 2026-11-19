@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -56,24 +57,30 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
           '/metrics/latest',
           queryParameters: date != null ? {'date': date} : null,
         );
-        final data = response.data;
-        if (data is Map<String, dynamic>) {
-          final inner = data['data'];
-          if (inner is Map<String, dynamic>) {
-            await _localStorage.cacheData(cacheKey, inner);
-            await _localStorage.cacheData('home_latest_metric', inner);
-            return BodyMetricModel.fromJson(inner);
-          }
+        final inner = _envelopeData(response.data, '/metrics/latest');
+        if (inner == null) return null;
+        if (inner is! Map<String, dynamic>) {
+          throw const FormatException('Unexpected /metrics/latest response');
         }
-        return null;
-      } catch (error) {
+        await _localStorage.cacheData(cacheKey, inner);
+        await _localStorage.cacheData('home_latest_metric', inner);
+        return BodyMetricModel.fromJson(inner);
+      } on DioException catch (error) {
+        // A request cancelled by a session change (logout or user switch)
+        // is not a network error: report it as LocalSessionChanged.
+        _localStorage.guardSession();
+        // The API answers 200 with `data: null` when there is no record; a
+        // 404 is still read as "no record", as the diets datasource does.
+        if (error.response?.statusCode == 404) return null;
         if (isOfflineError(error)) {
           final cached = _localStorage.getCachedMap(cacheKey);
           if (cached != null) {
             return BodyMetricModel.fromJson(cached);
           }
         }
-        return null;
+        // Network and server errors reach the caller: «Progreso» must tell
+        // them apart from an account without records.
+        rethrow;
       }
     });
   }
@@ -85,22 +92,23 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
         final response = await _apiClient.dio.get<dynamic>(
           '/metrics/weight-history',
         );
-        final data = response.data;
-        if (data is Map<String, dynamic>) {
-          final items = data['data'];
-          if (items is List) {
-            final normalized = items
-                .whereType<Map<String, dynamic>>()
-                .map(Map<String, dynamic>.from)
-                .toList(growable: false);
-            await _localStorage.cacheData('metrics_weight_history', normalized);
-            return normalized
-                .map(BodyMetricModel.fromJson)
-                .toList(growable: false);
-          }
+        final items = _envelopeData(response.data, '/metrics/weight-history');
+        if (items == null) return [];
+        if (items is! List) {
+          throw const FormatException(
+            'Unexpected /metrics/weight-history response',
+          );
         }
-        return [];
-      } catch (error) {
+        final normalized = items
+            .whereType<Map<String, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList(growable: false);
+        await _localStorage.cacheData('metrics_weight_history', normalized);
+        return normalized.map(BodyMetricModel.fromJson).toList(growable: false);
+      } on DioException catch (error) {
+        // A request cancelled by a session change (logout or user switch)
+        // is not a network error: report it as LocalSessionChanged.
+        _localStorage.guardSession();
         if (isOfflineError(error)) {
           final cached = _localStorage.getCachedList('metrics_weight_history');
           if (cached != null) {
@@ -110,8 +118,20 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
                 .toList(growable: false);
           }
         }
-        return [];
+        // The API answers 200 with `data: []` when there is no record; any
+        // other failure reaches the caller.
+        rethrow;
       }
     });
+  }
+
+  /// The `data` field of the API envelope `{success, data, ...}`. A 200 of any
+  /// other shape (e.g. a captive portal's HTML page) is an unexpected answer,
+  /// never an account without records.
+  static Object? _envelopeData(Object? body, String path) {
+    if (body is! Map<String, dynamic> || !body.containsKey('data')) {
+      throw FormatException('Unexpected $path response');
+    }
+    return body['data'];
   }
 }

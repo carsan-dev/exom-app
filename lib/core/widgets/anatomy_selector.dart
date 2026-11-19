@@ -48,6 +48,10 @@ class AnatomySelector extends StatefulWidget {
   static double bodyHeightFor(double height) =>
       height - _toggleFrameHeight - _toggleSpacing;
 
+  /// Width of a selector of total [height] (the body drawing sets it).
+  static double widthFor(double height) =>
+      bodyHeightFor(height) * (_kViewBoxW / _kViewBoxH);
+
   @override
   State<AnatomySelector> createState() => _AnatomySelectorState();
 }

@@ -1332,6 +1332,5 @@
   "@progressMeasureSide": {"placeholders": {"measure": {"type": "String"}, "side": {"type": "String"}}},
   "progressLoading": "Cargando tu progreso",
   "progressHistoryError": "No se pudo cargar tu progreso.",
-  "progressHistoryUnavailable": "No hemos podido mostrar tus medidas ahora. Si ya tienes registros, vuelve a intentarlo.",
   "progressHistoryOffline": "Sin conexión. Conéctate para ver tu progreso."
 }

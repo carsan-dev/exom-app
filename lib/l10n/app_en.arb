@@ -1260,5 +1260,8 @@
   "progressMeasureSide": "{measure} · {side}",
   "progressLoading": "Loading your progress",
   "progressHistoryError": "We could not load your progress.",
-  "progressHistoryOffline": "No connection. Connect to see your progress."
+  "progressHistoryOffline": "No connection. Connect to see your progress.",
+  "progressCachedBanner": "Offline · saved data",
+  "progressLatestUnavailableOffline": "Your latest record's measurements aren't available offline.",
+  "progressLatestUnavailableError": "Couldn't load your latest record's measurements."
 }

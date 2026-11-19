@@ -38,6 +38,21 @@ class MetricsHistoryLoading extends MetricsState {
   const MetricsHistoryLoading();
 }
 
+/// Why [MetricsHistoryLoaded.latest] is missing.
+enum MetricsLatestUnavailability {
+  /// The latest record was read: [MetricsHistoryLoaded.latest] is the record,
+  /// or null because the account has none.
+  none,
+
+  /// The latest-record request failed for lack of connection and there was no
+  /// cached copy.
+  offline,
+
+  /// The latest-record request failed for another reason (server error,
+  /// unexpected answer...).
+  error,
+}
+
 class MetricsHistoryLoaded extends MetricsState {
   /// Weight points as returned by the repository (`/metrics/weight-history`).
   final List<BodyMetricEntity> weightHistory;
@@ -45,7 +60,24 @@ class MetricsHistoryLoaded extends MetricsState {
   /// Most recent record of any date (`/metrics/latest`), or null.
   final BodyMetricEntity? latest;
 
-  const MetricsHistoryLoaded({required this.weightHistory, this.latest});
+  /// [weightHistory] is the offline cache copy, not the server's answer.
+  final bool historyFromCache;
+
+  /// [latest] is the offline cache copy, not the server's answer. Always false
+  /// when [latest] is null.
+  final bool latestFromCache;
+
+  /// Why [latest] is null; [MetricsLatestUnavailability.none] whenever the
+  /// latest record was read (including an account without records).
+  final MetricsLatestUnavailability latestUnavailability;
+
+  const MetricsHistoryLoaded({
+    required this.weightHistory,
+    this.latest,
+    this.historyFromCache = false,
+    this.latestFromCache = false,
+    this.latestUnavailability = MetricsLatestUnavailability.none,
+  });
 }
 
 class MetricsHistoryFailure extends MetricsState {

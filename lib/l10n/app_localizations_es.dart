@@ -3943,4 +3943,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get progressHistoryOffline =>
       'Sin conexión. Conéctate para ver tu progreso.';
+
+  @override
+  String get progressCachedBanner => 'Sin conexión · datos guardados';
+
+  @override
+  String get progressLatestUnavailableOffline =>
+      'Las medidas de tu último registro no están disponibles sin conexión.';
+
+  @override
+  String get progressLatestUnavailableError =>
+      'No se han podido cargar las medidas de tu último registro.';
 }

@@ -52,6 +52,29 @@ class _Repository extends Fake implements MetricsRepository {
   }
 }
 
+/// A repository that also reports where each «Progreso» read came from, as
+/// the real one does (L4-I12).
+class _SourcedRepository extends _Repository implements MetricsHistorySource {
+  final sourcedHistoryCalls =
+      <Completer<MetricsRead<List<BodyMetricEntity>>>>[];
+  bool latestFromCache = false;
+
+  @override
+  Future<MetricsRead<List<BodyMetricEntity>>> getWeightHistoryWithSource() {
+    final completer = Completer<MetricsRead<List<BodyMetricEntity>>>();
+    sourcedHistoryCalls.add(completer);
+    return completer.future;
+  }
+
+  @override
+  Future<MetricsRead<BodyMetricEntity?>> getLatestMetricWithSource() async {
+    latestCalls.add(null);
+    final error = latestError;
+    if (error != null) throw error;
+    return MetricsRead(latest, fromCache: latestFromCache);
+  }
+}
+
 class _Profile extends Fake implements ProfileEntity {}
 
 class _ProfileRepository extends Fake implements ProfileRepository {
@@ -194,6 +217,193 @@ void main() {
       expect(bloc.state, isA<MetricsHistoryFailure>());
       expect(bloc.state, isNot(isA<MetricsHistoryLoaded>()));
       await bloc.close();
+    });
+  });
+
+  // L4-I12: the loaded state says what comes from the offline cache and why
+  // the latest record is missing.
+  group('history load: origin and missing latest', () {
+    final weights = [
+      _weight('a', DateTime(2026, 11, 11), 68.8),
+      _weight('b', DateTime(2026, 11, 18), 68.4),
+    ];
+
+    Future<MetricsHistoryLoaded> loadSourced(
+      _SourcedRepository repository, {
+      required bool historyFromCache,
+    }) async {
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      repository.sourcedHistoryCalls.single.complete(
+        MetricsRead(weights, fromCache: historyFromCache),
+      );
+      await _settle();
+      // The plain reads are not used when the repository reports origin.
+      expect(repository.historyCalls, isEmpty);
+      return bloc.state as MetricsHistoryLoaded;
+    }
+
+    test('both from the network → no marks', () async {
+      final loaded = await loadSourced(
+        _SourcedRepository(),
+        historyFromCache: false,
+      );
+      expect(loaded.weightHistory, same(weights));
+      expect(loaded.latest, same(_latest));
+      expect(loaded.historyFromCache, isFalse);
+      expect(loaded.latestFromCache, isFalse);
+      expect(loaded.latestUnavailability, MetricsLatestUnavailability.none);
+    });
+
+    test('the origin of each half is propagated', () async {
+      final cachedHistory = await loadSourced(
+        _SourcedRepository(),
+        historyFromCache: true,
+      );
+      expect(cachedHistory.historyFromCache, isTrue);
+      expect(cachedHistory.latestFromCache, isFalse);
+
+      final cachedLatest = await loadSourced(
+        _SourcedRepository()..latestFromCache = true,
+        historyFromCache: false,
+      );
+      expect(cachedLatest.historyFromCache, isFalse);
+      expect(cachedLatest.latestFromCache, isTrue);
+      expect(cachedLatest.latest, same(_latest));
+      expect(
+        cachedLatest.latestUnavailability,
+        MetricsLatestUnavailability.none,
+      );
+    });
+
+    test('latest failing offline with a history → offline', () async {
+      final loaded = await loadSourced(
+        _SourcedRepository()
+          ..latestError = DioException(
+            requestOptions: RequestOptions(path: '/metrics/latest'),
+            type: DioExceptionType.connectionError,
+          ),
+        historyFromCache: true,
+      );
+      expect(loaded.weightHistory, same(weights));
+      expect(loaded.latest, isNull);
+      expect(loaded.historyFromCache, isTrue);
+      expect(loaded.latestFromCache, isFalse);
+      expect(loaded.latestUnavailability, MetricsLatestUnavailability.offline);
+    });
+
+    for (final entry in <String, Object>{
+      '5xx': DioException(
+        requestOptions: RequestOptions(path: '/metrics/latest'),
+        response: Response<Object?>(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          statusCode: 503,
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+      'FormatException': const FormatException('Unexpected'),
+    }.entries) {
+      test('latest failing with ${entry.key} with a history → error', () async {
+        final loaded = await loadSourced(
+          _SourcedRepository()..latestError = entry.value,
+          historyFromCache: false,
+        );
+        expect(loaded.latest, isNull);
+        expect(loaded.latestUnavailability, MetricsLatestUnavailability.error);
+      });
+    }
+
+    test('a repository without origin reads as the network', () async {
+      final repository = _Repository()
+        ..latestError = DioException(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          type: DioExceptionType.connectionError,
+        );
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      repository.historyCalls.single.complete(weights);
+      await _settle();
+      final loaded = bloc.state as MetricsHistoryLoaded;
+      expect(loaded.historyFromCache, isFalse);
+      expect(loaded.latestFromCache, isFalse);
+      expect(loaded.latestUnavailability, MetricsLatestUnavailability.offline);
+    });
+
+    test('an older cached response is discarded by the epoch', () async {
+      final repository = _SourcedRepository();
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      final states = <MetricsState>[];
+      final sub = bloc.stream.listen(states.add);
+      addTearDown(sub.cancel);
+
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      expect(repository.sourcedHistoryCalls, hasLength(2));
+
+      final fresh = [_weight('new', DateTime(2026, 11, 18), 68.4)];
+      repository.sourcedHistoryCalls[1].complete(MetricsRead(fresh));
+      await _settle();
+      repository.sourcedHistoryCalls[0].complete(
+        MetricsRead([
+          _weight('old', DateTime(2026, 11, 11), 70),
+        ], fromCache: true),
+      );
+      await _settle();
+
+      final loaded = states.whereType<MetricsHistoryLoaded>().toList();
+      expect(loaded, hasLength(1));
+      expect(loaded.single.weightHistory, same(fresh));
+      expect(loaded.single.historyFromCache, isFalse);
+    });
+
+    test('a session change in the latest half shows no data', () async {
+      final repository = _SourcedRepository()
+        ..latestError = const LocalSessionChanged();
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      repository.sourcedHistoryCalls.single.complete(
+        MetricsRead([
+          _weight('other-user', DateTime(2026, 11, 18), 90),
+        ], fromCache: true),
+      );
+      await _settle();
+      expect(bloc.state, isA<MetricsHistoryFailure>());
+    });
+
+    test('the day form keeps the plain dated read', () async {
+      final repository = _SourcedRepository();
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      bloc.add(const MetricsLoadRequested(date: '2026-11-18'));
+      await _settle();
+      await _settle();
+      expect((bloc.state as MetricsLoaded).current, same(_latest));
+      expect(repository.latestCalls, ['2026-11-18']);
+      expect(repository.sourcedHistoryCalls, isEmpty);
+    });
+
+    test('a cancelled latest request shows no data', () async {
+      final repository = _SourcedRepository()
+        ..latestError = DioException(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          type: DioExceptionType.cancel,
+        );
+      final bloc = _bloc(repository);
+      addTearDown(bloc.close);
+      bloc.add(const MetricsHistoryRequested());
+      await _settle();
+      repository.sourcedHistoryCalls.single.complete(MetricsRead(weights));
+      await _settle();
+      expect(bloc.state, isA<MetricsHistoryFailure>());
     });
   });
 

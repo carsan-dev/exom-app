@@ -44,19 +44,35 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
     emit(const MetricsHistoryLoading());
     try {
       final (history, latest) = await (
-        _metricsRepository.getWeightHistory(),
-        _metricsRepository.getLatestMetric(),
+        _readWeightHistory(),
+        _readLatestMetric(),
       ).wait;
       if (epoch != _historyEpoch) return;
-      emit(MetricsHistoryLoaded(weightHistory: history, latest: latest));
+      emit(
+        MetricsHistoryLoaded(
+          weightHistory: history.value,
+          latest: latest.value,
+          historyFromCache: history.fromCache,
+          latestFromCache: latest.value != null && latest.fromCache,
+        ),
+      );
     } catch (error) {
       if (epoch != _historyEpoch) return;
       // Only the latest record failed and the history has weights: show them
-      // (latest: null). The history alone never claims that the failed half
-      // is empty; an empty history or a failed history stays a failure.
-      final history = _historyWithoutLatest(error);
-      if (history != null) {
-        emit(MetricsHistoryLoaded(weightHistory: history));
+      // (latest: null) and say why the latest record is missing. The history
+      // alone never claims that the failed half is empty; an empty history or
+      // a failed history stays a failure.
+      final partial = _historyWithoutLatest(error);
+      if (partial != null) {
+        emit(
+          MetricsHistoryLoaded(
+            weightHistory: partial.history.value,
+            historyFromCache: partial.history.fromCache,
+            latestUnavailability: isOfflineError(partial.latestError)
+                ? MetricsLatestUnavailability.offline
+                : MetricsLatestUnavailability.error,
+          ),
+        );
         return;
       }
       // A session change (LocalSessionChanged) is a failure too: the data
@@ -65,17 +81,40 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
     }
   }
 
-  static List<BodyMetricEntity>? _historyWithoutLatest(Object error) {
+  /// The history read with its origin; a repository that does not report it
+  /// is read as the network.
+  Future<MetricsRead<List<BodyMetricEntity>>> _readWeightHistory() {
+    if (_metricsRepository case final MetricsHistorySource source) {
+      return source.getWeightHistoryWithSource();
+    }
+    return _metricsRepository.getWeightHistory().then(
+      (history) => MetricsRead<List<BodyMetricEntity>>(history),
+    );
+  }
+
+  /// The latest record of all time with its origin; a repository that does
+  /// not report it is read as the network.
+  Future<MetricsRead<BodyMetricEntity?>> _readLatestMetric() {
+    if (_metricsRepository case final MetricsHistorySource source) {
+      return source.getLatestMetricWithSource();
+    }
+    return _metricsRepository.getLatestMetric().then(
+      (latest) => MetricsRead<BodyMetricEntity?>(latest),
+    );
+  }
+
+  static ({MetricsRead<List<BodyMetricEntity>> history, Object latestError})?
+  _historyWithoutLatest(Object error) {
     if (error is! ParallelWaitError<Object?, Object?>) return null;
     if (error.errors case (
       null,
       final AsyncError latestError,
     ) when !_isSessionChange(latestError.error)) {
       if (error.values case (
-        final List<BodyMetricEntity> history,
+        final MetricsRead<List<BodyMetricEntity>> history,
         _,
-      ) when history.any((metric) => metric.weightKg != null)) {
-        return history;
+      ) when history.value.any((metric) => metric.weightKg != null)) {
+        return (history: history, latestError: latestError.error);
       }
     }
     return null;

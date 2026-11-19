@@ -18,6 +18,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/data/datasources/metrics_remote_datasource.dart';
 import 'package:exom_app/features/metrics/data/repositories/metrics_repository_impl.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
+import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
@@ -620,6 +621,263 @@ void main() {
     });
   });
 
+  // L4-I12: «Progreso» must know when what it shows comes from the offline
+  // cache, and why the latest record is missing. The sourced reads share the
+  // network/cache logic of the plain ones and only add the origin.
+  group('datasource sourced reads report the origin', () {
+    test('latest from the network → fromCache false', () async {
+      final env = _env()..reply(_latestPath, const _Ok(_latestJson));
+      final read = await env.datasource.getLatestMetricWithSource();
+      expect(read.value?.id, 'm-1');
+      expect(read.fromCache, isFalse);
+      expect(env.storage.cache['metrics_latest'], isNotNull);
+    });
+
+    test('latest 200 with data null / 404 → null, fromCache false', () async {
+      for (final reply in <_Reply>[const _Ok(null), const _Status(404)]) {
+        final env = _env()..reply(_latestPath, reply);
+        final read = await env.datasource.getLatestMetricWithSource();
+        expect(read.value, isNull);
+        expect(read.fromCache, isFalse);
+      }
+    });
+
+    test('latest offline with cache → cached record, fromCache true', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionError));
+      env.storage.cache['metrics_latest'] = Map<String, dynamic>.from(
+        _latestJson,
+      );
+      final read = await env.datasource.getLatestMetricWithSource();
+      expect(read.value?.id, 'm-1');
+      expect(read.fromCache, isTrue);
+    });
+
+    test('latest errors are rethrown as by the plain read', () async {
+      final server = _env()..reply(_latestPath, const _Status(500));
+      server.storage.cache['metrics_latest'] = Map<String, dynamic>.from(
+        _latestJson,
+      );
+      await expectLater(
+        server.datasource.getLatestMetricWithSource(),
+        throwsA(_dioError(offline: false, status: 500)),
+      );
+      final offline = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionError));
+      await expectLater(
+        offline.datasource.getLatestMetricWithSource(),
+        throwsA(_dioError(offline: true)),
+      );
+      final format = _env()..reply(_latestPath, const _Raw('[]'));
+      await expectLater(
+        format.datasource.getLatestMetricWithSource(),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('history from the network → fromCache false, cached', () async {
+      final env = _env()..reply(_historyPath, const _Ok(_historyJson));
+      final read = await env.datasource.getWeightHistoryWithSource();
+      expect(read.value.map((m) => m.weightKg), [79.0, 78.6]);
+      expect(read.fromCache, isFalse);
+      expect(env.storage.cache['metrics_weight_history'], hasLength(2));
+    });
+
+    test('history offline with cache → cached points, fromCache true', () async {
+      final env = _env()
+        ..reply(_historyPath, const _Fail(DioExceptionType.connectionError));
+      env.storage.cache['metrics_weight_history'] = <Object?>[
+        for (final item in _historyJson) Map<String, dynamic>.from(item),
+      ];
+      final read = await env.datasource.getWeightHistoryWithSource();
+      expect(read.value, hasLength(2));
+      expect(read.fromCache, isTrue);
+    });
+
+    test('history errors are rethrown as by the plain read', () async {
+      final server = _env()..reply(_historyPath, const _Status(500));
+      await expectLater(
+        server.datasource.getWeightHistoryWithSource(),
+        throwsA(_dioError(offline: false, status: 500)),
+      );
+      final offline = _env()
+        ..reply(_historyPath, const _Fail(DioExceptionType.receiveTimeout));
+      await expectLater(
+        offline.datasource.getWeightHistoryWithSource(),
+        throwsA(_dioError(offline: true)),
+      );
+      final format = _env()..reply(_historyPath, const _Ok('no-records'));
+      await expectLater(
+        format.datasource.getWeightHistoryWithSource(),
+        throwsA(isA<FormatException>()),
+      );
+      expect(format.storage.cache, isEmpty);
+    });
+  });
+
+  group('repository sourced reads keep the origin', () {
+    test('network reads → entities, fromCache false', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Ok(_latestJson))
+        ..reply(_historyPath, const _Ok(_historyJson));
+      final latest = await env.repository.getLatestMetricWithSource();
+      final history = await env.repository.getWeightHistoryWithSource();
+      expect(latest.value?.weightKg, 78.6);
+      expect(latest.fromCache, isFalse);
+      expect(history.value.map((m) => m.weightKg), [79.0, 78.6]);
+      expect(history.fromCache, isFalse);
+    });
+
+    test('cached reads → entities, fromCache true', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionError))
+        ..reply(_historyPath, const _Fail(DioExceptionType.connectionError));
+      env.storage.cache['metrics_latest'] = Map<String, dynamic>.from(
+        _latestJson,
+      );
+      env.storage.cache['metrics_weight_history'] = <Object?>[
+        for (final item in _historyJson) Map<String, dynamic>.from(item),
+      ];
+      final latest = await env.repository.getLatestMetricWithSource();
+      final history = await env.repository.getWeightHistoryWithSource();
+      expect(latest.value?.id, 'm-1');
+      expect(latest.fromCache, isTrue);
+      expect(history.value, hasLength(2));
+      expect(history.fromCache, isTrue);
+    });
+  });
+
+  group('MetricsBloc «Progreso» reports origin and missing latest', () {
+    Future<MetricsState> load(_Env env) async {
+      final bloc = env.metricsBloc();
+      addTearDown(bloc.close);
+      bloc.add(const MetricsHistoryRequested());
+      return bloc.stream.firstWhere(
+        (s) => s is MetricsHistoryLoaded || s is MetricsHistoryFailure,
+      );
+    }
+
+    Matcher loaded({
+      required bool historyFromCache,
+      required bool latestFromCache,
+      required MetricsLatestUnavailability unavailability,
+      required bool hasLatest,
+    }) => isA<MetricsHistoryLoaded>()
+        .having((s) => s.weightHistory, 'weightHistory', hasLength(2))
+        .having((s) => s.latest != null, 'has latest', hasLatest)
+        .having((s) => s.historyFromCache, 'historyFromCache', historyFromCache)
+        .having((s) => s.latestFromCache, 'latestFromCache', latestFromCache)
+        .having(
+          (s) => s.latestUnavailability,
+          'latestUnavailability',
+          unavailability,
+        );
+
+    test('both from the network → no marks', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Ok(_latestJson))
+        ..reply(_historyPath, const _Ok(_historyJson));
+      expect(
+        await load(env),
+        loaded(
+          historyFromCache: false,
+          latestFromCache: false,
+          unavailability: MetricsLatestUnavailability.none,
+          hasLatest: true,
+        ),
+      );
+    });
+
+    test('offline with both cached → both marked as cache', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionError))
+        ..reply(_historyPath, const _Fail(DioExceptionType.connectionError));
+      env.storage.cache['metrics_latest'] = Map<String, dynamic>.from(
+        _latestJson,
+      );
+      env.storage.cache['metrics_weight_history'] = <Object?>[
+        for (final item in _historyJson) Map<String, dynamic>.from(item),
+      ];
+      expect(
+        await load(env),
+        loaded(
+          historyFromCache: true,
+          latestFromCache: true,
+          unavailability: MetricsLatestUnavailability.none,
+          hasLatest: true,
+        ),
+      );
+    });
+
+    test('offline with only the history cached → latest offline', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionError))
+        ..reply(_historyPath, const _Fail(DioExceptionType.connectionError));
+      env.storage.cache['metrics_weight_history'] = <Object?>[
+        for (final item in _historyJson) Map<String, dynamic>.from(item),
+      ];
+      expect(
+        await load(env),
+        loaded(
+          historyFromCache: true,
+          latestFromCache: false,
+          unavailability: MetricsLatestUnavailability.offline,
+          hasLatest: false,
+        ),
+      );
+    });
+
+    test('latest offline, history from the network → latest offline', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Fail(DioExceptionType.connectionTimeout))
+        ..reply(_historyPath, const _Ok(_historyJson));
+      expect(
+        await load(env),
+        loaded(
+          historyFromCache: false,
+          latestFromCache: false,
+          unavailability: MetricsLatestUnavailability.offline,
+          hasLatest: false,
+        ),
+      );
+    });
+
+    for (final entry in <String, _Reply>{
+      '5xx': const _Status(503),
+      'unexpected body (FormatException)': const _Raw('[]'),
+    }.entries) {
+      test('latest ${entry.key} with a history → latest error', () async {
+        final env = _env()
+          ..reply(_latestPath, entry.value)
+          ..reply(_historyPath, const _Ok(_historyJson));
+        expect(
+          await load(env),
+          loaded(
+            historyFromCache: false,
+            latestFromCache: false,
+            unavailability: MetricsLatestUnavailability.error,
+            hasLatest: false,
+          ),
+        );
+      });
+    }
+
+    test('latest 404 is "no record", not unavailable', () async {
+      final env = _env()
+        ..reply(_latestPath, const _Status(404))
+        ..reply(_historyPath, const _Ok(_historyJson));
+      expect(
+        await load(env),
+        loaded(
+          historyFromCache: false,
+          latestFromCache: false,
+          unavailability: MetricsLatestUnavailability.none,
+          hasLatest: false,
+        ),
+      );
+    });
+  });
+
   group('ProfileBloc session change is still an error', () {
     test('LocalSessionChanged from a metric call → ProfileError', () async {
       final profiles = _ProfileRepository();
@@ -648,6 +906,14 @@ class _SessionChangedRepository extends MetricsRepositoryImpl {
 
   @override
   Future<BodyMetricEntity?> getLatestMetric({String? date}) async => null;
+
+  @override
+  Future<MetricsRead<List<BodyMetricEntity>>>
+  getWeightHistoryWithSource() async => throw const LocalSessionChanged();
+
+  @override
+  Future<MetricsRead<BodyMetricEntity?>> getLatestMetricWithSource() async =>
+      const MetricsRead(null);
 }
 
 class _NeverDataSource extends Fake implements MetricsRemoteDataSource {}
@@ -665,4 +931,13 @@ class _LatestSessionChangedRepository extends MetricsRepositoryImpl {
   @override
   Future<BodyMetricEntity?> getLatestMetric({String? date}) async =>
       throw const LocalSessionChanged();
+
+  // The «Progreso» load reads through these: same answers, with origin.
+  @override
+  Future<MetricsRead<List<BodyMetricEntity>>>
+  getWeightHistoryWithSource() async => MetricsRead(await getWeightHistory());
+
+  @override
+  Future<MetricsRead<BodyMetricEntity?>> getLatestMetricWithSource() async =>
+      MetricsRead(await getLatestMetric());
 }

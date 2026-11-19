@@ -1332,5 +1332,8 @@
   "@progressMeasureSide": {"placeholders": {"measure": {"type": "String"}, "side": {"type": "String"}}},
   "progressLoading": "Cargando tu progreso",
   "progressHistoryError": "No se pudo cargar tu progreso.",
-  "progressHistoryOffline": "Sin conexión. Conéctate para ver tu progreso."
+  "progressHistoryOffline": "Sin conexión. Conéctate para ver tu progreso.",
+  "progressCachedBanner": "Sin conexión · datos guardados",
+  "progressLatestUnavailableOffline": "Las medidas de tu último registro no están disponibles sin conexión.",
+  "progressLatestUnavailableError": "No se han podido cargar las medidas de tu último registro."
 }

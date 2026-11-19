@@ -6488,6 +6488,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin conexión. Conéctate para ver tu progreso.'**
   String get progressHistoryOffline;
+
+  /// No description provided for @progressCachedBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión · datos guardados'**
+  String get progressCachedBanner;
+
+  /// No description provided for @progressLatestUnavailableOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Las medidas de tu último registro no están disponibles sin conexión.'**
+  String get progressLatestUnavailableOffline;
+
+  /// No description provided for @progressLatestUnavailableError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se han podido cargar las medidas de tu último registro.'**
+  String get progressLatestUnavailableError;
 }
 
 class _AppLocalizationsDelegate

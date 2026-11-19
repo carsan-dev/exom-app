@@ -1,12 +1,15 @@
 // L4 unit 4: «Progreso» frame of Métricas. Real bloc and use cases; the
 // repository is a recording fake. The day form it opens is covered by
 // metrics_page_test.dart.
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -50,8 +53,12 @@ final _latest = BodyMetricEntity(
   waistCm: 74,
 );
 
-class _Repository extends Fake implements MetricsRepository {
+class _Repository extends Fake
+    implements MetricsRepository, MetricsHistorySource {
   _Repository({required this.history, this.latest});
+
+  bool historyFromCache = false;
+  bool latestFromCache = false;
 
   List<BodyMetricEntity> history;
   BodyMetricEntity? latest;
@@ -60,9 +67,15 @@ class _Repository extends Fake implements MetricsRepository {
   int historyCalls = 0;
   final saved = <Map<String, dynamic>>[];
 
+  /// While set, the history read waits for it (a request that has not been
+  /// answered yet); the error is checked after the wait.
+  Completer<void>? historyGate;
+
   @override
   Future<List<BodyMetricEntity>> getWeightHistory() async {
     historyCalls++;
+    final gate = historyGate;
+    if (gate != null) await gate.future;
     final error = historyError;
     if (error != null) throw error;
     return history;
@@ -74,6 +87,15 @@ class _Repository extends Fake implements MetricsRepository {
     if (error != null) throw error;
     return latest;
   }
+
+  @override
+  Future<MetricsRead<List<BodyMetricEntity>>>
+  getWeightHistoryWithSource() async =>
+      MetricsRead(await getWeightHistory(), fromCache: historyFromCache);
+
+  @override
+  Future<MetricsRead<BodyMetricEntity?>> getLatestMetricWithSource() async =>
+      MetricsRead(await getLatestMetric(), fromCache: latestFromCache);
 
   @override
   Future<BodyMetricEntity> saveMetric(Map<String, dynamic> data) async {
@@ -608,6 +630,400 @@ void main() {
       final l10n = _l10n(tester);
       expect(find.text(l10n.retry), findsNothing);
       expect(find.text(l10n.progressWeightEmpty), findsOneWidget);
+    });
+  });
+
+  group('cache and unavailable latest (L4-I12)', () {
+    DioException offline() => DioException(
+      requestOptions: RequestOptions(path: '/metrics/latest'),
+      type: DioExceptionType.connectionError,
+    );
+
+    testWidgets('history and latest from cache: banner, one retry, data', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true
+        ..latestFromCache = true;
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressCachedBanner), findsOneWidget);
+      expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+      expect(find.text(l10n.retry), findsOneWidget);
+      expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+      expect(find.text('74 cm'), findsOneWidget);
+
+      final calls = repository.historyCalls;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pumpAndSettle();
+      expect(repository.historyCalls, calls + 1);
+    });
+
+    testWidgets('only history from cache: banner, latest rows intact', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true;
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressCachedBanner), findsOneWidget);
+      expect(find.text('74 cm'), findsOneWidget);
+      expect(find.text(l10n.retry), findsOneWidget);
+    });
+
+    testWidgets('latest offline: notice, one retry, weights, no empty text', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly)
+        ..historyFromCache = true
+        ..latestError = offline();
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressLatestUnavailableOffline), findsOneWidget);
+      expect(find.text(l10n.progressLatestUnavailableError), findsNothing);
+      expect(find.text(l10n.progressMeasuresEmpty), findsNothing);
+      expect(find.text(l10n.progressHistoryOffline), findsNothing);
+      expect(find.text(l10n.retry), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('progress-measure-weight_kg-2026-11-11')),
+        findsOneWidget,
+      );
+      final button = find.ancestor(
+        of: find.text(l10n.retry),
+        matching: find.byType(ExomSecondaryButton),
+      );
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+
+      final calls = repository.historyCalls;
+      repository.latestError = null;
+      repository.latest = _latest;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pumpAndSettle();
+      expect(repository.historyCalls, calls + 1);
+      expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
+    });
+
+    testWidgets('latest 5xx with network history: error notice, no banner', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly)
+        ..latestError = Exception('500');
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressLatestUnavailableError), findsOneWidget);
+      expect(find.text(l10n.progressCachedBanner), findsNothing);
+      expect(find.text(l10n.progressMeasuresEmpty), findsNothing);
+      expect(find.text(l10n.retry), findsOneWidget);
+    });
+
+    testWidgets('all from network: no banner, no notice, no retry', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        repository: _Repository(history: _weekly, latest: _latest),
+      );
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressCachedBanner), findsNothing);
+      expect(find.byIcon(Icons.cloud_off_outlined), findsNothing);
+      expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
+      expect(find.text(l10n.progressLatestUnavailableError), findsNothing);
+      expect(find.text(l10n.retry), findsNothing);
+    });
+
+    testWidgets('banner plus notice never show two retry buttons', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly)
+        ..historyFromCache = true
+        ..latestError = offline();
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.progressCachedBanner), findsOneWidget);
+      expect(find.text(l10n.progressLatestUnavailableOffline), findsOneWidget);
+      expect(find.byType(ExomSecondaryButton), findsOneWidget);
+    });
+
+    testWidgets('banner plus notice announce once (one live region)', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final repository = _Repository(history: _weekly)
+        ..historyFromCache = true
+        ..latestError = offline();
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      final banner = tester.getSemantics(find.text(l10n.progressCachedBanner));
+      final notice = tester.getSemantics(
+        find.text(l10n.progressLatestUnavailableOffline),
+      );
+      final live = [
+        banner,
+        notice,
+      ].where((node) => node.flagsCollection.isLiveRegion).length;
+      expect(live, 1);
+      expect(banner.label, contains(l10n.progressCachedBanner));
+      handle.dispose();
+    });
+
+    testWidgets('banner alone is a live region', (tester) async {
+      final handle = tester.ensureSemantics();
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true;
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      final banner = tester.getSemantics(find.text(l10n.progressCachedBanner));
+      expect(banner.flagsCollection.isLiveRegion, isTrue);
+      handle.dispose();
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final scale in const [1.3, 1.6]) {
+        testWidgets('320 dp x$scale ${locale.languageCode}: no overflow', (
+          tester,
+        ) async {
+          for (final latestFails in [false, true]) {
+            final repository = _Repository(
+              history: _weekly,
+              latest: latestFails ? null : _latest,
+            )..historyFromCache = true;
+            if (latestFails) {
+              repository.latestError = offline();
+            } else {
+              repository.latestFromCache = true;
+            }
+            await _mount(
+              tester,
+              repository: repository,
+              size: const Size(320, 640),
+              textScale: scale,
+              locale: locale,
+            );
+            expect(tester.takeException(), isNull);
+            await tester.scrollUntilVisible(
+              find.byKey(const Key('progress-photos-row')),
+              200,
+              scrollable: find.byType(Scrollable).first,
+            );
+            expect(tester.takeException(), isNull);
+            _expectNoTextBelow13(tester);
+          }
+        });
+      }
+    }
+  });
+
+  group('banner retry is a compact text action (L4-I23)', () {
+    Future<_Repository> mountBanner(
+      WidgetTester tester, {
+      Size size = const Size(411, 900),
+      double textScale = 1.0,
+      Locale locale = const Locale('es'),
+    }) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true
+        ..latestFromCache = true;
+      await _mount(
+        tester,
+        repository: repository,
+        size: size,
+        textScale: textScale,
+        locale: locale,
+      );
+      return repository;
+    }
+
+    testWidgets('411 dp: not full width, 48 dp target, same line as text', (
+      tester,
+    ) async {
+      // Tests paint with the Ahem font (one em per glyph), about twice as
+      // wide as the real one: 0.5x text scale gives the real text width.
+      await mountBanner(tester, textScale: 0.5);
+      final l10n = _l10n(tester);
+      final button = find.byType(ExomQuietButton);
+      expect(button, findsOneWidget);
+      expect(find.byType(ExomSecondaryButton), findsNothing);
+      expect(find.text(l10n.retry), findsOneWidget);
+      final size = tester.getSize(button);
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.width, greaterThanOrEqualTo(48));
+      // The banner spans the screen minus its 20 dp side padding.
+      expect(size.width, lessThan(411 - 40));
+      final text = tester.getRect(find.text(l10n.progressCachedBanner));
+      final rect = tester.getRect(button);
+      expect(rect.left, greaterThanOrEqualTo(text.right));
+      expect((rect.center.dy - text.center.dy).abs(), lessThan(24));
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final scale in const [1.3, 1.6]) {
+        testWidgets('320 dp x$scale ${locale.languageCode}: wraps below', (
+          tester,
+        ) async {
+          await mountBanner(
+            tester,
+            size: const Size(320, 640),
+            textScale: scale,
+            locale: locale,
+          );
+          final l10n = _l10n(tester);
+          expect(tester.takeException(), isNull);
+          final button = find.byType(ExomQuietButton);
+          expect(button, findsOneWidget);
+          final size = tester.getSize(button);
+          expect(size.height, greaterThanOrEqualTo(48));
+          expect(size.width, greaterThanOrEqualTo(48));
+          final text = tester.getRect(find.text(l10n.progressCachedBanner));
+          final rect = tester.getRect(button);
+          expect(rect.top, greaterThanOrEqualTo(text.bottom - 1));
+          expect(rect.left, lessThan(text.left));
+        });
+      }
+    }
+  });
+
+  group('retry keeps the loaded content (L4-I23)', () {
+    DioException offline() => DioException(
+      requestOptions: RequestOptions(path: '/metrics/latest'),
+      type: DioExceptionType.connectionError,
+    );
+
+    Future<_Repository> mountNotice(WidgetTester tester) async {
+      final repository = _Repository(history: _weekly)
+        ..historyFromCache = true
+        ..latestError = offline();
+      await _mount(tester, repository: repository, size: const Size(390, 600));
+      return repository;
+    }
+
+    double pixels(WidgetTester tester) => tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position
+        .pixels;
+
+    testWidgets('notice retry: content and scroll stay, button disabled', (
+      tester,
+    ) async {
+      final repository = await mountNotice(tester);
+      final l10n = _l10n(tester);
+      await tester.scrollUntilVisible(
+        find.text(l10n.retry),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final before = pixels(tester);
+      expect(before, greaterThan(0));
+      final row = find.byKey(
+        const ValueKey('progress-measure-weight_kg-2026-11-11'),
+      );
+      expect(row, findsOneWidget);
+
+      // What the reload will answer: the latest read is not gated, so it
+      // is set before the tap.
+      repository
+        ..latestError = null
+        ..latest = _latest
+        ..historyFromCache = false
+        ..history = [..._weekly, _w(11, 25, 67.9)];
+      final gate = Completer<void>();
+      repository.historyGate = gate;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(row, findsOneWidget);
+      expect(pixels(tester), before);
+      final button = find.byType(ExomSecondaryButton);
+      expect(button, findsOneWidget);
+      expect(tester.widget<ExomSecondaryButton>(button).onPressed, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(CircularProgressIndicator)).height,
+        lessThanOrEqualTo(24),
+      );
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('progress-measure-weight_kg-2026-11-25')),
+        findsOneWidget,
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text(l10n.retry), findsNothing);
+    });
+
+    testWidgets('banner retry: content stays, button disabled while loading', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true
+        ..latestFromCache = true;
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      final gate = Completer<void>();
+      repository
+        ..historyGate = gate
+        ..historyFromCache = false
+        ..latestFromCache = false;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+      expect(find.text(l10n.progressCachedBanner), findsOneWidget);
+      expect(find.byType(ExomQuietButton), findsOneWidget);
+      expect(
+        tester.widget<ExomQuietButton>(find.byType(ExomQuietButton)).onPressed,
+        isNull,
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.progressCachedBanner), findsNothing);
+      expect(find.byType(ExomQuietButton), findsNothing);
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+    });
+
+    testWidgets('a failing retry shows the error screen, not old content', (
+      tester,
+    ) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyFromCache = true
+        ..latestFromCache = true;
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      final gate = Completer<void>();
+      repository.historyGate = gate;
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+      repository.historyError = Exception('x');
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.progressHistoryError), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('progress-measure-weight_kg-2026-11-11')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('first load shows the loader, not content', (tester) async {
+      final repository = _Repository(history: _weekly, latest: _latest)
+        ..historyGate = Completer<void>();
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(CircularProgressIndicator)).height,
+        greaterThan(24),
+      );
+      expect(find.text(l10n.weightSectionTitle.toUpperCase()), findsNothing);
+      expect(find.text(l10n.retry), findsNothing);
+      repository.historyGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
     });
   });
 

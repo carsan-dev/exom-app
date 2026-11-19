@@ -55,6 +55,11 @@ class _ProgressView extends StatefulWidget {
 class _ProgressViewState extends State<_ProgressView> {
   bool _formOpen = false;
 
+  /// Last loaded summary of THIS page instance, painted (read-only) while a
+  /// reload is in flight so a retry does not blank the screen or reset the
+  /// scroll. Dropped by any state that is not a load in progress.
+  MetricsHistoryLoaded? _previous;
+
   Future<void> _openForm() async {
     if (_formOpen) return;
     _formOpen = true;
@@ -89,16 +94,30 @@ class _ProgressViewState extends State<_ProgressView> {
           children: [
             Expanded(
               child: BlocBuilder<MetricsBloc, MetricsState>(
-                builder: (context, state) => ListView(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                      child: HomeTitle(l10n.progressTitle),
-                    ),
-                    ..._content(context, state),
-                  ],
-                ),
+                builder: (context, state) {
+                  if (state is MetricsHistoryLoaded) {
+                    _previous = state;
+                  } else if (state is! MetricsHistoryLoading) {
+                    _previous = null;
+                  }
+                  final held = state is MetricsHistoryLoading
+                      ? _previous
+                      : null;
+                  return ListView(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: HomeTitle(l10n.progressTitle),
+                      ),
+                      ..._content(
+                        context,
+                        held ?? state,
+                        refreshing: held != null,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             ExomPinnedFooter(
@@ -116,7 +135,13 @@ class _ProgressViewState extends State<_ProgressView> {
     );
   }
 
-  List<Widget> _content(BuildContext context, MetricsState state) {
+  /// [refreshing] paints a previously loaded [state] while the next load is in
+  /// flight: same content, retry buttons disabled and a small progress mark.
+  List<Widget> _content(
+    BuildContext context,
+    MetricsState state, {
+    bool refreshing = false,
+  }) {
     final bloc = context.read<MetricsBloc>();
     if (state is MetricsHistoryFailure) {
       return [
@@ -142,7 +167,25 @@ class _ProgressViewState extends State<_ProgressView> {
       final shown = series.length > _kChartPoints
           ? series.sublist(series.length - _kChartPoints)
           : series;
+      final unavailability = state.latestUnavailability;
+      final latestUnavailable =
+          unavailability != MetricsLatestUnavailability.none;
+      final cached = state.historyFromCache || state.latestFromCache;
+      final VoidCallback? retry = refreshing
+          ? null
+          : () => bloc.add(const MetricsHistoryRequested());
       return [
+        if (cached)
+          _CachedBanner(
+            text: l10n.progressCachedBanner,
+            // The page has no pull-to-refresh: with nothing missing, the
+            // banner carries the only retry. The section notice owns it
+            // otherwise, so two retry buttons never show together.
+            showRetry: !latestUnavailable,
+            onRetry: retry,
+            refreshing: refreshing,
+            announce: !latestUnavailable,
+          ),
         _WeightSummary(points: shown, format: format),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -157,6 +200,13 @@ class _ProgressViewState extends State<_ProgressView> {
         _LatestMeasures(
           rows: _latestRows(series, state.latest, format),
           format: format,
+          unavailableNotice: latestUnavailable
+              ? (unavailability == MetricsLatestUnavailability.offline
+                    ? l10n.progressLatestUnavailableOffline
+                    : l10n.progressLatestUnavailableError)
+              : null,
+          onRetry: retry,
+          refreshing: refreshing,
         ),
       ];
     }
@@ -464,6 +514,102 @@ class _MutedText extends StatelessWidget {
   }
 }
 
+/// Small spinner with an accessible label, shown next to a disabled retry
+/// while the reload is in flight.
+class _RefreshMark extends StatelessWidget {
+  const _RefreshMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: AppLocalizations.of(context).progressLoading,
+      excludeSemantics: true,
+      child: const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+}
+
+/// Discreet «offline, saved data» line (icon + text, never colour alone),
+/// styled like [ExomSyncStatus]. With [showRetry] a compact text action sits
+/// to the right of the text, or under it when it does not fit; a null
+/// [onRetry] shows it disabled (reload in flight, [refreshing]).
+class _CachedBanner extends StatelessWidget {
+  const _CachedBanner({
+    required this.text,
+    required this.showRetry,
+    required this.onRetry,
+    this.refreshing = false,
+    this.announce = true,
+  });
+
+  final String text;
+  final bool showRetry;
+  final VoidCallback? onRetry;
+  final bool refreshing;
+
+  /// Live region only when no section notice is announcing at the same time.
+  final bool announce;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        children: [
+          // Icon + text take their natural width and the text wraps by
+          // itself (hanging indent), so the retry can sit beside them or
+          // drop below. The icon is stacked so the width never rounds over.
+          Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 24),
+                child: Semantics(
+                  liveRegion: announce,
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 1,
+                child: ExcludeSemantics(
+                  child: Icon(
+                    Icons.cloud_off_outlined,
+                    size: 18,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (showRetry)
+            ExomQuietButton(
+              label: AppLocalizations.of(context).retry,
+              onPressed: onRetry,
+            ),
+          if (showRetry && refreshing) const _RefreshMark(),
+        ],
+      ),
+    );
+  }
+}
+
 class _WeightSummary extends StatelessWidget {
   const _WeightSummary({required this.points, required this.format});
 
@@ -663,17 +809,52 @@ class _WeightChart extends StatelessWidget {
 /// Flat rows (sketch `.rows`): type and date on the left, value on the right,
 /// then the progress photos row.
 class _LatestMeasures extends StatelessWidget {
-  const _LatestMeasures({required this.rows, required this.format});
+  const _LatestMeasures({
+    required this.rows,
+    required this.format,
+    required this.onRetry,
+    this.refreshing = false,
+    this.unavailableNotice,
+  });
 
   final List<_MeasureRowData> rows;
   final _ProgressFormat format;
+  final VoidCallback? onRetry;
+
+  /// A reload is in flight: the retry is disabled and shows a progress mark.
+  final bool refreshing;
+
+  /// Why the latest record's measurements are missing (null when it was
+  /// read, even if there is no record).
+  final String? unavailableNotice;
 
   @override
   Widget build(BuildContext context) {
+    final notice = unavailableNotice;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (rows.isEmpty)
+        if (notice != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(liveRegion: true, child: _MutedText(notice)),
+                const SizedBox(height: 12),
+                ExomSecondaryButton(
+                  label: format.l10n.retry,
+                  onPressed: onRetry,
+                ),
+                if (refreshing)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 12),
+                    child: Center(child: _RefreshMark()),
+                  ),
+              ],
+            ),
+          )
+        else if (rows.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: _MutedText(format.l10n.progressMeasuresEmpty),

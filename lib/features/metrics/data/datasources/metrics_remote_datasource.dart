@@ -3,11 +3,17 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
+import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 
 abstract class MetricsRemoteDataSource {
   Future<BodyMetricModel> saveMetric(Map<String, dynamic> data);
   Future<BodyMetricModel?> getLatestMetric({String? date});
   Future<List<BodyMetricModel>> getWeightHistory();
+
+  /// [getLatestMetric] (latest of all time) and [getWeightHistory] with their
+  /// origin: `fromCache` is true only for the offline cache fallback.
+  Future<MetricsRead<BodyMetricModel?>> getLatestMetricWithSource();
+  Future<MetricsRead<List<BodyMetricModel>>> getWeightHistoryWithSource();
 }
 
 class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
@@ -50,6 +56,17 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
 
   @override
   Future<BodyMetricModel?> getLatestMetric({String? date}) async {
+    return (await _readLatestMetric(date: date)).value;
+  }
+
+  @override
+  Future<MetricsRead<BodyMetricModel?>> getLatestMetricWithSource() {
+    return _readLatestMetric();
+  }
+
+  /// The single implementation behind [getLatestMetric] and
+  /// [getLatestMetricWithSource]: only the cache fallback is marked.
+  Future<MetricsRead<BodyMetricModel?>> _readLatestMetric({String? date}) {
     return _localStorage.sessionTask(() async {
       final cacheKey = date == null ? 'metrics_latest' : 'metrics_latest_$date';
       try {
@@ -58,24 +75,27 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
           queryParameters: date != null ? {'date': date} : null,
         );
         final inner = _envelopeData(response.data, '/metrics/latest');
-        if (inner == null) return null;
+        if (inner == null) return const MetricsRead(null);
         if (inner is! Map<String, dynamic>) {
           throw const FormatException('Unexpected /metrics/latest response');
         }
         await _localStorage.cacheData(cacheKey, inner);
         await _localStorage.cacheData('home_latest_metric', inner);
-        return BodyMetricModel.fromJson(inner);
+        return MetricsRead(BodyMetricModel.fromJson(inner));
       } on DioException catch (error) {
         // A request cancelled by a session change (logout or user switch)
         // is not a network error: report it as LocalSessionChanged.
         _localStorage.guardSession();
         // The API answers 200 with `data: null` when there is no record; a
         // 404 is still read as "no record", as the diets datasource does.
-        if (error.response?.statusCode == 404) return null;
+        if (error.response?.statusCode == 404) return const MetricsRead(null);
         if (isOfflineError(error)) {
           final cached = _localStorage.getCachedMap(cacheKey);
           if (cached != null) {
-            return BodyMetricModel.fromJson(cached);
+            return MetricsRead(
+              BodyMetricModel.fromJson(cached),
+              fromCache: true,
+            );
           }
         }
         // Network and server errors reach the caller: «Progreso» must tell
@@ -87,13 +107,24 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
 
   @override
   Future<List<BodyMetricModel>> getWeightHistory() async {
+    return (await _readWeightHistory()).value;
+  }
+
+  @override
+  Future<MetricsRead<List<BodyMetricModel>>> getWeightHistoryWithSource() {
+    return _readWeightHistory();
+  }
+
+  /// The single implementation behind [getWeightHistory] and
+  /// [getWeightHistoryWithSource]: only the cache fallback is marked.
+  Future<MetricsRead<List<BodyMetricModel>>> _readWeightHistory() {
     return _localStorage.sessionTask(() async {
       try {
         final response = await _apiClient.dio.get<dynamic>(
           '/metrics/weight-history',
         );
         final items = _envelopeData(response.data, '/metrics/weight-history');
-        if (items == null) return [];
+        if (items == null) return const MetricsRead(<BodyMetricModel>[]);
         if (items is! List) {
           throw const FormatException(
             'Unexpected /metrics/weight-history response',
@@ -104,7 +135,9 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
             .map(Map<String, dynamic>.from)
             .toList(growable: false);
         await _localStorage.cacheData('metrics_weight_history', normalized);
-        return normalized.map(BodyMetricModel.fromJson).toList(growable: false);
+        return MetricsRead(
+          normalized.map(BodyMetricModel.fromJson).toList(growable: false),
+        );
       } on DioException catch (error) {
         // A request cancelled by a session change (logout or user switch)
         // is not a network error: report it as LocalSessionChanged.
@@ -112,10 +145,13 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
         if (isOfflineError(error)) {
           final cached = _localStorage.getCachedList('metrics_weight_history');
           if (cached != null) {
-            return cached
-                .whereType<Map<String, dynamic>>()
-                .map(BodyMetricModel.fromJson)
-                .toList(growable: false);
+            return MetricsRead(
+              cached
+                  .whereType<Map<String, dynamic>>()
+                  .map(BodyMetricModel.fromJson)
+                  .toList(growable: false),
+              fromCache: true,
+            );
           }
         }
         // The API answers 200 with `data: []` when there is no record; any

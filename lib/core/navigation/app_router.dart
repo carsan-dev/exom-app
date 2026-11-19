@@ -46,7 +46,7 @@ import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 
 // Metrics pages
-import '../../features/metrics/presentation/pages/metrics_page.dart';
+import '../../features/metrics/presentation/pages/metrics_progress_page.dart';
 import '../../features/progress_photos/presentation/pages/progress_photos_page.dart';
 
 // Challenges pages
@@ -355,7 +355,7 @@ class AppRouter {
             pageBuilder: (_, state) => _platformPage(
               key: state.pageKey,
               name: state.name,
-              child: const MetricsPage(),
+              child: const MetricsProgressPage(),
             ),
           ),
           GoRoute(

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -271,13 +272,11 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
     }
   }
 
-  String _formatNumber(double value) {
-    if (value % 1 == 0) return value.toInt().toString();
-    return value
-        .toStringAsFixed(2)
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
-  }
+  /// Up to two decimals, with the separator of the app locale.
+  String _formatNumber(BuildContext context, double value) => NumberFormat(
+    '0.##',
+    AppLocalizations.of(context).localeName,
+  ).format(value);
 
   List<_MacroChipData> _buildMacroChips(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -298,7 +297,7 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.proteinLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.proteinG!)} g',
+              '${l10n.proteinLabel.substring(0, 1).toUpperCase()} ${_formatNumber(context, _selectedMeal.proteinG!)} g',
           color: semantic.accent,
         ),
       );
@@ -308,7 +307,7 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.carbsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.carbsG!)} g',
+              '${l10n.carbsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(context, _selectedMeal.carbsG!)} g',
           color: semantic.warning,
         ),
       );
@@ -318,7 +317,7 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
       items.add(
         _MacroChipData(
           label:
-              '${l10n.fatsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(_selectedMeal.fatG!)} g',
+              '${l10n.fatsLabel.substring(0, 1).toUpperCase()} ${_formatNumber(context, _selectedMeal.fatG!)} g',
           color: palette.primary,
         ),
       );
@@ -777,7 +776,7 @@ class _MacroChipsRow extends StatelessWidget {
                     item.label,
                     style: TextStyle(
                       color: item.color,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -809,7 +808,7 @@ class _NutritionalBadgePill extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
       ),

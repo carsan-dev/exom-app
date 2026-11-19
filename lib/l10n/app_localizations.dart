@@ -746,6 +746,12 @@ abstract class AppLocalizations {
   /// **'Comidas del día'**
   String get mealsOfTheDayLabel;
 
+  /// No description provided for @dietMealsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} comida} other{{count} comidas}}'**
+  String dietMealsCount(int count);
+
   /// No description provided for @todaysPlanLabel.
   ///
   /// In es, this message translates to:
@@ -757,6 +763,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Plan de'**
   String get planForLabel;
+
+  /// No description provided for @dietMealsProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{completed}/{total} {completed, plural, one{completada} other{completadas}}'**
+  String dietMealsProgress(int completed, int total);
 
   /// No description provided for @completedFeminine.
   ///
@@ -829,6 +841,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Marcar como completada'**
   String get markMealCompletedButton;
+
+  /// No description provided for @mealMarkCompleteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar {meal} como completada'**
+  String mealMarkCompleteLabel(String meal);
+
+  /// No description provided for @mealMarkUncompleteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Desmarcar {meal} como completada'**
+  String mealMarkUncompleteLabel(String meal);
 
   /// No description provided for @markExerciseCompletedButton.
   ///
@@ -6357,6 +6381,119 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{name}, ronda {round} · {status}'**
   String circuitSavedStatus(String name, int round, String status);
+
+  /// No description provided for @progressTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso'**
+  String get progressTitle;
+
+  /// No description provided for @progressLatestMeasures.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimas medidas'**
+  String get progressLatestMeasures;
+
+  /// No description provided for @progressAddMeasure.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir medida'**
+  String get progressAddMeasure;
+
+  /// No description provided for @progressOnDate.
+  ///
+  /// In es, this message translates to:
+  /// **'el {date}'**
+  String progressOnDate(String date);
+
+  /// No description provided for @progressDeltaLess.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} menos en {period}'**
+  String progressDeltaLess(String amount, String period);
+
+  /// No description provided for @progressDeltaMore.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} más en {period}'**
+  String progressDeltaMore(String amount, String period);
+
+  /// No description provided for @progressDeltaSame.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cambios en {period}'**
+  String progressDeltaSame(String period);
+
+  /// No description provided for @progressPeriodWeeks.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 semana} other{{count} semanas}}'**
+  String progressPeriodWeeks(int count);
+
+  /// No description provided for @progressPeriodDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 día} other{{count} días}}'**
+  String progressPeriodDays(int count);
+
+  /// No description provided for @progressChartSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso del {from} al {to}: de {start} a {end}'**
+  String progressChartSemantics(
+    String from,
+    String to,
+    String start,
+    String end,
+  );
+
+  /// No description provided for @progressChartEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra al menos dos pesos para ver la gráfica.'**
+  String get progressChartEmpty;
+
+  /// No description provided for @progressWeightEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no has registrado tu peso.'**
+  String get progressWeightEmpty;
+
+  /// No description provided for @progressMeasuresEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay medidas registradas.'**
+  String get progressMeasuresEmpty;
+
+  /// No description provided for @progressMeasureSide.
+  ///
+  /// In es, this message translates to:
+  /// **'{measure} · {side}'**
+  String progressMeasureSide(String measure, String side);
+
+  /// No description provided for @progressLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tu progreso'**
+  String get progressLoading;
+
+  /// No description provided for @progressHistoryError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar tu progreso.'**
+  String get progressHistoryError;
+
+  /// No description provided for @progressHistoryUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No hemos podido mostrar tus medidas ahora. Si ya tienes registros, vuelve a intentarlo.'**
+  String get progressHistoryUnavailable;
+
+  /// No description provided for @progressHistoryOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión. Conéctate para ver tu progreso.'**
+  String get progressHistoryOffline;
 }
 
 class _AppLocalizationsDelegate

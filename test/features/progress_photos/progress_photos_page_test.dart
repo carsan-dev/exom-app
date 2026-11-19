@@ -465,8 +465,13 @@ void main() {
     );
     await tester.pumpWidget(page(pollInterval: const Duration(milliseconds: 1)));
     await pumpPage(tester);
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -300));
-    await tester.pump();
+    // The button is reachable by scrolling; its offset depends on the tile
+    // metrics, so scroll to it instead of a fixed distance (L4 redesign).
+    await tester.scrollUntilVisible(
+      find.text('Load more'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('Load more'));
     await pumpPage(tester);
     expect(repository.requestedPages, containsAll([1, 2]));

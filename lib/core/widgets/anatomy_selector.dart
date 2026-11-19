@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// Interactive anatomical body selector that renders SVG-based body zones.
@@ -37,17 +36,30 @@ class AnatomySelector extends StatefulWidget {
     this.height = 440,
   });
 
+  static const double _toggleHeight = 48;
+  static const double _toggleSpacing = 12;
+
+  // The outer frame adds a 1 dp border on each side so every tab keeps a
+  // full 48 dp target inside it.
+  static const double _toggleFrameHeight = _toggleHeight + 2;
+
+  /// Height of the body drawing for a selector of total [height]. Callers that
+  /// align content with the body use this instead of a copied number.
+  static double bodyHeightFor(double height) =>
+      height - _toggleFrameHeight - _toggleSpacing;
+
   @override
   State<AnatomySelector> createState() => _AnatomySelectorState();
 }
 
 class _AnatomySelectorState extends State<AnatomySelector> {
-  static const double _toggleHeight = 40;
-  static const double _toggleSpacing = 12;
+  static const double _toggleHeight = AnatomySelector._toggleHeight;
+  static const double _toggleSpacing = AnatomySelector._toggleSpacing;
+  static const double _toggleFrameHeight = AnatomySelector._toggleFrameHeight;
 
   bool _isFront = true;
 
-  double get _bodyHeight => widget.height - _toggleHeight - _toggleSpacing;
+  double get _bodyHeight => AnatomySelector.bodyHeightFor(widget.height);
 
   double get _bodyWidth => _bodyHeight * (_kViewBoxW / _kViewBoxH);
 
@@ -89,22 +101,41 @@ class _AnatomySelectorState extends State<AnatomySelector> {
   }) {
     final palette = context.exomPalette;
 
+    // The row splits the width in proportion to each label so the longer one
+    // (Posterior) gets the room it needs instead of an equal half.
     return Expanded(
+      flex: label.length,
       child: GestureDetector(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          height: _toggleHeight,
-          alignment: Alignment.center,
-          decoration: active
-              ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
-              : const BoxDecoration(),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active ? palette.primary : palette.textDisabled,
-              fontSize: 12,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        behavior: HitTestBehavior.opaque,
+        child: Semantics(
+          button: true,
+          selected: active,
+          child: Container(
+            height: _toggleHeight,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: active ? palette.textPrimary : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            // Last resort for large text scales: shrink the label to fit
+            // rather than wrap, ellipsize or clip it.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: active ? palette.textPrimary : palette.textSecondary,
+                  fontSize: 14,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ),
@@ -140,10 +171,10 @@ class _AnatomySelectorState extends State<AnatomySelector> {
           ),
           const SizedBox(height: _toggleSpacing),
           Container(
-            padding: const EdgeInsets.all(4),
-            decoration: GlassDecoration.card(
-              borderRadius: 14,
-              borderColor: palette.glassBorder.withValues(alpha: 0.12),
+            height: _toggleFrameHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: palette.borderSoft, width: 1),
             ),
             child: Row(
               children: [

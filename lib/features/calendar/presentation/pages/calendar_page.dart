@@ -8,7 +8,6 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -19,14 +18,11 @@ import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart'
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_weekly_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_monthly_diet_usecase.dart';
-import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 import 'package:exom_app/features/diets/domain/utils/diet_export_period_utils.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
-import 'package:exom_app/features/diets/services/weekly_shopping_list_builder.dart';
-
-enum _PdfAction { print, share }
+import 'package:exom_app/features/diets/presentation/widgets/weekly_shopping_list_flow.dart';
 
 enum _DietExportPeriod { week, month }
 
@@ -610,71 +606,19 @@ class _CalendarViewState extends State<_CalendarView> {
           calendarMonth: exportPeriod == _DietExportPeriod.month,
         );
       } else {
-        final selections =
-            await showModalBottomSheet<List<WeeklyMealSelection>>(
-              context: context,
-              isScrollControlled: true,
-              builder: (sheetContext) => _WeeklyVariantSelector(
-                week: period,
-                locale: locale,
-                title: l10n.weeklyVariantSelectorTitle,
-                mainLabel: l10n.weeklyVariantMain,
-                generateLabel: l10n.weeklyGenerateShoppingList,
-                mealTypes: labels.mealTypes,
-              ),
-            );
-        if (selections == null || !context.mounted) return;
-        final items = const WeeklyShoppingListBuilder().build(
-          week: period,
-          selections: selections,
-          locale: locale,
-        );
-        bytes = await GetIt.I<WeeklyDietPdfService>().buildShoppingList(
-          week: period,
-          items: items,
-          locale: locale,
-          labels: WeeklyShoppingListPdfLabels(
-            title: exportPeriod == _DietExportPeriod.month
-                ? l10n.monthlyShoppingListPdfTitle
-                : l10n.weeklyShoppingListPdfTitle,
-            empty: exportPeriod == _DietExportPeriod.month
-                ? l10n.monthlyShoppingListEmpty
-                : l10n.weeklyShoppingListEmpty,
-          ),
-        );
-        filename = dietExportFilename(
-          shoppingList: true,
-          start: period.start,
-          end: period.end,
+        final result = await buildWeeklyShoppingListPdf(
+          context,
+          period: period,
           calendarMonth: exportPeriod == _DietExportPeriod.month,
+          mealTypes: labels.mealTypes,
         );
+        if (result == null) return;
+        bytes = result.bytes;
+        filename = result.filename;
       }
       if (!context.mounted) return;
 
-      final action = await showModalBottomSheet<_PdfAction>(
-        context: context,
-        builder: (sheetContext) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.print_outlined),
-                title: Text(l10n.weeklyDietPrint),
-                onTap: () => Navigator.pop(sheetContext, _PdfAction.print),
-              ),
-              ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: Text(l10n.weeklyDietShare),
-                onTap: () => Navigator.pop(sheetContext, _PdfAction.share),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (action == _PdfAction.print) {
-        await Printing.layoutPdf(name: filename, onLayout: (_) async => bytes);
-      } else if (action == _PdfAction.share) {
-        await Printing.sharePdf(bytes: bytes, filename: filename);
-      }
+      await printOrSharePdf(context, bytes: bytes, filename: filename);
     } catch (_) {
       if (mounted) {
         messenger.showSnackBar(
@@ -1613,165 +1557,6 @@ class _ToggleChip extends StatelessWidget {
 }
 
 // ─── Month/Year Picker Dialog ──────────────────────────────────────────────────
-
-class _WeeklyVariantSelector extends StatefulWidget {
-  const _WeeklyVariantSelector({
-    required this.week,
-    required this.locale,
-    required this.title,
-    required this.mainLabel,
-    required this.generateLabel,
-    required this.mealTypes,
-  });
-
-  final DietPeriodEntity week;
-  final String locale;
-  final String title;
-  final String mainLabel;
-  final String generateLabel;
-  final Map<String, String> mealTypes;
-
-  @override
-  State<_WeeklyVariantSelector> createState() => _WeeklyVariantSelectorState();
-}
-
-class _WeeklyVariantSelectorState extends State<_WeeklyVariantSelector> {
-  late final Map<String, String> _selectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = {};
-    for (final day in widget.week.days) {
-      for (final meal in day.diet?.meals ?? const <MealEntity>[]) {
-        if (meal.variants.isNotEmpty) {
-          _selectedIds[WeeklyMealSelection.selectionKey(day.date, meal.id)] =
-              meal.id;
-        }
-      }
-    }
-  }
-
-  List<WeeklyMealSelection> _result() => [
-    for (final day in widget.week.days)
-      for (final meal in day.diet?.meals ?? const <MealEntity>[])
-        if (meal.variants.isNotEmpty)
-          WeeklyMealSelection(
-            date: day.date,
-            parentMealId: meal.id,
-            selectedMealId:
-                _selectedIds[WeeklyMealSelection.selectionKey(
-                  day.date,
-                  meal.id,
-                )] ??
-                meal.id,
-          ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final dayFormat = DateFormat.EEEE(widget.locale);
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.85,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                children: [
-                  for (final day in widget.week.days)
-                    if ((day.diet?.meals ?? const <MealEntity>[]).any(
-                      (meal) => meal.variants.isNotEmpty,
-                    )) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12, bottom: 6),
-                        child: Text(
-                          toBeginningOfSentenceCase(dayFormat.format(day.date)),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      for (final meal
-                          in day.diet?.meals ?? const <MealEntity>[])
-                        if (meal.variants.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: DropdownButtonFormField<String>(
-                              initialValue:
-                                  _selectedIds[WeeklyMealSelection.selectionKey(
-                                    day.date,
-                                    meal.id,
-                                  )],
-                              decoration: InputDecoration(
-                                labelText:
-                                    widget.mealTypes[meal.type.toUpperCase()] ??
-                                    meal.type,
-                                border: const OutlineInputBorder(),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: meal.id,
-                                  child: Text(
-                                    '${widget.mainLabel}: ${meal.name}',
-                                  ),
-                                ),
-                                ...meal.variants.map(
-                                  (variant) => DropdownMenuItem(
-                                    value: variant.id,
-                                    child: Text(variant.name),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value == null) return;
-                                setState(() {
-                                  _selectedIds[WeeklyMealSelection.selectionKey(
-                                        day.date,
-                                        meal.id,
-                                      )] =
-                                      value;
-                                });
-                              },
-                            ),
-                          ),
-                    ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.pop(context, _result()),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(widget.generateLabel),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _MonthYearPickerDialog extends StatefulWidget {
   final int initialYear;

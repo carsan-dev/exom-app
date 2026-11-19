@@ -369,10 +369,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealsOfTheDayLabel => 'Meals of the day';
 
   @override
+  String dietMealsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count meals',
+      one: '$count meal',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get todaysPlanLabel => 'Today\'s plan';
 
   @override
   String get planForLabel => 'Plan for';
+
+  @override
+  String dietMealsProgress(int completed, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      completed,
+      locale: localeName,
+      other: 'completed',
+      one: 'completed',
+    );
+    return '$completed/$total $_temp0';
+  }
 
   @override
   String get completedFeminine => 'Completed';
@@ -409,6 +431,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get markMealCompletedButton => 'Mark as completed';
+
+  @override
+  String mealMarkCompleteLabel(String meal) {
+    return 'Mark $meal as completed';
+  }
+
+  @override
+  String mealMarkUncompleteLabel(String meal) {
+    return 'Unmark $meal as completed';
+  }
 
   @override
   String get markExerciseCompletedButton => 'Mark as completed';
@@ -3786,4 +3818,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String circuitSavedStatus(String name, int round, String status) {
     return '$name, round $round · $status';
   }
+
+  @override
+  String get progressTitle => 'Progress';
+
+  @override
+  String get progressLatestMeasures => 'Latest measurements';
+
+  @override
+  String get progressAddMeasure => 'Add measurement';
+
+  @override
+  String progressOnDate(String date) {
+    return 'on $date';
+  }
+
+  @override
+  String progressDeltaLess(String amount, String period) {
+    return '$amount less in $period';
+  }
+
+  @override
+  String progressDeltaMore(String amount, String period) {
+    return '$amount more in $period';
+  }
+
+  @override
+  String progressDeltaSame(String period) {
+    return 'No change in $period';
+  }
+
+  @override
+  String progressPeriodWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count weeks',
+      one: '1 week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressPeriodDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressChartSemantics(
+    String from,
+    String to,
+    String start,
+    String end,
+  ) {
+    return 'Weight from $from to $to: $start to $end';
+  }
+
+  @override
+  String get progressChartEmpty => 'Log at least two weights to see the chart.';
+
+  @override
+  String get progressWeightEmpty => 'You have not logged your weight yet.';
+
+  @override
+  String get progressMeasuresEmpty => 'No measurements logged yet.';
+
+  @override
+  String progressMeasureSide(String measure, String side) {
+    return '$measure · $side';
+  }
+
+  @override
+  String get progressLoading => 'Loading your progress';
+
+  @override
+  String get progressHistoryError => 'We could not load your progress.';
+
+  @override
+  String get progressHistoryUnavailable =>
+      'We could not show your measurements right now. If you already have records, try again.';
+
+  @override
+  String get progressHistoryOffline =>
+      'No connection. Connect to see your progress.';
 }

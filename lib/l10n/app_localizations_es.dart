@@ -373,10 +373,32 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mealsOfTheDayLabel => 'Comidas del día';
 
   @override
+  String dietMealsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count comidas',
+      one: '$count comida',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get todaysPlanLabel => 'Plan de hoy';
 
   @override
   String get planForLabel => 'Plan de';
+
+  @override
+  String dietMealsProgress(int completed, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      completed,
+      locale: localeName,
+      other: 'completadas',
+      one: 'completada',
+    );
+    return '$completed/$total $_temp0';
+  }
 
   @override
   String get completedFeminine => 'Completada';
@@ -413,6 +435,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get markMealCompletedButton => 'Marcar como completada';
+
+  @override
+  String mealMarkCompleteLabel(String meal) {
+    return 'Marcar $meal como completada';
+  }
+
+  @override
+  String mealMarkUncompleteLabel(String meal) {
+    return 'Desmarcar $meal como completada';
+  }
 
   @override
   String get markExerciseCompletedButton => 'Marcar como completado';
@@ -3825,4 +3857,94 @@ class AppLocalizationsEs extends AppLocalizations {
   String circuitSavedStatus(String name, int round, String status) {
     return '$name, ronda $round · $status';
   }
+
+  @override
+  String get progressTitle => 'Progreso';
+
+  @override
+  String get progressLatestMeasures => 'Últimas medidas';
+
+  @override
+  String get progressAddMeasure => 'Añadir medida';
+
+  @override
+  String progressOnDate(String date) {
+    return 'el $date';
+  }
+
+  @override
+  String progressDeltaLess(String amount, String period) {
+    return '$amount menos en $period';
+  }
+
+  @override
+  String progressDeltaMore(String amount, String period) {
+    return '$amount más en $period';
+  }
+
+  @override
+  String progressDeltaSame(String period) {
+    return 'Sin cambios en $period';
+  }
+
+  @override
+  String progressPeriodWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count semanas',
+      one: '1 semana',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressPeriodDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressChartSemantics(
+    String from,
+    String to,
+    String start,
+    String end,
+  ) {
+    return 'Peso del $from al $to: de $start a $end';
+  }
+
+  @override
+  String get progressChartEmpty =>
+      'Registra al menos dos pesos para ver la gráfica.';
+
+  @override
+  String get progressWeightEmpty => 'Aún no has registrado tu peso.';
+
+  @override
+  String get progressMeasuresEmpty => 'Aún no hay medidas registradas.';
+
+  @override
+  String progressMeasureSide(String measure, String side) {
+    return '$measure · $side';
+  }
+
+  @override
+  String get progressLoading => 'Cargando tu progreso';
+
+  @override
+  String get progressHistoryError => 'No se pudo cargar tu progreso.';
+
+  @override
+  String get progressHistoryUnavailable =>
+      'No hemos podido mostrar tus medidas ahora. Si ya tienes registros, vuelve a intentarlo.';
+
+  @override
+  String get progressHistoryOffline =>
+      'Sin conexión. Conéctate para ver tu progreso.';
 }

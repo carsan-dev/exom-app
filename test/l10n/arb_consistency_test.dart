@@ -24,6 +24,8 @@ const Map<String, String> identicalValueAllowlist = {
   'activeExerciseRestExtend': 'Symbol "+{seconds} s", same in both languages.',
   'setSheetRirLabel': 'Acronym "RIR", same in both languages.',
   'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',
+  // L4 unit 4 (Progreso): only placeholders and a separator, no prose.
+  'progressMeasureSide': 'Placeholders "{measure} · {side}", no words.',
 };
 
 /// English words that must not appear in Spanish values. "Feedback", "Recap"

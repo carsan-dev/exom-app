@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:exom_app/core/api/network_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -23,6 +26,42 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
        super(const MetricsInitial()) {
     on<MetricsLoadRequested>(_onLoadRequested);
     on<MetricsSaveRequested>(_onSaveRequested);
+    on<MetricsHistoryRequested>(_onHistoryRequested);
+  }
+
+  /// Bumped by every history load: only the newest one may emit, so an older
+  /// overlapping response can never replace newer data (same scheme as
+  /// HomeBloc's request epoch).
+  int _historyEpoch = 0;
+
+  Future<void> _onHistoryRequested(
+    MetricsHistoryRequested event,
+    Emitter<MetricsState> emit,
+  ) async {
+    final epoch = ++_historyEpoch;
+    emit(const MetricsHistoryLoading());
+    try {
+      final (history, latest) = await (
+        _metricsRepository.getWeightHistory(),
+        _metricsRepository.getLatestMetric(),
+      ).wait;
+      if (epoch != _historyEpoch) return;
+      emit(MetricsHistoryLoaded(weightHistory: history, latest: latest));
+    } catch (error) {
+      if (epoch != _historyEpoch) return;
+      // A session change (LocalSessionChanged) is a failure too: the data
+      // may belong to the previous owner and is never shown.
+      emit(MetricsHistoryFailure(offline: _isOffline(error)));
+    }
+  }
+
+  static bool _isOffline(Object error) {
+    if (error is ParallelWaitError<Object?, Object?>) {
+      if (error.errors case (final AsyncError? a, final AsyncError? b)) {
+        return [a, b].any((e) => e != null && isOfflineError(e.error));
+      }
+    }
+    return isOfflineError(error);
   }
 
   Future<void> _onLoadRequested(

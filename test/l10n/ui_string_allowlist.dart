@@ -12,11 +12,6 @@ class UiStringAllowance {
 
 const List<UiStringAllowance> uiStringAllowlist = [
   UiStringAllowance(
-    'lib/features/diets/presentation/pages/diets_page.dart',
-    r'${meal.calories} kcal',
-    'Unit symbol kcal, language neutral.',
-  ),
-  UiStringAllowance(
     'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
     r'${_height.toStringAsFixed(0)} cm',
     'Metric unit symbol, language neutral.',

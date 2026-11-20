@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -581,6 +582,17 @@ class AppTheme {
       dividerColor: palette.divider,
       shadowColor: palette.shadow,
       fontFamily: fontFamily,
+      // M1 (L5 T0.5): EXOM push on Android; iOS and macOS keep Cupertino and
+      // its back swipe (risk R3); the rest keep Flutter's default.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: ExomPushPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+        },
+      ),
       extensions: <ThemeExtension<dynamic>>[
         palette,
         isDark ? _darkSemanticPalette : _lightSemanticPalette,

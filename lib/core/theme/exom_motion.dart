@@ -49,6 +49,92 @@ abstract final class ExomMotion {
   static const Duration reducedScreen = Duration(milliseconds: 100);
   static const Duration reducedMilestone = Duration(milliseconds: 150);
 
+  // --- L5 motion patterns (contract T0.5, ESPEC §4). Curves: what enters uses
+  // [sheetEnterCurve] (except the M1 push, L5-D35), what leaves
+  // [sheetExitCurve], in-place changes ease-out.
+  // Rules for every pattern: no animation delays the action (the tap acts at
+  // once and the motion accompanies it), every animation is interruptible,
+  // and nothing but the milestone lasts more than [ordinaryMax].
+
+  /// Longest ordinary animation (the milestone and the launch are apart).
+  static const Duration ordinaryMax = Duration(milliseconds: 600);
+
+  // M1 Push and back: the new screen enters [pushOffset] from the advance side
+  // with a fade in [pushIn]; the previous one dims to [pushPreviousOpacity].
+  // Back is the inverse in [pushOut]. Reduced: a [reducedScreen] fade. Wired
+  // on Android through `ExomPushPageTransitionsBuilder` in the app theme; iOS
+  // keeps the Cupertino transition and its back gesture.
+  static const Duration pushIn = screen;
+  static const Duration pushOut = Duration(milliseconds: 200);
+  static const double pushOffset = 24;
+  static const double pushPreviousOpacity = 0.6;
+  // L5-D35 (owner, 2026-11-20): the push enters on easeOutCubic instead of
+  // [sheetEnterCurve] to spread the motion, so a frame dropped while the new
+  // screen is first rastered shows less. The sheet and the other entering
+  // patterns keep [sheetEnterCurve].
+  static const Curve pushEnterCurve = Curves.easeOutCubic;
+  static const Curve pushExitCurve = sheetExitCurve;
+
+  // M2 Tab change: crossfade without offset, the old tab leaves in
+  // [tabFadeOut] while the new one enters in [tabFadeIn]; the active bar of
+  // the bottom navigation slides in [navIndicatorSlide]. Reduced: cut.
+  static const Duration tabFadeOut = Duration(milliseconds: 60);
+  static const Duration tabFadeIn = Duration(milliseconds: 100);
+  static const Duration navIndicatorSlide = Duration(milliseconds: 200);
+  static const Curve navIndicatorCurve = Curves.easeOut;
+
+  // M3 Content arrival (`ExomArrival`): skeleton to content in [arrivalFade];
+  // the first [arrivalRiseRows] rows rise [arrivalRise] staggered by
+  // [arrivalStagger]. First load only, never on refresh. Reduced: 120 ms fade.
+  static const Duration arrivalFade = chipCrossfade;
+  static const double arrivalRise = 8;
+  static const Duration arrivalStagger = Duration(milliseconds: 30);
+  static const int arrivalRiseRows = 6;
+  static const Curve arrivalCurve = sheetEnterCurve;
+
+  // M4 In-place change: `AnimatedSwitcher` crossfade of icon and text in
+  // [inPlaceSwitch]; a selection (calendar day, segment, chip) slides its fill
+  // in [selectionSlide]. Reduced: 120 ms fade.
+  static const Duration inPlaceSwitch = chipCrossfade;
+  static const Duration selectionSlide = Duration(milliseconds: 200);
+  static const Curve inPlaceCurve = Curves.easeOut;
+
+  // M5 Progress and figures: bars grow in [growBar] (`ExomGrowBar`; an upload
+  // follows its bytes linearly); percentages count up in [countUp] the first
+  // time they appear (`ExomCountUp`). Reduced: final value directly.
+  static const Duration growBar = Duration(milliseconds: 300);
+  static const Curve growBarCurve = Curves.easeOut;
+  static const Duration countUp = milestoneCount;
+  static const Curve countUpCurve = Curves.easeOut;
+
+  // M6 Press: [pressIn]/[pressOut] at [pressScale] (`TappableScale` and the
+  // `Exom*Button`s); rows switch to the raised fill at once. Reduced:
+  // [reducedPressOpacity].
+
+  // M7 Expand and collapse (the `ExomAccordion` widget arrives in T0.3a):
+  // height in [expandHeight] ease-out, the chevron turns
+  // [expandChevronTurns] (180°), the content fades in [expandContentFade].
+  // Reduced: no animated height; fade.
+  static const Duration expandHeight = Duration(milliseconds: 200);
+  static const Curve expandCurve = Curves.easeOut;
+  static const double expandChevronTurns = 0.5;
+  static const Duration expandContentFade = reducedFade;
+
+  // M8 Immediate response (pattern, not a widget): switches, "mark as read",
+  // chips and selection change the UI in under 100 ms, before the network
+  // call; if the server fails they go back to the previous state and say so
+  // with an inline message (`ExomInlineMessage`, T0.2). The same in reduced
+  // motion. Never imply remote success before it is confirmed.
+
+  // M9 Form step (`ExomStepTransition`): the new step enters [stepOffset]
+  // from the side it advances to, in [step]; the progress rule fills its
+  // segment in [stepProgressRule]. Reduced: 100 ms fade; the rule jumps.
+  static const Duration step = screen;
+  static const double stepOffset = 24;
+  static const Curve stepCurve = sheetEnterCurve;
+  static const Duration stepProgressRule = growBar;
+  static const Curve stepProgressRuleCurve = Curves.easeOut;
+
   /// Resolves the motion spec for [context] through [PerformanceProfile].
   static ExomMotionSpec of(BuildContext context) {
     return resolve(reduced: PerformanceProfile.prefersReducedMotion(context));
@@ -83,6 +169,31 @@ class ExomMotionSpec {
     required this.milestoneBand,
     required this.milestoneCount,
     required this.milestoneTotal,
+    required this.pushSlides,
+    required this.pushIn,
+    required this.pushOut,
+    required this.pushOffset,
+    required this.pushPreviousOpacity,
+    required this.tabFades,
+    required this.tabFadeIn,
+    required this.tabFadeOut,
+    required this.navIndicatorSlide,
+    required this.arrivalFade,
+    required this.arrivalRise,
+    required this.arrivalStagger,
+    required this.inPlaceSwitch,
+    required this.selectionSlides,
+    required this.selection,
+    required this.growBar,
+    required this.countUp,
+    required this.expandAnimatesHeight,
+    required this.expandHeight,
+    required this.expandChevron,
+    required this.expandContentFade,
+    required this.stepSlides,
+    required this.step,
+    required this.stepOffset,
+    required this.stepProgressRule,
   });
 
   /// Full motion.
@@ -106,6 +217,31 @@ class ExomMotionSpec {
     milestoneBand: ExomMotion.milestoneBand,
     milestoneCount: ExomMotion.milestoneCount,
     milestoneTotal: ExomMotion.milestoneMax,
+    pushSlides: true,
+    pushIn: ExomMotion.pushIn,
+    pushOut: ExomMotion.pushOut,
+    pushOffset: ExomMotion.pushOffset,
+    pushPreviousOpacity: ExomMotion.pushPreviousOpacity,
+    tabFades: true,
+    tabFadeIn: ExomMotion.tabFadeIn,
+    tabFadeOut: ExomMotion.tabFadeOut,
+    navIndicatorSlide: ExomMotion.navIndicatorSlide,
+    arrivalFade: ExomMotion.arrivalFade,
+    arrivalRise: ExomMotion.arrivalRise,
+    arrivalStagger: ExomMotion.arrivalStagger,
+    inPlaceSwitch: ExomMotion.inPlaceSwitch,
+    selectionSlides: true,
+    selection: ExomMotion.selectionSlide,
+    growBar: ExomMotion.growBar,
+    countUp: ExomMotion.countUp,
+    expandAnimatesHeight: true,
+    expandHeight: ExomMotion.expandHeight,
+    expandChevron: ExomMotion.expandHeight,
+    expandContentFade: ExomMotion.expandContentFade,
+    stepSlides: true,
+    step: ExomMotion.step,
+    stepOffset: ExomMotion.stepOffset,
+    stepProgressRule: ExomMotion.stepProgressRule,
   );
 
   /// Reduced motion: no scale or translate; fades of at most 120 ms; screens
@@ -130,6 +266,31 @@ class ExomMotionSpec {
     milestoneBand: Duration.zero,
     milestoneCount: Duration.zero,
     milestoneTotal: ExomMotion.reducedMilestone,
+    pushSlides: false,
+    pushIn: ExomMotion.reducedScreen,
+    pushOut: ExomMotion.reducedScreen,
+    pushOffset: 0,
+    pushPreviousOpacity: 1,
+    tabFades: false,
+    tabFadeIn: Duration.zero,
+    tabFadeOut: Duration.zero,
+    navIndicatorSlide: Duration.zero,
+    arrivalFade: ExomMotion.reducedFade,
+    arrivalRise: 0,
+    arrivalStagger: Duration.zero,
+    inPlaceSwitch: ExomMotion.reducedFade,
+    selectionSlides: false,
+    selection: ExomMotion.reducedFade,
+    growBar: Duration.zero,
+    countUp: Duration.zero,
+    expandAnimatesHeight: false,
+    expandHeight: Duration.zero,
+    expandChevron: Duration.zero,
+    expandContentFade: ExomMotion.reducedFade,
+    stepSlides: false,
+    step: ExomMotion.reducedScreen,
+    stepOffset: 0,
+    stepProgressRule: Duration.zero,
   );
 
   final bool isReduced;
@@ -153,4 +314,47 @@ class ExomMotionSpec {
   final Duration milestoneBand;
   final Duration milestoneCount;
   final Duration milestoneTotal;
+
+  /// M1: false in reduced mode (fade only, no offset, no dimming).
+  final bool pushSlides;
+  final Duration pushIn;
+  final Duration pushOut;
+  final double pushOffset;
+
+  /// M1: opacity the covered screen dims to (1 in reduced mode).
+  final double pushPreviousOpacity;
+
+  /// M2: false in reduced mode (cut).
+  final bool tabFades;
+  final Duration tabFadeIn;
+  final Duration tabFadeOut;
+  final Duration navIndicatorSlide;
+
+  /// M3: fade of the content; [arrivalRise] and [arrivalStagger] are zero in
+  /// reduced mode.
+  final Duration arrivalFade;
+  final double arrivalRise;
+  final Duration arrivalStagger;
+
+  /// M4: crossfade in place; the selection slides its fill unless reduced
+  /// ([selectionSlides] false: it fades in [selection]).
+  final Duration inPlaceSwitch;
+  final bool selectionSlides;
+  final Duration selection;
+
+  /// M5: zero in reduced mode (final value directly).
+  final Duration growBar;
+  final Duration countUp;
+
+  /// M7: no animated height in reduced mode; the content still fades.
+  final bool expandAnimatesHeight;
+  final Duration expandHeight;
+  final Duration expandChevron;
+  final Duration expandContentFade;
+
+  /// M9: false in reduced mode (fade only); the progress rule jumps.
+  final bool stepSlides;
+  final Duration step;
+  final double stepOffset;
+  final Duration stepProgressRule;
 }

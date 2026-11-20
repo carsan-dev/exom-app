@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
@@ -231,18 +232,9 @@ class AppRouter {
         path: AppRoutes.forgotPassword,
         pageBuilder: (context, state) {
           final initialEmail = state.uri.queryParameters['email'];
-          return CustomTransitionPage(
+          return _platformPage(
             key: state.pageKey,
             child: ForgotPasswordPage(initialEmail: initialEmail),
-            transitionDuration: const Duration(milliseconds: 320),
-            transitionsBuilder: (ctx, animation, secondary, child) =>
-                FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeInOut,
-                  ),
-                  child: child,
-                ),
           );
         },
       ),
@@ -261,7 +253,8 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            pageBuilder: (context, state) => NoTransitionPage(
+            pageBuilder: (context, state) => ExomTabPage(
+              key: state.pageKey,
               child: HomePage(
                 completionRefresh: switch (state.extra) {
                   HomeCompletionRefresh refresh => refresh,
@@ -272,7 +265,8 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.trainings,
-            pageBuilder: (_, state) => NoTransitionPage(
+            pageBuilder: (_, state) => ExomTabPage(
+              key: state.pageKey,
               child: TrainingsPage(
                 selectedDate: state.uri.queryParameters['date'],
               ),
@@ -280,13 +274,15 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.diets,
-            pageBuilder: (_, state) => NoTransitionPage(
+            pageBuilder: (_, state) => ExomTabPage(
+              key: state.pageKey,
               child: DietsPage(selectedDate: state.uri.queryParameters['date']),
             ),
           ),
           GoRoute(
             path: AppRoutes.calendar,
-            pageBuilder: (context, state) => NoTransitionPage(
+            pageBuilder: (context, state) => ExomTabPage(
+              key: state.pageKey,
               child: CalendarPage(
                 initialDate: state.uri.queryParameters['date'],
               ),
@@ -295,7 +291,7 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.challenges,
             pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ChallengesPage()),
+                ExomTabPage(key: state.pageKey, child: const ChallengesPage()),
           ),
         ],
       ),

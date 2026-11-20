@@ -50,7 +50,7 @@ class TappableScale extends StatefulWidget {
     required Widget child,
     VoidCallback? onTap,
     VoidCallback? onLongPress,
-    double scale = 0.96,
+    double scale = ExomMotion.pressScale,
     HitTestBehavior behavior = HitTestBehavior.opaque,
     bool enabled = true,
   }) : this(

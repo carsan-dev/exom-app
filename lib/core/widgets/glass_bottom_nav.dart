@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// Main bottom navigation (V4, redesign L2). The name is kept for source
@@ -276,7 +277,8 @@ class GlassBottomNav extends StatelessWidget {
                 labels: labels,
                 textDirection: Directionality.of(context),
               );
-              return Row(
+              final selected = selectedIndex >= 0 && selectedIndex < 5;
+              final row = Row(
                 children: List.generate(5, (i) {
                   final isSelected = i == selectedIndex;
                   return SizedBox(
@@ -301,6 +303,25 @@ class GlassBottomNav extends StatelessWidget {
                     ),
                   );
                 }),
+              );
+              if (!selected) return row;
+              // M2: one active bar for the whole row, sliding between slots
+              // (cut with reduced motion). Painted under the tabs, which keep
+              // receiving every tap.
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  AnimatedPositionedDirectional(
+                    duration: ExomMotion.of(context).navIndicatorSlide,
+                    curve: ExomMotion.navIndicatorCurve,
+                    top: 0,
+                    start: slotWidth * selectedIndex + slotWidth * 0.22,
+                    width: slotWidth * 0.56,
+                    height: 2,
+                    child: ColoredBox(color: palette.textPrimary),
+                  ),
+                  row,
+                ],
               );
             },
           ),
@@ -356,14 +377,6 @@ class _NavTab extends StatelessWidget {
         onTap: onTap,
         child: Stack(
           children: [
-            if (selected)
-              Positioned(
-                top: 0,
-                left: slotWidth * 0.22,
-                right: slotWidth * 0.22,
-                height: 2,
-                child: ColoredBox(color: activeColor),
-              ),
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

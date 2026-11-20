@@ -1,6 +1,6 @@
 // L5 sweep (docs/plans/rediseno-app-l5-contrato-v2.md, section 5.2): files
 // already repainted for L5 must not use the legacy surface vocabulary. The list
-// of repainted files grows with each batch; it starts empty in T0.1.
+// of repainted files grows with each batch; it started empty in T0.1.
 //
 // Forbidden in a repainted file: `GlassCard`, `AppColors.`, `Color(0x`, a
 // literal `fontSize` below 13, and a corner radius above 4. A line that needs a
@@ -10,9 +10,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Repainted files, relative to the repository root. Empty until the first
-/// L5 batch repaints a screen.
-const List<String> kRepaintedFiles = <String>[];
+/// Repainted files, relative to the repository root. T0.2 adds the text and
+/// figure components of the base (no screen is repainted yet).
+const List<String> kRepaintedFiles = <String>[
+  'lib/core/widgets/exom_two_line_headline.dart',
+  'lib/core/widgets/exom_numeral.dart',
+  'lib/core/widgets/exom_index_number.dart',
+  'lib/core/widgets/exom_kicker.dart',
+  'lib/core/widgets/exom_numbered_section_header.dart',
+  'lib/core/widgets/exom_figure_columns.dart',
+  'lib/core/widgets/exom_moment_pill.dart',
+];
 
 const String _allowMarker = 'l5-allow:';
 
@@ -24,10 +32,46 @@ final RegExp _legacyRadius = RegExp(
   r'ExomRadius\.(?:xs|sm|md|lg|xl|xxl|all(?:Xs|Sm|Md|Lg|Xl|Xxl))\b',
 );
 
-/// Returns one message per forbidden pattern found in [source].
+/// Line (0-based) of the character at [offset] in [source].
+int _lineOf(String source, int offset) {
+  var line = 0;
+  for (var i = 0; i < offset; i++) {
+    if (source.codeUnitAt(i) == 0x0A) line++;
+  }
+  return line;
+}
+
+/// Last line (0-based) touched by the construct a match opened: when the match
+/// leaves parentheses open (`BorderRadius.circular(` + number), it runs on to
+/// the line that closes them, so an `l5-allow` marker after `);` still counts.
+int _endLine(String source, Match match) {
+  final text = match.group(0)!;
+  var depth = '('.allMatches(text).length - ')'.allMatches(text).length;
+  var end = match.end;
+  while (depth > 0 && end < source.length) {
+    final c = source.codeUnitAt(end);
+    if (c == 0x28) depth++;
+    if (c == 0x29) depth--;
+    end++;
+  }
+  return _lineOf(source, end > match.end ? end - 1 : match.end);
+}
+
+/// Returns one message per forbidden pattern found in [source]. The numeric
+/// patterns (font size, radius) are matched over the whole source, not line by
+/// line, so values that `dart format` splits over several lines
+/// (a radius literal on its own line after `BorderRadius.circular(`) are still
+/// found.
 List<String> findForbiddenSurfacePatterns(String source) {
   final problems = <String>[];
   final lines = source.split('\n');
+  bool allowed(int from, int to) {
+    for (var i = from; i <= to && i < lines.length; i++) {
+      if (lines[i].contains(_allowMarker)) return true;
+    }
+    return false;
+  }
+
   for (var i = 0; i < lines.length; i++) {
     final line = lines[i];
     if (line.contains(_allowMarker)) continue;
@@ -35,19 +79,21 @@ List<String> findForbiddenSurfacePatterns(String source) {
     if (line.contains('GlassCard')) problems.add('$n: GlassCard');
     if (line.contains('AppColors.')) problems.add('$n: AppColors.');
     if (line.contains('Color(0x')) problems.add('$n: Color(0x literal');
-    for (final m in _fontSize.allMatches(line)) {
-      if (double.parse(m.group(1)!) < 13) {
-        problems.add('$n: fontSize ${m.group(1)} < 13');
-      }
-    }
-    for (final m in _radiusLiteral.allMatches(line)) {
-      if (double.parse(m.group(1)!) > 4) {
-        problems.add('$n: radius ${m.group(1)} > 4');
-      }
-    }
     if (_legacyRadius.hasMatch(line)) {
       problems.add('$n: legacy ExomRadius xs..xxl');
     }
+  }
+  for (final m in _fontSize.allMatches(source)) {
+    if (double.parse(m.group(1)!) >= 13) continue;
+    final start = _lineOf(source, m.start);
+    if (allowed(start, _endLine(source, m))) continue;
+    problems.add('${start + 1}: fontSize ${m.group(1)} < 13');
+  }
+  for (final m in _radiusLiteral.allMatches(source)) {
+    if (double.parse(m.group(1)!) <= 4) continue;
+    final start = _lineOf(source, m.start);
+    if (allowed(start, _endLine(source, m))) continue;
+    problems.add('${start + 1}: radius ${m.group(1)} > 4');
   }
   return problems;
 }
@@ -98,6 +144,36 @@ final b = BorderRadius.circular(4);
 final c = Radius.circular(0);
 final d = Color(0xCC000000); // l5-allow: video scrim
 final e = ExomRadius.control;
+''';
+    expect(findForbiddenSurfacePatterns(sample), isEmpty);
+  });
+
+  test('detector sees values split across lines by dart format', () {
+    const sample = '''
+final a = BorderRadius.circular(
+  18,
+);
+final b = TextStyle(
+  fontSize:
+      12,
+);
+final c = Radius.circular(
+  Radius.circular(
+    20,
+  ),
+);
+''';
+    final problems = findForbiddenSurfacePatterns(sample);
+    expect(problems.join(' '), contains('radius 18'));
+    expect(problems.join(' '), contains('fontSize 12'));
+    expect(problems.join(' '), contains('radius 20'));
+  });
+
+  test('a marked exception still skips a value split across lines', () {
+    const sample = '''
+final a = BorderRadius.circular(
+  18,
+); // l5-allow: brand mark
 ''';
     expect(findForbiddenSurfacePatterns(sample), isEmpty);
   });

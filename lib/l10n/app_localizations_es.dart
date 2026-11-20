@@ -2610,6 +2610,39 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trainingFinalize => 'Finalizar';
 
   @override
+  String get trainingsContinueSessionButton => 'Continuar sesión';
+
+  @override
+  String get trainingsRestDayFirst => 'Día de';
+
+  @override
+  String get trainingsRestDaySecond => 'descanso.';
+
+  @override
+  String get trainingsNoPlanFirst => 'Sin plan.';
+
+  @override
+  String get trainingsNoPlanSecond => 'Todavía.';
+
+  @override
+  String get trainingsHistoryPreviousMonth => 'Mes anterior';
+
+  @override
+  String get trainingsHistoryNextMonth => 'Mes siguiente';
+
+  @override
+  String get trainingsTodayHeadlineFirst => 'Hoy sabes';
+
+  @override
+  String get trainingsTodayHeadlineSecond => 'qué hacer.';
+
+  @override
+  String get trainingsFigureMinutesApprox => 'min aprox.';
+
+  @override
+  String get trainingsHistoryDone => 'Hecha';
+
+  @override
   String get trainingDraftRecoveryFailed =>
       'No se pudo recuperar el borrador. Los datos guardados siguen disponibles.';
 

@@ -147,17 +147,25 @@ void main() {
     });
   }
 
-  testWidgets('conflict card identifies full session and offers scoped discard', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('es'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: PendingTrainingExecutions(
-        storage: PendingStorage(), onSelect: (_, _) {},
-      )),
-    ));
+  // D14-6 (L5-A3): the technical session ID left the row. It is shown only in
+  // the discard confirmation, where it identifies the exact local session. The
+  // previous version of this test asserted the ID on the card itself.
+  testWidgets('row hides the technical ID; only the discard dialog shows it', (tester) async {
+    final h = DiscardHarness();
+    await tester.pumpWidget(h.app());
     await tester.pumpAndSettle();
-    expect(find.textContaining('full-session-123456789'), findsOneWidget);
+    expect(find.textContaining('full-session-123456789'), findsNothing);
+    expect(find.textContaining('other-session'), findsNothing);
+    expect(find.textContaining('Fuerza · 2026-09-05'), findsNWidgets(2));
     expect(find.byKey(const Key('pending-discard-full-session-123456789')), findsOneWidget);
+    await openDialog(tester);
+    expect(find.textContaining('full-session-123456789'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.textContaining('ID de sesión: full-session-123456789'),
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -60,6 +60,40 @@ void main() {
     expect(find.byType(FilledButton), findsNothing);
   });
 
+  for (final brightness in Brightness.values) {
+    testWidgets('lead: strong line between the headline and the body '
+        '(${brightness.name})', (tester) async {
+      await pumpComponent(
+        tester,
+        const ExomEmptyState(
+          first: 'Sin plan.',
+          second: 'Todavía.',
+          lead: 'No tienes entrenamientos asignados',
+          body: _body,
+        ),
+        brightness: brightness,
+      );
+      final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+      final lead = tester.widget<Text>(
+        find.text('No tienes entrenamientos asignados'),
+      );
+      expect(lead.style!.fontWeight, FontWeight.w600);
+      expect(lead.style!.color, palette.textPrimary);
+      expect(
+        contrastRatio(lead.style!.color!, palette.background),
+        greaterThanOrEqualTo(4.5),
+      );
+      final headline = tester.getRect(find.byType(ExomTwoLineHeadline));
+      final leadRect = tester.getRect(
+        find.text('No tienes entrenamientos asignados'),
+      );
+      final bodyRect = tester.getRect(find.text(_body));
+      expect(leadRect.top - headline.bottom, 14);
+      expect(bodyRect.top - leadRect.bottom, 14);
+      expect(leadRect.left, 20);
+    });
+  }
+
   testWidgets('content is start aligned with 20 dp inset', (tester) async {
     await pumpComponent(tester, _empty());
     expect(tester.getTopLeft(find.byType(ExomTwoLineHeadline)).dx, 20);

@@ -2578,6 +2578,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trainingFinalize => 'Finish';
 
   @override
+  String get trainingsContinueSessionButton => 'Continue session';
+
+  @override
+  String get trainingsRestDayFirst => 'Rest';
+
+  @override
+  String get trainingsRestDaySecond => 'day.';
+
+  @override
+  String get trainingsNoPlanFirst => 'No plan.';
+
+  @override
+  String get trainingsNoPlanSecond => 'Yet.';
+
+  @override
+  String get trainingsHistoryPreviousMonth => 'Previous month';
+
+  @override
+  String get trainingsHistoryNextMonth => 'Next month';
+
+  @override
+  String get trainingsTodayHeadlineFirst => 'Today you know';
+
+  @override
+  String get trainingsTodayHeadlineSecond => 'what to do.';
+
+  @override
+  String get trainingsFigureMinutesApprox => 'approx. min';
+
+  @override
+  String get trainingsHistoryDone => 'Done';
+
+  @override
   String get trainingDraftRecoveryFailed =>
       'Draft recovery failed. Saved data remains available.';
 

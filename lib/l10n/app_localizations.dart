@@ -4538,6 +4538,72 @@ abstract class AppLocalizations {
   /// **'Finalizar'**
   String get trainingFinalize;
 
+  /// No description provided for @trainingsContinueSessionButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar sesión'**
+  String get trainingsContinueSessionButton;
+
+  /// No description provided for @trainingsRestDayFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Día de'**
+  String get trainingsRestDayFirst;
+
+  /// No description provided for @trainingsRestDaySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'descanso.'**
+  String get trainingsRestDaySecond;
+
+  /// No description provided for @trainingsNoPlanFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin plan.'**
+  String get trainingsNoPlanFirst;
+
+  /// No description provided for @trainingsNoPlanSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía.'**
+  String get trainingsNoPlanSecond;
+
+  /// No description provided for @trainingsHistoryPreviousMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes anterior'**
+  String get trainingsHistoryPreviousMonth;
+
+  /// No description provided for @trainingsHistoryNextMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes siguiente'**
+  String get trainingsHistoryNextMonth;
+
+  /// No description provided for @trainingsTodayHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy sabes'**
+  String get trainingsTodayHeadlineFirst;
+
+  /// No description provided for @trainingsTodayHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'qué hacer.'**
+  String get trainingsTodayHeadlineSecond;
+
+  /// No description provided for @trainingsFigureMinutesApprox.
+  ///
+  /// In es, this message translates to:
+  /// **'min aprox.'**
+  String get trainingsFigureMinutesApprox;
+
+  /// No description provided for @trainingsHistoryDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecha'**
+  String get trainingsHistoryDone;
+
   /// No description provided for @trainingDraftRecoveryFailed.
   ///
   /// In es, this message translates to:

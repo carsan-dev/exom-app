@@ -3965,4 +3965,46 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get progressLatestUnavailableError =>
       'Couldn\'t load your latest record\'s measurements.';
+
+  @override
+  String get noticesScreenTitle => 'Notifications';
+
+  @override
+  String get noticesEmptyFirst => 'All';
+
+  @override
+  String get noticesEmptySecond => 'caught up.';
+
+  @override
+  String get noticeTimeNow => 'now';
+
+  @override
+  String noticeTimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String noticeTimeHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String noticeTimeDays(int days) {
+    return '$days d';
+  }
+
+  @override
+  String get noticesUnreadHero => 'unread';
+
+  @override
+  String get noticesAllCaughtUp => 'All caught up';
+
+  @override
+  String get noticesGroupToday => 'Today';
+
+  @override
+  String get noticesGroupThisWeek => 'This week';
+
+  @override
+  String get noticesGroupEarlier => 'Earlier';
 }

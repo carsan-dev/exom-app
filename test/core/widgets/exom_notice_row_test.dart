@@ -121,4 +121,30 @@ void main() {
     expect(dot.left, 14);
     expect(title.left, dot.right + 10);
   });
+
+  testWidgets('optional leading sits between the dot and the text', (
+    tester,
+  ) async {
+    const leadingKey = Key('notice-leading');
+    await pumpComponent(
+      tester,
+      ExomNoticeRow(
+        title: _title,
+        body: _body,
+        time: '10:42',
+        unread: true,
+        onTap: () {},
+        leading: const SizedBox(key: leadingKey, width: 56, height: 56),
+      ),
+      width: 320,
+    );
+    final dot = tester.getRect(find.byKey(const Key('exom-notice-dot')));
+    final leading = tester.getRect(find.byKey(leadingKey));
+    final title = tester.getRect(find.text(_title));
+    expect(dot.left, 14);
+    expect(leading.left, dot.right + 10);
+    expect(leading.top, tester.getTopLeft(find.byType(ExomNoticeRow)).dy + 12);
+    expect(title.left, leading.right + 14);
+    expect(tester.takeException(), isNull);
+  });
 }

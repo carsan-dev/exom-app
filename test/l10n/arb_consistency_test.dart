@@ -14,6 +14,10 @@ const Map<String, String> identicalValueAllowlist = {
   'general': 'Shared Spanish/English word "General".',
   'weightBadgeLabel': 'Abbreviation shared by both languages.',
   'ingredientUnitG': 'Unit symbol "g".',
+  'noticeTimeMinutes':
+      'Compact unit "{minutes} min" shared by both languages.',
+  'noticeTimeHours': 'Compact unit "{hours} h" shared by both languages.',
+  'noticeTimeDays': 'Compact unit "{days} d" shared by both languages.',
   'ingredientUnitMl': 'Unit symbol "ml".',
   'errorTitle': 'Cognate "Error" is the same word in both languages.',
   // L3 unit 3 (active exercise): unit symbols and the RIR acronym.

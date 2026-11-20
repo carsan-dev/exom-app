@@ -4005,4 +4005,46 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get progressLatestUnavailableError =>
       'No se han podido cargar las medidas de tu último registro.';
+
+  @override
+  String get noticesScreenTitle => 'Avisos';
+
+  @override
+  String get noticesEmptyFirst => 'Todo';
+
+  @override
+  String get noticesEmptySecond => 'al día.';
+
+  @override
+  String get noticeTimeNow => 'ahora';
+
+  @override
+  String noticeTimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String noticeTimeHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String noticeTimeDays(int days) {
+    return '$days d';
+  }
+
+  @override
+  String get noticesUnreadHero => 'sin leer';
+
+  @override
+  String get noticesAllCaughtUp => 'Todo al día';
+
+  @override
+  String get noticesGroupToday => 'Hoy';
+
+  @override
+  String get noticesGroupThisWeek => 'Esta semana';
+
+  @override
+  String get noticesGroupEarlier => 'Anteriores';
 }

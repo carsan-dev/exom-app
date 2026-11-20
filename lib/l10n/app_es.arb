@@ -1350,5 +1350,20 @@
   "progressHistoryOffline": "Sin conexión. Conéctate para ver tu progreso.",
   "progressCachedBanner": "Sin conexión · datos guardados",
   "progressLatestUnavailableOffline": "Las medidas de tu último registro no están disponibles sin conexión.",
-  "progressLatestUnavailableError": "No se han podido cargar las medidas de tu último registro."
+  "progressLatestUnavailableError": "No se han podido cargar las medidas de tu último registro.",
+  "noticesScreenTitle": "Avisos",
+  "noticesEmptyFirst": "Todo",
+  "noticesEmptySecond": "al día.",
+  "noticeTimeNow": "ahora",
+  "noticeTimeMinutes": "{minutes} min",
+  "@noticeTimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "noticeTimeHours": "{hours} h",
+  "@noticeTimeHours": {"placeholders": {"hours": {"type": "int"}}},
+  "noticeTimeDays": "{days} d",
+  "@noticeTimeDays": {"placeholders": {"days": {"type": "int"}}},
+  "noticesUnreadHero": "sin leer",
+  "noticesAllCaughtUp": "Todo al día",
+  "noticesGroupToday": "Hoy",
+  "noticesGroupThisWeek": "Esta semana",
+  "noticesGroupEarlier": "Anteriores"
 }

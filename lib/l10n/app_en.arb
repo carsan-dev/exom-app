@@ -1235,6 +1235,8 @@
   "@setInputAboveMax": {"placeholders": {"max": {"type": "String"}}},
   "circuitCloseA11y": "Close circuit",
   "circuitRoundOf": "Round {current} of {total}",
+  "exomStepOf": "Step {step} of {total}",
+  "exomChartSummary": "{count, plural, =0{No data} =1{1 point, latest value {last}} other{{count} points, latest value {last}}}",
   "circuitThisRound": "This round",
   "circuitNotLogged": "Not logged",
   "circuitRowDoneA11y": "{name}: {value}, saved on this phone",

@@ -6294,6 +6294,18 @@ abstract class AppLocalizations {
   /// **'Ronda {current} de {total}'**
   String circuitRoundOf(int current, int total);
 
+  /// No description provided for @exomStepOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {step} de {total}'**
+  String exomStepOf(int step, int total);
+
+  /// No description provided for @exomChartSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin datos} =1{1 punto, último valor {last}} other{{count} puntos, último valor {last}}}'**
+  String exomChartSummary(int count, String last);
+
   /// No description provided for @circuitThisRound.
   ///
   /// In es, this message translates to:

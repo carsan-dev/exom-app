@@ -83,7 +83,13 @@ void registerTextComponentMatrix(
       final position = tester.state<ScrollableState>(scrollable).position;
       await tester.drag(scrollable, const Offset(0, -2000));
       await tester.pump();
-      expect(position.pixels, position.maxScrollExtent);
+      // Floating point noise only (fractional layout heights can leave the
+      // clamped drag 1e-13 px short of the end); a real shortfall is far
+      // larger than the tolerance.
+      expect(
+        position.pixels,
+        moreOrLessEquals(position.maxScrollExtent, epsilon: 1e-6),
+      );
       expectNoOverflow(tester);
       expectNoEllipsis(tester);
     });

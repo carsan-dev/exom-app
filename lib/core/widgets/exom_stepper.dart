@@ -18,6 +18,12 @@ import 'package:flutter/services.dart';
 /// static value. Every edit is forwarded verbatim to [onTextChanged] /
 /// [onTextSubmitted]; the caller owns parsing, normalisation and errors
 /// ([errorText] is displayed under the field).
+///
+/// Optional presentation hooks (L5 T0.4, used by `ExomNumeralStepper`; all
+/// off by default, so existing callers render exactly as before):
+/// [valueBuilder] replaces the static value display, [valueStyle] replaces
+/// the value text style (static and typed), and [onValueTap] makes the value
+/// tappable and adds a tap action to the control's semantics node.
 class ExomStepper<T> extends StatelessWidget {
   const ExomStepper({
     super.key,
@@ -43,6 +49,9 @@ class ExomStepper<T> extends StatelessWidget {
     this.textFieldKey,
     this.errorBelowRow = false,
     this.errorIcon,
+    this.valueBuilder,
+    this.valueStyle,
+    this.onValueTap,
   });
 
   final T value;
@@ -90,18 +99,31 @@ class ExomStepper<T> extends StatelessWidget {
   /// Icon shown before [errorText] when [errorBelowRow] is set.
   final IconData? errorIcon;
 
+  /// Replaces the static value display (no underline, no default text). Only
+  /// used without [textController].
+  final Widget Function(BuildContext context, T value)? valueBuilder;
+
+  /// Replaces the default value text style (Barlow 36 in the text colour).
+  final TextStyle? valueStyle;
+
+  /// Tap on the static value (e.g. to start typing). Also exposed as the tap
+  /// action of the control's semantics node.
+  final VoidCallback? onValueTap;
+
   static const double buttonSize = 56;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final valueStyle = TextStyle(
-      fontFamily: AppTheme.displayFontFamily,
-      fontSize: 36,
-      fontWeight: FontWeight.w800,
-      height: 1.0,
-      color: palette.textPrimary,
-    );
+    final valueStyle =
+        this.valueStyle ??
+        TextStyle(
+          fontFamily: AppTheme.displayFontFamily,
+          fontSize: 36,
+          fontWeight: FontWeight.w800,
+          height: 1.0,
+          color: palette.textPrimary,
+        );
 
     final error = errorText;
     final errorOutside = errorBelowRow && error != null;
@@ -158,6 +180,8 @@ class ExomStepper<T> extends StatelessWidget {
               : null,
         ),
       );
+    } else if (valueBuilder != null) {
+      centre = valueBuilder!(context, value);
     } else {
       centre = DecoratedBox(
         decoration: BoxDecoration(
@@ -204,6 +228,7 @@ class ExomStepper<T> extends StatelessWidget {
           : SemanticsValidationResult.none,
       onIncrease: onIncrement,
       onDecrease: onDecrement,
+      onTap: onValueTap,
       child: Row(
         children: [
           _StepButton(
@@ -215,7 +240,15 @@ class ExomStepper<T> extends StatelessWidget {
           Expanded(
             child: textController != null
                 ? centre
-                : ExcludeSemantics(child: centre),
+                : ExcludeSemantics(
+                    child: onValueTap == null
+                        ? centre
+                        : GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onValueTap,
+                            child: centre,
+                          ),
+                  ),
           ),
           const SizedBox(width: 8),
           _StepButton(

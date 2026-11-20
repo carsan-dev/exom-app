@@ -1365,5 +1365,10 @@
   "noticesAllCaughtUp": "Todo al día",
   "noticesGroupToday": "Hoy",
   "noticesGroupThisWeek": "Esta semana",
-  "noticesGroupEarlier": "Anteriores"
+  "noticesGroupEarlier": "Anteriores",
+  "videoPlayerPause": "Pausar",
+  "videoPlayerPlay": "Reproducir",
+  "videoPlayerProgress": "Progreso del vídeo",
+  "videoPlayerRewind5": "Retroceder 5 s",
+  "videoPlayerForward5": "Avanzar 5 s"
 }

@@ -1291,5 +1291,10 @@
   "noticesAllCaughtUp": "All caught up",
   "noticesGroupToday": "Today",
   "noticesGroupThisWeek": "This week",
-  "noticesGroupEarlier": "Earlier"
+  "noticesGroupEarlier": "Earlier",
+  "videoPlayerPause": "Pause",
+  "videoPlayerPlay": "Play",
+  "videoPlayerProgress": "Video progress",
+  "videoPlayerRewind5": "Rewind 5 s",
+  "videoPlayerForward5": "Forward 5 s"
 }

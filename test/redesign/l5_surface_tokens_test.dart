@@ -42,6 +42,7 @@ const List<String> kRepaintedFiles = <String>[
   'lib/core/widgets/exom_line_chart.dart',
   'lib/features/notifications/presentation/pages/notifications_page.dart',
   'lib/features/notifications/presentation/widgets/notification_tile.dart',
+  'lib/features/trainings/presentation/pages/exercise_video_player_page.dart',
 ];
 
 const String _allowMarker = 'l5-allow:';

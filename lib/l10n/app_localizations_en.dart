@@ -4007,4 +4007,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noticesGroupEarlier => 'Earlier';
+
+  @override
+  String get videoPlayerPause => 'Pause';
+
+  @override
+  String get videoPlayerPlay => 'Play';
+
+  @override
+  String get videoPlayerProgress => 'Video progress';
+
+  @override
+  String get videoPlayerRewind5 => 'Rewind 5 s';
+
+  @override
+  String get videoPlayerForward5 => 'Forward 5 s';
 }

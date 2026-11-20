@@ -34,6 +34,12 @@ class WeeklyShoppingListPdfLabels {
 class WeeklyDietPdfService {
   const WeeklyDietPdfService();
 
+  /// Room a day box needs to start on a page with its first lines: bottom
+  /// margin (12) and padding (2 × 12) of the box, the 13 pt heading, the gap
+  /// below it (5) and the 10–11 pt line that follows. With less room left the
+  /// day starts on the next page.
+  static const double _minDayStartSpace = 72;
+
   Future<Uint8List> build({
     required DietPeriodEntity week,
     required String locale,
@@ -88,15 +94,20 @@ class WeeklyDietPdfService {
         build: (context) => [
           pw.Text(range, style: pw.TextStyle(font: bold, fontSize: 13)),
           pw.SizedBox(height: 14),
-          ...week.days.map(
-            (day) => _buildDay(
-              day: day,
-              dateFormat: dateFormat,
-              dayFormat: dayFormat,
-              labels: labels,
-              bold: bold,
-              unitFormatter: unitFormatter,
-            ),
+          ...week.days.expand(
+            (day) => [
+              // A day box can span pages; started with too little room left,
+              // it would leave an empty box at the end of the page (L4-I25c).
+              pw.NewPage(freeSpace: _minDayStartSpace),
+              _buildDay(
+                day: day,
+                dateFormat: dateFormat,
+                dayFormat: dayFormat,
+                labels: labels,
+                bold: bold,
+                unitFormatter: unitFormatter,
+              ),
+            ],
           ),
         ],
       ),

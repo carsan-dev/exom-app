@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -899,7 +900,7 @@ class _MainGoalCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${challenge.currentValue.toStringAsFixed(0)} / ${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
+            '${formatFigure(context, challenge.currentValue)} / ${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: palette.textSecondary,
               fontSize: 13,
@@ -964,7 +965,7 @@ class _ChallengeCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${challenge.currentValue.toStringAsFixed(0)}/${challenge.targetValue.toStringAsFixed(0)} ${challenge.unit}',
+                '${formatFigure(context, challenge.currentValue)}/${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: palette.textSecondary,
                   fontSize: 12,

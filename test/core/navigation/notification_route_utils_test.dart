@@ -41,6 +41,52 @@ void main() {
     );
   });
 
+  group('progress photos as notification destination (D9)', () {
+    test('normalizes the progress photos route as a supported destination', () {
+      expect(
+        normalizeNotificationRoute('/profile/progress-photos'),
+        '/profile/progress-photos',
+      );
+      expect(
+        normalizeNotificationRoute(
+          '  /profile/progress-photos  ',
+          fallbackToNotifications: true,
+        ),
+        '/profile/progress-photos',
+      );
+    });
+
+    test('keeps the progress photos route out of date-aware handling', () {
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      expect(
+        normalizeNotificationRoute(
+          '/profile/progress-photos',
+          createdAt: yesterday,
+          fallbackToNotifications: true,
+        ),
+        '/profile/progress-photos',
+      );
+    });
+
+    test('pushes the progress photos route over the shell', () {
+      expect(shouldPushNotificationRoute('/profile/progress-photos'), isTrue);
+    });
+
+    test('a tap with the progress photos route opens it directly', () {
+      expect(
+        resolveNotificationRoute({
+          'route': '/profile/progress-photos',
+          'type': 'profile',
+        }),
+        '/profile/progress-photos',
+      );
+      expect(
+        resolveNotificationRoute({'route': '/profile/progress-photos'}),
+        '/profile/progress-photos',
+      );
+    });
+  });
+
   group('shouldPushNotificationRoute', () {
     test('pushes profile metrics route', () {
       expect(shouldPushNotificationRoute('/profile/metrics'), isTrue);

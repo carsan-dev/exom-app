@@ -1406,7 +1406,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get imperialDescription =>
-      'Usa libras e pulgadas, guardando en métrico internamente';
+      'Usa libras y pulgadas, guardando en métrico internamente';
 
   @override
   String get languageSettingsTitle => 'Idioma';

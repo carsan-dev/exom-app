@@ -2579,7 +2579,7 @@ abstract class AppLocalizations {
   /// No description provided for @imperialDescription.
   ///
   /// In es, this message translates to:
-  /// **'Usa libras e pulgadas, guardando en métrico internamente'**
+  /// **'Usa libras y pulgadas, guardando en métrico internamente'**
   String get imperialDescription;
 
   /// No description provided for @languageSettingsTitle.

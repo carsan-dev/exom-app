@@ -1092,4 +1092,39 @@ void main() {
       _expectNoTextBelow13(tester);
     });
   });
+
+  group('L4-I6 / L5-D5 figures without grouping, in both locales', () {
+    // Characterisation: the contract (section 5.4) formats figures with the
+    // active locale but the owner decided no thousands separator (2026-11-20),
+    // so the visible result equals the old toStringAsFixed(0) in es and en.
+    final bigDiet = DietEntity(
+      id: 'diet-big',
+      name: 'Volumen',
+      totalCalories: 9000,
+      totalProteinG: 1234,
+      totalCarbsG: 12345.5,
+      totalFatG: 68.4,
+      meals: [
+        _meal('m-big', 'LUNCH', 'Plato grande', protein: 1234, carbs: 12345.5),
+        _meal('m-small', 'DINNER', 'Plato normal', protein: 68.4, carbs: 45),
+      ],
+    );
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      testWidgets('remaining macros and meal rows, ${locale.languageCode}', (
+        tester,
+      ) async {
+        await _mount(tester, diet: bigDiet, locale: locale);
+        // Remaining macros: value and unit share one rich text.
+        expect(find.text('1234 g', findRichText: true), findsOneWidget);
+        expect(find.text('12346 g', findRichText: true), findsOneWidget);
+        expect(find.text('68 g', findRichText: true), findsOneWidget);
+        // Meal rows: no separator at or above 1000, normal figures as before.
+        expect(find.text('P 1234 g · C 12346 g'), findsOneWidget);
+        expect(find.text('P 68 g · C 45 g'), findsOneWidget);
+        expect(find.textContaining('1.234'), findsNothing);
+        expect(find.textContaining('1,234'), findsNothing);
+      });
+    }
+  });
 }

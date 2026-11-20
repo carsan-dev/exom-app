@@ -12,6 +12,7 @@ const Set<String> _supportedExactPaths = {
   '/challenges',
   '/profile',
   '/profile/metrics',
+  '/profile/progress-photos',
   '/recap',
   '/feedback',
   '/notifications',
@@ -24,6 +25,7 @@ const List<String> _supportedPrefixes = ['/trainings/', '/recap/'];
 const Set<String> _pushExactPaths = {
   '/profile',
   '/profile/metrics',
+  '/profile/progress-photos',
   '/recap',
   '/feedback',
   '/notifications',

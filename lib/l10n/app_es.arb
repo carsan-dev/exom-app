@@ -495,7 +495,7 @@
   "unitsSettingsTitle": "Unidades",
   "metricOption": "Métrico",
   "metricDescription": "Usa kilos y centímetros en toda la app",
-  "imperialDescription": "Usa libras e pulgadas, guardando en métrico internamente",
+  "imperialDescription": "Usa libras y pulgadas, guardando en métrico internamente",
   "languageSettingsTitle": "Idioma",
   "systemLanguageOption": "Sistema",
   "systemLanguageDescription": "Usa automáticamente el idioma configurado en tu dispositivo",

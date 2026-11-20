@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
@@ -547,19 +548,19 @@ class _DietHeader extends StatelessWidget {
               if (remaining.proteinG != null)
                 _MacroStat(
                   label: l10n.proteinLabel,
-                  value: remaining.proteinG!.toStringAsFixed(0),
+                  value: formatFigure(context, remaining.proteinG!),
                   unit: 'g',
                 ),
               if (remaining.carbsG != null)
                 _MacroStat(
                   label: l10n.carbsLabel,
-                  value: remaining.carbsG!.toStringAsFixed(0),
+                  value: formatFigure(context, remaining.carbsG!),
                   unit: 'g',
                 ),
               if (remaining.fatG != null)
                 _MacroStat(
                   label: l10n.fatsLabel,
-                  value: remaining.fatG!.toStringAsFixed(0),
+                  value: formatFigure(context, remaining.fatG!),
                   unit: 'g',
                 ),
             ],
@@ -675,8 +676,8 @@ class _MealRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final metrics = [
       if (meal.calories != null) '${meal.calories} kcal',
-      if (meal.proteinG != null) 'P ${meal.proteinG!.toStringAsFixed(0)} g',
-      if (meal.carbsG != null) 'C ${meal.carbsG!.toStringAsFixed(0)} g',
+      if (meal.proteinG != null) 'P ${formatFigure(context, meal.proteinG!)} g',
+      if (meal.carbsG != null) 'C ${formatFigure(context, meal.carbsG!)} g',
     ].join(' · ');
     final tags = [
       if (meal.variants.isNotEmpty) l10n.optionsCount(meal.variants.length + 1),

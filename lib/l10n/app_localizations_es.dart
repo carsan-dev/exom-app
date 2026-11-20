@@ -3808,6 +3808,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String exomStepOf(int step, int total) {
+    return 'Paso $step de $total';
+  }
+
+  @override
+  String exomChartSummary(int count, String last) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count puntos, último valor $last',
+      one: '1 punto, último valor $last',
+      zero: 'Sin datos',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get circuitThisRound => 'Esta ronda';
 
   @override

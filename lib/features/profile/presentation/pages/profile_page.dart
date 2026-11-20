@@ -10,6 +10,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -1315,7 +1316,8 @@ class _IndicatorCards extends StatelessWidget {
             child: avgSleep != null
                 ? _CircularIndicatorCard(
                     title: AppLocalizations.of(context).sleep,
-                    value: '${avgSleep.toStringAsFixed(1)} h',
+                    value:
+                        '${formatFigure(context, avgSleep, decimalDigits: 1)} h',
                     subtitle:
                         '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context).ofGoalPercentage}',
                     bottomLabel:

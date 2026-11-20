@@ -34,10 +34,6 @@ class ExomSegmentedControl<T> extends StatelessWidget {
   /// Key of the sliding fill (standard motion only), for tests.
   static const Key fillKey = ValueKey('exom-segmented-fill');
 
-  // M4 (T0.5): unificar con ExomMotionSpec al integrar.
-  static const Duration _slide = Duration(milliseconds: 200);
-  static const Curve _slideCurve = Curves.easeOut;
-
   static const double _minHeight = 48;
 
   @override
@@ -47,7 +43,9 @@ class ExomSegmentedControl<T> extends StatelessWidget {
     final index = options.indexOf(selected);
     assert(index >= 0, 'selected must be one of options');
     final change = onChanged;
-    final labelDuration = reduced ? ExomMotion.reducedFade : _slide;
+    final labelDuration = reduced
+        ? ExomMotion.reducedFade
+        : ExomMotion.selectionSlide;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(ExomRadius.control),
@@ -67,8 +65,8 @@ class ExomSegmentedControl<T> extends StatelessWidget {
               children: [
                 if (!reduced && index >= 0)
                   AnimatedPositionedDirectional(
-                    duration: _slide,
-                    curve: _slideCurve,
+                    duration: ExomMotion.selectionSlide,
+                    curve: ExomMotion.inPlaceCurve,
                     start: segment * index,
                     width: segment,
                     top: 0,

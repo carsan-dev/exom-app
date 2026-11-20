@@ -4,11 +4,6 @@ import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:flutter/material.dart';
 
-// M7 (T0.5): unificar con ExomMotionSpec al integrar.
-const Duration _kHeight = Duration(milliseconds: 200);
-const Duration _kChevron = Duration(milliseconds: 200);
-const Duration _kContent = Duration(milliseconds: 120);
-
 /// Flat accordion (`.acc`): a 56 px header row with an optional [number]
 /// («01», [ExomIndexNumber]), the [title] in 600 and a chevron, over a [body]
 /// padded 20 at the sides and 16 below. A 1 px `rule` sits on top; close a
@@ -59,25 +54,28 @@ class _ExomAccordionState extends State<ExomAccordion>
     final start = _open ? 1.0 : 0.0;
     _height = AnimationController(
       vsync: this,
-      duration: _kHeight,
+      duration: ExomMotion.expandHeight,
       value: start,
     );
     _chevron = AnimationController(
       vsync: this,
-      duration: _kChevron,
+      duration: ExomMotion.expandHeight,
       value: start,
     );
     _content = AnimationController(
       vsync: this,
-      duration: _kContent,
+      duration: ExomMotion.expandContentFade,
       value: start,
     );
-    _heightCurve = CurvedAnimation(parent: _height, curve: Curves.easeOut);
+    _heightCurve = CurvedAnimation(
+      parent: _height,
+      curve: ExomMotion.expandCurve,
+    );
     _turns = Tween<double>(
       begin: 0,
       end: 0.5,
-    ).animate(CurvedAnimation(parent: _chevron, curve: Curves.easeOut));
-    _opacity = CurvedAnimation(parent: _content, curve: Curves.easeOut);
+    ).animate(CurvedAnimation(parent: _chevron, curve: ExomMotion.expandCurve));
+    _opacity = CurvedAnimation(parent: _content, curve: ExomMotion.expandCurve);
   }
 
   @override
@@ -105,7 +103,7 @@ class _ExomAccordionState extends State<ExomAccordion>
       }
       return;
     }
-    _content.duration = _kContent;
+    _content.duration = ExomMotion.expandContentFade;
     if (_open) {
       _height.forward();
       _chevron.forward();

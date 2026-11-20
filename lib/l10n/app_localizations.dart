@@ -6554,6 +6554,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se han podido cargar las medidas de tu último registro.'**
   String get progressLatestUnavailableError;
+
+  /// No description provided for @videoPlayerPause.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get videoPlayerPause;
+
+  /// No description provided for @videoPlayerPlay.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproducir'**
+  String get videoPlayerPlay;
+
+  /// No description provided for @videoPlayerProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso del vídeo'**
+  String get videoPlayerProgress;
+
+  /// No description provided for @videoPlayerRewind5.
+  ///
+  /// In es, this message translates to:
+  /// **'Retroceder 5 s'**
+  String get videoPlayerRewind5;
+
+  /// No description provided for @videoPlayerForward5.
+  ///
+  /// In es, this message translates to:
+  /// **'Avanzar 5 s'**
+  String get videoPlayerForward5;
 }
 
 class _AppLocalizationsDelegate

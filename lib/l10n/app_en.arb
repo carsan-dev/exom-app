@@ -1276,5 +1276,10 @@
   "progressHistoryOffline": "No connection. Connect to see your progress.",
   "progressCachedBanner": "Offline · saved data",
   "progressLatestUnavailableOffline": "Your latest record's measurements aren't available offline.",
-  "progressLatestUnavailableError": "Couldn't load your latest record's measurements."
+  "progressLatestUnavailableError": "Couldn't load your latest record's measurements.",
+  "videoPlayerPause": "Pause",
+  "videoPlayerPlay": "Play",
+  "videoPlayerProgress": "Video progress",
+  "videoPlayerRewind5": "Rewind 5 s",
+  "videoPlayerForward5": "Forward 5 s"
 }

@@ -40,6 +40,7 @@ const List<String> kRepaintedFiles = <String>[
   'lib/core/widgets/exom_progress_rule.dart',
   'lib/core/widgets/exom_operation_bar.dart',
   'lib/core/widgets/exom_line_chart.dart',
+  'lib/features/trainings/presentation/pages/exercise_video_player_page.dart',
 ];
 
 const String _allowMarker = 'l5-allow:';

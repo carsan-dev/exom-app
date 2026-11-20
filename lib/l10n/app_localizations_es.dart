@@ -4005,4 +4005,19 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get progressLatestUnavailableError =>
       'No se han podido cargar las medidas de tu último registro.';
+
+  @override
+  String get videoPlayerPause => 'Pausar';
+
+  @override
+  String get videoPlayerPlay => 'Reproducir';
+
+  @override
+  String get videoPlayerProgress => 'Progreso del vídeo';
+
+  @override
+  String get videoPlayerRewind5 => 'Retroceder 5 s';
+
+  @override
+  String get videoPlayerForward5 => 'Avanzar 5 s';
 }

@@ -1350,5 +1350,10 @@
   "progressHistoryOffline": "Sin conexión. Conéctate para ver tu progreso.",
   "progressCachedBanner": "Sin conexión · datos guardados",
   "progressLatestUnavailableOffline": "Las medidas de tu último registro no están disponibles sin conexión.",
-  "progressLatestUnavailableError": "No se han podido cargar las medidas de tu último registro."
+  "progressLatestUnavailableError": "No se han podido cargar las medidas de tu último registro.",
+  "videoPlayerPause": "Pausar",
+  "videoPlayerPlay": "Reproducir",
+  "videoPlayerProgress": "Progreso del vídeo",
+  "videoPlayerRewind5": "Retroceder 5 s",
+  "videoPlayerForward5": "Avanzar 5 s"
 }

@@ -15,6 +15,10 @@ import 'package:flutter/material.dart';
 /// At least 56 tall, padded 12 above and below, 14 at the start and 20 at the
 /// end, with a 1 px `rule` on top. One merged semantics node, a button when
 /// [onTap] is set; pressed and disabled behave as [ExomRowSurface].
+///
+/// An optional [leading] widget (e.g. the `.x-thumb` icon square of a notice
+/// type) sits between the dot and the text, 10 after the dot and 14 before the
+/// text, aligned to the top. Without it the row is exactly as before.
 class ExomNoticeRow extends StatelessWidget {
   const ExomNoticeRow({
     super.key,
@@ -23,6 +27,7 @@ class ExomNoticeRow extends StatelessWidget {
     required this.time,
     this.unread = false,
     this.onTap,
+    this.leading,
   });
 
   final String title;
@@ -32,6 +37,10 @@ class ExomNoticeRow extends StatelessWidget {
   final String time;
   final bool unread;
   final VoidCallback? onTap;
+
+  /// Optional square before the text (decorative: it adds no semantics of
+  /// its own unless the caller gives it some).
+  final Widget? leading;
 
   static const double dotSize = 6;
 
@@ -46,6 +55,7 @@ class ExomNoticeRow extends StatelessWidget {
     );
     // `.notice-dot { margin-top: .6em }` of the 16 px title line.
     final dotTop = MediaQuery.textScalerOf(context).scale(16) * 0.6;
+    final leadingWidget = leading;
     final dot = Container(
       key: const Key('exom-notice-dot'),
       width: dotSize,
@@ -74,6 +84,10 @@ class ExomNoticeRow extends StatelessWidget {
                     : ExcludeSemantics(child: dot),
               ),
               const SizedBox(width: 10),
+              if (leadingWidget != null) ...[
+                leadingWidget,
+                const SizedBox(width: 14),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

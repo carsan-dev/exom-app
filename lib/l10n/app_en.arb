@@ -1276,5 +1276,20 @@
   "progressHistoryOffline": "No connection. Connect to see your progress.",
   "progressCachedBanner": "Offline · saved data",
   "progressLatestUnavailableOffline": "Your latest record's measurements aren't available offline.",
-  "progressLatestUnavailableError": "Couldn't load your latest record's measurements."
+  "progressLatestUnavailableError": "Couldn't load your latest record's measurements.",
+  "noticesScreenTitle": "Notifications",
+  "noticesEmptyFirst": "All",
+  "noticesEmptySecond": "caught up.",
+  "noticeTimeNow": "now",
+  "noticeTimeMinutes": "{minutes} min",
+  "@noticeTimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "noticeTimeHours": "{hours} h",
+  "@noticeTimeHours": {"placeholders": {"hours": {"type": "int"}}},
+  "noticeTimeDays": "{days} d",
+  "@noticeTimeDays": {"placeholders": {"days": {"type": "int"}}},
+  "noticesUnreadHero": "unread",
+  "noticesAllCaughtUp": "All caught up",
+  "noticesGroupToday": "Today",
+  "noticesGroupThisWeek": "This week",
+  "noticesGroupEarlier": "Earlier"
 }

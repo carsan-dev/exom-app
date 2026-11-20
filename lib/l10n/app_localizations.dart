@@ -6554,6 +6554,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se han podido cargar las medidas de tu último registro.'**
   String get progressLatestUnavailableError;
+
+  /// No description provided for @noticesScreenTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisos'**
+  String get noticesScreenTitle;
+
+  /// No description provided for @noticesEmptyFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get noticesEmptyFirst;
+
+  /// No description provided for @noticesEmptySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'al día.'**
+  String get noticesEmptySecond;
+
+  /// No description provided for @noticeTimeNow.
+  ///
+  /// In es, this message translates to:
+  /// **'ahora'**
+  String get noticeTimeNow;
+
+  /// No description provided for @noticeTimeMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min'**
+  String noticeTimeMinutes(int minutes);
+
+  /// No description provided for @noticeTimeHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h'**
+  String noticeTimeHours(int hours);
+
+  /// No description provided for @noticeTimeDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{days} d'**
+  String noticeTimeDays(int days);
+
+  /// No description provided for @noticesUnreadHero.
+  ///
+  /// In es, this message translates to:
+  /// **'sin leer'**
+  String get noticesUnreadHero;
+
+  /// No description provided for @noticesAllCaughtUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo al día'**
+  String get noticesAllCaughtUp;
+
+  /// No description provided for @noticesGroupToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get noticesGroupToday;
+
+  /// No description provided for @noticesGroupThisWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta semana'**
+  String get noticesGroupThisWeek;
+
+  /// No description provided for @noticesGroupEarlier.
+  ///
+  /// In es, this message translates to:
+  /// **'Anteriores'**
+  String get noticesGroupEarlier;
 }
 
 class _AppLocalizationsDelegate

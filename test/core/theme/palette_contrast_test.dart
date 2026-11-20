@@ -88,6 +88,28 @@ void main() {
     expect(contrastRatio(Colors.white, Colors.white), closeTo(1, 1e-9));
   });
 
+  // L5 T0.1 pairs (docs/plans/rediseno-app-l5-contrato-v2.md).
+  test('light data colour (#4F6B00) reaches 4.5:1 on background, panel and '
+      'elevated', () {
+    final p = AppTheme.light.extension<ExomThemePalette>()!;
+    expect(p.data, const Color(0xFF4F6B00));
+    for (final bg in [p.background, p.surface, p.surfaceElevated]) {
+      expect(contrastRatio(p.data, bg), greaterThanOrEqualTo(4.5));
+    }
+  });
+
+  for (final entry in {'dark': AppTheme.dark, 'light': AppTheme.light}.entries) {
+    test('${entry.key} onLimeFill on limeFill and onSelectionFill on '
+        'selectionFill reach 4.5:1', () {
+      final p = entry.value.extension<ExomThemePalette>()!;
+      expect(contrastRatio(p.onLimeFill, p.limeFill), greaterThanOrEqualTo(4.5));
+      expect(
+        contrastRatio(p.onSelectionFill, p.selectionFill),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  }
+
   for (final entry in {'dark': AppTheme.dark, 'light': AppTheme.light}.entries) {
     test('${entry.key} palette text pairs reach 4.5:1', () {
       final failures = <String>[];

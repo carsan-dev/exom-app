@@ -22,6 +22,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     required this.glassBorder,
     required this.gradientStart,
     required this.gradientEnd,
+    required this.data,
+    required this.limeFill,
+    required this.onLimeFill,
+    this.limeFillOutline,
+    required this.selectionFill,
+    required this.onSelectionFill,
   });
 
   final Color background;
@@ -44,6 +50,28 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
   final Color gradientStart;
   final Color gradientEnd;
 
+  /// Colour of data (figures, numbering, progress rules, "done" by the
+  /// client; L5 D8/D13/D19). Same value as [primary] in each theme: lime in
+  /// dark, `#4F6B00` in light.
+  final Color data;
+
+  /// Lime as a fill only (button, done calendar cells, "today" pill). Never
+  /// ink in the light theme (D13).
+  final Color limeFill;
+
+  /// Ink on top of [limeFill].
+  final Color onLimeFill;
+
+  /// Outline of the lime fill: none in dark, `#101111` in light (drawn at
+  /// `ExomRule.outline`).
+  final Color? limeFillOutline;
+
+  /// Selection fill in bone or charcoal, never lime.
+  final Color selectionFill;
+
+  /// Ink on top of [selectionFill].
+  final Color onSelectionFill;
+
   @override
   ExomThemePalette copyWith({
     Color? background,
@@ -65,6 +93,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     Color? glassBorder,
     Color? gradientStart,
     Color? gradientEnd,
+    Color? data,
+    Color? limeFill,
+    Color? onLimeFill,
+    Color? limeFillOutline,
+    Color? selectionFill,
+    Color? onSelectionFill,
   }) {
     return ExomThemePalette(
       background: background ?? this.background,
@@ -86,6 +120,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       glassBorder: glassBorder ?? this.glassBorder,
       gradientStart: gradientStart ?? this.gradientStart,
       gradientEnd: gradientEnd ?? this.gradientEnd,
+      data: data ?? this.data,
+      limeFill: limeFill ?? this.limeFill,
+      onLimeFill: onLimeFill ?? this.onLimeFill,
+      limeFillOutline: limeFillOutline ?? this.limeFillOutline,
+      selectionFill: selectionFill ?? this.selectionFill,
+      onSelectionFill: onSelectionFill ?? this.onSelectionFill,
     );
   }
 
@@ -123,6 +163,15 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       gradientStart:
           Color.lerp(gradientStart, other.gradientStart, t) ?? gradientStart,
       gradientEnd: Color.lerp(gradientEnd, other.gradientEnd, t) ?? gradientEnd,
+      data: Color.lerp(data, other.data, t) ?? data,
+      limeFill: Color.lerp(limeFill, other.limeFill, t) ?? limeFill,
+      onLimeFill: Color.lerp(onLimeFill, other.onLimeFill, t) ?? onLimeFill,
+      limeFillOutline: Color.lerp(limeFillOutline, other.limeFillOutline, t),
+      selectionFill:
+          Color.lerp(selectionFill, other.selectionFill, t) ?? selectionFill,
+      onSelectionFill:
+          Color.lerp(onSelectionFill, other.onSelectionFill, t) ??
+          onSelectionFill,
     );
   }
 }
@@ -336,6 +385,11 @@ class AppTheme {
     glassBorder: AppColors.glassBorderLight,
     gradientStart: AppColors.gradientStart,
     gradientEnd: AppColors.gradientEnd,
+    data: AppColors.primary,
+    limeFill: Color(0xFFBAF23A),
+    onLimeFill: Color(0xFF101111),
+    selectionFill: AppColors.textPrimary,
+    onSelectionFill: AppColors.background,
   );
 
   static const ExomThemePalette _lightPalette = ExomThemePalette(
@@ -361,6 +415,12 @@ class AppTheme {
     glassBorder: AppColors.glassBorderLightTheme,
     gradientStart: Color(0xFFF2F1E9),
     gradientEnd: Color(0xFFF2F1E9),
+    data: Color(0xFF4F6B00),
+    limeFill: Color(0xFFBAF23A),
+    onLimeFill: Color(0xFF101111),
+    limeFillOutline: Color(0xFF101111),
+    selectionFill: Color(0xFF101111),
+    onSelectionFill: Color(0xFFF2F1E9),
   );
 
   static const ExomSemanticPalette _darkSemanticPalette = ExomSemanticPalette(
@@ -725,9 +785,8 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: palette.surface,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+        // L5 D12: sheets have square corners.
+        shape: const RoundedRectangleBorder(),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: palette.surface,

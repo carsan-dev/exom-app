@@ -7,8 +7,8 @@ import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-/// Top radius of every EXOM sheet (plan §6).
-const double kExomSheetRadius = 20;
+/// Top radius of every EXOM sheet: square (L5 D12; was 20 in plan §6).
+const double kExomSheetRadius = 0;
 
 /// Opens an EXOM modal bottom sheet (sketch «A · Hoja de registro», motion
 /// card §8b) and returns its result.

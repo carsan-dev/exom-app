@@ -10,7 +10,8 @@ const _lime = Color(0xFFBAF23A);
 const _charcoal = Color(0xFF101111);
 const _bone = Color(0xFFF2F1E9);
 
-Color? _resolve(WidgetStateProperty<Color?>? property, [
+Color? _resolve(
+  WidgetStateProperty<Color?>? property, [
   Set<WidgetState> states = const <WidgetState>{},
 ]) => property?.resolve(states);
 
@@ -155,7 +156,11 @@ void main() {
           expect(style.fontFamily, 'DMSans');
           expect(style.fontWeight, FontWeight.w600);
         }
-        for (final style in [text.bodyLarge!, text.bodyMedium!, text.bodySmall!]) {
+        for (final style in [
+          text.bodyLarge!,
+          text.bodyMedium!,
+          text.bodySmall!,
+        ]) {
           expect(style.fontFamily, 'DMSans');
           expect(style.fontWeight, FontWeight.w400);
         }
@@ -247,14 +252,103 @@ void main() {
 
         final sheetShape =
             theme.bottomSheetTheme.shape! as RoundedRectangleBorder;
-        expect(
-          sheetShape.borderRadius,
-          const BorderRadius.vertical(top: Radius.circular(20)),
-        );
+        // L5 T0.1 (D12): sheets are square; was a 20 px top radius.
+        expect(sheetShape.borderRadius, BorderRadius.zero);
         expect(theme.bottomSheetTheme.backgroundColor, palette.surface);
 
         final dialogShape = theme.dialogTheme.shape! as RoundedRectangleBorder;
         expect(dialogShape.borderRadius, BorderRadius.circular(4));
+      }
+    });
+  });
+
+  // L5 T0.1 (docs/plans/rediseno-app-l5-contrato-v2.md, "T0.1 Tokens").
+  group('L5 T0.1 tokens', () {
+    ExomThemePalette paletteOf(ThemeData theme) =>
+        theme.extension<ExomThemePalette>()!;
+
+    test('dark palette exposes the new L5 tokens', () {
+      final p = paletteOf(AppTheme.dark);
+      expect(p.data, _lime);
+      expect(p.data, p.primary);
+      expect(p.limeFill, _lime);
+      expect(p.onLimeFill, _charcoal);
+      expect(p.limeFillOutline, isNull);
+      expect(p.selectionFill, p.textPrimary);
+      expect(p.onSelectionFill, p.background);
+    });
+
+    test('light palette exposes the new L5 tokens', () {
+      final p = paletteOf(AppTheme.light);
+      expect(p.data, const Color(0xFF4F6B00));
+      expect(p.data, p.primary);
+      expect(p.primary, const Color(0xFF4F6B00));
+      expect(p.limeFill, _lime);
+      expect(p.onLimeFill, _charcoal);
+      expect(p.limeFillOutline, _charcoal);
+      expect(p.selectionFill, p.textPrimary);
+      expect(p.onSelectionFill, p.background);
+    });
+
+    test('copyWith replaces and preserves the new tokens', () {
+      final p = paletteOf(AppTheme.light);
+      const red = Color(0xFFFF0000);
+      final changed = p.copyWith(
+        data: red,
+        limeFill: red,
+        onLimeFill: red,
+        limeFillOutline: red,
+        selectionFill: red,
+        onSelectionFill: red,
+      );
+      expect(changed.data, red);
+      expect(changed.limeFill, red);
+      expect(changed.onLimeFill, red);
+      expect(changed.limeFillOutline, red);
+      expect(changed.selectionFill, red);
+      expect(changed.onSelectionFill, red);
+      final same = p.copyWith();
+      expect(same.data, p.data);
+      expect(same.limeFill, p.limeFill);
+      expect(same.onLimeFill, p.onLimeFill);
+      expect(same.limeFillOutline, p.limeFillOutline);
+      expect(same.selectionFill, p.selectionFill);
+      expect(same.onSelectionFill, p.onSelectionFill);
+    });
+
+    test('lerp interpolates the new tokens, nullable outline included', () {
+      final dark = paletteOf(AppTheme.dark);
+      final light = paletteOf(AppTheme.light);
+      expect(dark.lerp(light, 0).data, dark.data);
+      expect(dark.lerp(light, 1).data, light.data);
+      expect(dark.lerp(light, 1).limeFillOutline, light.limeFillOutline);
+      // No outline fades in/out through alpha (Color.lerp with null).
+      expect(dark.lerp(light, 0).limeFillOutline?.a, 0);
+      expect(light.lerp(dark, 1).limeFillOutline?.a, 0);
+      expect(dark.lerp(dark, 1).limeFillOutline, isNull);
+      expect(
+        dark.lerp(light, 0.5).selectionFill,
+        Color.lerp(dark.selectionFill, light.selectionFill, 0.5),
+      );
+    });
+
+    test('lerp of limeFillOutline from null (dark) to #101111 at t = .5', () {
+      final dark = paletteOf(AppTheme.dark);
+      final light = paletteOf(AppTheme.light);
+      expect(dark.limeFillOutline, isNull);
+      expect(light.limeFillOutline, const Color(0xFF101111));
+      final mid = dark.lerp(light, 0.5).limeFillOutline;
+      expect(mid, isNotNull);
+      expect(mid!.toARGB32() & 0xFFFFFF, 0x101111);
+      expect(mid.a, greaterThan(0));
+      expect(mid.a, lessThan(1));
+      expect(mid, Color.lerp(null, const Color(0xFF101111), 0.5));
+    });
+
+    test('bottom sheet theme has square corners in both themes', () {
+      for (final theme in [AppTheme.dark, AppTheme.light]) {
+        final shape = theme.bottomSheetTheme.shape! as RoundedRectangleBorder;
+        expect(shape.borderRadius, BorderRadius.zero);
       }
     });
   });

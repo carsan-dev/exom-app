@@ -26,6 +26,12 @@ const List<String> kRepaintedFiles = <String>[
   'lib/core/widgets/exom_index_list.dart',
   'lib/core/widgets/exom_accordion.dart',
   'lib/core/widgets/exom_notice_row.dart',
+  'lib/core/widgets/exom_coach_block.dart',
+  'lib/core/widgets/exom_inline_message.dart',
+  'lib/core/widgets/exom_empty_state.dart',
+  'lib/core/widgets/exom_skeleton.dart',
+  'lib/core/widgets/exom_text_link.dart',
+  'lib/core/widgets/media_picker_error_dialog.dart',
 ];
 
 const String _allowMarker = 'l5-allow:';

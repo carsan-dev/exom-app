@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -32,7 +34,7 @@ const double kExomSheetRadius = 0;
 /// * **Dismissal** ([isDismissible]): scrim tap, system/predictive back,
 ///   Escape and the iOS accessibility escape close the sheet. With
 ///   `isDismissible: false` none of them does (the content must pop it).
-/// * **Layout**: `panel` surface, top radius 20, 1 px `rule` outline, no
+/// * **Layout**: `panel` surface, square corners ([kExomSheetRadius], 0), 1 px `rule` outline, no
 ///   shadow, a 40x4 handle; content in a scroll view capped at 90 % of the
 ///   screen height, above the keyboard and the bottom safe area. Builders
 ///   return plain (non-scrolling) content.
@@ -49,21 +51,50 @@ const double kExomSheetRadius = 0;
 /// `showSetPerformanceSheet`), so the caller cannot replace or pop its page
 /// while the sheet still owns inherited dependencies or text inputs. Disable
 /// with [waitForDisposal].
+///
+/// **Confirmation sheets** (L5 T0.3a): the optional [title], [body] and
+/// [actions] build the sheet without a [builder] (one of them, or [builder],
+/// is required). The title is painted upper case in Barlow Condensed 800 28
+/// and read as a header in its original case; the body follows in the
+/// secondary colour; a [builder], if also given, renders under them. The
+/// [actions] are pinned under the scrolling content, below a 1 px `rule`,
+/// stacked full width with a 4 px gap (sketch `.sheet-act`). They are built
+/// inside the sheet, so a `Builder` gives them the sheet's context to pop it
+/// with a result. Calls with only a [builder] behave exactly as before.
+///
+/// Like any EXOM sheet, a confirmation sheet closes when the router location
+/// changes: the future completes with null and no action runs (contract R22).
 Future<T?> showExomSheet<T>({
   required BuildContext context,
-  required WidgetBuilder builder,
+  WidgetBuilder? builder,
+  String? title,
+  String? body,
+  List<Widget>? actions,
   bool useRootNavigator = false,
   bool isDismissible = true,
   bool enableDrag = true,
   bool waitForDisposal = true,
 }) {
+  assert(
+    builder != null || title != null || body != null || actions != null,
+    'showExomSheet needs a builder or a title, body or actions',
+  );
+  final userBuilder = builder;
+  final WidgetBuilder content = title == null && body == null
+      ? (userBuilder ?? (_) => const SizedBox.shrink())
+      : (sheetContext) => _ExomSheetText(
+          title: title,
+          body: body,
+          child: userBuilder?.call(sheetContext),
+        );
   if (_openSheets[context] != null) {
     // Still open or closing: ignore the repeated trigger.
     return Future<T?>.value();
   }
   final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   final route = ExomSheetRoute<T>(
-    builder: builder,
+    builder: content,
+    actions: actions,
     motion: ExomMotion.of(context),
     isDismissible: isDismissible,
     enableDrag: enableDrag,
@@ -105,9 +136,13 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
     required this.enableDrag,
     required this.barrierLabel,
     required this.capturedThemes,
+    this.actions,
   });
 
   final WidgetBuilder builder;
+
+  /// Pinned actions under the scrolling content (see [showExomSheet]).
+  final List<Widget>? actions;
   final ExomMotionSpec motion;
   final bool isDismissible;
   final bool enableDrag;
@@ -361,6 +396,7 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final media = MediaQuery.of(context);
+    final actions = _route.actions;
     // 90 % of the space between the status bar and the keyboard; the
     // content scrolls beyond that.
     final maxHeight = math.max(
@@ -407,6 +443,8 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
                 child: widget.child,
               ),
             ),
+            if (actions != null && actions.isNotEmpty)
+              _ExomSheetActions(actions: actions),
           ],
         ),
       ),
@@ -468,6 +506,101 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
       child: Padding(
         padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
         child: panel,
+      ),
+    );
+  }
+}
+
+/// Title and body of a confirmation sheet (`.sheet-body`), with an optional
+/// builder content under them.
+class _ExomSheetText extends StatelessWidget {
+  const _ExomSheetText({this.title, this.body, this.child});
+
+  final String? title;
+  final String? body;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final titleText = title;
+    final bodyText = body;
+    final content = child;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (titleText != null)
+                Semantics(
+                  header: true,
+                  label: titleText,
+                  excludeSemantics: true,
+                  child: Text(
+                    titleText.toUpperCase(),
+                    style: ExomType.headline2Section.copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+              if (titleText != null && bodyText != null)
+                const SizedBox(height: ExomSpacing.xs),
+              if (bodyText != null)
+                Text(
+                  bodyText,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 14,
+                    height: 1.35,
+                    color: palette.textSecondary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (content != null) ...[const SizedBox(height: 10), content],
+      ],
+    );
+  }
+}
+
+/// Pinned actions of a confirmation sheet (`.sheet-act`).
+class _ExomSheetActions extends StatelessWidget {
+  const _ExomSheetActions({required this.actions});
+
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(
+      key: const Key('exom-sheet-actions'),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: context.exomPalette.borderSoft,
+              width: ExomRule.hairline,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(height: ExomSpacing.xs),
+                actions[i],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

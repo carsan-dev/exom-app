@@ -3341,6 +3341,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sheetBarrierA11y => 'Close sheet';
 
   @override
+  String get noticeUnreadA11y => 'Unread';
+
+  @override
   String get homeStartSessionButton => 'Start session';
 
   @override

@@ -1099,6 +1099,7 @@
   "syncStatusFailed": "Could not sync",
   "buttonBusyA11y": "In progress",
   "sheetBarrierA11y": "Close sheet",
+  "noticeUnreadA11y": "Unread",
   "homeStartSessionButton": "Start session",
   "homeContinueSessionButton": "Continue session",
   "homeSessionDone": "Done",

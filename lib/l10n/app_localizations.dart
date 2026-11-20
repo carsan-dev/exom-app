@@ -5780,6 +5780,12 @@ abstract class AppLocalizations {
   /// **'Cerrar hoja'**
   String get sheetBarrierA11y;
 
+  /// No description provided for @noticeUnreadA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'No leído'**
+  String get noticeUnreadA11y;
+
   /// No description provided for @homeStartSessionButton.
   ///
   /// In es, this message translates to:

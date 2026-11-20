@@ -1150,6 +1150,7 @@
   "syncStatusFailed": "No se pudo sincronizar",
   "buttonBusyA11y": "En curso",
   "sheetBarrierA11y": "Cerrar hoja",
+  "noticeUnreadA11y": "No leído",
   "homeStartSessionButton": "Empezar sesión",
   "homeContinueSessionButton": "Continuar sesión",
   "homeSessionDone": "Hecha",

@@ -40,6 +40,12 @@ enum ExomDayMark { none, pending, done, missed }
 /// Semantics: one node per day of the month with its localised date and
 /// «hoy» / «sesión hecha» / «sesión pendiente» / «sesión no hecha», the
 /// selected state and, with [onSelect], a tap action.
+///
+/// Optional flag (L5-A4a, sketch `.a-fl`): a day for which [flagOf] returns
+/// true carries a small flame in its top end corner, in the secondary text
+/// colour (in the ink of the fill on a selected or filled day, never lime as
+/// ink), and [flagLabelOf] extends that day's label. Without [flagOf] the grid
+/// is unchanged.
 class ExomMonthGrid extends StatelessWidget {
   const ExomMonthGrid({
     super.key,
@@ -49,6 +55,8 @@ class ExomMonthGrid extends StatelessWidget {
     required this.today,
     this.onSelect,
     this.doneAsFill = false,
+    this.flagOf,
+    this.flagLabelOf,
   });
 
   /// Any day of the month to show.
@@ -60,6 +68,15 @@ class ExomMonthGrid extends StatelessWidget {
   final DateTime today;
   final ValueChanged<DateTime>? onSelect;
   final bool doneAsFill;
+
+  /// Days of the month that carry the corner flag.
+  final bool Function(DateTime day)? flagOf;
+
+  /// Label of a flagged day built from its usual label.
+  final String Function(String label)? flagLabelOf;
+
+  /// Key of the corner flag of [day], for tests.
+  static Key flagKey(DateTime day) => ValueKey('exom-month-flag-${_id(day)}');
 
   /// Key of the weekday initials row, for tests.
   static const Key weekdayHeaderKey = ValueKey('exom-month-weekdays');
@@ -217,8 +234,13 @@ class ExomMonthGrid extends StatelessWidget {
       case ExomDayMark.missed:
         label = l10n.homeWeekDayMissed(label);
     }
+    final flagLabel = flagLabelOf;
+    if (flagLabel != null && _isFlagged(day)) label = flagLabel(label);
     return label;
   }
+
+  bool _isFlagged(DateTime day) =>
+      day.month == month.month && (flagOf?.call(day) ?? false);
 
   Widget _hitArea(DateTime day, String label) {
     final select = onSelect;
@@ -303,7 +325,7 @@ class ExomMonthGrid extends StatelessWidget {
       ),
     };
 
-    return AnimatedContainer(
+    final cell = AnimatedContainer(
       key: visualKey(day),
       duration: duration,
       curve: Curves.linear,
@@ -336,7 +358,30 @@ class ExomMonthGrid extends StatelessWidget {
         ],
       ),
     );
+    if (!inMonth || !_isFlagged(day)) return cell;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        cell,
+        PositionedDirectional(
+          top: _flagInsetTop,
+          end: _flagInsetEnd,
+          child: Icon(
+            key: flagKey(day),
+            Icons.local_fire_department_outlined,
+            size: _flagSize,
+            color: isSelected || filledDone ? ink : palette.textSecondary,
+          ),
+        ),
+      ],
+    );
   }
+
+  /// Corner flag of the sketch (`.a-fl`: 11 px, 3 px from the top, 5 from
+  /// the end).
+  static const double _flagSize = 11;
+  static const double _flagInsetTop = 3;
+  static const double _flagInsetEnd = 5;
 
   /// Mark sizes of the week strip of Inicio (L4b-D4).
   static const double _dotSize = 6;

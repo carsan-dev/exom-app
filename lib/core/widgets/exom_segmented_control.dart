@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/spacing.dart';
@@ -14,6 +16,11 @@ import 'package:flutter/material.dart';
 ///
 /// Semantics: each segment is a button in a mutually exclusive group with
 /// its selected state. A null [onChanged] disables the control.
+///
+/// A word never breaks inside (L4-I22, sketch A1 `.a-fit`): when the longest
+/// word of any label does not fit its segment at the current text scale, all
+/// labels shrink together until it fits; otherwise they keep their 16 and
+/// wrap between words.
 class ExomSegmentedControl<T> extends StatelessWidget {
   const ExomSegmentedControl({
     super.key,
@@ -35,6 +42,43 @@ class ExomSegmentedControl<T> extends StatelessWidget {
   static const Key fillKey = ValueKey('exom-segmented-fill');
 
   static const double _minHeight = 48;
+  static const double _fontSize = 16;
+
+  /// Label style at [fontSize] (16 unless the labels had to shrink).
+  static TextStyle _labelStyle(double fontSize) => TextStyle(
+    fontFamily: AppTheme.bodyFontFamily,
+    fontSize: fontSize,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+  );
+
+  /// Font size at which the longest word of every label fits [available]
+  /// logical pixels with [scaler]; 16 when it already fits.
+  double _fittedFontSize(
+    double available,
+    TextScaler scaler,
+    TextDirection direction,
+  ) {
+    var factor = 1.0;
+    for (final option in options) {
+      for (final word in labelOf(option).split(RegExp(r'\s+'))) {
+        if (word.isEmpty) continue;
+        final painter = TextPainter(
+          text: TextSpan(text: word, style: _labelStyle(_fontSize)),
+          textDirection: direction,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        final width = painter.width;
+        painter.dispose();
+        if (available > 0 && width > available) {
+          factor = math.min(factor, available / width);
+        }
+      }
+    }
+    // A small margin so the shrunk word does not wrap on rounding.
+    return factor < 1 ? _fontSize * factor * 0.98 : _fontSize;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +105,11 @@ class ExomSegmentedControl<T> extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final segment = constraints.maxWidth / options.length;
+            final fontSize = _fittedFontSize(
+              segment - 2 * ExomSpacing.sm,
+              MediaQuery.textScalerOf(context),
+              Directionality.of(context),
+            );
             return Stack(
               children: [
                 if (!reduced && index >= 0)
@@ -90,6 +139,7 @@ class ExomSegmentedControl<T> extends StatelessWidget {
                             reduced: reduced,
                             labelDuration: labelDuration,
                             minHeight: _minHeight,
+                            fontSize: fontSize,
                             palette: palette,
                             onTap: change == null
                                 ? null
@@ -119,6 +169,7 @@ class _Segment extends StatelessWidget {
     required this.reduced,
     required this.labelDuration,
     required this.minHeight,
+    required this.fontSize,
     required this.palette,
     required this.onTap,
   });
@@ -129,6 +180,7 @@ class _Segment extends StatelessWidget {
   final bool reduced;
   final Duration labelDuration;
   final double minHeight;
+  final double fontSize;
   final ExomThemePalette palette;
   final VoidCallback? onTap;
 
@@ -149,13 +201,9 @@ class _Segment extends StatelessWidget {
           child: AnimatedDefaultTextStyle(
             duration: labelDuration,
             curve: Curves.easeOut,
-            style: TextStyle(
-              fontFamily: AppTheme.bodyFontFamily,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              color: color,
-            ),
+            style: ExomSegmentedControl._labelStyle(
+              fontSize,
+            ).copyWith(color: color),
             child: Text(label, textAlign: TextAlign.center),
           ),
         ),

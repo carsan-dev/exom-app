@@ -3,6 +3,7 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'exom_component_harness.dart';
@@ -243,4 +244,65 @@ void main() {
       throwsAssertionError,
     );
   });
+
+  group('L4-I22: a word never breaks inside (sketch A1 `.a-fit`)', () {
+    // `Entrenamiento` at 1.6x does not fit half of 320 dp: the labels shrink
+    // together until their longest word fits, then wrap between words only.
+    String label(bool training) => training ? 'Entrenamiento' : 'Dietas';
+    Widget toggle() => ExomSegmentedControl<bool>(
+      options: const [true, false],
+      selected: true,
+      labelOf: label,
+      onChanged: (_) {},
+    );
+
+    int linesOf(WidgetTester tester, String text) => tester
+        .renderObject<RenderParagraph>(
+          find
+              .descendant(of: find.text(text), matching: find.byType(RichText))
+              .first,
+        )
+        .lines;
+
+    double sizeOf(WidgetTester tester, String text) => tester
+        .widget<AnimatedDefaultTextStyle>(
+          find
+              .ancestor(
+                of: find.text(text),
+                matching: find.byType(AnimatedDefaultTextStyle),
+              )
+              .first,
+        )
+        .style
+        .fontSize!;
+
+    for (final (width, scale) in const [
+      (320.0, 1.3),
+      (320.0, 1.6),
+      (360.0, 1.6),
+      (390.0, 1.6),
+    ]) {
+      testWidgets('$width dp at ${scale}x', (tester) async {
+        await pumpComponent(tester, toggle(), width: width, textScale: scale);
+        expectNoOverflow(tester);
+        expect(linesOf(tester, 'Entrenamiento'), 1);
+        expect(sizeOf(tester, 'Entrenamiento'), sizeOf(tester, 'Dietas'));
+      });
+    }
+
+    testWidgets('labels that fit keep their 16 and still wrap between words', (
+      tester,
+    ) async {
+      await pumpComponent(tester, _control(), width: 390);
+      expect(sizeOf(tester, _label(_View.week)), 16);
+      expect(linesOf(tester, _label(_View.month)), greaterThan(1));
+    });
+  });
+}
+
+extension on RenderParagraph {
+  /// Lines the painted text takes (distinct line tops of its glyph boxes).
+  int get lines => getBoxesForSelection(
+    TextSelection(baseOffset: 0, extentOffset: text.toPlainText().length),
+  ).map((box) => box.top.round()).toSet().length;
 }

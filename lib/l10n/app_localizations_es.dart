@@ -4095,4 +4095,75 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoPlayerForward5 => 'Avanzar 5 s';
+
+  @override
+  String calendarMonthTitleLabel(String month) {
+    return '$month, elegir mes y año';
+  }
+
+  @override
+  String get calendarHeroTrainingFirst => 'Tu mes,';
+
+  @override
+  String get calendarHeroTrainingSecond => 'organizado.';
+
+  @override
+  String get calendarHeroTrainingFoot => 'sesiones hechas';
+
+  @override
+  String get calendarHeroDietFirst => 'Tu comida.';
+
+  @override
+  String get calendarHeroDietSecond => 'Sin improvisar.';
+
+  @override
+  String get calendarHeroDietFoot => 'comidas esta semana';
+
+  @override
+  String get calendarHeroNoSessions => 'sesiones';
+
+  @override
+  String calendarHeroNoSessionsFoot(String year) {
+    return '$year · sin sesiones programadas';
+  }
+
+  @override
+  String calendarWeekTrainings(String done, String total) {
+    return '$done de $total entrenos esta semana';
+  }
+
+  @override
+  String get calendarEmptyMonthFirst => 'Sin actividades';
+
+  @override
+  String get calendarEmptyMonthSecond => 'este mes.';
+
+  @override
+  String get calendarOfflineFirst => 'Sin conexión.';
+
+  @override
+  String get calendarOfflineSecond => 'No se ha perdido nada.';
+
+  @override
+  String get calendarOfflineMessage =>
+      'Sin conexión. No se ha podido cargar el calendario.';
+
+  @override
+  String get calendarRestDayFacts => 'Sin entrenamiento asignado.';
+
+  @override
+  String calendarActiveChallengesToday(int count, String figure) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$figure retos activos hoy',
+      one: '$figure reto activo hoy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calendarDayWithChallenge(String day) {
+    return '$day, con reto';
+  }
 }

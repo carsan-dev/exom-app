@@ -519,4 +519,75 @@ void main() {
       findsNothing,
     );
   });
+
+  group('flag (L5-A4a: challenge in the corner, sketch `.a-fl`)', () {
+    bool flagged(DateTime day) =>
+        day.month == 11 && (day.day == 3 || day.day == 18 || day.day == 9);
+
+    Widget flaggedGrid({DateTime? selected}) => ExomMonthGrid(
+      month: _month,
+      selected: selected,
+      today: _today,
+      markOf: _marks,
+      onSelect: (_) {},
+      doneAsFill: true,
+      flagOf: flagged,
+      flagLabelOf: (label) => '$label, flag',
+    );
+
+    testWidgets('no flag without flagOf', (tester) async {
+      await pumpComponent(tester, _grid());
+      expect(
+        find.byKey(ExomMonthGrid.flagKey(DateTime(2026, 11, 3))),
+        findsNothing,
+      );
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('flag colours: secondary, on selection, on lime '
+          '(${brightness.name})', (tester) async {
+        await pumpComponent(
+          tester,
+          flaggedGrid(selected: DateTime(2026, 11, 18)),
+          brightness: brightness,
+        );
+        final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+        Color? colour(int d) => tester
+            .widget<Icon>(
+              find.byKey(ExomMonthGrid.flagKey(DateTime(2026, 11, d))),
+            )
+            .color;
+        expect(colour(3), palette.textSecondary);
+        expect(colour(18), palette.onSelectionFill);
+        expect(colour(9), palette.onLimeFill);
+        expect(
+          find.byKey(ExomMonthGrid.flagKey(DateTime(2026, 11, 4))),
+          findsNothing,
+        );
+        if (brightness == Brightness.light) expectNoLimeInk(tester);
+      });
+    }
+
+    testWidgets('the flag stays inside its cell and the label says it', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(tester, flaggedGrid(), width: 320, textScale: 1.6);
+      expectNoOverflow(tester);
+      final day = DateTime(2026, 11, 3);
+      final cell = tester.getRect(find.byKey(ExomMonthGrid.visualKey(day)));
+      final flag = tester.getRect(find.byKey(ExomMonthGrid.flagKey(day)));
+      expect(cell.contains(flag.topLeft), isTrue);
+      expect(
+        cell.contains(flag.bottomRight - const Offset(0.01, 0.01)),
+        isTrue,
+      );
+      final date = DateFormat.MMMMEEEEd('es').format(day);
+      expect(
+        tester.getSemantics(find.byKey(ExomMonthGrid.cellKey(day))).label,
+        '$date, flag',
+      );
+      handle.dispose();
+    });
+  });
 }

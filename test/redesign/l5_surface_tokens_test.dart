@@ -48,6 +48,16 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/trainings/presentation/widgets/pending_training_executions.dart',
 ];
 
+/// Files repainted only up to a marker line: the code from the marker on
+/// belongs to a later batch and keeps its legacy vocabulary until then.
+/// L5-A4a repaints the Calendario screen; its month and year picker dialog
+/// (`_MonthYearPickerDialog`, at the end of the file) is L5-A4b, which moves
+/// the file to [kRepaintedFiles].
+const Map<String, String> kPartlyRepaintedFiles = <String, String>{
+  'lib/features/calendar/presentation/pages/calendar_page.dart':
+      '// ─── Month/Year Picker Dialog',
+};
+
 const String _allowMarker = 'l5-allow:';
 
 final RegExp _fontSize = RegExp(r'fontSize\s*:\s*(\d+(?:\.\d+)?)');
@@ -139,6 +149,30 @@ void main() {
         failures.add('$path:$problem');
       }
     }
+    expect(failures, isEmpty);
+  });
+
+  test('partly repainted files use no legacy surface vocabulary before '
+      'their marker', () {
+    final failures = <String>[];
+    kPartlyRepaintedFiles.forEach((path, marker) {
+      final file = File(path);
+      if (!file.existsSync()) {
+        failures.add('$path: file does not exist');
+        return;
+      }
+      final source = file.readAsStringSync();
+      final end = source.indexOf(marker);
+      if (end < 0) {
+        failures.add('$path: marker not found');
+        return;
+      }
+      for (final problem in findForbiddenSurfacePatterns(
+        source.substring(0, end),
+      )) {
+        failures.add('$path:$problem');
+      }
+    });
     expect(failures, isEmpty);
   });
 

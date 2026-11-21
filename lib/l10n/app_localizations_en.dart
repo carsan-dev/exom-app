@@ -2827,6 +2827,90 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
 
   @override
+  String pendingUploadsCountSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '1 pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pendingUploadsErrorCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count failed',
+      one: '1 failed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsNone => 'Nothing pending';
+
+  @override
+  String get pendingUploadsKicker => 'On this phone';
+
+  @override
+  String pendingUploadsHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pending uploads',
+      one: 'pending upload',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsSectionEvidence => 'Evidence';
+
+  @override
+  String get pendingUploadsEmptyFirst => 'All clear.';
+
+  @override
+  String get pendingUploadsEmptySecond => 'No uploads.';
+
+  @override
+  String get pendingUploadsEmptyBody =>
+      'Every file stays on this phone until EXOM confirms it received it.';
+
+  @override
+  String get pendingMediaVideo => 'Feedback video';
+
+  @override
+  String get pendingMediaImage => 'Feedback image';
+
+  @override
+  String pendingUploadSendingBytes(int percent, String sent, String total) {
+    return 'Sending $percent% · $sent of $total MB';
+  }
+
+  @override
+  String get pendingRetryFailed =>
+      'The upload could not be retried. Your evidence is kept.';
+
+  @override
+  String get pendingRetryRequested => 'Retry requested.';
+
+  @override
+  String get pendingRetryNotStarted =>
+      'The retry didn\'t complete. Your data is kept.';
+
+  @override
+  String get pendingDeleteIncomplete =>
+      'The deletion was not completed. Your data is kept.';
+
+  @override
+  String get pendingDeleteDone => 'Evidence deleted.';
+
+  @override
+  String get pendingSyncDeleteDone => 'Action deleted.';
+
+  @override
   String get progressPhotosTitle => 'Progress photos';
 
   @override

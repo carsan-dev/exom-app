@@ -50,6 +50,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/calendar/presentation/pages/calendar_page.dart',
   // L5-B1 · Ayuda.
   'lib/features/help/presentation/pages/help_page.dart',
+  // L5-C1 · Subidas pendientes.
+  'lib/features/feedback/presentation/pages/pending_uploads_page.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

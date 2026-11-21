@@ -61,6 +61,12 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/diets/presentation/pages/diets_page.dart',
   'lib/features/diets/presentation/widgets/meal_detail_sheet.dart',
   'lib/features/diets/presentation/widgets/diet_history_button.dart',
+  // L5-B2 · Retos.
+  'lib/features/challenges/presentation/pages/challenges_page.dart',
+  'lib/features/challenges/presentation/widgets/achievement_tiles.dart',
+  'lib/features/challenges/presentation/widgets/challenge_streak_weeks.dart',
+  'lib/features/challenges/presentation/widgets/challenge_milestone_mark.dart',
+  'lib/features/challenges/presentation/widgets/challenge_tick_rule.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

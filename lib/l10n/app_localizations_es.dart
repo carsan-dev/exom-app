@@ -624,7 +624,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengesTitle => 'Mis Retos';
 
   @override
-  String get challengesSubtitle => 'Supera tus límites cada día';
+  String get challengesStreakHeadlineFirst => 'Días';
+
+  @override
+  String get challengesStreakHeadlineSecond => 'seguidos.';
+
+  @override
+  String challengesStreakEarlierDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count días anteriores',
+      one: '+$count día anterior',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get challengesWeekHeadlineFirst => 'Tu semana.';
+
+  @override
+  String get challengesWeekHeadlineSecond => 'También cuenta.';
 
   @override
   String get challengesLoadError => 'Error al cargar los retos';
@@ -640,6 +660,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get viewAllButton => 'Ver todos';
+
+  @override
+  String get achievementLocked => 'Bloqueado';
 
   @override
   String get achievementBoardTitle => 'Todos los logros';

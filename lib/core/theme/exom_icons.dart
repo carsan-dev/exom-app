@@ -23,6 +23,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// - Fonts are tree-shaken: only the glyphs referenced here reach the build.
 ///   Declaring a constant that no screen uses costs nothing.
 abstract final class ExomIcons {
+  /// Achievement (logro) of «Retos»: a medal, as in the sketch (`i-medal`).
+  /// `trophy` already means the «Retos» section itself.
+  static const IconData achievement = LucideIcons.medal;
   static const IconData add = LucideIcons.plus;
   static const IconData addPhoto = LucideIcons.imagePlus;
   static const IconData apple = LucideIcons.apple;

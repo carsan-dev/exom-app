@@ -107,6 +107,11 @@ abstract final class ExomMotion {
   static const Duration countUp = milestoneCount;
   static const Curve countUpCurve = Curves.easeOut;
 
+  // M5 Streak weeks grid: each lit square takes [streakSquareFill] to go from
+  // the rule tone to the data colour, overlapping its neighbours so the
+  // whole grid reads as one wave over [countUp] (`ChallengeStreakWeeks`).
+  static const Duration streakSquareFill = Duration(milliseconds: 300);
+
   // M6 Press: [pressIn]/[pressOut] at [pressScale] (`TappableScale` and the
   // `Exom*Button`s); rows switch to the raised fill at once. Reduced:
   // [reducedPressOpacity].

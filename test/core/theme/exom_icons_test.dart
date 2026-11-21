@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 void main() {
   const List<(String, IconData, IconData)> table =
       <(String, IconData, IconData)>[
+        ('achievement', ExomIcons.achievement, LucideIcons.medal),
         ('add', ExomIcons.add, LucideIcons.plus),
         ('addPhoto', ExomIcons.addPhoto, LucideIcons.imagePlus),
         ('apple', ExomIcons.apple, LucideIcons.apple),

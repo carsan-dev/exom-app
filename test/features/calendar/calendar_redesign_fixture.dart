@@ -150,7 +150,8 @@ CalendarError sceneServerError() => const CalendarError(
 final List<String> openedRoutes = [];
 
 /// Registers a bloc seeded with [state] and mounts the real CalendarPage inside
-/// a Scaffold under a GoRouter.
+/// a Scaffold under a GoRouter. [textScaler], when given, replaces the linear
+/// [textScale] (e.g. the nonlinear scaler of an Android 14+ device).
 Future<SeededCalendarBloc> pumpCalendarScene(
   WidgetTester tester, {
   required CalendarState state,
@@ -159,6 +160,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
   double width = 390,
   double height = 844,
   double textScale = 1.0,
+  TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
 }) async {
@@ -204,7 +206,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
         GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
+            textScaler: textScaler ?? TextScaler.linear(textScale),
             disableAnimations: disableAnimations,
           ),
           child: app!,

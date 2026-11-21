@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
 import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
@@ -212,18 +213,24 @@ Future<void> _tapText(WidgetTester tester, String text) async {
   await _settle(tester);
 }
 
+/// L5-A4b: the export sheets' two-line headline, read as [label].
+Finder _headline(String label) => find.byWidgetPredicate(
+  (widget) => widget is ExomTwoLineHeadline && widget.semanticsLabel == label,
+);
+
 /// Export button, then the period. The period is read before the format
-/// sheet appears, so loading / empty / failure end here.
+/// sheet appears, so loading / empty / failure end here. L5-A4b: the period
+/// entries are a numbered index, painted upper case.
 Future<void> _pickPeriod(WidgetTester tester, {String? period}) async {
   final l10n = _l10n(tester);
   await _tapText(tester, l10n.exportDietButton);
-  await _tapText(tester, period ?? l10n.exportThisWeek);
+  await _tapText(tester, (period ?? l10n.exportThisWeek).toUpperCase());
 }
 
 /// Export button, then period, then «Lista de la compra».
 Future<void> _startShoppingList(WidgetTester tester, {String? period}) async {
   await _pickPeriod(tester, period: period);
-  await _tapText(tester, _l10n(tester).weeklyExportShoppingList);
+  await _tapText(tester, _l10n(tester).weeklyExportShoppingList.toUpperCase());
 }
 
 /// The flow that the Dietas shopping-list row starts, for the same date.
@@ -268,13 +275,17 @@ void main() {
       await _mount(tester);
       final l10n = _l10n(tester);
       await _tapText(tester, l10n.exportDietButton);
-      expect(find.text(l10n.exportPeriodTitle), findsOneWidget);
-      expect(find.text(l10n.exportThisWeek), findsOneWidget);
-      expect(find.text(l10n.exportFullMonth), findsOneWidget);
-      await _tapText(tester, l10n.exportThisWeek);
-      expect(find.text(l10n.weeklyExportFormatTitle), findsOneWidget);
-      expect(find.text(l10n.exportMenu), findsOneWidget);
-      expect(find.text(l10n.weeklyExportShoppingList), findsOneWidget);
+      // L5-A4b: two-line headline read as the title; entries in upper case.
+      expect(_headline(l10n.exportPeriodTitle), findsOneWidget);
+      expect(find.text(l10n.exportThisWeek.toUpperCase()), findsOneWidget);
+      expect(find.text(l10n.exportFullMonth.toUpperCase()), findsOneWidget);
+      await _tapText(tester, l10n.exportThisWeek.toUpperCase());
+      expect(_headline(l10n.weeklyExportFormatTitle), findsOneWidget);
+      expect(find.text(l10n.exportMenu.toUpperCase()), findsOneWidget);
+      expect(
+        find.text(l10n.weeklyExportShoppingList.toUpperCase()),
+        findsOneWidget,
+      );
     });
   });
 
@@ -385,7 +396,7 @@ void main() {
       handle.dispose();
       gate.complete(_withVariants);
       await _settle(tester);
-      expect(find.text(l10n.weeklyExportFormatTitle), findsOneWidget);
+      expect(_headline(l10n.weeklyExportFormatTitle), findsOneWidget);
     });
 
     testWidgets('empty period: message, no selector, button restored', (

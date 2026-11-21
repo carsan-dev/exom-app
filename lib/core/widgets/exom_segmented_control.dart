@@ -44,6 +44,11 @@ class ExomSegmentedControl<T> extends StatelessWidget {
   static const double _minHeight = 48;
   static const double _fontSize = 16;
 
+  /// Smallest label size the refit may reach, in logical font pixels before
+  /// the scaler: 10 there is 10 sp of visible text for the active scaler.
+  /// Below it the word splits across lines instead of shrinking further.
+  static const double _minFittedFontSize = 10;
+
   /// Label style at [fontSize] (16 unless the labels had to shrink).
   static TextStyle _labelStyle(double fontSize) => TextStyle(
     fontFamily: AppTheme.bodyFontFamily,
@@ -54,30 +59,54 @@ class ExomSegmentedControl<T> extends StatelessWidget {
 
   /// Font size at which the longest word of every label fits [available]
   /// logical pixels with [scaler]; 16 when it already fits.
+  ///
+  /// The first guess shrinks by the overflow ratio, exact for a linear
+  /// scaler. A nonlinear scaler (Android 14+ font scale) grows small sizes
+  /// more than large ones, so the guess can still overflow: then the size is
+  /// searched with the scaler itself until the word fits (L5-A4 D1).
   double _fittedFontSize(
     double available,
     TextScaler scaler,
     TextDirection direction,
   ) {
-    var factor = 1.0;
-    for (final option in options) {
-      for (final word in labelOf(option).split(RegExp(r'\s+'))) {
-        if (word.isEmpty) continue;
+    final words = [
+      for (final option in options)
+        for (final word in labelOf(option).split(RegExp(r'\s+')))
+          if (word.isNotEmpty) word,
+    ];
+    double widest(double fontSize) {
+      var widest = 0.0;
+      for (final word in words) {
         final painter = TextPainter(
-          text: TextSpan(text: word, style: _labelStyle(_fontSize)),
+          text: TextSpan(text: word, style: _labelStyle(fontSize)),
           textDirection: direction,
           textScaler: scaler,
           maxLines: 1,
         )..layout();
-        final width = painter.width;
+        widest = math.max(widest, painter.width);
         painter.dispose();
-        if (available > 0 && width > available) {
-          factor = math.min(factor, available / width);
-        }
+      }
+      return widest;
+    }
+
+    final width = widest(_fontSize);
+    if (available <= 0 || width <= available) return _fontSize;
+    // A small margin so the shrunk word does not wrap on rounding.
+    final target = available * 0.98;
+    final guess = _fontSize * (available / width) * 0.98;
+    if (guess <= _minFittedFontSize) return _minFittedFontSize;
+    if (widest(guess) <= target) return guess;
+    var low = 0.0;
+    var high = guess;
+    for (var i = 0; i < 16; i++) {
+      final mid = (low + high) / 2;
+      if (widest(mid) <= target) {
+        low = mid;
+      } else {
+        high = mid;
       }
     }
-    // A small margin so the shrunk word does not wrap on rounding.
-    return factor < 1 ? _fontSize * factor * 0.98 : _fontSize;
+    return math.max(low, _minFittedFontSize);
   }
 
   @override

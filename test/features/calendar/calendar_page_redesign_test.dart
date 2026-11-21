@@ -32,6 +32,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/widgets/android_nonlinear_text_scaler.dart';
 import '../../core/widgets/exom_component_harness.dart';
 import '../../core/widgets/exom_text_component_matrix.dart';
 import '../../core/widgets/expect_no_lime_ink.dart';
@@ -80,6 +81,21 @@ void _expectWholeInside(WidgetTester tester, Finder root, double width) {
     );
     expect(topLeft.dx, greaterThanOrEqualTo(-0.01), reason: text);
     expect(bottomRight.dx, lessThanOrEqualTo(width + 0.01), reason: text);
+  }
+}
+
+/// No word of the text under [root] is broken across lines: each paragraph is
+/// at least as wide as its widest unbreakable word (its min intrinsic width).
+void _expectNoBrokenWord(Finder root) {
+  expect(root, findsWidgets);
+  for (final paragraph in _paragraphs(root)) {
+    final text = paragraph.text.toPlainText();
+    final widestWord = paragraph.getMinIntrinsicWidth(double.infinity);
+    expect(
+      widestWord,
+      lessThanOrEqualTo(paragraph.size.width + 0.01),
+      reason: 'word broken in "$text"',
+    );
   }
 }
 
@@ -139,6 +155,34 @@ void main() {
     }
   });
 
+  // L5-A4 D1 (emulator, Android 15): with the nonlinear font scale of Android
+  // 14+ «Entrenamiento» broke into «Entrenamient / o» at 360 dp 1.6x and at
+  // 320 dp 1.3x, while the linear TextScaler of the tests fitted it.
+  group('L4-I22 D1: no word of the toggle or the title breaks', () {
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final width in const [320.0, 360.0]) {
+        for (final scale in const [1.0, 1.3, 1.6]) {
+          for (final android in [false, true]) {
+            testWidgets('${locale.languageCode} $width dp ${scale}x '
+                '${android ? 'Android nonlinear' : 'linear'}', (tester) async {
+              await pumpCalendarScene(
+                tester,
+                state: sceneLoaded(),
+                width: width,
+                textScale: scale,
+                textScaler: android ? AndroidNonlinearTextScaler(scale) : null,
+                locale: locale,
+              );
+              expectNoOverflow(tester);
+              _expectNoBrokenWord(find.byType(ExomSegmentedControl<bool>));
+              _expectNoBrokenWord(find.byKey(_title));
+            });
+          }
+        }
+      }
+    }
+  });
+
   group('month header', () {
     testWidgets('title is the month, a button that opens the month picker', (
       tester,
@@ -164,7 +208,9 @@ void main() {
       handle.dispose();
       await tester.tap(find.byKey(_title));
       await tester.pumpAndSettle();
-      expect(find.byType(Dialog), findsOneWidget);
+      // L5-A4b (D14-2): the picker is a straight sheet, no longer a dialog.
+      expect(find.byKey(const Key('exom-sheet-panel')), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
     });
 
     testWidgets('arrows load the previous and the next month', (tester) async {
@@ -297,6 +343,31 @@ void main() {
       expect(bloc.events.whereType<CalendarDaySelected>().map((e) => e.date), [
         day,
       ]);
+    });
+
+    // L5-A4 O4 (emulator): in Dietas the days were announced with the
+    // training marks («sesión hecha / no hecha»).
+    testWidgets('Dietas: the days announce the diet marks, not sessions', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpCalendarScene(tester, state: sceneLoaded());
+      String label(int day) => tester
+          .getSemantics(
+            find.byKey(ExomMonthGrid.cellKey(DateTime(2026, 10, day))),
+          )
+          .label;
+      String date(int day) =>
+          DateFormat.MMMMEEEEd('es').format(DateTime(2026, 10, day));
+      // Entrenamiento: the training marks stay.
+      expect(label(2), '${date(2)}, sesión hecha');
+      expect(label(19), '${date(19)}, sesión no hecha');
+      await _tapDiets(tester);
+      // Day 2: diet completed; 20: diet not completed; 3: rest, no diet mark.
+      expect(label(2), '${date(2)}, dieta completada');
+      expect(label(20), '${date(20)}, dieta sin completar');
+      expect(label(3), date(3));
+      handle.dispose();
     });
 
     testWidgets('a day with a challenge carries the flag and says so', (

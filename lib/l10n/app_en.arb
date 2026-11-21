@@ -1330,5 +1330,19 @@
   "calendarActiveChallengesToday": "{count, plural, one{{figure} active challenge today} other{{figure} active challenges today}}",
   "@calendarActiveChallengesToday": {"placeholders": {"count": {"type": "int"}, "figure": {"type": "String"}}},
   "calendarDayWithChallenge": "{day}, with a challenge",
-  "@calendarDayWithChallenge": {"placeholders": {"day": {"type": "String"}}}
+  "@calendarDayWithChallenge": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietDone": "{day}, diet completed",
+  "@calendarDayDietDone": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietPending": "{day}, diet pending",
+  "@calendarDayDietPending": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietMissed": "{day}, diet not completed",
+  "@calendarDayDietMissed": {"placeholders": {"day": {"type": "String"}}},
+  "calendarMonthPickerKicker": "Choose month and year",
+  "calendarPreviousYear": "Previous year",
+  "calendarNextYear": "Next year",
+  "calendarExportPeriodKicker": "Diets · calendar",
+  "calendarExportPeriodFirst": "Choose",
+  "calendarExportPeriodSecond": "a period",
+  "calendarExportFormatFirst": "What do you want",
+  "calendarExportFormatSecond": "to export?"
 }

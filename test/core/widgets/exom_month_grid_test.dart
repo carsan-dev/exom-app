@@ -438,6 +438,39 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('markLabelOf replaces the session words (L5-A4 O4)', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final marks = <ExomDayMark>[];
+    await pumpComponent(
+      tester,
+      ExomMonthGrid(
+        month: _month,
+        selected: null,
+        today: _today,
+        markOf: _marks,
+        onSelect: (_) {},
+        markLabelOf: (label, mark) {
+          marks.add(mark);
+          return '$label, diet ${mark.name}';
+        },
+      ),
+    );
+    String date(int d) =>
+        DateFormat.MMMMEEEEd('es').format(DateTime(2026, 11, d));
+    String label(int d) => tester
+        .getSemantics(find.byKey(ExomMonthGrid.cellKey(DateTime(2026, 11, d))))
+        .label;
+    expect(label(18), '${date(18)}, diet done');
+    expect(label(20), '${date(20)}, hoy, diet pending');
+    expect(label(6), '${date(6)}, diet missed');
+    // A day without a mark keeps its date only; none is never passed.
+    expect(label(1), date(1));
+    expect(marks, isNot(contains(ExomDayMark.none)));
+    handle.dispose();
+  });
+
   testWidgets('today is injected, not read from the clock', (tester) async {
     await pumpComponent(
       tester,

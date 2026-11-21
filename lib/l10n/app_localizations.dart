@@ -6830,6 +6830,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{day}, con reto'**
   String calendarDayWithChallenge(String day);
+
+  /// No description provided for @calendarDayDietDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta completada'**
+  String calendarDayDietDone(String day);
+
+  /// No description provided for @calendarDayDietPending.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta pendiente'**
+  String calendarDayDietPending(String day);
+
+  /// No description provided for @calendarDayDietMissed.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta sin completar'**
+  String calendarDayDietMissed(String day);
+
+  /// No description provided for @calendarMonthPickerKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige mes y año'**
+  String get calendarMonthPickerKicker;
+
+  /// No description provided for @calendarPreviousYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año anterior'**
+  String get calendarPreviousYear;
+
+  /// No description provided for @calendarNextYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año siguiente'**
+  String get calendarNextYear;
+
+  /// No description provided for @calendarExportPeriodKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Dietas · calendario'**
+  String get calendarExportPeriodKicker;
+
+  /// No description provided for @calendarExportPeriodFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige'**
+  String get calendarExportPeriodFirst;
+
+  /// No description provided for @calendarExportPeriodSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'un periodo'**
+  String get calendarExportPeriodSecond;
+
+  /// No description provided for @calendarExportFormatFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué quieres'**
+  String get calendarExportFormatFirst;
+
+  /// No description provided for @calendarExportFormatSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'exportar?'**
+  String get calendarExportFormatSecond;
 }
 
 class _AppLocalizationsDelegate

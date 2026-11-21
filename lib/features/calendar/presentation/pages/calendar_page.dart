@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -11,17 +10,20 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_arrival.dart';
 import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_empty_state.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_month_grid.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -36,6 +38,22 @@ import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
 import 'package:exom_app/features/diets/presentation/widgets/weekly_shopping_list_flow.dart';
 
 enum _DietExportPeriod { week, month }
+
+/// Outcome of the last diet export (D14-3), shown inline under the export
+/// button for the month in which it happened.
+class _ExportMessage {
+  const _ExportMessage({
+    required this.kind,
+    required this.title,
+    required this.year,
+    required this.month,
+  });
+
+  final ExomMessageKind kind;
+  final String title;
+  final int year;
+  final int month;
+}
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key, this.initialDate});
@@ -133,6 +151,11 @@ class _CalendarViewState extends State<_CalendarView> {
   /// loads (another month) show their content as is.
   bool _contentArrived = false;
 
+  /// D14-3: the export's message (it was a `SnackBar`). Cleared by the next
+  /// export tap, a tab change and a month change (any other month, loading or
+  /// error state), so it never comes back for a later visit to its month.
+  _ExportMessage? _exportMessage;
+
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
   DateTime _normalizeDay(DateTime date) {
@@ -157,6 +180,7 @@ class _CalendarViewState extends State<_CalendarView> {
   Widget build(BuildContext context) {
     return BlocBuilder<CalendarBloc, CalendarState>(
       builder: (context, state) {
+        if (state is! CalendarLoaded) _exportMessage = null;
         if (state is CalendarLoading || state is CalendarInitial) {
           return const _CalendarLoadingView();
         }
@@ -185,7 +209,10 @@ class _CalendarViewState extends State<_CalendarView> {
         options: const [true, false],
         selected: _showTrainings,
         labelOf: (training) => training ? l10n.training : l10n.diets,
-        onChanged: (training) => setState(() => _showTrainings = training),
+        onChanged: (training) => setState(() {
+          _showTrainings = training;
+          _exportMessage = null;
+        }),
       ),
     );
   }
@@ -241,6 +268,11 @@ class _CalendarViewState extends State<_CalendarView> {
 
   Widget _buildContent(BuildContext context, CalendarLoaded state) {
     final l10n = AppLocalizations.of(context);
+    final message = _exportMessage;
+    if (message != null &&
+        (message.year != state.year || message.month != state.month)) {
+      _exportMessage = null;
+    }
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -306,61 +338,85 @@ class _CalendarViewState extends State<_CalendarView> {
 
   /// Export (sketch A1 «dietas»): outlined, not filled; the theme's outlined
   /// button is the sketch's `.btn-out`. Same action and busy state as before.
+  /// Its outcome (empty period, failure) is an inline message under it.
   Widget _buildWeeklyDietExport(BuildContext context, CalendarLoaded state) {
-    final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
+    final message = _exportMessage;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: _isExportingDiet
-              ? null
-              : () => _exportDiet(context, state),
-          icon: _isExportingDiet
-              ? SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: palette.textPrimary,
-                  ),
-                )
-              : const Icon(Icons.picture_as_pdf_outlined),
-          label: Text(
-            _isExportingDiet ? l10n.weeklyDietPreparing : l10n.exportDietButton,
-          ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildExportButton(context, state),
+          if (message != null) ...[
+            const SizedBox(height: ExomSpacing.md),
+            ExomInlineMessage(kind: message.kind, title: message.title),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExportButton(BuildContext context, CalendarLoaded state) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _isExportingDiet ? null : () => _exportDiet(context, state),
+        icon: _isExportingDiet
+            ? SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: palette.textPrimary,
+                ),
+              )
+            : const Icon(Icons.picture_as_pdf_outlined),
+        label: Text(
+          _isExportingDiet ? l10n.weeklyDietPreparing : l10n.exportDietButton,
         ),
       ),
     );
   }
 
+  /// Shows [title] inline under the export button, for the month of [state].
+  void _showExportMessage(
+    CalendarLoaded state,
+    ExomMessageKind kind,
+    String title,
+  ) {
+    if (!mounted) return;
+    setState(
+      () => _exportMessage = _ExportMessage(
+        kind: kind,
+        title: title,
+        year: state.year,
+        month: state.month,
+      ),
+    );
+  }
+
   Future<void> _exportDiet(BuildContext context, CalendarLoaded state) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final exportPeriod = await showModalBottomSheet<_DietExportPeriod>(
+    // A new tap on the export button clears the previous outcome.
+    if (_exportMessage != null) setState(() => _exportMessage = null);
+    // D14-2 (sketch A1 «Elige un periodo»): straight sheet, numbered index.
+    // The period is read as soon as it is picked, as with the previous
+    // Material sheet: the page stays, so there is no need to wait for the
+    // sheet's disposal before the read and the format sheet.
+    final exportPeriod = await showExomSheet<_DietExportPeriod>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              title: Text(
-                l10n.exportPeriodTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_view_week_outlined),
-              title: Text(l10n.exportThisWeek),
-              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.week),
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(l10n.exportFullMonth),
-              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.month),
-            ),
-          ],
-        ),
+      waitForDisposal: false,
+      builder: (_) => _ExportChoiceSheet<_DietExportPeriod>(
+        first: l10n.calendarExportPeriodFirst,
+        second: l10n.calendarExportPeriodSecond,
+        semanticsLabel: l10n.exportPeriodTitle,
+        choices: [
+          (l10n.exportThisWeek, _DietExportPeriod.week),
+          (l10n.exportFullMonth, _DietExportPeriod.month),
+        ],
       ),
     );
     if (exportPeriod == null || !context.mounted) return;
@@ -377,38 +433,27 @@ class _CalendarViewState extends State<_CalendarView> {
         period = await GetIt.I<GetWeeklyDietUseCase>()(_apiDate(monday));
       }
       if (!period.hasDiets) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.dietPeriodEmpty)));
+        _showExportMessage(state, ExomMessageKind.info, l10n.dietPeriodEmpty);
         return;
       }
       if (!context.mounted) return;
 
-      final format = await showModalBottomSheet<WeeklyDietExportFormat>(
+      // D14-2: the format is the same straight sheet as the period; the next
+      // step (selector or print / share) opens as soon as it is picked.
+      final format = await showExomSheet<WeeklyDietExportFormat>(
         context: context,
-        builder: (sheetContext) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                title: Text(
-                  l10n.weeklyExportFormatTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.calendar_view_week_outlined),
-                title: Text(l10n.exportMenu),
-                onTap: () =>
-                    Navigator.pop(sheetContext, WeeklyDietExportFormat.menu),
-              ),
-              ListTile(
-                leading: const Icon(Icons.shopping_cart_outlined),
-                title: Text(l10n.weeklyExportShoppingList),
-                onTap: () => Navigator.pop(
-                  sheetContext,
-                  WeeklyDietExportFormat.shoppingList,
-                ),
-              ),
-            ],
-          ),
+        waitForDisposal: false,
+        builder: (_) => _ExportChoiceSheet<WeeklyDietExportFormat>(
+          first: l10n.calendarExportFormatFirst,
+          second: l10n.calendarExportFormatSecond,
+          semanticsLabel: l10n.weeklyExportFormatTitle,
+          choices: [
+            (l10n.exportMenu, WeeklyDietExportFormat.menu),
+            (
+              l10n.weeklyExportShoppingList,
+              WeeklyDietExportFormat.shoppingList,
+            ),
+          ],
         ),
       );
       if (format == null || !context.mounted) return;
@@ -457,11 +502,11 @@ class _CalendarViewState extends State<_CalendarView> {
 
       await printOrSharePdf(context, bytes: bytes, filename: filename);
     } catch (_) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.weeklyDietExportError)),
-        );
-      }
+      _showExportMessage(
+        state,
+        ExomMessageKind.error,
+        l10n.weeklyDietExportError,
+      );
     } finally {
       if (mounted) setState(() => _isExportingDiet = false);
     }
@@ -487,20 +532,16 @@ class _CalendarViewState extends State<_CalendarView> {
     CalendarLoaded state,
   ) async {
     final bloc = context.read<CalendarBloc>();
-    int selectedYear = state.year;
-    int selectedMonth = state.month;
-
-    final result = await showDialog<List<int>>(
+    // D14-2: straight sheet; one tap on a month goes there (no «Ir al mes»).
+    final result = await showExomSheet<(int, int)>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.45),
-      builder: (dialogContext) => _MonthYearPickerDialog(
-        initialYear: selectedYear,
-        initialMonth: selectedMonth,
-      ),
+      builder: (_) =>
+          _MonthYearSheet(shownYear: state.year, shownMonth: state.month),
     );
 
     if (result != null) {
-      bloc.add(CalendarMonthLoadRequested(year: result[0], month: result[1]));
+      final (year, month) = result;
+      bloc.add(CalendarMonthLoadRequested(year: year, month: month));
     }
   }
 
@@ -635,6 +676,15 @@ class _CalendarViewState extends State<_CalendarView> {
           markOf: (date) => _markOf(dayMap[date], date, today),
           flagOf: (date) => challengeMap[date]?.isNotEmpty ?? false,
           flagLabelOf: l10n.calendarDayWithChallenge,
+          // O4: in Dietas the marks are diets, not sessions.
+          markLabelOf: _showTrainings
+              ? null
+              : (label, mark) => switch (mark) {
+                  ExomDayMark.done => l10n.calendarDayDietDone(label),
+                  ExomDayMark.pending => l10n.calendarDayDietPending(label),
+                  ExomDayMark.missed => l10n.calendarDayDietMissed(label),
+                  ExomDayMark.none => label,
+                },
           onSelect: (date) =>
               context.read<CalendarBloc>().add(CalendarDaySelected(date)),
         ),
@@ -994,160 +1044,179 @@ class _Status extends StatelessWidget {
   }
 }
 
-// ─── Month/Year Picker Dialog ──────────────────────────────────────────────────
+// ─── Sheets (L5-A4b, D14-2) ──────────────────────────────────────────────────
 
-class _MonthYearPickerDialog extends StatefulWidget {
-  final int initialYear;
-  final int initialMonth;
-
-  const _MonthYearPickerDialog({
-    required this.initialYear,
-    required this.initialMonth,
-  });
+/// Top bar of the calendar sheets (sketch `.sheet.a-bar`), in the data colour
+/// at the [ExomRule.bar] thickness of the redesign (the sketch draws 3 px).
+/// `showExomSheet` owns the drag handle, so the bar sits under it.
+class _SheetTopBar extends StatelessWidget {
+  const _SheetTopBar();
 
   @override
-  State<_MonthYearPickerDialog> createState() => _MonthYearPickerDialogState();
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(height: ExomRule.bar, color: context.exomPalette.data),
+    );
+  }
 }
 
-class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
-  late int _year;
-  late int _month;
+/// Export choice sheet (sketch A1 «Dietas · calendario / Elige un periodo»):
+/// the kicker, a two-line headline read as [semanticsLabel] and the numbered
+/// entries, each closing the sheet with its value. The period sheet is the
+/// one the sketch draws; the format sheet (menu or shopping list), not drawn,
+/// follows the same pattern.
+class _ExportChoiceSheet<T> extends StatelessWidget {
+  const _ExportChoiceSheet({
+    required this.first,
+    required this.second,
+    required this.semanticsLabel,
+    required this.choices,
+  });
+
+  final String first;
+  final String second;
+  final String semanticsLabel;
+
+  /// Entries in order: title and the value the sheet returns.
+  final List<(String, T)> choices;
 
   @override
-  void initState() {
-    super.initState();
-    _year = widget.initialYear;
-    _month = widget.initialMonth;
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _SheetTopBar(),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExomKicker(l10n.calendarExportPeriodKicker),
+              const SizedBox(height: ExomSpacing.sm),
+              ExomTwoLineHeadline(
+                first: first,
+                second: second,
+                semanticsLabel: semanticsLabel,
+              ),
+            ],
+          ),
+        ),
+        ExomIndexList(
+          items: [
+            for (final (title, value) in choices)
+              ExomIndexItem(
+                title: title,
+                onTap: () => Navigator.pop(context, value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+}
+
+/// Month and year (sketch A1 «Calendario · hoja de mes y año»): the kicker,
+/// the year in Barlow 28 between its arrows and the twelve months as 48 dp
+/// choices, the shown month filled. The arrows only change the year; one tap
+/// on a month closes the sheet with that year and month. Years are not
+/// bounded, as in the previous picker.
+class _MonthYearSheet extends StatefulWidget {
+  const _MonthYearSheet({required this.shownYear, required this.shownMonth});
+
+  /// Month the calendar shows now.
+  final int shownYear;
+  final int shownMonth;
+
+  @override
+  State<_MonthYearSheet> createState() => _MonthYearSheetState();
+}
+
+class _MonthYearSheetState extends State<_MonthYearSheet> {
+  late int _year = widget.shownYear;
+
+  /// Three-letter month label of the sketch («Ene… Sep… Dic», «Jan… Sep…
+  /// Dec»), without the dot: intl abbreviates September «sept» in Spanish,
+  /// which broke into «Sep / t» at 320 dp with large text (L5-A4 D2).
+  static String _monthAbbreviation(String locale, int month) {
+    final short = DateFormat.MMM(
+      locale,
+    ).format(DateTime(2000, month)).replaceAll('.', '');
+    final letters = short.characters;
+    return toBeginningOfSentenceCase(
+      letters.length > 3 ? letters.take(3).toString() : short,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
-            decoration: isDark
-                ? BoxDecoration(
-                    color: AppColors.headerGlass,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: palette.glassBorder.withValues(alpha: 0.18),
-                      width: 0.6,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x40000000),
-                        blurRadius: 32,
-                        offset: Offset(0, 10),
-                        spreadRadius: -8,
-                      ),
-                    ],
-                  )
-                : GlassDecoration.elevated(borderRadius: 24),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Year selector
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () => setState(() => _year--),
-                      icon: Icon(
-                        Icons.chevron_left,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      '$_year',
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _year++),
-                      icon: Icon(
-                        Icons.chevron_right,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Month grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.8,
+    final locale = Localizations.localeOf(context).toString();
+    final year = _year;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _SheetTopBar(),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ExomKicker(l10n.calendarMonthPickerKicker),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: l10n.calendarPreviousYear,
+                    constraints: _arrowTarget,
+                    onPressed: () => setState(() => _year--),
+                    icon: Icon(Icons.chevron_left, color: palette.textPrimary),
                   ),
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    final m = index + 1;
-                    final isSelected = m == _month;
-                    return GestureDetector(
-                      onTap: () => setState(() => _month = m),
-                      child: Container(
-                        decoration: isSelected
-                            ? GlassDecoration.accentCard(
-                                palette.primary,
-                                borderRadius: 12,
-                              )
-                            : GlassDecoration.card(borderRadius: 12),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _monthLabel(context, m),
-                          style: TextStyle(
-                            color: isSelected
-                                ? palette.primary
-                                : palette.textSecondary,
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
+                  Expanded(
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$year',
+                        textAlign: TextAlign.center,
+                        style: ExomType.headline2Section.copyWith(
+                          color: palette.textPrimary,
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Confirm button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context, [_year, _month]),
-                    child: Text(l10n.goToMonthButton),
+                    ),
                   ),
+                  IconButton(
+                    tooltip: l10n.calendarNextYear,
+                    constraints: _arrowTarget,
+                    onPressed: () => setState(() => _year++),
+                    icon: Icon(Icons.chevron_right, color: palette.textPrimary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ExomChoiceChips<int>(
+                options: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                selected: year == widget.shownYear ? widget.shownMonth : null,
+                columns: 4,
+                fitLabels: true,
+                labelOf: (month) => _monthAbbreviation(locale, month),
+                semanticLabelOf: (month) => toBeginningOfSentenceCase(
+                  DateFormat.yMMMM(locale).format(DateTime(year, month)),
                 ),
-              ],
-            ),
+                onSelected: (month) => Navigator.pop(context, (year, month)),
+              ),
+            ],
           ),
         ),
-      ),
+      ],
     );
-  }
-
-  String _monthLabel(BuildContext context, int month) {
-    final locale = Localizations.localeOf(context).toString();
-    final label = DateFormat.MMM(locale).format(DateTime(2000, month));
-    return toBeginningOfSentenceCase(label);
   }
 }

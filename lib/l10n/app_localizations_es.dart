@@ -4166,4 +4166,43 @@ class AppLocalizationsEs extends AppLocalizations {
   String calendarDayWithChallenge(String day) {
     return '$day, con reto';
   }
+
+  @override
+  String calendarDayDietDone(String day) {
+    return '$day, dieta completada';
+  }
+
+  @override
+  String calendarDayDietPending(String day) {
+    return '$day, dieta pendiente';
+  }
+
+  @override
+  String calendarDayDietMissed(String day) {
+    return '$day, dieta sin completar';
+  }
+
+  @override
+  String get calendarMonthPickerKicker => 'Elige mes y año';
+
+  @override
+  String get calendarPreviousYear => 'Año anterior';
+
+  @override
+  String get calendarNextYear => 'Año siguiente';
+
+  @override
+  String get calendarExportPeriodKicker => 'Dietas · calendario';
+
+  @override
+  String get calendarExportPeriodFirst => 'Elige';
+
+  @override
+  String get calendarExportPeriodSecond => 'un periodo';
+
+  @override
+  String get calendarExportFormatFirst => '¿Qué quieres';
+
+  @override
+  String get calendarExportFormatSecond => 'exportar?';
 }

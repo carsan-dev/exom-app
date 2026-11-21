@@ -1404,5 +1404,19 @@
   "calendarActiveChallengesToday": "{count, plural, one{{figure} reto activo hoy} other{{figure} retos activos hoy}}",
   "@calendarActiveChallengesToday": {"placeholders": {"count": {"type": "int"}, "figure": {"type": "String"}}},
   "calendarDayWithChallenge": "{day}, con reto",
-  "@calendarDayWithChallenge": {"placeholders": {"day": {"type": "String"}}}
+  "@calendarDayWithChallenge": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietDone": "{day}, dieta completada",
+  "@calendarDayDietDone": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietPending": "{day}, dieta pendiente",
+  "@calendarDayDietPending": {"placeholders": {"day": {"type": "String"}}},
+  "calendarDayDietMissed": "{day}, dieta sin completar",
+  "@calendarDayDietMissed": {"placeholders": {"day": {"type": "String"}}},
+  "calendarMonthPickerKicker": "Elige mes y año",
+  "calendarPreviousYear": "Año anterior",
+  "calendarNextYear": "Año siguiente",
+  "calendarExportPeriodKicker": "Dietas · calendario",
+  "calendarExportPeriodFirst": "Elige",
+  "calendarExportPeriodSecond": "un periodo",
+  "calendarExportFormatFirst": "¿Qué quieres",
+  "calendarExportFormatSecond": "exportar?"
 }

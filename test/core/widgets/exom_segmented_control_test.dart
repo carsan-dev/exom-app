@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'android_nonlinear_text_scaler.dart';
 import 'exom_component_harness.dart';
 import 'exom_text_component_matrix.dart';
 
@@ -289,6 +290,46 @@ void main() {
         expect(sizeOf(tester, 'Entrenamiento'), sizeOf(tester, 'Dietas'));
       });
     }
+
+    // L5-A4 D1: Android 14+ scales text nonlinearly, so shrinking the font by
+    // the overflow ratio is not enough; the fit is measured with the scaler.
+    for (final (width, scale) in const [
+      (320.0, 1.3),
+      (320.0, 1.6),
+      (360.0, 1.3),
+      (360.0, 1.6),
+      (390.0, 1.6),
+    ]) {
+      testWidgets('$width dp at ${scale}x, Android nonlinear scale', (
+        tester,
+      ) async {
+        await pumpComponent(
+          tester,
+          Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: AndroidNonlinearTextScaler(scale)),
+              child: toggle(),
+            ),
+          ),
+          width: width,
+        );
+        expectNoOverflow(tester);
+        expect(linesOf(tester, 'Entrenamiento'), 1);
+        expect(sizeOf(tester, 'Entrenamiento'), sizeOf(tester, 'Dietas'));
+      });
+    }
+
+    // L5-A4b: the refit never goes below 10 (10 sp of visible text); a word
+    // that still does not fit splits instead of becoming unreadable.
+    testWidgets('extreme width: the size stays at the 10 floor', (
+      tester,
+    ) async {
+      await pumpComponent(tester, toggle(), width: 40);
+      expect(sizeOf(tester, 'Entrenamiento'), greaterThanOrEqualTo(10));
+      expect(sizeOf(tester, 'Dietas'), greaterThanOrEqualTo(10));
+    });
 
     testWidgets('labels that fit keep their 16 and still wrap between words', (
       tester,

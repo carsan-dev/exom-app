@@ -39,7 +39,9 @@ enum ExomDayMark { none, pending, done, missed }
 ///
 /// Semantics: one node per day of the month with its localised date and
 /// «hoy» / «sesión hecha» / «sesión pendiente» / «sesión no hecha», the
-/// selected state and, with [onSelect], a tap action.
+/// selected state and, with [onSelect], a tap action. [markLabelOf]
+/// (optional, L5-A4 O4) replaces those session words for a grid whose marks
+/// are not sessions (e.g. diets); without it the labels are unchanged.
 ///
 /// Optional flag (L5-A4a, sketch `.a-fl`): a day for which [flagOf] returns
 /// true carries a small flame in its top end corner, in the secondary text
@@ -57,6 +59,7 @@ class ExomMonthGrid extends StatelessWidget {
     this.doneAsFill = false,
     this.flagOf,
     this.flagLabelOf,
+    this.markLabelOf,
   });
 
   /// Any day of the month to show.
@@ -74,6 +77,10 @@ class ExomMonthGrid extends StatelessWidget {
 
   /// Label of a flagged day built from its usual label.
   final String Function(String label)? flagLabelOf;
+
+  /// Label of a day with [mark] (never [ExomDayMark.none]) built from its
+  /// date (and «hoy») label; null uses the session labels.
+  final String Function(String label, ExomDayMark mark)? markLabelOf;
 
   /// Key of the corner flag of [day], for tests.
   static Key flagKey(DateTime day) => ValueKey('exom-month-flag-${_id(day)}');
@@ -224,15 +231,21 @@ class ExomMonthGrid extends StatelessWidget {
   String _label(AppLocalizations l10n, DateFormat format, DateTime day) {
     var label = format.format(day);
     if (_sameDay(day, today)) label = l10n.homeWeekDayToday(label);
-    switch (markOf(day)) {
-      case ExomDayMark.none:
-        break;
-      case ExomDayMark.pending:
-        label = l10n.homeWeekDayPending(label);
-      case ExomDayMark.done:
-        label = l10n.homeWeekDayDone(label);
-      case ExomDayMark.missed:
-        label = l10n.homeWeekDayMissed(label);
+    final mark = markOf(day);
+    final markLabel = markLabelOf;
+    if (markLabel != null) {
+      if (mark != ExomDayMark.none) label = markLabel(label, mark);
+    } else {
+      switch (mark) {
+        case ExomDayMark.none:
+          break;
+        case ExomDayMark.pending:
+          label = l10n.homeWeekDayPending(label);
+        case ExomDayMark.done:
+          label = l10n.homeWeekDayDone(label);
+        case ExomDayMark.missed:
+          label = l10n.homeWeekDayMissed(label);
+      }
     }
     final flagLabel = flagLabelOf;
     if (flagLabel != null && _isFlagged(day)) label = flagLabel(label);

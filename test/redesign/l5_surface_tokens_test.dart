@@ -46,17 +46,16 @@ const List<String> kRepaintedFiles = <String>[
   // L5-A3 · Entrenar: lista e historial.
   'lib/features/trainings/presentation/pages/trainings_page.dart',
   'lib/features/trainings/presentation/widgets/pending_training_executions.dart',
+  // L5-A4 · Calendario: A4a repainted the screen, A4b its sheets.
+  'lib/features/calendar/presentation/pages/calendar_page.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on
 /// belongs to a later batch and keeps its legacy vocabulary until then.
-/// L5-A4a repaints the Calendario screen; its month and year picker dialog
-/// (`_MonthYearPickerDialog`, at the end of the file) is L5-A4b, which moves
-/// the file to [kRepaintedFiles].
-const Map<String, String> kPartlyRepaintedFiles = <String, String>{
-  'lib/features/calendar/presentation/pages/calendar_page.dart':
-      '// ─── Month/Year Picker Dialog',
-};
+/// L5-A4a repainted the Calendario screen up to its month and year picker
+/// dialog; L5-A4b replaced that dialog and moved the file to
+/// [kRepaintedFiles]. No file is partly repainted now.
+const Map<String, String> kPartlyRepaintedFiles = <String, String>{};
 
 const String _allowMarker = 'l5-allow:';
 

@@ -24,11 +24,16 @@
   "@@locale": "es",
 
   "appTagline": "Tu entrenador personal, siempre contigo",
+  "loginHeadlineFirst": "Tu plan.",
+  "loginHeadlineSecond": "Siempre contigo.",
+  "loginSubtitle": "Tu entrenador crea tu cuenta al empezar. Entra con el correo que le diste.",
   "splashTagline": "Entrena. Come. Evoluciona.",
   "emailFieldLabel": "Correo electrónico",
   "emailValidationEmpty": "Introduce tu correo electrónico",
   "emailValidationInvalid": "Correo electrónico no válido",
   "passwordFieldLabel": "Contraseña",
+  "passwordShowTooltip": "Mostrar contraseña",
+  "passwordHideTooltip": "Ocultar contraseña",
   "passwordValidationEmpty": "Introduce tu contraseña",
   "passwordValidationLength": "La contraseña debe tener al menos 8 caracteres",
   "forgotPasswordButton": "¿Olvidaste tu contraseña?",
@@ -36,10 +41,15 @@
   "passwordResetEmailSent": "Email de recuperación enviado. Revisa tu bandeja de entrada.",
   "passwordResetEmailFailed": "No se pudo enviar el email. Verifica la dirección.",
   "forgotPasswordTitle": "Recupera tu contraseña",
+  "forgotHeadlineFirst": "Recupera",
+  "forgotHeadlineSecond": "tu contraseña.",
   "forgotPasswordSubtitle": "Introduce el correo asociado a tu cuenta y te enviaremos un enlace para restablecerla.",
-  "sendResetEmailButton": "Enviar enlace de recuperación",
-  "resetEmailSentTitle": "¡Email enviado!",
-  "resetEmailSentSubtitle": "Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de spam.",
+  "sendResetEmailButton": "Enviar enlace",
+  "resetEmailSentTitle": "Email enviado",
+  "resetEmailSentFirst": "Email",
+  "resetEmailSentSecond": "enviado.",
+  "resetEmailSentLinkTitle": "Enlace enviado",
+  "resetEmailSentSubtitle": "Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de correo no deseado.",
   "@resetEmailSentSubtitle": {
     "placeholders": {
       "email": {}
@@ -50,7 +60,7 @@
   "continueWithGoogle": "Continuar con Google",
   "continueWithApple": "Continuar con Apple",
   "linkSocialTitle": "Vincular acceso",
-  "linkSocialDescription": "Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular también {provider} y poder iniciar sesión con ambos métodos.",
+  "linkSocialDescription": "Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular este acceso.",
   "@linkSocialDescription": {
     "placeholders": {
       "email": {},
@@ -59,7 +69,11 @@
   },
   "linkSocialConfirmButton": "Vincular",
   "accountLockedTitle": "Cuenta bloqueada",
-  "accountLockedMessage": "Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.",
+  "accountLockedMessage": "Tu cuenta ha sido bloqueada temporalmente.",
+  "accountLockedHeadlineFirst": "Cuenta",
+  "accountLockedHeadlineSecond": "bloqueada.",
+  "accountLockedCoachAuthor": "Tu entrenador",
+  "accountLockedCoachMessage": "Contacta conmigo para más información.",
   "backToLoginButton": "Volver al inicio de sesión",
 
   "welcomeOnboarding": "¡Bienvenido\na EXOM!",

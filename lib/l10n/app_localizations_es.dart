@@ -90,6 +90,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appTagline => 'Tu entrenador personal, siempre contigo';
 
   @override
+  String get loginHeadlineFirst => 'Tu plan.';
+
+  @override
+  String get loginHeadlineSecond => 'Siempre contigo.';
+
+  @override
+  String get loginSubtitle =>
+      'Tu entrenador crea tu cuenta al empezar. Entra con el correo que le diste.';
+
+  @override
   String get splashTagline => 'Entrena. Come. Evoluciona.';
 
   @override
@@ -103,6 +113,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get passwordFieldLabel => 'Contraseña';
+
+  @override
+  String get passwordShowTooltip => 'Mostrar contraseña';
+
+  @override
+  String get passwordHideTooltip => 'Ocultar contraseña';
 
   @override
   String get passwordValidationEmpty => 'Introduce tu contraseña';
@@ -129,18 +145,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get forgotPasswordTitle => 'Recupera tu contraseña';
 
   @override
+  String get forgotHeadlineFirst => 'Recupera';
+
+  @override
+  String get forgotHeadlineSecond => 'tu contraseña.';
+
+  @override
   String get forgotPasswordSubtitle =>
       'Introduce el correo asociado a tu cuenta y te enviaremos un enlace para restablecerla.';
 
   @override
-  String get sendResetEmailButton => 'Enviar enlace de recuperación';
+  String get sendResetEmailButton => 'Enviar enlace';
 
   @override
-  String get resetEmailSentTitle => '¡Email enviado!';
+  String get resetEmailSentTitle => 'Email enviado';
+
+  @override
+  String get resetEmailSentFirst => 'Email';
+
+  @override
+  String get resetEmailSentSecond => 'enviado.';
+
+  @override
+  String get resetEmailSentLinkTitle => 'Enlace enviado';
 
   @override
   String resetEmailSentSubtitle(Object email) {
-    return 'Hemos enviado un enlace a $email. Revisa tu bandeja de entrada y la carpeta de spam.';
+    return 'Hemos enviado un enlace a $email. Revisa tu bandeja de entrada y la carpeta de correo no deseado.';
   }
 
   @override
@@ -160,7 +191,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String linkSocialDescription(Object email, Object provider) {
-    return 'Ya existe una cuenta EXOM para $email. Introduce tu contraseña actual para vincular también $provider y poder iniciar sesión con ambos métodos.';
+    return 'Ya existe una cuenta EXOM para $email. Introduce tu contraseña actual para vincular este acceso.';
   }
 
   @override
@@ -171,7 +202,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accountLockedMessage =>
-      'Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.';
+      'Tu cuenta ha sido bloqueada temporalmente.';
+
+  @override
+  String get accountLockedHeadlineFirst => 'Cuenta';
+
+  @override
+  String get accountLockedHeadlineSecond => 'bloqueada.';
+
+  @override
+  String get accountLockedCoachAuthor => 'Tu entrenador';
+
+  @override
+  String get accountLockedCoachMessage =>
+      'Contacta conmigo para más información.';
 
   @override
   String get backToLoginButton => 'Volver al inicio de sesión';

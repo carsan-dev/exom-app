@@ -2989,6 +2989,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String pendingUploadSendingKilobytes(int percent, String sent, String total) {
+    return 'Sending $percent% · $sent of $total KB';
+  }
+
+  @override
   String get pendingRetryFailed =>
       'The upload could not be retried. Your evidence is kept.';
 
@@ -4392,4 +4397,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mealDoneStatus => 'Done';
+
+  @override
+  String get feedbackUploadPreparingBody =>
+      'It is saved on this phone before it is sent.';
+
+  @override
+  String get feedbackUploadProcessingTitle => 'Sent · processing in EXOM';
+
+  @override
+  String get feedbackUploadProcessingBody =>
+      'Not confirmed yet. You can close the app.';
+
+  @override
+  String get feedbackUploadConfirmedBody => 'Your coach can review it now.';
+
+  @override
+  String get feedbackUploadFailedTitle => 'Couldn\'t send it.';
+
+  @override
+  String get feedbackUploadKeptBody => 'Your evidence is kept on this phone.';
+
+  @override
+  String get feedbackUploadOfflineBody =>
+      'It will be sent when the connection is back.';
+
+  @override
+  String get feedbackEmptyFirst => 'No feedback.';
+
+  @override
+  String get feedbackEmptySecond => 'Yet.';
+
+  @override
+  String get feedbackQuestionType => 'Evidence type';
+
+  @override
+  String get feedbackQuestionFile => 'File';
+
+  @override
+  String get feedbackChooseFile => 'Choose file';
+
+  @override
+  String get feedbackRemoveFile => 'Remove';
 }

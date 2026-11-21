@@ -3024,6 +3024,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String pendingUploadSendingKilobytes(int percent, String sent, String total) {
+    return 'Enviando $percent % · $sent de $total KB';
+  }
+
+  @override
   String get pendingRetryFailed =>
       'No se pudo reintentar la subida. Tu evidencia se conserva.';
 
@@ -4435,4 +4440,47 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mealDoneStatus => 'Hecha';
+
+  @override
+  String get feedbackUploadPreparingBody =>
+      'Se guarda en este móvil antes de enviarse.';
+
+  @override
+  String get feedbackUploadProcessingTitle => 'Enviado · procesando en EXOM';
+
+  @override
+  String get feedbackUploadProcessingBody =>
+      'Aún no está confirmada. Puedes cerrar la app.';
+
+  @override
+  String get feedbackUploadConfirmedBody => 'Tu entrenador ya puede revisarlo.';
+
+  @override
+  String get feedbackUploadFailedTitle => 'No se pudo enviar.';
+
+  @override
+  String get feedbackUploadKeptBody =>
+      'Tu evidencia se conserva en este móvil.';
+
+  @override
+  String get feedbackUploadOfflineBody =>
+      'Se enviará cuando vuelva la conexión.';
+
+  @override
+  String get feedbackEmptyFirst => 'Sin feedback.';
+
+  @override
+  String get feedbackEmptySecond => 'Todavía.';
+
+  @override
+  String get feedbackQuestionType => 'Tipo de evidencia';
+
+  @override
+  String get feedbackQuestionFile => 'Archivo';
+
+  @override
+  String get feedbackChooseFile => 'Elegir archivo';
+
+  @override
+  String get feedbackRemoveFile => 'Quitar';
 }

@@ -1034,6 +1034,8 @@
   "pendingMediaImage": "Imagen de feedback",
   "pendingUploadSendingBytes": "Enviando {percent} % · {sent} de {total} MB",
   "@pendingUploadSendingBytes": {"placeholders": {"percent": {"type": "int"}, "sent": {"type": "String"}, "total": {"type": "String"}}},
+  "pendingUploadSendingKilobytes": "Enviando {percent} % · {sent} de {total} KB",
+  "@pendingUploadSendingKilobytes": {"placeholders": {"percent": {"type": "int"}, "sent": {"type": "String"}, "total": {"type": "String"}}},
   "pendingRetryFailed": "No se pudo reintentar la subida. Tu evidencia se conserva.",
   "pendingRetryRequested": "Reintento solicitado.",
   "pendingRetryNotStarted": "No se pudo completar el reintento. Tus datos se conservan.",
@@ -1485,5 +1487,18 @@
   "dietOfTotalKcal": "de {total} kcal",
   "@dietOfTotalKcal": {"placeholders": {"total": {"type": "int"}}},
   "mealOptionsLabel": "Opciones",
-  "mealDoneStatus": "Hecha"
+  "mealDoneStatus": "Hecha",
+  "feedbackUploadPreparingBody": "Se guarda en este móvil antes de enviarse.",
+  "feedbackUploadProcessingTitle": "Enviado · procesando en EXOM",
+  "feedbackUploadProcessingBody": "Aún no está confirmada. Puedes cerrar la app.",
+  "feedbackUploadConfirmedBody": "Tu entrenador ya puede revisarlo.",
+  "feedbackUploadFailedTitle": "No se pudo enviar.",
+  "feedbackUploadKeptBody": "Tu evidencia se conserva en este móvil.",
+  "feedbackUploadOfflineBody": "Se enviará cuando vuelva la conexión.",
+  "feedbackEmptyFirst": "Sin feedback.",
+  "feedbackEmptySecond": "Todavía.",
+  "feedbackQuestionType": "Tipo de evidencia",
+  "feedbackQuestionFile": "Archivo",
+  "feedbackChooseFile": "Elegir archivo",
+  "feedbackRemoveFile": "Quitar"
 }

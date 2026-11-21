@@ -52,6 +52,10 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/help/presentation/pages/help_page.dart',
   // L5-C1 · Subidas pendientes.
   'lib/features/feedback/presentation/pages/pending_uploads_page.dart',
+  // L5-C2 · Feedback.
+  'lib/features/feedback/presentation/pages/feedback_page.dart',
+  'lib/features/feedback/presentation/widgets/feedback_upload_status.dart',
+  'lib/features/feedback/presentation/widgets/feedback_media_picker.dart',
   // L5-D1 · Acceso.
   'lib/features/auth/presentation/pages/login_page.dart',
   'lib/features/auth/presentation/pages/forgot_password_page.dart',

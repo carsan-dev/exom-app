@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/upload_feedback_media_usecase.dart';
@@ -74,6 +75,20 @@ void main() {
           ),
           findsOneWidget,
         );
+        // L5-C2 (D14-3): the history failure belongs to this screen, so it
+        // stays in line instead of a SnackBar that disappears.
+        expect(
+          find.descendant(
+            of: find.byType(ExomInlineMessage),
+            matching: find.text(
+              locale == 'es'
+                  ? 'Sin conexión a internet. Tus evidencias pendientes siguen guardadas.'
+                  : 'No internet connection. Your pending evidence is still saved.',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(SnackBar), findsNothing);
         expect(find.textContaining('Failed host lookup'), findsNothing);
         expect(
           find.text(locale == 'es' ? 'Reintentar' : 'Retry').hitTestable(),

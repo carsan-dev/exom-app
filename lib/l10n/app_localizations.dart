@@ -5210,6 +5210,12 @@ abstract class AppLocalizations {
   /// **'Enviando {percent} % · {sent} de {total} MB'**
   String pendingUploadSendingBytes(int percent, String sent, String total);
 
+  /// No description provided for @pendingUploadSendingKilobytes.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviando {percent} % · {sent} de {total} KB'**
+  String pendingUploadSendingKilobytes(int percent, String sent, String total);
+
   /// No description provided for @pendingRetryFailed.
   ///
   /// In es, this message translates to:
@@ -7256,6 +7262,84 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hecha'**
   String get mealDoneStatus;
+
+  /// No description provided for @feedbackUploadPreparingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda en este móvil antes de enviarse.'**
+  String get feedbackUploadPreparingBody;
+
+  /// No description provided for @feedbackUploadProcessingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviado · procesando en EXOM'**
+  String get feedbackUploadProcessingTitle;
+
+  /// No description provided for @feedbackUploadProcessingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no está confirmada. Puedes cerrar la app.'**
+  String get feedbackUploadProcessingBody;
+
+  /// No description provided for @feedbackUploadConfirmedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrenador ya puede revisarlo.'**
+  String get feedbackUploadConfirmedBody;
+
+  /// No description provided for @feedbackUploadFailedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo enviar.'**
+  String get feedbackUploadFailedTitle;
+
+  /// No description provided for @feedbackUploadKeptBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu evidencia se conserva en este móvil.'**
+  String get feedbackUploadKeptBody;
+
+  /// No description provided for @feedbackUploadOfflineBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se enviará cuando vuelva la conexión.'**
+  String get feedbackUploadOfflineBody;
+
+  /// No description provided for @feedbackEmptyFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin feedback.'**
+  String get feedbackEmptyFirst;
+
+  /// No description provided for @feedbackEmptySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía.'**
+  String get feedbackEmptySecond;
+
+  /// No description provided for @feedbackQuestionType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de evidencia'**
+  String get feedbackQuestionType;
+
+  /// No description provided for @feedbackQuestionFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo'**
+  String get feedbackQuestionFile;
+
+  /// No description provided for @feedbackChooseFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir archivo'**
+  String get feedbackChooseFile;
+
+  /// No description provided for @feedbackRemoveFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar'**
+  String get feedbackRemoveFile;
 }
 
 class _AppLocalizationsDelegate

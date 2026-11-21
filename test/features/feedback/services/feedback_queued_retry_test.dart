@@ -6,12 +6,14 @@ import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_pa
 import 'package:exom_app/injection_container.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../core/widgets/expect_no_lime_ink.dart';
 import 'feedback_upload_queue_service_test.dart' as fixtures;
 
 void main() {
@@ -200,11 +202,23 @@ void main() {
           ),
         );
         expect(find.text('Reintentar').hitTestable(), findsOneWidget);
-        final button = tester.widget<TextButton>(find.byType(TextButton));
+        // L5-C2: the retry is an in-line text link (sketch C1 e), not a
+        // TextButton in the primary colour; in light no lime ink (D13).
         expect(
-          button.style!.foregroundColor!.resolve({}),
-          theme.colorScheme.primary,
+          find.widgetWithText(ExomTextLink, 'Reintentar'),
+          findsOneWidget,
         );
+        if (theme.brightness == Brightness.light) expectNoLimeInk(tester);
+        // Both themes: the link text is in the text colour and its underline
+        // in the data colour (`.x-link`), never the error colour.
+        final retryText = find.descendant(
+          of: find.byType(ExomTextLink),
+          matching: find.text('Reintentar'),
+        );
+        final palette = tester.element(retryText).exomPalette;
+        final retryStyle = tester.widget<Text>(retryText).style!;
+        expect(retryStyle.color, palette.textPrimary);
+        expect(retryStyle.decorationColor, palette.data);
         await tester.runAsync(() async {
           await tester.tap(find.text('Reintentar'));
           await fixtures.waitUntil(() => service.progressOf('pending') != null);

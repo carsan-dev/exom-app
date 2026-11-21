@@ -434,20 +434,29 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
             // Dots + button row
             Row(
               children: [
-                ...List.generate(_steps.length, (i) {
-                  final isActive = i == _currentStep;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 5),
-                    width: isActive ? 18 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isActive ? palette.primary : palette.textDisabled,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  );
-                }),
-                const Spacer(),
+                // The dots take the space the button leaves and wrap instead
+                // of overflowing the row in the narrow drawer bubble.
+                Expanded(
+                  child: Wrap(
+                    runSpacing: 5,
+                    children: List.generate(_steps.length, (i) {
+                      final isActive = i == _currentStep;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 5),
+                        width: isActive ? 18 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? palette.primary
+                              : palette.textDisabled,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 SizedBox(
                   height: buttonHeight,
                   child: ElevatedButton(

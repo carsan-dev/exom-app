@@ -1,14 +1,10 @@
 // Screen components of L5-B2 «Retos» (sketch b-cuenta.html «B4 · Retos",
-// direccion.css): the milestone mark with bands at ±12° (`.x-mark`), the
-// 50-mark rule of the main goal (`.x-ticks`) and the flat achievement tiles
-// with the lock (`.x-tiles`).
-import 'dart:math' as math;
-
+// direccion.css): the 50-mark rule of the main goal (`.x-ticks`), the flat
+// achievement tiles with the lock (`.x-tiles`) and the contrast helper. The
+// streak milestone (L5-D40) is in challenge_streak_weeks_test.dart.
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/achievement_tiles.dart';
-import 'package:exom_app/features/challenges/presentation/widgets/challenge_icons.dart';
-import 'package:exom_app/features/challenges/presentation/widgets/challenge_milestone_mark.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/challenge_tick_rule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../core/widgets/android_nonlinear_text_scaler.dart';
 import '../../core/widgets/exom_component_harness.dart';
 import '../../core/widgets/expect_no_lime_ink.dart';
+import 'challenges_test_support.dart';
 
 const _tiles = [
   AchievementTileData(name: 'Primer entreno', unlocked: true),
@@ -27,56 +24,34 @@ ExomThemePalette _palette(WidgetTester tester) =>
     tester.element(find.byType(Scaffold)).exomPalette;
 
 void main() {
-  group('ChallengeMilestoneMark (.x-mark)', () {
-    for (final brightness in Brightness.values) {
-      testWidgets('two bands at ±12° behind the numeral, ${brightness.name}', (
+  group('expectParagraphContrast', () {
+    // The helper measures text, not glyphs: icon fonts (Material and the
+    // Lucide font of ExomIcons) are skipped, whatever their colour.
+    testWidgets('skips Lucide glyphs of ExomIcons', (tester) async {
+      await pumpComponent(
         tester,
-      ) async {
-        await pumpComponent(
-          tester,
-          const ChallengeMilestoneMark(value: '12', semanticsLabel: '12 días'),
-          brightness: brightness,
-        );
-        final angles =
-            tester
-                .widgetList<Transform>(
-                  find.descendant(
-                    of: find.byType(ChallengeMilestoneMark),
-                    matching: find.byType(Transform),
-                  ),
-                )
-                .map(
-                  (t) => math.atan2(
-                    t.transform.entry(1, 0),
-                    t.transform.entry(0, 0),
-                  ),
-                )
-                .where((a) => a.abs() > 1e-6)
-                .map((a) => (a * 180 / math.pi).round())
-                .toList()
-              ..sort();
-        expect(angles, [-12, 12]);
-
-        final numeral = tester.widget<ExomNumeral>(find.byType(ExomNumeral));
-        expect(numeral.value, '12');
-        expect(numeral.size, ExomNumeralSize.hero140);
-        // The milestone numeral is text coloured: the data colour is the goal's.
-        expect(numeral.isData, isFalse);
-
-        final front = tester.widget<DecoratedBox>(
-          find.byKey(ChallengeMilestoneMark.frontBandKey),
-        );
-        final border = (front.decoration as BoxDecoration).border! as Border;
-        expect(border.top.color, _palette(tester).data);
-        expect(border.top.width, 2);
-        expect(
-          tester.getSemantics(find.byType(ChallengeMilestoneMark)).label,
-          contains('12 días'),
-        );
-        if (brightness == Brightness.light) expectNoLimeInk(tester);
-        expectNoOverflow(tester);
-      });
-    }
+        Builder(
+          builder: (context) {
+            final palette = context.exomPalette;
+            return ColoredBox(
+              key: const ValueKey('scope'),
+              color: palette.background,
+              child: Row(
+                children: [
+                  Icon(ExomIcons.done, color: palette.background),
+                  Text('Hecha', style: TextStyle(color: palette.textPrimary)),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+      expectParagraphContrast(
+        tester,
+        find.byKey(const ValueKey('scope')),
+        fallback: _palette(tester).background,
+      );
+    });
   });
 
   group('ChallengeTickRule (.x-ticks)', () {
@@ -129,13 +104,13 @@ void main() {
       );
       final palette = _palette(tester);
       final medal = tester.widget<Icon>(
-        find.byIcon(ChallengeIcons.achievement).first,
+        find.byIcon(ExomIcons.achievement).first,
       );
       expect(medal.color, palette.data);
-      final lock = tester.widget<Icon>(find.byIcon(ChallengeIcons.locked));
+      final lock = tester.widget<Icon>(find.byIcon(ExomIcons.locked));
       expect(lock.color, palette.textSecondary);
-      expect(find.byIcon(ChallengeIcons.locked), findsOneWidget);
-      expect(find.byIcon(ChallengeIcons.achievement), findsNWidgets(2));
+      expect(find.byIcon(ExomIcons.locked), findsOneWidget);
+      expect(find.byIcon(ExomIcons.achievement), findsNWidgets(2));
       // No rounded cards, no shadows: square tiles.
       for (final box in tester.widgetList<DecoratedBox>(
         find.descendant(

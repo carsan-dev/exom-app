@@ -1202,6 +1202,12 @@ abstract class AppLocalizations {
   /// **'seguidos.'**
   String get challengesStreakHeadlineSecond;
 
+  /// No description provided for @challengesStreakEarlierDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{+{count} día anterior} other{+{count} días anteriores}}'**
+  String challengesStreakEarlierDays(int count);
+
   /// No description provided for @challengesWeekHeadlineFirst.
   ///
   /// In es, this message translates to:

@@ -626,6 +626,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengesStreakHeadlineSecond => 'in a row.';
 
   @override
+  String challengesStreakEarlierDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count earlier days',
+      one: '+$count earlier day',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get challengesWeekHeadlineFirst => 'Your week.';
 
   @override

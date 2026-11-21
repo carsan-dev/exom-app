@@ -630,6 +630,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengesStreakHeadlineSecond => 'seguidos.';
 
   @override
+  String challengesStreakEarlierDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count días anteriores',
+      one: '+$count día anterior',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get challengesWeekHeadlineFirst => 'Tu semana.';
 
   @override

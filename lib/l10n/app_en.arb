@@ -232,6 +232,8 @@
   "challengesTitle": "My Challenges",
   "challengesStreakHeadlineFirst": "Days",
   "challengesStreakHeadlineSecond": "in a row.",
+  "@challengesStreakEarlierDays": {"placeholders": {"count": {"type": "int"}}},
+  "challengesStreakEarlierDays": "{count, plural, one{+{count} earlier day} other{+{count} earlier days}}",
   "challengesWeekHeadlineFirst": "Your week.",
   "challengesWeekHeadlineSecond": "It counts too.",
   "challengesLoadError": "Could not load challenges",

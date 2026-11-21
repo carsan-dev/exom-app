@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/features/challenges/presentation/widgets/challenge_icons.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -178,9 +178,7 @@ class _Tile extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 1),
                   child: Icon(
-                    unlocked
-                        ? ChallengeIcons.achievement
-                        : ChallengeIcons.locked,
+                    unlocked ? ExomIcons.achievement : ExomIcons.locked,
                     size: 20,
                     color: unlocked ? palette.data : palette.textSecondary,
                     semanticLabel: unlocked

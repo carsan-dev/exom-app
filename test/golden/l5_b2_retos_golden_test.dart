@@ -2,7 +2,8 @@
 // section 5.3): the main scene (title, the streak milestone, the main goal with
 // its 50-mark rule, the numbered weekly challenges and the achievement tiles)
 // and the «all achievements» sheet, in dark and light at text scale 1.0 and
-// 1.6 on the 390x844 surface of the L0 baseline.
+// 1.6 on the 390x844 surface of the L0 baseline; plus a 40-day streak (L5-D40,
+// the 4-week cap) in dark and light at 1.0.
 //
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts (loadRedesignFonts), so regenerate on the same
@@ -31,6 +32,24 @@ void main() {
           matchesGoldenFile('goldens/retos_$suffix.png'),
         );
       });
+
+      if (scale == 1.0) {
+        // L5-D40: a 40-day streak fills the 4 weeks of the grid and sums up
+        // the rest with «+14 días anteriores».
+        testWidgets('golden retos_racha_40_$suffix', (tester) async {
+          await pumpChallengesPage(
+            tester,
+            FakeChallengesRepository(streakDays: 40),
+            height: 844,
+            mode: mode,
+          );
+          expect(tester.takeException(), isNull);
+          await expectLater(
+            find.byType(MaterialApp),
+            matchesGoldenFile('goldens/retos_racha_40_$suffix.png'),
+          );
+        });
+      }
 
       testWidgets('golden retos_logros_$suffix', (tester) async {
         await pumpChallengesPage(

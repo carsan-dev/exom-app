@@ -5,11 +5,11 @@
 // nonlinear scaler (CC 3) and a sheet that follows a live theme change (the
 // captured-colour defect fixed in E7).
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
-import 'package:exom_app/features/challenges/presentation/widgets/challenge_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -107,16 +107,13 @@ void main() {
       await openAchievementsBoard(tester, 'Ver todos');
       final panel = find.byKey(const Key('exom-sheet-panel'));
       expect(
-        find.descendant(
-          of: panel,
-          matching: find.byIcon(ChallengeIcons.locked),
-        ),
+        find.descendant(of: panel, matching: find.byIcon(ExomIcons.locked)),
         findsNWidgets(2),
       );
       expect(
         find.descendant(
           of: panel,
-          matching: find.byIcon(ChallengeIcons.achievement),
+          matching: find.byIcon(ExomIcons.achievement),
         ),
         findsNWidgets(3),
       );
@@ -180,9 +177,20 @@ void main() {
       tester,
     ) async {
       await pumpChallengesPage(tester, FakeChallengesRepository());
-      expect(find.byIcon(ChallengeIcons.done), findsOneWidget);
+      expect(find.byIcon(ExomIcons.done), findsOneWidget);
       expect(find.text('Completado'), findsOneWidget);
       expect(_anyTextEquals(tester, '100%'), isFalse);
+    });
+
+    testWidgets('the streak shows its weeks and the flame (L5-D40, D38)', (
+      tester,
+    ) async {
+      await pumpChallengesPage(
+        tester,
+        FakeChallengesRepository(streakDays: 40),
+      );
+      expect(find.byIcon(ExomIcons.streak), findsOneWidget);
+      expect(find.text('+14 días anteriores'), findsOneWidget);
     });
   });
 

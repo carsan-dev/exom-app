@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_band.dart';
@@ -22,13 +23,13 @@ import 'package:exom_app/features/challenges/domain/entities/achievement_entity.
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/achievement_tiles.dart';
-import 'package:exom_app/features/challenges/presentation/widgets/challenge_icons.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/challenge_milestone_mark.dart';
+import 'package:exom_app/features/challenges/presentation/widgets/challenge_streak_weeks.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/challenge_tick_rule.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// «Retos» tab (sketch b-cuenta.html «B4 · Retos», L5-B2): the streak as the
-/// milestone with bands at ±12°, the main goal as a figure with its 50-mark
+/// milestone with its weeks grid (L5-D40), the main goal as a figure with its 50-mark
 /// rule, the weekly challenges numbered with their percentage and rule, and
 /// the achievements as flat tiles. «Ver todos» opens every achievement of the
 /// catalog in a straight EXOM sheet, which closes when the router location
@@ -64,44 +65,66 @@ class ChallengesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
-      child: BlocBuilder<ChallengesBloc, ChallengesState>(
-        builder: (context, state) {
-          if (state is ChallengesInitial || state is ChallengesLoading) {
-            return const _ChallengesLoadingContent();
-          }
-          if (state is ChallengesError) {
-            return _buildErrorState(context, state);
-          }
-          if (state is ChallengesLoaded) {
-            return _ChallengesContent(
-              streakDays: state.streakDays,
-              mainGoals: state.mainGoals,
-              weeklyChallenges: state.weeklyChallenges,
-              achievements: state.achievements,
-              achievementCatalog: state.achievementCatalog,
-              alwaysShowAchievements: false,
-              onRefresh: () => _refreshChallenges(context),
-            );
-          }
-          if (state is ChallengesEmpty) {
-            return _ChallengesContent(
-              streakDays: state.streakDays,
-              mainGoals: const [],
-              weeklyChallenges: const [],
-              achievements: state.achievements,
-              achievementCatalog: state.achievementCatalog,
-              alwaysShowAchievements: true,
-              onRefresh: () => _refreshChallenges(context),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+    return _StreakFillHolder(
+      child: BlocProvider(
+        create: (_) =>
+            GetIt.I<ChallengesBloc>()..add(const ChallengesLoadRequested()),
+        child: BlocBuilder<ChallengesBloc, ChallengesState>(
+          builder: (context, state) {
+            if (state is ChallengesInitial || state is ChallengesLoading) {
+              return const _ChallengesLoadingContent();
+            }
+            if (state is ChallengesError) {
+              return _buildErrorState(context, state);
+            }
+            if (state is ChallengesLoaded) {
+              return _ChallengesContent(
+                streakDays: state.streakDays,
+                mainGoals: state.mainGoals,
+                weeklyChallenges: state.weeklyChallenges,
+                achievements: state.achievements,
+                achievementCatalog: state.achievementCatalog,
+                alwaysShowAchievements: false,
+                onRefresh: () => _refreshChallenges(context),
+              );
+            }
+            if (state is ChallengesEmpty) {
+              return _ChallengesContent(
+                streakDays: state.streakDays,
+                mainGoals: const [],
+                weeklyChallenges: const [],
+                achievements: state.achievements,
+                achievementCatalog: state.achievementCatalog,
+                alwaysShowAchievements: true,
+                onRefresh: () => _refreshChallenges(context),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
+}
+
+/// Keeps one [StreakFillGate] per opening of the page, so the streak grid
+/// fills once (M5) and not again after a pull-to-refresh or a reload, which
+/// rebuild the content while the page stays mounted.
+class _StreakFillHolder extends StatefulWidget {
+  const _StreakFillHolder({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_StreakFillHolder> createState() => _StreakFillHolderState();
+}
+
+class _StreakFillHolderState extends State<_StreakFillHolder> {
+  final StreakFillGate _gate = StreakFillGate();
+
+  @override
+  Widget build(BuildContext context) =>
+      StreakFillScope(gate: _gate, child: widget.child);
 }
 
 /// Loading: skeletons with the final shape (numeral, headline, rule, rows).
@@ -267,8 +290,8 @@ class _ChallengesContent extends StatelessWidget {
   }
 }
 
-/// Streak (sketch `.x-mark` + kicker + «Días / seguidos.»): the milestone of
-/// the screen, once.
+/// Streak (L5-D40: numeral and weeks grid + kicker + «Días / seguidos.»): the
+/// milestone of the screen, once.
 class _StreakSection extends StatelessWidget {
   const _StreakSection({required this.days});
 
@@ -283,6 +306,7 @@ class _StreakSection extends StatelessWidget {
       children: [
         ChallengeMilestoneMark(
           value: value,
+          days: days,
           semanticsLabel: '$value ${l10n.days}',
         ),
         Padding(
@@ -290,7 +314,7 @@ class _StreakSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ExomKicker(l10n.streak, icon: ChallengeIcons.streak),
+              ExomKicker(l10n.streak, icon: ExomIcons.streak),
               const SizedBox(height: ExomSpacing.md),
               ExomTwoLineHeadline(
                 first: l10n.challengesStreakHeadlineFirst,
@@ -595,7 +619,7 @@ class _DoneMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(ChallengeIcons.done, size: 16, color: palette.data),
+        Icon(ExomIcons.done, size: 16, color: palette.data),
         const SizedBox(width: 6),
         Text(
           AppLocalizations.of(context).completed,

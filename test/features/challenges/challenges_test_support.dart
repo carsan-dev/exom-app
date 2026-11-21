@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/domain/repositories/challenges_repository.dart';
@@ -208,6 +209,7 @@ Future<GoRouter> pumpChallengesPage(
   Locale locale = const Locale('es'),
   TextScaler textScaler = TextScaler.noScaling,
   bool settle = true,
+  bool disableAnimations = true,
 }) async {
   await loadRedesignFonts();
   tester.view.physicalSize = Size(width, height);
@@ -236,6 +238,7 @@ Future<GoRouter> pumpChallengesPage(
       mode: mode,
       locale: locale,
       textScaler: textScaler,
+      disableAnimations: disableAnimations,
     ),
   );
   if (settle) {
@@ -414,10 +417,23 @@ Color _backgroundOf(Element element, Color fallback) {
   return found ?? fallback;
 }
 
+/// Font family of a painted glyph of [icon], as [Icon] passes it to the text
+/// style (`packages/<package>/<family>` for a packaged font).
+String _paintedFamily(IconData icon) => icon.fontPackage == null
+    ? icon.fontFamily!
+    : 'packages/${icon.fontPackage}/${icon.fontFamily}';
+
+/// Icon fonts skipped by [expectParagraphContrast]: Material and the Lucide
+/// font of [ExomIcons] (L5-D38). Glyphs are not text.
+final Set<String> _iconFamilies = {
+  'MaterialIcons',
+  _paintedFamily(ExomIcons.done),
+};
+
 /// Contrast of every painted run of text under [scope], by identity (not by
 /// semantics nor by screen position): the colour of the text against the
 /// colour painted behind it, [fallback] where nothing paints one. AA: 4.5, or
-/// 3.0 for large text. Icon glyphs are skipped. Fails when [scope] holds no
+/// 3.0 for large text. Icon glyphs (Material and Lucide) are skipped. Fails when [scope] holds no
 /// text, so an empty finder never passes.
 void expectParagraphContrast(
   WidgetTester tester,
@@ -438,7 +454,7 @@ void expectParagraphContrast(
     final runs = <(String, TextStyle)>[];
     _collectRuns(render.text, const TextStyle(), runs);
     for (final (text, style) in runs) {
-      if (style.fontFamily == 'MaterialIcons') continue;
+      if (_iconFamilies.contains(style.fontFamily)) continue;
       final color = style.color;
       if (color == null) {
         failures.add('"$text": no text colour');

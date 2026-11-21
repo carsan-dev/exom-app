@@ -3038,6 +3038,60 @@ abstract class AppLocalizations {
   /// **'Caché sin conexión borrada correctamente'**
   String get cacheDeletedMessage;
 
+  /// No description provided for @settingsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tema, idioma, avisos y cuenta'**
+  String get settingsSubtitle;
+
+  /// No description provided for @settingsThemeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tema'**
+  String get settingsThemeLabel;
+
+  /// No description provided for @settingsUnitsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Métrico usa kilos y centímetros. Imperial usa libras y pulgadas.'**
+  String get settingsUnitsHint;
+
+  /// No description provided for @clearCacheSheetBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borrarán los datos guardados en este móvil para usar EXOM sin conexión. Volverán a descargarse cuando tengas conexión.'**
+  String get clearCacheSheetBody;
+
+  /// No description provided for @settingsPushEnableFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron activar las notificaciones push. Sigue desactivado.'**
+  String get settingsPushEnableFailed;
+
+  /// No description provided for @settingsPushDisableFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron desactivar las notificaciones push. Sigue activado.'**
+  String get settingsPushDisableFailed;
+
+  /// No description provided for @settingsSwitchEnableFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo activar. Sigue desactivado.'**
+  String get settingsSwitchEnableFailed;
+
+  /// No description provided for @settingsSwitchDisableFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo desactivar. Sigue activado.'**
+  String get settingsSwitchDisableFailed;
+
+  /// No description provided for @deleteAccountConfirmHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'El botón se activa cuando escribes {word}.'**
+  String deleteAccountConfirmHelper(String word);
+
   /// No description provided for @clearCacheActiveWorkTitle.
   ///
   /// In es, this message translates to:

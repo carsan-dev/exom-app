@@ -92,7 +92,8 @@ void main() {
   }
 
   Future<void> tapClearCache(WidgetTester tester) async {
-    final tile = find.text('Borrar caché local');
+    // L5-B3: the row paints its title upper case; it is found by key.
+    final tile = find.byKey(const Key('settings-clear-cache'));
     await tester.scrollUntilVisible(tile, 200,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(tile);
@@ -104,8 +105,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder dialogButton(Type type) =>
-      find.descendant(of: find.byType(AlertDialog), matching: find.byType(type));
+  // L5-B3 (L5-D29, D17-1): the confirmation is a straight sheet, shown every
+  // time; the amber notice only appears with an unfinished circuit.
+  final sheet = find.byKey(const Key('exom-sheet-panel'));
+  final circuitWarning = find.byKey(
+    const Key('settings-clear-cache-circuit-warning'),
+  );
+  final confirmButton = find.byKey(const Key('settings-clear-cache-confirm'));
+  final cancelButton = find.byKey(const Key('settings-clear-cache-cancel'));
 
   testWidgets('warns before clearing while a circuit is in progress and '
       'keeps everything when cancelled', (tester) async {
@@ -115,14 +122,15 @@ void main() {
 
     await tapClearCache(tester);
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(sheet, findsOneWidget);
+    expect(circuitWarning, findsOneWidget);
     expect(storage.getCachedMap(_circuitKey), isNotNull);
     expect(storage.getCachedMap('home_profile'), isNotNull);
 
-    await tester.tap(dialogButton(TextButton));
+    await tester.tap(cancelButton);
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(sheet, findsNothing);
     expect(storage.getCachedMap(_circuitKey), isNotNull);
     expect(storage.getCachedMap('home_profile'), isNotNull);
     expect(find.byType(SnackBar), findsNothing);
@@ -134,8 +142,8 @@ void main() {
     await pumpSettings(tester);
 
     await tapClearCache(tester);
-    expect(find.byType(AlertDialog), findsOneWidget);
-    await tester.tap(dialogButton(FilledButton));
+    expect(sheet, findsOneWidget);
+    await tester.tap(confirmButton);
     await tester.pumpAndSettle();
 
     expect(storage.getCachedMap(_circuitKey), isNull);
@@ -144,14 +152,20 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('without work in progress it clears with no dialog',
-      (tester) async {
+  testWidgets('without work in progress it still asks first and clears only '
+      'after confirming (L5-D29)', (tester) async {
     await storage.cacheData('home_profile', {'name': 'x'});
     await pumpSettings(tester);
 
     await tapClearCache(tester);
 
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(sheet, findsOneWidget);
+    expect(circuitWarning, findsNothing);
+    expect(storage.getCachedMap('home_profile'), isNotNull);
+
+    await tester.tap(confirmButton);
+    await tester.pumpAndSettle();
+
     expect(storage.getCachedMap('home_profile'), isNull);
     expect(find.text('Caché sin conexión borrada correctamente'),
         findsOneWidget);
@@ -167,7 +181,10 @@ void main() {
 
     await tapClearCache(tester);
 
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(sheet, findsOneWidget);
+    expect(circuitWarning, findsNothing);
+    await tester.tap(confirmButton);
+    await tester.pumpAndSettle();
     expect(storage.getCachedMap('home_profile'), isNull);
   });
 }

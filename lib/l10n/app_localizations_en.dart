@@ -1651,6 +1651,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cacheDeletedMessage => 'Offline cache cleared successfully';
 
   @override
+  String get settingsSubtitle => 'Theme, language, alerts and account';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsUnitsHint =>
+      'Metric uses kilograms and centimetres. Imperial uses pounds and inches.';
+
+  @override
+  String get clearCacheSheetBody =>
+      'The data saved on this phone to use EXOM offline will be deleted. It will download again when you\'re online.';
+
+  @override
+  String get settingsPushEnableFailed =>
+      'Push notifications couldn\'t be turned on. Still off.';
+
+  @override
+  String get settingsPushDisableFailed =>
+      'Push notifications couldn\'t be turned off. Still on.';
+
+  @override
+  String get settingsSwitchEnableFailed => 'Couldn\'t turn it on. Still off.';
+
+  @override
+  String get settingsSwitchDisableFailed => 'Couldn\'t turn it off. Still on.';
+
+  @override
+  String deleteAccountConfirmHelper(String word) {
+    return 'The button turns on when you type $word.';
+  }
+
+  @override
   String get clearCacheActiveWorkTitle => 'Clear local cache?';
 
   @override

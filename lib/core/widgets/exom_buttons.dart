@@ -140,11 +140,15 @@ class ExomSecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.labelKey,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+
+  /// Key of the label `Text` (the tutorial locates it by key).
+  final Key? labelKey;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +191,7 @@ class ExomSecondaryButton extends StatelessWidget {
                     Flexible(
                       child: Text(
                         label,
+                        key: labelKey,
                         textAlign: TextAlign.center,
                         style: _labelStyle(colour),
                       ),

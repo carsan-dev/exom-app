@@ -1,19 +1,62 @@
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
+import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../golden/redesign_scenes.dart' show loadRedesignFonts;
 import '../widgets/exom_component_harness.dart';
 
+// L5-F2: «Recap semanal» and «Cerrar sesión» in sentence case. The six
+// destinations are painted upper case (numbered index, `.x-ix`); the log-out
+// button keeps its sentence case (`.btn-out`).
 const _itemsEs = [
-  'Perfil',
-  'Retos',
-  'Recap Semanal',
-  'Feedback',
-  'Ajustes',
-  'Ayuda',
-  'Cerrar Sesión',
+  'PERFIL',
+  'RETOS',
+  'RECAP SEMANAL',
+  'FEEDBACK',
+  'AJUSTES',
+  'AYUDA',
+  'Cerrar sesión',
 ];
+
+class _Auth extends Fake implements AuthBloc {
+  final events = <AuthEvent>[];
+
+  @override
+  AuthState get state => AuthInitial();
+
+  @override
+  Stream<AuthState> get stream => const Stream<AuthState>.empty();
+
+  @override
+  void add(AuthEvent event) => events.add(event);
+
+  @override
+  Future<void> close() async {}
+}
+
+/// Every word of the paragraph must sit on one line: nothing is split
+/// mid-word.
+void _expectNoWordSplit(Element element) {
+  final paragraph = element.findRenderObject()! as RenderParagraph;
+  final text = paragraph.text.toPlainText();
+  for (final match in RegExp(r'\S+').allMatches(text)) {
+    final boxes = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: match.start, extentOffset: match.end),
+    );
+    final tops = boxes.map((b) => b.top.round()).toSet();
+    expect(tops.length, 1, reason: '«${match.group(0)}» split across lines');
+  }
+}
 
 void main() {
   for (final brightness in Brightness.values) {
@@ -55,9 +98,18 @@ void main() {
       final palette = themeFor(brightness).extension<ExomThemePalette>()!;
       final drawer = tester.widget<Drawer>(find.byType(Drawer));
       expect(drawer.backgroundColor, palette.background);
-      final logout = tester.widget<Text>(find.text('Cerrar Sesión'));
-      expect(logout.style?.color, palette.error);
-      expect(find.text('Lucía'), findsOneWidget);
+      // «Cerrar sesión» is a secondary button (1.5 px `text` border), no
+      // longer a red row.
+      final logoutText = tester.widget<Text>(find.text('Cerrar sesión'));
+      expect(logoutText.style?.color, palette.textPrimary);
+      expect(identical(keys[6].currentWidget, logoutText), isTrue);
+      expect(find.byType(ExomSecondaryButton), findsOneWidget);
+      expect(find.text('Recap Semanal'), findsNothing);
+      expect(find.text('Cerrar Sesión'), findsNothing);
+      // The account name is the protagonist: Barlow 28, painted upper case.
+      final name = tester.widget<Text>(find.text('LUCÍA'));
+      expect(name.style?.fontSize, 28);
+      expect(find.text('Miembro EXOM'), findsOneWidget);
       // No gradient remains in the drawer.
       for (final box in tester.widgetList<Container>(
         find.descendant(
@@ -73,6 +125,159 @@ void main() {
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     });
   }
+
+  testWidgets('drawer panel is 304 wide (264 at 320 dp), numbered, scrolls', (
+    tester,
+  ) async {
+    for (final width in [390.0, 320.0]) {
+      final keys = List.generate(7, (_) => GlobalKey());
+      final scaffoldKey = GlobalKey<ScaffoldState>();
+      await pumpComponent(
+        tester,
+        Scaffold(
+          key: scaffoldKey,
+          endDrawer: AppDrawer(drawerItemKeys: keys, displayName: 'Lucía'),
+          body: const SizedBox.expand(),
+        ),
+        width: width,
+        wrapInScaffold: false,
+      );
+      scaffoldKey.currentState!.openEndDrawer();
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byType(Drawer)).width,
+        width == 390 ? 304 : 264,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(ExomIndexList), findsOneWidget);
+      for (final n in ['01', '02', '03', '04', '05', '06']) {
+        expect(find.text(n), findsOneWidget);
+      }
+    }
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'no label splits mid-word at 320 dp and 160 % (${brightness.name})',
+      (tester) async {
+        final keys = List.generate(7, (_) => GlobalKey());
+        final scaffoldKey = GlobalKey<ScaffoldState>();
+        await pumpComponent(
+          tester,
+          Scaffold(
+            key: scaffoldKey,
+            endDrawer: AppDrawer(drawerItemKeys: keys, displayName: 'Lucía'),
+            body: const SizedBox.expand(),
+          ),
+          width: 320,
+          textScale: 1.6,
+          brightness: brightness,
+          wrapInScaffold: false,
+        );
+        scaffoldKey.currentState!.openEndDrawer();
+        await tester.pumpAndSettle();
+        for (final key in keys) {
+          _expectNoWordSplit(key.currentContext! as Element);
+        }
+        for (final text in tester.widgetList<Text>(
+          find.descendant(
+            of: find.byType(Drawer),
+            matching: find.byType(Text),
+          ),
+        )) {
+          expect(text.overflow, isNot(TextOverflow.ellipsis));
+        }
+        expectNoOverflow(tester);
+      },
+    );
+  }
+
+  testWidgets('drawer destinations navigate as before and close the drawer', (
+    tester,
+  ) async {
+    final auth = _Auth();
+    final keys = List.generate(7, (_) => GlobalKey());
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            endDrawer: AppDrawer(drawerItemKeys: keys, displayName: 'Lucía'),
+            body: Builder(
+              builder: (ctx) => TextButton(
+                onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+        for (final path in [
+          AppRoutes.profile,
+          AppRoutes.challenges,
+          AppRoutes.recap,
+          AppRoutes.feedback,
+          AppRoutes.settings,
+          AppRoutes.help,
+        ])
+          GoRoute(
+            path: path,
+            builder: (context, _) => Scaffold(body: Text('page $path')),
+          ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await loadRedesignFonts();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      BlocProvider<AuthBloc>.value(
+        value: auth,
+        child: MaterialApp.router(
+          routerConfig: router,
+          theme: AppTheme.dark,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+
+    const destinations = <(int, String)>[
+      (0, AppRoutes.profile),
+      (1, AppRoutes.challenges),
+      (2, AppRoutes.recap),
+      (3, AppRoutes.feedback),
+      (4, AppRoutes.settings),
+      (5, AppRoutes.help),
+    ];
+    for (final (index, path) in destinations) {
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(keys[index]));
+      await tester.pumpAndSettle();
+      expect(find.text('page $path'), findsOneWidget, reason: path);
+      expect(find.byType(Drawer), findsNothing, reason: 'drawer closed');
+      router.go('/');
+      await tester.pumpAndSettle();
+    }
+
+    // «Cerrar sesión» closes the drawer and logs out, with no confirmation.
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(keys[6]));
+    await tester.pumpAndSettle();
+    expect(auth.events.single, isA<AuthLogoutRequested>());
+    expect(find.byType(Drawer), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
 
   for (final brightness in Brightness.values) {
     testWidgets(

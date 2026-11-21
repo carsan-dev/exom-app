@@ -83,11 +83,11 @@
   "exomMemberLabel": "Miembro EXOM",
   "profileMenuItem": "Perfil",
   "challengesMenuItem": "Retos",
-  "weeklyRecapMenuItem": "Recap Semanal",
+  "weeklyRecapMenuItem": "Recap semanal",
   "feedbackMenuItem": "Feedback",
   "settingsMenuItem": "Ajustes",
   "helpMenuItem": "Ayuda",
-  "logOutMenuItem": "Cerrar Sesión",
+  "logOutMenuItem": "Cerrar sesión",
 
   "restDayTitle": "Día de descanso",
   "restDayMessage": "No tienes entrenamiento asignado para hoy.\nAprovecha para recuperarte.",

@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// No description provided for @weeklyRecapMenuItem.
   ///
   /// In es, this message translates to:
-  /// **'Recap Semanal'**
+  /// **'Recap semanal'**
   String get weeklyRecapMenuItem;
 
   /// No description provided for @feedbackMenuItem.
@@ -503,7 +503,7 @@ abstract class AppLocalizations {
   /// No description provided for @logOutMenuItem.
   ///
   /// In es, this message translates to:
-  /// **'Cerrar Sesión'**
+  /// **'Cerrar sesión'**
   String get logOutMenuItem;
 
   /// No description provided for @restDayTitle.

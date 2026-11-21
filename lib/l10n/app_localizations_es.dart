@@ -228,7 +228,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengesMenuItem => 'Retos';
 
   @override
-  String get weeklyRecapMenuItem => 'Recap Semanal';
+  String get weeklyRecapMenuItem => 'Recap semanal';
 
   @override
   String get feedbackMenuItem => 'Feedback';
@@ -240,7 +240,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get helpMenuItem => 'Ayuda';
 
   @override
-  String get logOutMenuItem => 'Cerrar Sesión';
+  String get logOutMenuItem => 'Cerrar sesión';
 
   @override
   String get restDayTitle => 'Día de descanso';

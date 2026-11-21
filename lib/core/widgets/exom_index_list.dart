@@ -15,9 +15,13 @@ class ExomIndexItem {
     this.icon,
     this.status,
     this.onTap,
+    this.titleKey,
   });
 
   final String title;
+
+  /// Key of the painted title `Text` (the tutorial locates it by key).
+  final Key? titleKey;
 
   /// Trailing icon; a chevron by default when [onTap] is set.
   final IconData? icon;
@@ -148,7 +152,7 @@ class _IndexEntry extends StatelessWidget {
               final title = Semantics(
                 label: item.title,
                 excludeSemantics: true,
-                child: Text(titleText, style: titleStyle),
+                child: Text(titleText, key: item.titleKey, style: titleStyle),
               );
               final statusText = status == null
                   ? null

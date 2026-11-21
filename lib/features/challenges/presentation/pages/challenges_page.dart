@@ -4,16 +4,35 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/formatters/figure_format.dart';
-import 'package:exom_app/core/navigation/page_aware_bottom_sheet.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/challenges/domain/entities/achievement_entity.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/challenges/presentation/bloc/challenges_bloc.dart';
+import 'package:exom_app/features/challenges/presentation/widgets/achievement_tiles.dart';
+import 'package:exom_app/features/challenges/presentation/widgets/challenge_icons.dart';
+import 'package:exom_app/features/challenges/presentation/widgets/challenge_milestone_mark.dart';
+import 'package:exom_app/features/challenges/presentation/widgets/challenge_tick_rule.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+/// «Retos» tab (sketch b-cuenta.html «B4 · Retos», L5-B2): the streak as the
+/// milestone with bands at ±12°, the main goal as a figure with its 50-mark
+/// rule, the weekly challenges numbered with their percentage and rule, and
+/// the achievements as flat tiles. «Ver todos» opens every achievement of the
+/// catalog in a straight EXOM sheet, which closes when the router location
+/// changes (CC 11). No behaviour changes: same bloc, same data, same actions.
 class ChallengesPage extends StatelessWidget {
   const ChallengesPage({super.key});
 
@@ -58,13 +77,23 @@ class ChallengesPage extends StatelessWidget {
           }
           if (state is ChallengesLoaded) {
             return _ChallengesContent(
-              state: state,
+              streakDays: state.streakDays,
+              mainGoals: state.mainGoals,
+              weeklyChallenges: state.weeklyChallenges,
+              achievements: state.achievements,
+              achievementCatalog: state.achievementCatalog,
+              alwaysShowAchievements: false,
               onRefresh: () => _refreshChallenges(context),
             );
           }
           if (state is ChallengesEmpty) {
-            return _ChallengesEmptyContent(
-              state: state,
+            return _ChallengesContent(
+              streakDays: state.streakDays,
+              mainGoals: const [],
+              weeklyChallenges: const [],
+              achievements: state.achievements,
+              achievementCatalog: state.achievementCatalog,
+              alwaysShowAchievements: true,
               onRefresh: () => _refreshChallenges(context),
             );
           }
@@ -75,187 +104,162 @@ class ChallengesPage extends StatelessWidget {
   }
 }
 
+/// Loading: skeletons with the final shape (numeral, headline, rule, rows).
 class _ChallengesLoadingContent extends StatelessWidget {
   const _ChallengesLoadingContent();
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.only(bottom: ExomSpacing.xxxl),
       children: const [
-        _ChallengesHeaderSkeleton(),
-        _ChallengesSectionTitleSkeleton(),
+        _ScreenTitle(),
         Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: ShimmerCard(
-            height: 188,
-            borderRadius: BorderRadius.all(Radius.circular(22)),
-          ),
-        ),
-        _ChallengesSectionTitleSkeleton(width: 168),
-        Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: ShimmerCard(
-            height: 96,
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-          ),
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+          child: ExomSkeleton.numeral(),
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: ShimmerCard(
-            height: 96,
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-          ),
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomSkeleton.headline(),
         ),
-        _ChallengesSectionTitleSkeleton(width: 190, showAction: true),
-        _ChallengesAchievementsSkeleton(),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomSkeleton.rule(),
+        ),
+        SizedBox(height: ExomSpacing.xxl),
+        ExomSkeleton.row(),
+        ExomSkeleton.row(),
+        ExomSkeleton.row(),
       ],
     );
   }
 }
 
-class _ChallengesHeaderSkeleton extends StatelessWidget {
-  const _ChallengesHeaderSkeleton();
+/// Screen headline (sketch `.t1`), painted upper case; one header node with
+/// the original text.
+class _ScreenTitle extends StatelessWidget {
+  const _ScreenTitle();
 
   @override
   Widget build(BuildContext context) {
+    final title = AppLocalizations.of(context).challengesTitle;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShimmerCard(
-                  height: 34,
-                  width: 176,
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                ),
-                SizedBox(height: 8),
-                ShimmerCard(
-                  height: 16,
-                  width: 224,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 12),
-          ShimmerCard(
-            height: 104,
-            width: 96,
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-          ),
-        ],
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        ExomSpacing.xl,
+        ExomSpacing.sm,
+        ExomSpacing.xl,
+        0,
       ),
-    );
-  }
-}
-
-class _ChallengesSectionTitleSkeleton extends StatelessWidget {
-  const _ChallengesSectionTitleSkeleton({
-    this.width = 132,
-    this.showAction = false,
-  });
-
-  final double width;
-  final bool showAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        children: [
-          ShimmerCard(
-            height: 22,
-            width: width,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+      child: Semantics(
+        header: true,
+        label: title,
+        excludeSemantics: true,
+        child: Text(
+          title.toUpperCase(),
+          style: ExomType.screenTitle.copyWith(
+            color: context.exomPalette.textPrimary,
           ),
-          const Spacer(),
-          if (showAction)
-            const ShimmerCard(
-              height: 28,
-              width: 72,
-              borderRadius: BorderRadius.all(Radius.circular(999)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChallengesAchievementsSkeleton extends StatelessWidget {
-  const _ChallengesAchievementsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 3,
-        separatorBuilder: (_, index) => const SizedBox(width: 12),
-        itemBuilder: (_, index) => const ShimmerCard(
-          height: 120,
-          width: 116,
-          borderRadius: BorderRadius.all(Radius.circular(18)),
         ),
       ),
     );
   }
 }
 
-class _ChallengesContent extends StatelessWidget {
-  const _ChallengesContent({required this.state, required this.onRefresh});
+/// Section title (sketch `.t2`): Barlow 800 22 painted upper case, header.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
 
-  final ChallengesLoaded state;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      header: true,
+      label: text,
+      excludeSemantics: true,
+      child: Text(
+        text.toUpperCase(),
+        style: ExomType.section.copyWith(
+          color: context.exomPalette.textPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+TextStyle _bodyStyle(
+  Color color, {
+  double size = 14,
+  FontWeight weight = FontWeight.w400,
+}) => TextStyle(
+  fontFamily: AppTheme.bodyFontFamily,
+  fontSize: size,
+  fontWeight: weight,
+  height: 1.35,
+  color: color,
+);
+
+class _ChallengesContent extends StatelessWidget {
+  const _ChallengesContent({
+    required this.streakDays,
+    required this.mainGoals,
+    required this.weeklyChallenges,
+    required this.achievements,
+    required this.achievementCatalog,
+    required this.alwaysShowAchievements,
+    required this.onRefresh,
+  });
+
+  final int streakDays;
+  final List<ChallengeEntity> mainGoals;
+  final List<ChallengeEntity> weeklyChallenges;
+  final List<AchievementEntity> achievements;
+  final List<AchievementEntity> achievementCatalog;
+
+  /// The empty state always shows the achievements band (as before).
+  final bool alwaysShowAchievements;
   final RefreshCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final showCatalogButton = state.achievementCatalog.isNotEmpty;
-    final unlockedIds = state.achievements
-        .map((achievement) => achievement.id)
-        .toSet();
+    final palette = context.exomPalette;
+    final showCatalogButton = achievementCatalog.isNotEmpty;
+    final noChallenges = mainGoals.isEmpty && weeklyChallenges.isEmpty;
+    final showAchievements =
+        alwaysShowAchievements || achievements.isNotEmpty || showCatalogButton;
 
     return RefreshIndicator(
-      color: context.exomPalette.primary,
-      backgroundColor: context.exomPalette.surface,
+      color: palette.data,
+      backgroundColor: palette.surface,
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: const EdgeInsets.only(bottom: ExomSpacing.xxl),
         children: [
-          _ChallengesHeader(streakDays: state.streakDays),
-          if (state.mainGoals.isNotEmpty) ...[
-            _SectionTitle(title: l10n.mainGoalSection),
-            ...state.mainGoals.map((c) => _MainGoalCard(challenge: c)),
+          const _ScreenTitle(),
+          const SizedBox(height: ExomSpacing.lg),
+          _StreakSection(days: streakDays),
+          if (noChallenges) const _EmptyChallenges(),
+          for (final goal in mainGoals) ...[
+            const SizedBox(height: ExomSpacing.xxxl),
+            _MainGoalBlock(challenge: goal),
           ],
-          if (state.weeklyChallenges.isNotEmpty) ...[
-            _SectionTitle(title: l10n.weeklyChallengesSection),
-            ...state.weeklyChallenges.map((c) => _ChallengeCard(challenge: c)),
+          if (weeklyChallenges.isNotEmpty) ...[
+            const SizedBox(height: ExomSpacing.xxxl),
+            _WeeklyChallenges(challenges: weeklyChallenges),
           ],
-          if (state.achievements.isNotEmpty || showCatalogButton) ...[
-            _SectionTitle(
-              title: l10n.unlockedAchievementsSection,
-              actionLabel: showCatalogButton ? l10n.viewAllButton : null,
-              onActionTap: showCatalogButton
+          if (showAchievements) ...[
+            const SizedBox(height: ExomSpacing.xxxl),
+            _AchievementsBand(
+              achievements: achievements,
+              onViewAll: showCatalogButton
                   ? () => _showAchievementsBoard(
                       context,
-                      catalog: state.achievementCatalog,
-                      unlockedIds: unlockedIds,
+                      catalog: achievementCatalog,
+                      unlockedIds: achievements.map((a) => a.id).toSet(),
                     )
                   : null,
             ),
-            if (state.achievements.isNotEmpty)
-              _AchievementsCarousel(achievements: state.achievements)
-            else
-              const _EmptyAchievementsCard(),
           ],
         ],
       ),
@@ -263,191 +267,402 @@ class _ChallengesContent extends StatelessWidget {
   }
 }
 
-class _ChallengesEmptyContent extends StatelessWidget {
-  const _ChallengesEmptyContent({required this.state, required this.onRefresh});
-
-  final ChallengesEmpty state;
-  final RefreshCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final showCatalogButton = state.achievementCatalog.isNotEmpty;
-    final unlockedIds = state.achievements
-        .map((achievement) => achievement.id)
-        .toSet();
-
-    return RefreshIndicator(
-      color: context.exomPalette.primary,
-      backgroundColor: context.exomPalette.surface,
-      onRefresh: onRefresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 32),
-        children: [
-          _ChallengesHeader(streakDays: state.streakDays),
-          const _EmptyChallengesCard(),
-          _SectionTitle(
-            title: l10n.unlockedAchievementsSection,
-            actionLabel: showCatalogButton ? l10n.viewAllButton : null,
-            onActionTap: showCatalogButton
-                ? () => _showAchievementsBoard(
-                    context,
-                    catalog: state.achievementCatalog,
-                    unlockedIds: unlockedIds,
-                  )
-                : null,
-          ),
-          if (state.achievements.isNotEmpty)
-            _AchievementsCarousel(achievements: state.achievements)
-          else
-            const _EmptyAchievementsCard(),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChallengesHeader extends StatelessWidget {
-  const _ChallengesHeader({required this.streakDays});
-
-  final int streakDays;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.challengesTitle,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.challengesSubtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          _StreakSummaryCard(days: streakDays),
-        ],
-      ),
-    );
-  }
-}
-
-class _StreakSummaryCard extends StatelessWidget {
-  const _StreakSummaryCard({required this.days});
+/// Streak (sketch `.x-mark` + kicker + «Días / seguidos.»): the milestone of
+/// the screen, once.
+class _StreakSection extends StatelessWidget {
+  const _StreakSection({required this.days});
 
   final int days;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-
-    return Container(
-      constraints: const BoxConstraints(minWidth: 92),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: GlassDecoration.accentCard(
-        AppColors.warning,
-        borderRadius: 18,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.local_fire_department_rounded,
-            color: AppColors.warning,
-            size: 24,
+    final value = formatFigure(context, days);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ChallengeMilestoneMark(
+          value: value,
+          semanticsLabel: '$value ${l10n.days}',
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExomKicker(l10n.streak, icon: ChallengeIcons.streak),
+              const SizedBox(height: ExomSpacing.md),
+              ExomTwoLineHeadline(
+                first: l10n.challengesStreakHeadlineFirst,
+                second: l10n.challengesStreakHeadlineSecond,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$days ${l10n.days}',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: AppColors.warning,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l10n.streak,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    this.actionLabel,
-    this.onActionTap,
-  });
-
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onActionTap;
+/// No active challenges (sketch `.x-empty`): flat, no card and no icon.
+class _EmptyChallenges extends StatelessWidget {
+  const _EmptyChallenges();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: palette.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
+          _SectionTitle(l10n.noActiveChallenges),
+          const SizedBox(height: 14),
+          Text(
+            l10n.noActiveChallengesMessage,
+            style: _bodyStyle(palette.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _figures(BuildContext context, ChallengeEntity challenge, String sep) =>
+    '${formatFigure(context, challenge.currentValue)}$sep'
+    '${formatFigure(context, challenge.targetValue)} ${challenge.unit}';
+
+int _percent(ChallengeEntity challenge) => (challenge.progress * 100).toInt();
+
+/// Main goal (sketch `.x-feat`): kicker, title, the percentage at 96 with the
+/// figures and the deadline beside it, and the 50-mark rule with its scale.
+class _MainGoalBlock extends StatelessWidget {
+  const _MainGoalBlock({required this.challenge});
+
+  final ChallengeEntity challenge;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final figures = _figures(context, challenge, ' / ');
+    final deadline = challenge.deadline;
+    final scaleStyle = _bodyStyle(palette.textSecondary, size: 13);
+    return ExomFeatureBlock(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ExomKicker(l10n.mainGoalSection),
+                const SizedBox(height: ExomSpacing.sm),
+                _SectionTitle(challenge.title),
+                if (challenge.description.isNotEmpty) ...[
+                  const SizedBox(height: ExomSpacing.sm),
+                  Text(
+                    challenge.description,
+                    style: _bodyStyle(palette.textSecondary),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: ExomSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ExomNumeral(
+              value: formatFigure(context, _percent(challenge)),
+              unit: '%',
+              side: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    figures,
+                    style: ExomType.headline2Section.copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  if (deadline != null) ...[
+                    const SizedBox(height: ExomSpacing.xs),
+                    Text(
+                      '${l10n.challengeDeadlineLabel}: ${DateFormat('dd MMM yyyy', Localizations.localeOf(context).languageCode).format(deadline)}',
+                      style: _bodyStyle(palette.textSecondary),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-          if (actionLabel != null && onActionTap != null)
-            TextButton(
-              onPressed: onActionTap,
-              style: TextButton.styleFrom(
-                foregroundColor: palette.primary,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              ),
-              child: Text(
-                actionLabel!,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: palette.primary,
-                  fontWeight: FontWeight.w700,
+          const SizedBox(height: ExomSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ChallengeTickRule(
+                  value: challenge.progress,
+                  semanticsLabel: figures,
                 ),
+                const SizedBox(height: 6),
+                ExcludeSemantics(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(formatFigure(context, 0), style: scaleStyle),
+                      const SizedBox(width: ExomSpacing.md),
+                      Text(
+                        formatFigure(context, challenge.targetValue / 2),
+                        style: scaleStyle,
+                      ),
+                      const SizedBox(width: ExomSpacing.md),
+                      Flexible(
+                        child: Text(
+                          '${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
+                          textAlign: TextAlign.end,
+                          style: scaleStyle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Weekly challenges (sketch «Tu semana. / También cuenta.» + `.x-rows`): each
+/// challenge numbered 01, 02, 03… with its figures, deadline, percentage (or
+/// the «hecha» mark) and rule. The model has no category to group them by, so
+/// the numbering follows the challenges.
+class _WeeklyChallenges extends StatelessWidget {
+  const _WeeklyChallenges({required this.challenges});
+
+  final List<ChallengeEntity> challenges;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomTwoLineHeadline(
+              first: l10n.challengesWeekHeadlineFirst,
+              second: l10n.challengesWeekHeadlineSecond,
+            ),
+          ),
+        ),
+        const SizedBox(height: ExomSpacing.lg),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: palette.borderSoft,
+                width: ExomRule.hairline,
+              ),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < challenges.length; i++) ...[
+                ExomNumberedSectionHeader(n: i + 1, title: challenges[i].title),
+                _ChallengeMeter(challenge: challenges[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One weekly challenge (sketch `.x-meter`).
+class _ChallengeMeter extends StatelessWidget {
+  const _ChallengeMeter({required this.challenge});
+
+  final ChallengeEntity challenge;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final deadline = challenge.deadline;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // A wrap, not a row: with very large text on a narrow screen the
+          // figures and the percentage or the «Completado» mark go on two
+          // lines instead of splitting a word of the figures.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: ExomSpacing.md,
+            runSpacing: ExomSpacing.sm,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _figures(context, challenge, '/'),
+                    style: _bodyStyle(
+                      palette.textPrimary,
+                      size: 16,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  if (deadline != null) ...[
+                    const SizedBox(height: ExomSpacing.xs),
+                    Text(
+                      '${l10n.challengeUntilLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(deadline)}',
+                      style: _bodyStyle(palette.textSecondary),
+                    ),
+                  ],
+                ],
+              ),
+              if (challenge.isCompleted)
+                const _DoneMark()
+              else
+                _Percent(value: _percent(challenge)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ExomProgressRule(value: challenge.progress),
+        ],
+      ),
+    );
+  }
+}
+
+/// Percentage of a weekly challenge (sketch `.x-pct`): Barlow 800 36 in the
+/// data colour with a half-size «%».
+class _Percent extends StatelessWidget {
+  const _Percent({required this.value});
+
+  final int value;
+
+  static const double size = 36;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: formatFigure(context, value)),
+          const TextSpan(
+            text: '%',
+            style: TextStyle(fontSize: size / 2),
+          ),
+        ],
+      ),
+      maxLines: 1,
+      softWrap: false,
+      style: TextStyle(
+        fontFamily: AppTheme.displayFontFamily,
+        fontSize: size,
+        fontWeight: FontWeight.w800,
+        height: 0.85,
+        color: context.exomPalette.data,
+      ),
+    );
+  }
+}
+
+/// «Hecha» of the client (sketch `.x-ok`, rule D19): check in the data colour
+/// and the text in the text colour.
+class _DoneMark extends StatelessWidget {
+  const _DoneMark();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(ChallengeIcons.done, size: 16, color: palette.data),
+        const SizedBox(width: 6),
+        Text(
+          AppLocalizations.of(context).completed,
+          style: _bodyStyle(palette.textPrimary),
+        ),
+      ],
+    );
+  }
+}
+
+/// Unlocked achievements (sketch `.x-band` + `.x-tiles`) with «Ver todos».
+class _AchievementsBand extends StatelessWidget {
+  const _AchievementsBand({required this.achievements, this.onViewAll});
+
+  final List<AchievementEntity> achievements;
+  final VoidCallback? onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final viewAll = onViewAll;
+    return ExomBand(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: ExomSpacing.md,
+              children: [
+                _SectionTitle(l10n.unlockedAchievementsSection),
+                if (viewAll != null)
+                  ExomTextLink(label: l10n.viewAllButton, onTap: viewAll),
+              ],
+            ),
+          ),
+          const SizedBox(height: ExomSpacing.sm),
+          if (achievements.isNotEmpty)
+            AchievementTiles(
+              items: [
+                for (final achievement in achievements)
+                  AchievementTileData(name: achievement.name, unlocked: true),
+              ],
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.noUnlockedAchievementsTitle,
+                    style: _bodyStyle(
+                      palette.textPrimary,
+                      size: 16,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: ExomSpacing.xs),
+                  Text(
+                    l10n.noUnlockedAchievementsMessage,
+                    style: _bodyStyle(palette.textSecondary),
+                  ),
+                ],
               ),
             ),
         ],
@@ -456,626 +671,77 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+/// Every achievement of the catalog in a straight EXOM sheet (was
+/// `showPageAwareModalBottomSheet`). Colours are read inside the sheet from
+/// the live theme, so a theme change while it is open repaints it (the
+/// captured-colour defect fixed in E7). It closes with «Cerrar», back, the
+/// scrim, a drag, or when the router location changes (CC 11).
 Future<void> _showAchievementsBoard(
   BuildContext context, {
   required List<AchievementEntity> catalog,
   required Set<String> unlockedIds,
 }) {
-  return showPageAwareModalBottomSheet<void>(
+  return showExomSheet<void>(
     context: context,
-    isScrollControlled: true,
     useRootNavigator: true,
-    backgroundColor: context.exomPalette.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (_) =>
-        _AchievementsBoardSheet(catalog: catalog, unlockedIds: unlockedIds),
+        _AchievementsBoard(catalog: catalog, unlockedIds: unlockedIds),
+    actions: [
+      Builder(
+        builder: (sheetContext) => ExomQuietButton(
+          label: MaterialLocalizations.of(sheetContext).closeButtonLabel,
+          onPressed: () => Navigator.of(sheetContext).pop(),
+        ),
+      ),
+    ],
   );
 }
 
-class _AchievementsBoardSheet extends StatelessWidget {
-  const _AchievementsBoardSheet({
-    required this.catalog,
-    required this.unlockedIds,
-  });
+class _AchievementsBoard extends StatelessWidget {
+  const _AchievementsBoard({required this.catalog, required this.unlockedIds});
 
   final List<AchievementEntity> catalog;
   final Set<String> unlockedIds;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final crossAxisCount = MediaQuery.sizeOf(context).width >= 720 ? 3 : 2;
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.78,
-      minChildSize: 0.5,
-      maxChildSize: 0.94,
-      builder: (context, scrollController) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: Container(
-            color: palette.surface,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 72,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.warning.withValues(alpha: 0.25),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.achievementBoardTitle,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: palette.textPrimary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${unlockedIds.length}/${catalog.length}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: GridView.builder(
-                    controller: scrollController,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.92,
-                    ),
-                    itemCount: catalog.length,
-                    itemBuilder: (_, index) {
-                      final achievement = catalog[index];
-                      return _AchievementBoardCard(
-                        achievement: achievement,
-                        isUnlocked: unlockedIds.contains(achievement.id),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _AchievementBoardCard extends StatelessWidget {
-  const _AchievementBoardCard({
-    required this.achievement,
-    required this.isUnlocked,
-  });
-
-  final AchievementEntity achievement;
-  final bool isUnlocked;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final iconColor = isUnlocked ? AppColors.warning : palette.textDisabled;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: isUnlocked
-          ? GlassDecoration.accentCard(AppColors.warning, borderRadius: 20)
-          : GlassDecoration.card(
-              borderRadius: 20,
-              borderColor: palette.glassBorder.withValues(alpha: 0.14),
-            ),
+    final title = l10n.achievementBoardTitle;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: isUnlocked ? 0.18 : 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  isUnlocked
-                      ? Icons.workspace_premium_rounded
-                      : Icons.workspace_premium_outlined,
-                  color: iconColor,
-                  size: 26,
-                ),
-              ),
-              const Spacer(),
-              Icon(
-                isUnlocked
-                    ? Icons.check_circle_rounded
-                    : Icons.lock_outline_rounded,
-                color: iconColor,
-                size: 18,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            achievement.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: isUnlocked ? palette.textPrimary : palette.textSecondary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
+          Semantics(
+            header: true,
+            label: title,
+            excludeSemantics: true,
             child: Text(
-              achievement.description,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isUnlocked
-                    ? palette.textSecondary
-                    : palette.textDisabled,
-                height: 1.35,
+              title.toUpperCase(),
+              style: ExomType.headline2Section.copyWith(
+                color: palette.textPrimary,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyChallengesCard extends StatelessWidget {
-  const _EmptyChallengesCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(24),
-      borderRadius: 24,
-      child: Column(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: palette.glassBorder.withValues(alpha: 0.18),
-              ),
-              color: palette.glassBackground,
-            ),
-            child: Icon(
-              Icons.star_border_rounded,
-              color: palette.textDisabled,
-              size: 34,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.noActiveChallenges,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.noActiveChallengesMessage,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.45,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyAchievementsCard extends StatelessWidget {
-  const _EmptyAchievementsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 24,
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(
-              4,
-              (_) => const _AchievementPlaceholderCard(),
             ),
           ),
           const SizedBox(height: 18),
-          Text(
-            l10n.noUnlockedAchievementsTitle,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+          ExomNumeral(
+            value: formatFigure(context, unlockedIds.length),
+            unit: '/${formatFigure(context, catalog.length)}',
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.noUnlockedAchievementsMessage,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.35,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AchievementsCarousel extends StatelessWidget {
-  const _AchievementsCarousel({required this.achievements});
-
-  final List<AchievementEntity> achievements;
-
-  @override
-  Widget build(BuildContext context) {
-    if (achievements.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: achievements.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (_, index) =>
-            _AchievementCard(achievement: achievements[index]),
-      ),
-    );
-  }
-}
-
-class _AchievementPlaceholderCard extends StatelessWidget {
-  const _AchievementPlaceholderCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: GlassDecoration.card(
-        borderRadius: 14,
-        borderColor: palette.glassBorder.withValues(alpha: 0.18),
-      ),
-      child: Icon(
-        Icons.lock_outline_rounded,
-        color: palette.textDisabled,
-        size: 28,
-      ),
-    );
-  }
-}
-
-class _MainGoalCard extends StatelessWidget {
-  const _MainGoalCard({required this.challenge});
-
-  final ChallengeEntity challenge;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.accentCard(
-        AppColors.warning,
-        borderRadius: 22,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.emoji_events_rounded,
-                color: AppColors.warning,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  challenge.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+          const SizedBox(height: 18),
+          AchievementTiles(
+            padding: EdgeInsets.zero,
+            items: [
+              for (final achievement in catalog)
+                AchievementTileData(
+                  name: achievement.name,
+                  description: achievement.description,
+                  unlocked: unlockedIds.contains(achievement.id),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            challenge.description,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.progress,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                '${(challenge.progress * 100).toInt()}%',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.warning,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _GlowingProgressBar(
-            value: challenge.progress,
-            color: challenge.isCompleted
-                ? AppColors.success
-                : AppColors.warning,
-            backgroundColor: AppColors.warning.withValues(alpha: 0.18),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${formatFigure(context, challenge.currentValue)} / ${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          if (challenge.deadline != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              '${l10n.challengeDeadlineLabel}: ${DateFormat('dd MMM yyyy', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textDisabled,
-                fontSize: 11,
-              ),
-            ),
-          ],
         ],
-      ),
-    );
-  }
-}
-
-class _ChallengeCard extends StatelessWidget {
-  const _ChallengeCard({required this.challenge});
-
-  final ChallengeEntity challenge;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-    final progressColor = challenge.isCompleted
-        ? AppColors.warning
-        : palette.primary;
-
-    return GlassCard(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(16),
-      borderRadius: 18,
-      accentColor: challenge.isCompleted ? AppColors.warning : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                challenge.isCompleted ? Icons.check_circle : Icons.emoji_events,
-                color: challenge.isCompleted
-                    ? AppColors.success
-                    : progressColor,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  challenge.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                '${formatFigure(context, challenge.currentValue)}/${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _GlowingProgressBar(
-            value: challenge.progress,
-            color: challenge.isCompleted ? AppColors.success : progressColor,
-            backgroundColor: palette.glassBackground,
-          ),
-          if (challenge.deadline != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              '${l10n.challengeUntilLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(challenge.deadline!)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textDisabled,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _AchievementCard extends StatelessWidget {
-  const _AchievementCard({required this.achievement});
-
-  final AchievementEntity achievement;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
-      decoration: GlassDecoration.accentCard(
-        AppColors.warning,
-        borderRadius: 16,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.workspace_premium,
-            color: AppColors.warning,
-            size: 32,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            achievement.name,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlowingProgressBar extends StatelessWidget {
-  const _GlowingProgressBar({
-    required this.value,
-    required this.color,
-    required this.backgroundColor,
-  });
-
-  final double value;
-  final Color color;
-  final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        height: 10,
-        color: backgroundColor,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: value.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 0),
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

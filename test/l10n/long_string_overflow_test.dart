@@ -21,6 +21,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../features/challenges/challenges_test_support.dart';
+
 const _codes = [
   'progress_conflict_review_required',
   'PROGRESS_VERSION_CONFLICT',
@@ -145,6 +147,32 @@ Future<void> _pumpMetricsForm(
 }
 
 void main() {
+  // L5-B2 «Retos»: the main scene and its all-achievements sheet at 320 dp
+  // with 1.3x and 1.6x text, in both languages (CC 3).
+  for (final locale in const [Locale('es'), Locale('en')]) {
+    for (final scale in const [1.3, 1.6]) {
+      testWidgets(
+        'Retos does not overflow at 320dp, ${scale}x, ${locale.languageCode}',
+        (tester) async {
+          await pumpChallengesPage(
+            tester,
+            realisticRepository(locale),
+            width: 320,
+            height: 6000,
+            locale: locale,
+            textScaler: TextScaler.linear(scale),
+          );
+          expect(tester.takeException(), isNull);
+          await openAchievementsBoard(
+            tester,
+            locale.languageCode == 'es' ? 'Ver todos' : 'View all',
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets('error and upload states do not overflow at 320dp, 1.3x text', (tester) async {
     await _pump(tester, (context) {
       final l10n = AppLocalizations.of(context);

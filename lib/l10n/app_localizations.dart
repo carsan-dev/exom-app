@@ -1190,11 +1190,29 @@ abstract class AppLocalizations {
   /// **'Mis Retos'**
   String get challengesTitle;
 
-  /// No description provided for @challengesSubtitle.
+  /// No description provided for @challengesStreakHeadlineFirst.
   ///
   /// In es, this message translates to:
-  /// **'Supera tus límites cada día'**
-  String get challengesSubtitle;
+  /// **'Días'**
+  String get challengesStreakHeadlineFirst;
+
+  /// No description provided for @challengesStreakHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'seguidos.'**
+  String get challengesStreakHeadlineSecond;
+
+  /// No description provided for @challengesWeekHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu semana.'**
+  String get challengesWeekHeadlineFirst;
+
+  /// No description provided for @challengesWeekHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'También cuenta.'**
+  String get challengesWeekHeadlineSecond;
 
   /// No description provided for @challengesLoadError.
   ///
@@ -1225,6 +1243,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver todos'**
   String get viewAllButton;
+
+  /// No description provided for @achievementLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueado'**
+  String get achievementLocked;
 
   /// No description provided for @achievementBoardTitle.
   ///

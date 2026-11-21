@@ -620,7 +620,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengesTitle => 'My Challenges';
 
   @override
-  String get challengesSubtitle => 'Push your limits every day';
+  String get challengesStreakHeadlineFirst => 'Days';
+
+  @override
+  String get challengesStreakHeadlineSecond => 'in a row.';
+
+  @override
+  String get challengesWeekHeadlineFirst => 'Your week.';
+
+  @override
+  String get challengesWeekHeadlineSecond => 'It counts too.';
 
   @override
   String get challengesLoadError => 'Could not load challenges';
@@ -636,6 +645,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewAllButton => 'View all';
+
+  @override
+  String get achievementLocked => 'Locked';
 
   @override
   String get achievementBoardTitle => 'All achievements';

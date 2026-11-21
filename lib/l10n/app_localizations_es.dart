@@ -4095,4 +4095,30 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoPlayerForward5 => 'Avanzar 5 s';
+
+  @override
+  String get dietHeadlineFirst => 'Tu comida.';
+
+  @override
+  String get dietHeadlineSecond => 'Sin improvisar.';
+
+  @override
+  String get dietEmptyHeadlineFirst => 'Sin plan.';
+
+  @override
+  String get dietEmptyHeadlineSecond => 'Por ahora.';
+
+  @override
+  String get dietLeftKicker => 'Te quedan';
+
+  @override
+  String dietOfTotalKcal(int total) {
+    return 'de $total kcal';
+  }
+
+  @override
+  String get mealOptionsLabel => 'Opciones';
+
+  @override
+  String get mealDoneStatus => 'Hecha';
 }

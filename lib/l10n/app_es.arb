@@ -1381,5 +1381,14 @@
   "videoPlayerPlay": "Reproducir",
   "videoPlayerProgress": "Progreso del vídeo",
   "videoPlayerRewind5": "Retroceder 5 s",
-  "videoPlayerForward5": "Avanzar 5 s"
+  "videoPlayerForward5": "Avanzar 5 s",
+  "dietHeadlineFirst": "Tu comida.",
+  "dietHeadlineSecond": "Sin improvisar.",
+  "dietEmptyHeadlineFirst": "Sin plan.",
+  "dietEmptyHeadlineSecond": "Por ahora.",
+  "dietLeftKicker": "Te quedan",
+  "dietOfTotalKcal": "de {total} kcal",
+  "@dietOfTotalKcal": {"placeholders": {"total": {"type": "int"}}},
+  "mealOptionsLabel": "Opciones",
+  "mealDoneStatus": "Hecha"
 }

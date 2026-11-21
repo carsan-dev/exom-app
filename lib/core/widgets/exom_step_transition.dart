@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 /// side. Reduced motion: a 100 ms fade, no offset.
 ///
 /// The new step takes taps from the first frame; the leaving one ignores
-/// them. A new change mid-animation starts from where things are: each step
+/// them and is out of the semantics tree (L5-A4c). A new change mid-animation starts from where things are: each step
 /// keeps the curve of the direction its animation started in until it comes
 /// to rest, so reversing mid-way does not jump.
 class ExomStepTransition extends StatefulWidget {
@@ -134,16 +134,21 @@ class _StepEntryState extends State<_StepEntry> {
   Widget build(BuildContext context) {
     final curved = _curved;
     final offset = _offset;
+    // The leaving step is only painted: it takes no taps and a screen reader
+    // does not read it (L5-A4c), so the content is never announced twice.
     return IgnorePointer(
       ignoring: !widget.incoming,
-      child: FadeTransition(
-        opacity: curved,
-        child: AnimatedBuilder(
-          animation: curved,
-          child: widget.child,
-          builder: (context, child) => Transform.translate(
-            offset: Offset((1 - curved.value) * offset, 0),
-            child: child,
+      child: ExcludeSemantics(
+        excluding: !widget.incoming,
+        child: FadeTransition(
+          opacity: curved,
+          child: AnimatedBuilder(
+            animation: curved,
+            child: widget.child,
+            builder: (context, child) => Transform.translate(
+              offset: Offset((1 - curved.value) * offset, 0),
+              child: child,
+            ),
           ),
         ),
       ),

@@ -164,10 +164,39 @@ Future<SeededCalendarBloc> pumpCalendarScene(
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
 }) async {
+  final bloc = SeededCalendarBloc(state);
+  await pumpCalendarWithBloc(
+    tester,
+    bloc,
+    initialDate: initialDate,
+    brightness: brightness,
+    width: width,
+    height: height,
+    textScale: textScale,
+    textScaler: textScaler,
+    locale: locale,
+    disableAnimations: disableAnimations,
+  );
+  return bloc;
+}
+
+/// Mounts the real CalendarPage, as [pumpCalendarScene], on [bloc] (e.g. the
+/// real CalendarBloc over controlled repositories).
+Future<void> pumpCalendarWithBloc(
+  WidgetTester tester,
+  CalendarBloc bloc, {
+  String? initialDate = '2026-10-15',
+  Brightness brightness = Brightness.dark,
+  double width = 390,
+  double height = 844,
+  double textScale = 1.0,
+  TextScaler? textScaler,
+  Locale locale = const Locale('es'),
+  bool disableAnimations = true,
+}) async {
   await loadRedesignFonts();
   await sl.reset();
   openedRoutes.clear();
-  final bloc = SeededCalendarBloc(state);
   sl.registerFactory<CalendarBloc>(() => bloc);
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1.0;
@@ -216,5 +245,4 @@ Future<SeededCalendarBloc> pumpCalendarScene(
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
-  return bloc;
 }

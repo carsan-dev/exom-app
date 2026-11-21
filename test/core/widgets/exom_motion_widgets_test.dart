@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'exom_component_harness.dart';
+import 'semantic_labels.dart';
 
 double _effectiveOpacity(WidgetTester tester, Finder finder) {
   var opacity = 1.0;
@@ -638,6 +639,29 @@ void main() {
       await tester.pump();
       expect(_stepDx(tester, 1), closeTo(-24, 0.01));
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('only the new step is in the semantics tree (L5-A4c)', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final key = GlobalKey<_StepHostState>();
+      await pumpComponent(tester, _StepHost(key: key, onTap: () {}));
+      key.currentState!.go(1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      // Both steps are painted mid-way, but a screen reader reads one.
+      expect(find.text('Paso 1'), findsOneWidget);
+      expect(semanticCount(tester, 'Paso 1'), 0);
+      expect(semanticCount(tester, 'Paso 2'), 1);
+      // Going back mid-way: the returning step is read again, alone.
+      key.currentState!.go(0);
+      await tester.pump();
+      expect(semanticCount(tester, 'Paso 1'), 1);
+      expect(semanticCount(tester, 'Paso 2'), 0);
+      await tester.pumpAndSettle();
+      expect(semanticCount(tester, 'Paso 1'), 1);
+      handle.dispose();
     });
 
     testWidgets('the new step takes taps at once; the old one does not', (

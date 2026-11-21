@@ -236,6 +236,10 @@ void main() {
         1200,
       );
       await tester.pumpAndSettle();
+      // L5-A4c: the grid takes no gestures until the month asked for
+      // arrives, so the second swipe starts from November once loaded.
+      bloc.seed(sceneLoaded(month: 11));
+      await tester.pumpAndSettle();
       await tester.fling(
         find.byType(ExomMonthGrid),
         const Offset(300, 0),
@@ -245,7 +249,7 @@ void main() {
       final loads = bloc.events.whereType<CalendarMonthLoadRequested>();
       expect(loads.map((e) => (e.year, e.month, e.selectedDate)), [
         (2026, 11, kSceneSelected),
-        (2026, 9, kSceneSelected),
+        (2026, 10, kSceneSelected),
       ]);
     });
   });

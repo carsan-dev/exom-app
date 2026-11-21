@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_arrival.dart';
@@ -21,10 +23,12 @@ import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_month_grid.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_operation_bar.dart';
 import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_step_transition.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
@@ -156,6 +160,141 @@ class _CalendarViewState extends State<_CalendarView> {
   /// error state), so it never comes back for a later visit to its month.
   _ExportMessage? _exportMessage;
 
+  // L5-A4c: month changes keep the shown month until the one asked for
+  // arrives. The bloc handles its events concurrently (no transformer), so
+  // responses can arrive after a later request or out of order. The page
+  // follows only its TARGET (the last month it asked for):
+  // * a CalendarLoaded of the target is adopted (also a day selection or a
+  //   refresh of that month);
+  // * a CalendarLoaded of another month is never adopted. While the target is
+  //   pending it is ignored (the page stays busy). If it arrives after the
+  //   target was adopted (late response of an abandoned month) the bloc has
+  //   settled on a month the page does not show, so the page asks for the
+  //   target again, once;
+  // * an error while the target is pending (or with nothing shown) is shown
+  //   as before; a late error after the target was adopted is treated like a
+  //   late month: the target is asked for again.
+  // No endless re-requests: a re-request is only sent when nothing is
+  // pending, and only in answer to a response of an abandoned request. The
+  // responses to target requests are adopted, never re-requested, and the
+  // abandoned requests in flight are finite, so the re-requests are too.
+
+  /// The month on screen (always the target once adopted).
+  CalendarLoaded? _shown;
+
+  /// The month (year, month) the page wants: the first month loaded, then the
+  /// last one it asked for. The title and the arrows work from it.
+  (int, int)? _target;
+
+  /// A request of [_target] has not been answered yet.
+  bool _pending = false;
+
+  /// The load error on screen.
+  CalendarError? _error;
+
+  /// The load has lasted more than [ExomMotion.busyIndicatorDelay].
+  bool _slow = false;
+  Timer? _slowTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // The bloc may already hold a state the listener will not report.
+    _absorb(context.read<CalendarBloc>().state, react: false);
+  }
+
+  @override
+  void dispose() {
+    _slowTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Updates what the page shows for a new [state] of the bloc (see the
+  /// rules above). With [react] it may ask for the target again.
+  void _absorb(CalendarState state, {required bool react}) {
+    switch (state) {
+      case CalendarLoading():
+        _error = null;
+      case CalendarLoaded():
+        final month = (state.year, state.month);
+        _target ??= month;
+        if (month == _target) {
+          _shown = state;
+          _pending = false;
+          _error = null;
+        } else if (!_pending && react) {
+          _askTarget();
+        }
+      case CalendarError():
+        if (_pending || _shown == null) {
+          _error = state;
+          _shown = null;
+          _pending = false;
+        } else if (react) {
+          _askTarget();
+        }
+      default:
+        break;
+    }
+  }
+
+  /// Asks the bloc for [_target] again, keeping the selected day.
+  void _askTarget() {
+    final target = _target;
+    if (target == null) return;
+    _pending = true;
+    final selected = _shown?.selectedDate;
+    context.read<CalendarBloc>().add(
+      CalendarMonthLoadRequested(
+        year: target.$1,
+        month: target.$2,
+        selectedDate:
+            selected != null &&
+                selected.year == target.$1 &&
+                selected.month == target.$2
+            ? selected
+            : null,
+      ),
+    );
+  }
+
+  bool _isBusy(CalendarState state) => _pending || state is CalendarLoading;
+
+  void _onStateChanged(BuildContext context, CalendarState state) {
+    _absorb(state, react: true);
+    // The slow-load indicator: armed once per busy period over a kept month.
+    if (_isBusy(state) && _shown != null) {
+      _slowTimer ??= Timer(ExomMotion.busyIndicatorDelay, () {
+        if (mounted) setState(() => _slow = true);
+      });
+    } else {
+      _slowTimer?.cancel();
+      _slowTimer = null;
+      _slow = false;
+    }
+  }
+
+  /// Asks the bloc for [year]-[month] (every month change of this page).
+  void _requestMonth(
+    BuildContext context,
+    int year,
+    int month, {
+    DateTime? selectedDate,
+  }) {
+    final bloc = context.read<CalendarBloc>();
+    setState(() {
+      _target = (year, month);
+      _pending = true;
+    });
+    bloc.add(
+      CalendarMonthLoadRequested(
+        year: year,
+        month: month,
+        selectedDate: selectedDate,
+      ),
+    );
+  }
+
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
   DateTime _normalizeDay(DateTime date) {
@@ -178,24 +317,22 @@ class _CalendarViewState extends State<_CalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CalendarBloc, CalendarState>(
+    return BlocConsumer<CalendarBloc, CalendarState>(
+      listener: _onStateChanged,
       builder: (context, state) {
         if (state is! CalendarLoaded) _exportMessage = null;
-        if (state is CalendarLoading || state is CalendarInitial) {
-          return const _CalendarLoadingView();
-        }
-        if (state is CalendarError) {
-          return _buildErrorState(context, state);
-        }
-        if (state is CalendarLoaded) {
-          final animate = !_contentArrived;
-          _contentArrived = true;
-          return ExomArrival(
-            animate: animate,
-            child: _buildContent(context, state),
-          );
-        }
-        return const SizedBox.shrink();
+        final error = _error;
+        if (error != null) return _buildErrorState(context, error);
+        // First load: the skeleton. A later load keeps the last month.
+        final shown = _shown;
+        if (shown == null) return const _CalendarLoadingView();
+        final busy = _isBusy(state);
+        final animate = !_contentArrived;
+        _contentArrived = true;
+        return ExomArrival(
+          animate: animate,
+          child: _buildContent(context, shown, busy: busy, slow: busy && _slow),
+        );
       },
     );
   }
@@ -224,9 +361,7 @@ class _CalendarViewState extends State<_CalendarView> {
     final l10n = AppLocalizations.of(context);
     void retry() {
       final now = DateTime.now();
-      context.read<CalendarBloc>().add(
-        CalendarMonthLoadRequested(year: now.year, month: now.month),
-      );
+      _requestMonth(context, now.year, now.month);
     }
 
     final apiException = state.apiException;
@@ -266,7 +401,15 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Widget _buildContent(BuildContext context, CalendarLoaded state) {
+  /// [busy]: another month is loading; this one stays and ignores taps
+  /// except on the header and the segmented control. [slow]: that load is
+  /// slow, so the operation bar shows over the top edge.
+  Widget _buildContent(
+    BuildContext context,
+    CalendarLoaded state, {
+    bool busy = false,
+    bool slow = false,
+  }) {
     final l10n = AppLocalizations.of(context);
     final message = _exportMessage;
     if (message != null &&
@@ -295,20 +438,31 @@ class _CalendarViewState extends State<_CalendarView> {
         hasChallengeMarkers;
 
     final hero = _buildHero(context, state);
+    final (year, month) = _target ?? (state.year, state.month);
+    final monthStep = state.year * 12 + state.month;
+    Widget frozen(Widget child) => IgnorePointer(ignoring: busy, child: child);
     final blocks = <Widget>[
       _MonthHeader(
-        year: state.year,
-        month: state.month,
-        onPrevious: () => _changeMonth(context, state, -1),
-        onNext: () => _changeMonth(context, state, 1),
-        onTitleTap: () => _showMonthYearPicker(context, state),
+        year: year,
+        month: month,
+        onPrevious: () => _changeMonth(context, year, month, -1),
+        onNext: () => _changeMonth(context, year, month, 1),
+        onTitleTap: () => _showMonthYearPicker(context, year, month),
       ),
       if (hero != null)
-        Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 0), child: hero),
+        frozen(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            // L5-A4c: the figure moves with the month.
+            child: ExomStepTransition(step: monthStep, child: hero),
+          ),
+        ),
       _buildToggle(context),
-      Padding(
-        padding: EdgeInsets.only(top: hasActivities ? 8 : 16),
-        child: _buildCalendar(context, state, dayMap, challengeMap),
+      frozen(
+        Padding(
+          padding: EdgeInsets.only(top: hasActivities ? 8 : 16),
+          child: _buildCalendar(context, state, dayMap, challengeMap),
+        ),
       ),
       if (!hasActivities)
         ExomEmptyState(
@@ -318,20 +472,36 @@ class _CalendarViewState extends State<_CalendarView> {
           body: l10n.noActivitiesThisMonthSubtitle,
         )
       else ...[
-        if (!_showTrainings) _buildWeeklyDietExport(context, state),
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: _buildSelectedDayCard(context, state, dayMap, challengeMap),
+        if (!_showTrainings) frozen(_buildWeeklyDietExport(context, state)),
+        frozen(
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _buildSelectedDayCard(context, state, dayMap, challengeMap),
+          ),
         ),
       ],
-      _buildChallengesShortcut(context),
+      frozen(_buildChallengesShortcut(context)),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        for (final (index, block) in blocks.indexed)
-          ExomArrivalItem(index: index, child: block),
+        ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            for (final (index, block) in blocks.indexed)
+              ExomArrivalItem(index: index, child: block),
+          ],
+        ),
+        // L5-A4c: a slow month load shows the operation bar over the kept
+        // month, at the top edge, without moving it.
+        if (slow)
+          const Positioned(
+            top: 0,
+            left: 20,
+            right: 20,
+            child: ExomOperationBar(),
+          ),
       ],
     );
   }
@@ -512,36 +682,40 @@ class _CalendarViewState extends State<_CalendarView> {
     }
   }
 
-  void _changeMonth(BuildContext context, CalendarLoaded state, int delta) {
-    var year = state.year;
-    var month = state.month + delta;
-    if (month > 12) {
-      month = 1;
-      year++;
-    } else if (month < 1) {
-      month = 12;
-      year--;
+  /// [delta] months from [year]-[month], the month of the title (the
+  /// requested one while it loads).
+  void _changeMonth(BuildContext context, int year, int month, int delta) {
+    var targetYear = year;
+    var targetMonth = month + delta;
+    if (targetMonth > 12) {
+      targetMonth = 1;
+      targetYear++;
+    } else if (targetMonth < 1) {
+      targetMonth = 12;
+      targetYear--;
     }
-    context.read<CalendarBloc>().add(
-      CalendarMonthLoadRequested(year: year, month: month),
-    );
+    _requestMonth(context, targetYear, targetMonth);
   }
 
   Future<void> _showMonthYearPicker(
     BuildContext context,
-    CalendarLoaded state,
+    int shownYear,
+    int shownMonth,
   ) async {
-    final bloc = context.read<CalendarBloc>();
     // D14-2: straight sheet; one tap on a month goes there (no «Ir al mes»).
     final result = await showExomSheet<(int, int)>(
       context: context,
       builder: (_) =>
-          _MonthYearSheet(shownYear: state.year, shownMonth: state.month),
+          _MonthYearSheet(shownYear: shownYear, shownMonth: shownMonth),
     );
 
-    if (result != null) {
+    // The month already shown (or already asked for): the sheet just closes,
+    // without reloading or resetting the selected day.
+    if (result != null &&
+        context.mounted &&
+        result != (shownYear, shownMonth)) {
       final (year, month) = result;
-      bloc.add(CalendarMonthLoadRequested(year: year, month: month));
+      _requestMonth(context, year, month);
     }
   }
 
@@ -655,12 +829,11 @@ class _CalendarViewState extends State<_CalendarView> {
         state.year,
         state.month + (velocity < 0 ? 1 : -1),
       );
-      context.read<CalendarBloc>().add(
-        CalendarMonthLoadRequested(
-          year: target.year,
-          month: target.month,
-          selectedDate: state.selectedDate,
-        ),
+      _requestMonth(
+        context,
+        target.year,
+        target.month,
+        selectedDate: state.selectedDate,
       );
     }
 
@@ -673,6 +846,9 @@ class _CalendarViewState extends State<_CalendarView> {
           selected: state.selectedDate,
           today: today,
           doneAsFill: true,
+          // L5-A4c: the day fill slides and the weeks move with the month.
+          slideSelection: true,
+          monthTransition: true,
           markOf: (date) => _markOf(dayMap[date], date, today),
           flagOf: (date) => challengeMap[date]?.isNotEmpty ?? false,
           flagLabelOf: l10n.calendarDayWithChallenge,
@@ -947,7 +1123,10 @@ class _MonthHeader extends StatelessWidget {
       padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 8, 0),
       child: Row(
         children: [
-          Expanded(child: title),
+          // L5-A4c: the title moves to the requested month at once.
+          Expanded(
+            child: ExomStepTransition(step: year * 12 + month, child: title),
+          ),
           if (previous != null)
             IconButton(
               key: _previousMonthKey,

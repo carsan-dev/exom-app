@@ -623,4 +623,125 @@ void main() {
       handle.dispose();
     });
   });
+
+  // L5-A4c (sketch a-diario.html#calendario): with slideSelection the bone
+  // fill of the chosen day slides between cells in ExomMotion.selectionSlide
+  // (200 ms, ease-out); reduced motion keeps the 120 ms crossfade in place.
+  // With monthTransition the weeks of a new month enter horizontally while
+  // the weekday initials stay.
+  group('L5-A4c motion (optional)', () {
+    Widget slideGrid(DateTime selected, {bool slide = true}) => ExomMonthGrid(
+      month: _month,
+      selected: selected,
+      today: _today,
+      markOf: _marks,
+      onSelect: (_) {},
+      doneAsFill: true,
+      slideSelection: slide,
+    );
+
+    final from = DateTime(2026, 11, 10);
+    final to = DateTime(2026, 11, 12);
+    final otherWeek = DateTime(2026, 11, 26);
+
+    testWidgets('the fill slides from the previous cell in 200 ms', (
+      tester,
+    ) async {
+      await pumpComponent(tester, slideGrid(from));
+      await tester.pumpAndSettle();
+      final fill = find.byKey(ExomMonthGrid.selectionFillKey);
+      expect(fill, findsOneWidget);
+      final fromRect = tester.getRect(
+        find.byKey(ExomMonthGrid.visualKey(from)),
+      );
+      expect(tester.getRect(fill), fromRect);
+      await pumpComponent(tester, slideGrid(to));
+      final toRect = tester.getRect(find.byKey(ExomMonthGrid.visualKey(to)));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(tester.getRect(fill).left, closeTo(fromRect.left, 2));
+      await tester.pump(const Duration(milliseconds: 99));
+      final mid = tester.getRect(fill).left;
+      expect(mid, greaterThan(fromRect.left));
+      expect(mid, lessThan(toRect.left));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(tester.getRect(fill).left, lessThan(toRect.left));
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(tester.getRect(fill), toRect);
+      expect(ExomMotion.selectionSlide, const Duration(milliseconds: 200));
+      // The cell itself carries no fill: the sliding layer paints it.
+      expect(_decorationOf(tester, to).color, isNull);
+    });
+
+    testWidgets('to another week it slides along the new row', (tester) async {
+      await pumpComponent(tester, slideGrid(from));
+      await tester.pumpAndSettle();
+      await pumpComponent(tester, slideGrid(otherWeek));
+      await tester.pump(const Duration(milliseconds: 100));
+      final target = tester.getRect(
+        find.byKey(ExomMonthGrid.visualKey(otherWeek)),
+      );
+      final mid = tester.getRect(find.byKey(ExomMonthGrid.selectionFillKey));
+      expect(mid.top, target.top);
+      expect(mid.left, lessThan(target.left));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(ExomMonthGrid.selectionFillKey)),
+        target,
+      );
+    });
+
+    testWidgets('reduced motion: no sliding layer, crossfade in the cell', (
+      tester,
+    ) async {
+      await pumpComponent(tester, slideGrid(from), disableAnimations: true);
+      await pumpComponent(tester, slideGrid(to), disableAnimations: true);
+      expect(find.byKey(ExomMonthGrid.selectionFillKey), findsNothing);
+      await tester.pumpAndSettle();
+      final palette = themeFor(
+        Brightness.dark,
+      ).extension<ExomThemePalette>()!;
+      expect(_decorationOf(tester, to).color, palette.selectionFill);
+    });
+
+    testWidgets('without slideSelection the grid is unchanged', (
+      tester,
+    ) async {
+      await pumpComponent(tester, slideGrid(from, slide: false));
+      expect(find.byKey(ExomMonthGrid.selectionFillKey), findsNothing);
+      final palette = themeFor(
+        Brightness.dark,
+      ).extension<ExomThemePalette>()!;
+      expect(_decorationOf(tester, from).color, palette.selectionFill);
+    });
+
+    testWidgets('monthTransition: the weeks move, the initials stay', (
+      tester,
+    ) async {
+      Widget monthGrid(DateTime month) => ExomMonthGrid(
+        month: month,
+        selected: null,
+        today: _today,
+        markOf: (_) => ExomDayMark.none,
+        monthTransition: true,
+      );
+      await pumpComponent(tester, monthGrid(_month));
+      final header = tester.getRect(find.byKey(ExomMonthGrid.weekdayHeaderKey));
+      final day = DateTime(2026, 12, 15);
+      await pumpComponent(tester, monthGrid(DateTime(2026, 12)));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        tester.getRect(find.byKey(ExomMonthGrid.weekdayHeaderKey)),
+        header,
+      );
+      expect(find.byKey(ExomMonthGrid.weekdayHeaderKey), findsOneWidget);
+      final mid = tester.getTopLeft(find.byKey(ExomMonthGrid.visualKey(day)));
+      await tester.pumpAndSettle();
+      final rest = tester.getTopLeft(find.byKey(ExomMonthGrid.visualKey(day)));
+      expect(mid.dx, greaterThan(rest.dx));
+      expect(
+        find.byKey(ExomMonthGrid.visualKey(DateTime(2026, 11, 15))),
+        findsNothing,
+      );
+    });
+  });
 }

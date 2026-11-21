@@ -230,6 +230,24 @@ abstract class AppLocalizations {
   /// **'Tu entrenador personal, siempre contigo'**
   String get appTagline;
 
+  /// No description provided for @loginHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu plan.'**
+  String get loginHeadlineFirst;
+
+  /// No description provided for @loginHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Siempre contigo.'**
+  String get loginHeadlineSecond;
+
+  /// No description provided for @loginSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrenador crea tu cuenta al empezar. Entra con el correo que le diste.'**
+  String get loginSubtitle;
+
   /// No description provided for @splashTagline.
   ///
   /// In es, this message translates to:
@@ -259,6 +277,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Contraseña'**
   String get passwordFieldLabel;
+
+  /// No description provided for @passwordShowTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get passwordShowTooltip;
+
+  /// No description provided for @passwordHideTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get passwordHideTooltip;
 
   /// No description provided for @passwordValidationEmpty.
   ///
@@ -302,6 +332,18 @@ abstract class AppLocalizations {
   /// **'Recupera tu contraseña'**
   String get forgotPasswordTitle;
 
+  /// No description provided for @forgotHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Recupera'**
+  String get forgotHeadlineFirst;
+
+  /// No description provided for @forgotHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'tu contraseña.'**
+  String get forgotHeadlineSecond;
+
   /// No description provided for @forgotPasswordSubtitle.
   ///
   /// In es, this message translates to:
@@ -311,19 +353,37 @@ abstract class AppLocalizations {
   /// No description provided for @sendResetEmailButton.
   ///
   /// In es, this message translates to:
-  /// **'Enviar enlace de recuperación'**
+  /// **'Enviar enlace'**
   String get sendResetEmailButton;
 
   /// No description provided for @resetEmailSentTitle.
   ///
   /// In es, this message translates to:
-  /// **'¡Email enviado!'**
+  /// **'Email enviado'**
   String get resetEmailSentTitle;
+
+  /// No description provided for @resetEmailSentFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Email'**
+  String get resetEmailSentFirst;
+
+  /// No description provided for @resetEmailSentSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'enviado.'**
+  String get resetEmailSentSecond;
+
+  /// No description provided for @resetEmailSentLinkTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace enviado'**
+  String get resetEmailSentLinkTitle;
 
   /// No description provided for @resetEmailSentSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de spam.'**
+  /// **'Hemos enviado un enlace a {email}. Revisa tu bandeja de entrada y la carpeta de correo no deseado.'**
   String resetEmailSentSubtitle(Object email);
 
   /// No description provided for @loginButton.
@@ -359,7 +419,7 @@ abstract class AppLocalizations {
   /// No description provided for @linkSocialDescription.
   ///
   /// In es, this message translates to:
-  /// **'Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular también {provider} y poder iniciar sesión con ambos métodos.'**
+  /// **'Ya existe una cuenta EXOM para {email}. Introduce tu contraseña actual para vincular este acceso.'**
   String linkSocialDescription(Object email, Object provider);
 
   /// No description provided for @linkSocialConfirmButton.
@@ -377,8 +437,32 @@ abstract class AppLocalizations {
   /// No description provided for @accountLockedMessage.
   ///
   /// In es, this message translates to:
-  /// **'Tu cuenta ha sido bloqueada temporalmente.\nContacta a tu entrenador para más información.'**
+  /// **'Tu cuenta ha sido bloqueada temporalmente.'**
   String get accountLockedMessage;
+
+  /// No description provided for @accountLockedHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get accountLockedHeadlineFirst;
+
+  /// No description provided for @accountLockedHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'bloqueada.'**
+  String get accountLockedHeadlineSecond;
+
+  /// No description provided for @accountLockedCoachAuthor.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrenador'**
+  String get accountLockedCoachAuthor;
+
+  /// No description provided for @accountLockedCoachMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Contacta conmigo para más información.'**
+  String get accountLockedCoachMessage;
 
   /// No description provided for @backToLoginButton.
   ///

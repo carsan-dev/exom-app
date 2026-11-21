@@ -90,6 +90,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTagline => 'Your personal coach, always with you';
 
   @override
+  String get loginHeadlineFirst => 'Your plan.';
+
+  @override
+  String get loginHeadlineSecond => 'Always with you.';
+
+  @override
+  String get loginSubtitle =>
+      'Your coach creates your account when you start. Sign in with the email you gave them.';
+
+  @override
   String get splashTagline => 'Train. Eat. Evolve.';
 
   @override
@@ -103,6 +113,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get passwordFieldLabel => 'Password';
+
+  @override
+  String get passwordShowTooltip => 'Show password';
+
+  @override
+  String get passwordHideTooltip => 'Hide password';
 
   @override
   String get passwordValidationEmpty => 'Enter your password';
@@ -128,18 +144,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forgotPasswordTitle => 'Recover your password';
 
   @override
+  String get forgotHeadlineFirst => 'Recover';
+
+  @override
+  String get forgotHeadlineSecond => 'your password.';
+
+  @override
   String get forgotPasswordSubtitle =>
       'Enter the email associated with your account and we\'ll send you a link to reset it.';
 
   @override
-  String get sendResetEmailButton => 'Send recovery link';
+  String get sendResetEmailButton => 'Send link';
 
   @override
-  String get resetEmailSentTitle => 'Email sent!';
+  String get resetEmailSentTitle => 'Email sent';
+
+  @override
+  String get resetEmailSentFirst => 'Email';
+
+  @override
+  String get resetEmailSentSecond => 'sent.';
+
+  @override
+  String get resetEmailSentLinkTitle => 'Link sent';
 
   @override
   String resetEmailSentSubtitle(Object email) {
-    return 'We\'ve sent a link to $email. Check your inbox and spam folder.';
+    return 'We\'ve sent a link to $email. Check your inbox and your junk mail folder.';
   }
 
   @override
@@ -159,7 +190,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String linkSocialDescription(Object email, Object provider) {
-    return 'An EXOM account already exists for $email. Enter your current password to also link $provider so you can sign in with both methods.';
+    return 'An EXOM account already exists for $email. Enter your current password to link this sign-in.';
   }
 
   @override
@@ -170,7 +201,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountLockedMessage =>
-      'Your account has been temporarily locked.\nContact your coach for more information.';
+      'Your account has been temporarily locked.';
+
+  @override
+  String get accountLockedHeadlineFirst => 'Account';
+
+  @override
+  String get accountLockedHeadlineSecond => 'locked.';
+
+  @override
+  String get accountLockedCoachAuthor => 'Your coach';
+
+  @override
+  String get accountLockedCoachMessage => 'Contact me for more information.';
 
   @override
   String get backToLoginButton => 'Back to login';

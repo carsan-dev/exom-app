@@ -12,6 +12,7 @@ const Map<String, String> identicalValueAllowlist = {
   'mealTypeSnack': 'Product term "Snack" kept in Spanish by the owner.',
   'recapGeneral': 'Shared Spanish/English word "General".',
   'general': 'Shared Spanish/English word "General".',
+  'resetEmailSentFirst': 'Cognate "Email" is the same word in both languages.',
   'weightBadgeLabel': 'Abbreviation shared by both languages.',
   'ingredientUnitG': 'Unit symbol "g".',
   'noticeTimeMinutes':

@@ -78,11 +78,11 @@
   "exomMemberLabel": "EXOM Member",
   "profileMenuItem": "Profile",
   "challengesMenuItem": "Challenges",
-  "weeklyRecapMenuItem": "Weekly Recap",
+  "weeklyRecapMenuItem": "Weekly recap",
   "feedbackMenuItem": "Feedback",
   "settingsMenuItem": "Settings",
   "helpMenuItem": "Help",
-  "logOutMenuItem": "Log Out",
+  "logOutMenuItem": "Log out",
 
   "restDayTitle": "Rest day",
   "restDayMessage": "You have no training assigned for today.\nTake the chance to recover.",

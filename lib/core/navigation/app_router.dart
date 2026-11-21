@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -11,6 +12,9 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
@@ -721,9 +725,15 @@ class ShellUnreadBadge extends StatelessWidget {
 
 // ─── App Drawer ────────────────────────────────────────────────────────────────
 
-/// End drawer of [MainShell]. Item labels carry [drawerItemKeys] (in order:
-/// profile, challenges, weekly recap, feedback, settings, help, log out) that
-/// the tutorial overlay uses to locate them.
+/// End drawer of [MainShell] (L5-F2). Panel of 304 dp (screen - 56 when
+/// narrower) with a left rule: logo, the account name as protagonist (Barlow
+/// 28) and «Miembro EXOM»; the six destinations as a numbered index 01-06 and
+/// «Cerrar sesión» as a secondary button after a rule. The panel scrolls when
+/// it does not fit (large text, short screens).
+///
+/// [drawerItemKeys] (in order: profile, challenges, weekly recap, feedback,
+/// settings, help, log out) sit on the label texts and are used by the
+/// tutorial overlay to locate them.
 ///
 /// [displayName] is a test seam: when null the name is read from Firebase.
 @visibleForTesting
@@ -744,10 +754,17 @@ class AppDrawer extends StatelessWidget {
         displayName ??
         FirebaseAuth.instance.currentUser?.displayName ??
         l10n.userDefaultName;
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    // Pops the drawer and then runs [go]: the order every entry always had.
+    VoidCallback leave(VoidCallback go) => () {
+      Navigator.pop(context);
+      go();
+    };
 
     return Drawer(
+      width: math.min(304.0, math.max(0.0, screenWidth - 56)),
       backgroundColor: palette.background,
       shape: const RoundedRectangleBorder(),
       child: DecoratedBox(
@@ -758,160 +775,97 @@ class AppDrawer extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: palette.borderSoft, width: 1),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SvgPicture.asset(
+                        Theme.of(context).brightness == Brightness.light
+                            ? 'assets/images/logo_dark.svg'
+                            : 'assets/images/logo.svg',
+                        height: 24,
+                      ),
+                      const SizedBox(height: 16),
+                      Semantics(
+                        header: true,
+                        label: name,
+                        excludeSemantics: true,
+                        child: Text(
+                          name.toUpperCase(),
+                          style: ExomType.headline2Section.copyWith(
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.exomMemberLabel,
+                        style: TextStyle(
+                          fontFamily: AppTheme.bodyFontFamily,
+                          color: palette.textSecondary,
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SvgPicture.asset(
-                      Theme.of(context).brightness == Brightness.light
-                          ? 'assets/images/logo_dark.svg'
-                          : 'assets/images/logo.svg',
-                      height: 24,
+                ExomIndexList(
+                  items: [
+                    ExomIndexItem(
+                      title: l10n.profileMenuItem,
+                      titleKey: drawerItemKeys[0],
+                      onTap: leave(() => context.push(AppRoutes.profile)),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      name,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    ExomIndexItem(
+                      title: l10n.challengesMenuItem,
+                      titleKey: drawerItemKeys[1],
+                      onTap: leave(() => context.go(AppRoutes.challenges)),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.exomMemberLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 13,
-                      ),
+                    ExomIndexItem(
+                      title: l10n.weeklyRecapMenuItem,
+                      titleKey: drawerItemKeys[2],
+                      onTap: leave(() => context.push(AppRoutes.recap)),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _DrawerItem(
-                      icon: Icons.person_outline,
-                      label: l10n.profileMenuItem,
-                      labelKey: drawerItemKeys[0],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppRoutes.profile);
-                      },
+                    ExomIndexItem(
+                      title: l10n.feedbackMenuItem,
+                      titleKey: drawerItemKeys[3],
+                      onTap: leave(() => context.push(AppRoutes.feedback)),
                     ),
-                    _DrawerItem(
-                      icon: Icons.emoji_events_outlined,
-                      label: l10n.challengesMenuItem,
-                      labelKey: drawerItemKeys[1],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go(AppRoutes.challenges);
-                      },
+                    ExomIndexItem(
+                      title: l10n.settingsMenuItem,
+                      titleKey: drawerItemKeys[4],
+                      onTap: leave(() => context.push(AppRoutes.settings)),
                     ),
-                    _DrawerItem(
-                      icon: Icons.bar_chart_outlined,
-                      label: l10n.weeklyRecapMenuItem,
-                      labelKey: drawerItemKeys[2],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppRoutes.recap);
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.feedback_outlined,
-                      label: l10n.feedbackMenuItem,
-                      labelKey: drawerItemKeys[3],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppRoutes.feedback);
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.settings_outlined,
-                      label: l10n.settingsMenuItem,
-                      labelKey: drawerItemKeys[4],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppRoutes.settings);
-                      },
-                    ),
-                    _DrawerItem(
-                      icon: Icons.help_outline,
-                      label: l10n.helpMenuItem,
-                      labelKey: drawerItemKeys[5],
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppRoutes.help);
-                      },
-                    ),
-                    Divider(color: palette.divider, height: 24),
-                    _DrawerItem(
-                      icon: Icons.logout,
-                      label: l10n.logOutMenuItem,
-                      labelKey: drawerItemKeys[6],
-                      color: palette.error,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.read<AuthBloc>().add(
-                          const AuthLogoutRequested(),
-                        );
-                      },
+                    ExomIndexItem(
+                      title: l10n.helpMenuItem,
+                      titleKey: drawerItemKeys[5],
+                      onTap: leave(() => context.push(AppRoutes.help)),
                     ),
                   ],
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: ExomSecondaryButton(
+                    label: l10n.logOutMenuItem,
+                    labelKey: drawerItemKeys[6],
+                    onPressed: leave(
+                      () => context.read<AuthBloc>().add(
+                        const AuthLogoutRequested(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _DrawerItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? color;
-  final GlobalKey? labelKey;
-
-  const _DrawerItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
-    this.labelKey,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final itemColor = color ?? context.exomPalette.textPrimary;
-    return ListTile(
-      leading: Icon(icon, color: itemColor, size: 22),
-      title: Text(
-        key: labelKey,
-        label,
-        style: TextStyle(
-          color: itemColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      onTap: onTap,
-      horizontalTitleGap: 8,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     );
   }
 }

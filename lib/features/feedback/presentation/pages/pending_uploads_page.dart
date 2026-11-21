@@ -250,10 +250,13 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
         : <Map<String, dynamic>>[];
     final empty = items.isEmpty && syncFailures.isEmpty;
     final failedCount = items.where((i) => i['status'] == 'failed').length;
-    final subtitle = empty
+    // A confirmed row stays listed but is no longer pending (L5-D45, same
+    // rule as the Ajustes counter).
+    final pendingCount = items.where((i) => i['status'] != 'completed').length;
+    final subtitle = empty || pendingCount == 0
         ? l10n.pendingUploadsNone
         : [
-            l10n.pendingUploadsCountSubtitle(items.length),
+            l10n.pendingUploadsCountSubtitle(pendingCount),
             if (failedCount > 0) l10n.pendingUploadsErrorCount(failedCount),
           ].join(' · ');
     final outcome = _visibleOutcome;
@@ -284,7 +287,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       body: l10n.pendingUploadsEmptyBody,
                     )
                   else ...[
-                    _Summary(count: items.length, failed: failedCount),
+                    _Summary(count: pendingCount, failed: failedCount),
                     if (items.isNotEmpty) ...[
                       _SectionHeader(
                         n: 1,
@@ -406,7 +409,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     return switch (status) {
       'uploading' => l10n.pendingUploadUploadingStatus,
       'processing' => l10n.pendingUploadProcessingStatus,
-      'completed' => l10n.pendingUploadCompletedStatus,
+      'completed' => l10n.syncStatusConfirmed,
       'failed' => l10n.pendingUploadFailedStatus,
       _ => l10n.pendingUploadQueuedStatus,
     };
@@ -450,16 +453,26 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       );
     }
     if (sending) {
-      final megabytes = NumberFormat(
+      final size = NumberFormat(
         '0.0',
         Localizations.localeOf(context).toString(),
       );
+      // Same reading as `FeedbackUploadStatus`: below 0.1 MB one decimal of
+      // megabytes rounds to «0,0», so the total picks kilobytes for both
+      // figures. Without a total there is only «Subiendo».
+      final kilobytes = total < 100000;
       final label = fraction != null && sent != null
-          ? l10n.pendingUploadSendingBytes(
-              (fraction * 100).floor(),
-              megabytes.format(sent / 1000000),
-              megabytes.format(total / 1000000),
-            )
+          ? kilobytes
+                ? l10n.pendingUploadSendingKilobytes(
+                    (fraction * 100).floor(),
+                    size.format(sent / 1000),
+                    size.format(total / 1000),
+                  )
+                : l10n.pendingUploadSendingBytes(
+                    (fraction * 100).floor(),
+                    size.format(sent / 1000000),
+                    size.format(total / 1000000),
+                  )
           : l10n.pendingUploadUploadingStatus;
       return _Status(
         label,
@@ -470,7 +483,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     }
     return switch (status) {
       'completed' => _Status(
-        l10n.pendingUploadCompletedStatus,
+        l10n.syncStatusConfirmed,
         ExomIcons.check,
         _Tone.primary,
       ),

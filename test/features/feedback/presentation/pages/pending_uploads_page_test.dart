@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
@@ -122,6 +123,52 @@ Future<({_Queue queue, AppLocalizations l10n})> _pump(
     l10n: AppLocalizations.of(tester.element(find.byType(PendingUploadsPage))),
   );
 }
+
+
+/// Queue with a fixed list of rows and per-row progress (L5-C1b).
+class _ListQueue extends Fake implements FeedbackUploadQueueService {
+  _ListQueue(this.items, {this.progress = const {}});
+  final List<Map<String, dynamic>> items;
+  final Map<String, FeedbackUploadNotice> progress;
+  final events = StreamController<FeedbackUploadNotice>.broadcast();
+  @override
+  Stream<FeedbackUploadNotice> get notices => events.stream;
+  @override
+  List<Map<String, dynamic>> get pendingItems => items;
+  @override
+  FeedbackUploadNotice? progressOf(String id) => progress[id];
+}
+
+Future<AppLocalizations> _pumpList(
+  WidgetTester tester, {
+  required String locale,
+  required List<Map<String, dynamic>> items,
+  Map<String, FeedbackUploadNotice> progress = const {},
+}) async {
+  await sl.reset();
+  final queue = _ListQueue(items, progress: progress);
+  sl.registerSingleton<LocalStorage>(_Storage());
+  sl.registerSingleton<FeedbackUploadQueueService>(queue);
+  sl.registerSingleton<OfflineSyncService>(_Sync());
+  addTearDown(() async {
+    await queue.events.close();
+    await sl.reset();
+  });
+  await tester.pumpWidget(MaterialApp(
+    locale: Locale(locale),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const PendingUploadsPage(),
+  ));
+  await tester.pumpAndSettle();
+  return AppLocalizations.of(tester.element(find.byType(PendingUploadsPage)));
+}
+
+Map<String, dynamic> _row(String id, String status) => {
+      'id': id,
+      'media_type': 'IMAGE',
+      'status': status,
+    };
 
 const _retryKey = Key('pending-retry-retained-operation');
 const _deleteKey = Key('pending-delete-retained-operation');
@@ -320,11 +367,104 @@ void main() {
     expect(queue.retried, 'retained-operation');
     expect(queue.item['id'], 'retained-operation');
     expect(find.byKey(_retryKey), findsNothing);
-    expect(find.text(l10n.pendingUploadCompletedStatus), findsOneWidget);
+    expect(find.text(l10n.syncStatusConfirmed), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     expect(queue.events.hasListener, isFalse);
     await queue.events.close();
     await sl.reset();
   });
+  }
+
+  for (final locale in ['es', 'en']) {
+    group('L5-C1b $locale', () {
+      testWidgets('completed rows stay in the list but are not counted', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('a', 'failed'),
+          _row('b', 'completed'),
+          _row('c', 'queued'),
+        ]);
+        expect(
+          find.text(
+            '${l10n.pendingUploadsCountSubtitle(2)} · '
+            '${l10n.pendingUploadsErrorCount(1)}',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('2'), findsOneWidget);
+        expect(find.text('3'), findsNothing);
+        expect(find.text(l10n.pendingUploadsHeroLabel(2)), findsOneWidget);
+        expect(find.byKey(const ValueKey('pending-row-b')), findsOneWidget);
+      });
+
+      testWidgets('only completed rows: the summary says nothing is pending', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('b', 'completed'),
+        ]);
+        expect(find.text(l10n.pendingUploadsNone), findsOneWidget);
+        expect(find.text(l10n.pendingUploadsCountSubtitle(1)), findsNothing);
+        expect(find.text('0'), findsOneWidget);
+        expect(find.byKey(const ValueKey('pending-row-b')), findsOneWidget);
+      });
+
+      testWidgets('completed row reads «Confirmada» with a check in the text '
+          'colour', (tester) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('b', 'completed'),
+        ]);
+        expect(find.text(l10n.syncStatusConfirmed), findsOneWidget);
+        expect(find.text(l10n.pendingUploadCompletedStatus), findsNothing);
+        final row = find.byKey(const ValueKey('pending-row-b'));
+        final label = tester.widget<Text>(
+          find.descendant(of: row, matching: find.text(l10n.syncStatusConfirmed)),
+        );
+        final icon = tester.widget<Icon>(
+          find.descendant(of: row, matching: find.byIcon(ExomIcons.check)),
+        );
+        expect(icon.color, label.style?.color);
+      });
+
+      testWidgets('small file sends in KB with the locale format', (
+        tester,
+      ) async {
+        await _pumpList(tester, locale: locale, items: [
+          _row('s', 'uploading'),
+        ], progress: {
+          's': const FeedbackUploadNotice(
+            's',
+            FeedbackUploadNoticeKind.uploading,
+            sentBytes: 19000,
+            totalBytes: 38000,
+          ),
+        });
+        expect(
+          find.text(
+            locale == 'es'
+                ? 'Enviando 50 % · 19,0 de 38,0 KB'
+                : 'Sending 50% · 19.0 of 38.0 KB',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('sending without a total keeps the plain status', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('s', 'uploading'),
+        ], progress: {
+          's': const FeedbackUploadNotice(
+            's',
+            FeedbackUploadNoticeKind.uploading,
+            sentBytes: 19000,
+            totalBytes: 0,
+          ),
+        });
+        expect(find.text(l10n.pendingUploadUploadingStatus), findsOneWidget);
+      });
+    });
   }
 }

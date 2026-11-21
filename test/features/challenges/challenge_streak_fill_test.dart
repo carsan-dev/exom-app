@@ -1,7 +1,11 @@
-// M5 fill of the streak weeks grid (round 4, owner's request; L5-D40): the lit
-// squares fill in reading order once per opening of the page, with one
-// controller, ease-out and at most 600 ms; reduced motion, a refresh or a
-// reload show the final state directly.
+// M5 fill of the streak weeks grid (rounds 4 and 5, owner's request; L5-D40):
+// the lit squares change colour in a wave, in reading order, once per opening
+// of the page, with one controller, ease-out and 600 ms in all (300 ms each),
+// starting when the entry transition of the route ends; only the colour moves;
+// reduced motion, a refresh or a reload show the final state directly.
+import 'dart:async';
+
+import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/challenge_milestone_mark.dart';
 import 'package:exom_app/features/challenges/presentation/widgets/challenge_streak_weeks.dart';
@@ -11,28 +15,50 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../core/widgets/exom_component_harness.dart';
 import 'challenges_test_support.dart';
 
-/// Effective opacity of each lit square inside the grid (the product of the
-/// fades between the square and the grid), in reading order.
-List<double> litOpacities(WidgetTester tester) {
-  final result = <double>[];
-  for (final element in find.byKey(ChallengeStreakWeeks.onKey).evaluate()) {
-    var opacity = 1.0;
-    element.visitAncestorElements((ancestor) {
-      final widget = ancestor.widget;
-      if (widget.key == ChallengeStreakWeeks.gridKey) return false;
-      if (widget is FadeTransition) opacity *= widget.opacity.value;
-      return true;
-    });
-    result.add(opacity);
-  }
-  return result;
+/// Progress (0 = rule tone, 1 = data colour) of each lit square, in reading
+/// order, read from its current colour.
+List<double> litProgress(WidgetTester tester) {
+  final elements = find.byKey(ChallengeStreakWeeks.onKey).evaluate();
+  if (elements.isEmpty) return const [];
+  final palette = elements.first.exomPalette;
+  final off = palette.borderSoft;
+  final on = palette.data;
+  final channels = <double Function(Color)>[
+    (c) => c.a,
+    (c) => c.r,
+    (c) => c.g,
+    (c) => c.b,
+  ];
+  // The channel that tells the two tones apart the most.
+  final channel = channels.reduce(
+    (a, b) => (a(on) - a(off)).abs() >= (b(on) - b(off)).abs() ? a : b,
+  );
+  return [
+    for (final element in elements)
+      (channel((element.widget as ColoredBox).color) - channel(off)) /
+          (channel(on) - channel(off)),
+  ];
 }
 
-int visibleLit(WidgetTester tester) =>
-    litOpacities(tester).where((o) => o > 0).length;
+bool allLitFull(WidgetTester tester) {
+  final elements = find.byKey(ChallengeStreakWeeks.onKey).evaluate();
+  if (elements.isEmpty) return false;
+  final data = elements.first.exomPalette.data;
+  return elements.every((e) => (e.widget as ColoredBox).color == data);
+}
 
-bool allLitFull(WidgetTester tester) =>
-    litOpacities(tester).every((o) => o == 1.0);
+bool allLitDark(WidgetTester tester) =>
+    litProgress(tester).every((p) => p == 0);
+
+/// Squares strictly between the rule tone and the data colour.
+int midway(WidgetTester tester) =>
+    litProgress(tester).where((p) => p > 0 && p < 1).length;
+
+/// Sizes of the lit squares.
+List<Size> litSizes(WidgetTester tester) => [
+  for (final element in find.byKey(ChallengeStreakWeeks.onKey).evaluate())
+    tester.getSize(find.byWidget(element.widget)),
+];
 
 Widget _mark(int days, {StreakFillGate? gate}) {
   final mark = ChallengeMilestoneMark(
@@ -45,28 +71,26 @@ Widget _mark(int days, {StreakFillGate? gate}) {
 
 void main() {
   group('streakFillTiming', () {
-    test('at most 600 ms and 40 ms per square, ease-out spread', () {
-      for (final lit in const [1, 3, 12, 15, 26, 28]) {
-        final timing = streakFillTiming(lit);
+    double stepMs(int lit) {
+      final t = streakFillTiming(lit);
+      return t.step * t.total.inMicroseconds / 1000;
+    }
+
+    test('wave: 300 ms per square, 600 ms in all, no stagger cap', () {
+      expect(ExomMotion.streakSquareFill, const Duration(milliseconds: 300));
+      // lit: (total ms, stagger ms).
+      const table = {1: (300, 0.0), 2: (600, 300.0), 12: (600, 300 / 11)};
+      for (final entry in table.entries) {
+        final timing = streakFillTiming(entry.key);
+        expect(timing.total.inMicroseconds, entry.value.$1 * 1000);
+        expect(stepMs(entry.key), closeTo(entry.value.$2, 1e-6));
         expect(
-          timing.total,
-          lessThanOrEqualTo(ExomMotion.countUp),
-          reason: '$lit',
+          timing.fade * timing.total.inMicroseconds / 1000,
+          closeTo(300, 1e-6),
         );
-        final stepMs = timing.step * timing.total.inMicroseconds / 1000;
-        expect(stepMs, lessThanOrEqualTo(40.0001), reason: '$lit');
       }
-      // Few days: not slowed down by the stagger.
-      expect(streakFillTiming(1).total, ExomMotion.chipCrossfade);
-      expect(
-        streakFillTiming(3).total,
-        ExomMotion.chipCrossfade + const Duration(milliseconds: 80),
-      );
-      // Many days: the whole 600 ms (integer microseconds per step).
-      expect(
-        streakFillTiming(28).total.inMicroseconds,
-        closeTo(ExomMotion.countUp.inMicroseconds, 30),
-      );
+      expect(streakFillTiming(28).total, ExomMotion.countUp);
+      expect(stepMs(28), closeTo(300 / 27, 1e-6));
     });
   });
 
@@ -75,10 +99,12 @@ void main() {
         'order', (tester) async {
       await pumpComponent(tester, _mark(12, gate: StreakFillGate()));
       expect(find.byKey(ChallengeStreakWeeks.onKey), findsNWidgets(12));
-      expect(visibleLit(tester), 0);
+      expect(allLitDark(tester), isTrue);
+      await tester.pump();
+      expect(allLitDark(tester), isTrue);
 
       await tester.pump(const Duration(milliseconds: 100));
-      final partial = litOpacities(tester);
+      final partial = litProgress(tester);
       // Reading order: earlier squares are never behind later ones.
       for (var i = 1; i < partial.length; i++) {
         expect(partial[i], lessThanOrEqualTo(partial[i - 1]));
@@ -108,8 +134,78 @@ void main() {
       );
     });
 
+    testWidgets('midway: several squares at once in intermediate tones', (
+      tester,
+    ) async {
+      await pumpComponent(tester, _mark(12, gate: StreakFillGate()));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(midway(tester), greaterThanOrEqualTo(4));
+      // The first ones are done, the last ones have not started.
+      final progress = litProgress(tester);
+      expect(progress.first, 1.0);
+      expect(progress.last, 0.0);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('no square changes size while filling', (tester) async {
+      await pumpComponent(tester, _mark(12, gate: StreakFillGate()));
+      final initial = litSizes(tester);
+      expect(initial.every((s) => s == const Size.square(18)), isTrue);
+      expect(
+        find.descendant(
+          of: find.byKey(ChallengeStreakWeeks.gridKey),
+          matching: find.byType(ScaleTransition),
+        ),
+        findsNothing,
+      );
+      for (var i = 0; i < 14; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(litSizes(tester), initial, reason: 'frame $i');
+      }
+      await tester.pumpAndSettle();
+      expect(litSizes(tester), initial);
+    });
+
+    testWidgets('waits for the entry transition of the route', (tester) async {
+      await pumpComponent(tester, const SizedBox());
+      final navigator = Navigator.of(tester.element(find.byType(Scaffold)));
+      final gate = StreakFillGate();
+      unawaited(
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(body: _mark(12, gate: gate)),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      final route = ModalRoute.of(
+        tester.element(find.byType(ChallengeStreakWeeks)),
+      )!.animation!;
+      expect(route.status, AnimationStatus.forward);
+      expect(find.byKey(ChallengeStreakWeeks.onKey), findsNWidgets(12));
+      // Mid transition and up to its very last frames: every lit square
+      // still looks dark.
+      var midTransition = 0;
+      while (route.status != AnimationStatus.completed) {
+        expect(allLitDark(tester), isTrue, reason: 'route ${route.value}');
+        midTransition++;
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(midTransition, greaterThan(3));
+      // The transition has ended; the fill starts in the next frame.
+      expect(allLitDark(tester), isTrue);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(midway(tester), greaterThanOrEqualTo(4));
+      await tester.pumpAndSettle();
+      expect(allLitFull(tester), isTrue);
+    });
+
     testWidgets('one controller for the whole grid', (tester) async {
       await pumpComponent(tester, _mark(28, gate: StreakFillGate()));
+      await tester.pump();
       expect(tester.binding.transientCallbackCount, 1);
       await tester.pumpAndSettle();
       expect(tester.binding.transientCallbackCount, 0);
@@ -123,7 +219,6 @@ void main() {
         _mark(12, gate: StreakFillGate()),
         disableAnimations: true,
       );
-      expect(visibleLit(tester), 12);
       expect(allLitFull(tester), isTrue);
       expect(tester.binding.transientCallbackCount, 0);
     });
@@ -175,7 +270,8 @@ void main() {
         disableAnimations: false,
       );
       await waitForMark(tester);
-      expect(visibleLit(tester), 0);
+      expect(allLitDark(tester), isTrue);
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(allLitFull(tester), isTrue);
       await tester.pumpAndSettle();
@@ -202,7 +298,6 @@ void main() {
         settle: false,
       );
       await waitForMark(tester);
-      expect(visibleLit(tester), 12);
       expect(allLitFull(tester), isTrue);
     });
   });

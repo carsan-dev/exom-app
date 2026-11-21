@@ -78,18 +78,18 @@ class StreakFillScope extends InheritedWidget {
   bool updateShouldNotify(StreakFillScope oldWidget) => gate != oldWidget.gate;
 }
 
-/// Timing of the M5 fill for [lit] squares: each square fades in over
-/// [ExomMotion.chipCrossfade], staggered by at most
-/// [ExomMotion.milestoneLetterStagger] (40 ms) and never beyond the
-/// [ExomMotion.countUp] total (600 ms, the M5 figure count-up). [step] and
-/// [fade] are fractions of [total].
+/// Timing of the M5 fill for [lit] squares, a wave: each square goes from the
+/// rule tone to the data colour in [ExomMotion.streakSquareFill] (300 ms),
+/// overlapping its neighbours, and the whole fill lasts exactly
+/// [ExomMotion.countUp] (600 ms) from 2 squares on (a single one takes just
+/// its 300 ms). The stagger is `(600 - 300) / (lit - 1)`, without a cap.
+/// [step] and [fade] are fractions of [total].
 ({Duration total, double step, double fade}) streakFillTiming(int lit) {
-  final fade = ExomMotion.chipCrossfade.inMicroseconds;
+  final fade = ExomMotion.streakSquareFill.inMicroseconds;
   final max = ExomMotion.countUp.inMicroseconds;
-  final stagger = ExomMotion.milestoneLetterStagger.inMicroseconds;
   final gaps = math.max(0, lit - 1);
-  final step = gaps == 0 ? 0 : math.min(stagger, (max - fade) ~/ gaps);
-  final total = gaps * step + fade;
+  final total = gaps == 0 ? fade : max;
+  final step = gaps == 0 ? 0.0 : (max - fade) / gaps;
   return (
     total: Duration(microseconds: total),
     step: step / total,
@@ -102,13 +102,14 @@ class StreakFillScope extends InheritedWidget {
 /// colour of the theme (the goal rule's token: never lime ink in light) and the
 /// others in the rule tone; the whole grid at [opacity].
 ///
-/// Motion (M5, owner's request in round 4): the first grid built under a
+/// Motion (M5, owner's request in rounds 4 and 5): the first grid built under a
 /// [StreakFillScope] whose gate it can claim fills its lit squares in reading
-/// order, each one fading from the rule tone to the data colour while it grows
-/// from [fillScale] to 1, staggered ([streakFillTiming], ease-out, at most
-/// 600 ms), with one controller for the whole grid. Dark squares do not move.
-/// Reduced motion, no scope, a claimed gate or a change of [days]: the final
-/// state directly.
+/// order as a wave, each one changing colour (and only colour) from the rule
+/// tone to the data colour ([streakFillTiming], ease-out, 600 ms in all), with
+/// one controller for the whole grid. It starts once the entry transition of
+/// the route has finished (in the next frame if there is none); until then the
+/// lit squares look dark. Dark squares do not move. Reduced motion, no scope,
+/// a claimed gate or a change of [days]: the final state directly.
 ///
 /// Decorative: excluded from semantics (the numeral and «Días seguidos» already
 /// say the streak).
@@ -123,9 +124,6 @@ class ChallengeStreakWeeks extends StatefulWidget {
   static const double gap = 4;
   static const double opacity = 0.5;
 
-  /// Starting scale of a lit square while it fills.
-  static const double fillScale = 0.85;
-
   /// Keys for tests: the grid and its lit and dark squares.
   static const Key gridKey = ValueKey('challenge-weeks-grid');
   static const Key onKey = ValueKey('challenge-weeks-on');
@@ -139,7 +137,9 @@ class _ChallengeStreakWeeksState extends State<ChallengeStreakWeeks>
     with SingleTickerProviderStateMixin {
   AnimationController? _controller;
   List<Animation<double>> _fills = const [];
+  Animation<double>? _routeAnimation;
   bool _resolved = false;
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
@@ -153,18 +153,50 @@ class _ChallengeStreakWeeksState extends State<ChallengeStreakWeeks>
     final timing = streakFillTiming(lit);
     final controller = AnimationController(vsync: this, duration: timing.total);
     _controller = controller;
+    // Each square follows its own slice of the controller; `drive` leaves no
+    // object to release.
     _fills = [
       for (var i = 0; i < lit; i++)
-        CurvedAnimation(
-          parent: controller,
-          curve: Interval(
-            math.min(1.0, i * timing.step),
-            math.min(1.0, i * timing.step + timing.fade),
-            curve: ExomMotion.countUpCurve,
+        controller.drive(
+          CurveTween(
+            curve: Interval(
+              math.min(1.0, i * timing.step),
+              math.min(1.0, i * timing.step + timing.fade),
+              curve: ExomMotion.countUpCurve,
+            ),
           ),
         ),
     ];
-    controller.forward();
+    // A route that is still being built reports its animation as complete
+    // for its first frame, so the state is read again in the next frame (and
+    // whenever the animation changes status) before starting.
+    final route = ModalRoute.of(context)?.animation;
+    if (route != null) {
+      _routeAnimation = route;
+      route.addStatusListener(_onRouteStatus);
+    }
+    _checkStartNextFrame();
+  }
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _checkStartNextFrame();
+  }
+
+  void _checkStartNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _started) return;
+      final route = _routeAnimation;
+      // Still in its entry transition: the status listener will call again.
+      if (route != null && route.status != AnimationStatus.completed) return;
+      _started = true;
+      _releaseRoute();
+      _controller?.forward();
+    });
+  }
+
+  void _releaseRoute() {
+    _routeAnimation?.removeStatusListener(_onRouteStatus);
+    _routeAnimation = null;
   }
 
   @override
@@ -175,6 +207,7 @@ class _ChallengeStreakWeeksState extends State<ChallengeStreakWeeks>
   }
 
   void _stop() {
+    _releaseRoute();
     _controller?.dispose();
     _controller = null;
     _fills = const [];
@@ -228,25 +261,23 @@ class _ChallengeStreakWeeksState extends State<ChallengeStreakWeeks>
         ),
       );
     }
-    final on = ColoredBox(key: ChallengeStreakWeeks.onKey, color: palette.data);
     if (index >= _fills.length) {
-      return SizedBox.square(dimension: size, child: on);
+      return SizedBox.square(
+        dimension: size,
+        child: ColoredBox(key: ChallengeStreakWeeks.onKey, color: palette.data),
+      );
     }
     final fill = _fills[index];
     return SizedBox.square(
       dimension: size,
-      // The square starts in the rule tone and the data colour fades over it.
-      child: ColoredBox(
-        color: palette.borderSoft,
-        child: FadeTransition(
-          opacity: fill,
-          child: ScaleTransition(
-            scale: Tween<double>(
-              begin: ChallengeStreakWeeks.fillScale,
-              end: 1,
-            ).animate(fill),
-            child: on,
-          ),
+      // Only the colour moves: from the rule tone to the data colour.
+      child: AnimatedBuilder(
+        animation: fill,
+        builder: (context, _) => ColoredBox(
+          key: ChallengeStreakWeeks.onKey,
+          color:
+              Color.lerp(palette.borderSoft, palette.data, fill.value) ??
+              palette.data,
         ),
       ),
     );

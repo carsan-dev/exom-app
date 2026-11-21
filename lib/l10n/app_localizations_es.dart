@@ -1673,6 +1673,41 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cacheDeletedMessage => 'Caché sin conexión borrada correctamente';
 
   @override
+  String get settingsSubtitle => 'Tema, idioma, avisos y cuenta';
+
+  @override
+  String get settingsThemeLabel => 'Tema';
+
+  @override
+  String get settingsUnitsHint =>
+      'Métrico usa kilos y centímetros. Imperial usa libras y pulgadas.';
+
+  @override
+  String get clearCacheSheetBody =>
+      'Se borrarán los datos guardados en este móvil para usar EXOM sin conexión. Volverán a descargarse cuando tengas conexión.';
+
+  @override
+  String get settingsPushEnableFailed =>
+      'No se pudieron activar las notificaciones push. Sigue desactivado.';
+
+  @override
+  String get settingsPushDisableFailed =>
+      'No se pudieron desactivar las notificaciones push. Sigue activado.';
+
+  @override
+  String get settingsSwitchEnableFailed =>
+      'No se pudo activar. Sigue desactivado.';
+
+  @override
+  String get settingsSwitchDisableFailed =>
+      'No se pudo desactivar. Sigue activado.';
+
+  @override
+  String deleteAccountConfirmHelper(String word) {
+    return 'El botón se activa cuando escribes $word.';
+  }
+
+  @override
   String get clearCacheActiveWorkTitle => '¿Borrar la caché local?';
 
   @override

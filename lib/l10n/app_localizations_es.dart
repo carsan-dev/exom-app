@@ -666,6 +666,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get frequentlyAskedQuestions => 'Preguntas frecuentes';
 
   @override
+  String get helpHeadlineFirst => 'Tus dudas.';
+
+  @override
+  String get helpHeadlineSecond => 'Con tu entrenador.';
+
+  @override
+  String get helpCoachAuthor => 'Tu entrenador';
+
+  @override
+  String get helpCoachText => 'Si no encuentras la respuesta, escríbeme.';
+
+  @override
+  String get helpOpensInBrowser => 'Se abre en el navegador';
+
+  @override
+  String get helpOpensInMail => 'Se abre en tu aplicación de correo';
+
+  @override
   String get creditsDescription =>
       'Producto EXOM de valor añadido para clientes. Desarrollo principal por Carlos Sánchez Román, con aplicación móvil en Flutter y servidor en NestJS.';
 

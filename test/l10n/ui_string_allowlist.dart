@@ -32,6 +32,11 @@ const List<UiStringAllowance> uiStringAllowlist = [
     'URL/handle, not translatable.',
   ),
   UiStringAllowance(
+    'lib/features/help/presentation/pages/help_page.dart',
+    r'EXOM',
+    'Brand name (decorative watermark, excluded from semantics).',
+  ),
+  UiStringAllowance(
     'lib/features/splash/presentation/pages/splash_page.dart',
     r'EXOM',
     'Brand name.',

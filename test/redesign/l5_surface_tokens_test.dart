@@ -46,6 +46,8 @@ const List<String> kRepaintedFiles = <String>[
   // L5-A3 · Entrenar: lista e historial.
   'lib/features/trainings/presentation/pages/trainings_page.dart',
   'lib/features/trainings/presentation/widgets/pending_training_executions.dart',
+  // L5-B1 · Ayuda.
+  'lib/features/help/presentation/pages/help_page.dart',
 ];
 
 const String _allowMarker = 'l5-allow:';

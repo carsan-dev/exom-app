@@ -4055,4 +4055,114 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoPlayerForward5 => 'Forward 5 s';
+
+  @override
+  String calendarMonthTitleLabel(String month) {
+    return '$month, choose month and year';
+  }
+
+  @override
+  String get calendarHeroTrainingFirst => 'Your month,';
+
+  @override
+  String get calendarHeroTrainingSecond => 'organized.';
+
+  @override
+  String get calendarHeroTrainingFoot => 'sessions done';
+
+  @override
+  String get calendarHeroDietFirst => 'Your meals.';
+
+  @override
+  String get calendarHeroDietSecond => 'No improvising.';
+
+  @override
+  String get calendarHeroDietFoot => 'meals this week';
+
+  @override
+  String get calendarHeroNoSessions => 'sessions';
+
+  @override
+  String calendarHeroNoSessionsFoot(String year) {
+    return '$year · no sessions scheduled';
+  }
+
+  @override
+  String calendarWeekTrainings(String done, String total) {
+    return '$done of $total workouts this week';
+  }
+
+  @override
+  String get calendarEmptyMonthFirst => 'No activities';
+
+  @override
+  String get calendarEmptyMonthSecond => 'this month.';
+
+  @override
+  String get calendarOfflineFirst => 'Offline.';
+
+  @override
+  String get calendarOfflineSecond => 'Nothing is lost.';
+
+  @override
+  String get calendarOfflineMessage =>
+      'Offline. The calendar could not be loaded.';
+
+  @override
+  String get calendarRestDayFacts => 'No training assigned.';
+
+  @override
+  String calendarActiveChallengesToday(int count, String figure) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$figure active challenges today',
+      one: '$figure active challenge today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calendarDayWithChallenge(String day) {
+    return '$day, with a challenge';
+  }
+
+  @override
+  String calendarDayDietDone(String day) {
+    return '$day, diet completed';
+  }
+
+  @override
+  String calendarDayDietPending(String day) {
+    return '$day, diet pending';
+  }
+
+  @override
+  String calendarDayDietMissed(String day) {
+    return '$day, diet not completed';
+  }
+
+  @override
+  String get calendarMonthPickerKicker => 'Choose month and year';
+
+  @override
+  String get calendarPreviousYear => 'Previous year';
+
+  @override
+  String get calendarNextYear => 'Next year';
+
+  @override
+  String get calendarExportPeriodKicker => 'Diets · calendar';
+
+  @override
+  String get calendarExportPeriodFirst => 'Choose';
+
+  @override
+  String get calendarExportPeriodSecond => 'a period';
+
+  @override
+  String get calendarExportFormatFirst => 'What do you want';
+
+  @override
+  String get calendarExportFormatSecond => 'to export?';
 }

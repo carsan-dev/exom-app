@@ -135,6 +135,16 @@ abstract final class ExomMotion {
   static const Duration stepProgressRule = growBar;
   static const Curve stepProgressRuleCurve = Curves.easeOut;
 
+  // Month change of Calendario (L5-A4c, sketch `a-diario.html#calendario`):
+  // the grid, the month title and the protagonist figure move as an M9 step
+  // ([step], [stepOffset], [stepCurve] in, [sheetExitCurve] out; towards the
+  // start when the month advances) and the selected day's fill slides in
+  // [selectionSlide]. While the next month loads the previous one stays on
+  // screen; if the load lasts longer than [busyIndicatorDelay] a discreet
+  // `ExomOperationBar` appears over it, so a fast load never flashes it. The
+  // delay is the same with reduced motion (it is not an animation).
+  static const Duration busyIndicatorDelay = Duration(milliseconds: 400);
+
   /// Resolves the motion spec for [context] through [PerformanceProfile].
   static ExomMotionSpec of(BuildContext context) {
     return resolve(reduced: PerformanceProfile.prefersReducedMotion(context));

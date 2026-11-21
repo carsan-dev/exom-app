@@ -6722,6 +6722,180 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Avanzar 5 s'**
   String get videoPlayerForward5;
+
+  /// No description provided for @calendarMonthTitleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{month}, elegir mes y año'**
+  String calendarMonthTitleLabel(String month);
+
+  /// No description provided for @calendarHeroTrainingFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu mes,'**
+  String get calendarHeroTrainingFirst;
+
+  /// No description provided for @calendarHeroTrainingSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'organizado.'**
+  String get calendarHeroTrainingSecond;
+
+  /// No description provided for @calendarHeroTrainingFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'sesiones hechas'**
+  String get calendarHeroTrainingFoot;
+
+  /// No description provided for @calendarHeroDietFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu comida.'**
+  String get calendarHeroDietFirst;
+
+  /// No description provided for @calendarHeroDietSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin improvisar.'**
+  String get calendarHeroDietSecond;
+
+  /// No description provided for @calendarHeroDietFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'comidas esta semana'**
+  String get calendarHeroDietFoot;
+
+  /// No description provided for @calendarHeroNoSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'sesiones'**
+  String get calendarHeroNoSessions;
+
+  /// No description provided for @calendarHeroNoSessionsFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'{year} · sin sesiones programadas'**
+  String calendarHeroNoSessionsFoot(String year);
+
+  /// No description provided for @calendarWeekTrainings.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total} entrenos esta semana'**
+  String calendarWeekTrainings(String done, String total);
+
+  /// No description provided for @calendarEmptyMonthFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin actividades'**
+  String get calendarEmptyMonthFirst;
+
+  /// No description provided for @calendarEmptyMonthSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'este mes.'**
+  String get calendarEmptyMonthSecond;
+
+  /// No description provided for @calendarOfflineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión.'**
+  String get calendarOfflineFirst;
+
+  /// No description provided for @calendarOfflineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'No se ha perdido nada.'**
+  String get calendarOfflineSecond;
+
+  /// No description provided for @calendarOfflineMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión. No se ha podido cargar el calendario.'**
+  String get calendarOfflineMessage;
+
+  /// No description provided for @calendarRestDayFacts.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin entrenamiento asignado.'**
+  String get calendarRestDayFacts;
+
+  /// No description provided for @calendarActiveChallengesToday.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{figure} reto activo hoy} other{{figure} retos activos hoy}}'**
+  String calendarActiveChallengesToday(int count, String figure);
+
+  /// No description provided for @calendarDayWithChallenge.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, con reto'**
+  String calendarDayWithChallenge(String day);
+
+  /// No description provided for @calendarDayDietDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta completada'**
+  String calendarDayDietDone(String day);
+
+  /// No description provided for @calendarDayDietPending.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta pendiente'**
+  String calendarDayDietPending(String day);
+
+  /// No description provided for @calendarDayDietMissed.
+  ///
+  /// In es, this message translates to:
+  /// **'{day}, dieta sin completar'**
+  String calendarDayDietMissed(String day);
+
+  /// No description provided for @calendarMonthPickerKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige mes y año'**
+  String get calendarMonthPickerKicker;
+
+  /// No description provided for @calendarPreviousYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año anterior'**
+  String get calendarPreviousYear;
+
+  /// No description provided for @calendarNextYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año siguiente'**
+  String get calendarNextYear;
+
+  /// No description provided for @calendarExportPeriodKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Dietas · calendario'**
+  String get calendarExportPeriodKicker;
+
+  /// No description provided for @calendarExportPeriodFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige'**
+  String get calendarExportPeriodFirst;
+
+  /// No description provided for @calendarExportPeriodSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'un periodo'**
+  String get calendarExportPeriodSecond;
+
+  /// No description provided for @calendarExportFormatFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué quieres'**
+  String get calendarExportFormatFirst;
+
+  /// No description provided for @calendarExportFormatSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'exportar?'**
+  String get calendarExportFormatSecond;
 }
 
 class _AppLocalizationsDelegate

@@ -987,6 +987,8 @@
   "pendingMediaImage": "Feedback image",
   "pendingUploadSendingBytes": "Sending {percent}% · {sent} of {total} MB",
   "@pendingUploadSendingBytes": {"placeholders": {"percent": {"type": "int"}, "sent": {"type": "String"}, "total": {"type": "String"}}},
+  "pendingUploadSendingKilobytes": "Sending {percent}% · {sent} of {total} KB",
+  "@pendingUploadSendingKilobytes": {"placeholders": {"percent": {"type": "int"}, "sent": {"type": "String"}, "total": {"type": "String"}}},
   "pendingRetryFailed": "The upload could not be retried. Your evidence is kept.",
   "pendingRetryRequested": "Retry requested.",
   "pendingRetryNotStarted": "The retry didn't complete. Your data is kept.",
@@ -1401,5 +1403,18 @@
   "dietOfTotalKcal": "of {total} kcal",
   "@dietOfTotalKcal": {"placeholders": {"total": {"type": "int"}}},
   "mealOptionsLabel": "Options",
-  "mealDoneStatus": "Done"
+  "mealDoneStatus": "Done",
+  "feedbackUploadPreparingBody": "It is saved on this phone before it is sent.",
+  "feedbackUploadProcessingTitle": "Sent · processing in EXOM",
+  "feedbackUploadProcessingBody": "Not confirmed yet. You can close the app.",
+  "feedbackUploadConfirmedBody": "Your coach can review it now.",
+  "feedbackUploadFailedTitle": "Couldn't send it.",
+  "feedbackUploadKeptBody": "Your evidence is kept on this phone.",
+  "feedbackUploadOfflineBody": "It will be sent when the connection is back.",
+  "feedbackEmptyFirst": "No feedback.",
+  "feedbackEmptySecond": "Yet.",
+  "feedbackQuestionType": "Evidence type",
+  "feedbackQuestionFile": "File",
+  "feedbackChooseFile": "Choose file",
+  "feedbackRemoveFile": "Remove"
 }

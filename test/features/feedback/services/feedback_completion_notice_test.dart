@@ -64,11 +64,13 @@ void main() {
         await tester.pumpWidget(screen());
         queue.complete();
         await tester.pump();
-        expect(find.text('Completada'), findsOneWidget);
+        // L5-C2 (sketch C1 d, D19): the confirmed state reads «Confirmada»
+        // (was «Completada»); the 3 s lifetime below is unchanged.
+        expect(find.text('Confirmada'), findsOneWidget);
         await tester.pump(const Duration(seconds: 2));
-        expect(find.text('Completada'), findsOneWidget);
+        expect(find.text('Confirmada'), findsOneWidget);
         await tester.pump(const Duration(seconds: 2));
-        expect(find.text('Completada'), findsNothing);
+        expect(find.text('Confirmada'), findsNothing);
         expect(find.byType(FeedbackUploadStatus), findsOneWidget);
         expect(storage.queue.first, {
           'id': 'finished',
@@ -77,10 +79,10 @@ void main() {
         });
         queue.complete(); // Repeated confirmation must not revive the banner.
         await tester.pump();
-        expect(find.text('Completada'), findsNothing);
+        expect(find.text('Confirmada'), findsNothing);
         await tester.pumpWidget(const SizedBox());
         await tester.pumpWidget(screen());
-        expect(find.text('Completada'), findsNothing);
+        expect(find.text('Confirmada'), findsNothing);
         expect(find.byType(FeedbackUploadStatus), findsOneWidget);
       },
     );

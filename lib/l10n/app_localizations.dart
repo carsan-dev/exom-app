@@ -1262,6 +1262,42 @@ abstract class AppLocalizations {
   /// **'Preguntas frecuentes'**
   String get frequentlyAskedQuestions;
 
+  /// No description provided for @helpHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus dudas.'**
+  String get helpHeadlineFirst;
+
+  /// No description provided for @helpHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Con tu entrenador.'**
+  String get helpHeadlineSecond;
+
+  /// No description provided for @helpCoachAuthor.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrenador'**
+  String get helpCoachAuthor;
+
+  /// No description provided for @helpCoachText.
+  ///
+  /// In es, this message translates to:
+  /// **'Si no encuentras la respuesta, escríbeme.'**
+  String get helpCoachText;
+
+  /// No description provided for @helpOpensInBrowser.
+  ///
+  /// In es, this message translates to:
+  /// **'Se abre en el navegador'**
+  String get helpOpensInBrowser;
+
+  /// No description provided for @helpOpensInMail.
+  ///
+  /// In es, this message translates to:
+  /// **'Se abre en tu aplicación de correo'**
+  String get helpOpensInMail;
+
   /// No description provided for @creditsDescription.
   ///
   /// In es, this message translates to:

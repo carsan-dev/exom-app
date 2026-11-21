@@ -48,6 +48,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/trainings/presentation/widgets/pending_training_executions.dart',
   // L5-A4 · Calendario: A4a repainted the screen, A4b its sheets.
   'lib/features/calendar/presentation/pages/calendar_page.dart',
+  // L5-B1 · Ayuda.
+  'lib/features/help/presentation/pages/help_page.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

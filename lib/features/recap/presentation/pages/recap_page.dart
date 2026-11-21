@@ -1,4 +1,5 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -122,12 +123,12 @@ class _RecapViewState extends State<_RecapView> {
                       onPressed: () => context.read<RecapBloc>().add(
                         const RecapFormCancelled(),
                       ),
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(ExomIcons.close),
                     )
                   : context.canPop()
                   ? IconButton(
                       onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: const Icon(ExomIcons.back),
                     )
                   : null,
               actions: isFormActive
@@ -137,7 +138,7 @@ class _RecapViewState extends State<_RecapView> {
                         onPressed: () => context.read<RecapBloc>().add(
                           const RecapLoadRequested(),
                         ),
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(ExomIcons.retry),
                       ),
                     ],
             ),
@@ -176,10 +177,10 @@ class _RecapViewState extends State<_RecapView> {
                             : palette.onPrimary,
                         icon: Icon(
                           isBlocked
-                              ? Icons.block_rounded
+                              ? ExomIcons.block
                               : currentWeekDraft != null
-                              ? Icons.edit_note_rounded
-                              : Icons.add,
+                              ? ExomIcons.editNote
+                              : ExomIcons.add,
                         ),
                         label: Text(
                           currentWeekDraft != null
@@ -273,7 +274,7 @@ class _RecapViewState extends State<_RecapView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, color: palette.error, size: 42),
+              Icon(ExomIcons.error, color: palette.error, size: 42),
               const SizedBox(height: 16),
               Text(
                 l10n.couldNotLoadRecap,
@@ -554,7 +555,7 @@ class _RecapListView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: Icon(
-                  Icons.edit_calendar_outlined,
+                  ExomIcons.editCalendar,
                   color: palette.primary,
                   size: 40,
                 ),
@@ -581,7 +582,7 @@ class _RecapListView extends StatelessWidget {
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: onCreate,
-                icon: const Icon(Icons.add),
+                icon: const Icon(ExomIcons.add),
                 label: Text(l10n.createMyFirstRecap),
               ),
             ],
@@ -696,7 +697,7 @@ class _RecapHistoryCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            Icons.mark_chat_unread_outlined,
+                            ExomIcons.chatUnread,
                             size: 13,
                             color: palette.primary,
                           ),
@@ -724,19 +725,19 @@ class _RecapHistoryCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _InfoPill(
-                icon: Icons.fitness_center,
+                icon: ExomIcons.train,
                 label: trainingProgress != null
                     ? formatRecapOption(trainingProgress)
                     : l10n.trainingNotRated,
               ),
               _InfoPill(
-                icon: Icons.restaurant,
+                icon: ExomIcons.diet,
                 label: nutritionQuality != null
                     ? formatRecapOption(nutritionQuality)
                     : l10n.nutritionNotRated,
               ),
               _InfoPill(
-                icon: Icons.mood,
+                icon: ExomIcons.mood,
                 label: mood != null
                     ? formatRecapOption(mood)
                     : l10n.moodNotRated,
@@ -910,7 +911,7 @@ class _RecapFormView extends StatelessWidget {
                   children: [
                     TextButton.icon(
                       onPressed: () => onStepChanged(state.step - 1),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: const Icon(ExomIcons.back),
                       label: Text(
                         state.step == 1 ? l10n.cancel : l10n.previous,
                       ),
@@ -918,7 +919,7 @@ class _RecapFormView extends StatelessWidget {
                     const Spacer(),
                     OutlinedButton.icon(
                       onPressed: _hasValidationErrors ? null : onSaveDraft,
-                      icon: const Icon(Icons.save_outlined),
+                      icon: const Icon(ExomIcons.save),
                       label: Text(l10n.save),
                     ),
                   ],
@@ -932,8 +933,8 @@ class _RecapFormView extends StatelessWidget {
                         : () => onStepChanged(state.step + 1),
                     icon: Icon(
                       _isImprovementStep
-                          ? Icons.send_rounded
-                          : Icons.arrow_forward,
+                          ? ExomIcons.send
+                          : ExomIcons.forward,
                     ),
                     label: Text(
                       _isImprovementStep
@@ -1014,7 +1015,7 @@ class _StepBadge extends StatelessWidget {
             child: Transform.translate(
               offset: const Offset(0, 0.5),
               child: isCompleted
-                  ? Icon(Icons.check, size: 11, color: invertedColor)
+                  ? Icon(ExomIcons.check, size: 11, color: invertedColor)
                   : Text(
                       '$index',
                       style: TextStyle(

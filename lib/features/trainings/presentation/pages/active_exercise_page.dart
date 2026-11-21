@@ -1,5 +1,6 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
 import 'dart:io';
@@ -494,19 +495,19 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.info_outline),
+              leading: const Icon(ExomIcons.info),
               title: Text(AppLocalizations.of(context).attachLastSetVideo),
               subtitle: Text(
                 AppLocalizations.of(context).lastSetVideoRequiredDescription,
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.videocam_outlined),
+              leading: const Icon(ExomIcons.video),
               title: Text(AppLocalizations.of(context).recordNow),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.video_library_outlined),
+              leading: const Icon(ExomIcons.videoLibrary),
               title: Text(AppLocalizations.of(context).chooseFromGallery),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
@@ -789,7 +790,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                           width: double.infinity,
                           child: ExomPrimaryButton(
                             label: l10n.activeExerciseLogSetButton,
-                            trailingIcon: Icons.arrow_forward,
+                            trailingIcon: ExomIcons.forward,
                             busy: _logging,
                             onPressed: () =>
                                 _onCompleteSetPressed(state, l10n, weightText),
@@ -1039,7 +1040,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           ExomSecondaryButton(
             key: const Key('active-exercise-technique'),
             label: l10n.activeExerciseTechniqueButton,
-            icon: _hasVideo ? Icons.play_arrow_rounded : null,
+            icon: _hasVideo ? ExomIcons.play : null,
             onPressed: () => _openTechnique(l10n),
           ),
         ],
@@ -1305,7 +1306,7 @@ class _Header extends StatelessWidget {
         children: [
           IconButton(
             key: const Key('active-exercise-close'),
-            icon: Icon(Icons.close, color: palette.textPrimary),
+            icon: Icon(ExomIcons.close, color: palette.textPrimary),
             tooltip: closeTooltip,
             onPressed: onClose,
           ),

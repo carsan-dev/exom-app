@@ -1,4 +1,5 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -158,7 +159,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
           leading: context.canPop()
               ? IconButton(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(ExomIcons.back),
                 )
               : null,
         ),

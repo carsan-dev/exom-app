@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -207,7 +208,7 @@ class TodayTrainingCard extends StatelessWidget {
           children: [
             for (final training in plan.others)
               HomeRow(
-                icon: Icons.fitness_center,
+                icon: ExomIcons.train,
                 title: training.name,
                 trailing: training.completed
                     ? HomeDoneStatus(label: l10n.homeSessionDone)
@@ -267,7 +268,7 @@ class HomeRestDayHeader extends StatelessWidget {
           const SizedBox(height: 20),
           ExomSecondaryButton(
             label: l10n.openCalendarButton,
-            icon: Icons.calendar_today_outlined,
+            icon: ExomIcons.calendar,
             onPressed: () => context.go('/calendar'),
           ),
         ],
@@ -326,7 +327,7 @@ class HomeSessionAction extends StatelessWidget {
         label: continues
             ? l10n.homeContinueSessionButton
             : l10n.homeStartSessionButton,
-        trailingIcon: Icons.arrow_forward,
+        trailingIcon: ExomIcons.forward,
         onPressed: open,
       );
     } else {

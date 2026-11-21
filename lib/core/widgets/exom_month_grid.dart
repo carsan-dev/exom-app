@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_step_transition.dart';
@@ -443,7 +444,7 @@ class _ExomMonthGridState extends State<ExomMonthGrid> {
       ExomDayMark.none => null,
       ExomDayMark.done => Icon(
         key: ExomMonthGrid.markKey(day),
-        Icons.check,
+        ExomIcons.check,
         size: _checkSize,
         color: markInk,
       ),
@@ -520,7 +521,7 @@ class _ExomMonthGridState extends State<ExomMonthGrid> {
           end: _flagInsetEnd,
           child: Icon(
             key: ExomMonthGrid.flagKey(day),
-            Icons.local_fire_department_outlined,
+            ExomIcons.streak,
             size: _flagSize,
             color: isSelected || filledDone ? ink : palette.textSecondary,
           ),

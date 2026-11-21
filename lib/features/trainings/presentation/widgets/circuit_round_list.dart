@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -136,7 +137,7 @@ class CircuitRoundList extends StatelessWidget {
         if (row.state == CircuitRowState.done) ...[
           const SizedBox(width: 4),
           Icon(
-            Icons.smartphone_outlined,
+            ExomIcons.phone,
             size: 16,
             color: palette.textSecondary,
           ),

@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -55,13 +56,13 @@ class StatsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HomeRow(
-          icon: Icons.local_fire_department_outlined,
+          icon: ExomIcons.streak,
           title: l10n.homeStreakRow(summary.streakDays),
           subtitles: [if (summary.streakDays > 0) l10n.keepItUpSubtitle],
           onTap: () => context.push('/challenges'),
         ),
         HomeRow(
-          icon: Icons.monitor_weight_outlined,
+          icon: ExomIcons.weight,
           title: '${l10n.weight} · $weight ${weightUnitSymbol(unitSystem)}',
           subtitles: [
             if (summary.lastWeightDate != null)
@@ -70,7 +71,7 @@ class StatsRow extends StatelessWidget {
           onTap: openMetrics,
         ),
         HomeRow(
-          icon: Icons.bedtime_outlined,
+          icon: ExomIcons.sleep,
           title: '${l10n.sleep} · $sleep ${l10n.hours}',
           subtitles: [?sleepQuality],
           onTap: openMetrics,

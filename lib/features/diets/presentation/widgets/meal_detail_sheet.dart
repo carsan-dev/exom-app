@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -447,13 +448,13 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
                 if (resolvedCompleted)
                   ExomSecondaryButton(
                     label: l10n.mealCompletedButton,
-                    icon: Icons.check,
+                    icon: ExomIcons.check,
                     onPressed: toggleCompleted,
                   )
                 else
                   ExomPrimaryButton(
                     label: l10n.completeButton,
-                    trailingIcon: Icons.check,
+                    trailingIcon: ExomIcons.check,
                     onPressed: toggleCompleted,
                   ),
                 const SizedBox(height: 4),
@@ -540,7 +541,7 @@ class _SheetTopBar extends StatelessWidget {
             child: IconButton(
               onPressed: () => Navigator.of(context).pop(),
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              icon: Icon(Icons.close, color: palette.textPrimary, size: 22),
+              icon: Icon(ExomIcons.close, color: palette.textPrimary, size: 22),
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
           ),
@@ -597,7 +598,7 @@ class _MealPhotoPlaceholder extends StatelessWidget {
       child: Center(
         child: ExcludeSemantics(
           child: Icon(
-            Icons.restaurant_outlined,
+            ExomIcons.diet,
             color: palette.textSecondary,
             size: 32,
           ),

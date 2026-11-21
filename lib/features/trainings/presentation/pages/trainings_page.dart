@@ -3,6 +3,7 @@ import 'dart:async';
 import '../widgets/pending_training_executions.dart';
 export '../widgets/pending_training_executions.dart';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/formatters/figure_format.dart';
@@ -284,7 +285,7 @@ class _TrainingsViewState extends State<_TrainingsView> {
                 label: AppLocalizations.of(
                   context,
                 ).trainingsContinueSessionButton,
-                trailingIcon: Icons.arrow_forward,
+                trailingIcon: ExomIcons.forward,
                 onPressed: _pendingBusy
                     ? null
                     : () =>
@@ -578,7 +579,7 @@ class _HistoryMonthSelector extends StatelessWidget {
             constraints: _arrowTarget,
             color: palette.textPrimary,
             disabledColor: palette.textDisabled,
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(ExomIcons.previous),
           ),
           Expanded(
             child: Text(
@@ -599,7 +600,7 @@ class _HistoryMonthSelector extends StatelessWidget {
             constraints: _arrowTarget,
             color: palette.textPrimary,
             disabledColor: palette.textDisabled,
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(ExomIcons.next),
           ),
         ],
       ),
@@ -627,7 +628,7 @@ class _DoneStatus extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 1),
           child: ExcludeSemantics(
-            child: Icon(Icons.check, size: 18, color: palette.data),
+            child: Icon(ExomIcons.check, size: 18, color: palette.data),
           ),
         ),
         const SizedBox(width: 6),
@@ -816,7 +817,7 @@ class _TodaySession extends StatelessWidget {
                           ),
                           const SizedBox(width: 16),
                           Icon(
-                            Icons.chevron_right,
+                            ExomIcons.next,
                             size: 22,
                             color: palette.textSecondary,
                           ),
@@ -851,7 +852,7 @@ class _TodayTrainingRow extends StatelessWidget {
     final day = DateTime.tryParse(selectedDate);
     return ExomRichRow(
       leading: day == null
-          ? const ExomRowLeading.icon(Icons.fitness_center)
+          ? const ExomRowLeading.icon(ExomIcons.train)
           : _dateLeading(context, day),
       title: training.name,
       facts: _trainingFacts(

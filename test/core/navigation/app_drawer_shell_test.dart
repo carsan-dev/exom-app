@@ -1,5 +1,6 @@
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -292,7 +293,7 @@ void main() {
               icon: const Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(Icons.notifications_outlined, size: 24),
+                  Icon(ExomIcons.notifications, size: 24),
                   Positioned(
                     right: -8,
                     top: -7,

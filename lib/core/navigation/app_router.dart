@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:io' show Platform;
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -614,7 +615,7 @@ class _MainShellState extends State<MainShell> {
                         clipBehavior: Clip.none,
                         children: [
                           Icon(
-                            Icons.notifications_outlined,
+                            ExomIcons.notifications,
                             color: palette.textPrimary,
                             size: 24,
                           ),
@@ -633,7 +634,7 @@ class _MainShellState extends State<MainShell> {
                   tooltip: l10n.profileMenuItem,
                   onPressed: () => context.push(AppRoutes.profile),
                   icon: Icon(
-                    Icons.person_outline,
+                    ExomIcons.profile,
                     color: palette.textPrimary,
                     size: 24,
                   ),
@@ -643,7 +644,7 @@ class _MainShellState extends State<MainShell> {
                     tooltip: l10n.shellMenuTooltip,
                     onPressed: () => Scaffold.of(ctx).openEndDrawer(),
                     icon: Icon(
-                      Icons.menu,
+                      ExomIcons.menu,
                       color: palette.textPrimary,
                       size: 24,
                     ),

@@ -1,6 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_accordion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -191,7 +192,7 @@ void main() {
       expect(title.style?.fontWeight, FontWeight.w600);
       expect(title.style?.color, palette.textPrimary);
       expect(
-        tester.widget<Icon>(find.byIcon(Icons.expand_more)).color,
+        tester.widget<Icon>(find.byIcon(ExomIcons.expand)).color,
         palette.textSecondary,
       );
       expect(find.text('02'), findsOneWidget);

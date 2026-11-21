@@ -8,6 +8,7 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
@@ -286,7 +287,8 @@ List<({String text, double size})> _textRuns(WidgetTester tester) {
         final text = span.text;
         final isIcon =
             style?.fontFamily == 'MaterialIcons' ||
-            (style?.fontFamily?.contains('MaterialIcons') ?? false);
+            (style?.fontFamily?.contains('MaterialIcons') ?? false) ||
+            (style?.fontFamily?.contains('Lucide') ?? false);
         if (text != null && text.trim().isNotEmpty && !isIcon) {
           runs.add((text: text, size: style?.fontSize ?? 14.0));
         }
@@ -366,7 +368,7 @@ void main() {
       );
       expect(row, findsOneWidget);
       expect(
-        find.descendant(of: row, matching: find.byIcon(Icons.schedule)),
+        find.descendant(of: row, matching: find.byIcon(ExomIcons.time)),
         findsOneWidget,
       );
       expect(
@@ -425,14 +427,14 @@ void main() {
       expect(
         find.descendant(
           of: _toggle('m-lunch'),
-          matching: find.byIcon(Icons.check),
+          matching: find.byIcon(ExomIcons.check),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
           of: _toggle('m-snack'),
-          matching: find.byIcon(Icons.check),
+          matching: find.byIcon(ExomIcons.check),
         ),
         findsNothing,
       );
@@ -554,7 +556,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(of: row(), matching: find.byIcon(Icons.chevron_right)),
+        find.descendant(of: row(), matching: find.byIcon(ExomIcons.next)),
         findsOneWidget,
       );
       expect(tester.getSize(row()).height, greaterThanOrEqualTo(60));
@@ -873,7 +875,7 @@ void main() {
       expect(
         find.descendant(
           of: thumb('m-lunch'),
-          matching: find.byIcon(Icons.restaurant_outlined),
+          matching: find.byIcon(ExomIcons.diet),
         ),
         findsOneWidget,
       );
@@ -905,7 +907,7 @@ void main() {
         expect(
           find.descendant(
             of: thumb('m-x'),
-            matching: find.byIcon(Icons.restaurant_outlined),
+            matching: find.byIcon(ExomIcons.diet),
           ),
           findsOneWidget,
           reason: 'url "$url"',
@@ -941,13 +943,13 @@ void main() {
           ),
         );
         expect(
-          find.byIcon(Icons.restaurant_outlined),
+          find.byIcon(ExomIcons.diet),
           findsOneWidget,
           reason: entry.key,
         );
         expect(
           find.ancestor(
-            of: find.byIcon(Icons.restaurant_outlined),
+            of: find.byIcon(ExomIcons.diet),
             matching: find.byWidgetPredicate(
               (w) =>
                   (w is ColoredBox && w.color == AppColors.surfaceElevated) ||
@@ -993,11 +995,11 @@ void main() {
         );
         icons[type] = icon.icon!;
       }
-      expect(icons['BREAKFAST'], Icons.wb_sunny_outlined);
-      expect(icons['LUNCH'], Icons.restaurant_outlined);
-      expect(icons['SNACK'], Icons.local_cafe_outlined);
-      expect(icons['DINNER'], Icons.nights_stay_outlined);
-      expect(icons['OTHER'], Icons.restaurant_outlined);
+      expect(icons['BREAKFAST'], ExomIcons.sun);
+      expect(icons['LUNCH'], ExomIcons.diet);
+      expect(icons['SNACK'], ExomIcons.coffee);
+      expect(icons['DINNER'], ExomIcons.sleep);
+      expect(icons['OTHER'], ExomIcons.diet);
       expect(
         {
           icons['BREAKFAST'],
@@ -1055,12 +1057,12 @@ void main() {
       await _mount(tester, diet: _diet);
       await _revealIndex(tester);
       for (final id in ['m-breakfast', 'm-lunch', 'm-snack', 'm-dinner']) {
-        expect(inRow(id, find.byIcon(Icons.chevron_right)), findsNothing);
+        expect(inRow(id, find.byIcon(ExomIcons.next)), findsNothing);
       }
       expect(
         find.descendant(
           of: find.byKey(const Key('diet-shopping-list-row')),
-          matching: find.byIcon(Icons.chevron_right),
+          matching: find.byIcon(ExomIcons.next),
         ),
         findsNWidgets(2), // both entries of the index
       );
@@ -1254,7 +1256,7 @@ void main() {
           final done = tester.widget<Icon>(
             find.descendant(
               of: _toggle('m-lunch'),
-              matching: find.byIcon(Icons.check),
+              matching: find.byIcon(ExomIcons.check),
             ),
           );
           expect(done.color, data);

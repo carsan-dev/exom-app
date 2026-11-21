@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
@@ -88,7 +89,7 @@ class ExerciseVideoPreview extends StatelessWidget {
                       ],
                     ),
                     child: Icon(
-                      Icons.play_arrow_rounded,
+                      ExomIcons.play,
                       color: context.trainingAccent,
                       size: 46,
                     ),
@@ -158,7 +159,7 @@ class _PreviewPlaceholder extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.only(bottom: 48),
       child: showIcon
-          ? Icon(Icons.fitness_center, color: palette.textDisabled, size: 42)
+          ? Icon(ExomIcons.train, color: palette.textDisabled, size: 42)
           : null,
     );
   }

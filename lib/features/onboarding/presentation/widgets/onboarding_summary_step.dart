@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -255,7 +256,7 @@ class _CompletionCard extends StatelessWidget {
                     ? NetworkImage(avatarUrl!)
                     : null,
                 child: avatarUrl == null
-                    ? Icon(Icons.person, color: palette.textDisabled, size: 28)
+                    ? Icon(ExomIcons.profile, color: palette.textDisabled, size: 28)
                     : null,
               ),
               const SizedBox(width: 16),

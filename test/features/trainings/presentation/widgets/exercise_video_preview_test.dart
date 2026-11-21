@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -70,15 +71,15 @@ void main() {
         onTap: () {},
       ),
     );
-    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.fitness_center), findsNothing);
+    expect(find.byIcon(ExomIcons.play), findsOneWidget);
+    expect(find.byIcon(ExomIcons.train), findsNothing);
   });
 
   testWidgets('without an openable video the placeholder keeps its icon',
       (tester) async {
     await _pump(tester, const ExerciseVideoPreview(title: 'Hip thrust'));
-    expect(find.byIcon(Icons.fitness_center), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+    expect(find.byIcon(ExomIcons.train), findsOneWidget);
+    expect(find.byIcon(ExomIcons.play), findsNothing);
 
     // A video without a tap handler cannot be opened: same as no video.
     await _pump(
@@ -88,7 +89,7 @@ void main() {
         videoUrl: 'https://example.invalid/v.mp4',
       ),
     );
-    expect(find.byIcon(Icons.fitness_center), findsOneWidget);
+    expect(find.byIcon(ExomIcons.train), findsOneWidget);
   });
 
   testWidgets('the video tag and the no-video notice are at least 13 px',

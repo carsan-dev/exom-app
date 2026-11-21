@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_value_text.dart';
@@ -153,7 +154,7 @@ class ActiveExerciseSetChips extends StatelessWidget {
               if (done) ...[
                 const SizedBox(width: 4),
                 Icon(
-                  Icons.smartphone_outlined,
+                  ExomIcons.phone,
                   size: 16,
                   color: palette.textSecondary,
                 ),

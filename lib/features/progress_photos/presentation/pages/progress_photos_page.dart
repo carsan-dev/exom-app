@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
@@ -69,10 +70,10 @@ class ProgressPhotosPage extends StatefulWidget {
 
 class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
   static const _views = <_CanonicalView>[
-    _CanonicalView('FRONT', Icons.person_outline),
-    _CanonicalView('LEFT', Icons.turn_left),
-    _CanonicalView('RIGHT', Icons.turn_right),
-    _CanonicalView('BACK', Icons.accessibility_new_outlined),
+    _CanonicalView('FRONT', ExomIcons.profile),
+    _CanonicalView('LEFT', ExomIcons.turnLeft),
+    _CanonicalView('RIGHT', ExomIcons.turnRight),
+    _CanonicalView('BACK', ExomIcons.body),
   ];
 
   late final ProgressPhotoRepository _repository;
@@ -294,12 +295,12 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
+              leading: const Icon(ExomIcons.camera),
               title: Text(l10n.progressPhotosCamera),
               onTap: () => Navigator.pop(dialogContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(ExomIcons.gallery),
               title: Text(l10n.progressPhotosGallery),
               onTap: () => Navigator.pop(dialogContext, ImageSource.gallery),
             ),
@@ -651,14 +652,14 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
         appBar: GlassAppBar(
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            icon: Icon(ExomIcons.back, color: palette.textPrimary),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           actions: [
             IconButton(
               tooltip: l10n.progressPhotosRefresh,
               onPressed: _load,
-              icon: Icon(Icons.refresh, color: palette.textPrimary),
+              icon: Icon(ExomIcons.retry, color: palette.textPrimary),
             ),
           ],
         ),
@@ -679,7 +680,7 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
                 ? BorderSide.none
                 : const BorderSide(color: AppColors.textOnPrimary, width: 1.5),
           ),
-          icon: const Icon(Icons.add),
+          icon: const Icon(ExomIcons.add),
           label: Text(
             l10n.progressPhotosNewSession,
             style: const TextStyle(
@@ -1017,7 +1018,7 @@ class _ViewTile extends StatelessWidget {
                     ? () => onAdd(session, view, replacement: active)
                     : () => onAdd(session, view),
                 icon: Icon(
-                  active != null ? Icons.swap_horiz : Icons.add,
+                  active != null ? ExomIcons.swap : ExomIcons.add,
                   size: 18,
                 ),
                 label: Text(
@@ -1116,7 +1117,7 @@ class _ViewTile extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.zoom_in,
+                      ExomIcons.zoomIn,
                       size: 18,
                       color: Colors.white,
                     ),
@@ -1180,7 +1181,7 @@ class _ViewTile extends StatelessWidget {
           appBar: AppBar(
             leading: IconButton(
               tooltip: AppLocalizations.of(context).progressPhotosCloseImage,
-              icon: const Icon(Icons.close),
+              icon: const Icon(ExomIcons.close),
               onPressed: () => Navigator.pop(dialogContext),
             ),
             title: Text(view.label(AppLocalizations.of(context))),

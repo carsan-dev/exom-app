@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:flutter/material.dart';
@@ -43,10 +44,10 @@ class ExomInlineMessage extends StatelessWidget {
     final palette = context.exomPalette;
     final semantic = context.exomSemantic;
     final (IconData icon, Color colour) = switch (kind) {
-      ExomMessageKind.error => (Icons.error_outline, palette.error),
-      ExomMessageKind.pendiente => (Icons.schedule, semantic.warning),
-      ExomMessageKind.ok => (Icons.check, palette.textPrimary),
-      ExomMessageKind.info => (Icons.info_outline, palette.textSecondary),
+      ExomMessageKind.error => (ExomIcons.error, palette.error),
+      ExomMessageKind.pendiente => (ExomIcons.time, semantic.warning),
+      ExomMessageKind.ok => (ExomIcons.check, palette.textPrimary),
+      ExomMessageKind.info => (ExomIcons.info, palette.textSecondary),
     };
     final iconSize = MediaQuery.textScalerOf(context).scale(_iconBase);
     final bodyText = body;

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
@@ -32,7 +33,7 @@ Widget _dated({ExomSyncState? state, VoidCallback? onTap}) => ExomRichRow(
 );
 
 Widget _iconRow() => ExomRichRow(
-  leading: const ExomRowLeading.icon(Icons.restaurant),
+  leading: const ExomRowLeading.icon(ExomIcons.diet),
   title: 'Plan nutricional',
   facts: 'Definición · 2.150 kcal · 5 comidas',
   status: const ExomSyncStatus(state: ExomSyncState.pendiente),
@@ -118,7 +119,7 @@ void main() {
     );
     expect((box.decoration! as BoxDecoration).color, palette.surfaceElevated);
     expect(
-      tester.widget<Icon>(find.byIcon(Icons.restaurant)).color,
+      tester.widget<Icon>(find.byIcon(ExomIcons.diet)).color,
       palette.textSecondary,
     );
   });
@@ -158,7 +159,7 @@ void main() {
     final handle = tester.ensureSemantics();
     var taps = 0;
     await pumpComponent(tester, _dated(onTap: () => taps++));
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.byIcon(ExomIcons.next), findsOneWidget);
     final node = tester.getSemantics(find.byType(ExomRichRow));
     expect(node.flagsCollection.isButton, isTrue);
     expect(node.label, contains('Sentadilla búlgara'));
@@ -167,7 +168,7 @@ void main() {
     expect(taps, 1);
 
     await pumpComponent(tester, _dated());
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(find.byIcon(ExomIcons.next), findsNothing);
     expect(
       tester.getSemantics(find.byType(ExomRichRow)).flagsCollection.isButton,
       isFalse,
@@ -182,7 +183,7 @@ void main() {
       tester,
       SingleChildScrollView(
         child: ExomRichRow(
-          leading: const ExomRowLeading.icon(Icons.restaurant),
+          leading: const ExomRowLeading.icon(ExomIcons.diet),
           title: 'Plan nutricional de definición para las próximas semanas',
           facts: 'Definición · 2.150 kcal · 5 comidas repartidas en el día',
           status: const ExomSyncStatus(state: ExomSyncState.pendiente),
@@ -194,7 +195,7 @@ void main() {
     );
     final row = tester.getRect(find.byType(ExomRichRow));
     final thumb = tester.getRect(find.byKey(const Key('exom-row-leading')));
-    final chevron = tester.getRect(find.byIcon(Icons.chevron_right));
+    final chevron = tester.getRect(find.byIcon(ExomIcons.next));
     expect(row.height, greaterThan(thumb.height + 24));
     // Row content spans the padded area: 12 above and 12 below.
     final centre = (row.top + 12 + row.bottom - 12) / 2;

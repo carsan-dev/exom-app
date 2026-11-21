@@ -4,6 +4,7 @@ import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
@@ -348,7 +349,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     ].join(' · ');
     return _EvidenceRow(
       key: ValueKey('pending-row-$id'),
-      icon: isVideo ? Icons.videocam_outlined : Icons.image_outlined,
+      icon: isVideo ? ExomIcons.video : ExomIcons.image,
       title: isVideo ? l10n.pendingMediaVideo : l10n.pendingMediaImage,
       description: description,
       status: _statusOf(l10n, status, _queue.progressOf(id)),
@@ -435,7 +436,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     if (preparing) {
       return _Status(
         l10n.pendingUploadPreparingStatus,
-        Icons.smartphone_outlined,
+        ExomIcons.phone,
         _Tone.secondary,
         indeterminate: true,
       );
@@ -443,7 +444,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     if (processing) {
       return _Status(
         l10n.pendingUploadProcessingStatus,
-        Icons.sync,
+        ExomIcons.syncing,
         _Tone.secondary,
         indeterminate: true,
       );
@@ -462,7 +463,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
           : l10n.pendingUploadUploadingStatus;
       return _Status(
         label,
-        Icons.cloud_upload_outlined,
+        ExomIcons.upload,
         _Tone.secondary,
         fraction: fraction,
       );
@@ -470,17 +471,17 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     return switch (status) {
       'completed' => _Status(
         l10n.pendingUploadCompletedStatus,
-        Icons.check,
+        ExomIcons.check,
         _Tone.primary,
       ),
       'failed' || 'discarding' => _Status(
         l10n.pendingUploadFailedStatus,
-        Icons.error_outline,
+        ExomIcons.error,
         _Tone.error,
       ),
       _ => _Status(
         l10n.pendingUploadQueuedStatus,
-        Icons.smartphone_outlined,
+        ExomIcons.phone,
         _Tone.secondary,
       ),
     };
@@ -577,7 +578,7 @@ class _Summary extends StatelessWidget {
             children: [
               ExomKicker(
                 l10n.pendingUploadsKicker,
-                icon: Icons.smartphone_outlined,
+                icon: ExomIcons.phone,
               ),
               const SizedBox(height: ExomSpacing.md),
               MergeSemantics(
@@ -890,7 +891,7 @@ class _Actions extends StatelessWidget {
           _RowAction(
             key: retryKey,
             label: l10n.pendingUploadRetry,
-            icon: Icons.refresh,
+            icon: ExomIcons.retry,
             onTap: onRetry!,
           ),
         _RowAction(

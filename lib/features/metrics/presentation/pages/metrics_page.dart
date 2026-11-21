@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:exom_app/core/formatters/input_example.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -1156,7 +1157,7 @@ class _MetricsViewState extends State<_MetricsView> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const Icon(ExomIcons.done, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
@@ -1199,7 +1200,7 @@ class _MetricsViewState extends State<_MetricsView> {
           appBar: GlassAppBar(
             leading: IconButton(
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+              icon: Icon(ExomIcons.back, color: palette.textPrimary),
               onPressed: () => context.pop(),
             ),
           ),
@@ -1225,7 +1226,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.recordDateTitle,
-                          icon: Icons.calendar_today_outlined,
+                          icon: ExomIcons.calendar,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1237,7 +1238,7 @@ class _MetricsViewState extends State<_MetricsView> {
                               OutlinedButton.icon(
                                 onPressed: _pickMetricDate,
                                 icon: const Icon(
-                                  Icons.event_outlined,
+                                  ExomIcons.event,
                                   size: 18,
                                 ),
                                 label: Text(_selectedDateLabel(context)),
@@ -1247,7 +1248,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.heightSectionTitle,
-                          icon: Icons.height,
+                          icon: ExomIcons.height,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1275,7 +1276,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.weightSectionTitle,
-                          icon: Icons.monitor_weight_outlined,
+                          icon: ExomIcons.weight,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1375,7 +1376,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.muscleMassSectionTitle,
-                          icon: Icons.fitness_center,
+                          icon: ExomIcons.train,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1448,7 +1449,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                                 context,
                                               ),
                                           icon: const Icon(
-                                            Icons.calculate_outlined,
+                                            ExomIcons.calculate,
                                           ),
                                           label: Text(
                                             l10n.calculateEstimateButton,
@@ -1464,7 +1465,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.sleepHoursSectionTitle,
-                          icon: Icons.bedtime_outlined,
+                          icon: ExomIcons.sleep,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1521,7 +1522,7 @@ class _MetricsViewState extends State<_MetricsView> {
                         ),
                         _SectionCard(
                           title: l10n.bodyMeasurementsTitle,
-                          icon: Icons.straighten,
+                          icon: ExomIcons.ruler,
                           trailing: InkWell(
                             onTap: () => setState(() {
                               _bodyMapMode = !_bodyMapMode;
@@ -1536,8 +1537,8 @@ class _MetricsViewState extends State<_MetricsView> {
                                 children: [
                                   Icon(
                                     _bodyMapMode
-                                        ? Icons.grid_view
-                                        : Icons.accessibility_new,
+                                        ? ExomIcons.grid
+                                        : ExomIcons.body,
                                     color: palette.textPrimary,
                                     size: 18,
                                   ),
@@ -1645,7 +1646,7 @@ class _SeenSourceLink extends StatelessWidget {
     final palette = context.exomPalette;
     return TextButton.icon(
       onPressed: onTap,
-      icon: const Icon(Icons.open_in_new, size: 16),
+      icon: const Icon(ExomIcons.openExternal, size: 16),
       label: Text(text),
       style: TextButton.styleFrom(
         foregroundColor: palette.primary,

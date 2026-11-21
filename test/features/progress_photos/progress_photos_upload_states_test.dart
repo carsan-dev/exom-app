@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/progress_photos/presentation/pages/progress_photos_page.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -20,20 +21,20 @@ import 'progress_photos_page_test.dart'
 typedef _Expected = ({String session, String view, IconData icon});
 
 const _expected = <String, _Expected>{
-  'pending': (session: 's1', view: 'FRONT', icon: Icons.schedule),
+  'pending': (session: 's1', view: 'FRONT', icon: ExomIcons.time),
   'synchronizing': (
     session: 's1',
     view: 'LEFT',
-    icon: Icons.cloud_upload_outlined,
+    icon: ExomIcons.syncing,
   ),
-  'confirmed': (session: 's1', view: 'RIGHT', icon: Icons.check),
+  'confirmed': (session: 's1', view: 'RIGHT', icon: ExomIcons.check),
   'cleanupPending': (
     session: 's1',
     view: 'BACK',
-    icon: Icons.cleaning_services_outlined,
+    icon: ExomIcons.cleaning,
   ),
-  'failed': (session: 's2', view: 'FRONT', icon: Icons.error_outline),
-  'conflict': (session: 's2', view: 'LEFT', icon: Icons.sync_problem),
+  'failed': (session: 's2', view: 'FRONT', icon: ExomIcons.error),
+  'conflict': (session: 's2', view: 'LEFT', icon: ExomIcons.syncProblem),
 };
 
 Key _statusKey(String session, String view) =>
@@ -57,7 +58,9 @@ List<({String text, double size})> _textRuns(WidgetTester tester) {
       final style = inherited?.merge(span.style) ?? span.style;
       if (span is TextSpan) {
         final text = span.text;
-        final isIcon = style?.fontFamily?.contains('MaterialIcons') ?? false;
+        final isIcon =
+            (style?.fontFamily?.contains('MaterialIcons') ?? false) ||
+            (style?.fontFamily?.contains('Lucide') ?? false);
         if (text != null && text.trim().isNotEmpty && !isIcon) {
           runs.add((text: text, size: style?.fontSize ?? 14.0));
         }

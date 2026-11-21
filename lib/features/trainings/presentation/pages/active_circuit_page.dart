@@ -6,6 +6,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
@@ -787,12 +788,12 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.videocam_outlined),
+              leading: const Icon(ExomIcons.video),
               title: Text(AppLocalizations.of(context).recordNow),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.video_library_outlined),
+              leading: const Icon(ExomIcons.videoLibrary),
               title: Text(AppLocalizations.of(context).chooseFromGallery),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
@@ -1333,8 +1334,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
                               ? l10n.circuitFinishButton
                               : l10n.activeExerciseLogSetButton,
                           trailingIcon: ready
-                              ? Icons.check
-                              : Icons.arrow_forward,
+                              ? ExomIcons.check
+                              : ExomIcons.forward,
                           busy:
                               _seriesBusy ||
                               _finishing ||
@@ -1581,7 +1582,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           ExomSecondaryButton(
             key: const Key('circuit-technique'),
             label: l10n.activeExerciseTechniqueButton,
-            icon: _hasVideo(exercise) ? Icons.play_arrow_rounded : null,
+            icon: _hasVideo(exercise) ? ExomIcons.play : null,
             onPressed: () => _openTechnique(l10n),
           ),
         ],
@@ -1704,7 +1705,7 @@ class _CircuitHeader extends StatelessWidget {
         children: [
           IconButton(
             key: const Key('circuit-close'),
-            icon: Icon(Icons.close, color: palette.textPrimary),
+            icon: Icon(ExomIcons.close, color: palette.textPrimary),
             tooltip: closeTooltip,
             onPressed: onClose,
           ),

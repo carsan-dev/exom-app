@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -309,21 +310,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.appearanceSettingsTitle,
                   children: [
                     _ThemeModeTile(
-                      icon: Icons.phone_android_outlined,
+                      icon: ExomIcons.phone,
                       title: l10n.systemThemeOption,
                       subtitle: l10n.systemThemeDescription,
                       selected: preferences.themeMode == ThemeMode.system,
                       onTap: () => _setThemeMode(ThemeMode.system),
                     ),
                     _ThemeModeTile(
-                      icon: Icons.light_mode_outlined,
+                      icon: ExomIcons.sun,
                       title: l10n.lightThemeOption,
                       subtitle: l10n.lightThemeDescription,
                       selected: preferences.themeMode == ThemeMode.light,
                       onTap: () => _setThemeMode(ThemeMode.light),
                     ),
                     _ThemeModeTile(
-                      icon: Icons.dark_mode_outlined,
+                      icon: ExomIcons.darkMode,
                       title: l10n.darkThemeOption,
                       subtitle: l10n.darkThemeDescription,
                       selected: preferences.themeMode == ThemeMode.dark,
@@ -336,13 +337,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.accountSettingsTitle,
                   children: [
                     _SettingsTile(
-                      icon: Icons.person_outline,
+                      icon: ExomIcons.profile,
                       title: l10n.editProfileOption,
                       subtitle: l10n.editProfileDescription,
                       onTap: () => context.push(AppRoutes.profile),
                     ),
                     _SettingsTile(
-                      icon: Icons.straighten_outlined,
+                      icon: ExomIcons.ruler,
                       title: l10n.myMetricsOption,
                       subtitle: l10n.myMetricsDescription,
                       onTap: () => context.push('/profile/metrics'),
@@ -354,14 +355,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.unitsSettingsTitle,
                   children: [
                     _ThemeModeTile(
-                      icon: Icons.straighten,
+                      icon: ExomIcons.ruler,
                       title: l10n.metricOption,
                       subtitle: l10n.metricDescription,
                       selected: preferences.unitSystem == UnitSystem.metric,
                       onTap: () => _setUnitSystem(UnitSystem.metric),
                     ),
                     _ThemeModeTile(
-                      icon: Icons.square_foot,
+                      icon: ExomIcons.squareFoot,
                       title: 'Imperial',
                       subtitle: l10n.imperialDescription,
                       selected: preferences.unitSystem == UnitSystem.imperial,
@@ -374,14 +375,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.languageSettingsTitle,
                   children: [
                     _ThemeModeTile(
-                      icon: Icons.phone_android_outlined,
+                      icon: ExomIcons.phone,
                       title: l10n.systemLanguageOption,
                       subtitle: l10n.systemLanguageDescription,
                       selected: preferences.isSystemLocale,
                       onTap: () => _setLocale(null),
                     ),
                     _ThemeModeTile(
-                      icon: Icons.language,
+                      icon: ExomIcons.language,
                       title: 'Español',
                       subtitle: l10n.spanishLanguageDescription,
                       selected:
@@ -390,7 +391,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: () => _setLocale(const Locale('es', 'ES')),
                     ),
                     _ThemeModeTile(
-                      icon: Icons.translate,
+                      icon: ExomIcons.translate,
                       title: 'English',
                       subtitle: l10n.englishLanguageDescription,
                       selected:
@@ -405,7 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.privacySettingsTitle,
                   children: [
                     _SettingsTile(
-                      icon: Icons.privacy_tip_outlined,
+                      icon: ExomIcons.privacy,
                       title: l10n.privacyPolicyOption,
                       subtitle: l10n.privacyPolicyDescription,
                       onTap: () => _openExternalLink(
@@ -414,7 +415,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     _SettingsTile(
-                      icon: Icons.support_agent_outlined,
+                      icon: ExomIcons.support,
                       title: l10n.supportContactOption,
                       subtitle: l10n.supportContactDescription,
                       onTap: () => _openExternalLink(
@@ -423,7 +424,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     _SettingsTile(
-                      icon: Icons.alternate_email,
+                      icon: ExomIcons.email,
                       title: l10n.serviceSupportEmailOption,
                       subtitle: l10n.serviceSupportEmailDescription,
                       onTap: () => _openExternalLink(
@@ -432,7 +433,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     _SettingsTile(
-                      icon: Icons.build_circle_outlined,
+                      icon: ExomIcons.tools,
                       title: l10n.technicalSupportEmailOption,
                       subtitle: l10n.technicalSupportEmailDescription,
                       onTap: () => _openExternalLink(
@@ -447,7 +448,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.notificationsSettingsTitle,
                   children: [
                     _SettingsTile(
-                      icon: Icons.notifications_active_outlined,
+                      icon: ExomIcons.notificationsActive,
                       title: l10n.pushNotificationsOption,
                       subtitle: l10n.pushNotificationsDescription,
                       trailing: Switch(
@@ -459,7 +460,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           : () => _toggleNotifications(!_notificationsEnabled),
                     ),
                     _SettingsTile(
-                      icon: Icons.volume_up_outlined,
+                      icon: ExomIcons.volume,
                       title: l10n.restTimerSoundOption,
                       subtitle: l10n.restTimerSoundDescription,
                       trailing: Switch(
@@ -470,7 +471,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           _toggleRestTimerSound(!_restTimerSoundEnabled),
                     ),
                     _SettingsTile(
-                      icon: Icons.video_camera_front_outlined,
+                      icon: ExomIcons.video,
                       title: l10n.lastSetVideoReminderOption,
                       subtitle: l10n.lastSetVideoReminderDescription,
                       trailing: Switch(
@@ -487,19 +488,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.dataAndSupportTitle,
                   children: [
                     _SettingsTile(
-                      icon: Icons.cloud_off_outlined,
+                      icon: ExomIcons.offline,
                       title: l10n.offlineModeOption,
                       subtitle: l10n.offlineModeDescription,
                       onTap: null,
                     ),
                     _SettingsTile(
-                      icon: Icons.cleaning_services_outlined,
+                      icon: ExomIcons.cleaning,
                       title: l10n.clearCacheOption,
                       subtitle: l10n.clearCacheDescription,
                       onTap: _clearOfflineCache,
                     ),
                     _SettingsTile(
-                      icon: Icons.cloud_upload_outlined,
+                      icon: ExomIcons.upload,
                       title: l10n.pendingUploadsOption,
                       subtitle: l10n.pendingUploadsDescription,
                       onTap: () => Navigator.of(context).push(
@@ -509,13 +510,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     _SettingsTile(
-                      icon: Icons.feedback_outlined,
+                      icon: ExomIcons.feedback,
                       title: l10n.sendFeedbackOption,
                       subtitle: l10n.sendFeedbackDescription,
                       onTap: () => context.push(AppRoutes.feedback),
                     ),
                     _SettingsTile(
-                      icon: Icons.help_outline,
+                      icon: ExomIcons.help,
                       title: l10n.helpAndFaqOption,
                       subtitle: l10n.helpAndFaqDescription,
                       onTap: () => context.push(AppRoutes.help),
@@ -527,7 +528,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.applicationSettingsTitle,
                   children: [
                     _SettingsTile(
-                      icon: Icons.info_outline,
+                      icon: ExomIcons.info,
                       title: l10n.versionOption,
                       subtitle: l10n.versionDescription,
                       trailing: Text(
@@ -540,7 +541,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: null,
                     ),
                     _SettingsTile(
-                      icon: Icons.auto_awesome_outlined,
+                      icon: ExomIcons.sparkles,
                       title: l10n.creditsOption,
                       subtitle: l10n.creditsOptionDescription,
                       onTap: _showCredits,
@@ -554,7 +555,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     onPressed: () {
                       context.read<AuthBloc>().add(const AuthLogoutRequested());
                     },
-                    icon: const Icon(Icons.logout, size: 18),
+                    icon: const Icon(ExomIcons.logout, size: 18),
                     label: Text(l10n.logOutButton),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: palette.error,
@@ -595,7 +596,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: l10n.dangerZoneTitle,
                     children: [
                       _DangerTile(
-                        icon: Icons.delete_forever_outlined,
+                        icon: ExomIcons.deleteForever,
                         title: l10n.deleteAccountOption,
                         subtitle: l10n.deleteAccountDescription,
                         onTap: _confirmDeleteAccount,
@@ -661,7 +662,7 @@ class _DangerTile extends StatelessWidget {
         ),
       ),
       trailing: Icon(
-        Icons.chevron_right,
+        ExomIcons.next,
         color: palette.error.withValues(alpha: 0.6),
         size: 18,
       ),
@@ -733,7 +734,7 @@ class _CreditsSheet extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: GlassDecoration.card(borderRadius: 12),
-                child: Icon(Icons.code, color: palette.primary, size: 20),
+                child: Icon(ExomIcons.code, color: palette.primary, size: 20),
               ),
               title: Text(
                 'Carlos Sánchez Román',
@@ -749,7 +750,7 @@ class _CreditsSheet extends StatelessWidget {
                 ),
               ),
               trailing: Icon(
-                Icons.open_in_new,
+                ExomIcons.openExternal,
                 color: palette.textDisabled,
                 size: 18,
               ),
@@ -847,7 +848,7 @@ class _SettingsTile extends StatelessWidget {
       trailing:
           trailing ??
           (onTap != null
-              ? Icon(Icons.chevron_right, color: palette.textDisabled, size: 18)
+              ? Icon(ExomIcons.next, color: palette.textDisabled, size: 18)
               : null),
       onTap: onTap,
     );
@@ -905,7 +906,7 @@ class _ThemeModeTile extends StatelessWidget {
         ),
       ),
       trailing: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        selected ? ExomIcons.radioOn : ExomIcons.radioOff,
         color: selected ? palette.primary : palette.textDisabled,
       ),
     );

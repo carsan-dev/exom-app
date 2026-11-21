@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -29,7 +30,7 @@ class RecapStepRecovery extends StatelessWidget {
           RecapSectionCard(
             title: l10n.restAndRecovery,
             subtitle: l10n.rateHowYourBodyRespondedThisWeek,
-            icon: Icons.hotel_outlined,
+            icon: ExomIcons.bed,
             child: Column(
               children: [
                 RecapChoiceChipsField(
@@ -53,7 +54,7 @@ class RecapStepRecovery extends StatelessWidget {
           RecapSectionCard(
             title: l10n.discomfortOrTightness,
             subtitle: l10n.tapTheAreasThatFeltTheMostLoaded,
-            icon: Icons.accessibility_new,
+            icon: ExomIcons.body,
             child: Column(
               children: [
                 RecapBodyMapField(
@@ -78,7 +79,7 @@ class RecapStepRecovery extends StatelessWidget {
           RecapSectionCard(
             title: l10n.recoveryNotes,
             subtitle: l10n.addAnythingImportantToAdjustThePlan,
-            icon: Icons.self_improvement,
+            icon: ExomIcons.relax,
             child: RecapTextAreaField(
               label: l10n.recapTrainingObservations,
               hintText: l10n.egIStillHaveLowerBackTightness,

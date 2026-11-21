@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
@@ -22,7 +23,7 @@ Widget _list({List<String>? taps}) => ExomIndexList(
     ),
     ExomIndexItem(
       title: 'Fotos de progreso',
-      icon: Icons.arrow_forward,
+      icon: ExomIcons.forward,
       onTap: () => taps?.add('fotos'),
     ),
     const ExomIndexItem(title: 'Historial de revisiones', status: '3 nuevas'),
@@ -141,8 +142,8 @@ void main() {
     tester,
   ) async {
     await pumpComponent(tester, _list());
-    expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.byIcon(ExomIcons.forward), findsOneWidget);
+    expect(find.byIcon(ExomIcons.next), findsOneWidget);
   });
 
   testWidgets('taps reach the item; semantics read the original title', (

@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -531,7 +532,7 @@ class RecapStarRatingField extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(
-                  isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
+                  isFilled ? ExomIcons.star : ExomIcons.star,
                   color: isFilled ? semantic.warning : palette.textDisabled,
                   size: 40,
                 ),
@@ -623,7 +624,7 @@ class RecapBodyMapField extends StatelessWidget {
                 ),
                 backgroundColor: semantic.accent,
                 deleteIcon: const Icon(
-                  Icons.close,
+                  ExomIcons.close,
                   size: 16,
                   color: Colors.white,
                 ),

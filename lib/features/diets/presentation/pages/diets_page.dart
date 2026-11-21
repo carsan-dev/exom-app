@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/formatters/figure_format.dart';
@@ -845,7 +846,7 @@ class _MealDoneStatus extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ExcludeSemantics(
-          child: Icon(Icons.check, size: 18, color: palette.data),
+          child: Icon(ExomIcons.check, size: 18, color: palette.data),
         ),
         const SizedBox(width: 6),
         Flexible(
@@ -914,15 +915,15 @@ class _MealThumb extends StatelessWidget {
   static IconData _mealIcon(String type) {
     switch (type.toUpperCase()) {
       case 'BREAKFAST':
-        return Icons.wb_sunny_outlined;
+        return ExomIcons.sun;
       case 'LUNCH':
-        return Icons.restaurant_outlined;
+        return ExomIcons.diet;
       case 'SNACK':
-        return Icons.local_cafe_outlined;
+        return ExomIcons.coffee;
       case 'DINNER':
-        return Icons.nights_stay_outlined;
+        return ExomIcons.sleep;
       default:
-        return Icons.restaurant_outlined;
+        return ExomIcons.diet;
     }
   }
 }
@@ -990,7 +991,7 @@ class _MealMark extends StatelessWidget {
               ),
             ),
             child: isCompleted
-                ? Icon(Icons.check, size: 26, color: palette.data)
+                ? Icon(ExomIcons.check, size: 26, color: palette.data)
                 : null,
           ),
         ),

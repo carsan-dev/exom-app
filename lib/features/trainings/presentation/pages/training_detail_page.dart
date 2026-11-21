@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:flutter/material.dart';
@@ -1389,7 +1390,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 hintText: l10n.addQuickNoteOptional,
                 hintStyle: TextStyle(color: palette.textSecondary),
                 prefixIcon: Icon(
-                  Icons.edit_note,
+                  ExomIcons.editNote,
                   color: palette.textSecondary,
                 ),
                 filled: false,
@@ -1427,7 +1428,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                     next.blockExercises == null
                         ? next.leader.exercise.name
                         : next.leader.blockName ?? 'Circuito'),
-                  trailingIcon: Icons.arrow_forward,
+                  trailingIcon: ExomIcons.forward,
                   busy: _openingNext,
                   onPressed: !_sameSession
                       ? null
@@ -1574,7 +1575,7 @@ class TrainingNoteReplyCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.sticky_note_2_outlined,
+                  ExomIcons.note,
                   size: 18,
                   color: palette.textSecondary,
                 ),
@@ -1599,7 +1600,7 @@ class TrainingNoteReplyCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.mark_chat_read_outlined,
+                  ExomIcons.chatRead,
                   size: 18,
                   color: palette.primary,
                 ),
@@ -1640,7 +1641,7 @@ class _DetailBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: context.exomPalette.textPrimary),
+      icon: Icon(ExomIcons.back, color: context.exomPalette.textPrimary),
       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       onPressed: onPressed,
     );
@@ -1825,7 +1826,7 @@ class _CompleteTrainingButton extends StatelessWidget {
       onPressed: onPressed,
       style: style,
       icon: Icon(
-        done ? Icons.check_circle_outline : Icons.done_outline,
+        done ? ExomIcons.done : ExomIcons.complete,
         size: 20,
       ),
       label: Text(label),
@@ -1955,7 +1956,7 @@ class _RowTrailing extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(left: 8),
       child: Icon(
-        done ? Icons.check_rounded : Icons.chevron_right_rounded,
+        done ? ExomIcons.check : ExomIcons.next,
         color: done ? palette.textPrimary : palette.textSecondary,
         size: 24,
       ),
@@ -2004,7 +2005,7 @@ class _CircuitCard extends StatelessWidget {
                 width: 36,
                 child: ExcludeSemantics(
                   child: Icon(
-                    Icons.repeat_rounded,
+                    ExomIcons.repeat,
                     color: palette.textSecondary,
                     size: 22,
                   ),
@@ -2055,7 +2056,7 @@ class _CircuitCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  icon: const Icon(Icons.video_library_outlined, size: 20),
+                  icon: const Icon(ExomIcons.videoLibrary, size: 20),
                   label: Text(l10n.circuitFeedbackAction),
                 ),
               ),
@@ -2064,7 +2065,7 @@ class _CircuitCard extends StatelessWidget {
                 IconButton(
                   onPressed: onMarkPending,
                   color: palette.textPrimary,
-                  icon: const Icon(Icons.radio_button_unchecked_rounded),
+                  icon: const Icon(ExomIcons.radioOff),
                   tooltip: l10n.markCircuitPendingButton,
                 ),
               ],
@@ -2423,7 +2424,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
               Align(
                 alignment: Alignment.topLeft,
                 child: _SheetHeaderAction(
-                  icon: Icons.feedback_outlined,
+                  icon: ExomIcons.feedback,
                   label: l10n.feedbackSendFromExercise,
                   onTap: () => _openFeedback(context),
                   tooltip: l10n.feedbackSendFromExercise,
@@ -2432,7 +2433,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
               Align(
                 alignment: Alignment.topRight,
                 child: _SheetHeaderAction(
-                  icon: Icons.close,
+                  icon: ExomIcons.close,
                   onTap: () => Navigator.of(context).pop(),
                   tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                   highlighted: true,
@@ -2469,14 +2470,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
           runSpacing: 8,
           children: [
             _InfoChip(
-              icon: Icons.local_fire_department_outlined,
+              icon: ExomIcons.streak,
               label: _trainingLevelLabel(l10n, trainingLevel),
               color: typeColor,
               emphasized: true,
             ),
             if (muscleGroups.isNotEmpty)
               _InfoChip(
-                icon: Icons.track_changes_rounded,
+                icon: ExomIcons.target,
                 label: muscleGroups.join(', '),
                 color: palette.textSecondary,
                 maxWidth: MediaQuery.sizeOf(context).width - 128,
@@ -2517,7 +2518,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                                     color: palette.surfaceVariant,
                                     alignment: Alignment.center,
                                     child: Icon(
-                                      Icons.fitness_center,
+                                      ExomIcons.train,
                                       color: palette.textDisabled,
                                       size: 44,
                                     ),
@@ -2530,7 +2531,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Icons.fitness_center,
+                                    ExomIcons.train,
                                     color: palette.textDisabled,
                                     size: 40,
                                   ),
@@ -2558,7 +2559,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                         border: Border.all(color: palette.borderSoft),
                       ),
                       child: Icon(
-                        Icons.play_arrow_rounded,
+                        ExomIcons.play,
                         color: palette.textPrimary,
                         size: 44,
                       ),
@@ -2573,7 +2574,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: _InfoChip(
-              icon: Icons.fitness_center,
+              icon: ExomIcons.train,
               label: weightLabel,
               color: palette.textPrimary,
               emphasized: true,
@@ -2644,7 +2645,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         if (isCompleted) ...[
           const SizedBox(height: 28),
           ExomSecondaryButton(
-            icon: Icons.edit_note_rounded,
+            icon: ExomIcons.editNote,
             label: AppLocalizations.of(context).editData,
             onPressed: () {
               Navigator.of(
@@ -2664,7 +2665,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         ] else ...[
           const SizedBox(height: 28),
           ExomSecondaryButton(
-            icon: Icons.play_arrow_rounded,
+            icon: ExomIcons.play,
             label: hasPartialProgress
                 ? l10n.resumeExerciseButton
                 : l10n.startExerciseButton,

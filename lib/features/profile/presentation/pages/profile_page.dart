@@ -2,6 +2,7 @@ import 'package:exom_app/core/formatters/input_example.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:math' as math;
 import 'dart:io';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -39,7 +40,7 @@ class ProfilePage extends StatelessWidget {
         appBar: GlassAppBar(
           leading: IconButton(
             icon: Icon(
-              Icons.arrow_back,
+              ExomIcons.back,
               color: context.exomPalette.textPrimary,
             ),
             onPressed: () => context.pop(),
@@ -500,12 +501,12 @@ class _ProfileHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
+              leading: const Icon(ExomIcons.camera),
               title: Text(l10n.feedbackFromCamera),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(ExomIcons.gallery),
               title: Text(l10n.feedbackFromGallery),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
@@ -624,7 +625,7 @@ class _ProfileHeader extends StatelessWidget {
                   children: [
                     if (profile.currentWeightKg != null)
                       _InlineStat(
-                        icon: Icons.monitor_weight_outlined,
+                        icon: ExomIcons.weight,
                         text: formatWeight(
                           profile.currentWeightKg,
                           unitSystem,
@@ -633,7 +634,7 @@ class _ProfileHeader extends StatelessWidget {
                       ),
                     if (profile.heightCm != null)
                       _InlineStat(
-                        icon: Icons.height,
+                        icon: ExomIcons.height,
                         text: formatLength(
                           profile.heightCm,
                           unitSystem,
@@ -641,7 +642,7 @@ class _ProfileHeader extends StatelessWidget {
                         ),
                       ),
                     _InlineStat(
-                      icon: Icons.local_fire_department_outlined,
+                      icon: ExomIcons.streak,
                       text:
                           '${AppLocalizations.of(context).streak} ${profile.streakDays} ${AppLocalizations.of(context).days}',
                       iconColor: AppColors.calorieAccent,
@@ -689,14 +690,14 @@ class _ProfileHeader extends StatelessWidget {
                             height: 80,
                             fit: BoxFit.cover,
                             errorWidget: (_, _, _) => const Icon(
-                              Icons.person,
+                              ExomIcons.profile,
                               color: AppColors.primary,
                               size: 40,
                             ),
                           ),
                         )
                       : const Icon(
-                          Icons.person,
+                          ExomIcons.profile,
                           color: AppColors.primary,
                           size: 40,
                         ),
@@ -717,7 +718,7 @@ class _ProfileHeader extends StatelessWidget {
                       ],
                     ),
                     child: const Icon(
-                      Icons.camera_alt,
+                      ExomIcons.camera,
                       color: AppColors.textOnPrimary,
                       size: 12,
                     ),
@@ -807,7 +808,7 @@ class _ActionButtons extends StatelessWidget {
         children: [
           Expanded(
             child: _ActionChip(
-              icon: Icons.monitor_weight_outlined,
+              icon: ExomIcons.weight,
               label: AppLocalizations.of(context).updateWeightButton,
               onTap: () async {
                 await context.push('/profile/metrics');
@@ -820,7 +821,7 @@ class _ActionButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _ActionChip(
-              icon: Icons.straighten_outlined,
+              icon: ExomIcons.ruler,
               label: AppLocalizations.of(context).updateMeasurementsButton,
               onTap: () async {
                 await context.push('/profile/metrics');
@@ -833,7 +834,7 @@ class _ActionButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _ActionChip(
-              icon: Icons.bar_chart_outlined,
+              icon: ExomIcons.barChart,
               label: AppLocalizations.of(context).weeklyRecapButton,
               onTap: () => context.push(AppRoutes.recap),
             ),
@@ -856,7 +857,7 @@ class ProgressPhotosEntry extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: () => context.push(AppRoutes.progressPhotos),
-          icon: const Icon(Icons.photo_camera_back_outlined),
+          icon: const Icon(ExomIcons.camera),
           label: Text(AppLocalizations.of(context).progressPhotosEntry),
           style: OutlinedButton.styleFrom(
             foregroundColor: palette.textPrimary,
@@ -979,7 +980,7 @@ class _EmptyChart extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           Icon(
-            Icons.show_chart,
+            ExomIcons.progress,
             color: AppColors.primary.withValues(alpha: 0.3),
             size: 48,
           ),
@@ -1279,7 +1280,7 @@ class _IndicatorCards extends StatelessWidget {
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
                       icon: Icon(
-                        Icons.tune,
+                        ExomIcons.tune,
                         color: palette.textDisabled,
                         size: 16,
                       ),
@@ -1303,7 +1304,7 @@ class _IndicatorCards extends StatelessWidget {
                     headerAction: IconButton(
                       onPressed: () => _editMuscleGoal(context),
                       icon: Icon(
-                        Icons.tune,
+                        ExomIcons.tune,
                         color: palette.textDisabled,
                         size: 16,
                       ),
@@ -1647,7 +1648,7 @@ class _BodyDataSection extends StatelessWidget {
           const SizedBox(height: 14),
           // Weight row
           _DataRow(
-            icon: Icons.monitor_weight_outlined,
+            icon: ExomIcons.weight,
             label: latestWeight != null
                 ? '${AppLocalizations.of(context).weight}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
                 : '${AppLocalizations.of(context).weight}: --',
@@ -1657,7 +1658,7 @@ class _BodyDataSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _DataRow(
-            icon: Icons.fitness_center,
+            icon: ExomIcons.train,
             label: latestMetric?.muscleMassKg != null
                 ? '${AppLocalizations.of(context).muscleMassLabel}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
                 : '${AppLocalizations.of(context).muscleMassLabel}: --',
@@ -1667,7 +1668,7 @@ class _BodyDataSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _DataRow(
-            icon: Icons.height,
+            icon: ExomIcons.height,
             label: currentHeightCm != null
                 ? '${AppLocalizations.of(context).height}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
                 : '${AppLocalizations.of(context).height}: --',
@@ -1678,7 +1679,7 @@ class _BodyDataSection extends StatelessWidget {
           const SizedBox(height: 10),
           // Measurements row
           _DataRow(
-            icon: Icons.straighten_outlined,
+            icon: ExomIcons.ruler,
             label: AppLocalizations.of(context).measurementsLabel,
             detail: hasMeasurements
                 ? '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}'

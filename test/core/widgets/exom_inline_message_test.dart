@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
@@ -146,7 +147,7 @@ void main() {
         _msg(ExomMessageKind.ok, actionLabel: null),
         brightness: brightness,
       );
-      expect(tester.widget<Icon>(find.byType(Icon)).icon, Icons.check);
+      expect(tester.widget<Icon>(find.byType(Icon)).icon, ExomIcons.check);
       expect(titleColor(tester), palette.textPrimary);
       expect(titleColor(tester), isNot(palette.limeFill));
     });

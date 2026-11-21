@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
@@ -41,11 +42,11 @@ class GlassBottomNav extends StatelessWidget {
   });
 
   static const _icons = [
-    Icons.emoji_events_outlined,
-    Icons.fitness_center,
+    ExomIcons.trophy,
+    ExomIcons.train,
     null, // center = EXOM mark
-    Icons.restaurant,
-    Icons.calendar_month,
+    ExomIcons.diet,
+    ExomIcons.calendarMonth,
   ];
 
   static const _barHeight = 64.0;

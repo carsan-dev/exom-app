@@ -11,6 +11,7 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
@@ -409,7 +410,7 @@ void main() {
       expect(find.byType(ExomPrimaryButton), findsNothing);
       expect(_limeFills(), findsNothing);
       expect(find.text('Hecha'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.byIcon(ExomIcons.done), findsOneWidget);
       expect(find.text('3 ejercicios'), findsOneWidget);
       expect(
         find.bySemanticsLabel('Miércoles 18 de noviembre, hoy, sesión hecha'),
@@ -1250,7 +1251,7 @@ void main() {
 
         expect(mark('done', 16), findsOneWidget);
         final check = tester.widget<Icon>(mark('done', 16));
-        expect(check.icon, Icons.check);
+        expect(check.icon, ExomIcons.check);
         expect(check.size, 12);
 
         expect(mark('pending', 20), findsOneWidget);

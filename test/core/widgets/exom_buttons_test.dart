@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +35,7 @@ void main() {
               ExomPrimaryButton(
                 key: const Key('primary'),
                 label: 'Guardar serie',
-                trailingIcon: Icons.check,
+                trailingIcon: ExomIcons.check,
                 onPressed: () {},
               ),
             ]),
@@ -58,7 +59,7 @@ void main() {
           expect(text.style?.fontFamily, AppTheme.bodyFontFamily);
           expect(text.style?.fontWeight, FontWeight.w600);
           expect(text.style?.fontSize, 16);
-          expect(find.byIcon(Icons.check), findsOneWidget);
+          expect(find.byIcon(ExomIcons.check), findsOneWidget);
           await expectTapTargetGuidelines(tester);
         },
       );
@@ -225,14 +226,14 @@ void main() {
             ExomPrimaryButton(
               key: const Key('primary'),
               label: _longLabel,
-              trailingIcon: Icons.arrow_forward,
+              trailingIcon: ExomIcons.forward,
               onPressed: () {},
             ),
             const SizedBox(height: 8),
             ExomSecondaryButton(
               key: const Key('secondary'),
               label: _longLabel,
-              icon: Icons.refresh,
+              icon: ExomIcons.retry,
               onPressed: () {},
             ),
             ExomQuietButton(
@@ -267,7 +268,7 @@ void main() {
             ExomSecondaryButton(
               key: const Key('secondary'),
               label: 'Reintentar',
-              icon: Icons.refresh,
+              icon: ExomIcons.retry,
               onPressed: () => secondary++,
             ),
             ExomQuietButton(

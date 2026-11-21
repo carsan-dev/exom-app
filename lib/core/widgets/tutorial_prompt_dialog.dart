@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -49,7 +50,7 @@ class TutorialPromptDialog extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.explore_outlined,
+                  ExomIcons.explore,
                   color: palette.primary,
                   size: 32,
                 ),

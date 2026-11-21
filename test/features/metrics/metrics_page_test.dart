@@ -172,7 +172,8 @@ List<({String text, double size})> _textRuns(WidgetTester tester) {
         final text = span.text;
         final isIcon =
             style?.fontFamily == 'MaterialIcons' ||
-            (style?.fontFamily?.contains('MaterialIcons') ?? false);
+            (style?.fontFamily?.contains('MaterialIcons') ?? false) ||
+            (style?.fontFamily?.contains('Lucide') ?? false);
         if (text != null && text.trim().isNotEmpty && !isIcon) {
           runs.add((text: text, size: style?.fontSize ?? 14.0));
         }

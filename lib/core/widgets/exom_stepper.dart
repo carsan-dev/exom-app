@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -232,7 +233,7 @@ class ExomStepper<T> extends StatelessWidget {
       child: Row(
         children: [
           _StepButton(
-            icon: Icons.remove,
+            icon: ExomIcons.remove,
             semanticLabel: decrementLabel,
             onPressed: onDecrement,
           ),
@@ -252,7 +253,7 @@ class ExomStepper<T> extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _StepButton(
-            icon: Icons.add,
+            icon: ExomIcons.add,
             semanticLabel: incrementLabel,
             onPressed: onIncrement,
           ),

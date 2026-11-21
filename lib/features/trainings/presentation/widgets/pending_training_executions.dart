@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/models/training_execution_discard.dart';
@@ -151,7 +152,7 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
   /// the active locale, or a clock when the stored date does not parse.
   ExomRowLeading _leading(BuildContext context, Object? assignmentDate) {
     final date = assignmentDate is String ? DateTime.tryParse(assignmentDate) : null;
-    if (date == null) return const ExomRowLeading.icon(Icons.schedule);
+    if (date == null) return const ExomRowLeading.icon(ExomIcons.time);
     final locale = Localizations.localeOf(context).toLanguageTag();
     return ExomRowLeading.date(
       day: DateFormat('d', locale).format(date),

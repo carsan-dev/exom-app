@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -28,7 +29,7 @@ class RecapStepNutrition extends StatelessWidget {
           RecapSectionCard(
             title: l10n.weekQuality,
             subtitle: l10n.rateHowYourNutritionWentTheseDays,
-            icon: Icons.restaurant_menu,
+            icon: ExomIcons.meal,
             child: Column(
               children: [
                 RecapChoiceChipsField(
@@ -51,7 +52,7 @@ class RecapStepNutrition extends StatelessWidget {
           RecapSectionCard(
             title: l10n.hydration,
             subtitle: l10n.tellUsIfYouPaidAttentionToThisArea,
-            icon: Icons.water_drop_outlined,
+            icon: ExomIcons.water,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -93,7 +94,7 @@ class RecapStepNutrition extends StatelessWidget {
           RecapSectionCard(
             title: l10n.nutritionNotes,
             subtitle: l10n.addContextForIssuesCravingsOrDifficulties,
-            icon: Icons.edit_note,
+            icon: ExomIcons.editNote,
             child: RecapTextAreaField(
               label: l10n.recapTrainingObservations,
               hintText: l10n.egItWasHardToOrganizeBreakfasts,

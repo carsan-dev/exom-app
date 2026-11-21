@@ -7,6 +7,7 @@
 // [FakeVideoController], so no platform video is needed.
 import 'dart:io';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
@@ -61,7 +62,7 @@ void main() {
     ) async {
       final controller = await pumpPlayer(tester);
 
-      expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+      expect(find.byIcon(ExomIcons.pause), findsOneWidget);
       expect(find.text('00:12 / 00:38'), findsOneWidget);
       expect(controller.calls, contains('play'));
       expectNoOverflow(tester);
@@ -724,7 +725,7 @@ void main() {
       // The unimplemented platform fails initialize(): the page shows its
       // retry state instead of crashing.
       expect(find.byType(ExerciseVideoPlayerPage), findsOneWidget);
-      expect(find.byIcon(Icons.pause_rounded), findsNothing);
+      expect(find.byIcon(ExomIcons.pause), findsNothing);
       await tester.pumpWidget(const SizedBox());
     });
 

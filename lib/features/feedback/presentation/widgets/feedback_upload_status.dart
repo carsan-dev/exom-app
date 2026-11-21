@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -53,7 +54,7 @@ class FeedbackUploadStatus extends StatelessWidget {
               TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: colors.primary),
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(ExomIcons.retry),
                 label: Text(l10n.pendingUploadRetry),
               ),
           ],

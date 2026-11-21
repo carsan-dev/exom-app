@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -38,7 +39,7 @@ final _steps = [
     route: '/',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 2,
-    icon: Icons.home_outlined,
+    icon: ExomIcons.home,
     title: (l10n) => l10n.tutorialHomeTitle,
     description: (l10n) => l10n.tutorialHomeDesc,
   ),
@@ -46,7 +47,7 @@ final _steps = [
     route: '/trainings',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 1,
-    icon: Icons.fitness_center,
+    icon: ExomIcons.train,
     title: (l10n) => l10n.tutorialTrainingsTitle,
     description: (l10n) => l10n.tutorialTrainingsDesc,
   ),
@@ -54,7 +55,7 @@ final _steps = [
     route: '/diets',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 3,
-    icon: Icons.restaurant,
+    icon: ExomIcons.diet,
     title: (l10n) => l10n.tutorialDietsTitle,
     description: (l10n) => l10n.tutorialDietsDesc,
   ),
@@ -62,7 +63,7 @@ final _steps = [
     route: '/calendar',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 4,
-    icon: Icons.calendar_month,
+    icon: ExomIcons.calendarMonth,
     title: (l10n) => l10n.tutorialCalendarTitle,
     description: (l10n) => l10n.tutorialCalendarDesc,
   ),
@@ -70,13 +71,13 @@ final _steps = [
     route: '/challenges',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 0,
-    icon: Icons.emoji_events_outlined,
+    icon: ExomIcons.trophy,
     title: (l10n) => l10n.tutorialChallengesTitle,
     description: (l10n) => l10n.tutorialChallengesDesc,
   ),
   _TutorialStep(
     pointsAt: _PointsAt.headerProfile,
-    icon: Icons.person_outline,
+    icon: ExomIcons.profile,
     title: (l10n) => l10n.tutorialProfileTitle,
     description: (l10n) => l10n.tutorialProfileDesc,
   ),
@@ -85,7 +86,7 @@ final _steps = [
     drawerItemIndex:
         2, // Weekly Recap is 3rd item (0: Profile, 1: Challenges, 2: Recap)
     openDrawer: true,
-    icon: Icons.bar_chart_outlined,
+    icon: ExomIcons.barChart,
     title: (l10n) => l10n.tutorialRecapTitle,
     description: (l10n) => l10n.tutorialRecapDesc,
   ),
@@ -93,7 +94,7 @@ final _steps = [
     pointsAt: _PointsAt.drawerItem,
     drawerItemIndex: 3, // Feedback is 4th item
     openDrawer: true,
-    icon: Icons.feedback_outlined,
+    icon: ExomIcons.feedback,
     title: (l10n) => l10n.tutorialFeedbackTitle,
     description: (l10n) => l10n.tutorialFeedbackDesc,
   ),

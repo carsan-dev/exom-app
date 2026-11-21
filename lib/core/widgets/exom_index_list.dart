@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
@@ -113,7 +114,7 @@ class _IndexEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final scaler = MediaQuery.textScalerOf(context);
-    final icon = item.icon ?? (item.onTap == null ? null : Icons.chevron_right);
+    final icon = item.icon ?? (item.onTap == null ? null : ExomIcons.next);
     final status = item.status;
     return MergeSemantics(
       child: Semantics(

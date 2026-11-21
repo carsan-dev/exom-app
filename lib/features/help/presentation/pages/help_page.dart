@@ -3,6 +3,7 @@
 import 'package:exom_app/core/config/external_links.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_accordion.dart';
@@ -130,7 +131,7 @@ class _HelpPageState extends State<HelpPage> {
   }) => _HelpLinkRow(
     rowKey: const Key('help-link-row'),
     title: title,
-    icon: Icons.open_in_new,
+    icon: ExomIcons.openExternal,
     details: [destination, description],
     onTap: () => _openExternalLink(section, uri, errorMessage),
   );
@@ -149,7 +150,7 @@ class _HelpPageState extends State<HelpPage> {
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(ExomIcons.back),
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => context.pop(),
           ),
@@ -205,14 +206,14 @@ class _HelpPageState extends State<HelpPage> {
                   _HelpLinkRow(
                     rowKey: const Key('help-feedback-row'),
                     title: l10n.sendQuestionOrIssue,
-                    icon: Icons.chevron_right,
+                    icon: ExomIcons.next,
                     tag: l10n.feedback,
                     onTap: () => context.push(AppRoutes.feedback),
                   ),
                   _HelpLinkRow(
                     rowKey: const Key('help-settings-row'),
                     title: l10n.notificationsAndCache,
-                    icon: Icons.chevron_right,
+                    icon: ExomIcons.next,
                     tag: l10n.settings,
                     onTap: () => context.push(AppRoutes.settings),
                   ),

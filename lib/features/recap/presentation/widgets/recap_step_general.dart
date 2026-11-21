@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -31,7 +32,7 @@ class RecapStepGeneral extends StatelessWidget {
           RecapSectionCard(
             title: l10n.generalState,
             subtitle: l10n.yourMentalAndEmotionalContextAlsoMatters,
-            icon: Icons.mood,
+            icon: ExomIcons.mood,
             child: Column(
               children: [
                 RecapChoiceChipsField(

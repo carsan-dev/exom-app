@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -43,10 +44,10 @@ class RecapStartView extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     final sections = [
-      (icon: Icons.fitness_center_rounded, label: l10n.recapTraining),
-      (icon: Icons.restaurant_rounded, label: l10n.recapNutrition),
-      (icon: Icons.bedtime_rounded, label: l10n.recapRecovery),
-      (icon: Icons.mood_rounded, label: l10n.recapGeneral),
+      (icon: ExomIcons.train, label: l10n.recapTraining),
+      (icon: ExomIcons.diet, label: l10n.recapNutrition),
+      (icon: ExomIcons.sleep, label: l10n.recapRecovery),
+      (icon: ExomIcons.mood, label: l10n.recapGeneral),
     ];
 
     final allComplete = List.generate(
@@ -70,7 +71,7 @@ class RecapStartView extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.calendar_today_rounded,
+                  ExomIcons.calendar,
                   size: 15,
                   color: palette.primary,
                 ),
@@ -174,7 +175,7 @@ class RecapStartView extends StatelessWidget {
                             ),
                             child: isComplete
                                 ? const Icon(
-                                    Icons.check_rounded,
+                                    ExomIcons.check,
                                     size: 14,
                                     color: Colors.white,
                                   )
@@ -201,7 +202,7 @@ class RecapStartView extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: allComplete ? onReviewAndSend : onStart,
               icon: Icon(
-                allComplete ? Icons.send_rounded : Icons.play_arrow_rounded,
+                allComplete ? ExomIcons.send : ExomIcons.play,
               ),
               label: Text(
                 allComplete

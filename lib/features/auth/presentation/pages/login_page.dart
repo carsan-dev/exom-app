@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -127,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
         Builder(
           builder: (sheetContext) => ExomPrimaryButton(
             label: l10n.linkSocialConfirmButton,
-            trailingIcon: Icons.arrow_forward,
+            trailingIcon: ExomIcons.forward,
             onPressed: () {
               if (formKey.currentState?.validate() ?? false) {
                 Navigator.of(sheetContext).pop(controller.text);
@@ -170,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: Icon(Icons.error_outline, size: 16, color: palette.error),
+            child: Icon(ExomIcons.error, size: 16, color: palette.error),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -343,8 +344,8 @@ class _LoginPageState extends State<LoginPage> {
               : l10n.passwordHideTooltip,
           icon: Icon(
             _obscurePassword
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
+                ? ExomIcons.show
+                : ExomIcons.hide,
             color: palette.textSecondary,
           ),
           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -405,7 +406,7 @@ class _LoginPageState extends State<LoginPage> {
           ExomPrimaryButton(
             key: const Key('login-submit'),
             label: l10n.loginButton,
-            trailingIcon: Icons.arrow_forward,
+            trailingIcon: ExomIcons.forward,
             busy: isLoading,
             onPressed: _onLoginPressed,
           ),
@@ -430,7 +431,7 @@ class _LoginPageState extends State<LoginPage> {
     // «Continuar con Apple» only on iOS; elsewhere only Google is offered.
     final appleButton = isIOS
         ? SocialLoginButton(
-            icon: Icon(Icons.apple, size: 24, color: palette.textPrimary),
+            icon: Icon(ExomIcons.apple, size: 24, color: palette.textPrimary),
             label: l10n.continueWithApple,
             isLoading: isLoading,
             onPressed: () =>

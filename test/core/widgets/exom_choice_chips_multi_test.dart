@@ -1,6 +1,7 @@
 // T0.4 (docs/plans/rediseno-app-l5-contrato-v2.md): multi-select variant of
 // ExomChoiceChips. The single-select API and its tests stay untouched.
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,7 +54,7 @@ void main() {
     tester,
   ) async {
     await pumpComponent(tester, _multi(selected: {'Espalda', 'Piernas'}));
-    expect(find.byIcon(Icons.check), findsNWidgets(2));
+    expect(find.byIcon(ExomIcons.check), findsNWidgets(2));
   });
 
   for (final brightness in Brightness.values) {
@@ -62,7 +63,7 @@ void main() {
         '(${brightness.name})', (tester) async {
       await pumpComponent(tester, _multi(), brightness: brightness);
       await tester.pumpAndSettle();
-      final icon = tester.widget<Icon>(find.byIcon(Icons.check));
+      final icon = tester.widget<Icon>(find.byIcon(ExomIcons.check));
       expect(icon.color, palette.onSelectionFill);
       final text = tester.widget<Text>(find.text('Espalda'));
       expect(

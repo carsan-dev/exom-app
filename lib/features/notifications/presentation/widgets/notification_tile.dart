@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_notice_row.dart';
 import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -33,24 +34,24 @@ class NotificationTile extends StatelessWidget {
       case 'training':
       case 'training_reminder':
       case 'training_note_reply':
-        return Icons.fitness_center;
+        return ExomIcons.train;
       case 'diet':
       case 'diet_reminder':
       case 'meal':
-        return Icons.restaurant;
+        return ExomIcons.diet;
       case 'challenge':
       case 'challenge_update':
-        return Icons.emoji_events;
+        return ExomIcons.trophy;
       case 'recap':
       case 'recap_reminder':
       case 'recap_feedback':
-        return Icons.bar_chart;
+        return ExomIcons.barChart;
       case 'profile':
-        return Icons.person_outline;
+        return ExomIcons.profile;
       case 'calendar':
-        return Icons.calendar_today;
+        return ExomIcons.calendar;
       default:
-        return Icons.notifications_outlined;
+        return ExomIcons.notifications;
     }
   }
 

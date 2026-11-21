@@ -4,6 +4,7 @@ import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
@@ -554,7 +555,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
             onTextSubmitted: (_) => _weightFocus.requestFocus(),
             errorText: _countError,
             errorBelowRow: true,
-            errorIcon: Icons.error_outline,
+            errorIcon: ExomIcons.error,
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -592,7 +593,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
             onTextChanged: _onWeightChanged,
             errorText: _weightError,
             errorBelowRow: true,
-            errorIcon: Icons.error_outline,
+            errorIcon: ExomIcons.error,
           ),
           ...[
             const SizedBox(height: 18),
@@ -630,7 +631,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
             ExomPrimaryButton(
               key: const Key('set-sheet-save'),
               label: l10n.setSheetSave,
-              trailingIcon: Icons.check,
+              trailingIcon: ExomIcons.check,
               busy: _saving,
               onPressed: _save,
             ),

@@ -2,6 +2,7 @@
 // an inline message with an icon above the button, not a SnackBar. They stay
 // until the next attempt and the typed email is kept. The busy button keeps
 // its label and the fields are disabled while it works.
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
@@ -132,7 +133,7 @@ void main() {
       expect(bloc.events, isEmpty);
       expect(find.text(_es.emailValidationEmpty), findsOneWidget);
       expect(find.text(_es.passwordValidationEmpty), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline), findsNWidgets(2));
+      expect(find.byIcon(ExomIcons.error), findsNWidgets(2));
 
       await tester.enterText(_inner(_emailKey), 'lucia@ejemplo.es');
       await tester.enterText(_inner(_passwordKey), 'corta');

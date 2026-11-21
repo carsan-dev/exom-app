@@ -1,5 +1,6 @@
 // Redesign L2: the restyled shared widgets keep their API and paint V4 tokens.
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
@@ -80,7 +81,7 @@ void main() {
                 IconButton(
                   tooltip: 'Perfil',
                   onPressed: () {},
-                  icon: const Icon(Icons.person_outline),
+                  icon: const Icon(ExomIcons.profile),
                 ),
               ],
             ),
@@ -160,14 +161,14 @@ void main() {
         ErrorWidget2(message: 'Algo falló', onRetry: () {}),
         brightness: brightness,
       );
-      final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
+      final icon = tester.widget<Icon>(find.byIcon(ExomIcons.error));
       expect(icon.color, palette.error);
       await pumpComponent(
         tester,
         NoConnectionWidget(onRetry: () {}),
         brightness: brightness,
       );
-      final wifi = tester.widget<Icon>(find.byIcon(Icons.wifi_off_outlined));
+      final wifi = tester.widget<Icon>(find.byIcon(ExomIcons.wifiOff));
       expect(
         wifi.color,
         themeFor(brightness).extension<ExomSemanticPalette>()!.warning,

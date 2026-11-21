@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -239,7 +240,7 @@ class _DaySlot extends StatelessWidget {
                       child: switch (mark) {
                         null =>
                           isDone
-                              ? Icon(Icons.check, size: 14, color: foreground)
+                              ? Icon(ExomIcons.check, size: 14, color: foreground)
                               : null,
                         HomeDayMark.none => null,
                         HomeDayMark.pending => Center(
@@ -267,7 +268,7 @@ class _DaySlot extends StatelessWidget {
                         HomeDayMark.done => Center(
                           child: Icon(
                             key: markKey,
-                            Icons.check,
+                            ExomIcons.check,
                             size: _checkSize,
                             color: foreground,
                           ),

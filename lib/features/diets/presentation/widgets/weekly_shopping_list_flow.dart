@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
@@ -92,12 +93,12 @@ Future<void> printOrSharePdf(
       child: Wrap(
         children: [
           ListTile(
-            leading: const Icon(Icons.print_outlined),
+            leading: const Icon(ExomIcons.print),
             title: Text(l10n.weeklyDietPrint),
             onTap: () => Navigator.pop(sheetContext, PdfAction.print),
           ),
           ListTile(
-            leading: const Icon(Icons.share_outlined),
+            leading: const Icon(ExomIcons.share),
             title: Text(l10n.weeklyDietShare),
             onTap: () => Navigator.pop(sheetContext, PdfAction.share),
           ),
@@ -245,7 +246,7 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(ExomIcons.close),
                   ),
                 ],
               ),
@@ -339,7 +340,7 @@ class _WeeklyVariantSelectorState extends State<WeeklyVariantSelector> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: () => Navigator.pop(context, _result()),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  icon: const Icon(ExomIcons.pdf),
                   label: Text(widget.generateLabel),
                 ),
               ),

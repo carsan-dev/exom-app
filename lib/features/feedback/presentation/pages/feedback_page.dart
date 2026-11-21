@@ -1,6 +1,7 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'dart:io';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_upload_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -66,7 +67,7 @@ class FeedbackPage extends StatelessWidget {
           backgroundColor: Colors.transparent,
           appBar: GlassAppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+              icon: Icon(ExomIcons.back, color: palette.textPrimary),
               onPressed: () => context.pop(),
             ),
             title: Text(
@@ -742,8 +743,8 @@ class _FeedbackCard extends StatelessWidget {
             children: [
               Icon(
                 feedback.isVideo
-                    ? Icons.videocam_outlined
-                    : Icons.image_outlined,
+                    ? ExomIcons.video
+                    : ExomIcons.image,
                 color: palette.primary,
                 size: 16,
               ),
@@ -780,7 +781,7 @@ class _FeedbackCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.reply, color: palette.primary, size: 14),
+                  Icon(ExomIcons.reply, color: palette.primary, size: 14),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(

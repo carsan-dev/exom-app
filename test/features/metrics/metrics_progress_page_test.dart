@@ -9,6 +9,7 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -206,7 +207,9 @@ List<({String text, double size})> _textRuns(WidgetTester tester) {
       final style = inherited?.merge(span.style) ?? span.style;
       if (span is TextSpan) {
         final text = span.text;
-        final isIcon = style?.fontFamily?.contains('MaterialIcons') ?? false;
+        final isIcon =
+            (style?.fontFamily?.contains('MaterialIcons') ?? false) ||
+            (style?.fontFamily?.contains('Lucide') ?? false);
         if (text != null && text.trim().isNotEmpty && !isIcon) {
           runs.add((text: text, size: style?.fontSize ?? 14.0));
         }
@@ -648,7 +651,7 @@ void main() {
       await _mount(tester, repository: repository);
       final l10n = _l10n(tester);
       expect(find.text(l10n.progressCachedBanner), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+      expect(find.byIcon(ExomIcons.offline), findsOneWidget);
       expect(find.text(l10n.retry), findsOneWidget);
       expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
@@ -726,7 +729,7 @@ void main() {
       );
       final l10n = _l10n(tester);
       expect(find.text(l10n.progressCachedBanner), findsNothing);
-      expect(find.byIcon(Icons.cloud_off_outlined), findsNothing);
+      expect(find.byIcon(ExomIcons.offline), findsNothing);
       expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
       expect(find.text(l10n.progressLatestUnavailableError), findsNothing);
       expect(find.text(l10n.retry), findsNothing);

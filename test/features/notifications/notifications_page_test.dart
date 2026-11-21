@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_arrival.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
@@ -131,7 +132,7 @@ void main() {
     await pumpNotificationsPage(tester, repo);
     expect(find.byType(ExomEmptyState), findsOneWidget);
     expect(find.text('No tienes notificaciones'), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_off_outlined), findsNothing);
+    expect(find.byIcon(ExomIcons.notificationsOff), findsNothing);
     expect(find.byType(ExomTextLink), findsNothing);
   });
 
@@ -448,10 +449,10 @@ void main() {
         ),
         matching: find.byIcon(icon),
       );
-      expect(iconIn('Dieta', Icons.restaurant), findsOneWidget);
-      expect(iconIn('Reto', Icons.emoji_events), findsOneWidget);
-      expect(iconIn('Tipo raro', Icons.notifications_outlined), findsOneWidget);
-      expect(iconIn('Sin tipo', Icons.notifications_outlined), findsOneWidget);
+      expect(iconIn('Dieta', ExomIcons.diet), findsOneWidget);
+      expect(iconIn('Reto', ExomIcons.trophy), findsOneWidget);
+      expect(iconIn('Tipo raro', ExomIcons.notifications), findsOneWidget);
+      expect(iconIn('Sin tipo', ExomIcons.notifications), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const ValueKey('notice-thumb-d'))),
         const Size(56, 56),

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -67,12 +68,12 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
+              leading: const Icon(ExomIcons.camera),
               title: Text(l10n.feedbackFromCamera),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(ExomIcons.gallery),
               title: Text(l10n.feedbackFromGallery),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
@@ -205,7 +206,7 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                                     (avatarFile == null &&
                                         widget.initialAvatarUrl == null)
                                     ? Icon(
-                                        Icons.person,
+                                        ExomIcons.profile,
                                         color: palette.textDisabled,
                                         size: 40,
                                       )
@@ -253,7 +254,7 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                                       ],
                                     ),
                                     child: Icon(
-                                      Icons.camera_alt,
+                                      ExomIcons.camera,
                                       color: palette.onPrimary,
                                       size: 16,
                                     ),
@@ -304,7 +305,7 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
                           decoration: InputDecoration(
                             labelText: l10n.onboardingBirthDateLabel,
                             suffixIcon: const Icon(
-                              Icons.calendar_today_outlined,
+                              ExomIcons.calendar,
                             ),
                           ),
                           child: Text(

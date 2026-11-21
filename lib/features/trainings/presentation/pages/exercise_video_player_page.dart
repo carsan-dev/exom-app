@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
@@ -586,8 +587,8 @@ class _ExerciseVideoPlayerPageState extends State<ExerciseVideoPlayerPage> {
                   ),
                   icon: Icon(
                     value.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
+                        ? ExomIcons.pause
+                        : ExomIcons.play,
                   ),
                 ),
                 const SizedBox(width: ExomSpacing.md),
@@ -964,7 +965,7 @@ class _SpeedPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.fast_forward_rounded,
+            ExomIcons.fastForward,
             color: palette.textPrimary,
             size: 18,
           ),

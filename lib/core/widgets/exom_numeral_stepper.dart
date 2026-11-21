@@ -1,5 +1,6 @@
 import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
@@ -192,7 +193,7 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
       onTextSubmitted: (_) => _finish(),
       errorText: widget.errorText,
       errorBelowRow: true,
-      errorIcon: Icons.error_outline,
+      errorIcon: ExomIcons.error,
       valueStyle: ExomType.hero64.copyWith(height: 1, color: palette.data),
       onValueTap: enabled && !_editing ? _startEditing : null,
       valueBuilder: (context, value) => Center(

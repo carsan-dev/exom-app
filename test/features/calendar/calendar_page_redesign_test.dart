@@ -7,6 +7,7 @@
 // The bloc is seeded: loading, selection and month changes are only recorded
 // as events; the export flow is covered by calendar_shopping_list_export_test.
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_arrival.dart';
 import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
@@ -553,7 +554,7 @@ void main() {
         final check = tester.widget<Icon>(
           find.descendant(
             of: find.byKey(_trainingRow),
-            matching: find.byIcon(Icons.check),
+            matching: find.byIcon(ExomIcons.check),
           ),
         );
         expect(check.color, palette.data);

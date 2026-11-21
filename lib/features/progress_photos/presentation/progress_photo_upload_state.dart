@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -71,12 +72,12 @@ class ProgressPhotoUploadStatus extends StatelessWidget {
   final ProgressPhotoUploadState state;
 
   static IconData iconOf(ProgressPhotoUploadState state) => switch (state) {
-    ProgressPhotoUploadState.pending => Icons.schedule,
-    ProgressPhotoUploadState.synchronizing => Icons.cloud_upload_outlined,
-    ProgressPhotoUploadState.confirmed => Icons.check,
-    ProgressPhotoUploadState.cleanupPending => Icons.cleaning_services_outlined,
-    ProgressPhotoUploadState.failed => Icons.error_outline,
-    ProgressPhotoUploadState.conflict => Icons.sync_problem,
+    ProgressPhotoUploadState.pending => ExomIcons.time,
+    ProgressPhotoUploadState.synchronizing => ExomIcons.syncing,
+    ProgressPhotoUploadState.confirmed => ExomIcons.check,
+    ProgressPhotoUploadState.cleanupPending => ExomIcons.cleaning,
+    ProgressPhotoUploadState.failed => ExomIcons.error,
+    ProgressPhotoUploadState.conflict => ExomIcons.syncProblem,
   };
 
   @override

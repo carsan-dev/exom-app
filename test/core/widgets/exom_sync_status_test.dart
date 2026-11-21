@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,11 +23,11 @@ const _en = {
 };
 
 const _icons = {
-  ExomSyncState.guardadaEnMovil: Icons.smartphone_outlined,
-  ExomSyncState.pendiente: Icons.schedule,
-  ExomSyncState.enviando: Icons.cloud_upload_outlined,
-  ExomSyncState.confirmada: Icons.check,
-  ExomSyncState.fallida: Icons.error_outline,
+  ExomSyncState.guardadaEnMovil: ExomIcons.phone,
+  ExomSyncState.pendiente: ExomIcons.time,
+  ExomSyncState.enviando: ExomIcons.upload,
+  ExomSyncState.confirmada: ExomIcons.check,
+  ExomSyncState.fallida: ExomIcons.error,
 };
 
 Widget _all() => Padding(

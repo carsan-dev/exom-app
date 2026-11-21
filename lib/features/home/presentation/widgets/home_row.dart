@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
@@ -64,7 +65,7 @@ class HomeDoneStatus extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.check_circle_outline, size: 20, color: palette.textPrimary),
+        Icon(ExomIcons.done, size: 20, color: palette.textPrimary),
         const SizedBox(width: 6),
         Flexible(
           child: Text(

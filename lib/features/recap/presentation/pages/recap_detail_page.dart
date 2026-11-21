@@ -1,4 +1,5 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -77,7 +78,7 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, color: palette.error, size: 42),
+                      Icon(ExomIcons.error, color: palette.error, size: 42),
                       const SizedBox(height: 16),
                       Text(
                         AppLocalizations.of(context).couldNotLoadRecap,

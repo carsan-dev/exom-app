@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/widgets/exom_month_grid.dart';
 import 'package:flutter/material.dart';
@@ -337,7 +338,7 @@ void main() {
       final check = tester.widget<Icon>(
         find.byKey(ExomMonthGrid.markKey(DateTime(2026, 11, 4))),
       );
-      expect(check.icon, Icons.check);
+      expect(check.icon, ExomIcons.check);
       expect(check.color, palette.data);
       expect(_numberColor(tester, DateTime(2026, 11, 4)), palette.textPrimary);
       expectNoLimeInk(tester);
@@ -382,7 +383,7 @@ void main() {
     await pumpComponent(tester, _grid(doneAsFill: false));
     Finder mark(int d) =>
         find.byKey(ExomMonthGrid.markKey(DateTime(2026, 11, d)));
-    expect(tester.widget<Icon>(mark(9)).icon, Icons.check);
+    expect(tester.widget<Icon>(mark(9)).icon, ExomIcons.check);
     final dot =
         tester.widget<DecoratedBox>(mark(23)).decoration as BoxDecoration;
     expect(dot.shape, BoxShape.circle);

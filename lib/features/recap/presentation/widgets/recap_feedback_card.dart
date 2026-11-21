@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +34,7 @@ class RecapFeedbackCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.record_voice_over_outlined,
+                ExomIcons.coachVoice,
                 color: palette.primary,
                 size: 18,
               ),
@@ -89,7 +90,7 @@ class RecapFeedbackCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.schedule_outlined, size: 13, color: palette.primary),
+                Icon(ExomIcons.time, size: 13, color: palette.primary),
                 const SizedBox(width: 4),
                 Text(
                   AppLocalizations.of(context).recapFeedbackPendingRead,
@@ -107,7 +108,7 @@ class RecapFeedbackCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.check_circle_outline,
+                  ExomIcons.done,
                   size: 13,
                   color: semantic.success,
                 ),

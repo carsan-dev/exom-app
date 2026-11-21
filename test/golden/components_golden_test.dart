@@ -10,6 +10,7 @@
 // Scenes: componentes_texto (T0.2): ExomKicker, ExomTwoLineHeadline,
 // ExomMomentPill, ExomNumeral, ExomNumberedSectionHeader, ExomFigureColumns and
 // ExomIndexNumber.
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
@@ -34,7 +35,7 @@ Widget _componentesTexto() {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const ExomKicker('Semana 3', icon: Icons.calendar_today),
+              const ExomKicker('Semana 3', icon: ExomIcons.calendar),
               const SizedBox(height: 10),
               const ExomTwoLineHeadline(
                 first: 'Tu semana',

@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -51,16 +52,16 @@ class ExomSyncStatus extends StatelessWidget {
     final semantic = context.exomSemantic;
     final (IconData icon, Color colour) = switch (state) {
       ExomSyncState.guardadaEnMovil => (
-        Icons.smartphone_outlined,
+        ExomIcons.phone,
         palette.textSecondary,
       ),
-      ExomSyncState.pendiente => (Icons.schedule, semantic.warning),
+      ExomSyncState.pendiente => (ExomIcons.time, semantic.warning),
       ExomSyncState.enviando => (
-        Icons.cloud_upload_outlined,
+        ExomIcons.upload,
         palette.textSecondary,
       ),
-      ExomSyncState.confirmada => (Icons.check, palette.textPrimary),
-      ExomSyncState.fallida => (Icons.error_outline, palette.error),
+      ExomSyncState.confirmada => (ExomIcons.check, palette.textPrimary),
+      ExomSyncState.fallida => (ExomIcons.error, palette.error),
     };
     final text = label ?? defaultLabel(AppLocalizations.of(context), state);
     return Row(

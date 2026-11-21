@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -78,7 +79,7 @@ class FeedbackMediaPicker extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.videocam_outlined),
+              leading: const Icon(ExomIcons.video),
               title: Text(l10n.feedbackFromCamera),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -86,7 +87,7 @@ class FeedbackMediaPicker extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.video_library_outlined),
+              leading: const Icon(ExomIcons.videoLibrary),
               title: Text(l10n.feedbackFromGallery),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -119,7 +120,7 @@ class FeedbackMediaPicker extends StatelessWidget {
               const SizedBox(height: 8),
               ListTile(
                 leading: Icon(
-                  Icons.camera_alt_outlined,
+                  ExomIcons.camera,
                   color: palette.primary,
                 ),
                 title: Text(
@@ -133,7 +134,7 @@ class FeedbackMediaPicker extends StatelessWidget {
               ),
               ListTile(
                 leading: Icon(
-                  Icons.photo_library_outlined,
+                  ExomIcons.gallery,
                   color: palette.primary,
                 ),
                 title: Text(
@@ -194,8 +195,8 @@ class FeedbackMediaPicker extends StatelessWidget {
           children: [
             Icon(
               mediaType == 'VIDEO'
-                  ? Icons.videocam_rounded
-                  : Icons.image_rounded,
+                  ? ExomIcons.video
+                  : ExomIcons.image,
               color: palette.primary,
               size: 20,
             ),
@@ -210,7 +211,7 @@ class FeedbackMediaPicker extends StatelessWidget {
             if (onClear != null)
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close, color: palette.textDisabled, size: 18),
+                child: Icon(ExomIcons.close, color: palette.textDisabled, size: 18),
               ),
           ],
         ),
@@ -225,7 +226,7 @@ class FeedbackMediaPicker extends StatelessWidget {
             children: [
               _TypeChip(
                 label: l10n.feedbackSelectImage,
-                icon: Icons.image_outlined,
+                icon: ExomIcons.image,
                 selected: mediaType == 'IMAGE',
                 onTap: () => onMediaTypeChanged('IMAGE'),
                 palette: palette,
@@ -233,7 +234,7 @@ class FeedbackMediaPicker extends StatelessWidget {
               const SizedBox(width: 8),
               _TypeChip(
                 label: l10n.feedbackSelectVideo,
-                icon: Icons.videocam_outlined,
+                icon: ExomIcons.video,
                 selected: mediaType == 'VIDEO',
                 onTap: () => onMediaTypeChanged('VIDEO'),
                 palette: palette,
@@ -258,8 +259,8 @@ class FeedbackMediaPicker extends StatelessWidget {
               children: [
                 Icon(
                   mediaType == 'VIDEO'
-                      ? Icons.video_call_outlined
-                      : Icons.add_photo_alternate_outlined,
+                      ? ExomIcons.video
+                      : ExomIcons.addPhoto,
                   color: palette.textDisabled,
                   size: 20,
                 ),

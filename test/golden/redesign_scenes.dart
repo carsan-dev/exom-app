@@ -16,6 +16,7 @@
 //    real time, so the visible value is 90 for any machine speed below 1 s.
 //  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
 //    after "now" («1:00»).
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
@@ -604,6 +605,40 @@ Future<void> loadRedesignFonts() async {
       ..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())));
     await loader.load();
   }
+  final lucide = findLucideFontFile();
+  final loader = FontLoader('packages/lucide_icons_flutter/Lucide')
+    ..addFont(Future.value(ByteData.sublistView(lucide.readAsBytesSync())));
+  await loader.load();
+}
+
+/// Locates the regular Lucide font of `lucide_icons_flutter` through
+/// `.dart_tool/package_config.json`. Throws [StateError] when it cannot be
+/// found: without it every icon in a golden is an Ahem box, and that must
+/// never fail silently.
+File findLucideFontFile() {
+  final config = File('.dart_tool/package_config.json');
+  if (!config.existsSync()) {
+    throw StateError('Lucide font: ${config.path} not found (run pub get).');
+  }
+  final packages =
+      (jsonDecode(config.readAsStringSync())
+              as Map<String, Object?>)['packages']
+          as List<Object?>;
+  for (final entry in packages.cast<Map<String, Object?>>()) {
+    if (entry['name'] != 'lucide_icons_flutter') continue;
+    var raw = entry['rootUri']! as String;
+    // rootUri has no trailing slash for hosted packages; resolve() would
+    // otherwise drop the package directory.
+    if (!raw.endsWith('/')) raw = '$raw/';
+    final root = Uri.parse(raw);
+    final base = root.isAbsolute ? root : config.absolute.parent.uri.resolveUri(root);
+    final font = File.fromUri(base.resolve('assets/lucide.ttf'));
+    if (!font.existsSync()) {
+      throw StateError('Lucide font: ${font.path} does not exist.');
+    }
+    return font;
+  }
+  throw StateError('Lucide font: lucide_icons_flutter is not in package_config.');
 }
 
 File? _findMaterialIcons() {

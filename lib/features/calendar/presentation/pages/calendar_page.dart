@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
@@ -542,7 +543,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   color: palette.textPrimary,
                 ),
               )
-            : const Icon(Icons.picture_as_pdf_outlined),
+            : const Icon(ExomIcons.pdf),
         label: Text(
           _isExportingDiet ? l10n.weeklyDietPreparing : l10n.exportDietButton,
         ),
@@ -908,7 +909,7 @@ class _CalendarViewState extends State<_CalendarView> {
         rows.add(
           ExomRichRow(
             key: _restRowKey,
-            leading: const ExomRowLeading.icon(Icons.bedtime_outlined),
+            leading: const ExomRowLeading.icon(ExomIcons.sleep),
             title: l10n.restDayTitle,
             facts: l10n.calendarRestDayFacts,
           ),
@@ -917,7 +918,7 @@ class _CalendarViewState extends State<_CalendarView> {
         rows.add(
           ExomRichRow(
             key: _trainingRowKey,
-            leading: const ExomRowLeading.icon(Icons.fitness_center),
+            leading: const ExomRowLeading.icon(ExomIcons.train),
             title: l10n.training,
             status: day.trainingCompleted
                 ? _DoneStatus(label: l10n.completed)
@@ -930,7 +931,7 @@ class _CalendarViewState extends State<_CalendarView> {
         rows.add(
           ExomRichRow(
             key: _dietRowKey,
-            leading: const ExomRowLeading.icon(Icons.restaurant_menu),
+            leading: const ExomRowLeading.icon(ExomIcons.meal),
             title: l10n.nutritionPlanDefault,
             status: day.dietCompleted
                 ? _DoneStatus(label: l10n.completedFeminine)
@@ -947,7 +948,7 @@ class _CalendarViewState extends State<_CalendarView> {
       rows.add(
         ExomRichRow(
           key: _emptyRowKey,
-          leading: const ExomRowLeading.icon(Icons.event_busy_outlined),
+          leading: const ExomRowLeading.icon(ExomIcons.eventBusy),
           title: l10n.noActivityAssigned,
         ),
       );
@@ -999,7 +1000,7 @@ class _CalendarViewState extends State<_CalendarView> {
 
     return ExomRichRow(
       key: _challengesRowKey,
-      leading: const ExomRowLeading.icon(Icons.local_fire_department_outlined),
+      leading: const ExomRowLeading.icon(ExomIcons.streak),
       title: l10n.challenges,
       facts: count == 0
           ? null
@@ -1023,7 +1024,7 @@ class _CalendarViewState extends State<_CalendarView> {
           ExomFlatRow(
             key: _challengesShortcutKey,
             leading: Icon(
-              Icons.emoji_events_outlined,
+              ExomIcons.trophy,
               size: 24,
               color: palette.textPrimary,
             ),
@@ -1106,7 +1107,7 @@ class _MonthHeader extends StatelessWidget {
                   if (tap != null) ...[
                     const SizedBox(width: 4),
                     Icon(
-                      Icons.keyboard_arrow_down,
+                      ExomIcons.expand,
                       size: 24,
                       color: palette.textSecondary,
                     ),
@@ -1133,7 +1134,7 @@ class _MonthHeader extends StatelessWidget {
               tooltip: l10n.trainingsHistoryPreviousMonth,
               constraints: _arrowTarget,
               onPressed: previous,
-              icon: Icon(Icons.chevron_left, color: palette.textPrimary),
+              icon: Icon(ExomIcons.previous, color: palette.textPrimary),
             ),
           if (next != null)
             IconButton(
@@ -1141,7 +1142,7 @@ class _MonthHeader extends StatelessWidget {
               tooltip: l10n.trainingsHistoryNextMonth,
               constraints: _arrowTarget,
               onPressed: next,
-              icon: Icon(Icons.chevron_right, color: palette.textPrimary),
+              icon: Icon(ExomIcons.next, color: palette.textPrimary),
             ),
         ],
       ),
@@ -1162,7 +1163,7 @@ class _DoneStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Status(
       label: label,
-      icon: Icons.check,
+      icon: ExomIcons.check,
       colour: context.exomPalette.data,
     );
   }
@@ -1178,7 +1179,7 @@ class _PendingStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Status(
       label: label,
-      icon: Icons.schedule,
+      icon: ExomIcons.time,
       colour: context.exomSemantic.warning,
     );
   }
@@ -1358,7 +1359,7 @@ class _MonthYearSheetState extends State<_MonthYearSheet> {
                     tooltip: l10n.calendarPreviousYear,
                     constraints: _arrowTarget,
                     onPressed: () => setState(() => _year--),
-                    icon: Icon(Icons.chevron_left, color: palette.textPrimary),
+                    icon: Icon(ExomIcons.previous, color: palette.textPrimary),
                   ),
                   Expanded(
                     child: Semantics(
@@ -1376,7 +1377,7 @@ class _MonthYearSheetState extends State<_MonthYearSheet> {
                     tooltip: l10n.calendarNextYear,
                     constraints: _arrowTarget,
                     onPressed: () => setState(() => _year++),
-                    icon: Icon(Icons.chevron_right, color: palette.textPrimary),
+                    icon: Icon(ExomIcons.next, color: palette.textPrimary),
                   ),
                 ],
               ),

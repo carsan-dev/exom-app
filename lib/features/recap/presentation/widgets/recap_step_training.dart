@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -28,7 +29,7 @@ class RecapStepTraining extends StatelessWidget {
           RecapSectionCard(
             title: l10n.loadAndFeelings,
             subtitle: l10n.tellUsHowYouFeltTrainingThisWeek,
-            icon: Icons.fitness_center,
+            icon: ExomIcons.train,
             child: Column(
               children: [
                 RecapEmojiRatingField(
@@ -50,7 +51,7 @@ class RecapStepTraining extends StatelessWidget {
           RecapSectionCard(
             title: l10n.perceivedProgress,
             subtitle: l10n.chooseTheProgressThatBestReflectsYourWeek,
-            icon: Icons.trending_up,
+            icon: ExomIcons.trendingUp,
             child: RecapChoiceChipsField(
               label: l10n.progressPerception,
               helperText: l10n.yourOverallFeelingAboutThePlanProgress,
@@ -68,7 +69,7 @@ class RecapStepTraining extends StatelessWidget {
           RecapSectionCard(
             title: l10n.dailyActivity,
             subtitle: l10n.dailyActivityRecapDescription,
-            icon: Icons.directions_walk,
+            icon: ExomIcons.walk,
             child: RecapIntegerField(
               label: l10n.averageDailySteps,
               helperText: l10n.averageDailyStepsHelper,
@@ -83,7 +84,7 @@ class RecapStepTraining extends StatelessWidget {
           RecapSectionCard(
             title: l10n.trainingNotes,
             subtitle: l10n.addContextSoYourCoachCanReviewYourWeekBetter,
-            icon: Icons.notes,
+            icon: ExomIcons.notes,
             child: RecapTextAreaField(
               label: l10n.recapTrainingObservations,
               hintText: l10n.egItWasHardToKeepThePaceOnThursday,

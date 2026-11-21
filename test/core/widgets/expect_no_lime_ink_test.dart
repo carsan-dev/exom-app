@@ -2,6 +2,7 @@
 import 'dart:ui' show PointMode;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,7 +61,7 @@ void main() {
   testWidgets('fails on a lime icon in the light theme', (tester) async {
     await pumpComponent(
       tester,
-      const Icon(Icons.check, color: kLimeInk),
+      const Icon(ExomIcons.check, color: kLimeInk),
       brightness: Brightness.light,
     );
     expect(() => expectNoLimeInk(tester), throwsA(isA<TestFailure>()));
@@ -204,7 +205,7 @@ void main() {
       Column(
         children: [
           Text('Hecha', style: TextStyle(color: _light.data)),
-          Icon(Icons.check, color: _light.data),
+          Icon(ExomIcons.check, color: _light.data),
         ],
       ),
       brightness: Brightness.light,

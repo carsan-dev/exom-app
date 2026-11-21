@@ -20,6 +20,7 @@
 //    (title, body and pinned actions) open over a plain page.
 import 'dart:typed_data';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_accordion.dart';
 import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
@@ -63,7 +64,7 @@ Widget _estructura() {
           child: ExomFlatRowGroup(
             children: const [
               ExomFlatRow(
-                leading: Icon(Icons.restaurant),
+                leading: Icon(ExomIcons.diet),
                 title: 'Definición · 2.150 kcal',
                 subtitles: ['1 de 4 comidas hechas'],
                 onTap: _noop,
@@ -110,7 +111,7 @@ Widget _estructura() {
                 onTap: _noop,
               ),
               ExomRichRow(
-                leading: ExomRowLeading.icon(Icons.restaurant),
+                leading: ExomRowLeading.icon(ExomIcons.diet),
                 title: 'Plan nutricional',
                 facts: 'Definición · 2.150 kcal · 5 comidas',
                 status: ExomSyncStatus(state: ExomSyncState.pendiente),
@@ -142,7 +143,7 @@ Widget _listas() {
             ExomIndexItem(title: 'Actualizar peso y medidas', onTap: _noop),
             ExomIndexItem(
               title: 'Fotos de progreso',
-              icon: Icons.arrow_forward,
+              icon: ExomIcons.forward,
               status: '3 nuevas',
               onTap: _noop,
             ),

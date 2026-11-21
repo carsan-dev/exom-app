@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -161,7 +162,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: IconButton(
-        icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+        icon: Icon(ExomIcons.back, color: palette.textPrimary),
         onPressed: _onBackToLogin,
         tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       ),
@@ -230,7 +231,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: Icon(Icons.error_outline, size: 16, color: palette.error),
+            child: Icon(ExomIcons.error, size: 16, color: palette.error),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -298,7 +299,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ExomPrimaryButton(
               key: const Key('forgot-submit'),
               label: l10n.sendResetEmailButton,
-              trailingIcon: Icons.arrow_forward,
+              trailingIcon: ExomIcons.forward,
               busy: _isSubmitting,
               onPressed: _onSubmit,
             ),

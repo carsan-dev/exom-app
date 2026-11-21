@@ -13,6 +13,7 @@ import 'package:exom_app/core/models/training_execution_discard.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_arrival.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_empty_state.dart';
@@ -211,7 +212,7 @@ void main() {
         final check = tester.widget<Icon>(
           find.descendant(
             of: find.ancestor(of: done.first, matching: find.byType(Row)).first,
-            matching: find.byIcon(Icons.check),
+            matching: find.byIcon(ExomIcons.check),
           ),
         );
         expect(check.color, palette.data);

@@ -6,6 +6,7 @@ import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
@@ -86,7 +87,7 @@ class _ProgressViewState extends State<_ProgressView> {
         appBar: GlassAppBar(
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            icon: Icon(Icons.arrow_back, color: palette.textPrimary),
+            icon: Icon(ExomIcons.back, color: palette.textPrimary),
             onPressed: () => context.pop(),
           ),
         ),
@@ -125,7 +126,7 @@ class _ProgressViewState extends State<_ProgressView> {
               child: ExomPrimaryButton(
                 key: const Key('progress-add-measure'),
                 label: l10n.progressAddMeasure,
-                trailingIcon: Icons.add,
+                trailingIcon: ExomIcons.add,
                 onPressed: _openForm,
               ),
             ),
@@ -590,7 +591,7 @@ class _CachedBanner extends StatelessWidget {
                 top: 1,
                 child: ExcludeSemantics(
                   child: Icon(
-                    Icons.cloud_off_outlined,
+                    ExomIcons.offline,
                     size: 18,
                     color: palette.textSecondary,
                   ),
@@ -985,7 +986,7 @@ class _PhotosRow extends StatelessWidget {
                 children: [
                   ExcludeSemantics(
                     child: Icon(
-                      Icons.photo_camera_outlined,
+                      ExomIcons.camera,
                       size: 22,
                       color: palette.textPrimary,
                     ),
@@ -1005,7 +1006,7 @@ class _PhotosRow extends StatelessWidget {
                   const SizedBox(width: 8),
                   ExcludeSemantics(
                     child: Icon(
-                      Icons.chevron_right,
+                      ExomIcons.next,
                       size: 22,
                       color: palette.textSecondary,
                     ),

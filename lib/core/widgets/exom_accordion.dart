@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
@@ -155,7 +156,7 @@ class _ExomAccordionState extends State<ExomAccordion>
                   RotationTransition(
                     turns: _turns,
                     child: Icon(
-                      Icons.expand_more,
+                      ExomIcons.expand,
                       size: 22,
                       color: palette.textSecondary,
                     ),

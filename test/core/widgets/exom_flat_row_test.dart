@@ -1,6 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +17,7 @@ ExomThemePalette _palette(Brightness b) =>
 Widget _row({VoidCallback? onTap, Widget? trailing}) => ExomFlatRowGroup(
   children: [
     ExomFlatRow(
-      leading: const Icon(Icons.restaurant),
+      leading: const Icon(ExomIcons.diet),
       title: 'Definición · 2.150 kcal',
       subtitles: const ['1 de 4 comidas hechas', 'Siguiente: merienda'],
       trailing: trailing,
@@ -144,7 +145,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await pumpComponent(tester, _row());
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.byIcon(ExomIcons.next), findsNothing);
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(ExomFlatRow)),
       );
@@ -160,7 +161,7 @@ void main() {
     testWidgets('enabled: one merged button node with chevron', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpComponent(tester, _row(onTap: () {}));
-      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+      expect(find.byIcon(ExomIcons.next), findsOneWidget);
       final node = tester.getSemantics(find.byType(ExomFlatRow));
       expect(node.flagsCollection.isButton, isTrue);
       expect(node.label, contains('Definición · 2.150 kcal'));
@@ -173,7 +174,7 @@ void main() {
         tester,
         _row(onTap: () {}, trailing: const Text('Hecha')),
       );
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.byIcon(ExomIcons.next), findsNothing);
       expect(find.text('Hecha'), findsOneWidget);
     });
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:exom_app/core/services/managed_upload.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
 import 'package:exom_app/features/progress_photos/presentation/pages/progress_photos_page.dart';
@@ -94,7 +95,7 @@ void main() {
     expect(find.text('16 Sep 2026'), findsOneWidget);
     expect(find.text('Confirmed'), findsWidgets);
     expect(find.byTooltip('Refresh progress photos'), findsOneWidget);
-    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh)).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, ExomIcons.retry)).onPressed, isNotNull);
     expect(find.byType(FloatingActionButton), findsOneWidget);
 
     await tester.tap(find.byType(FloatingActionButton));

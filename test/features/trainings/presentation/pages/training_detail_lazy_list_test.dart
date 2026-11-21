@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -254,6 +255,12 @@ Future<({_Storage storage, _Repository repository})> _mount(
   return (storage: storage, repository: repository);
 }
 
+/// The row check mark (24 dp). The base told it apart from the 18 dp check by
+/// using Icons.check_rounded; both are now ExomIcons.check, so the size does it.
+final Finder _rowCheck = find.byWidgetPredicate(
+  (Widget w) => w is Icon && w.icon == ExomIcons.check && w.size == 24,
+);
+
 void main() {
   tearDown(sl.reset);
 
@@ -305,11 +312,11 @@ void main() {
 
   testWidgets('progress update checks the visible row', (tester) async {
     await _mount(tester, withExecution: true);
-    expect(find.byIcon(Icons.check_rounded), findsNothing);
+    expect(_rowCheck, findsNothing);
     markCompleted(blocOf(tester), 1);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(_rowCheck, findsOneWidget);
   });
 
   testWidgets('progress update keeps the scroll position', (tester) async {
@@ -329,7 +336,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(offset(), before);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(_rowCheck, findsOneWidget);
   });
 
   testWidgets('a new training revision regroups circuits', (tester) async {

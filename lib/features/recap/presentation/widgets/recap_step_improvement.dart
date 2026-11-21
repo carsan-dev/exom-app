@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
@@ -33,7 +34,7 @@ class RecapStepImprovement extends StatelessWidget {
           RecapSectionCard(
             title: l10n.recapImprovementRatingsTitle,
             subtitle: l10n.recapImprovementRatingsSubtitle,
-            icon: Icons.star_outline_rounded,
+            icon: ExomIcons.star,
             child: Column(
               children: [
                 RecapStarRatingField(
@@ -57,7 +58,7 @@ class RecapStepImprovement extends StatelessWidget {
           RecapSectionCard(
             title: l10n.recapWhatCanWeImprove,
             subtitle: l10n.selectThePointsWhereYouWantMoreSupport,
-            icon: Icons.tune_rounded,
+            icon: ExomIcons.tune,
             child: RecapMultiSelectField(
               label: l10n.selectThePointsWhereYouWantMoreSupport,
               helperText: l10n.selectThePointsWhereYouWantMoreSupport,
@@ -76,7 +77,7 @@ class RecapStepImprovement extends StatelessWidget {
           RecapSectionCard(
             title: l10n.recapTellUsMore,
             subtitle: l10n.closeTheWeekWithWhatMattersForYourCoach,
-            icon: Icons.chat_bubble_outline_rounded,
+            icon: ExomIcons.chat,
             child: RecapTextAreaField(
               label: l10n.suggestionsOrImprovements,
               hintText: l10n.egIWouldLikeMoreContextInTheSessions,

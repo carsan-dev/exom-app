@@ -1,6 +1,7 @@
 // T0.4 (docs/plans/rediseno-app-l5-contrato-v2.md): ExomNumeralStepper, the
 // 64 numeral with unit and ± of 56 on top of ExomStepper (`.numstep`).
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
@@ -129,9 +130,9 @@ void main() {
   ) async {
     final probe = _Probe();
     await pumpComponent(tester, _stateful(probe, initial: 68, step: 0.5));
-    await _tapButton(tester, Icons.add);
-    await _tapButton(tester, Icons.add);
-    await _tapButton(tester, Icons.remove);
+    await _tapButton(tester, ExomIcons.add);
+    await _tapButton(tester, ExomIcons.add);
+    await _tapButton(tester, ExomIcons.remove);
     expect(probe.values, [68.5, 69, 68.5]);
     expect(tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value, '68,5');
   });
@@ -154,7 +155,7 @@ void main() {
       tester,
       _stateful(probe, initial: 41, min: 40, max: 42),
     );
-    await _tapButton(tester, Icons.remove);
+    await _tapButton(tester, ExomIcons.remove);
     expect(probe.values, [40]);
     expect(
       tester.getSemantics(_minus),
@@ -165,11 +166,11 @@ void main() {
         isEnabled: false,
       ),
     );
-    await _tapButton(tester, Icons.remove);
+    await _tapButton(tester, ExomIcons.remove);
     expect(probe.values, [40]);
-    await _tapButton(tester, Icons.add);
-    await _tapButton(tester, Icons.add);
-    await _tapButton(tester, Icons.add);
+    await _tapButton(tester, ExomIcons.add);
+    await _tapButton(tester, ExomIcons.add);
+    await _tapButton(tester, ExomIcons.add);
     expect(probe.values, [40, 41, 42]);
     expect(
       tester.getSemantics(_plus),
@@ -191,7 +192,7 @@ void main() {
       tester,
       _stateful(probe, initial: 40.3, min: 40, max: 160, step: 0.5),
     );
-    await _tapButton(tester, Icons.remove);
+    await _tapButton(tester, ExomIcons.remove);
     expect(probe.values, [40]);
   });
 
@@ -280,7 +281,7 @@ void main() {
     final probe = _Probe();
     await pumpComponent(tester, _stateful(probe, initial: 70));
     await _startEditing(tester);
-    await _tapButton(tester, Icons.add);
+    await _tapButton(tester, ExomIcons.add);
     expect(probe.values, [71]);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -333,7 +334,7 @@ void main() {
   testWidgets('disabled: no buttons, no editing', (tester) async {
     final probe = _Probe();
     await pumpComponent(tester, _stepper(probe: probe, enabled: false));
-    await _tapButton(tester, Icons.add);
+    await _tapButton(tester, ExomIcons.add);
     await _startEditing(tester);
     expect(find.byType(TextField), findsNothing);
     expect(probe.values, isEmpty);
@@ -345,7 +346,7 @@ void main() {
     // One frame between taps (a real device always renders one): no
     // animation or delay holds a tap back.
     for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(ExomIcons.add));
       await tester.pump();
     }
     expect(probe.values, [71, 72, 73]);

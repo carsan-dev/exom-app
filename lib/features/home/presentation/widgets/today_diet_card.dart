@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,7 +48,7 @@ class TodayDietCard extends StatelessWidget {
     ];
 
     return HomeRow(
-      icon: Icons.restaurant_menu,
+      icon: ExomIcons.meal,
       title: summary.dietName ?? l10n.nutritionPlanDefault,
       subtitles: [
         if (progress.isNotEmpty) progress.join(' · '),

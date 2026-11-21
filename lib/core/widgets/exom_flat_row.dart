@@ -1,5 +1,6 @@
 import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +139,7 @@ class ExomFlatRow extends StatelessWidget {
         (onTap == null
             ? null
             : Icon(
-                Icons.chevron_right,
+                ExomIcons.next,
                 size: 22,
                 color: palette.textSecondary,
               ));

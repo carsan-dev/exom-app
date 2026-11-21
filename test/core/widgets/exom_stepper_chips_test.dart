@@ -1,6 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_panel.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
@@ -306,7 +307,7 @@ void main() {
         textFieldKey: const Key('stepper-field'),
         errorText: errorText,
         errorBelowRow: errorBelowRow,
-        errorIcon: Icons.error_outline,
+        errorIcon: ExomIcons.error,
       ),
     );
 
@@ -353,7 +354,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('stepper')),
-          matching: find.byIcon(Icons.error_outline),
+          matching: find.byIcon(ExomIcons.error),
         ),
         findsOneWidget,
       );
@@ -374,7 +375,7 @@ void main() {
         find.byKey(const Key('stepper-field')),
       );
       expect(field.decoration?.errorText, 'Mal');
-      expect(find.byIcon(Icons.error_outline), findsNothing);
+      expect(find.byIcon(ExomIcons.error), findsNothing);
     });
   });
 }

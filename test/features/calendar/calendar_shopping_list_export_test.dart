@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
@@ -324,7 +325,7 @@ void main() {
       final h = await _mount(tester);
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(ExomIcons.close));
       await _settle(tester);
       expect(h.pdf.shoppingLists, isEmpty);
       expect(find.text(l10n.weeklyDietExportError), findsNothing);

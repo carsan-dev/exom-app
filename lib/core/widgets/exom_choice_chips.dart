@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:flutter/material.dart';
 
@@ -254,7 +255,7 @@ class _Chip extends StatelessWidget {
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check, size: 18, color: foreground),
+              Icon(ExomIcons.check, size: 18, color: foreground),
               const SizedBox(width: 6),
               Flexible(child: text),
             ],

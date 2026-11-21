@@ -1460,5 +1460,14 @@
   "calendarExportPeriodFirst": "Elige",
   "calendarExportPeriodSecond": "un periodo",
   "calendarExportFormatFirst": "¿Qué quieres",
-  "calendarExportFormatSecond": "exportar?"
+  "calendarExportFormatSecond": "exportar?",
+  "dietHeadlineFirst": "Tu comida.",
+  "dietHeadlineSecond": "Sin improvisar.",
+  "dietEmptyHeadlineFirst": "Sin plan.",
+  "dietEmptyHeadlineSecond": "Por ahora.",
+  "dietLeftKicker": "Te quedan",
+  "dietOfTotalKcal": "de {total} kcal",
+  "@dietOfTotalKcal": {"placeholders": {"total": {"type": "int"}}},
+  "mealOptionsLabel": "Opciones",
+  "mealDoneStatus": "Hecha"
 }

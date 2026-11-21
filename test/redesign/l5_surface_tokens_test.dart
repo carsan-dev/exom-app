@@ -57,6 +57,10 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/auth/presentation/pages/forgot_password_page.dart',
   'lib/features/auth/presentation/pages/account_locked_page.dart',
   'lib/features/auth/presentation/widgets/social_login_button.dart',
+  // L5-E7 · Nutrición y detalle de comida.
+  'lib/features/diets/presentation/pages/diets_page.dart',
+  'lib/features/diets/presentation/widgets/meal_detail_sheet.dart',
+  'lib/features/diets/presentation/widgets/diet_history_button.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

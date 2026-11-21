@@ -8,7 +8,12 @@ import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_completed_meals_usecase.dart';
@@ -261,6 +266,13 @@ void _semanticTap(WidgetTester tester, String label) {
   );
 }
 
+/// The index closing the list is built lazily: scroll it into view first.
+Future<void> _revealIndex(WidgetTester tester) => tester.scrollUntilVisible(
+  find.byKey(const Key('diet-shopping-list-row')),
+  300,
+  scrollable: find.byType(Scrollable).first,
+);
+
 Finder _toggle(String mealId) => find.byKey(Key('meal-toggle-$mealId'));
 
 /// Every painted text run with its effective font size. Icon glyphs (icon
@@ -485,8 +497,11 @@ void main() {
       expect(title.style?.fontFamily, AppTheme.displayFontFamily);
       expect(title.style?.fontSize, 44);
       expect(find.text('2150 kcal · 4 comidas'), findsOneWidget);
-      // 2150 - 780 consumed.
-      expect(find.text('1370 kcal', findRichText: true), findsOneWidget);
+      // 2150 - 780 consumed, now the hero numeral (E7).
+      expect(
+        tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value,
+        '1370',
+      );
     });
 
     testWidgets('progress agrees in number: 1/4 completada', (tester) async {
@@ -515,7 +530,13 @@ void main() {
   });
 
   group('shopping list row', () {
-    Finder row() => find.byKey(const Key('diet-shopping-list-row'));
+    // Entry «01» of the numbered index (E7); the key wraps the whole index.
+    Finder row() => find
+        .descendant(
+          of: find.byKey(const Key('diet-shopping-list-row')),
+          matching: find.byKey(const Key('exom-index-entry')),
+        )
+        .first;
 
     testWidgets('flat row: text 13+, 48 dp target, chevron, button semantics', (
       tester,
@@ -523,29 +544,28 @@ void main() {
       final semantics = tester.ensureSemantics();
       await _mount(tester, diet: _diet);
       final l10n = _l10n(tester);
+      await _revealIndex(tester);
       await tester.ensureVisible(row());
       expect(row(), findsOneWidget);
+      // The index paints its titles upper case; the spoken label keeps case.
+      final title = l10n.weeklyExportShoppingList.toUpperCase();
       expect(
-        find.descendant(
-          of: row(),
-          matching: find.text(l10n.weeklyExportShoppingList),
-        ),
+        find.descendant(of: row(), matching: find.text(title)),
         findsOneWidget,
       );
       expect(
         find.descendant(of: row(), matching: find.byIcon(Icons.chevron_right)),
         findsOneWidget,
       );
-      expect(tester.getSize(row()).height, greaterThanOrEqualTo(48));
-      final runs = _textRuns(
-        tester,
-      ).where((r) => r.text == l10n.weeklyExportShoppingList);
+      expect(tester.getSize(row()).height, greaterThanOrEqualTo(60));
+      final runs = _textRuns(tester).where((r) => r.text == title);
       expect(runs, isNotEmpty);
       expect(runs.every((r) => r.size >= 13), isTrue);
       expect(
         tester.getSemantics(row()),
         matchesSemantics(
-          label: l10n.weeklyExportShoppingList,
+          // Index entry 01: the position precedes the title in the label.
+          label: '01\n${l10n.weeklyExportShoppingList}',
           isButton: true,
           hasTapAction: true,
           hasFocusAction: true,
@@ -577,6 +597,7 @@ void main() {
         ],
       );
       final l10n = _l10n(tester);
+      await _revealIndex(tester);
       await tester.ensureVisible(row());
       await tester.tap(row());
       await tester.pump();
@@ -611,6 +632,7 @@ void main() {
         ],
       );
       final l10n = _l10n(tester);
+      await _revealIndex(tester);
       await tester.ensureVisible(row());
       await tester.tap(row());
       await tester.pump();
@@ -631,6 +653,7 @@ void main() {
         days: [WeeklyDietDayEntity(date: DateTime(2026, 11, 18), diet: null)],
       );
       final l10n = _l10n(tester);
+      await _revealIndex(tester);
       await tester.ensureVisible(row());
       await tester.tap(row());
       await tester.pump();
@@ -646,6 +669,7 @@ void main() {
         GetWeeklyDietUseCase(_FailingWeekRepository()),
       );
       final l10n = _l10n(tester);
+      await _revealIndex(tester);
       await tester.ensureVisible(row());
       await tester.tap(row());
       await tester.pump();
@@ -653,9 +677,18 @@ void main() {
       expect(find.text(l10n.weeklyDietExportError), findsOneWidget);
     });
 
-    testWidgets('not shown without a diet', (tester) async {
+    testWidgets('not offered without a diet: only the history remains', (
+      tester,
+    ) async {
       await _mount(tester);
-      expect(row(), findsNothing);
+      expect(
+        find.text(_l10n(tester).weeklyExportShoppingList.toUpperCase()),
+        findsNothing,
+      );
+      expect(
+        find.text(_l10n(tester).dietHistoryTitle.toUpperCase()),
+        findsOneWidget,
+      );
     });
   });
 
@@ -686,7 +719,9 @@ void main() {
       final h = await _mount(tester, diet: _diet);
       final l10n = _l10n(tester);
       expect(h.repository.historyReads, 0);
-      await tester.tap(find.text(l10n.dietHistoryTitle));
+      await _revealIndex(tester);
+      // The index paints its titles upper case.
+      await tester.tap(find.text(l10n.dietHistoryTitle.toUpperCase()));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(h.repository.historyReads, 1);
@@ -714,11 +749,14 @@ void main() {
     });
   });
 
-  group('L4-I8 fixed history bar', () {
+  // L4-I8 kept the history reachable in a pinned bar; E7 moves it to entry
+  // «02» of the numbered index that closes the list. Same guarantee: at the end
+  // of the list every row and both entries are fully visible and reachable.
+  group('L4-I8 history stays reachable at the end of the list', () {
     for (final width in [390.0, 320.0]) {
       for (final scale in [1.0, 1.3]) {
         testWidgets(
-          'at the end of the list nothing is under the bar (${width}dp, x$scale)',
+          'index entries end the list and fit (${width}dp, x$scale)',
           (tester) async {
             await _mount(
               tester,
@@ -728,17 +766,12 @@ void main() {
               size: Size(width, 640),
               textScale: scale,
             );
-            final footer = find.byType(ExomPinnedFooter);
-            expect(footer, findsOneWidget);
-            expect(
-              find.descendant(
-                of: footer,
-                matching: find.text(_l10n(tester).dietHistoryTitle),
-              ),
-              findsOneWidget,
+            expect(find.byType(ExomPinnedFooter), findsNothing);
+            final history = find.text(
+              _l10n(tester).dietHistoryTitle.toUpperCase(),
             );
             await tester.scrollUntilVisible(
-              find.byKey(const Key('diet-shopping-list-row')),
+              history,
               300,
               scrollable: find.byType(Scrollable).first,
             );
@@ -747,24 +780,31 @@ void main() {
               const Offset(0, -400),
             );
             await tester.pumpAndSettle();
-            final bar = tester.getRect(footer);
+            final screen = tester.getRect(find.byType(Scaffold));
             for (final finder in [
-              find.byKey(const Key('diet-shopping-list-row')),
+              history,
+              find.text(_l10n(tester).weeklyExportShoppingList.toUpperCase()),
               find.byKey(const Key('meal-row-m-dinner')),
             ]) {
               final rect = tester.getRect(finder);
               expect(
                 rect.bottom,
-                lessThanOrEqualTo(bar.top),
-                reason: 'row $rect under bar $bar',
+                lessThanOrEqualTo(screen.bottom),
+                reason: 'row $rect below the screen $screen',
               );
             }
             expect(
-              tester
-                  .getRect(find.byKey(const Key('diet-shopping-list-row')))
-                  .bottom,
-              lessThanOrEqualTo(bar.top - 16),
-              reason: 'safety margin above the bar',
+              tester.getTopLeft(history).dy,
+              greaterThan(
+                tester
+                    .getTopLeft(
+                      find.text(
+                        _l10n(tester).weeklyExportShoppingList.toUpperCase(),
+                      ),
+                    )
+                    .dy,
+              ),
+              reason: 'history is entry 02, under the shopping list',
             );
             expect(tester.takeException(), isNull);
           },
@@ -1009,10 +1049,11 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('meal rows have no chevron, the shopping row keeps it', (
+    testWidgets('meal rows have no chevron, the index entries keep it', (
       tester,
     ) async {
       await _mount(tester, diet: _diet);
+      await _revealIndex(tester);
       for (final id in ['m-breakfast', 'm-lunch', 'm-snack', 'm-dinner']) {
         expect(inRow(id, find.byIcon(Icons.chevron_right)), findsNothing);
       }
@@ -1021,7 +1062,7 @@ void main() {
           of: find.byKey(const Key('diet-shopping-list-row')),
           matching: find.byIcon(Icons.chevron_right),
         ),
-        findsOneWidget,
+        findsNWidgets(2), // both entries of the index
       );
     });
 
@@ -1115,10 +1156,15 @@ void main() {
         tester,
       ) async {
         await _mount(tester, diet: bigDiet, locale: locale);
-        // Remaining macros: value and unit share one rich text.
-        expect(find.text('1234 g', findRichText: true), findsOneWidget);
-        expect(find.text('12346 g', findRichText: true), findsOneWidget);
-        expect(find.text('68 g', findRichText: true), findsOneWidget);
+        // Remaining macros, now figure columns (E7): value and unit as given.
+        final columns = tester.widget<ExomFigureColumns>(
+          find.byType(ExomFigureColumns),
+        );
+        expect(columns.items.map((i) => '${i.value} ${i.unit}').toList(), [
+          '1234 g',
+          '12346 g',
+          '68 g',
+        ]);
         // Meal rows: no separator at or above 1000, normal figures as before.
         expect(find.text('P 1234 g · C 12346 g'), findsOneWidget);
         expect(find.text('P 68 g · C 45 g'), findsOneWidget);
@@ -1126,5 +1172,171 @@ void main() {
         expect(find.textContaining('1,234'), findsNothing);
       });
     }
+  });
+
+  group('E7 · Nutrición (L5)', () {
+    ThemeData themeOf(Brightness b) =>
+        b == Brightness.dark ? AppTheme.dark : AppTheme.light;
+    ExomThemePalette paletteOf(Brightness b) =>
+        themeOf(b).extension<ExomThemePalette>()!;
+
+    testWidgets(
+      'two-line headline «Tu comida. / Sin improvisar.» in es and en',
+      (tester) async {
+        await _mount(tester, diet: _diet);
+        var headline = tester.widget<ExomTwoLineHeadline>(
+          find.byType(ExomTwoLineHeadline),
+        );
+        expect(headline.first, 'Tu comida.');
+        expect(headline.second, 'Sin improvisar.');
+        await _mount(tester, diet: _diet, locale: const Locale('en'));
+        headline = tester.widget<ExomTwoLineHeadline>(
+          find.byType(ExomTwoLineHeadline),
+        );
+        expect(headline.first, 'Your meals.');
+        expect(headline.second, 'No improvising.');
+      },
+    );
+
+    testWidgets('what is left is a hero figure with its day total beside it', (
+      tester,
+    ) async {
+      await _mount(tester, diet: _diet, completed: {'m-lunch'});
+      final numeral = tester.widget<ExomNumeral>(find.byType(ExomNumeral));
+      // 2150 - 780 consumed; no thousands separator (L5-D33).
+      expect(numeral.value, '1370');
+      expect(numeral.unit, 'kcal');
+      expect(numeral.size, ExomNumeralSize.hero96);
+      expect(numeral.isData, isTrue);
+      expect(find.text('TE QUEDAN'), findsOneWidget);
+      expect(find.text('de 2150 kcal'), findsOneWidget);
+    });
+
+    testWidgets('remaining protein, carbs and fat go in figure columns', (
+      tester,
+    ) async {
+      await _mount(tester, diet: _diet, completed: {'m-dinner'});
+      final columns = tester.widget<ExomFigureColumns>(
+        find.byType(ExomFigureColumns),
+      );
+      expect(columns.numbered, isFalse);
+      // 160 - 40, 220 - 45, 70 - 0.
+      expect(columns.items.map((i) => '${i.value}${i.unit}').toList(), [
+        '120g',
+        '175g',
+        '70g',
+      ]);
+    });
+
+    testWidgets('progress is a segmented rule, one segment per meal', (
+      tester,
+    ) async {
+      await _mount(tester, diet: _diet, completed: {'m-lunch'});
+      final rule = tester.widget<ExomProgressRule>(
+        find.byType(ExomProgressRule),
+      );
+      expect(rule.segments, 4);
+      expect(rule.value, 0.25);
+      expect(find.text('1/4 completada'), findsOneWidget);
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'done mark is an outline in the data colour, ${brightness.name}',
+        (tester) async {
+          await _mount(
+            tester,
+            diet: _diet,
+            completed: {'m-lunch'},
+            theme: themeOf(brightness),
+          );
+          final data = paletteOf(brightness).data;
+          final done = tester.widget<Icon>(
+            find.descendant(
+              of: _toggle('m-lunch'),
+              matching: find.byIcon(Icons.check),
+            ),
+          );
+          expect(done.color, data);
+          final box = tester.widget<Container>(
+            find.descendant(
+              of: _toggle('m-lunch'),
+              matching: find.byType(Container),
+            ),
+          );
+          final decoration = box.decoration! as BoxDecoration;
+          expect(decoration.color, isNull, reason: 'outline, not filled');
+          expect((decoration.border! as Border).top.color, data);
+          final open = tester.widget<Container>(
+            find.descendant(
+              of: _toggle('m-snack'),
+              matching: find.byType(Container),
+            ),
+          );
+          expect(
+            ((open.decoration! as BoxDecoration).border! as Border).top.color,
+            paletteOf(brightness).textPrimary,
+          );
+        },
+      );
+    }
+
+    testWidgets(
+      'a done meal says «Hecha» in the data colour; open and queued do not',
+      (tester) async {
+        await _mount(
+          tester,
+          diet: _diet,
+          completed: {'m-lunch', 'm-snack'},
+          actions: [_action('m-snack')],
+        );
+        Finder inRow(String id) => find.descendant(
+          of: find.byKey(Key('meal-row-$id')),
+          matching: find.text('Hecha'),
+        );
+        expect(inRow('m-lunch'), findsOneWidget);
+        expect(
+          tester.widget<Text>(inRow('m-lunch')).style?.color,
+          AppTheme.dark.extension<ExomThemePalette>()!.data,
+        );
+        expect(inRow('m-dinner'), findsNothing);
+        // A queued change shows its sync state instead (never both).
+        expect(inRow('m-snack'), findsNothing);
+        expect(find.text(_l10n(tester).syncStatusPending), findsOneWidget);
+      },
+    );
+
+    testWidgets('index lists the shopping list and the history, numbered', (
+      tester,
+    ) async {
+      await _mount(tester, diet: _diet);
+      await _revealIndex(tester);
+      final index = tester.widget<ExomIndexList>(find.byType(ExomIndexList));
+      expect(index.items.map((i) => i.title).toList(), [
+        'Lista de la compra',
+        'Histórico de dietas',
+      ]);
+      expect(find.byKey(const Key('diet-shopping-list-row')), findsOneWidget);
+      expect(find.byType(ExomPinnedFooter), findsNothing);
+    });
+
+    testWidgets('empty day: «Sin plan. / Por ahora.» and the history entry', (
+      tester,
+    ) async {
+      final h = await _mount(tester);
+      final headline = tester.widget<ExomTwoLineHeadline>(
+        find.byType(ExomTwoLineHeadline),
+      );
+      expect(headline.first, 'Sin plan.');
+      expect(headline.second, 'Por ahora.');
+      expect(find.text(_l10n(tester).noDietForDateMessage), findsOneWidget);
+      expect(
+        find.text(_l10n(tester).contactCoachForPlanMessage),
+        findsOneWidget,
+      );
+      final index = tester.widget<ExomIndexList>(find.byType(ExomIndexList));
+      expect(index.items.map((i) => i.title).toList(), ['Histórico de dietas']);
+      expect(h.repository.historyReads, 0);
+    });
   });
 }

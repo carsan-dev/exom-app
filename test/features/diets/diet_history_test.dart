@@ -159,16 +159,24 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(brightness: brightness),
           home: Scaffold(
-            body: DietHistoryButton(
-              load: () async {
-                reads++;
-                return const DietHistory(
-                  entries: [
-                    DietHistoryEntry(diet: diet, legacyAvailable: true),
-                  ],
-                  unresolvedMealIds: ['lost'],
-                );
-              },
+            // The entry itself is the page's index item; here a plain button
+            // stands for it and opens the same dialog.
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showDietHistory(
+                  context,
+                  load: () async {
+                    reads++;
+                    return const DietHistory(
+                      entries: [
+                        DietHistoryEntry(diet: diet, legacyAvailable: true),
+                      ],
+                      unresolvedMealIds: ['lost'],
+                    );
+                  },
+                ),
+                child: const Text('Histórico de dietas'),
+              ),
             ),
           ),
         ),

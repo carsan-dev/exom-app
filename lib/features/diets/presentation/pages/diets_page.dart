@@ -10,8 +10,15 @@ import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/repositories/diet_repository.dart';
@@ -32,22 +39,7 @@ class DietsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<DietBloc>()..add(DietLoadRequested(date: selectedDate)),
-      child: Column(
-        children: [
-          Expanded(child: _DietsView(selectedDate: selectedDate)),
-          // Pinned footer, separate from the list: the list viewport ends at
-          // its top edge, so scrolling to the end leaves every row above it.
-          ExomPinnedFooter(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Center(
-              child: DietHistoryButton(
-                load: () =>
-                    sl<DietRepository>().getDietHistory(date: selectedDate),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: _DietsView(selectedDate: selectedDate),
     );
   }
 }
@@ -66,34 +58,84 @@ class _DietsView extends StatelessWidget {
           return const _DietsLoadingView();
         }
         if (state is DietError) {
-          return ErrorWidget2(
-            message: state.apiException != null
-                ? localizedApiError(context, state.apiException!)
-                : l10n.errorServer,
-            onRetry: () => context.read<DietBloc>().add(
-              DietLoadRequested(date: selectedDate),
-            ),
+          // The history is an independent read: it stays reachable under the
+          // error, as the pinned history bar kept it before.
+          return Column(
+            children: [
+              Expanded(
+                child: ErrorWidget2(
+                  message: state.apiException != null
+                      ? localizedApiError(context, state.apiException!)
+                      : l10n.errorServer,
+                  onRetry: () => context.read<DietBloc>().add(
+                    DietLoadRequested(date: selectedDate),
+                  ),
+                ),
+              ),
+              _DietIndex(date: null, selectedDate: selectedDate),
+              const SizedBox(height: 8),
+            ],
           );
         }
         if (state is DietNoContent) {
-          return EmptyWidget(
-            message: selectedDate == null
-                ? l10n.noDietTodayMessage
-                : l10n.noDietForDateMessage,
-            subtitle: l10n.contactCoachForPlanMessage,
-            icon: Icons.restaurant_menu_outlined,
-            action: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.message_outlined, size: 16),
-              label: Text(l10n.contactCoachButton),
-            ),
-          );
+          return _DietsEmptyView(selectedDate: selectedDate);
         }
         if (state is DietLoaded) {
           return _DietContent(state: state, selectedDate: selectedDate);
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+}
+
+/// Day without a plan (sketch «Nutrición · día sin plan»): title and date, the
+/// two-line headline with the cause and the way out, and the history entry.
+class _DietsEmptyView extends StatelessWidget {
+  const _DietsEmptyView({required this.selectedDate});
+
+  final String? selectedDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final date =
+        (selectedDate == null ? null : DateTime.tryParse(selectedDate!)) ??
+        DateTime.now();
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HomeTitle(l10n.nutrition),
+              const SizedBox(height: 12),
+              HomeDateLine(date: date),
+            ],
+          ),
+        ),
+        ExomEmptyState(
+          first: l10n.dietEmptyHeadlineFirst,
+          second: l10n.dietEmptyHeadlineSecond,
+          lead: selectedDate == null
+              ? l10n.noDietTodayMessage
+              : l10n.noDietForDateMessage,
+          body: l10n.contactCoachForPlanMessage,
+          action: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomSecondaryButton(
+              label: l10n.contactCoachButton,
+              onPressed: () {},
+            ),
+          ),
+        ),
+        _DietIndex(date: null, selectedDate: selectedDate),
+      ],
     );
   }
 }
@@ -314,8 +356,9 @@ class _DietContent extends StatelessWidget {
             }
             if (index == 1) return const _MealsSectionTitle();
             if (index == meals.length + 2) {
-              return _ShoppingListRow(
+              return _DietIndex(
                 date: DateTime.tryParse(state.selectedDate) ?? DateTime.now(),
+                selectedDate: selectedDate,
               );
             }
 
@@ -395,26 +438,29 @@ class _MealsSectionTitle extends StatelessWidget {
   }
 }
 
-/// Last row of the list (sketch «Nutrición»): opens the weekly shopping list
-/// of the week that contains the shown date, the same flow as the calendar
-/// export.
-class _ShoppingListRow extends StatefulWidget {
-  const _ShoppingListRow({required this.date});
+/// Numbered index closing the screen (sketch «Nutrición», `.x-ixs`): «01» the
+/// weekly shopping list of the week that contains [date] (the same flow as the
+/// calendar export) and «02» the read-only diet history. Without [date] (no
+/// plan, load error) only the history is offered. The wrapper keeps the
+/// `diet-shopping-list-row` key of the former single row.
+class _DietIndex extends StatefulWidget {
+  const _DietIndex({required this.date, required this.selectedDate});
 
-  final DateTime date;
+  final DateTime? date;
+  final String? selectedDate;
 
   @override
-  State<_ShoppingListRow> createState() => _ShoppingListRowState();
+  State<_DietIndex> createState() => _DietIndexState();
 }
 
-class _ShoppingListRowState extends State<_ShoppingListRow> {
+class _DietIndexState extends State<_DietIndex> {
   bool _busy = false;
 
-  Future<void> _open() async {
+  Future<void> _openShoppingList(DateTime date) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await startWeeklyShoppingList(context, widget.date);
+      await startWeeklyShoppingList(context, date);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -422,47 +468,29 @@ class _ShoppingListRowState extends State<_ShoppingListRow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-
-    return DecoratedBox(
-      key: const Key('diet-shopping-list-row'),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-      ),
-      child: Semantics(
-        button: true,
-        child: InkWell(
-          onTap: _busy ? null : _open,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.weeklyExportShoppingList,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.chevron_right,
-                      size: 22,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ],
+    final date = widget.date;
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: KeyedSubtree(
+        key: const Key('diet-shopping-list-row'),
+        child: ExomIndexList(
+          items: [
+            if (date != null)
+              ExomIndexItem(
+                title: l10n.weeklyExportShoppingList,
+                onTap: _busy ? null : () => _openShoppingList(date),
+              ),
+            ExomIndexItem(
+              title: l10n.dietHistoryTitle,
+              onTap: () => showDietHistory(
+                context,
+                load: () => sl<DietRepository>().getDietHistory(
+                  date: widget.selectedDate,
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -470,7 +498,8 @@ class _ShoppingListRowState extends State<_ShoppingListRow> {
 }
 
 /// Screen head (sketch «Nutrición»): plan name as the Barlow title, date,
-/// kcal · meals summary, progress and what is left to eat.
+/// kcal · meals summary, the two-line headline, then what is left to eat as a
+/// hero figure with a segmented progress rule and the macros in columns.
 class _DietHeader extends StatelessWidget {
   const _DietHeader({
     required this.diet,
@@ -494,138 +523,107 @@ class _DietHeader extends StatelessWidget {
     final summary = diet.totalCalories == null
         ? mealsText
         : '${diet.totalCalories} kcal · $mealsText';
+    final totalMeals = diet.meals.length;
+    final figures = [
+      if (remaining.proteinG != null)
+        ExomFigure(
+          label: l10n.proteinLabel,
+          value: formatFigure(context, remaining.proteinG!),
+          unit: 'g',
+        ),
+      if (remaining.carbsG != null)
+        ExomFigure(
+          label: l10n.carbsLabel,
+          value: formatFigure(context, remaining.carbsG!),
+          unit: 'g',
+        ),
+      if (remaining.fatG != null)
+        ExomFigure(
+          label: l10n.fatsLabel,
+          value: formatFigure(context, remaining.fatG!),
+          unit: 'g',
+        ),
+    ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HomeTitle(diet.name),
-          if (date != null) ...[
-            const SizedBox(height: 12),
-            HomeDateLine(date: date!),
-          ],
-          const SizedBox(height: 12),
-          Text(
-            summary,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l10n.dietMealsProgress(completedCount, diet.meals.length),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.remainingToConsumeLabel,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 28,
-            runSpacing: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (remaining.calories != null)
-                _MacroStat(
-                  label: l10n.caloriesLabel,
-                  value: '${remaining.calories}',
-                  unit: 'kcal',
+              HomeTitle(diet.name),
+              if (date != null) ...[
+                const SizedBox(height: 12),
+                HomeDateLine(date: date!),
+              ],
+              const SizedBox(height: 12),
+              Text(
+                summary,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
                 ),
-              if (remaining.proteinG != null)
-                _MacroStat(
-                  label: l10n.proteinLabel,
-                  value: formatFigure(context, remaining.proteinG!),
-                  unit: 'g',
-                ),
-              if (remaining.carbsG != null)
-                _MacroStat(
-                  label: l10n.carbsLabel,
-                  value: formatFigure(context, remaining.carbsG!),
-                  unit: 'g',
-                ),
-              if (remaining.fatG != null)
-                _MacroStat(
-                  label: l10n.fatsLabel,
-                  value: formatFigure(context, remaining.fatG!),
-                  unit: 'g',
-                ),
+              ),
+              const SizedBox(height: 16),
+              ExomTwoLineHeadline(
+                first: l10n.dietHeadlineFirst,
+                second: l10n.dietHeadlineSecond,
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One remaining-macro figure: Barlow numeral with its unit, label below. The
-/// label names the figure, so the colour is not needed to tell them apart.
-class _MacroStat extends StatelessWidget {
-  const _MacroStat({
-    required this.label,
-    required this.value,
-    required this.unit,
-  });
-
-  final String label;
-  final String value;
-  final String unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return MergeSemantics(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text.rich(
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                fontFamily: AppTheme.displayFontFamily,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                height: 1.0,
-                color: palette.textPrimary,
-              ),
-              children: [
-                TextSpan(
-                  text: ' $unit',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (remaining.calories != null) ...[
+                ExomKicker(l10n.dietLeftKicker),
+                const SizedBox(height: 12),
+                ExomNumeral(
+                  value: '${remaining.calories}',
+                  unit: 'kcal',
+                  size: ExomNumeralSize.hero96,
+                  side: diet.totalCalories == null
+                      ? null
+                      : Text(
+                          l10n.dietOfTotalKcal(diet.totalCalories!),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: palette.textSecondary,
+                            fontSize: 14,
+                            height: 1.35,
+                          ),
+                        ),
                 ),
+                const SizedBox(height: 16),
               ],
-            ),
+              if (totalMeals > 0) ...[
+                ExomProgressRule(
+                  value: completedCount / totalMeals,
+                  segments: totalMeals,
+                ),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                l10n.dietMealsProgress(completedCount, totalMeals),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 13,
-            ),
-          ),
+        ),
+        if (figures.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ExomFigureColumns(items: figures, numbered: false),
         ],
-      ),
+      ],
     );
   }
 }
@@ -784,6 +782,9 @@ class _MealRow extends StatelessWidget {
                             if (syncState != null) ...[
                               const SizedBox(height: 4),
                               ExomSyncStatus(state: syncState),
+                            ] else if (isCompleted) ...[
+                              const SizedBox(height: 4),
+                              const _MealDoneStatus(),
                             ],
                             if (tags.isNotEmpty) ...[
                               const SizedBox(height: 6),
@@ -827,6 +828,38 @@ class _MealRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// «Hecha» line of a completed meal (sketch `.x-ok`): the client's own done is
+/// data (D19), icon and text, so it never rests on colour alone. A queued
+/// change shows its sync state instead.
+class _MealDoneStatus extends StatelessWidget {
+  const _MealDoneStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExcludeSemantics(
+          child: Icon(Icons.check, size: 18, color: palette.data),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            AppLocalizations.of(context).mealDoneStatus,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: palette.data,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -917,8 +950,9 @@ class _MealIconFallback extends StatelessWidget {
   }
 }
 
-/// Square 48 dp mark (sketch `.mark`): empty outline, or filled with a check
-/// once the meal is done, so the state reads from the shape and not the colour.
+/// Square 48 dp mark (sketch `.e-mark`): empty outline, or a heavier outline
+/// with a check in the data colour once the meal is done (D19: the client's
+/// «hecha» is data), so the state reads from the shape and not the colour.
 class _MealMark extends StatelessWidget {
   const _MealMark({
     super.key,
@@ -949,12 +983,14 @@ class _MealMark extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: isCompleted ? palette.textPrimary : null,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: palette.textPrimary, width: 1.5),
+              border: Border.all(
+                color: isCompleted ? palette.data : palette.textPrimary,
+                width: isCompleted ? 2 : 1.5,
+              ),
             ),
             child: isCompleted
-                ? Icon(Icons.check, size: 26, color: palette.background)
+                ? Icon(Icons.check, size: 26, color: palette.data)
                 : null,
           ),
         ),

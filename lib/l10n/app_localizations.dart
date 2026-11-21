@@ -7124,6 +7124,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'exportar?'**
   String get calendarExportFormatSecond;
+
+  /// No description provided for @dietHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu comida.'**
+  String get dietHeadlineFirst;
+
+  /// No description provided for @dietHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin improvisar.'**
+  String get dietHeadlineSecond;
+
+  /// No description provided for @dietEmptyHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin plan.'**
+  String get dietEmptyHeadlineFirst;
+
+  /// No description provided for @dietEmptyHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Por ahora.'**
+  String get dietEmptyHeadlineSecond;
+
+  /// No description provided for @dietLeftKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Te quedan'**
+  String get dietLeftKicker;
+
+  /// No description provided for @dietOfTotalKcal.
+  ///
+  /// In es, this message translates to:
+  /// **'de {total} kcal'**
+  String dietOfTotalKcal(int total);
+
+  /// No description provided for @mealOptionsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Opciones'**
+  String get mealOptionsLabel;
+
+  /// No description provided for @mealDoneStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecha'**
+  String get mealDoneStatus;
 }
 
 class _AppLocalizationsDelegate

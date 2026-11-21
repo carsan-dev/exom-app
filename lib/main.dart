@@ -25,6 +25,7 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_service_starter.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
+import 'package:exom_app/features/feedback/presentation/feedback_notice_snack_bars.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
@@ -304,19 +305,17 @@ class _ExomAppViewState extends State<_ExomAppView> {
       FeedbackUploadNoticeKind.preparing => l10n.feedbackQueued,
       FeedbackUploadNoticeKind.discarded => l10n.feedbackQueued,
     };
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: isFailure
-            ? SnackBarAction(
-                label: l10n.retry,
-                textColor: Theme.of(context).colorScheme.inversePrimary,
-                onPressed: () => unawaited(
-                  sl<FeedbackUploadQueueService>().retry(notice.id),
-                ),
-              )
-            : null,
-      ),
+    FeedbackNoticeSnackBars.show(
+      messenger,
+      message: message,
+      action: isFailure
+          ? SnackBarAction(
+              label: l10n.retry,
+              textColor: Theme.of(context).colorScheme.inversePrimary,
+              onPressed: () =>
+                  unawaited(sl<FeedbackUploadQueueService>().retry(notice.id)),
+            )
+          : null,
     );
   }
 

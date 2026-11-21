@@ -149,13 +149,12 @@ void main() {
             home: const PendingUploadsPage(),
           ),
         );
-        final retry = find.byWidgetPredicate(
-          (widget) => widget is IconButton && widget.tooltip == 'Reintentar',
-        );
+        // L5-C1: the retry is an in-line action (label + icon), no IconButton.
+        final retry = find.byKey(const Key('pending-retry-pending'));
         expect(retry.hitTestable(), findsOneWidget);
         expect(
-          tester.widget<IconButton>(retry).color,
-          theme.colorScheme.primary,
+          find.descendant(of: retry, matching: find.text('Reintentar')),
+          findsOneWidget,
         );
         await tester.runAsync(() async {
           await tester.tap(retry);

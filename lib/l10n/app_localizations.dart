@@ -4934,6 +4934,114 @@ abstract class AppLocalizations {
   /// **'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.'**
   String get pendingSyncConflict;
 
+  /// No description provided for @pendingUploadsCountSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 pendiente} other{{count} pendientes}}'**
+  String pendingUploadsCountSubtitle(int count);
+
+  /// No description provided for @pendingUploadsErrorCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 con error} other{{count} con error}}'**
+  String pendingUploadsErrorCount(int count);
+
+  /// No description provided for @pendingUploadsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada pendiente'**
+  String get pendingUploadsNone;
+
+  /// No description provided for @pendingUploadsKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'En este móvil'**
+  String get pendingUploadsKicker;
+
+  /// No description provided for @pendingUploadsHeroLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{subida pendiente} other{subidas pendientes}}'**
+  String pendingUploadsHeroLabel(int count);
+
+  /// No description provided for @pendingUploadsSectionEvidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencias'**
+  String get pendingUploadsSectionEvidence;
+
+  /// No description provided for @pendingUploadsEmptyFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo al día.'**
+  String get pendingUploadsEmptyFirst;
+
+  /// No description provided for @pendingUploadsEmptySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin subidas.'**
+  String get pendingUploadsEmptySecond;
+
+  /// No description provided for @pendingUploadsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada archivo sigue en este móvil hasta que EXOM confirma que lo ha recibido.'**
+  String get pendingUploadsEmptyBody;
+
+  /// No description provided for @pendingMediaVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo de feedback'**
+  String get pendingMediaVideo;
+
+  /// No description provided for @pendingMediaImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen de feedback'**
+  String get pendingMediaImage;
+
+  /// No description provided for @pendingUploadSendingBytes.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviando {percent} % · {sent} de {total} MB'**
+  String pendingUploadSendingBytes(int percent, String sent, String total);
+
+  /// No description provided for @pendingRetryFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo reintentar la subida. Tu evidencia se conserva.'**
+  String get pendingRetryFailed;
+
+  /// No description provided for @pendingRetryRequested.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintento solicitado.'**
+  String get pendingRetryRequested;
+
+  /// No description provided for @pendingRetryNotStarted.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo completar el reintento. Tus datos se conservan.'**
+  String get pendingRetryNotStarted;
+
+  /// No description provided for @pendingDeleteIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'No se completó la eliminación. Tus datos se conservan.'**
+  String get pendingDeleteIncomplete;
+
+  /// No description provided for @pendingDeleteDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Evidencia eliminada.'**
+  String get pendingDeleteDone;
+
+  /// No description provided for @pendingSyncDeleteDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Acción eliminada.'**
+  String get pendingSyncDeleteDone;
+
   /// No description provided for @progressPhotosTitle.
   ///
   /// In es, this message translates to:

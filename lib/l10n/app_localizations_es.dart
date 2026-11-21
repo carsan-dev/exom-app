@@ -2841,6 +2841,90 @@ class AppLocalizationsEs extends AppLocalizations {
       'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.';
 
   @override
+  String pendingUploadsCountSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pendientes',
+      one: '1 pendiente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pendingUploadsErrorCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count con error',
+      one: '1 con error',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsNone => 'Nada pendiente';
+
+  @override
+  String get pendingUploadsKicker => 'En este móvil';
+
+  @override
+  String pendingUploadsHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'subidas pendientes',
+      one: 'subida pendiente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsSectionEvidence => 'Evidencias';
+
+  @override
+  String get pendingUploadsEmptyFirst => 'Todo al día.';
+
+  @override
+  String get pendingUploadsEmptySecond => 'Sin subidas.';
+
+  @override
+  String get pendingUploadsEmptyBody =>
+      'Cada archivo sigue en este móvil hasta que EXOM confirma que lo ha recibido.';
+
+  @override
+  String get pendingMediaVideo => 'Vídeo de feedback';
+
+  @override
+  String get pendingMediaImage => 'Imagen de feedback';
+
+  @override
+  String pendingUploadSendingBytes(int percent, String sent, String total) {
+    return 'Enviando $percent % · $sent de $total MB';
+  }
+
+  @override
+  String get pendingRetryFailed =>
+      'No se pudo reintentar la subida. Tu evidencia se conserva.';
+
+  @override
+  String get pendingRetryRequested => 'Reintento solicitado.';
+
+  @override
+  String get pendingRetryNotStarted =>
+      'No se pudo completar el reintento. Tus datos se conservan.';
+
+  @override
+  String get pendingDeleteIncomplete =>
+      'No se completó la eliminación. Tus datos se conservan.';
+
+  @override
+  String get pendingDeleteDone => 'Evidencia eliminada.';
+
+  @override
+  String get pendingSyncDeleteDone => 'Acción eliminada.';
+
+  @override
   String get progressPhotosTitle => 'Fotos de progreso';
 
   @override

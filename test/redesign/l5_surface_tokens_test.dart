@@ -72,6 +72,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/challenges/presentation/widgets/challenge_milestone_mark.dart',
   'lib/features/challenges/presentation/widgets/challenge_tick_rule.dart',
   'lib/features/settings/presentation/pages/settings_page.dart',
+  // L5-B4 · Perfil.
+  'lib/features/profile/presentation/pages/profile_page.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

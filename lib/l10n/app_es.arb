@@ -1145,6 +1145,82 @@
   "feedbackOperationError": "No se pudo completar la operación. Vuelve a intentarlo.",
   "notificationsLoadError": "No se pudieron cargar las notificaciones. Inténtalo de nuevo.",
   "profileOperationError": "No se pudo completar la operación del perfil. Inténtalo de nuevo.",
+  "profileHeadlineFirst": "Mira atrás.",
+  "profileHeadlineSecond": "Sigue adelante.",
+  "profileStreakDays": "{count, plural, =1{Racha de 1 día} other{Racha de {count} días}}",
+  "@profileStreakDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileChangePhotoA11y": "Cambiar foto de perfil",
+  "profileAvatarSending": "Enviando foto de perfil",
+  "profileWeightSince": "desde {value}",
+  "@profileWeightSince": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalShare": "{percent} del objetivo",
+  "@profileGoalShare": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalValue": "Objetivo: {value}",
+  "@profileGoalValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profileIndexMetrics": "Actualizar peso y medidas",
+  "profileEmptyFirst": "Sin datos",
+  "profileEmptySecond": "todavía.",
+  "profileMeasurementsUpdated": "Medidas · última actualización {date}",
+  "@profileMeasurementsUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalSheetFirst": "Objetivo",
+  "profileGoalSheetSecond": "de masa muscular",
+  "profileGoalLatest": "Última medición: {value}",
+  "@profileGoalLatest": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalDecrease": "Restar {step}",
+  "@profileGoalDecrease": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalIncrease": "Sumar {step}",
+  "@profileGoalIncrease": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "profileGoalInvalid": "Introduce un objetivo mayor que 0.",
+  "profileGoalEditA11y": "Editar objetivo de masa muscular",
+  "profileHoursUnit": "h",
   "recapSaveError": "No se pudo guardar el resumen semanal. Inténtalo de nuevo.",
   "recapLoadError": "No se pudieron cargar los resúmenes semanales. Inténtalo de nuevo.",
   "recapDetailLoadError": "No se pudo cargar el resumen semanal. Inténtalo de nuevo.",

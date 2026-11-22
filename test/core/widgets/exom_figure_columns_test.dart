@@ -102,6 +102,21 @@ void main() {
     );
   });
 
+  testWidgets('alignLabels: in a row the labels share one y when a figure '
+      'shrinks (O5)', (tester) async {
+    // «31,2 kg» and «14,8 %» shrink to different sizes at 2.0 x.
+    await pumpComponent(
+      tester,
+      const ExomFigureColumns(items: _long, alignLabels: true),
+      width: 320,
+      textScale: 2.0,
+    );
+    expect(
+      _topLeft(tester, 'Grasa corporal').dy,
+      closeTo(_topLeft(tester, 'Masa muscular').dy, 0.5),
+    );
+  });
+
   testWidgets('numbered shows 01, 02, 03 and can be turned off', (
     tester,
   ) async {

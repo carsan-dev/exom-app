@@ -5786,6 +5786,126 @@ abstract class AppLocalizations {
   /// **'No se pudo completar la operación del perfil. Inténtalo de nuevo.'**
   String get profileOperationError;
 
+  /// No description provided for @profileHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Mira atrás.'**
+  String get profileHeadlineFirst;
+
+  /// No description provided for @profileHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue adelante.'**
+  String get profileHeadlineSecond;
+
+  /// No description provided for @profileStreakDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Racha de 1 día} other{Racha de {count} días}}'**
+  String profileStreakDays(int count);
+
+  /// No description provided for @profileChangePhotoA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar foto de perfil'**
+  String get profileChangePhotoA11y;
+
+  /// No description provided for @profileAvatarSending.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviando foto de perfil'**
+  String get profileAvatarSending;
+
+  /// No description provided for @profileWeightSince.
+  ///
+  /// In es, this message translates to:
+  /// **'desde {value}'**
+  String profileWeightSince(String value);
+
+  /// No description provided for @profileGoalShare.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent} del objetivo'**
+  String profileGoalShare(String percent);
+
+  /// No description provided for @profileGoalValue.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo: {value}'**
+  String profileGoalValue(String value);
+
+  /// No description provided for @profileIndexMetrics.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar peso y medidas'**
+  String get profileIndexMetrics;
+
+  /// No description provided for @profileEmptyFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin datos'**
+  String get profileEmptyFirst;
+
+  /// No description provided for @profileEmptySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'todavía.'**
+  String get profileEmptySecond;
+
+  /// No description provided for @profileMeasurementsUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Medidas · última actualización {date}'**
+  String profileMeasurementsUpdated(String date);
+
+  /// No description provided for @profileGoalSheetFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo'**
+  String get profileGoalSheetFirst;
+
+  /// No description provided for @profileGoalSheetSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'de masa muscular'**
+  String get profileGoalSheetSecond;
+
+  /// No description provided for @profileGoalLatest.
+  ///
+  /// In es, this message translates to:
+  /// **'Última medición: {value}'**
+  String profileGoalLatest(String value);
+
+  /// No description provided for @profileGoalDecrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Restar {step}'**
+  String profileGoalDecrease(String step);
+
+  /// No description provided for @profileGoalIncrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Sumar {step}'**
+  String profileGoalIncrease(String step);
+
+  /// No description provided for @profileGoalInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce un objetivo mayor que 0.'**
+  String get profileGoalInvalid;
+
+  /// No description provided for @profileGoalEditA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar objetivo de masa muscular'**
+  String get profileGoalEditA11y;
+
+  /// No description provided for @profileHoursUnit.
+  ///
+  /// In es, this message translates to:
+  /// **'h'**
+  String get profileHoursUnit;
+
   /// No description provided for @recapSaveError.
   ///
   /// In es, this message translates to:

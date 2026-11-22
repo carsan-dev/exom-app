@@ -27,7 +27,9 @@ void main() {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ));
-    await tester.tap(find.text('Progress photos'));
+    // L5-B4: the entry is now item 02 of the numbered index, whose titles are
+    // painted upper case (ExomIndexList); same entry, same route.
+    await tester.tap(find.text('PROGRESS PHOTOS'));
     await tester.pumpAndSettle();
 
     expect(find.text('Progress photos destination'), findsOneWidget);

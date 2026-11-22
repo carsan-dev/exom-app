@@ -92,6 +92,9 @@ Future<void> _mount(WidgetTester tester, Locale locale) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
+// L5-B4 (D14-7): the sleep figure is a flat block whose unit «h» is a small
+// span right after the digits (exomFigureSpans, the gap is letter spacing),
+// so the plain text reads «7,5h»; the locale separator is what is checked.
 void main() {
   tearDown(sl.reset);
 
@@ -100,16 +103,16 @@ void main() {
       tester,
     ) async {
       await _mount(tester, const Locale('es'));
-      expect(find.text('7,5 h', findRichText: true), findsOneWidget);
-      expect(find.text('7.5 h', findRichText: true), findsNothing);
+      expect(find.text('7,5h', findRichText: true), findsOneWidget);
+      expect(find.text('7.5h', findRichText: true), findsNothing);
     });
 
     testWidgets('sleep average in English uses a decimal point', (
       tester,
     ) async {
       await _mount(tester, const Locale('en'));
-      expect(find.text('7.5 h', findRichText: true), findsOneWidget);
-      expect(find.text('7,5 h', findRichText: true), findsNothing);
+      expect(find.text('7.5h', findRichText: true), findsOneWidget);
+      expect(find.text('7,5h', findRichText: true), findsNothing);
     });
   });
 }

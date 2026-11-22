@@ -3372,6 +3372,88 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo completar la operación del perfil. Inténtalo de nuevo.';
 
   @override
+  String get profileHeadlineFirst => 'Mira atrás.';
+
+  @override
+  String get profileHeadlineSecond => 'Sigue adelante.';
+
+  @override
+  String profileStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Racha de $count días',
+      one: 'Racha de 1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileChangePhotoA11y => 'Cambiar foto de perfil';
+
+  @override
+  String get profileAvatarSending => 'Enviando foto de perfil';
+
+  @override
+  String profileWeightSince(String value) {
+    return 'desde $value';
+  }
+
+  @override
+  String profileGoalShare(String percent) {
+    return '$percent del objetivo';
+  }
+
+  @override
+  String profileGoalValue(String value) {
+    return 'Objetivo: $value';
+  }
+
+  @override
+  String get profileIndexMetrics => 'Actualizar peso y medidas';
+
+  @override
+  String get profileEmptyFirst => 'Sin datos';
+
+  @override
+  String get profileEmptySecond => 'todavía.';
+
+  @override
+  String profileMeasurementsUpdated(String date) {
+    return 'Medidas · última actualización $date';
+  }
+
+  @override
+  String get profileGoalSheetFirst => 'Objetivo';
+
+  @override
+  String get profileGoalSheetSecond => 'de masa muscular';
+
+  @override
+  String profileGoalLatest(String value) {
+    return 'Última medición: $value';
+  }
+
+  @override
+  String profileGoalDecrease(String step) {
+    return 'Restar $step';
+  }
+
+  @override
+  String profileGoalIncrease(String step) {
+    return 'Sumar $step';
+  }
+
+  @override
+  String get profileGoalInvalid => 'Introduce un objetivo mayor que 0.';
+
+  @override
+  String get profileGoalEditA11y => 'Editar objetivo de masa muscular';
+
+  @override
+  String get profileHoursUnit => 'h';
+
+  @override
   String get recapSaveError =>
       'No se pudo guardar el resumen semanal. Inténtalo de nuevo.';
 

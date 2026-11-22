@@ -30,7 +30,7 @@ class ExomPoint {
 /// decimals), hairline grid at the round marks of `weightAxis` (the L4 axis
 /// of the weight chart, reused) and a hairline base.
 ///
-/// States: no points (base only), one point (a labelled point, no line), a
+/// States: no points (base and two grid rules), one point (a labelled point, no line), a
 /// series. Points are drawn in [ExomPoint.x] order. Width 100 %, height 40 %
 /// of the width (the sketch's 350 x 140).
 ///
@@ -205,6 +205,13 @@ class _LineChartPainter extends CustomPainter {
         final y = layout.yOf(tick);
         canvas.drawLine(Offset(0, y), Offset(size.width, y), rulePaint);
       }
+    } else {
+      // No data: the sketch's empty chart keeps its two grid rules (34 and 73
+      // of 140) so the area reads as a chart, not as a blank gap.
+      for (final fraction in _emptyGridFractions) {
+        final y = size.height * fraction;
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), rulePaint);
+      }
     }
     canvas.drawLine(
       Offset(0, layout.baseY),
@@ -237,6 +244,10 @@ class _LineChartPainter extends CustomPainter {
       );
     }
   }
+
+  /// Grid rules of the empty chart, as fractions of the height (sketch 350 x
+  /// 140: y 34 and y 73).
+  static const List<double> _emptyGridFractions = [34 / 140, 73 / 140];
 
   @override
   bool shouldRepaint(_LineChartPainter old) =>

@@ -22,6 +22,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/challenges/challenges_test_support.dart';
+import '../features/profile/presentation/profile_scene.dart' as perfil;
 
 const _codes = [
   'progress_conflict_review_required',
@@ -166,6 +167,26 @@ void main() {
           await openAchievementsBoard(
             tester,
             locale.languageCode == 'es' ? 'Ver todos' : 'View all',
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  // L5-B4 «Perfil»: the main scene at 320 dp with 1.3x and 1.6x text, in
+  // both languages (CC 3).
+  for (final locale in const [Locale('es'), Locale('en')]) {
+    for (final scale in const [1.3, 1.6]) {
+      testWidgets(
+        'Perfil does not overflow at 320dp, ${scale}x, ${locale.languageCode}',
+        (tester) async {
+          await perfil.pumpProfileScene(
+            tester,
+            width: 320,
+            height: 6000,
+            locale: locale,
+            textScaler: TextScaler.linear(scale),
           );
           expect(tester.takeException(), isNull);
         },

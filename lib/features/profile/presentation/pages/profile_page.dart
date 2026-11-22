@@ -1,57 +1,75 @@
-import 'package:exom_app/core/formatters/input_example.dart';
-import 'package:exom_app/core/api/api_error_helper.dart';
-import 'dart:math' as math;
 import 'dart:io';
-import 'package:exom_app/core/theme/exom_icons.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_line_chart.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
+import 'package:exom_app/core/widgets/exom_operation_bar.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
+import 'package:exom_app/injection_container.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
+/// Keeps a value and its unit on one line.
+const String _nbsp = '\u00A0';
+
+/// Perfil (L5-B4, sketch `b-cuenta.html` «B1 · Perfil»): identity, two-line
+/// headline, the weight as protagonist in the featured block, the flat muscle
+/// mass and sleep figures (D14-7), the numbered index and the body data band.
+///
+/// EX-Q7 (L5-D28): a [ProfileError] that keeps the profile is painted as the
+/// loaded page with the error in line; without a profile the error takes the
+/// whole screen. The bloc is created here for this page only (a factory in
+/// `injection_container.dart`), so a kept profile never outlives the page.
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        // Sketch B1: the bar only carries «Volver»; the name is the title.
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           leading: IconButton(
-            icon: Icon(
-              ExomIcons.back,
-              color: context.exomPalette.textPrimary,
-            ),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            icon: Icon(ExomIcons.back, color: palette.textPrimary),
             onPressed: () => context.pop(),
-          ),
-          title: Text(
-            AppLocalizations.of(context).profilePageTitle,
-            style: TextStyle(
-              color: context.exomPalette.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ),
         body: BlocProvider(
@@ -70,407 +88,289 @@ class _ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
-        if (state is ProfileLoading || state is ProfileInitial) {
-          return const _ProfileLoadingView();
-        }
-        if (state is ProfileError) {
-          return ErrorWidget2(
-            message: localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.profileOperationError),
-            onRetry: () =>
-                context.read<ProfileBloc>().add(const ProfileLoadRequested()),
-          );
-        }
-        if (state is ProfileLoaded) {
-          return _ProfileContent(
+        void retry() =>
+            context.read<ProfileBloc>().add(const ProfileLoadRequested());
+        String errorText(String message) => localizedErrorTextOf(
+          context,
+          message,
+          fallback: (l10n) => l10n.profileOperationError,
+        );
+        return switch (state) {
+          ProfileLoaded() => _ProfileContent(
             profile: state.profile,
-            isUploadingAvatar: false,
             weightHistory: state.weightHistory,
             latestMetric: state.latestMetric,
-          );
-        }
-        if (state is ProfileAvatarUploading) {
-          return _ProfileContent(
+            editable: true,
+          ),
+          ProfileAvatarUploading() => _ProfileContent(
             profile: state.profile,
+            weightHistory: state.weightHistory,
+            latestMetric: state.latestMetric,
             isUploadingAvatar: true,
+          ),
+          ProfileError(profile: final ProfileEntity profile) => _ProfileContent(
+            profile: profile,
             weightHistory: state.weightHistory,
             latestMetric: state.latestMetric,
-          );
-        }
-        return const SizedBox.shrink();
+            errorMessage: errorText(state.message),
+            onRetry: retry,
+          ),
+          ProfileError() => _ProfileFullError(
+            message: errorText(state.message),
+            onRetry: retry,
+          ),
+          _ => const _ProfileSkeleton(),
+        };
       },
     );
   }
 }
 
-class _ProfileLoadingView extends StatelessWidget {
-  const _ProfileLoadingView();
+double _bottomSpacing(BuildContext context) =>
+    math.max(40.0, 16.0 + MediaQuery.viewPaddingOf(context).bottom);
 
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final bottomSpacing = math.max(40.0, 16.0 + bottomInset);
+TextStyle _secondaryStyle(BuildContext context) => TextStyle(
+  fontFamily: AppTheme.bodyFontFamily,
+  fontSize: 14,
+  height: 1.35,
+  color: context.exomPalette.textSecondary,
+);
 
-    return ListView(
-      padding: EdgeInsets.only(bottom: bottomSpacing),
-      children: const [
-        _ProfileHeaderSkeleton(),
-        _ProfileActionButtonsSkeleton(),
-        _ProfileChartSkeleton(),
-        _ProfileIndicatorsSkeleton(),
-        _ProfileBodyDataSkeleton(),
-      ],
-    );
+/// Opens the metrics page and reloads the profile on return (as before).
+Future<void> _openMetrics(BuildContext context) async {
+  await context.push('/profile/metrics');
+  if (context.mounted) {
+    context.read<ProfileBloc>().add(const ProfileLoadRequested());
   }
 }
 
-class _ProfileHeaderSkeleton extends StatelessWidget {
-  const _ProfileHeaderSkeleton();
+/// Two equal columns with a hairline between them and rules above and below
+/// (`.x-cols`). The middle rule is a positioned line over the full height of
+/// the taller column: no intrinsic sizing (the bars and skeletons inside use
+/// LayoutBuilder) and no Table (its cells confuse the semantics geometry).
+Widget _twoColumns(Widget start, Widget end, BorderSide rule) => DecoratedBox(
+  decoration: BoxDecoration(
+    border: Border(top: rule, bottom: rule),
+  ),
+  child: LayoutBuilder(
+    builder: (context, constraints) => Stack(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: start),
+            Expanded(child: end),
+          ],
+        ),
+        PositionedDirectional(
+          start: constraints.maxWidth / 2,
+          top: 0,
+          bottom: 0,
+          width: rule.width,
+          child: ColoredBox(color: rule.color),
+        ),
+      ],
+    ),
+  ),
+);
+
+// ── Loading ─────────────────────────────────────────────────────────────────
+
+/// Skeletons with the final shape (sketch «Perfil · carga»): identity,
+/// headline, the featured block with numeral and rule, two figure columns and
+/// three rows.
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 24,
-      child: Row(
+    final rule = BorderSide(
+      color: context.exomPalette.borderSoft,
+      width: ExomRule.hairline,
+    );
+    Widget column({required bool first}) => Padding(
+      padding: EdgeInsetsDirectional.fromSTEB(first ? 20 : 14, 14, 12, 16),
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Expanded(
+        children: [
+          ExomSkeleton.numeral(),
+          SizedBox(height: ExomSpacing.sm),
+          ExomSkeleton.rule(),
+        ],
+      ),
+    );
+    return ListView(
+      key: const Key('profile-skeleton'),
+      padding: EdgeInsets.only(bottom: _bottomSpacing(context)),
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: ExomSkeleton.headline(),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+          child: ExomSkeleton.headline(),
+        ),
+        const SizedBox(height: ExomSpacing.lg),
+        const ExomFeatureBlock(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ShimmerCard(
-                  height: 22,
-                  width: 144,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ShimmerCard(
-                      height: 22,
-                      width: 74,
-                      borderRadius: BorderRadius.all(Radius.circular(16)),
-                    ),
-                    ShimmerCard(
-                      height: 22,
-                      width: 86,
-                      borderRadius: BorderRadius.all(Radius.circular(16)),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                ShimmerCard(
-                  height: 14,
-                  width: 152,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                SizedBox(height: 8),
-                ShimmerCard(
-                  height: 14,
-                  width: 128,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                SizedBox(height: 8),
-                ShimmerCard(
-                  height: 14,
-                  width: 164,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
+                ExomSkeleton.numeral(),
+                SizedBox(height: ExomSpacing.lg),
+                ExomSkeleton.rule(),
               ],
             ),
           ),
-          SizedBox(width: 16),
-          ShimmerCard(
-            height: 80,
-            width: 80,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileActionButtonsSkeleton extends StatelessWidget {
-  const _ProfileActionButtonsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: List.generate(3, (index) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
-              child: GlassCard(
-                margin: EdgeInsets.zero,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 10,
-                ),
-                borderRadius: 16,
-                child: const Column(
-                  children: [
-                    ShimmerCard(
-                      height: 18,
-                      width: 18,
-                      borderRadius: BorderRadius.all(Radius.circular(9)),
-                    ),
-                    SizedBox(height: 8),
-                    ShimmerCard(
-                      height: 12,
-                      width: 74,
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                    SizedBox(height: 4),
-                    ShimmerCard(
-                      height: 12,
-                      width: 58,
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-class _ProfileChartSkeleton extends StatelessWidget {
-  const _ProfileChartSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 22,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ShimmerCard(
-            height: 18,
-            width: 138,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-          SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ShimmerCard(
-              height: 22,
-              width: 104,
-              borderRadius: BorderRadius.all(Radius.circular(999)),
-            ),
-          ),
-          SizedBox(height: 12),
-          ShimmerCard(
-            height: 160,
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileIndicatorsSkeleton extends StatelessWidget {
-  const _ProfileIndicatorsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        children: [
-          Expanded(child: _ProfileIndicatorCardSkeleton()),
-          SizedBox(width: 12),
-          Expanded(child: _ProfileIndicatorCardSkeleton()),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileIndicatorCardSkeleton extends StatelessWidget {
-  const _ProfileIndicatorCardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(16),
-      borderRadius: 20,
-      child: const Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: ShimmerCard(
-                  height: 16,
-                  width: 72,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ),
-              SizedBox(width: 8),
-              ShimmerCard(
-                height: 16,
-                width: 16,
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
-            ],
-          ),
-          SizedBox(height: 18),
-          ShimmerCard(
-            height: 90,
-            width: 90,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-          SizedBox(height: 14),
-          ShimmerCard(
-            height: 16,
-            width: 88,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-          SizedBox(height: 8),
-          ShimmerCard(
-            height: 12,
-            width: 108,
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileBodyDataSkeleton extends StatelessWidget {
-  const _ProfileBodyDataSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 22,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: ShimmerCard(
-                  height: 18,
-                  width: 92,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ),
-              SizedBox(width: 12),
-              ShimmerCard(
-                height: 12,
-                width: 86,
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
-            ],
-          ),
-          SizedBox(height: 18),
-          _ProfileDataRowSkeleton(),
-          SizedBox(height: 12),
-          _ProfileDataRowSkeleton(),
-          SizedBox(height: 12),
-          _ProfileDataRowSkeleton(),
-          SizedBox(height: 12),
-          _ProfileDataRowSkeleton(),
-          SizedBox(height: 18),
-          ShimmerCard(
-            height: 44,
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileDataRowSkeleton extends StatelessWidget {
-  const _ProfileDataRowSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        ShimmerCard(
-          height: 16,
-          width: 16,
-          borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
-        SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ShimmerCard(
-                height: 14,
-                width: 168,
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-              SizedBox(height: 6),
-              ShimmerCard(
-                height: 12,
-                width: 92,
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
-            ],
-          ),
+        _twoColumns(column(first: true), column(first: false), rule),
+        const SizedBox(height: ExomSpacing.xxl),
+        const ExomSkeleton.row(),
+        const ExomSkeleton.row(),
+        const ExomSkeleton.row(),
+      ],
+    );
+  }
+}
+
+// ── Full-screen error (first load) ──────────────────────────────────────────
+
+class _ProfileFullError extends StatelessWidget {
+  const _ProfileFullError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      key: const Key('profile-full-error'),
+      padding: EdgeInsets.fromLTRB(20, 24, 20, _bottomSpacing(context)),
+      children: [
+        _ErrorBlock(
+          message: message,
+          onRetry: onRetry,
+          messageKey: const Key('profile-full-error-message'),
         ),
       ],
     );
   }
 }
 
-class _ProfileContent extends StatelessWidget {
-  final ProfileEntity profile;
-  final bool isUploadingAvatar;
-  final List<BodyMetricEntity> weightHistory;
-  final BodyMetricEntity? latestMetric;
+/// Error with «Reintentar» (sketch «Perfil · error»: rule, icon and text,
+/// then a secondary button).
+class _ErrorBlock extends StatelessWidget {
+  const _ErrorBlock({
+    required this.message,
+    required this.onRetry,
+    required this.messageKey,
+  });
 
+  final String message;
+  final VoidCallback onRetry;
+  final Key messageKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExomInlineMessage(
+          key: messageKey,
+          kind: ExomMessageKind.error,
+          title: message,
+        ),
+        const SizedBox(height: ExomSpacing.md),
+        ExomSecondaryButton(
+          key: const Key('profile-retry'),
+          label: AppLocalizations.of(context).retry,
+          icon: ExomIcons.retry,
+          onPressed: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Content ─────────────────────────────────────────────────────────────────
+
+class _ProfileContent extends StatelessWidget {
   const _ProfileContent({
     required this.profile,
-    required this.isUploadingAvatar,
     required this.weightHistory,
     required this.latestMetric,
+    this.isUploadingAvatar = false,
+    this.editable = false,
+    this.errorMessage,
+    this.onRetry,
   });
+
+  final ProfileEntity profile;
+  final List<BodyMetricEntity> weightHistory;
+  final BodyMetricEntity? latestMetric;
+  final bool isUploadingAvatar;
+
+  /// Avatar and goal can change only from a loaded profile: the bloc ignores
+  /// a goal update in any other state.
+  final bool editable;
+
+  /// EX-Q7: error painted in line, the profile stays visible.
+  final String? errorMessage;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final bottomSpacing = math.max(40.0, 16.0 + bottomInset);
+    final l10n = AppLocalizations.of(context);
+    final entries = _weightEntries(weightHistory);
+    final error = errorMessage;
+    final showHeadline = error != null || entries.isNotEmpty;
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: palette.textPrimary,
       backgroundColor: palette.surface,
       onRefresh: () async {
         context.read<ProfileBloc>().add(const ProfileLoadRequested());
       },
       child: ListView(
-        padding: EdgeInsets.only(bottom: bottomSpacing),
+        padding: EdgeInsets.only(bottom: _bottomSpacing(context)),
         children: [
-          _ProfileHeader(
+          _Identity(
             profile: profile,
             isUploadingAvatar: isUploadingAvatar,
+            editable: editable,
           ),
-          _ActionButtons(profile: profile),
+          if (isUploadingAvatar)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: ExomOperationBar(),
+            ),
+          if (showHeadline)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: ExomTwoLineHeadline(
+                first: l10n.profileHeadlineFirst,
+                second: l10n.profileHeadlineSecond,
+              ),
+            ),
+          SizedBox(height: showHeadline ? ExomSpacing.lg : ExomSpacing.xl),
+          _WeightFeature(
+            entries: entries,
+            errorMessage: error,
+            onRetry: onRetry,
+          ),
+          _FlatIndicators(
+            profile: profile,
+            latestMetric: latestMetric,
+            editable: editable,
+          ),
+          const SizedBox(height: ExomSpacing.xxl),
           const ProgressPhotosEntry(),
-          _WeightChartCard(weightHistory: weightHistory),
-          _IndicatorCards(profile: profile, latestMetric: latestMetric),
-          _BodyDataSection(
+          const SizedBox(height: ExomSpacing.xxl),
+          _BodyData(
             profile: profile,
             weightHistory: weightHistory,
             latestMetric: latestMetric,
@@ -481,16 +381,147 @@ class _ProfileContent extends StatelessWidget {
   }
 }
 
-// ── Profile Header ──────────────────────────────────────────────────────────
+/// Latest weight of each day, oldest first (as the previous chart).
+List<BodyMetricEntity> _weightEntries(List<BodyMetricEntity> history) {
+  final latestByDay = <String, BodyMetricEntity>{};
+  for (final entry in history.where((item) => item.weightKg != null)) {
+    latestByDay[DateFormat('yyyy-MM-dd').format(entry.date)] = entry;
+  }
+  return latestByDay.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+}
 
-class _ProfileHeader extends StatelessWidget {
-  final ProfileEntity profile;
-  final bool isUploadingAvatar;
+// ── Identity and avatar ─────────────────────────────────────────────────────
 
-  const _ProfileHeader({
+class _Identity extends StatelessWidget {
+  const _Identity({
     required this.profile,
     required this.isUploadingAvatar,
+    required this.editable,
   });
+
+  final ProfileEntity profile;
+  final bool isUploadingAvatar;
+  final bool editable;
+
+  static String _levelLabel(AppLocalizations l10n, String? level) {
+    switch (level?.toUpperCase()) {
+      case 'BEGINNER':
+      case 'PRINCIPIANTE':
+        return l10n.beginnerLevel;
+      case 'INTERMEDIATE':
+      case 'INTERMEDIO':
+        return l10n.intermediateLevel;
+      case 'ADVANCED':
+      case 'AVANZADO':
+        return l10n.advancedLevel;
+      default:
+        return level ?? '';
+    }
+  }
+
+  static String _goalLabel(AppLocalizations l10n, String? goal) {
+    switch (goal?.toUpperCase()) {
+      case 'LOSE_WEIGHT':
+        return l10n.loseWeightGoal;
+      case 'GAIN_MUSCLE':
+        return l10n.gainMuscleGoal;
+      case 'MAINTAIN':
+        return l10n.maintainGoal;
+      case 'IMPROVE_FITNESS':
+        return l10n.improveFitnessGoal;
+      default:
+        return goal ?? '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
+    final name = profile.fullName.isNotEmpty
+        ? profile.fullName
+        : l10n.profileFallbackUserName;
+    final details = [
+      _levelLabel(l10n, profile.level),
+      _goalLabel(l10n, profile.goal),
+      if (profile.heightCm != null)
+        // No-break space: value and unit never split across lines (O4).
+        formatLength(
+          profile.heightCm,
+          unitSystem,
+          decimals: 0,
+        ).replaceAll(' ', _nbsp),
+    ].where((part) => part.isNotEmpty).join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  label: name,
+                  excludeSemantics: true,
+                  child: Text(
+                    name.toUpperCase(),
+                    style: ExomType.screenTitle.copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: ExomSpacing.sm),
+                  Text(details, style: _secondaryStyle(context)),
+                ],
+                const SizedBox(height: ExomSpacing.sm),
+                Text(
+                  l10n.profileStreakDays(profile.streakDays),
+                  style: _secondaryStyle(context),
+                ),
+                if (isUploadingAvatar) ...[
+                  const SizedBox(height: ExomSpacing.sm),
+                  ExomSyncStatus(
+                    key: const Key('profile-avatar-sending'),
+                    state: ExomSyncState.enviando,
+                    label: l10n.profileAvatarSending,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: ExomSpacing.lg),
+          _Avatar(profile: profile, canChange: editable && !isUploadingAvatar),
+        ],
+      ),
+    );
+  }
+}
+
+/// Square avatar (`.x-av`, 72): the photo, or the initials, with the camera
+/// badge when it can be changed.
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.profile, required this.canChange});
+
+  final ProfileEntity profile;
+  final bool canChange;
+
+  static const double _size = 72;
+  static const double _badge = 24;
+
+  String get _initials {
+    final parts = [profile.firstName, profile.lastName]
+        .whereType<String>()
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty);
+    return parts.map((part) => part.characters.first.toUpperCase()).join();
+  }
 
   Future<void> _pickAndUpload(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
@@ -540,1218 +571,720 @@ class _ProfileHeader extends StatelessWidget {
     }
   }
 
-  String _levelLabel(BuildContext context, String? level) {
-    switch (level?.toUpperCase()) {
-      case 'BEGINNER':
-      case 'PRINCIPIANTE':
-        return AppLocalizations.of(context).beginnerLevel;
-      case 'INTERMEDIATE':
-      case 'INTERMEDIO':
-        return AppLocalizations.of(context).intermediateLevel;
-      case 'ADVANCED':
-      case 'AVANZADO':
-        return AppLocalizations.of(context).advancedLevel;
-      default:
-        return level ?? '';
-    }
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final initials = _initials;
+    final Widget fallback = Center(
+      child: initials.isEmpty
+          ? Icon(ExomIcons.profile, size: 32, color: palette.textPrimary)
+          : Text(
+              initials,
+              style: ExomType.section.copyWith(color: palette.textPrimary),
+            ),
+    );
+    final url = profile.avatarUrl;
+    final avatar = SizedBox(
+      width: _size,
+      height: _size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ColoredBox(
+              color: palette.surfaceElevated,
+              child: url == null
+                  ? fallback
+                  : CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) => fallback,
+                    ),
+            ),
+          ),
+          if (canChange)
+            PositionedDirectional(
+              end: 0,
+              bottom: 0,
+              child: SizedBox(
+                width: _badge,
+                height: _badge,
+                child: ColoredBox(
+                  color: palette.textPrimary,
+                  child: Icon(
+                    ExomIcons.camera,
+                    size: 14,
+                    color: palette.background,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+    return Semantics(
+      button: canChange,
+      label: AppLocalizations.of(context).profileChangePhotoA11y,
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const Key('profile-avatar'),
+        onTap: canChange ? () => _pickAndUpload(context) : null,
+        child: avatar,
+      ),
+    );
   }
+}
 
-  String _goalLabel(BuildContext context, String? goal) {
-    switch (goal?.toUpperCase()) {
-      case 'LOSE_WEIGHT':
-        return AppLocalizations.of(context).loseWeightGoal;
-      case 'GAIN_MUSCLE':
-        return AppLocalizations.of(context).gainMuscleGoal;
-      case 'MAINTAIN':
-        return AppLocalizations.of(context).maintainGoal;
-      case 'IMPROVE_FITNESS':
-        return AppLocalizations.of(context).improveFitnessGoal;
-      default:
-        return goal ?? '';
-    }
-  }
+// ── Weight (featured block) ─────────────────────────────────────────────────
+
+class _WeightFeature extends StatelessWidget {
+  const _WeightFeature({
+    required this.entries,
+    required this.errorMessage,
+    required this.onRetry,
+  });
+
+  final List<BodyMetricEntity> entries;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
       (cubit) => cubit.state.unitSystem,
     );
+    final unit = weightUnitSymbol(unitSystem);
+    String figure(double display) =>
+        formatFigure(context, display, decimalDigits: 1);
+    final error = errorMessage;
+    final retry = onRetry;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.accentCard(
-        AppColors.primary,
-        borderRadius: 24,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final List<Widget> content;
+    if (entries.isEmpty) {
+      content = [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomLineChart(points: []),
+        ),
+        ExomEmptyState(
+          first: l10n.profileEmptyFirst,
+          second: l10n.profileEmptySecond,
+          body: l10n.logMetricsPrompt,
+          action: ExomSecondaryButton(
+            label: l10n.logMetricsButton,
+            onPressed: () => _openMetrics(context),
+          ),
+        ),
+      ];
+    } else {
+      final display = [
+        for (final entry in entries)
+          UnitConverters.weightToDisplay(entry.weightKg!, unitSystem),
+      ];
+      final first = display.first;
+      final last = display.last;
+      final delta = last - first;
+      // Rounded first so «−0,0» never shows.
+      final deltaText = figure(delta.abs());
+      final sign = deltaText == figure(0) ? '' : (delta < 0 ? '−' : '+');
+      final dateFormat = DateFormat(
+        'd MMM',
+        Localizations.localeOf(context).languageCode,
+      );
+      final footStyle = _secondaryStyle(context);
+      content = [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: ExomNumeral(
+            key: const Key('profile-weight-hero'),
+            value: figure(last),
+            unit: unit,
+            size: ExomNumeralSize.hero140,
+            side: entries.length < 2
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$sign$deltaText$_nbsp$unit',
+                        style: ExomType.headline2Section.copyWith(
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.profileWeightSince('${figure(first)}$_nbsp$unit'),
+                        style: footStyle,
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomLineChart(
+            points: [
+              for (var i = 0; i < display.length; i++)
+                ExomPoint(i.toDouble(), display[i]),
+            ],
+            labelOf: figure,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  dateFormat.format(entries.first.date),
+                  style: footStyle,
+                ),
+              ),
+              Text(dateFormat.format(entries.last.date), style: footStyle),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    // The error in line is added to the weight, never in its place: the kept
+    // figure, chart and dates stay visible (EX-Q7).
+    return ExomFeatureBlock(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Left: name, tags, stats
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.fullName.isNotEmpty
-                      ? profile.fullName.toUpperCase()
-                      : AppLocalizations.of(context).profileFallbackUserName,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Tags
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (_levelLabel(context, profile.level).isNotEmpty)
-                      _Tag(label: _levelLabel(context, profile.level)),
-                    if (_goalLabel(context, profile.goal).isNotEmpty)
-                      _Tag(label: _goalLabel(context, profile.goal)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Stats row
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
-                  children: [
-                    if (profile.currentWeightKg != null)
-                      _InlineStat(
-                        icon: ExomIcons.weight,
-                        text: formatWeight(
-                          profile.currentWeightKg,
-                          unitSystem,
-                          decimals: 0,
-                        ),
-                      ),
-                    if (profile.heightCm != null)
-                      _InlineStat(
-                        icon: ExomIcons.height,
-                        text: formatLength(
-                          profile.heightCm,
-                          unitSystem,
-                          decimals: 0,
-                        ),
-                      ),
-                    _InlineStat(
-                      icon: ExomIcons.streak,
-                      text:
-                          '${AppLocalizations.of(context).streak} ${profile.streakDays} ${AppLocalizations.of(context).days}',
-                      iconColor: AppColors.calorieAccent,
-                    ),
-                  ],
-                ),
-              ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomKicker(l10n.weightProgressTitle),
             ),
           ),
-          const SizedBox(width: 16),
-          // Right: avatar
-          GestureDetector(
-            onTap: isUploadingAvatar ? null : () => _pickAndUpload(context),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomRight,
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.28),
-                          blurRadius: 30,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                  child: isUploadingAvatar
-                      ? const CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 2,
-                        )
-                      : profile.avatarUrl != null
-                      ? ClipOval(
-                          child: CachedNetworkImage(
-                            imageUrl: profile.avatarUrl!,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, _, _) => const Icon(
-                              ExomIcons.profile,
-                              color: AppColors.primary,
-                              size: 40,
-                            ),
-                          ),
-                        )
-                      : const Icon(
-                          ExomIcons.profile,
-                          color: AppColors.primary,
-                          size: 40,
-                        ),
-                ),
-                if (!isUploadingAvatar)
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.24),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                          spreadRadius: -6,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      ExomIcons.camera,
-                      color: AppColors.textOnPrimary,
-                      size: 12,
-                    ),
-                  ),
-              ],
+          if (error != null && retry != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: _ErrorBlock(
+                message: error,
+                onRetry: retry,
+                messageKey: const Key('profile-inline-error'),
+              ),
             ),
-          ),
+          ...content,
         ],
       ),
     );
   }
 }
 
-class _Tag extends StatelessWidget {
-  final String label;
+// ── Muscle mass and sleep: flat blocks (D14-7) ──────────────────────────────
 
-  const _Tag({required this.label});
+class _FlatIndicators extends StatelessWidget {
+  const _FlatIndicators({
+    required this.profile,
+    required this.latestMetric,
+    required this.editable,
+  });
+
+  final ProfileEntity profile;
+  final BodyMetricEntity? latestMetric;
+  final bool editable;
+
+  static const double _sleepGoalHours = 8;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
+      (cubit) => cubit.state.unitSystem,
+    );
+    final percent = NumberFormat.percentPattern(
+      Localizations.localeOf(context).toLanguageTag(),
+    );
+    final muscle = latestMetric?.muscleMassKg;
+    final goal = profile.muscleMassGoalKg;
+    final muscleShare = muscle != null && goal != null && goal > 0
+        ? (muscle / goal).clamp(0.0, 1.0).toDouble()
+        : null;
+    final sleep = latestMetric?.sleepHours;
+    final sleepShare = sleep == null
+        ? null
+        : (sleep / _sleepGoalHours).clamp(0.0, 1.0).toDouble();
+    String weightFigure(double kg) => formatFigure(
+      context,
+      UnitConverters.weightToDisplay(kg, unitSystem),
+      decimalDigits: 1,
+    );
+    final unit = weightUnitSymbol(unitSystem);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: palette.glassBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: palette.glassBorder.withValues(alpha: 0.16),
-          width: 0.6,
-        ),
+    final String muscleCaption;
+    if (goal == null) {
+      muscleCaption = l10n.setYourGoal;
+    } else if (muscleShare != null) {
+      muscleCaption = l10n.profileGoalShare(percent.format(muscleShare));
+    } else {
+      muscleCaption = l10n.profileGoalValue('${weightFigure(goal)}$_nbsp$unit');
+    }
+
+    final palette = context.exomPalette;
+    final editButton = IconButton(
+      key: const Key('profile-muscle-goal-edit'),
+      tooltip: l10n.profileGoalEditA11y,
+      onPressed: editable
+          ? () => _editMuscleGoal(context, profile, latestMetric)
+          : null,
+      icon: Icon(ExomIcons.tune, size: 20, color: palette.textPrimary),
+    );
+
+    return _FigurePair(
+      left: _FlatFigure(
+        key: const Key('profile-muscle-block'),
+        kicker: l10n.muscleMassLabel,
+        value: muscle == null ? null : weightFigure(muscle),
+        unit: unit,
+        share: muscleShare,
+        caption: muscleCaption,
+        trailing: editButton,
       ),
-      child: Text(
-        label,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: palette.textSecondary,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
+      right: _FlatFigure(
+        key: const Key('profile-sleep-block'),
+        kicker: l10n.sleep,
+        value: sleep == null
+            ? null
+            : formatFigure(context, sleep, decimalDigits: 1),
+        unit: l10n.profileHoursUnit,
+        share: sleepShare,
+        caption: sleepShare == null
+            ? l10n.noDataLabel
+            : l10n.profileGoalShare(percent.format(sleepShare)),
       ),
     );
   }
 }
 
-class _InlineStat extends StatelessWidget {
-  const _InlineStat({required this.icon, required this.text, this.iconColor});
+/// Two figures side by side with a hairline between them and rules above and
+/// below (`.x-cols`), stacked in one column when a column would be narrower
+/// than [_minColumn] at the current text size.
+class _FigurePair extends StatelessWidget {
+  const _FigurePair({required this.left, required this.right});
 
-  final IconData icon;
-  final String text;
-  final Color? iconColor;
+  final Widget left;
+  final Widget right;
+
+  static const double _minColumn = 136;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
+    final rule = BorderSide(
+      color: context.exomPalette.borderSoft,
+      width: ExomRule.hairline,
+    );
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final inRow = constraints.maxWidth / 2 - 34 >= scaler.scale(_minColumn);
+        if (inRow) {
+          return _twoColumns(
+            _cell(left, first: true),
+            _cell(right, first: false),
+            rule,
+          );
+        }
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: rule, bottom: rule),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _cell(left, first: true),
+              DecoratedBox(
+                decoration: BoxDecoration(border: Border(top: rule)),
+                child: _cell(right, first: true),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-    return Row(
+  static Widget _cell(Widget child, {required bool first}) => Padding(
+    padding: EdgeInsetsDirectional.fromSTEB(first ? 20 : 14, 14, 12, 16),
+    child: child,
+  );
+}
+
+/// One flat block: kicker, figure in the data colour (a dash without data),
+/// a 4 px bar ([ExomProgressRule]) and a caption.
+class _FlatFigure extends StatelessWidget {
+  const _FlatFigure({
+    super.key,
+    required this.kicker,
+    required this.value,
+    required this.unit,
+    required this.share,
+    required this.caption,
+    this.trailing,
+  });
+
+  final String kicker;
+  final String? value;
+  final String unit;
+  final double? share;
+  final String caption;
+  final Widget? trailing;
+
+  static const double _figureSize = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final shown = value;
+    final style = ExomType.section.copyWith(
+      fontSize: _figureSize,
+      height: 0.85,
+      letterSpacing: -1.12,
+      color: shown == null ? palette.textSecondary : palette.data,
+    );
+    final action = trailing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: iconColor ?? palette.textSecondary, size: 14),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textSecondary,
-            fontSize: 13,
+        Row(
+          children: [
+            Expanded(child: ExomKicker(kicker)),
+            ?action,
+          ],
+        ),
+        const SizedBox(height: 6),
+        Semantics(
+          label: shown == null ? '$kicker: —' : '$kicker: $shown $unit',
+          excludeSemantics: true,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: _figureSize * 0.025),
+              child: Text.rich(
+                TextSpan(
+                  children: shown == null
+                      ? const [TextSpan(text: '—')]
+                      : exomFigureSpans(
+                          value: shown,
+                          unit: unit,
+                          fontSize: _figureSize,
+                        ),
+                ),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                style: style,
+              ),
+            ),
           ),
         ),
+        const SizedBox(height: ExomSpacing.sm),
+        ExomProgressRule(value: share ?? 0, thickness: ExomRule.bar),
+        const SizedBox(height: ExomSpacing.sm),
+        Text(caption, style: _secondaryStyle(context)),
       ],
     );
   }
 }
 
-// ── Action Buttons ──────────────────────────────────────────────────────────
+// ── Muscle mass goal sheet (D17-2) ──────────────────────────────────────────
 
-class _ActionButtons extends StatelessWidget {
-  final ProfileEntity profile;
+/// Draft of the goal while the sheet is open, in the display unit.
+@immutable
+class _GoalDraft {
+  const _GoalDraft(
+    this.value, {
+    this.parses = true,
+    this.showError = false,
+    this.touched = true,
+  });
 
-  const _ActionButtons({required this.profile});
+  final double value;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ActionChip(
-              icon: ExomIcons.weight,
-              label: AppLocalizations.of(context).updateWeightButton,
-              onTap: () async {
-                await context.push('/profile/metrics');
-                if (context.mounted) {
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                }
-              },
+  /// False while the starting point is only a suggestion (no goal saved yet
+  /// and no ± or typing): «Guardar» sends nothing until it is true.
+  final bool touched;
+
+  /// False while the typed text does not parse.
+  final bool parses;
+  final bool showError;
+
+  /// Today's rule: a number greater than 0, without a cap.
+  bool get isValid => parses && value > 0;
+}
+
+/// Value the sheet starts at, in the display unit. With a goal it is the text
+/// the previous dialog started with (`formatWeightValue`, one decimal), so
+/// saving untouched sends what the dialog sent. Without a goal: the latest
+/// muscle mass, else the dialog's example value; that start is an untouched
+/// draft (the dialog started empty and sent nothing until something was typed).
+double _initialGoal(
+  ProfileEntity profile,
+  BodyMetricEntity? latestMetric,
+  UnitSystem unitSystem,
+) {
+  final start = profile.muscleMassGoalKg ?? latestMetric?.muscleMassKg;
+  if (start == null) return unitSystem == UnitSystem.imperial ? 75.0 : 34.0;
+  return double.parse(formatWeightValue(start, unitSystem));
+}
+
+Future<void> _editMuscleGoal(
+  BuildContext context,
+  ProfileEntity profile,
+  BodyMetricEntity? latestMetric,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
+  final unit = weightUnitSymbol(unitSystem);
+  // L5-D31: 0.5 kg in metric, 1 lb in imperial.
+  final step = unitSystem == UnitSystem.imperial ? 1.0 : 0.5;
+  final stepDigits = step % 1 == 0 ? 0 : 1;
+  final stepText =
+      '${formatFigure(context, step, decimalDigits: stepDigits)} $unit';
+  final draft = ValueNotifier<_GoalDraft>(
+    _GoalDraft(
+      _initialGoal(profile, latestMetric, unitSystem),
+      touched: profile.muscleMassGoalKg != null,
+    ),
+  );
+  final latest = latestMetric?.muscleMassKg;
+
+  final double? newGoalKg;
+  try {
+    newGoalKg = await showExomSheet<double>(
+      context: context,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(
+          ExomSpacing.xl,
+          ExomSpacing.xs,
+          ExomSpacing.xl,
+          ExomSpacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExomTwoLineHeadline(
+              first: l10n.profileGoalSheetFirst,
+              second: l10n.profileGoalSheetSecond,
+              semanticsLabel: l10n.muscleMassGoalTitle,
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ActionChip(
-              icon: ExomIcons.ruler,
-              label: AppLocalizations.of(context).updateMeasurementsButton,
-              onTap: () async {
-                await context.push('/profile/metrics');
-                if (context.mounted) {
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                }
-              },
+            if (latest != null) ...[
+              const SizedBox(height: ExomSpacing.sm),
+              Text(
+                l10n.profileGoalLatest(
+                  '${formatFigure(sheetContext, UnitConverters.weightToDisplay(latest, unitSystem), decimalDigits: 1)}$_nbsp$unit',
+                ),
+                style: _secondaryStyle(sheetContext),
+              ),
+            ],
+            const SizedBox(height: ExomSpacing.lg),
+            ValueListenableBuilder<_GoalDraft>(
+              valueListenable: draft,
+              builder: (_, current, _) => ExomNumeralStepper(
+                value: current.value,
+                min: step,
+                max: double.maxFinite,
+                step: step,
+                unit: unit,
+                label: l10n.muscleMassGoalTitle,
+                decrementLabel: l10n.profileGoalDecrease(stepText),
+                incrementLabel: l10n.profileGoalIncrease(stepText),
+                acceptsTypedOutOfRange: true,
+                errorText: current.showError ? l10n.profileGoalInvalid : null,
+                onChanged: (value) => draft.value = _GoalDraft(value),
+                onInvalidInput: (_) => draft.value = _GoalDraft(
+                  current.value,
+                  parses: false,
+                  showError: current.showError,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _ActionChip(
-              icon: ExomIcons.barChart,
-              label: AppLocalizations.of(context).weeklyRecapButton,
-              onTap: () => context.push(AppRoutes.recap),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
+      actions: [
+        Builder(
+          builder: (sheetContext) => ValueListenableBuilder<_GoalDraft>(
+            valueListenable: draft,
+            builder: (_, current, _) => ExomPrimaryButton(
+              key: const Key('profile-goal-save'),
+              label: l10n.save,
+              trailingIcon: ExomIcons.check,
+              // Disabled while the suggested start is untouched: nothing is
+              // sent (and no goal invented) until a ± or a typed value.
+              onPressed: !current.touched
+                  ? null
+                  : () {
+                      final latest = draft.value;
+                      if (!latest.isValid) {
+                        draft.value = _GoalDraft(
+                          latest.value,
+                          parses: latest.parses,
+                          showError: true,
+                        );
+                        return;
+                      }
+                      Navigator.of(sheetContext).pop(
+                        UnitConverters.weightFromDisplay(
+                          latest.value,
+                          unitSystem,
+                        ),
+                      );
+                    },
+            ),
+          ),
+        ),
+        Builder(
+          builder: (sheetContext) => ExomQuietButton(
+            key: const Key('profile-goal-cancel'),
+            label: l10n.cancel,
+            onPressed: () => Navigator.of(sheetContext).pop(),
+          ),
+        ),
+      ],
     );
+  } finally {
+    draft.dispose();
+  }
+
+  if (newGoalKg != null && context.mounted) {
+    context.read<ProfileBloc>().add(ProfileMuscleGoalUpdated(newGoalKg));
   }
 }
 
+// ── Index 01-03 ─────────────────────────────────────────────────────────────
+
+/// Numbered index of the profile (`.x-ixs`): 01 weight and measurements,
+/// 02 progress photos, 03 weekly recap. Keeps the public name of the former
+/// progress photos button, whose route test drives it.
 class ProgressPhotosEntry extends StatelessWidget {
   const ProgressPhotosEntry({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: () => context.push(AppRoutes.progressPhotos),
-          icon: const Icon(ExomIcons.camera),
-          label: Text(AppLocalizations.of(context).progressPhotosEntry),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: palette.textPrimary,
-            side: BorderSide(color: palette.glassBorder),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
+    final l10n = AppLocalizations.of(context);
+    return ExomIndexList(
+      items: [
+        ExomIndexItem(
+          title: l10n.profileIndexMetrics,
+          onTap: () => _openMetrics(context),
         ),
-      ),
-    );
-  }
-}
-
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: GlassDecoration.card(borderRadius: 16),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 18),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textSecondary,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        ExomIndexItem(
+          title: l10n.progressPhotosEntry,
+          onTap: () => context.push(AppRoutes.progressPhotos),
         ),
-      ),
-    );
-  }
-}
-
-// ── Weight Chart ────────────────────────────────────────────────────────────
-
-class _WeightChartCard extends StatelessWidget {
-  final List<BodyMetricEntity> weightHistory;
-
-  const _WeightChartCard({required this.weightHistory});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final latestByDay = <String, BodyMetricEntity>{};
-    for (final entry in weightHistory.where((item) => item.weightKg != null)) {
-      final dayKey = DateFormat('yyyy-MM-dd').format(entry.date);
-      latestByDay[dayKey] = entry;
-    }
-
-    final entries = latestByDay.values.toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.card(borderRadius: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppLocalizations.of(context).weightProgressTitle,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (entries.isEmpty)
-            _EmptyChart(
-              onRegister: () async {
-                await context.push('/profile/metrics');
-                if (context.mounted) {
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                }
-              },
-            )
-          else
-            _FilledChart(entries: entries),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyChart extends StatelessWidget {
-  final VoidCallback onRegister;
-
-  const _EmptyChart({required this.onRegister});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 16),
-          Icon(
-            ExomIcons.progress,
-            color: AppColors.primary.withValues(alpha: 0.3),
-            size: 48,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            AppLocalizations.of(context).noDataYetMessage,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: palette.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            AppLocalizations.of(context).logMetricsPrompt,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: onRegister,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(AppLocalizations.of(context).logMetricsButton),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilledChart extends StatelessWidget {
-  final List<BodyMetricEntity> entries;
-
-  const _FilledChart({required this.entries});
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
-      (cubit) => cubit.state.unitSystem,
-    );
-    final weights = entries.map((e) => e.weightKg!).toList();
-    final minW = weights.reduce(math.min) - 1;
-    final maxW = weights.reduce(math.max) + 1;
-
-    final spots = entries.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.weightKg!);
-    }).toList();
-
-    final dateFormat = DateFormat(
-      'd MMM',
-      Localizations.localeOf(context).languageCode,
-    );
-
-    return Column(
-      children: [
-        // Latest value badge
-        if (entries.length >= 2)
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: GlassDecoration.card(
-                borderRadius: 999,
-                borderColor: AppColors.primary.withValues(alpha: 0.18),
-              ),
-              child: Text(
-                '${dateFormat.format(entries.last.date)}  ${formatWeight(entries.last.weightKg, unitSystem)}',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 160,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (_) =>
-                    FlLine(color: palette.divider, strokeWidth: 1),
-              ),
-              titlesData: FlTitlesData(
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 24,
-                    interval: entries.length > 6
-                        ? (entries.length / 5).ceilToDouble()
-                        : 1,
-                    getTitlesWidget: (value, _) {
-                      final idx = value.toInt();
-                      if (idx < 0 || idx >= entries.length) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          dateFormat.format(entries[idx].date),
-                          style: TextStyle(
-                            color: palette.textDisabled,
-                            fontSize: 9,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    getTitlesWidget: (value, _) => Text(
-                      formatWeight(value, unitSystem, decimals: 0, empty: '--'),
-                      style: TextStyle(
-                        color: palette.textDisabled,
-                        fontSize: 9,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              minY: minW,
-              maxY: maxW,
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  color: AppColors.primary,
-                  barWidth: 2.5,
-                  isStrokeCapRound: true,
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (_, _, _, _) => FlDotCirclePainter(
-                      radius: 3,
-                      color: AppColors.primary,
-                      strokeWidth: 2,
-                      strokeColor: palette.surface,
-                    ),
-                  ),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.3),
-                        AppColors.primary.withValues(alpha: 0.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        ExomIndexItem(
+          title: l10n.weeklyRecapButton,
+          onTap: () => context.push(AppRoutes.recap),
         ),
       ],
     );
   }
 }
 
-// ── Indicator Cards (Masa Muscular + Sueño) ─────────────────────────────────
+// ── Body data band ──────────────────────────────────────────────────────────
 
-class _IndicatorCards extends StatelessWidget {
-  final ProfileEntity profile;
-  final BodyMetricEntity? latestMetric;
-
-  const _IndicatorCards({required this.profile, required this.latestMetric});
-
-  Future<void> _editMuscleGoal(BuildContext context) async {
-    final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
-    final controller = TextEditingController(
-      text: profile.muscleMassGoalKg != null
-          ? formatWeightValue(profile.muscleMassGoalKg, unitSystem)
-          : '',
-    );
-
-    final newGoal = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) {
-        final palette = dialogContext.exomPalette;
-        return AlertDialog(
-          backgroundColor: palette.surface,
-          title: Text(
-            AppLocalizations.of(context).muscleMassGoalTitle,
-            style: TextStyle(color: palette.textPrimary),
-          ),
-          content: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: TextStyle(color: palette.textPrimary),
-            decoration: InputDecoration(
-              hintText: localizedInputExample(
-                AppLocalizations.of(context),
-                unitSystem == UnitSystem.imperial ? 75.0 : 34.0,
-              ),
-              suffixText: weightUnitSymbol(unitSystem),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final parsed = double.tryParse(
-                  controller.text.replaceAll(',', '.'),
-                );
-                if (parsed != null && parsed > 0) {
-                  Navigator.of(
-                    dialogContext,
-                  ).pop(UnitConverters.weightFromDisplay(parsed, unitSystem));
-                }
-              },
-              child: Text(AppLocalizations.of(context).save),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (newGoal != null && context.mounted) {
-      context.read<ProfileBloc>().add(ProfileMuscleGoalUpdated(newGoal));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
-      (cubit) => cubit.state.unitSystem,
-    );
-    final latestMuscleMass = latestMetric?.muscleMassKg;
-    final muscleGoal = profile.muscleMassGoalKg;
-    final muscleProgress =
-        latestMuscleMass != null && muscleGoal != null && muscleGoal > 0
-        ? (latestMuscleMass / muscleGoal).clamp(0.0, 1.0)
-        : null;
-
-    final sleepEntries = latestMetric?.sleepHours != null
-        ? [latestMetric!]
-        : <BodyMetricEntity>[];
-    final avgSleep = sleepEntries.isNotEmpty
-        ? sleepEntries.map((e) => e.sleepHours!).reduce((a, b) => a + b) /
-              sleepEntries.length
-        : null;
-    final sleepGoal = 8.0;
-    final sleepPercent = avgSleep != null
-        ? (avgSleep / sleepGoal).clamp(0.0, 1.0)
-        : null;
-    final daysInGoal = sleepEntries.where((e) => e.sleepHours! >= 7.0).length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: latestMuscleMass != null
-                ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context).muscleMassLabel,
-                    value: formatWeight(latestMuscleMass, unitSystem),
-                    subtitle: muscleGoal != null
-                        ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(muscleGoal, unitSystem)}'
-                        : AppLocalizations.of(context).setYourGoal,
-                    bottomLabel: latestMetric != null
-                        ? '${AppLocalizations.of(context).latestMeasurementLabel} ${DateFormat('dd MMM', Localizations.localeOf(context).languageCode).format(latestMetric!.date)}'
-                        : AppLocalizations.of(context).updateYourMetrics,
-                    progress: muscleProgress,
-                    color: AppColors.calorieAccent,
-                    progressCaption: AppLocalizations.of(
-                      context,
-                    ).currentCaption,
-                    headerAction: IconButton(
-                      onPressed: () => _editMuscleGoal(context),
-                      icon: Icon(
-                        ExomIcons.tune,
-                        color: palette.textDisabled,
-                        size: 16,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  )
-                : _EmptyIndicatorCard(
-                    title: AppLocalizations.of(context).muscleMassLabel,
-                    message: AppLocalizations.of(context).muscleGoalEmptyState,
-                    actionLabel: AppLocalizations.of(
-                      context,
-                    ).logOrCalculateButton,
-                    onAction: () async {
-                      await context.push('/profile/metrics');
-                      if (context.mounted) {
-                        context.read<ProfileBloc>().add(
-                          const ProfileLoadRequested(),
-                        );
-                      }
-                    },
-                    headerAction: IconButton(
-                      onPressed: () => _editMuscleGoal(context),
-                      icon: Icon(
-                        ExomIcons.tune,
-                        color: palette.textDisabled,
-                        size: 16,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: avgSleep != null
-                ? _CircularIndicatorCard(
-                    title: AppLocalizations.of(context).sleep,
-                    value:
-                        '${formatFigure(context, avgSleep, decimalDigits: 1)} h',
-                    subtitle:
-                        '${(sleepPercent! * 100).toInt()}% ${AppLocalizations.of(context).ofGoalPercentage}',
-                    bottomLabel:
-                        '$daysInGoal/${sleepEntries.length} ${AppLocalizations.of(context).daysWithinGoal}',
-                    progress: sleepPercent,
-                    color: AppColors.sleepAccent,
-                    progressCaption: AppLocalizations.of(context).todayCaption,
-                  )
-                : _EmptyIndicatorCard(
-                    title: AppLocalizations.of(context).sleep,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircularIndicatorCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String? subtitle;
-  final String bottomLabel;
-  final double? progress;
-  final Color color;
-  final Widget? headerAction;
-  final String progressCaption;
-
-  const _CircularIndicatorCard({
-    required this.title,
-    required this.value,
-    this.subtitle,
-    required this.bottomLabel,
-    this.progress,
-    required this.color,
-    this.headerAction,
-    this.progressCaption = 'media',
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: GlassDecoration.accentCard(color, borderRadius: 20),
-      child: Column(
-        children: [
-          // Header
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle!,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (headerAction != null) ...[headerAction!],
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Circular indicator
-          SizedBox(
-            width: 90,
-            height: 90,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (progress != null)
-                  CustomPaint(
-                    size: const Size(90, 90),
-                    painter: _CircularProgressPainter(
-                      progress: progress!,
-                      color: color,
-                      trackColor: palette.surfaceVariant,
-                    ),
-                  ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          value,
-                          maxLines: 1,
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (progress != null)
-                      Text(
-                        progressCaption,
-                        style: TextStyle(
-                          color: color.withValues(alpha: 0.6),
-                          fontSize: 10,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            bottomLabel,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textDisabled,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final Color trackColor;
-
-  _CircularProgressPainter({
-    required this.progress,
-    required this.color,
-    required this.trackColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 5;
-    const strokeWidth = 6.0;
-
-    // Track
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Progress arc
-    final progressPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
-      false,
-      progressPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _CircularProgressPainter old) =>
-      old.progress != progress || old.color != color;
-}
-
-class _EmptyIndicatorCard extends StatelessWidget {
-  final String title;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  final Widget? headerAction;
-
-  const _EmptyIndicatorCard({
-    required this.title,
-    this.message = 'Sin datos',
-    this.actionLabel,
-    this.onAction,
-    this.headerAction,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: GlassDecoration.card(borderRadius: 20),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              if (headerAction != null) ...[headerAction!],
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: palette.textDisabled,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onAction,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.borderMedium),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(actionLabel!),
-              ),
-            ),
-          ] else
-            const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Datos Corporales Section ────────────────────────────────────────────────
-
-class _BodyDataSection extends StatelessWidget {
-  final ProfileEntity profile;
-  final List<BodyMetricEntity> weightHistory;
-  final BodyMetricEntity? latestMetric;
-
-  const _BodyDataSection({
+class _BodyData extends StatelessWidget {
+  const _BodyData({
     required this.profile,
     required this.weightHistory,
     required this.latestMetric,
   });
 
+  final ProfileEntity profile;
+  final List<BodyMetricEntity> weightHistory;
+  final BodyMetricEntity? latestMetric;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
       (cubit) => cubit.state.unitSystem,
     );
-    final latestWeight =
-        weightHistory.where((e) => e.weightKg != null).isNotEmpty
-        ? weightHistory.where((e) => e.weightKg != null).last
-        : null;
+    final withWeight = weightHistory.where((e) => e.weightKg != null);
+    final weightKg = withWeight.isNotEmpty
+        ? withWeight.last.weightKg
+        : profile.currentWeightKg;
+    final metric = latestMetric;
+    final heightCm = metric?.heightCm ?? profile.heightCm;
+    final waistCm = metric?.waistCm;
     final hasMeasurements =
-        latestMetric != null &&
-        (latestMetric!.neckCm != null ||
-            latestMetric!.chestCm != null ||
-            latestMetric!.waistCm != null ||
-            latestMetric!.hipsCm != null);
-    final currentHeightCm = latestMetric?.heightCm ?? profile.heightCm;
+        metric != null &&
+        (metric.neckCm != null ||
+            metric.chestCm != null ||
+            metric.waistCm != null ||
+            metric.hipsCm != null);
 
-    final dateFormat = DateFormat('dd/MM/yyyy');
+    String length(double cm) =>
+        formatFigure(context, UnitConverters.lengthToDisplay(cm, unitSystem));
+    const dash = '—';
+    final lengthUnit = lengthUnitSymbol(unitSystem);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.card(borderRadius: 22),
+    final String? footnote;
+    if (hasMeasurements) {
+      footnote = l10n.profileMeasurementsUpdated(
+        DateFormat.MMMMd(
+          Localizations.localeOf(context).languageCode,
+        ).format(metric.date),
+      );
+    } else if (heightCm == null) {
+      footnote = l10n.addHeightInMetrics;
+    } else {
+      footnote = null;
+    }
+
+    return ExomBand(
+      key: const Key('profile-body-data'),
+      kicker: l10n.bodyDataTitle,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                AppLocalizations.of(context).bodyDataTitle,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+          ExomFigureColumns(
+            numbered: false,
+            alignLabels: true,
+            items: [
+              ExomFigure(
+                label: l10n.weight,
+                value: weightKg == null
+                    ? dash
+                    : formatFigure(
+                        context,
+                        UnitConverters.weightToDisplay(weightKg, unitSystem),
+                        decimalDigits: 1,
+                      ),
+                unit: weightKg == null ? null : weightUnitSymbol(unitSystem),
               ),
-              if (latestMetric != null)
-                Text(
-                  '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: palette.textDisabled,
-                    fontSize: 10,
-                  ),
-                ),
+              ExomFigure(
+                label: l10n.height,
+                value: heightCm == null ? dash : length(heightCm),
+                unit: heightCm == null ? null : lengthUnit,
+              ),
+              ExomFigure(
+                label: waistCm == null
+                    ? l10n.measurementsLabel
+                    : l10n.measureWaist,
+                value: waistCm == null ? dash : length(waistCm),
+                unit: waistCm == null ? null : lengthUnit,
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          // Weight row
-          _DataRow(
-            icon: ExomIcons.weight,
-            label: latestWeight != null
-                ? '${AppLocalizations.of(context).weight}: ${formatWeight(latestWeight.weightKg, unitSystem)}'
-                : '${AppLocalizations.of(context).weight}: --',
-            detail: latestWeight != null
-                ? '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestWeight.date)}'
-                : null,
-          ),
-          const SizedBox(height: 10),
-          _DataRow(
-            icon: ExomIcons.train,
-            label: latestMetric?.muscleMassKg != null
-                ? '${AppLocalizations.of(context).muscleMassLabel}: ${formatWeight(latestMetric!.muscleMassKg, unitSystem)}'
-                : '${AppLocalizations.of(context).muscleMassLabel}: --',
-            detail: profile.muscleMassGoalKg != null
-                ? '${AppLocalizations.of(context).goalLabel} ${formatWeight(profile.muscleMassGoalKg, unitSystem)}'
-                : AppLocalizations.of(context).setYourGoal,
-          ),
-          const SizedBox(height: 10),
-          _DataRow(
-            icon: ExomIcons.height,
-            label: currentHeightCm != null
-                ? '${AppLocalizations.of(context).height}: ${formatLength(currentHeightCm, unitSystem, decimals: 0)}'
-                : '${AppLocalizations.of(context).height}: --',
-            detail: currentHeightCm != null
-                ? AppLocalizations.of(context).syncedWithProfileAndMetrics
-                : AppLocalizations.of(context).addHeightInMetrics,
-          ),
-          const SizedBox(height: 10),
-          // Measurements row
-          _DataRow(
-            icon: ExomIcons.ruler,
-            label: AppLocalizations.of(context).measurementsLabel,
-            detail: hasMeasurements
-                ? '${AppLocalizations.of(context).lastUpdatedLabel} ${dateFormat.format(latestMetric!.date)}'
-                : AppLocalizations.of(context).noDataLabel,
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                await context.push('/profile/metrics');
-                if (context.mounted) {
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: palette.textSecondary,
-                side: const BorderSide(color: AppColors.borderMedium),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(AppLocalizations.of(context).updateMetricsButton),
+          if (footnote != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Text(footnote, style: _secondaryStyle(context)),
             ),
-          ),
         ],
       ),
-    );
-  }
-}
-
-class _DataRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? detail;
-
-  const _DataRow({required this.icon, required this.label, this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Row(
-      children: [
-        Icon(icon, color: palette.textSecondary, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              if (detail != null)
-                Text(
-                  detail!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: palette.textDisabled,
-                    fontSize: 10,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

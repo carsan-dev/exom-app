@@ -3331,6 +3331,88 @@ class AppLocalizationsEn extends AppLocalizations {
       'The profile operation could not be completed. Please try again.';
 
   @override
+  String get profileHeadlineFirst => 'Look back.';
+
+  @override
+  String get profileHeadlineSecond => 'Keep going.';
+
+  @override
+  String profileStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileChangePhotoA11y => 'Change profile photo';
+
+  @override
+  String get profileAvatarSending => 'Sending profile photo';
+
+  @override
+  String profileWeightSince(String value) {
+    return 'from $value';
+  }
+
+  @override
+  String profileGoalShare(String percent) {
+    return '$percent of goal';
+  }
+
+  @override
+  String profileGoalValue(String value) {
+    return 'Goal: $value';
+  }
+
+  @override
+  String get profileIndexMetrics => 'Update weight and measurements';
+
+  @override
+  String get profileEmptyFirst => 'No data';
+
+  @override
+  String get profileEmptySecond => 'yet.';
+
+  @override
+  String profileMeasurementsUpdated(String date) {
+    return 'Measurements · last updated $date';
+  }
+
+  @override
+  String get profileGoalSheetFirst => 'Muscle mass';
+
+  @override
+  String get profileGoalSheetSecond => 'goal';
+
+  @override
+  String profileGoalLatest(String value) {
+    return 'Latest measurement: $value';
+  }
+
+  @override
+  String profileGoalDecrease(String step) {
+    return 'Subtract $step';
+  }
+
+  @override
+  String profileGoalIncrease(String step) {
+    return 'Add $step';
+  }
+
+  @override
+  String get profileGoalInvalid => 'Enter a goal greater than 0.';
+
+  @override
+  String get profileGoalEditA11y => 'Edit muscle mass goal';
+
+  @override
+  String get profileHoursUnit => 'h';
+
+  @override
   String get recapSaveError =>
       'The weekly recap could not be saved. Please try again.';
 

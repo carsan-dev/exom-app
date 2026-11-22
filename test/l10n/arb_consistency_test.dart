@@ -20,6 +20,8 @@ const Map<String, String> identicalValueAllowlist = {
   'noticeTimeHours': 'Compact unit "{hours} h" shared by both languages.',
   'noticeTimeDays': 'Compact unit "{days} d" shared by both languages.',
   'ingredientUnitMl': 'Unit symbol "ml".',
+  // L5-B4 (Perfil): unit of the sleep figure.
+  'profileHoursUnit': 'Unit symbol "h".',
   'errorTitle': 'Cognate "Error" is the same word in both languages.',
   // L3 unit 3 (active exercise): unit symbols and the RIR acronym.
   'activeExerciseUnitReps': 'Abbreviation "reps" shared by both languages.',

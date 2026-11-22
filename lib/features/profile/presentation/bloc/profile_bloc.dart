@@ -37,6 +37,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadRequested event,
     Emitter<ProfileState> emit,
   ) async {
+    final previous = state;
     emit(const ProfileLoading());
     try {
       // The metric calls throw on network and server errors (L4-I1). The
@@ -58,8 +59,40 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         ProfileLoaded(profile, weightHistory: history, latestMetric: latest),
       );
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(previous, e));
     }
+  }
+
+  /// EX-Q7: the error keeps the profile [shown] carried, if any. A session
+  /// change (LocalSessionChanged, or a request the auth interceptor cancelled)
+  /// keeps nothing: that profile belongs to the previous session (R12).
+  static ProfileError _errorKeeping(ProfileState shown, Object error) {
+    final message = error.toString();
+    final sessionChanged =
+        error is LocalSessionChanged ||
+        (error is DioException && error.type == DioExceptionType.cancel);
+    if (sessionChanged) return ProfileError(message);
+    return switch (shown) {
+      ProfileLoaded() => ProfileError(
+        message,
+        profile: shown.profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      ProfileAvatarUploading() => ProfileError(
+        message,
+        profile: shown.profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      ProfileError(profile: final ProfileEntity profile) => ProfileError(
+        message,
+        profile: profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      _ => ProfileError(message),
+    };
   }
 
   /// Never turns a session change into loaded data: LocalSessionChanged and a
@@ -98,7 +131,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final updated = await _uploadAvatarUseCase(event.file);
       emit(ProfileLoaded(updated, weightHistory: history, latestMetric: latest));
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(current, e));
     }
   }
 
@@ -125,7 +158,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         ),
       );
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(current, e));
     }
   }
 }

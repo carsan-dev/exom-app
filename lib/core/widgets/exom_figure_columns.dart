@@ -43,9 +43,15 @@ class ExomFigureColumns extends StatelessWidget {
     super.key,
     required this.items,
     this.numbered = true,
+    this.alignLabels = false,
   });
 
   final List<ExomFigure> items;
+
+  /// In a row, pins every label to the bottom of its cell so the labels share
+  /// one y even when a wide figure shrinks to its column and ends up shorter
+  /// than its neighbours. Off by default (the label follows its figure).
+  final bool alignLabels;
 
   /// Shows an [ExomIndexNumber] («01», «02»…) above each figure.
   final bool numbered;
@@ -140,28 +146,41 @@ class ExomFigureColumns extends StatelessWidget {
           container: true,
           label: '${item.label}: ${item.value}${unit == null ? '' : ' $unit'}',
           excludeSemantics: true,
+          // With [alignLabels] the figure goes on top and the label is pinned
+          // to the bottom: in a row every cell is stretched to the same height,
+          // so the labels share one y. Stacked, the cell has no extra height
+          // and this is the plain column.
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: alignLabels ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment: alignLabels
+                ? MainAxisAlignment.spaceBetween
+                : MainAxisAlignment.start,
             children: [
-              if (numbered) ...[
-                ExomIndexNumber(index + 1),
-                const SizedBox(height: 6),
-              ],
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 56 * 0.025),
-                  child: Text.rich(
-                    _figureSpan(item, _figureStyle(palette.data)),
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.visible,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (numbered) ...[
+                    ExomIndexNumber(index + 1),
+                    const SizedBox(height: 6),
+                  ],
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 56 * 0.025),
+                      child: Text.rich(
+                        _figureSpan(item, _figureStyle(palette.data)),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                ],
               ),
-              const SizedBox(height: 6),
               Text(item.label, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),

@@ -87,14 +87,14 @@ void main() {
     expectNoLimeInk(tester);
   });
 
-  testWidgets('empty: only the base rule, summary says no data', (
+  testWidgets('empty: base rule and two grid rules, summary says no data', (
     tester,
   ) async {
     final handle = tester.ensureSemantics();
     await pumpComponent(tester, _padded(const ExomLineChart(points: [])));
     expect(_painter, paintsExactlyCountTimes(#drawPath, 0));
     expect(_painter, paintsExactlyCountTimes(#drawCircle, 0));
-    expect(_painter, paints..line());
+    expect(_painter, paintsExactlyCountTimes(#drawLine, 3));
     expect(find.bySemanticsLabel('Sin datos'), findsOneWidget);
     handle.dispose();
   });

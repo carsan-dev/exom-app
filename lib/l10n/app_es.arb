@@ -840,11 +840,59 @@
       "percent": { "type": "int" }
     }
   },
+  "onboardingProfileIncomplete": "Perfil incompleto",
+  "onboardingProfileHalfDone": "Perfil a medias",
+  "onboardingProfileAlmostComplete": "Perfil casi completo",
+  "onboardingProfileComplete": "Perfil completo",
+  "onboardingProfileCompletionA11y": "{label}, {percent} %",
+  "@onboardingProfileCompletionA11y": {
+    "placeholders": {
+      "label": { "type": "String" },
+      "percent": { "type": "int" }
+    }
+  },
   "onboardingSkipButton": "Saltar",
   "onboardingNextButton": "Siguiente",
   "onboardingSubmittingMessage": "Guardando tu perfil...",
   "onboardingSuccessMessage": "¡Perfil completado!",
   "onboardingErrorMessage": "Error al guardar el perfil. Inténtalo de nuevo.",
+  "onboardingWelcomeKicker": "Bienvenido a EXOM",
+  "onboardingWelcomeHeadlineFirst": "Tu cambio.",
+  "onboardingWelcomeHeadlineSecond": "Con mi método.",
+  "onboardingMethodOneTitle": "Parto de tu realidad.",
+  "onboardingMethodOneBody": "Antes de nada, tu punto de partida: cuéntame cómo eres y cómo es tu vida.",
+  "onboardingMethodTwoTitle": "Sabes qué hacer.",
+  "onboardingMethodTwoBody": "Con tu plan en la app, cada día sabes qué toca: tu entrenamiento, tu alimentación y tu evolución.",
+  "onboardingMethodThreeTitle": "Lo ajusto contigo.",
+  "onboardingMethodThreeBody": "Reviso cómo vas y ajusto el plan contigo, según tu progreso.",
+  "onboardingWelcomeSteps": "Vamos a preparar tu perfil en cuatro pasos. Te llevará un minuto y podrás cambiarlo cuando quieras.",
+  "onboardingBasicsHeadlineFirst": "Datos básicos.",
+  "onboardingBasicsHeadlineSecond": "Parto de tu realidad.",
+  "onboardingBodyHeadlineFirst": "Tu cuerpo.",
+  "onboardingBodyHeadlineSecond": "Tu punto de partida.",
+  "onboardingGoalsHeadlineFirst": "Tus objetivos.",
+  "onboardingGoalsHeadlineSecond": "Conmigo a tu lado.",
+  "onboardingSummaryHeadlineFirst": "Resumen.",
+  "onboardingSummaryHeadlineSecond": "Vamos a por tu cambio.",
+  "onboardingTargetsLabel": "Metas",
+  "onboardingNumeralHint": "Toca la cifra para escribirla. Los decimales llevan coma.",
+  "onboardingStepDecrease": "Restar {step}",
+  "@onboardingStepDecrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "onboardingStepIncrease": "Sumar {step}",
+  "@onboardingStepIncrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "onboardingNumberInvalid": "Introduce un número válido.",
+  "onboardingNumberNotPositive": "Introduce un valor mayor que 0.",
+  "onboardingPreviousStep": "Paso anterior",
+  "onboardingSaveErrorTitle": "Error al guardar el perfil.",
+  "onboardingSaveErrorBody": "Inténtalo de nuevo; tus datos siguen aquí.",
   "continueDraftRecap": "Continuar borrador",
   "recapAlreadySubmittedThisWeek": "Ya tienes un recap subido esta semana",
 

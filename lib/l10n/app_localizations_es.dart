@@ -2262,6 +2262,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get onboardingProfileIncomplete => 'Perfil incompleto';
+
+  @override
+  String get onboardingProfileHalfDone => 'Perfil a medias';
+
+  @override
+  String get onboardingProfileAlmostComplete => 'Perfil casi completo';
+
+  @override
+  String get onboardingProfileComplete => 'Perfil completo';
+
+  @override
+  String onboardingProfileCompletionA11y(String label, int percent) {
+    return '$label, $percent %';
+  }
+
+  @override
   String get onboardingSkipButton => 'Saltar';
 
   @override
@@ -2276,6 +2293,97 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get onboardingErrorMessage =>
       'Error al guardar el perfil. Inténtalo de nuevo.';
+
+  @override
+  String get onboardingWelcomeKicker => 'Bienvenido a EXOM';
+
+  @override
+  String get onboardingWelcomeHeadlineFirst => 'Tu cambio.';
+
+  @override
+  String get onboardingWelcomeHeadlineSecond => 'Con mi método.';
+
+  @override
+  String get onboardingMethodOneTitle => 'Parto de tu realidad.';
+
+  @override
+  String get onboardingMethodOneBody =>
+      'Antes de nada, tu punto de partida: cuéntame cómo eres y cómo es tu vida.';
+
+  @override
+  String get onboardingMethodTwoTitle => 'Sabes qué hacer.';
+
+  @override
+  String get onboardingMethodTwoBody =>
+      'Con tu plan en la app, cada día sabes qué toca: tu entrenamiento, tu alimentación y tu evolución.';
+
+  @override
+  String get onboardingMethodThreeTitle => 'Lo ajusto contigo.';
+
+  @override
+  String get onboardingMethodThreeBody =>
+      'Reviso cómo vas y ajusto el plan contigo, según tu progreso.';
+
+  @override
+  String get onboardingWelcomeSteps =>
+      'Vamos a preparar tu perfil en cuatro pasos. Te llevará un minuto y podrás cambiarlo cuando quieras.';
+
+  @override
+  String get onboardingBasicsHeadlineFirst => 'Datos básicos.';
+
+  @override
+  String get onboardingBasicsHeadlineSecond => 'Parto de tu realidad.';
+
+  @override
+  String get onboardingBodyHeadlineFirst => 'Tu cuerpo.';
+
+  @override
+  String get onboardingBodyHeadlineSecond => 'Tu punto de partida.';
+
+  @override
+  String get onboardingGoalsHeadlineFirst => 'Tus objetivos.';
+
+  @override
+  String get onboardingGoalsHeadlineSecond => 'Conmigo a tu lado.';
+
+  @override
+  String get onboardingSummaryHeadlineFirst => 'Resumen.';
+
+  @override
+  String get onboardingSummaryHeadlineSecond => 'Vamos a por tu cambio.';
+
+  @override
+  String get onboardingTargetsLabel => 'Metas';
+
+  @override
+  String get onboardingNumeralHint =>
+      'Toca la cifra para escribirla. Los decimales llevan coma.';
+
+  @override
+  String onboardingStepDecrease(String step) {
+    return 'Restar $step';
+  }
+
+  @override
+  String onboardingStepIncrease(String step) {
+    return 'Sumar $step';
+  }
+
+  @override
+  String get onboardingNumberInvalid => 'Introduce un número válido.';
+
+  @override
+  String get onboardingNumberNotPositive => 'Introduce un valor mayor que 0.';
+
+  @override
+  String get onboardingPreviousStep => 'Paso anterior';
+
+  @override
+  String get onboardingSaveErrorTitle => 'Error al guardar el perfil.';
+
+  @override
+  String get onboardingSaveErrorBody =>
+      'Inténtalo de nuevo; tus datos siguen aquí.';
 
   @override
   String get continueDraftRecap => 'Continuar borrador';

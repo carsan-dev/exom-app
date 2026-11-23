@@ -1,47 +1,61 @@
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_step_header.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 
-class OnboardingProgressIndicator extends StatelessWidget {
-  const OnboardingProgressIndicator({
+import 'onboarding_step_layout.dart';
+
+/// Header of a data step of the onboarding (sketch `.x-step`): the step
+/// numeral «01/04» at 120 in the data colour, then [ExomStepHeader] with the
+/// kicker «Paso 1 de 4», the two-line title and the rule of [total]
+/// segments. It replaces the former pill of 8 dp dots (L5-D2).
+///
+/// The numeral is decorative: the rule already announces «Paso X de N».
+class OnboardingStepHeading extends StatelessWidget {
+  const OnboardingStepHeading({
     super.key,
-    required this.currentStep,
-    required this.totalSteps,
+    required this.step,
+    required this.total,
+    required this.first,
+    required this.second,
   });
 
-  final int currentStep;
-  final int totalSteps;
+  final int step;
+  final int total;
+  final String first;
+  final String second;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(totalSteps, (index) {
-        final isActive = index == currentStep;
-        final isPast = index < currentStep;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: isActive ? 24 : 8,
-          height: 8,
-          decoration: isActive
-              ? GlassDecoration.accentCard(palette.primary, borderRadius: 999)
-              : BoxDecoration(
-                  color: isPast
-                      ? palette.primary.withValues(alpha: 0.7)
-                      : palette.glassBackground,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: isPast
-                        ? palette.primary.withValues(alpha: 0.24)
-                        : palette.glassBorder.withValues(alpha: 0.14),
-                    width: 0.5,
-                  ),
-                ),
-        );
-      }),
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kOnboardingSidePadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExcludeSemantics(
+              child: ExomNumeral(
+                value: ExomIndexNumber.format(step),
+                unit: '/${ExomIndexNumber.format(total)}',
+                size: ExomNumeralSize.hero120,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ExomStepHeader(
+            step: step,
+            total: total,
+            kicker: l10n.exomStepOf(step, total),
+            first: first,
+            second: second,
+            segmentGrowth: OnboardingStepEntranceScope.maybeOf(context)?.rule,
+          ),
+        ],
+      ),
     );
   }
 }

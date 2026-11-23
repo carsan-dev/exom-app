@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 /// `.x-step`): [kicker] ([ExomKicker]), the step title as an
 /// [ExomTwoLineHeadline] of screen size ([first] in the text colour, [second]
 /// in data) and a progress rule of [total] segments of 4 dp with the first
-/// [step] filled ([ExomProgressRule]).
+/// [step] filled ([ExomProgressRule]). With [segmentGrowth] the last filled
+/// segment fills as that animation runs (M9 when a step advances); the
+/// semantics do not change.
 ///
 /// Semantics: the headline is a header node; the rule is one node labelled
 /// «Paso X de N» (localised), so the position is read even when [kicker] says
@@ -23,6 +25,7 @@ class ExomStepHeader extends StatelessWidget {
     required this.kicker,
     required this.first,
     required this.second,
+    this.segmentGrowth,
   }) : assert(total > 0 && step >= 1 && step <= total, '1 <= step <= total');
 
   final int step;
@@ -30,6 +33,7 @@ class ExomStepHeader extends StatelessWidget {
   final String kicker;
   final String first;
   final String second;
+  final Animation<double>? segmentGrowth;
 
   @override
   Widget build(BuildContext context) {
@@ -60,15 +64,29 @@ class ExomStepHeader extends StatelessWidget {
         Semantics(
           container: true,
           label: stepLabel,
-          child: ExcludeSemantics(
-            child: ExomProgressRule(
-              value: step / total,
-              thickness: ExomRule.bar,
-              segments: total,
-            ),
-          ),
+          child: ExcludeSemantics(child: _rule()),
         ),
       ],
+    );
+  }
+
+  Widget _rule() {
+    final growth = segmentGrowth;
+    if (growth == null) {
+      return ExomProgressRule(
+        value: step / total,
+        thickness: ExomRule.bar,
+        segments: total,
+      );
+    }
+    return AnimatedBuilder(
+      animation: growth,
+      builder: (context, _) => ExomProgressRule(
+        value: step / total,
+        thickness: ExomRule.bar,
+        segments: total,
+        lastSegmentGrowth: growth.value,
+      ),
     );
   }
 }

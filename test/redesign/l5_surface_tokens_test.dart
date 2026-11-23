@@ -78,6 +78,15 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/recap/presentation/pages/recap_detail_page.dart',
   'lib/features/recap/presentation/widgets/recap_feedback_card.dart',
   'lib/features/recap/presentation/widgets/recap_published_review_card.dart',
+  // L5-D2 · Onboarding.
+  'lib/features/onboarding/presentation/pages/onboarding_page.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_welcome_step.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_basics_step.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_goals_step.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_summary_step.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_progress_indicator.dart',
+  'lib/features/onboarding/presentation/widgets/onboarding_step_layout.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

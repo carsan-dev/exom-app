@@ -135,6 +135,8 @@ abstract final class ExomMotion {
   // from the side it advances to, in [step]; the progress rule fills its
   // segment in [stepProgressRule]. Reduced: 100 ms fade; the rule jumps.
   static const Duration step = screen;
+  // The step that leaves fades out in [stepExit] (the same reduced).
+  static const Duration stepExit = Duration(milliseconds: 100);
   static const double stepOffset = 24;
   static const Curve stepCurve = sheetEnterCurve;
   static const Duration stepProgressRule = growBar;

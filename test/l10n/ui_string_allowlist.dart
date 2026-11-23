@@ -12,16 +12,6 @@ class UiStringAllowance {
 
 const List<UiStringAllowance> uiStringAllowlist = [
   UiStringAllowance(
-    'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
-    r'${_height.toStringAsFixed(0)} cm',
-    'Metric unit symbol, language neutral.',
-  ),
-  UiStringAllowance(
-    'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
-    r'${_weight.toStringAsFixed(1)} kg',
-    'Metric unit symbol, language neutral.',
-  ),
-  UiStringAllowance(
     'lib/features/settings/presentation/pages/settings_page.dart',
     r'Carlos Sánchez Román',
     'Proper name of the author.',

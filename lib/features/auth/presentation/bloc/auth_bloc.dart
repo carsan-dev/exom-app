@@ -226,10 +226,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (e.isLocked) {
         emit(const AuthAccountLocked());
       } else if (e.isNetworkError && !e.backendRejectedSession) {
+        // Offline: role and onboarding state are assumptions, not server
+        // facts, so the entity is never treated as validated.
         final entity = UserEntity(
           id: firebaseSession.uid,
           email: firebaseSession.email ?? '',
           role: 'CLIENT',
+          onboardingStatus: OnboardingServerStatus.unknown,
+          isServerValidated: false,
         );
         emit(AuthAuthenticated(entity));
       } else if (e.statusCode == 401 || e.statusCode == 403) {

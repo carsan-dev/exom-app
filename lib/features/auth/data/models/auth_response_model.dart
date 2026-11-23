@@ -27,12 +27,14 @@ class UserModel {
   final String email;
   final String role;
   final ProfileModel? profile;
+  final OnboardingServerStatus onboardingStatus;
 
   const UserModel({
     required this.id,
     required this.email,
     required this.role,
     this.profile,
+    this.onboardingStatus = OnboardingServerStatus.unknown,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -43,7 +45,24 @@ class UserModel {
       profile: json['profile'] != null
           ? ProfileModel.fromJson(json['profile'] as Map<String, dynamic>)
           : null,
+      onboardingStatus: parseOnboardingStatus(json['profile']),
     );
+  }
+
+  /// Tri-state reading of `profile.onboarding_completed_at`: a missing key
+  /// (older API) stays [OnboardingServerStatus.unknown] and only an explicit
+  /// `null` means [OnboardingServerStatus.pending].
+  static OnboardingServerStatus parseOnboardingStatus(Object? profile) {
+    if (profile is! Map<String, dynamic> ||
+        !profile.containsKey('onboarding_completed_at')) {
+      return OnboardingServerStatus.unknown;
+    }
+    final value = profile['onboarding_completed_at'];
+    if (value == null) return OnboardingServerStatus.pending;
+    if (value is String && DateTime.tryParse(value) != null) {
+      return OnboardingServerStatus.done;
+    }
+    return OnboardingServerStatus.unknown;
   }
 
   Map<String, dynamic> toJson() => {
@@ -60,6 +79,8 @@ class UserModel {
     firstName: profile?.firstName,
     lastName: profile?.lastName,
     avatarUrl: profile?.avatarUrl,
+    onboardingStatus: onboardingStatus,
+    isServerValidated: true,
   );
 }
 

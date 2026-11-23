@@ -11,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
+import 'package:exom_app/core/onboarding/onboarding_resolver.dart';
 
 class LocalStorage implements ActiveWorkoutLocalStore {
   LocalStorage({
@@ -873,6 +874,103 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     await _settings.put(_legacyOnboardingCompleteKey, true);
     await _settings.put(_onboardingIdentityKey, identity);
     await _settings.put('$_legacyOnboardingCompleteKey::$identity', true);
+  }
+
+  // Onboarding server sync. The pending entry lives in `settings` (it must
+  // survive logout like the mark) and is scoped to the Firebase uid and the
+  // API environment, like the v2 queues.
+  static const _onboardingPendingPrefix = 'onboarding_sync_pending';
+  static const onboardingPendingFormatVersion = 1;
+
+  String _onboardingPendingKey(String ownerId) {
+    final scope = base64Url.encode(
+      utf8.encode(jsonEncode([_environment, ownerId])),
+    );
+    return '$_onboardingPendingPrefix::$scope';
+  }
+
+  Map<String, Object?> _onboardingPendingEntry(
+    String ownerId,
+    String? outcome,
+  ) => {
+    'format_version': onboardingPendingFormatVersion,
+    'owner_id': ownerId,
+    'environment': _environment,
+    'outcome': outcome,
+    'created_at': DateTime.now().toUtc().toIso8601String(),
+  };
+
+  /// Pending onboarding mark of [ownerId] in this environment, or `null` when
+  /// absent or not attributable to that owner (such an entry is kept as is
+  /// and never sent).
+  Map<String, Object?>? onboardingPendingFor(String ownerId) {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return null;
+    final raw = _settings.get(_onboardingPendingKey(owner));
+    if (raw is! Map) return null;
+    final entry = <String, Object?>{
+      for (final item in raw.entries) item.key.toString(): item.value,
+    };
+    final outcome = entry['outcome'];
+    if (entry['format_version'] != onboardingPendingFormatVersion ||
+        entry['owner_id'] != owner ||
+        entry['environment'] != _environment ||
+        (outcome != null &&
+            outcome != OnboardingOutcomes.completed &&
+            outcome != OnboardingOutcomes.skipped)) {
+      return null;
+    }
+    return entry;
+  }
+
+  /// Done locally: the Hive mark of the identity or a pending entry of the
+  /// owner (covers a crash between both writes, OP-D16).
+  bool isOnboardingLocallyDone({required String uid, String? email}) =>
+      isOnboardingCompleteFor(uid: uid, email: email) ||
+      onboardingPendingFor(uid) != null;
+
+  /// Writes the Hive mark and the pending entry in a single `putAll`.
+  Future<void> markOnboardingLocallyDone({
+    required String uid,
+    String? email,
+    String? outcome,
+  }) async {
+    final ownerId = uid.trim();
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (ownerId.isEmpty || identity == null) return;
+
+    // Pending first: Hive replays records in order, so a torn write keeps the outcome (OP-D16 covers pending without mark).
+    await _settings.putAll({
+      _onboardingPendingKey(ownerId): _onboardingPendingEntry(ownerId, outcome),
+      _legacyOnboardingCompleteKey: true,
+      _onboardingIdentityKey: identity,
+      '$_legacyOnboardingCompleteKey::$identity': true,
+    });
+  }
+
+  /// Mirrors a server `done` in the Hive mark; no write when already cached.
+  Future<void> cacheServerOnboardingDone({
+    required String uid,
+    String? email,
+  }) async {
+    if (isOnboardingCompleteFor(uid: uid, email: email)) return;
+    await setOnboardingCompleteFor(uid: uid, email: email);
+  }
+
+  /// Self-repair (R4): registers a pending entry without outcome unless the
+  /// owner already has one (attributable or not).
+  Future<void> registerOnboardingRepair(String ownerId) async {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return;
+    final key = _onboardingPendingKey(owner);
+    if (_settings.containsKey(key)) return;
+    await _settings.put(key, _onboardingPendingEntry(owner, null));
+  }
+
+  Future<void> clearOnboardingPending(String ownerId) async {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return;
+    await _settings.delete(_onboardingPendingKey(owner));
   }
 
   // Tutorial guide

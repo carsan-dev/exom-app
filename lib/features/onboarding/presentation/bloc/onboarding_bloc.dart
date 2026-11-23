@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/auth/auth_token_provider.dart';
+import 'package:exom_app/core/onboarding/onboarding_resolver.dart';
+import 'package:exom_app/core/onboarding/onboarding_sync_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/profile/domain/usecases/get_profile_usecase.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
@@ -16,6 +20,8 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final UpdateProfileUseCase updateProfile;
   final UploadAvatarUseCase uploadAvatar;
   final LocalStorage localStorage;
+  final LocalAuthSession? Function() _currentSession;
+  final OnboardingSyncCoordinator? _syncCoordinator;
 
   static const int _totalSteps =
       5; // 0=welcome, 1=basics, 2=body, 3=goals, 4=summary
@@ -25,13 +31,23 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     required this.updateProfile,
     required this.uploadAvatar,
     required this.localStorage,
-  }) : super(const OnboardingInitial()) {
+    LocalAuthSession? Function()? currentSession,
+    OnboardingSyncCoordinator? syncCoordinator,
+  }) : _currentSession = currentSession ?? _firebaseSession,
+       _syncCoordinator = syncCoordinator,
+       super(const OnboardingInitial()) {
     on<OnboardingStarted>(_onStarted);
     on<OnboardingStepCompleted>(_onStepCompleted);
     on<OnboardingStepSelected>(_onStepSelected);
     on<OnboardingAvatarPicked>(_onAvatarPicked);
     on<OnboardingSubmitted>(_onSubmitted);
     on<OnboardingSkipped>(_onSkipped);
+  }
+
+  static LocalAuthSession? _firebaseSession() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    return LocalAuthSession(uid: user.uid, email: user.email);
   }
 
   Future<void> _onStarted(
@@ -142,14 +158,16 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(const OnboardingSubmitting());
     try {
       await updateProfile(current.accumulatedData);
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await localStorage.setOnboardingCompleteFor(
-          uid: user.uid,
-          email: user.email,
+      final session = _currentSession();
+      if (session != null) {
+        await localStorage.markOnboardingLocallyDone(
+          uid: session.uid,
+          email: session.email,
+          outcome: OnboardingOutcomes.completed,
         );
       }
       emit(const OnboardingCompleted());
+      _requestServerSync();
     } catch (error) {
       final apiException = ApiException.maybeFrom(error);
       emit(
@@ -166,13 +184,23 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     OnboardingSkipped event,
     Emitter<OnboardingState> emit,
   ) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await localStorage.setOnboardingCompleteFor(
-        uid: user.uid,
-        email: user.email,
+    final session = _currentSession();
+    if (session != null) {
+      await localStorage.markOnboardingLocallyDone(
+        uid: session.uid,
+        email: session.email,
+        outcome: OnboardingOutcomes.skipped,
       );
     }
     emit(const OnboardingCompleted());
+    _requestServerSync();
+  }
+
+  /// Fire-and-forget: a failed POST keeps the pending entry and never blocks
+  /// the user (OP-D8).
+  void _requestServerSync() {
+    final coordinator = _syncCoordinator;
+    if (coordinator == null) return;
+    unawaited(coordinator.requestSync());
   }
 }

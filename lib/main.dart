@@ -2,17 +2,18 @@ import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
 import 'package:exom_app/core/navigation/notification_route_utils.dart';
+import 'package:exom_app/core/onboarding/onboarding_readers.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -258,19 +259,20 @@ class _ExomAppViewState extends State<_ExomAppView> {
   void _schedulePendingNotification() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (context.read<AuthBloc>().state is! AuthAuthenticated) return;
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-      final onboardingComplete = sl<LocalStorage>().isOnboardingCompleteFor(
-        uid: user.uid,
-        email: user.email,
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! AuthAuthenticated) return;
+      final session = sl<FirebaseAuthService>().currentSession;
+      if (session == null) return;
+      final resolution = resolveOnboardingForSession(
+        authState: authState,
+        session: session,
+        storage: sl<LocalStorage>(),
       );
       final location = AppRouter.router.routeInformationProvider.value.uri.path;
-      final isRouterReady =
-          onboardingComplete &&
-          location != AppRoutes.splash &&
-          location != AppRoutes.login &&
-          location != AppRoutes.onboarding;
+      final isRouterReady = isNotificationNavigationReady(
+        resolution: resolution,
+        location: location,
+      );
       _notificationNavigation.consumeIfReady(
         isReady: isRouterReady,
         navigate: (route) {

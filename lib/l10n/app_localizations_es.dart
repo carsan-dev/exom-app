@@ -3507,6 +3507,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recapDetailTitle => 'Detalle del recap';
 
   @override
+  String get recapDetailHeadlineFirst => 'Mira atrás.';
+
+  @override
+  String get recapDetailHeadlineSecond => 'Sigue adelante.';
+
+  @override
   String recapReviewedOn(String date) {
     return 'Revisado el $date';
   }

@@ -5966,6 +5966,18 @@ abstract class AppLocalizations {
   /// **'Detalle del recap'**
   String get recapDetailTitle;
 
+  /// No description provided for @recapDetailHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Mira atrás.'**
+  String get recapDetailHeadlineFirst;
+
+  /// No description provided for @recapDetailHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue adelante.'**
+  String get recapDetailHeadlineSecond;
+
   /// No description provided for @recapReviewedOn.
   ///
   /// In es, this message translates to:

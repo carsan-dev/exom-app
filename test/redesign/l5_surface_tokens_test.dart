@@ -74,6 +74,10 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/settings/presentation/pages/settings_page.dart',
   // L5-B4 · Perfil.
   'lib/features/profile/presentation/pages/profile_page.dart',
+  // L5-C3 · Recap, detalle.
+  'lib/features/recap/presentation/pages/recap_detail_page.dart',
+  'lib/features/recap/presentation/widgets/recap_feedback_card.dart',
+  'lib/features/recap/presentation/widgets/recap_published_review_card.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

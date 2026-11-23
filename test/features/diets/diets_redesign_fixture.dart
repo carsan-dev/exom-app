@@ -15,6 +15,7 @@ import 'package:exom_app/features/diets/domain/usecases/unmark_meal_completed_us
 import 'package:exom_app/features/diets/presentation/bloc/diet_bloc.dart';
 import 'package:exom_app/features/diets/presentation/pages/diets_page.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +23,11 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../core/widgets/exom_component_harness.dart';
 
 const sceneDate = '2026-11-18';
+
+/// Fixed «now» of the scene (local time, so it does not depend on the time
+/// zone). The date line of «Nutrición» shows a relative label against today
+/// («Hace 3 días · …»), so the real clock made the goldens drift daily.
+final sceneNow = DateTime(2026, 11, 21, 12);
 
 MealEntity _meal(
   String id,
@@ -209,7 +215,10 @@ Future<SceneDietRepository> pumpDietsScene(
   addTearDown(sl.reset);
   await pumpComponent(
     tester,
-    const DietsPage(selectedDate: sceneDate),
+    HomeClock(
+      now: () => sceneNow,
+      child: const DietsPage(selectedDate: sceneDate),
+    ),
     brightness: brightness,
     width: width,
     height: height,

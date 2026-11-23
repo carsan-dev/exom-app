@@ -803,11 +803,59 @@
       "percent": { "type": "int" }
     }
   },
+  "onboardingProfileIncomplete": "Profile incomplete",
+  "onboardingProfileHalfDone": "Profile half done",
+  "onboardingProfileAlmostComplete": "Profile almost complete",
+  "onboardingProfileComplete": "Profile complete",
+  "onboardingProfileCompletionA11y": "{label}, {percent}%",
+  "@onboardingProfileCompletionA11y": {
+    "placeholders": {
+      "label": { "type": "String" },
+      "percent": { "type": "int" }
+    }
+  },
   "onboardingSkipButton": "Skip",
   "onboardingNextButton": "Next",
   "onboardingSubmittingMessage": "Saving your profile...",
   "onboardingSuccessMessage": "Profile complete!",
   "onboardingErrorMessage": "Error saving profile. Please try again.",
+  "onboardingWelcomeKicker": "Welcome to EXOM",
+  "onboardingWelcomeHeadlineFirst": "Your change.",
+  "onboardingWelcomeHeadlineSecond": "With my method.",
+  "onboardingMethodOneTitle": "I start from your reality.",
+  "onboardingMethodOneBody": "First of all, your starting point: tell me about yourself and how you live.",
+  "onboardingMethodTwoTitle": "You know what to do.",
+  "onboardingMethodTwoBody": "With your plan in the app, every day you know what's next: your training, your nutrition and your progress.",
+  "onboardingMethodThreeTitle": "I adjust it with you.",
+  "onboardingMethodThreeBody": "I review how you're doing and adjust the plan with you, based on your progress.",
+  "onboardingWelcomeSteps": "Let's set up your profile in four steps. It takes a minute and you can change it whenever you like.",
+  "onboardingBasicsHeadlineFirst": "Basic details.",
+  "onboardingBasicsHeadlineSecond": "I start from your reality.",
+  "onboardingBodyHeadlineFirst": "Your body.",
+  "onboardingBodyHeadlineSecond": "Your starting point.",
+  "onboardingGoalsHeadlineFirst": "Your goals.",
+  "onboardingGoalsHeadlineSecond": "With me by your side.",
+  "onboardingSummaryHeadlineFirst": "Summary.",
+  "onboardingSummaryHeadlineSecond": "Let's go for your change.",
+  "onboardingTargetsLabel": "Targets",
+  "onboardingNumeralHint": "Tap the figure to type it. Decimals use a point.",
+  "onboardingStepDecrease": "Subtract {step}",
+  "@onboardingStepDecrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "onboardingStepIncrease": "Add {step}",
+  "@onboardingStepIncrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "onboardingNumberInvalid": "Enter a valid number.",
+  "onboardingNumberNotPositive": "Enter a value greater than 0.",
+  "onboardingPreviousStep": "Previous step",
+  "onboardingSaveErrorTitle": "Error saving profile.",
+  "onboardingSaveErrorBody": "Try again; your details are still here.",
   "continueDraftRecap": "Continue draft",
   "recapAlreadySubmittedThisWeek": "You already have a recap submitted this week",
 

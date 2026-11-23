@@ -1,8 +1,29 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:exom_app/core/formatters/figure_format.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:flutter/material.dart';
 
+import 'onboarding_progress_indicator.dart';
+import 'onboarding_step_layout.dart';
+
+/// Height and weight of the onboarding (L5-D2, D14-4): two
+/// [ExomNumeralStepper]s that keep the validation of the former sliders and
+/// manual fields (contract table «Rangos de los steppers»):
+///
+/// * ± move by 1 inside 140-220 cm and 40-200 kg; untouched, the starting
+///   value (the loaded one, else 170 cm and 70 kg) is sent unchanged.
+/// * Typing accepts any value greater than 0 without a cap, with the decimal
+///   separator of the language (L4-I19; the stepper also reads the other
+///   one, at most one separator and never thousands grouping).
+/// * Text that does not parse, and a value of 0, show an inline error and
+///   «Siguiente» does not advance: nothing different from what is typed is
+///   ever sent.
+///
+/// The onboarding is metric (contract 1.2): cm and kg, whatever the unit
+/// preference.
 class OnboardingBodyStep extends StatefulWidget {
   const OnboardingBodyStep({
     super.key,
@@ -15,6 +36,12 @@ class OnboardingBodyStep extends StatefulWidget {
   final void Function(Map<String, dynamic> data) onNext;
   final VoidCallback onSkip;
 
+  static const double heightMin = 140;
+  static const double heightMax = 220;
+  static const double weightMin = 40;
+  static const double weightMax = 200;
+  static const double step = 1;
+
   @override
   State<OnboardingBodyStep> createState() => _OnboardingBodyStepState();
 }
@@ -22,10 +49,13 @@ class OnboardingBodyStep extends StatefulWidget {
 class _OnboardingBodyStepState extends State<OnboardingBodyStep> {
   late double _height; // cm
   late double _weight; // kg
-  bool _useManualHeight = false;
-  bool _useManualWeight = false;
-  final _heightController = TextEditingController();
-  final _weightController = TextEditingController();
+
+  /// False while the typed text of that stepper does not parse.
+  bool _heightParses = true;
+  bool _weightParses = true;
+
+  /// Errors are shown once «Siguiente» was tried, then follow the text.
+  bool _showErrors = false;
 
   @override
   void initState() {
@@ -33,230 +63,110 @@ class _OnboardingBodyStepState extends State<OnboardingBodyStep> {
     _height = (widget.initialData['height'] as num?)?.toDouble() ?? 170.0;
     _weight =
         (widget.initialData['current_weight'] as num?)?.toDouble() ?? 70.0;
-    _heightController.text = _height.toStringAsFixed(0);
-    _weightController.text = _weight.toStringAsFixed(1);
   }
 
-  @override
-  void dispose() {
-    _heightController.dispose();
-    _weightController.dispose();
-    super.dispose();
+  bool _isValid(bool parses, double value) => parses && value > 0;
+
+  String? _errorFor(AppLocalizations l10n, bool parses, double value) {
+    if (!_showErrors) return null;
+    if (!parses) return l10n.onboardingNumberInvalid;
+    if (value <= 0) return l10n.onboardingNumberNotPositive;
+    return null;
   }
 
   void _submit() {
-    final data = <String, dynamic>{};
-    final parsedHeight = _useManualHeight
-        ? double.tryParse(_heightController.text)
-        : _height;
-    final parsedWeight = _useManualWeight
-        ? double.tryParse(_weightController.text)
-        : _weight;
-
-    if (parsedHeight != null && parsedHeight > 0) {
-      data['height'] = parsedHeight;
+    if (!_isValid(_heightParses, _height) ||
+        !_isValid(_weightParses, _weight)) {
+      setState(() => _showErrors = true);
+      return;
     }
-    if (parsedWeight != null && parsedWeight > 0) {
-      data['current_weight'] = parsedWeight;
-    }
-    widget.onNext(data);
+    widget.onNext({'height': _height, 'current_weight': _weight});
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final cm = lengthUnitSymbol(UnitSystem.metric);
+    final kg = weightUnitSymbol(UnitSystem.metric);
+    String stepText(String unit) =>
+        '${formatFigure(context, OnboardingBodyStep.step)} $unit';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          Expanded(
-            child: SingleChildScrollView(
-              child: GlassCard(
-                margin: EdgeInsets.zero,
-                padding: const EdgeInsets.all(24),
-                borderRadius: 28,
-                elevated: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.onboardingBodyTitle,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    Row(
-                      children: [
-                        Text(
-                          l10n.onboardingHeightLabel,
-                          style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => setState(
-                            () => _useManualHeight = !_useManualHeight,
-                          ),
-                          child: Text(
-                            l10n.manualEntryToggle,
-                            style: TextStyle(
-                              color: palette.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_useManualHeight)
-                      TextFormField(
-                        controller: _heightController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(suffixText: 'cm'),
-                      )
-                    else ...[
-                      Slider(
-                        value: _height.clamp(140.0, 220.0),
-                        min: 140,
-                        max: 220,
-                        divisions: 80,
-                        label: '${_height.toStringAsFixed(0)} cm',
-                        activeColor: palette.primary,
-                        onChanged: (v) => setState(() {
-                          _height = v;
-                          _heightController.text = v.toStringAsFixed(0);
-                        }),
-                      ),
-                      Center(
-                        child: Text(
-                          '${_height.toStringAsFixed(0)} cm',
-                          style: TextStyle(
-                            color: palette.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    Row(
-                      children: [
-                        Text(
-                          l10n.onboardingWeightLabel,
-                          style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => setState(
-                            () => _useManualWeight = !_useManualWeight,
-                          ),
-                          child: Text(
-                            l10n.manualEntryToggle,
-                            style: TextStyle(
-                              color: palette.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_useManualWeight)
-                      TextFormField(
-                        controller: _weightController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(suffixText: 'kg'),
-                      )
-                    else ...[
-                      Slider(
-                        value: _weight.clamp(40.0, 200.0),
-                        min: 40,
-                        max: 200,
-                        divisions: 160,
-                        label: '${_weight.toStringAsFixed(1)} kg',
-                        activeColor: palette.primary,
-                        onChanged: (v) => setState(() {
-                          _weight = v;
-                          _weightController.text = v.toStringAsFixed(1);
-                        }),
-                      ),
-                      Center(
-                        child: Text(
-                          '${_weight.toStringAsFixed(1)} kg',
-                          style: TextStyle(
-                            color: palette.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _StepButtons(onNext: _submit, onSkip: widget.onSkip),
-          const SizedBox(height: 16),
-        ],
+    return OnboardingStepLayout(
+      footer: OnboardingStepActions(
+        primaryKey: const Key('onboarding-body-next'),
+        primaryLabel: l10n.onboardingNextButton,
+        onPrimary: _submit,
+        quietLabel: l10n.onboardingSkipButton,
+        onQuiet: widget.onSkip,
       ),
-    );
-  }
-}
-
-class _StepButtons extends StatelessWidget {
-  const _StepButtons({required this.onNext, required this.onSkip});
-
-  final VoidCallback onNext;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-
-    return Column(
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: onNext,
-            child: Text(l10n.onboardingNextButton),
+        OnboardingStepHeading(
+          step: 2,
+          total: 4,
+          first: l10n.onboardingBodyHeadlineFirst,
+          second: l10n.onboardingBodyHeadlineSecond,
+        ),
+        const SizedBox(height: ExomSpacing.xxl),
+        OnboardingQuestion(
+          n: 1,
+          label: l10n.height,
+          labelInControl: true,
+          child: ExomNumeralStepper(
+            key: const Key('onboarding-height'),
+            value: _height,
+            min: OnboardingBodyStep.heightMin,
+            max: OnboardingBodyStep.heightMax,
+            step: OnboardingBodyStep.step,
+            unit: cm,
+            label: l10n.height,
+            decrementLabel: l10n.onboardingStepDecrease(stepText(cm)),
+            incrementLabel: l10n.onboardingStepIncrease(stepText(cm)),
+            acceptsTypedOutOfRange: true,
+            errorText: _errorFor(l10n, _heightParses, _height),
+            onChanged: (value) => setState(() {
+              _height = value;
+              _heightParses = true;
+            }),
+            onInvalidInput: (_) => setState(() => _heightParses = false),
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: onSkip,
-            child: Text(
-              l10n.onboardingSkipButton,
-              style: TextStyle(color: palette.textMuted),
-            ),
+        OnboardingQuestion(
+          n: 2,
+          label: l10n.weight,
+          labelInControl: true,
+          bottomRule: true,
+          child: ExomNumeralStepper(
+            key: const Key('onboarding-weight'),
+            value: _weight,
+            min: OnboardingBodyStep.weightMin,
+            max: OnboardingBodyStep.weightMax,
+            step: OnboardingBodyStep.step,
+            unit: kg,
+            label: l10n.weight,
+            decrementLabel: l10n.onboardingStepDecrease(stepText(kg)),
+            incrementLabel: l10n.onboardingStepIncrease(stepText(kg)),
+            acceptsTypedOutOfRange: true,
+            errorText: _errorFor(l10n, _weightParses, _weight),
+            onChanged: (value) => setState(() {
+              _weight = value;
+              _weightParses = true;
+            }),
+            onInvalidInput: (_) => setState(() => _weightParses = false),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            kOnboardingSidePadding,
+            ExomSpacing.sm,
+            kOnboardingSidePadding,
+            0,
+          ),
+          child: Text(
+            l10n.onboardingNumeralHint,
+            style: onboardingSecondaryStyle(context),
           ),
         ),
       ],
     );
   }
 }
-

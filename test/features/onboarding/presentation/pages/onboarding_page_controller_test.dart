@@ -70,12 +70,45 @@ Future<(_ProfileRepository, _ProbeBloc)> _mount(WidgetTester tester) async {
     ),
   );
   await tester.pump();
-  expect(find.byType(PageView), findsNothing);
+  _expectNoSteps();
   return (repository, bloc);
 }
 
-PageController _controller(WidgetTester tester) =>
-    tester.widget<PageView>(find.byType(PageView)).controller!;
+// The contract is the navigation between steps driven by the page's
+// controller, not a given widget. Until round 4 the steps lived in a
+// PageView and these tests read its PageController; since round 5 (owner:
+// the steps overlap as in the sketch) the page stacks the steps itself and
+// keeps each one mounted, so the tests read which step is on screen through
+// the keys of the page (OnboardingPage.stepKey). Same steps, same values and
+// the same detached state while saving («Guardando»).
+
+/// Step on screen once a change has settled: exactly one step is painted
+/// (the others are offstage or not mounted).
+int _page(WidgetTester tester) {
+  final painted = [
+    for (var i = 0; i < 5; i++)
+      if (find
+          .descendant(
+            of: find.byKey(OnboardingPage.stepKey(i)),
+            matching: find.byKey(const Key('onboarding-step-transition')),
+          )
+          .evaluate()
+          .isNotEmpty)
+        i,
+  ];
+  expect(painted, hasLength(1), reason: 'steps painted: $painted');
+  return painted.single;
+}
+
+/// The steps are not mounted (before the profile, or while saving).
+void _expectNoSteps() {
+  for (var i = 0; i < 5; i++) {
+    expect(
+      find.byKey(OnboardingPage.stepKey(i), skipOffstage: false),
+      findsNothing,
+    );
+  }
+}
 
 void main() {
   testWidgets('initial async profile attaches pages before navigation', (
@@ -87,7 +120,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
-    expect(_controller(tester).page, 0);
+    expect(_page(tester), 0);
   });
 
   testWidgets('reattachment honors requested nonzero page', (tester) async {
@@ -97,16 +130,21 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
-    expect(_controller(tester).page, 3);
+    expect(_page(tester), 3);
     bloc.detachPages();
+    // A state emitted by the bloc reaches the page on a microtask: the first
+    // pump flushes it and schedules the page's rebuild, the second paints it.
+    // The step change (M9) leaves no frame scheduled of its own, so there is
+    // no earlier frame that would have painted it.
     await tester.pump();
-    expect(find.byType(PageView), findsNothing);
+    await tester.pump();
+    _expectNoSteps();
     bloc.restoreAt(1);
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
-    expect(_controller(tester).page, 1);
+    expect(_page(tester), 1);
   });
 
   testWidgets('submit error restores summary after pages were detached', (
@@ -119,17 +157,22 @@ void main() {
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(_controller(tester).page, 4);
+    expect(_page(tester), 4);
     bloc.add(const OnboardingSubmitted());
+    // Same as above: the event, the state and the rebuild need two frames.
     await tester.pump();
-    expect(find.byType(PageView), findsNothing);
+    await tester.pump();
+    _expectNoSteps();
     repository.pendingUpdate.completeError(StateError('Synthetic submit failure'));
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
-    expect(_controller(tester).page, 4);
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(_page(tester), 4);
+    // L5-D2 (D14-3/8): the save error is shown inline above «Confirmar»
+    // instead of an ephemeral SnackBar.
+    expect(find.byKey(const Key('onboarding-save-error')), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('rapid targets keep latest page and disposal stays safe', (
@@ -143,7 +186,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(_controller(tester).page, 3);
+    expect(_page(tester), 3);
     bloc.restoreAt(2);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

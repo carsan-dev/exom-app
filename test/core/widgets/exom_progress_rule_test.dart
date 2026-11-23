@@ -101,4 +101,49 @@ void main() {
     expect(data.value, expected);
     handle.dispose();
   });
+
+  testWidgets('segments: lastSegmentGrowth paints the last filled segment '
+      'only that share of its width, the value stays', (tester) async {
+    await pumpComponent(
+      tester,
+      _padded(
+        const ExomProgressRule(
+          value: 0.5,
+          thickness: 4,
+          segments: 4,
+          lastSegmentGrowth: 0.25,
+        ),
+      ),
+    );
+    final growing = find.byKey(ExomProgressRule.growthKey);
+    expect(growing, findsOneWidget);
+    expect(tester.widget<FractionallySizedBox>(growing).widthFactor, 0.25);
+    // The complete segment is still on; the growing one counts as an outline
+    // until it is done.
+    expect(find.byKey(const ValueKey('exom-rule-segment-on')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('exom-rule-segment-off')),
+      findsNWidgets(3),
+    );
+    final cell = tester.getRect(growing);
+    final fill = tester.getRect(
+      find.descendant(of: growing, matching: find.byType(ColoredBox)),
+    );
+    expect(fill.width, closeTo(cell.width * 0.25, 0.01));
+    expect(fill.left, closeTo(cell.left, 0.01));
+  });
+
+  testWidgets('segments: lastSegmentGrowth 1 (default) is the plain rule', (
+    tester,
+  ) async {
+    await pumpComponent(
+      tester,
+      _padded(const ExomProgressRule(value: 0.5, thickness: 4, segments: 4)),
+    );
+    expect(find.byKey(ExomProgressRule.growthKey), findsNothing);
+    expect(
+      find.byKey(const ValueKey('exom-rule-segment-on')),
+      findsNWidgets(2),
+    );
+  });
 }

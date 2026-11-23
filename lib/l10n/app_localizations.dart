@@ -4100,6 +4100,36 @@ abstract class AppLocalizations {
   /// **'Perfil {percent}% completo'**
   String onboardingProgressComplete(int percent);
 
+  /// No description provided for @onboardingProfileIncomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil incompleto'**
+  String get onboardingProfileIncomplete;
+
+  /// No description provided for @onboardingProfileHalfDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil a medias'**
+  String get onboardingProfileHalfDone;
+
+  /// No description provided for @onboardingProfileAlmostComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil casi completo'**
+  String get onboardingProfileAlmostComplete;
+
+  /// No description provided for @onboardingProfileComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil completo'**
+  String get onboardingProfileComplete;
+
+  /// No description provided for @onboardingProfileCompletionA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{label}, {percent} %'**
+  String onboardingProfileCompletionA11y(String label, int percent);
+
   /// No description provided for @onboardingSkipButton.
   ///
   /// In es, this message translates to:
@@ -4129,6 +4159,168 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Error al guardar el perfil. Inténtalo de nuevo.'**
   String get onboardingErrorMessage;
+
+  /// No description provided for @onboardingWelcomeKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenido a EXOM'**
+  String get onboardingWelcomeKicker;
+
+  /// No description provided for @onboardingWelcomeHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cambio.'**
+  String get onboardingWelcomeHeadlineFirst;
+
+  /// No description provided for @onboardingWelcomeHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Con mi método.'**
+  String get onboardingWelcomeHeadlineSecond;
+
+  /// No description provided for @onboardingMethodOneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Parto de tu realidad.'**
+  String get onboardingMethodOneTitle;
+
+  /// No description provided for @onboardingMethodOneBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de nada, tu punto de partida: cuéntame cómo eres y cómo es tu vida.'**
+  String get onboardingMethodOneBody;
+
+  /// No description provided for @onboardingMethodTwoTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sabes qué hacer.'**
+  String get onboardingMethodTwoTitle;
+
+  /// No description provided for @onboardingMethodTwoBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Con tu plan en la app, cada día sabes qué toca: tu entrenamiento, tu alimentación y tu evolución.'**
+  String get onboardingMethodTwoBody;
+
+  /// No description provided for @onboardingMethodThreeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo ajusto contigo.'**
+  String get onboardingMethodThreeTitle;
+
+  /// No description provided for @onboardingMethodThreeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Reviso cómo vas y ajusto el plan contigo, según tu progreso.'**
+  String get onboardingMethodThreeBody;
+
+  /// No description provided for @onboardingWelcomeSteps.
+  ///
+  /// In es, this message translates to:
+  /// **'Vamos a preparar tu perfil en cuatro pasos. Te llevará un minuto y podrás cambiarlo cuando quieras.'**
+  String get onboardingWelcomeSteps;
+
+  /// No description provided for @onboardingBasicsHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos básicos.'**
+  String get onboardingBasicsHeadlineFirst;
+
+  /// No description provided for @onboardingBasicsHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Parto de tu realidad.'**
+  String get onboardingBasicsHeadlineSecond;
+
+  /// No description provided for @onboardingBodyHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuerpo.'**
+  String get onboardingBodyHeadlineFirst;
+
+  /// No description provided for @onboardingBodyHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu punto de partida.'**
+  String get onboardingBodyHeadlineSecond;
+
+  /// No description provided for @onboardingGoalsHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus objetivos.'**
+  String get onboardingGoalsHeadlineFirst;
+
+  /// No description provided for @onboardingGoalsHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Conmigo a tu lado.'**
+  String get onboardingGoalsHeadlineSecond;
+
+  /// No description provided for @onboardingSummaryHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen.'**
+  String get onboardingSummaryHeadlineFirst;
+
+  /// No description provided for @onboardingSummaryHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Vamos a por tu cambio.'**
+  String get onboardingSummaryHeadlineSecond;
+
+  /// No description provided for @onboardingTargetsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Metas'**
+  String get onboardingTargetsLabel;
+
+  /// No description provided for @onboardingNumeralHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la cifra para escribirla. Los decimales llevan coma.'**
+  String get onboardingNumeralHint;
+
+  /// No description provided for @onboardingStepDecrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Restar {step}'**
+  String onboardingStepDecrease(String step);
+
+  /// No description provided for @onboardingStepIncrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Sumar {step}'**
+  String onboardingStepIncrease(String step);
+
+  /// No description provided for @onboardingNumberInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce un número válido.'**
+  String get onboardingNumberInvalid;
+
+  /// No description provided for @onboardingNumberNotPositive.
+  ///
+  /// In es, this message translates to:
+  /// **'Introduce un valor mayor que 0.'**
+  String get onboardingNumberNotPositive;
+
+  /// No description provided for @onboardingPreviousStep.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso anterior'**
+  String get onboardingPreviousStep;
+
+  /// No description provided for @onboardingSaveErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Error al guardar el perfil.'**
+  String get onboardingSaveErrorTitle;
+
+  /// No description provided for @onboardingSaveErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Inténtalo de nuevo; tus datos siguen aquí.'**
+  String get onboardingSaveErrorBody;
 
   /// No description provided for @continueDraftRecap.
   ///

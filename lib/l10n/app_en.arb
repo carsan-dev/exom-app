@@ -699,7 +699,6 @@
   "circuitExerciseRestTitle": "Rest between exercises",
   "feedbackQueued": "Feedback queued. You can keep navigating while it uploads.",
   "feedbackUploadFailed": "Feedback upload failed.",
-  "retry": "Retry",
 
   "weightInputTitle": "Weight used?",
   "weightInputHint": "e.g. 20 (optional)",

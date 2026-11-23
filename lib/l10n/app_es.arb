@@ -736,7 +736,6 @@
   "circuitExerciseRestTitle": "Descanso entre ejercicios",
   "feedbackQueued": "Feedback en cola. Puedes seguir navegando mientras se sube.",
   "feedbackUploadFailed": "No se pudo subir el feedback.",
-  "retry": "Reintentar",
 
   "weightInputTitle": "¿Peso utilizado?",
   "weightInputHint": "ej. 20 (opcional)",

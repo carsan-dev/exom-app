@@ -1137,6 +1137,8 @@
   "chooseAnOption": "Choose an option",
   "streakDaysLabel": "{count, plural, =0{day streak} =1{day streak} other{day streak}}",
   "recapDetailTitle": "Recap details",
+  "recapDetailHeadlineFirst": "Look back.",
+  "recapDetailHeadlineSecond": "Keep going.",
   "recapReviewedOn": "Reviewed on {date}",
   "recapNewCoachComment": "New comment from your coach",
   "recapCoachCommentTitle": "Comment from your coach",

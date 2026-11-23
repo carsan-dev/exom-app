@@ -1,11 +1,15 @@
+import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
+import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 
+/// Trainer comment of a recap (sketch C5): the text as an [ExomReplyBlock]
+/// whose byline carries «Nuevo» as plain text while it is unread, followed by
+/// the sent / read lines in the secondary colour. No card and no pill.
 class RecapFeedbackCard extends StatelessWidget {
   final RecapEntity recap;
 
@@ -14,110 +18,61 @@ class RecapFeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     if (!recap.hasClientFeedback) {
       return const SizedBox.shrink();
     }
 
     final isUnread = recap.hasUnreadClientFeedback;
+    final sentAt = recap.clientFeedbackSentAt;
+    final readAt = recap.clientFeedbackReadAt;
+    final noteStyle = TextStyle(
+      color: palette.textSecondary,
+      fontSize: 13,
+      height: 1.3,
+    );
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: isUnread
-          ? GlassDecoration.accentCard(palette.primary, borderRadius: 22)
-          : GlassDecoration.card(borderRadius: 22),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.xl),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(
-                ExomIcons.coachVoice,
-                color: palette.primary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context).recapCoachCommentTitle,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (isUnread)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: GlassDecoration.accentCard(
-                    palette.primary,
-                    borderRadius: 999,
-                  ),
-                  child: Text(
-                    AppLocalizations.of(context).recapBadgeNew,
-                    style: TextStyle(
-                      color: palette.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
+          ExomReplyBlock(
+            text: recap.clientFeedbackText!,
+            author: l10n.recapCoachCommentTitle,
+            time: isUnread ? l10n.recapBadgeNew : null,
           ),
-          const SizedBox(height: 12),
-          Text(
-            recap.clientFeedbackText!,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textPrimary,
-              height: 1.5,
-            ),
-          ),
-          if (recap.clientFeedbackSentAt != null) ...[
+          if (sentAt != null) ...[
             const SizedBox(height: 10),
             Text(
-              AppLocalizations.of(context).recapFeedbackSentOn(
-                _formatDate(recap.clientFeedbackSentAt!),
-              ),
-              style: TextStyle(color: palette.textSecondary, fontSize: 12),
+              l10n.recapFeedbackSentOn(_formatDate(context, sentAt)),
+              style: noteStyle,
             ),
           ],
-          if (isUnread && recap.clientFeedbackSentAt != null) ...[
+          if (isUnread && sentAt != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(ExomIcons.time, size: 13, color: palette.primary),
+                Icon(ExomIcons.time, size: 13, color: palette.textSecondary),
                 const SizedBox(width: 4),
-                Text(
-                  AppLocalizations.of(context).recapFeedbackPendingRead,
-                  style: TextStyle(
-                    color: palette.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Flexible(
+                  child: Text(l10n.recapFeedbackPendingRead, style: noteStyle),
                 ),
               ],
             ),
           ],
-          if (!isUnread && recap.clientFeedbackReadAt != null) ...[
+          if (!isUnread && readAt != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(
-                  ExomIcons.done,
-                  size: 13,
-                  color: semantic.success,
-                ),
+                Icon(ExomIcons.done, size: 13, color: palette.textSecondary),
                 const SizedBox(width: 4),
-                Text(
-                  AppLocalizations.of(context).recapFeedbackReadOn(
-                    _formatDate(recap.clientFeedbackReadAt!),
+                Flexible(
+                  child: Text(
+                    l10n.recapFeedbackReadOn(_formatDate(context, readAt)),
+                    style: noteStyle,
                   ),
-                  style: TextStyle(color: semantic.success, fontSize: 12),
                 ),
               ],
             ),
@@ -127,7 +82,10 @@ class RecapFeedbackCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return DateFormat('dd MMM yyyy, HH:mm').format(date.toLocal());
+  String _formatDate(BuildContext context, DateTime date) {
+    return DateFormat(
+      'dd MMM yyyy, HH:mm',
+      Localizations.localeOf(context).languageCode,
+    ).format(date.toLocal());
   }
 }

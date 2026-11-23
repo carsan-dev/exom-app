@@ -21,8 +21,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../core/widgets/android_nonlinear_text_scaler.dart';
 import '../features/challenges/challenges_test_support.dart';
 import '../features/profile/presentation/profile_scene.dart' as perfil;
+import '../features/recap/presentation/pages/recap_detail_redesign_test.dart'
+    show pumpDetail, recapDetailRich;
 
 const _codes = [
   'progress_conflict_review_required',
@@ -193,6 +196,31 @@ void main() {
       );
     }
   }
+
+  // L5-C3 «Recap, detalle»: the full scene at 320 and 360 dp with 1.0x, 1.3x
+  // and 1.6x text (Android non-linear scaler), in both languages (CC 3).
+  group('Recap detalle does not overflow', () {
+    tearDown(() async => sl.reset());
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final width in const [320.0, 360.0]) {
+        for (final scale in const [1.0, 1.3, 1.6]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}',
+            (tester) async {
+              await pumpDetail(
+                tester,
+                extra: recapDetailRich,
+                width: width,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              expect(tester.takeException(), isNull);
+            },
+          );
+        }
+      }
+    }
+  });
 
   testWidgets('error and upload states do not overflow at 320dp, 1.3x text', (tester) async {
     await _pump(tester, (context) {

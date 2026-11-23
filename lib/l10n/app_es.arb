@@ -1233,6 +1233,8 @@
   "@streakDaysLabel": {"placeholders": {"count": {"type": "int"}}},
   "streakDaysLabel": "{count, plural, =0{días de racha} =1{día de racha} other{días de racha}}",
   "recapDetailTitle": "Detalle del recap",
+  "recapDetailHeadlineFirst": "Mira atrás.",
+  "recapDetailHeadlineSecond": "Sigue adelante.",
   "recapReviewedOn": "Revisado el {date}",
   "@recapReviewedOn": {"placeholders": {"date": {"type": "String"}}},
   "recapNewCoachComment": "Nuevo comentario de tu entrenador",

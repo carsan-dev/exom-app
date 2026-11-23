@@ -135,7 +135,10 @@ import 'package:exom_app/features/notifications/domain/usecases/mark_notificatio
 import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc.dart';
 
 // Onboarding
+import 'package:exom_app/core/onboarding/onboarding_sync_coordinator.dart';
+import 'package:exom_app/features/onboarding/data/onboarding_remote_datasource.dart';
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 final sl = GetIt.instance;
 
@@ -145,6 +148,18 @@ void handleExecutionTimerSessionState(AuthState state) {
   sl<ExecutionTimerCoordinator>().updateOwner(
     gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null,
   );
+}
+
+/// Every [AuthBloc] state change: session gate, execution timer owner and
+/// onboarding sync (OP-D17: on each change, not once per process).
+void handleAuthSessionState(AuthState state) {
+  handleExecutionTimerSessionState(state);
+  // The sync must never prevent AuthBloc from emitting.
+  try {
+    sl<OnboardingSyncCoordinator>().handle(state);
+  } catch (error) {
+    if (kDebugMode) debugPrint('[ONBOARDING_SYNC] handle failed (${error.runtimeType})');
+  }
 }
 
 bool isExecutionTimerOwnerCurrent(
@@ -242,7 +257,7 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AuthBloc(
-      onSessionStateChanged: handleExecutionTimerSessionState,
+      onSessionStateChanged: handleAuthSessionState,
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
@@ -571,12 +586,24 @@ Future<void> initDependencies() async {
   );
 
   // ── Onboarding ────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<OnboardingRemoteDataSource>(
+    () => OnboardingRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<OnboardingSyncCoordinator>(
+    () => OnboardingSyncCoordinator(
+      storage: sl<LocalStorage>(),
+      currentSession: () => sl<FirebaseAuthService>().currentSession,
+      remote: sl<OnboardingRemoteDataSource>(),
+    ),
+  );
   sl.registerFactory(
     () => OnboardingBloc(
       getProfile: sl<GetProfileUseCase>(),
       updateProfile: sl<UpdateProfileUseCase>(),
       uploadAvatar: sl<UploadAvatarUseCase>(),
       localStorage: sl<LocalStorage>(),
+      currentSession: () => sl<FirebaseAuthService>().currentSession,
+      syncCoordinator: sl<OnboardingSyncCoordinator>(),
     ),
   );
 }

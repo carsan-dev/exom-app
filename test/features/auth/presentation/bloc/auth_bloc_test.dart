@@ -158,6 +158,21 @@ void main() {
       },
     );
 
+    test(
+      'OP-APP-01 offline entity is unknown and not server validated',
+      () async {
+        final fixture = _fixture(
+          const ApiException(statusCode: 0, message: 'offline'),
+        );
+
+        final state = await fixture.checkStatus();
+
+        final user = (state as AuthAuthenticated).user;
+        expect(user.onboardingStatus, OnboardingServerStatus.unknown);
+        expect(user.isServerValidated, isFalse);
+      },
+    );
+
     test('5xx is temporary failure and does not authenticate', () async {
       final fixture = _fixture(
         const ApiException(statusCode: 503, message: 'temporary'),

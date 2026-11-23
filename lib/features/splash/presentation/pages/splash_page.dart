@@ -1,12 +1,13 @@
 import 'dart:math' as math;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/app_distribution_config.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
+import 'package:exom_app/core/onboarding/onboarding_readers.dart';
 import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -231,16 +232,21 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final session = sl<FirebaseAuthService>().currentSession;
+    if (session == null) {
       context.go(AppRoutes.login);
       return;
     }
-    final onboardingDone = sl<LocalStorage>().isOnboardingCompleteFor(
-      uid: user.uid,
-      email: user.email,
+    final resolution = resolveOnboardingForSession(
+      authState: authState,
+      session: session,
+      storage: sl<LocalStorage>(),
     );
-    context.go(onboardingDone ? AppRoutes.home : AppRoutes.onboarding);
+    context.go(
+      resolution?.needsOnboarding == true
+          ? AppRoutes.onboarding
+          : AppRoutes.home,
+    );
   }
 
   @override

@@ -75,6 +75,9 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 
 // Storage
+import '../../core/auth/auth_token_provider.dart';
+import '../../core/auth/firebase_auth_service.dart';
+import '../../core/onboarding/onboarding_readers.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/storage/local_storage.dart';
 import '../../injection_container.dart';
@@ -161,6 +164,47 @@ String? resolveAppRouteRedirect({
   return null;
 }
 
+/// Reads the auth state, the local Firebase session and the onboarding
+/// readers, then delegates the decision to [resolveAppRouteRedirect].
+String? resolveAppRouteRedirectFor({
+  required String location,
+  required AuthState authState,
+  required LocalAuthSession? session,
+  required LocalStorage storage,
+  bool isCompletingAuth = false,
+}) {
+  if (location == AppRoutes.splash) return null;
+
+  final isAuthenticated = authState is AuthAuthenticated;
+  final isLocked = authState is AuthAccountLocked;
+  final isAuthRoute =
+      location == AppRoutes.login ||
+      location == AppRoutes.forgotPassword ||
+      location == AppRoutes.accountLocked;
+  final shouldCheckOnboarding =
+      isAuthenticated &&
+      session != null &&
+      (location == AppRoutes.login ||
+          (!isAuthRoute && location != AppRoutes.onboarding));
+  final isOnboardingComplete =
+      shouldCheckOnboarding &&
+      isOnboardingSettled(
+        resolveOnboardingForSession(
+          authState: authState,
+          session: session,
+          storage: storage,
+        ),
+      );
+  return resolveAppRouteRedirect(
+    location: location,
+    isAuthenticated: isAuthenticated,
+    hasFirebaseUser: session != null,
+    isOnboardingComplete: isOnboardingComplete,
+    isLocked: isLocked,
+    isCompletingAuth: isCompletingAuth,
+  );
+}
+
 class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -175,30 +219,11 @@ class AppRouter {
       final loc = state.matchedLocation;
       if (loc == AppRoutes.splash) return null;
 
-      final user = FirebaseAuth.instance.currentUser;
-      final authState = context.read<AuthBloc>().state;
-      final isAuthenticated = authState is AuthAuthenticated;
-      final isLocked = authState is AuthAccountLocked;
-      final isAuthRoute =
-          loc == AppRoutes.login ||
-          loc == AppRoutes.forgotPassword ||
-          loc == AppRoutes.accountLocked;
-      final shouldCheckOnboarding =
-          isAuthenticated &&
-          user != null &&
-          (loc == AppRoutes.login ||
-              (!isAuthRoute && loc != AppRoutes.onboarding));
-      final isOnboardingComplete = shouldCheckOnboarding &&
-          sl<LocalStorage>().isOnboardingCompleteFor(
-            uid: user.uid,
-            email: user.email,
-          );
-      return resolveAppRouteRedirect(
+      return resolveAppRouteRedirectFor(
         location: loc,
-        isAuthenticated: isAuthenticated,
-        hasFirebaseUser: user != null,
-        isOnboardingComplete: isOnboardingComplete,
-        isLocked: isLocked,
+        authState: context.read<AuthBloc>().state,
+        session: sl<FirebaseAuthService>().currentSession,
+        storage: sl<LocalStorage>(),
         isCompletingAuth: _isCompletingAuth(context),
       );
     },
@@ -509,20 +534,25 @@ class _MainShellState extends State<MainShell> {
     if (_tutorialChecked) return;
     _tutorialChecked = true;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    final session = sl<FirebaseAuthService>().currentSession;
+    if (session == null) return;
 
     final storage = sl<LocalStorage>();
-    if (!storage.isOnboardingCompleteFor(uid: user.uid, email: user.email)) {
+    final resolution = resolveOnboardingForSession(
+      authState: context.read<AuthBloc>().state,
+      session: session,
+      storage: storage,
+    );
+    if (!isOnboardingSettled(resolution)) {
       _tutorialChecked = false;
       return;
     }
     final done = storage.isTutorialCompleteFor(
-      uid: user.uid,
-      email: user.email,
+      uid: session.uid,
+      email: session.email,
     );
 
-    if (!done) {
+    if (shouldOfferTutorial(resolution: resolution, tutorialDone: done)) {
       setState(() => _showPrompt = true);
     }
   }

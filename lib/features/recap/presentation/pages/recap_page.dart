@@ -12,6 +12,7 @@ import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_step_transition.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
@@ -23,7 +24,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
@@ -57,7 +57,6 @@ class _RecapView extends StatefulWidget {
 }
 
 class _RecapViewState extends State<_RecapView> {
-  final PageController _pageController = PageController();
   final DateFormat _apiDateFormat = DateFormat('yyyy-MM-dd');
 
   /// The form was open since the list was last shown. Saving and sending go
@@ -70,12 +69,6 @@ class _RecapViewState extends State<_RecapView> {
   void _cancelForm(BuildContext context) {
     _formOpen = false;
     context.read<RecapBloc>().add(const RecapFormCancelled());
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   @override
@@ -93,17 +86,6 @@ class _RecapViewState extends State<_RecapView> {
           _formOpen = true;
         } else if (state is! RecapLoading) {
           _formOpen = false;
-        }
-
-        if (state is RecapFormActive) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!_pageController.hasClients) return;
-            _pageController.animateToPage(
-              state.step,
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-            );
-          });
         }
 
         if (state is RecapSubmitted) {
@@ -168,7 +150,8 @@ class _RecapViewState extends State<_RecapView> {
               leading: isFormActive
                   ? IconButton(
                       onPressed: () => _cancelForm(context),
-                      icon: const Icon(ExomIcons.close),
+                      tooltip: l10n.cancel,
+                      icon: Icon(ExomIcons.close, color: palette.textPrimary),
                     )
                   : context.canPop()
                   ? IconButton(
@@ -264,14 +247,6 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   Widget _buildBody(BuildContext context, RecapState state) {
-    final l10n = AppLocalizations.of(context);
-    final stepTitles = [
-      l10n.recapTraining,
-      l10n.recapNutrition,
-      l10n.recapRecovery,
-      l10n.recapGeneral,
-    ];
-
     if (state is RecapLoading || state is RecapInitial) {
       return _RecapLoadingView(
         key: const ValueKey('recap-loading'),
@@ -282,8 +257,6 @@ class _RecapViewState extends State<_RecapView> {
     if (state is RecapFormActive) {
       return _RecapFormView(
         key: const ValueKey('recap-form'),
-        pageController: _pageController,
-        stepTitles: stepTitles,
         state: state,
         onFieldChanged: (field, value) => context.read<RecapBloc>().add(
           RecapFieldUpdated(field: field, value: value),
@@ -608,10 +581,7 @@ class _RecapListView extends StatelessWidget {
 /// («1 comentario nuevo de tu entrenador»), so the headline never sits between
 /// the figure and what it counts.
 class _UnreadHero extends StatelessWidget {
-  const _UnreadHero({
-    required this.value,
-    required this.label,
-  });
+  const _UnreadHero({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -1042,11 +1012,12 @@ class _RecapErrorView extends StatelessWidget {
   }
 }
 
-// l5-c5-form: from here on, the step form (L5-C5) keeps its legacy vocabulary.
-
+/// The step form (L5-C5a, sketch «C4 · Recap, formulario por pasos»): the start
+/// view and the five steps inside an [ExomStepTransition] (M9), with the
+/// action of the step pinned below. A failed save or send still shows its own
+/// SnackBar (it is not a validation); an invalid value is explained under its
+/// field and in a line above the buttons.
 class _RecapFormView extends StatelessWidget {
-  final PageController pageController;
-  final List<String> stepTitles;
   final RecapFormActive state;
   final void Function(String field, dynamic value) onFieldChanged;
   final ValueChanged<int> onStepChanged;
@@ -1057,8 +1028,6 @@ class _RecapFormView extends StatelessWidget {
 
   const _RecapFormView({
     super.key,
-    required this.pageController,
-    required this.stepTitles,
     required this.state,
     required this.onFieldChanged,
     required this.onStepChanged,
@@ -1073,260 +1042,104 @@ class _RecapFormView extends StatelessWidget {
 
   bool get _isStartStep => state.step == _stepStart;
   bool get _isImprovementStep => state.step == _stepImprovement;
-  bool get _isCoreStep => state.step >= 1 && state.step <= 4;
   bool get _hasValidationErrors =>
       !isValidRecapAverageDailySteps(state.formData['average_daily_steps']);
 
+  Widget _stepBody() {
+    switch (state.step) {
+      case 1:
+        return RecapStepTraining(
+          formData: state.formData,
+          onChanged: onFieldChanged,
+        );
+      case 2:
+        return RecapStepNutrition(
+          formData: state.formData,
+          onChanged: onFieldChanged,
+        );
+      case 3:
+        return RecapStepRecovery(
+          formData: state.formData,
+          onChanged: onFieldChanged,
+        );
+      case 4:
+        return RecapStepGeneral(
+          formData: state.formData,
+          onChanged: onFieldChanged,
+        );
+      case 5:
+        return RecapStepImprovement(
+          formData: state.formData,
+          onChanged: onFieldChanged,
+        );
+      default:
+        return RecapStartView(
+          formData: state.formData,
+          weekLabel: formatWeekRange(state.formData),
+          onStart: () => onStepChanged(1),
+          onReviewAndSend: () => onStepChanged(5),
+          onCancel: onCancel,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Column(
       children: [
-        if (_isCoreStep) ...[
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            padding: const EdgeInsets.all(18),
-            decoration: GlassDecoration.elevated(borderRadius: 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  formatWeekRange(state.formData),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.completeTheFourBlocksAndSendYourWeeklySummary,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: List.generate(stepTitles.length, (index) {
-                    final badgeStep = state.step - 1;
-                    final isActive = index == badgeStep;
-                    final isCompleted = index < badgeStep;
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: index == stepTitles.length - 1 ? 0 : 8,
-                        ),
-                        child: _StepBadge(
-                          label: stepTitles[index],
-                          index: index + 1,
-                          isActive: isActive,
-                          isCompleted: isCompleted,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
         Expanded(
-          child: PageView(
-            controller: pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              RecapStartView(
-                formData: state.formData,
-                weekLabel: formatWeekRange(state.formData),
-                onStart: () => onStepChanged(1),
-                onReviewAndSend: () => onStepChanged(5),
-                onCancel: onCancel,
-              ),
-              RecapStepTraining(
-                formData: state.formData,
-                onChanged: onFieldChanged,
-              ),
-              RecapStepNutrition(
-                formData: state.formData,
-                onChanged: onFieldChanged,
-              ),
-              RecapStepRecovery(
-                formData: state.formData,
-                onChanged: onFieldChanged,
-              ),
-              RecapStepGeneral(
-                formData: state.formData,
-                onChanged: onFieldChanged,
-              ),
-              RecapStepImprovement(
-                formData: state.formData,
-                onChanged: onFieldChanged,
-              ),
-            ],
+          child: RecapWeekScope(
+            label: formatWeekRange(state.formData),
+            child: ExomStepTransition(step: state.step, child: _stepBody()),
           ),
         ),
         if (!_isStartStep)
-          Container(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              16 + MediaQuery.of(context).padding.bottom,
-            ),
-            decoration: _recapStickyBarDecoration(context),
+          ExomPinnedFooter(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (_hasValidationErrors) ...[
-                  Text(
-                    l10n.correctInvalidRecapFields,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: palette.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  ExomInlineMessage(
+                    kind: ExomMessageKind.error,
+                    title: l10n.correctInvalidRecapFields,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ExomSpacing.md),
                 ],
-                Row(
+                ExomPrimaryButton(
+                  key: const ValueKey('recap-step-action'),
+                  label: _isImprovementStep
+                      ? l10n.sendRecap
+                      : l10n.recapNextStep,
+                  trailingIcon: _isImprovementStep
+                      ? ExomIcons.send
+                      : ExomIcons.forward,
+                  onPressed: _isImprovementStep
+                      ? (_hasValidationErrors ? null : onSubmit)
+                      : () => onStepChanged(state.step + 1),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    TextButton.icon(
+                    ExomQuietButton(
+                      label: l10n.previous,
                       onPressed: () => onStepChanged(state.step - 1),
-                      icon: const Icon(ExomIcons.back),
-                      label: Text(
-                        state.step == 1 ? l10n.cancel : l10n.previous,
-                      ),
                     ),
-                    const Spacer(),
-                    OutlinedButton.icon(
+                    ExomQuietButton(
+                      label: l10n.recapSaveDraft,
                       onPressed: _hasValidationErrors ? null : onSaveDraft,
-                      icon: const Icon(ExomIcons.save),
-                      label: Text(l10n.save),
                     ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isImprovementStep
-                        ? (_hasValidationErrors ? null : onSubmit)
-                        : () => onStepChanged(state.step + 1),
-                    icon: Icon(
-                      _isImprovementStep
-                          ? ExomIcons.send
-                          : ExomIcons.forward,
-                    ),
-                    label: Text(
-                      _isImprovementStep
-                          ? l10n.sendRecap
-                          : state.step == 4
-                          ? l10n.recapImprovementTitle
-                          : l10n.continueToNextStep,
-                    ),
-                  ),
                 ),
               ],
             ),
           ),
       ],
-    );
-  }
-}
-
-BoxDecoration _recapStickyBarDecoration(BuildContext context) {
-  final palette = context.exomPalette;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  return BoxDecoration(
-    color: isDark ? AppColors.navBarGlass : AppColors.navBarGlassLightTheme,
-    border: Border(
-      top: BorderSide(
-        color: palette.glassBorder.withValues(alpha: isDark ? 0.18 : 0.10),
-        width: 0.6,
-      ),
-    ),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
-        blurRadius: 24,
-        offset: const Offset(0, -6),
-        spreadRadius: -14,
-      ),
-    ],
-  );
-}
-
-class _StepBadge extends StatelessWidget {
-  final String label;
-  final int index;
-  final bool isActive;
-  final bool isCompleted;
-
-  const _StepBadge({
-    required this.label,
-    required this.index,
-    required this.isActive,
-    required this.isCompleted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final color = isCompleted || isActive
-        ? palette.primary
-        : palette.textDisabled;
-    final invertedColor = color.computeLuminance() > 0.5
-        ? Colors.black
-        : Colors.white;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: isActive
-          ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
-          : GlassDecoration.card(borderRadius: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 10,
-            backgroundColor: color,
-            child: Transform.translate(
-              offset: const Offset(0, 0.5),
-              child: isCompleted
-                  ? Icon(ExomIcons.check, size: 11, color: invertedColor)
-                  : Text(
-                      '$index',
-                      style: TextStyle(
-                        color: invertedColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isActive ? palette.textPrimary : palette.textSecondary,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

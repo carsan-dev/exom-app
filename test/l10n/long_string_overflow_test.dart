@@ -27,6 +27,8 @@ import '../features/challenges/challenges_test_support.dart';
 import '../features/profile/presentation/profile_scene.dart' as perfil;
 import '../features/recap/presentation/pages/recap_detail_redesign_test.dart'
     show pumpDetail, recapDetailRich;
+import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
+    show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
 
@@ -250,6 +252,41 @@ void main() {
               expect(tester.takeException(), isNull);
             },
           );
+        }
+      }
+    }
+  });
+
+  // L5-C5a «Recap, formulario por pasos»: the start view and the five steps
+  // with their longest content (invalid value and its reasons, many chosen
+  // zones, optional switches on) at 320 and 360 dp with 1.0x, 1.3x and 1.6x
+  // text, in both languages (CC 3); 2.0x scrolling is in
+  // recap_form_redesign_test.dart.
+  group('Recap formulario por pasos does not overflow', () {
+    setUpAll(() async {
+      await initializeDateFormatting('es');
+      await initializeDateFormatting('en');
+    });
+    tearDown(() async => sl.reset());
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final width in const [320.0, 360.0]) {
+        for (final scale in const [1.0, 1.3, 1.6]) {
+          for (final step in const [0, 1, 2, 3, 4, 5]) {
+            testWidgets(
+              'step $step at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}',
+              (tester) async {
+                await pumpRecapForm(
+                  tester,
+                  step: step,
+                  width: width,
+                  locale: locale,
+                  rich: true,
+                  textScaler: AndroidNonlinearTextScaler(scale),
+                );
+                expect(tester.takeException(), isNull);
+              },
+            );
+          }
         }
       }
     }

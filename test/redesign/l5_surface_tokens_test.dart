@@ -78,6 +78,17 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/recap/presentation/pages/recap_detail_page.dart',
   'lib/features/recap/presentation/widgets/recap_feedback_card.dart',
   'lib/features/recap/presentation/widgets/recap_published_review_card.dart',
+  // L5-C4 · Recap, lista, and L5-C5a · Recap, formulario por pasos.
+  'lib/features/recap/presentation/pages/recap_page.dart',
+  'lib/features/recap/presentation/widgets/recap_start_view.dart',
+  'lib/features/recap/presentation/widgets/recap_form_fields.dart',
+  'lib/features/recap/presentation/widgets/recap_optional_rating.dart',
+  'lib/features/recap/presentation/widgets/recap_anatomy_selector.dart',
+  'lib/features/recap/presentation/widgets/recap_step_training.dart',
+  'lib/features/recap/presentation/widgets/recap_step_nutrition.dart',
+  'lib/features/recap/presentation/widgets/recap_step_recovery.dart',
+  'lib/features/recap/presentation/widgets/recap_step_general.dart',
+  'lib/features/recap/presentation/widgets/recap_step_improvement.dart',
   // L5-D2 · Onboarding.
   'lib/features/onboarding/presentation/pages/onboarding_page.dart',
   'lib/features/onboarding/presentation/widgets/onboarding_welcome_step.dart',
@@ -95,10 +106,7 @@ const List<String> kRepaintedFiles = <String>[
 /// dialog; L5-A4b replaced that dialog and moved the file to
 /// [kRepaintedFiles]. L5-C4 repainted the recap list (and its pinned action)
 /// up to the step form, which L5-C5 repaints.
-const Map<String, String> kPartlyRepaintedFiles = <String, String>{
-  'lib/features/recap/presentation/pages/recap_page.dart':
-      '// l5-c5-form:',
-};
+const Map<String, String> kPartlyRepaintedFiles = <String, String>{};
 
 const String _allowMarker = 'l5-allow:';
 

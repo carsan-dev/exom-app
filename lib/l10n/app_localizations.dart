@@ -2009,7 +2009,7 @@ abstract class AppLocalizations {
   /// No description provided for @recapStartDescription.
   ///
   /// In es, this message translates to:
-  /// **'Completa los cuatro pasos para que tu entrenador entienda cómo ha ido tu semana y pueda ajustar el plan.'**
+  /// **'Completa los cinco pasos para que tu entrenador entienda cómo ha ido tu semana y pueda ajustar el plan.'**
   String get recapStartDescription;
 
   /// No description provided for @recapStartButton.
@@ -2201,7 +2201,7 @@ abstract class AppLocalizations {
   /// No description provided for @completeTheFourBlocksAndSendYourWeeklySummary.
   ///
   /// In es, this message translates to:
-  /// **'Completa los cuatro bloques y envía tu resumen semanal.'**
+  /// **'Completa los cinco pasos y envía tu resumen semanal.'**
   String get completeTheFourBlocksAndSendYourWeeklySummary;
 
   /// No description provided for @sendRecap.
@@ -7716,7 +7716,7 @@ abstract class AppLocalizations {
   /// No description provided for @recapListEmptyCoachText.
   ///
   /// In es, this message translates to:
-  /// **'Cuéntame cómo ha ido tu semana en cinco pasos. Con eso ajusto tu plan.'**
+  /// **'Cuéntame cómo ha ido tu semana en cinco pasos.'**
   String get recapListEmptyCoachText;
 
   /// No description provided for @recapListErrorHeadlineFirst.
@@ -7730,6 +7730,138 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'con el recap.'**
   String get recapListErrorHeadlineSecond;
+
+  /// No description provided for @recapStepKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Recap semanal · paso {step} de {total}'**
+  String recapStepKicker(int step, int total);
+
+  /// No description provided for @recapStepTrainingFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Entreno.'**
+  String get recapStepTrainingFirst;
+
+  /// No description provided for @recapStepTrainingSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo ha ido.'**
+  String get recapStepTrainingSecond;
+
+  /// No description provided for @recapStepNutritionFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Nutrición.'**
+  String get recapStepNutritionFirst;
+
+  /// No description provided for @recapStepNutritionSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu semana cuenta.'**
+  String get recapStepNutritionSecond;
+
+  /// No description provided for @recapStepRecoveryFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Recuperación.'**
+  String get recapStepRecoveryFirst;
+
+  /// No description provided for @recapStepRecoverySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo estás.'**
+  String get recapStepRecoverySecond;
+
+  /// No description provided for @recapStepGeneralFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'General.'**
+  String get recapStepGeneralFirst;
+
+  /// No description provided for @recapStepGeneralSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo te sientes.'**
+  String get recapStepGeneralSecond;
+
+  /// No description provided for @recapStepImprovementFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejora.'**
+  String get recapStepImprovementFirst;
+
+  /// No description provided for @recapStepImprovementSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu opinión cuenta.'**
+  String get recapStepImprovementSecond;
+
+  /// No description provided for @recapStepTrainingCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Dime cómo han ido tus entrenos esta semana.'**
+  String get recapStepTrainingCoach;
+
+  /// No description provided for @recapStepNutritionCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntame cómo has comido esta semana.'**
+  String get recapStepNutritionCoach;
+
+  /// No description provided for @recapStepRecoveryCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Dime cómo has descansado y si has notado alguna molestia.'**
+  String get recapStepRecoveryCoach;
+
+  /// No description provided for @recapStepGeneralCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntame cómo te has sentido en general esta semana.'**
+  String get recapStepGeneralCoach;
+
+  /// No description provided for @recapStepImprovementCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Dime qué mejorarías del servicio y de la app.'**
+  String get recapStepImprovementCoach;
+
+  /// No description provided for @recapStartHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu semana.'**
+  String get recapStartHeadlineFirst;
+
+  /// No description provided for @recapStartHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'En cinco pasos.'**
+  String get recapStartHeadlineSecond;
+
+  /// No description provided for @recapSaveDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar borrador'**
+  String get recapSaveDraft;
+
+  /// No description provided for @recapNextStep.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get recapNextStep;
+
+  /// No description provided for @recapChosenZones.
+  ///
+  /// In es, this message translates to:
+  /// **'Zonas elegidas · {count}'**
+  String recapChosenZones(int count);
+
+  /// No description provided for @recapImprovement.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejora'**
+  String get recapImprovement;
 }
 
 class _AppLocalizationsDelegate

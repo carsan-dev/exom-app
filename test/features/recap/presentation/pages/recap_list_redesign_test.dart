@@ -14,6 +14,7 @@ import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_step_transition.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
@@ -300,7 +301,7 @@ void main() {
       await tester.tap(newRecap);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(PageView), findsOneWidget);
+      expect(find.byType(ExomStepTransition), findsOneWidget);
       // A new form: no recap id and nothing but this week's dates.
       final form = _blocOf(tester).state as RecapFormActive;
       expect(form.recapId, isNull);
@@ -322,7 +323,7 @@ void main() {
       await tester.tap(newRecap);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(PageView), findsOneWidget);
+      expect(find.byType(ExomStepTransition), findsOneWidget);
       // It loads that draft: its id, its week and its values.
       final form = _blocOf(tester).state as RecapFormActive;
       expect(form.recapId, 'D');
@@ -349,7 +350,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(SnackBar), findsNothing);
-      expect(find.byType(PageView), findsNothing);
+      expect(find.byType(ExomStepTransition), findsNothing);
     });
 
     testWidgets('not blocked: the button is lime and there is no reason', (
@@ -444,7 +445,7 @@ void main() {
       await tester.tap(find.text('16 nov - 22 nov'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(PageView), findsOneWidget);
+      expect(find.byType(ExomStepTransition), findsOneWidget);
       final form = _blocOf(tester).state as RecapFormActive;
       expect(form.recapId, 'D');
       expect(form.formData['week_start_date'], '2026-11-16');
@@ -546,7 +547,7 @@ void main() {
       await tester.tap(newRecap);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(PageView), findsOneWidget);
+      expect(find.byType(ExomStepTransition), findsOneWidget);
     });
 
     testWidgets('error: headline with the second line in the error colour', (

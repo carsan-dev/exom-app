@@ -22,6 +22,7 @@ List<InlineSpan> exomFigureSpans({
   required String value,
   required double fontSize,
   String? unit,
+  Color? unitColor,
 }) {
   if (unit == null || value.isEmpty) return [TextSpan(text: value)];
   final unitSize = fontSize * 0.4;
@@ -36,7 +37,7 @@ List<InlineSpan> exomFigureSpans({
     ),
     TextSpan(
       text: unit,
-      style: TextStyle(fontSize: unitSize, letterSpacing: 0),
+      style: TextStyle(fontSize: unitSize, letterSpacing: 0, color: unitColor),
     ),
   ];
 }
@@ -63,6 +64,7 @@ class ExomNumeral extends StatelessWidget {
     this.size = ExomNumeralSize.hero96,
     this.isData = true,
     this.side,
+    this.unitColor,
   });
 
   /// With the sketch line height (.78) the round digits (0, 3, 6, 8, 9) overshoot
@@ -82,6 +84,10 @@ class ExomNumeral extends StatelessWidget {
   /// `true`: data colour; `false`: text colour (system operation).
   final bool isData;
   final Widget? side;
+
+  /// Colour of [unit] when it differs from the figure's (the sketch's muted
+  /// `small`); by default the unit takes the figure's colour.
+  final Color? unitColor;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +117,7 @@ class ExomNumeral extends StatelessWidget {
                 value: value,
                 unit: unitText,
                 fontSize: fontSize,
+                unitColor: unitColor,
               ),
             ),
             key: valueKey,

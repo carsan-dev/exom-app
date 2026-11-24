@@ -26,6 +26,7 @@ class ExomScaleChips extends StatelessWidget {
     this.onChanged,
     this.lowLabel,
     this.highLabel,
+    this.semanticLabelOf,
     this.allowDeselect = false,
   }) : assert(min < max, 'min must be below max');
 
@@ -35,6 +36,11 @@ class ExomScaleChips extends StatelessWidget {
   final ValueChanged<int?>? onChanged;
   final String? lowLabel;
   final String? highLabel;
+
+  /// Spoken label of each value; by default the number, with [lowLabel] and
+  /// [highLabel] on the first and last. Use it to give the question and the
+  /// maximum when the scale stands alone in a form.
+  final String Function(int value)? semanticLabelOf;
   final bool allowDeselect;
 
   static const int _columns = 5;
@@ -59,11 +65,13 @@ class ExomScaleChips extends StatelessWidget {
           options: [for (var v = min; v <= max; v++) v],
           selected: selected,
           labelOf: (v) => '$v',
-          semanticLabelOf: (v) {
-            if (v == min && low != null) return '$v, $low';
-            if (v == max && high != null) return '$v, $high';
-            return '$v';
-          },
+          semanticLabelOf:
+              semanticLabelOf ??
+              (v) {
+                if (v == min && low != null) return '$v, $low';
+                if (v == max && high != null) return '$v, $high';
+                return '$v';
+              },
           columns: _columns,
           labelStyle: const TextStyle(
             fontFamily: AppTheme.displayFontFamily,

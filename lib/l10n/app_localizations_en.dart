@@ -1067,7 +1067,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapStartDescription =>
-      'Complete the four steps so your coach understands how your week went and can adjust your plan.';
+      'Complete the five steps so your coach understands how your week went and can adjust your plan.';
 
   @override
   String get recapStartButton => 'Start';
@@ -1167,7 +1167,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completeTheFourBlocksAndSendYourWeeklySummary =>
-      'Complete the four sections and send your weekly summary.';
+      'Complete the five steps and send your weekly summary.';
 
   @override
   String get sendRecap => 'Send recap';
@@ -4672,11 +4672,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapListEmptyCoachText =>
-      'Tell me how your week went in five steps. With that I adjust your plan.';
+      'Tell me how your week went in five steps.';
 
   @override
   String get recapListErrorHeadlineFirst => 'Something went wrong';
 
   @override
   String get recapListErrorHeadlineSecond => 'with the recap.';
+
+  @override
+  String recapStepKicker(int step, int total) {
+    return 'Weekly recap · step $step of $total';
+  }
+
+  @override
+  String get recapStepTrainingFirst => 'Training.';
+
+  @override
+  String get recapStepTrainingSecond => 'How it went.';
+
+  @override
+  String get recapStepNutritionFirst => 'Nutrition.';
+
+  @override
+  String get recapStepNutritionSecond => 'Your week counts.';
+
+  @override
+  String get recapStepRecoveryFirst => 'Recovery.';
+
+  @override
+  String get recapStepRecoverySecond => 'How you are.';
+
+  @override
+  String get recapStepGeneralFirst => 'General.';
+
+  @override
+  String get recapStepGeneralSecond => 'How you feel.';
+
+  @override
+  String get recapStepImprovementFirst => 'Improve.';
+
+  @override
+  String get recapStepImprovementSecond => 'Your opinion counts.';
+
+  @override
+  String get recapStepTrainingCoach =>
+      'Tell me how your workouts went this week.';
+
+  @override
+  String get recapStepNutritionCoach => 'Tell me how you ate this week.';
+
+  @override
+  String get recapStepRecoveryCoach =>
+      'Tell me how you rested and whether you felt any discomfort.';
+
+  @override
+  String get recapStepGeneralCoach => 'Tell me how you felt overall this week.';
+
+  @override
+  String get recapStepImprovementCoach =>
+      'Tell me what you would improve about the service and the app.';
+
+  @override
+  String get recapStartHeadlineFirst => 'Your week.';
+
+  @override
+  String get recapStartHeadlineSecond => 'In five steps.';
+
+  @override
+  String get recapSaveDraft => 'Save draft';
+
+  @override
+  String get recapNextStep => 'Next';
+
+  @override
+  String recapChosenZones(int count) {
+    return 'Chosen areas · $count';
+  }
+
+  @override
+  String get recapImprovement => 'Improve';
 }

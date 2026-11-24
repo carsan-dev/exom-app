@@ -787,6 +787,13 @@ class AppDrawer extends StatelessWidget {
         l10n.userDefaultName;
     final palette = context.exomPalette;
     final screenWidth = MediaQuery.sizeOf(context).width;
+    // The destination being shown (L5-F2-ICONOS): by the router's matched
+    // location, prefix of the destination's route. None outside a router or
+    // on any other screen.
+    final location = GoRouter.maybeOf(context)?.state.matchedLocation;
+    bool isCurrent(String route) =>
+        location != null &&
+        (location == route || location.startsWith('$route/'));
 
     // Pops the drawer and then runs [go]: the order every entry always had.
     VoidCallback leave(VoidCallback go) => () {
@@ -850,31 +857,43 @@ class AppDrawer extends StatelessWidget {
                   items: [
                     ExomIndexItem(
                       title: l10n.profileMenuItem,
+                      leading: ExomIcons.profile,
+                      selected: isCurrent(AppRoutes.profile),
                       titleKey: drawerItemKeys[0],
                       onTap: leave(() => context.push(AppRoutes.profile)),
                     ),
                     ExomIndexItem(
                       title: l10n.challengesMenuItem,
+                      leading: ExomIcons.trophy,
+                      selected: isCurrent(AppRoutes.challenges),
                       titleKey: drawerItemKeys[1],
                       onTap: leave(() => context.go(AppRoutes.challenges)),
                     ),
                     ExomIndexItem(
                       title: l10n.weeklyRecapMenuItem,
+                      leading: ExomIcons.barChart,
+                      selected: isCurrent(AppRoutes.recap),
                       titleKey: drawerItemKeys[2],
                       onTap: leave(() => context.push(AppRoutes.recap)),
                     ),
                     ExomIndexItem(
                       title: l10n.feedbackMenuItem,
+                      leading: ExomIcons.feedback,
+                      selected: isCurrent(AppRoutes.feedback),
                       titleKey: drawerItemKeys[3],
                       onTap: leave(() => context.push(AppRoutes.feedback)),
                     ),
                     ExomIndexItem(
                       title: l10n.settingsMenuItem,
+                      leading: ExomIcons.settings,
+                      selected: isCurrent(AppRoutes.settings),
                       titleKey: drawerItemKeys[4],
                       onTap: leave(() => context.push(AppRoutes.settings)),
                     ),
                     ExomIndexItem(
                       title: l10n.helpMenuItem,
+                      leading: ExomIcons.help,
+                      selected: isCurrent(AppRoutes.help),
                       titleKey: drawerItemKeys[5],
                       onTap: leave(() => context.push(AppRoutes.help)),
                     ),

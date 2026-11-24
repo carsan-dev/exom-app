@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
@@ -15,6 +17,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../golden/redesign_scenes.dart' show loadRedesignFonts;
 import '../widgets/exom_component_harness.dart';
+import '../widgets/expect_no_lime_ink.dart';
 
 // L5-F2: «Recap semanal» and «Cerrar sesión» in sentence case. The six
 // destinations are painted upper case (numbered index, `.x-ix`); the log-out
@@ -127,7 +130,7 @@ void main() {
     });
   }
 
-  testWidgets('drawer panel is 304 wide (264 at 320 dp), numbered, scrolls', (
+  testWidgets('drawer panel is 304 wide (264 at 320 dp), icons, scrolls', (
     tester,
   ) async {
     for (final width in [390.0, 320.0]) {
@@ -157,10 +160,219 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(ExomIndexList), findsOneWidget);
+      // L5-F2-ICONOS: the icons replace the numbers.
       for (final n in ['01', '02', '03', '04', '05', '06']) {
-        expect(find.text(n), findsOneWidget);
+        expect(find.text(n), findsNothing);
       }
     }
+  });
+
+  const destinationIcons = <(String, IconData)>[
+    (AppRoutes.profile, ExomIcons.profile),
+    (AppRoutes.challenges, ExomIcons.trophy),
+    (AppRoutes.recap, ExomIcons.barChart),
+    (AppRoutes.feedback, ExomIcons.feedback),
+    (AppRoutes.settings, ExomIcons.settings),
+    (AppRoutes.help, ExomIcons.help),
+  ];
+
+  /// Opens the drawer on a real router at [location].
+  Future<void> pumpDrawerAt(
+    WidgetTester tester,
+    String location, {
+    Brightness brightness = Brightness.dark,
+    double width = 390,
+    double textScale = 1.0,
+  }) async {
+    final keys = List.generate(7, (_) => GlobalKey());
+    final router = GoRouter(
+      initialLocation: location,
+      routes: [
+        GoRoute(
+          path: '/:rest(.*)',
+          builder: (context, _) => Scaffold(
+            endDrawer: AppDrawer(drawerItemKeys: keys, displayName: 'Lucía'),
+            body: Builder(
+              builder: (ctx) => TextButton(
+                onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await loadRedesignFonts();
+    tester.view.physicalSize = Size(width, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      BlocProvider<AuthBloc>.value(
+        value: _Auth(),
+        child: MaterialApp.router(
+          builder: (context, app) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: app!,
+          ),
+          routerConfig: router,
+          theme: themeFor(brightness),
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  Finder entryOf(IconData icon) => find.ancestor(
+    of: find.descendant(of: find.byType(Drawer), matching: find.byIcon(icon)),
+    matching: find.byKey(const Key('exom-index-entry')),
+  );
+
+  for (final brightness in Brightness.values) {
+    testWidgets('each destination shows its icon, no number '
+        '(${brightness.name})', (tester) async {
+      await pumpDrawerAt(tester, AppRoutes.home, brightness: brightness);
+      final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+      for (final (_, icon) in destinationIcons) {
+        final finder = find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byIcon(icon),
+        );
+        expect(finder, findsOneWidget, reason: '$icon');
+        final widget = tester.widget<Icon>(finder);
+        expect(widget.size, 22);
+        expect(widget.color, palette.textSecondary);
+        expect(tester.getSize(entryOf(icon)).height, greaterThanOrEqualTo(60));
+      }
+      for (final n in ['01', '02', '03', '04', '05', '06']) {
+        expect(find.text(n), findsNothing);
+      }
+      expect(find.byKey(const Key('exom-index-selected-rule')), findsNothing);
+      expectNoLimeInk(tester);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      // Icon and rule contrast against the panel (the generic text guideline
+      // reads the scrim behind the drawer, not the panel).
+      double ratio(Color a, Color b) {
+        final l1 = a.computeLuminance();
+        final l2 = b.computeLuminance();
+        return (math.max(l1, l2) + 0.05) / (math.min(l1, l2) + 0.05);
+      }
+
+      expect(
+        ratio(palette.textSecondary, palette.background),
+        greaterThan(4.5),
+      );
+      expect(ratio(palette.textPrimary, palette.background), greaterThan(4.5));
+    });
+
+    testWidgets('on Retos only Retos is selected (${brightness.name})', (
+      tester,
+    ) async {
+      await pumpDrawerAt(tester, AppRoutes.challenges, brightness: brightness);
+      final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+      final handle = tester.ensureSemantics();
+      for (final (path, icon) in destinationIcons) {
+        final current = path == AppRoutes.challenges;
+        final entry = entryOf(icon);
+        expect(
+          // ignore: deprecated_member_use
+          tester.getSemantics(entry).hasFlag(SemanticsFlag.isSelected),
+          current,
+          reason: path,
+        );
+        final iconWidget = tester.widget<Icon>(
+          find.descendant(of: entry, matching: find.byIcon(icon)),
+        );
+        expect(
+          iconWidget.color,
+          current ? palette.textPrimary : palette.textSecondary,
+          reason: path,
+        );
+      }
+      final rule = find.byKey(const Key('exom-index-selected-rule'));
+      expect(rule, findsOneWidget);
+      expect(tester.getSize(rule).width, 2);
+      expect(tester.widget<ColoredBox>(rule).color, palette.textPrimary);
+      final entryRect = tester.getRect(entryOf(ExomIcons.trophy));
+      expect(tester.getRect(rule).left, entryRect.left);
+      expect(tester.getRect(rule).height, entryRect.height);
+      expectNoLimeInk(tester);
+      handle.dispose();
+    });
+  }
+
+  testWidgets('prefix boundary: /recaps-algo and /challengesX mark nothing', (
+    tester,
+  ) async {
+    for (final location in ['/recaps-algo', '/challengesX']) {
+      await pumpDrawerAt(tester, location);
+      expect(
+        find.byKey(const Key('exom-index-selected-rule')),
+        findsNothing,
+        reason: location,
+      );
+    }
+  });
+
+  testWidgets('the 2 px rule does not swallow the tap on the marked row', (
+    tester,
+  ) async {
+    await pumpDrawerAt(tester, AppRoutes.challenges);
+    final rect = tester.getRect(entryOf(ExomIcons.trophy));
+    await tester.tapAt(Offset(rect.left + 1, rect.center.dy));
+    await tester.pumpAndSettle();
+    expect(find.byType(Drawer), findsNothing, reason: 'tap at left + 1 closes');
+  });
+
+  testWidgets('with an icon the column stays 26 wide at 160 % and 320 dp', (
+    tester,
+  ) async {
+    await pumpDrawerAt(
+      tester,
+      AppRoutes.challenges,
+      width: 320,
+      textScale: 1.6,
+    );
+    for (final (_, icon) in destinationIcons) {
+      final column = find.ancestor(
+        of: find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byIcon(icon),
+        ),
+        matching: find.byType(SizedBox),
+      );
+      final widths = tester
+          .widgetList<SizedBox>(column)
+          .map((b) => b.width)
+          .whereType<double>();
+      expect(widths, contains(26.0), reason: '$icon');
+    }
+    expectNoOverflow(tester);
+  });
+
+  testWidgets('a sub-route of Retos still marks Retos; Inicio marks none', (
+    tester,
+  ) async {
+    await pumpDrawerAt(tester, '${AppRoutes.challenges}/abc');
+    expect(find.byKey(const Key('exom-index-selected-rule')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: entryOf(ExomIcons.trophy),
+        matching: find.byKey(const Key('exom-index-selected-rule')),
+      ),
+      findsNothing,
+      reason: 'the rule is a sibling of the entry, not inside it',
+    );
+    await pumpDrawerAt(tester, AppRoutes.home);
+    expect(find.byKey(const Key('exom-index-selected-rule')), findsNothing);
   });
 
   for (final brightness in Brightness.values) {
@@ -187,10 +399,7 @@ void main() {
           _expectNoWordSplit(key.currentContext! as Element);
         }
         for (final text in tester.widgetList<Text>(
-          find.descendant(
-            of: find.byType(Drawer),
-            matching: find.byType(Text),
-          ),
+          find.descendant(of: find.byType(Drawer), matching: find.byType(Text)),
         )) {
           expect(text.overflow, isNot(TextOverflow.ellipsis));
         }

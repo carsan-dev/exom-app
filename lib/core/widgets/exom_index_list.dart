@@ -14,6 +14,8 @@ class ExomIndexItem {
   const ExomIndexItem({
     required this.title,
     this.icon,
+    this.leading,
+    this.selected = false,
     this.status,
     this.onTap,
     this.titleKey,
@@ -26,6 +28,15 @@ class ExomIndexItem {
 
   /// Trailing icon; a chevron by default when [onTap] is set.
   final IconData? icon;
+
+  /// Leading icon that replaces the position number («01»…) in its column
+  /// (22, secondary colour; primary when [selected]). Null keeps the number.
+  final IconData? leading;
+
+  /// Current destination: primary-colour icon, a 2 px primary rule on the left
+  /// edge of the entry, announced as selected. Needs no [leading] to be set,
+  /// but is only drawn by the icon variant.
+  final bool selected;
 
   /// Short status after the title (e.g. «3 nuevas»), DM Sans 14 / 600.
   final String? status;
@@ -116,9 +127,12 @@ class _IndexEntry extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final icon = item.icon ?? (item.onTap == null ? null : ExomIcons.next);
     final status = item.status;
-    return MergeSemantics(
+    final leading = item.leading;
+    final selected = item.selected && leading != null;
+    final entry = MergeSemantics(
       child: Semantics(
         button: item.onTap != null,
+        selected: selected ? true : null,
         child: ExomRowSurface(
           key: const Key('exom-index-entry'),
           onTap: item.onTap,
@@ -133,10 +147,14 @@ class _IndexEntry extends StatelessWidget {
                 palette.data,
               ).copyWith(fontSize: _numberSize);
               final numberText = ExomIndexNumber.format(n);
-              final numberWidth = math.max(
-                scaler.scale(_numberSize * 1.6),
-                _textWidth(numberText, numberStyle, scaler, context),
-              );
+              // With an icon the column is fixed (22 + 2 x 2, `.x-ix .lead`):
+              // it does not grow with the text scale.
+              final numberWidth = leading != null
+                  ? 26.0
+                  : math.max(
+                      scaler.scale(_numberSize * 1.6),
+                      _textWidth(numberText, numberStyle, scaler, context),
+                    );
               final iconWidth = icon == null ? 0.0 : 14.0 + 22;
               // Inline, title and status share what is left equally (the
               // status only takes what it needs, the title keeps the half).
@@ -174,17 +192,37 @@ class _IndexEntry extends StatelessWidget {
                   // flex-start` of the number); the rest is centred.
                   Expanded(
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: leading != null
+                          ? CrossAxisAlignment.center
+                          : CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: EdgeInsets.only(
-                            top: scaler.scale(_numberSize * 0.2),
+                        if (leading != null)
+                          // The icon takes the number's column, centred in
+                          // the entry (`.x-ix .lead`).
+                          SizedBox(
+                            width: numberWidth,
+                            child: Center(
+                              child: Icon(
+                                leading,
+                                size: 22,
+                                color: selected
+                                    ? palette.textPrimary
+                                    : palette.textSecondary,
+                              ),
+                            ),
+                          )
+                        else
+                          Padding(
+                            padding: EdgeInsets.only(
+                              top: scaler.scale(_numberSize * 0.2),
+                            ),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minWidth: numberWidth,
+                              ),
+                              child: Text(numberText, style: numberStyle),
+                            ),
                           ),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(minWidth: numberWidth),
-                            child: Text(numberText, style: numberStyle),
-                          ),
-                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: stacked
@@ -216,6 +254,25 @@ class _IndexEntry extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!selected) return entry;
+    return Stack(
+      children: [
+        entry,
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 2,
+          // Decoration only: the tap on its 2 px reaches the entry.
+          child: IgnorePointer(
+            child: ColoredBox(
+              key: const Key('exom-index-selected-rule'),
+              color: palette.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

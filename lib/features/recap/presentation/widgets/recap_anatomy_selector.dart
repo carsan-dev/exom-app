@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 enum RecapAnatomyView { front, back }
@@ -252,8 +253,8 @@ class RecapAnatomySelector extends StatefulWidget {
 }
 
 class _RecapAnatomySelectorState extends State<RecapAnatomySelector> {
-  static const double _toggleHeight = 40;
-  static const double _toggleSpacing = 12;
+  static const double _toggleHeight = 48;
+  static const double _toggleSpacing = ExomSpacing.md;
 
   var _view = RecapAnatomyView.front;
 
@@ -278,48 +279,28 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector> {
     }
   }
 
-  Widget _buildViewTab({
-    required BuildContext context,
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    final palette = context.exomPalette;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          height: _toggleHeight,
-          alignment: Alignment.center,
-          decoration: active
-              ? GlassDecoration.accentCard(palette.primary, borderRadius: 12)
-              : const BoxDecoration(),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active ? palette.primary : palette.textDisabled,
-              fontSize: 12,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
-    return SizedBox(
-      width: _bodyWidth,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Front / back (D14-3): the zones chosen belong to the form, not to
+        // the view, so changing the view never loses them.
+        ExomSegmentedControl<RecapAnatomyView>(
+          options: RecapAnatomyView.values,
+          selected: _view,
+          labelOf: (view) => view == RecapAnatomyView.front
+              ? l10n.frontViewLabel
+              : l10n.backViewLabel,
+          onChanged: (view) => setState(() => _view = view),
+        ),
+        const SizedBox(height: _toggleSpacing),
+        Center(
+          child: GestureDetector(
             onTapDown: _handleTap,
             child: SizedBox(
               width: _bodyWidth,
@@ -334,33 +315,8 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector> {
               ),
             ),
           ),
-          const SizedBox(height: _toggleSpacing),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: GlassDecoration.card(
-              borderRadius: 14,
-              borderColor: palette.glassBorder.withValues(alpha: 0.12),
-            ),
-            child: Row(
-              children: [
-                _buildViewTab(
-                  context: context,
-                  label: l10n.frontViewLabel,
-                  active: _view == RecapAnatomyView.front,
-                  onTap: () => setState(() => _view = RecapAnatomyView.front),
-                ),
-                const SizedBox(width: 4),
-                _buildViewTab(
-                  context: context,
-                  label: l10n.backViewLabel,
-                  active: _view == RecapAnatomyView.back,
-                  onTap: () => setState(() => _view = RecapAnatomyView.back),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -429,10 +385,10 @@ class _RecapAnatomyPainter extends CustomPainter {
       ..strokeWidth = 0.8
       ..strokeJoin = StrokeJoin.round;
     final selectedFill = Paint()
-      ..color = palette.primary.withValues(alpha: 0.35)
+      ..color = palette.selectionFill.withValues(alpha: 0.55)
       ..style = PaintingStyle.fill;
     final selectedStroke = Paint()
-      ..color = palette.primary.withValues(alpha: 0.65)
+      ..color = palette.textPrimary.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4
       ..strokeJoin = StrokeJoin.round;

@@ -4679,4 +4679,48 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedbackRemoveFile => 'Quitar';
+
+  @override
+  String get recapListHeadlineFirst => 'Tu semana.';
+
+  @override
+  String get recapListHeadlineSecond => 'También cuenta.';
+
+  @override
+  String recapListWeekSubtitle(String start, String end) {
+    return 'Semana del $start al $end';
+  }
+
+  @override
+  String recapListNewCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'comentarios nuevos de tu entrenador',
+      one: 'comentario nuevo de tu entrenador',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recapListNotRated => 'Sin valorar';
+
+  @override
+  String get recapListCoachAuthor => 'tu entrenador';
+
+  @override
+  String get recapListEmptyHeadlineFirst => 'Sin recaps.';
+
+  @override
+  String get recapListEmptyHeadlineSecond => 'Todavía.';
+
+  @override
+  String get recapListEmptyCoachText =>
+      'Cuéntame cómo ha ido tu semana en cinco pasos. Con eso ajusto tu plan.';
+
+  @override
+  String get recapListErrorHeadlineFirst => 'Algo ha fallado';
+
+  @override
+  String get recapListErrorHeadlineSecond => 'con el recap.';
 }

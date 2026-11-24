@@ -66,15 +66,22 @@ class ExomBand extends StatelessWidget {
 /// The sketch draws a 3 px bar; the L5 contract fixes it at [ExomRule.bar]
 /// (4 px).
 class ExomFeatureBlock extends StatelessWidget {
-  const ExomFeatureBlock({super.key, required this.child});
+  const ExomFeatureBlock({
+    super.key,
+    required this.child,
+    this.topPadding = 16,
+  });
 
   final Widget child;
+
+  /// Space between the bar and the content.
+  final double topPadding;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     return Container(
-      padding: const EdgeInsets.only(top: 16, bottom: 20),
+      padding: EdgeInsets.only(top: topPadding, bottom: 20),
       decoration: BoxDecoration(
         color: palette.surface,
         border: Border(

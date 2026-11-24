@@ -1625,5 +1625,18 @@
   "feedbackQuestionType": "Tipo de evidencia",
   "feedbackQuestionFile": "Archivo",
   "feedbackChooseFile": "Elegir archivo",
-  "feedbackRemoveFile": "Quitar"
+  "feedbackRemoveFile": "Quitar",
+  "recapListHeadlineFirst": "Tu semana.",
+  "recapListHeadlineSecond": "También cuenta.",
+  "recapListWeekSubtitle": "Semana del {start} al {end}",
+  "@recapListWeekSubtitle": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
+  "recapListNewCommentsCount": "{count, plural, one{comentario nuevo de tu entrenador} other{comentarios nuevos de tu entrenador}}",
+  "@recapListNewCommentsCount": {"placeholders": {"count": {"type": "int"}}},
+  "recapListNotRated": "Sin valorar",
+  "recapListCoachAuthor": "tu entrenador",
+  "recapListEmptyHeadlineFirst": "Sin recaps.",
+  "recapListEmptyHeadlineSecond": "Todavía.",
+  "recapListEmptyCoachText": "Cuéntame cómo ha ido tu semana en cinco pasos. Con eso ajusto tu plan.",
+  "recapListErrorHeadlineFirst": "Algo ha fallado",
+  "recapListErrorHeadlineSecond": "con el recap."
 }

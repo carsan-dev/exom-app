@@ -4635,4 +4635,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackRemoveFile => 'Remove';
+
+  @override
+  String get recapListHeadlineFirst => 'Your week.';
+
+  @override
+  String get recapListHeadlineSecond => 'It counts too.';
+
+  @override
+  String recapListWeekSubtitle(String start, String end) {
+    return 'Week of $start to $end';
+  }
+
+  @override
+  String recapListNewCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'new comments from your coach',
+      one: 'new comment from your coach',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recapListNotRated => 'Not rated';
+
+  @override
+  String get recapListCoachAuthor => 'your coach';
+
+  @override
+  String get recapListEmptyHeadlineFirst => 'No recaps.';
+
+  @override
+  String get recapListEmptyHeadlineSecond => 'Yet.';
+
+  @override
+  String get recapListEmptyCoachText =>
+      'Tell me how your week went in five steps. With that I adjust your plan.';
+
+  @override
+  String get recapListErrorHeadlineFirst => 'Something went wrong';
+
+  @override
+  String get recapListErrorHeadlineSecond => 'with the recap.';
 }

@@ -1495,5 +1495,16 @@
   "feedbackQuestionType": "Evidence type",
   "feedbackQuestionFile": "File",
   "feedbackChooseFile": "Choose file",
-  "feedbackRemoveFile": "Remove"
+  "feedbackRemoveFile": "Remove",
+  "recapListHeadlineFirst": "Your week.",
+  "recapListHeadlineSecond": "It counts too.",
+  "recapListWeekSubtitle": "Week of {start} to {end}",
+  "recapListNewCommentsCount": "{count, plural, one{new comment from your coach} other{new comments from your coach}}",
+  "recapListNotRated": "Not rated",
+  "recapListCoachAuthor": "your coach",
+  "recapListEmptyHeadlineFirst": "No recaps.",
+  "recapListEmptyHeadlineSecond": "Yet.",
+  "recapListEmptyCoachText": "Tell me how your week went in five steps. With that I adjust your plan.",
+  "recapListErrorHeadlineFirst": "Something went wrong",
+  "recapListErrorHeadlineSecond": "with the recap."
 }

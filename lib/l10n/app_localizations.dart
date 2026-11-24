@@ -7664,6 +7664,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Quitar'**
   String get feedbackRemoveFile;
+
+  /// No description provided for @recapListHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu semana.'**
+  String get recapListHeadlineFirst;
+
+  /// No description provided for @recapListHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'También cuenta.'**
+  String get recapListHeadlineSecond;
+
+  /// No description provided for @recapListWeekSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Semana del {start} al {end}'**
+  String recapListWeekSubtitle(String start, String end);
+
+  /// No description provided for @recapListNewCommentsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{comentario nuevo de tu entrenador} other{comentarios nuevos de tu entrenador}}'**
+  String recapListNewCommentsCount(int count);
+
+  /// No description provided for @recapListNotRated.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin valorar'**
+  String get recapListNotRated;
+
+  /// No description provided for @recapListCoachAuthor.
+  ///
+  /// In es, this message translates to:
+  /// **'tu entrenador'**
+  String get recapListCoachAuthor;
+
+  /// No description provided for @recapListEmptyHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin recaps.'**
+  String get recapListEmptyHeadlineFirst;
+
+  /// No description provided for @recapListEmptyHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía.'**
+  String get recapListEmptyHeadlineSecond;
+
+  /// No description provided for @recapListEmptyCoachText.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntame cómo ha ido tu semana en cinco pasos. Con eso ajusto tu plan.'**
+  String get recapListEmptyCoachText;
+
+  /// No description provided for @recapListErrorHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo ha fallado'**
+  String get recapListErrorHeadlineFirst;
+
+  /// No description provided for @recapListErrorHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'con el recap.'**
+  String get recapListErrorHeadlineSecond;
 }
 
 class _AppLocalizationsDelegate

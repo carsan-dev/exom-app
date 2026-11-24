@@ -93,8 +93,12 @@ const List<String> kRepaintedFiles = <String>[
 /// belongs to a later batch and keeps its legacy vocabulary until then.
 /// L5-A4a repainted the Calendario screen up to its month and year picker
 /// dialog; L5-A4b replaced that dialog and moved the file to
-/// [kRepaintedFiles]. No file is partly repainted now.
-const Map<String, String> kPartlyRepaintedFiles = <String, String>{};
+/// [kRepaintedFiles]. L5-C4 repainted the recap list (and its pinned action)
+/// up to the step form, which L5-C5 repaints.
+const Map<String, String> kPartlyRepaintedFiles = <String, String>{
+  'lib/features/recap/presentation/pages/recap_page.dart':
+      '// l5-c5-form:',
+};
 
 const String _allowMarker = 'l5-allow:';
 

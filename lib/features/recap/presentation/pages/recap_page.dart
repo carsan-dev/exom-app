@@ -1,5 +1,21 @@
+import 'dart:math' as math;
+
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -9,8 +25,6 @@ import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
@@ -46,6 +60,18 @@ class _RecapViewState extends State<_RecapView> {
   final PageController _pageController = PageController();
   final DateFormat _apiDateFormat = DateFormat('yyyy-MM-dd');
 
+  /// The form was open since the list was last shown. Saving and sending go
+  /// through `RecapLoading` before they fail, so the previous state alone
+  /// cannot tell a failed save from a failed load of the list.
+  bool _formOpen = false;
+
+  /// Leaving the form towards the list: the reload that follows is a load of
+  /// the list, so its failure is shown in line and not as a failed save.
+  void _cancelForm(BuildContext context) {
+    _formOpen = false;
+    context.read<RecapBloc>().add(const RecapFormCancelled());
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -59,6 +85,15 @@ class _RecapViewState extends State<_RecapView> {
         final palette = context.exomPalette;
         final semantic = context.exomSemantic;
         final l10n = AppLocalizations.of(context);
+
+        // D14-3: a failed load of the list is shown in line (the error view);
+        // the SnackBar is only for a save or send that fails in the form.
+        final errorFromForm = state is RecapError && _formOpen;
+        if (state is RecapFormActive) {
+          _formOpen = true;
+        } else if (state is! RecapLoading) {
+          _formOpen = false;
+        }
 
         if (state is RecapFormActive) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,24 +109,34 @@ class _RecapViewState extends State<_RecapView> {
         if (state is RecapSubmitted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.recapSentSuccessfully),
+              content: Text(
+                l10n.recapSentSuccessfully,
+                style: TextStyle(color: palette.background),
+              ),
               backgroundColor: semantic.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExomRadius.control),
               ),
             ),
           );
         }
 
-        if (state is RecapError) {
+        if (errorFromForm) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.recapSaveError)),
+              content: Text(
+                localizedErrorTextOf(
+                  context,
+                  state.message,
+                  fallback: (l10n) => l10n.recapSaveError,
+                ),
+                style: TextStyle(color: palette.background),
+              ),
               backgroundColor: palette.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExomRadius.control),
               ),
             ),
           );
@@ -106,29 +151,32 @@ class _RecapViewState extends State<_RecapView> {
         return ExomStaticBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
+            // Sketch C3: on the list the bar only carries «Volver» and the
+            // reload action; the screen title is the first line of the body.
             appBar: AppBar(
-              title: Text(
-                isFormActive
-                    ? formState.step == 5
+              title: isFormActive
+                  ? Text(
+                      formState.step == 5
                           ? l10n.recapImprovementTitle
                           : formState.recapId == null
                           ? l10n.newRecap
-                          : l10n.editRecap
-                    : l10n.weeklyRecapTitle,
-              ),
+                          : l10n.editRecap,
+                    )
+                  : null,
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
               leading: isFormActive
                   ? IconButton(
-                      onPressed: () => context.read<RecapBloc>().add(
-                        const RecapFormCancelled(),
-                      ),
+                      onPressed: () => _cancelForm(context),
                       icon: const Icon(ExomIcons.close),
                     )
                   : context.canPop()
                   ? IconButton(
                       onPressed: () => context.pop(),
-                      icon: const Icon(ExomIcons.back),
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
+                      icon: Icon(ExomIcons.back, color: palette.textPrimary),
                     )
                   : null,
               actions: isFormActive
@@ -138,66 +186,80 @@ class _RecapViewState extends State<_RecapView> {
                         onPressed: () => context.read<RecapBloc>().add(
                           const RecapLoadRequested(),
                         ),
-                        icon: const Icon(ExomIcons.retry),
+                        tooltip: l10n.retry,
+                        icon: Icon(ExomIcons.retry, color: palette.textPrimary),
                       ),
                     ],
             ),
-            floatingActionButton: state is RecapListLoaded
-                ? Builder(
-                    builder: (context) {
-                      final currentWeekDraft = _findCurrentWeekDraft(
-                        state.recaps,
-                      );
-                      final hasSubmittedRecapThisWeek =
-                          _hasSubmittedRecapThisWeek(state.recaps);
-                      final isBlocked =
-                          hasSubmittedRecapThisWeek && currentWeekDraft == null;
-
-                      return FloatingActionButton.extended(
-                        onPressed: () {
-                          if (isBlocked) {
-                            _showWeeklyRecapAlreadySubmittedMessage(context);
-                            return;
-                          }
-
-                          if (currentWeekDraft != null) {
-                            _openDraftRecap(currentWeekDraft);
-                            return;
-                          }
-
-                          context.read<RecapBloc>().add(
-                            const RecapCreateRequested(),
-                          );
-                        },
-                        backgroundColor: isBlocked
-                            ? palette.surfaceVariant
-                            : palette.primary,
-                        foregroundColor: isBlocked
-                            ? palette.textSecondary
-                            : palette.onPrimary,
-                        icon: Icon(
-                          isBlocked
-                              ? ExomIcons.block
-                              : currentWeekDraft != null
-                              ? ExomIcons.editNote
-                              : ExomIcons.add,
-                        ),
-                        label: Text(
-                          currentWeekDraft != null
-                              ? l10n.continueDraftRecap
-                              : l10n.newRecap,
-                        ),
-                      );
-                    },
-                  )
-                : null,
-            body: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: _buildBody(context, state),
+            body: Column(
+              children: [
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: _buildBody(context, state),
+                  ),
+                ),
+                if (state is RecapListLoaded)
+                  _buildFooter(context, state.recaps),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Pinned action of the list (D14-1): «Nuevo recap», «Continuar borrador»
+  /// (draft of this week) or «Crear mi primer recap» (empty list). With a recap
+  /// already sent this week and no draft the action is blocked: no lime, and
+  /// the reason in line above it instead of a SnackBar.
+  Widget _buildFooter(BuildContext context, List<RecapEntity> recaps) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final currentWeekDraft = _findCurrentWeekDraft(recaps);
+    final isBlocked =
+        _hasSubmittedRecapThisWeek(recaps) && currentWeekDraft == null;
+    final label = currentWeekDraft != null
+        ? l10n.continueDraftRecap
+        : recaps.isEmpty
+        ? l10n.createMyFirstRecap
+        : l10n.newRecap;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return ExomPinnedFooter(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isBlocked) ...[
+            Text(
+              l10n.recapAlreadySubmittedThisWeek,
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                fontSize: 14,
+                height: 1.4,
+                color: palette.textSecondary,
+              ),
+            ),
+            const SizedBox(height: ExomSpacing.sm),
+          ],
+          ExomPrimaryButton(
+            key: const ValueKey('recap-new'),
+            label: label,
+            trailingIcon: ExomIcons.forward,
+            onPressed: isBlocked
+                ? null
+                : () {
+                    if (currentWeekDraft != null) {
+                      _openDraftRecap(currentWeekDraft);
+                      return;
+                    }
+                    context.read<RecapBloc>().add(const RecapCreateRequested());
+                  },
+          ),
+        ],
+      ),
     );
   }
 
@@ -211,7 +273,10 @@ class _RecapViewState extends State<_RecapView> {
     ];
 
     if (state is RecapLoading || state is RecapInitial) {
-      return const _RecapLoadingView(key: ValueKey('recap-loading'));
+      return _RecapLoadingView(
+        key: const ValueKey('recap-loading'),
+        header: _buildListHeader(context),
+      );
     }
 
     if (state is RecapFormActive) {
@@ -230,8 +295,7 @@ class _RecapViewState extends State<_RecapView> {
         onSubmit: () => context.read<RecapBloc>().add(
           RecapSubmitRequested(recapId: state.recapId),
         ),
-        onCancel: () =>
-            context.read<RecapBloc>().add(const RecapFormCancelled()),
+        onCancel: () => _cancelForm(context),
         formatWeekRange: _formatWeekRange,
       );
     }
@@ -239,12 +303,11 @@ class _RecapViewState extends State<_RecapView> {
     if (state is RecapListLoaded) {
       return _RecapListView(
         key: const ValueKey('recap-list'),
+        header: _buildListHeader(context),
         recaps: state.recaps,
         onRefresh: () async {
           context.read<RecapBloc>().add(const RecapLoadRequested());
         },
-        onCreate: () =>
-            context.read<RecapBloc>().add(const RecapCreateRequested()),
         onOpenRecap: (recap) async {
           if (!recap.isDraft) {
             await context.push(AppRoutes.recapDetail(recap.id));
@@ -266,40 +329,57 @@ class _RecapViewState extends State<_RecapView> {
     }
 
     if (state is RecapError) {
-      final palette = context.exomPalette;
-      return Center(
+      return _RecapErrorView(
         key: const ValueKey('recap-error'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(ExomIcons.error, color: palette.error, size: 42),
-              const SizedBox(height: 16),
-              Text(
-                l10n.couldNotLoadRecap,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.recapLoadError),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: palette.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () =>
-                    context.read<RecapBloc>().add(const RecapLoadRequested()),
-                child: Text(l10n.retry),
-              ),
-            ],
-          ),
+        header: _buildListHeader(context),
+        message: localizedErrorTextOf(
+          context,
+          state.message,
+          fallback: (l10n) => l10n.recapLoadError,
         ),
+        onRetry: () =>
+            context.read<RecapBloc>().add(const RecapLoadRequested()),
       );
     }
 
     return const SizedBox.shrink(key: ValueKey('recap-empty'));
   }
+
+  /// Title and current week (sketch `.t1` + `.sec`), shared by every state of
+  /// the list. The week comes from the screen clock ([HomeClock]).
+  Widget _buildListHeader(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final today = _today(context);
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final format = DateFormat.MMMMd(languageCode);
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          HomeTitle(l10n.weeklyRecapTitle),
+          const SizedBox(height: ExomSpacing.sm),
+          Text(
+            l10n.recapListWeekSubtitle(
+              format.format(weekStart),
+              format.format(weekEnd),
+            ),
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              fontSize: 15,
+              height: 1.35,
+              color: palette.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DateTime _today(BuildContext context) => HomeClock.todayOf(context);
 
   RecapEntity? _findCurrentWeekDraft(List<RecapEntity> recaps) {
     for (final recap in recaps) {
@@ -320,8 +400,7 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   bool _isCurrentWeekRecap(RecapEntity recap) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = _today(context);
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 6));
 
@@ -338,20 +417,6 @@ class _RecapViewState extends State<_RecapView> {
       RecapFormStarted(
         recapId: draft.id,
         initialData: _buildInitialData(draft),
-      ),
-    );
-  }
-
-  void _showWeeklyRecapAlreadySubmittedMessage(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.recapAlreadySubmittedThisWeek),
-        backgroundColor: palette.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -411,228 +476,126 @@ class _RecapViewState extends State<_RecapView> {
   }
 }
 
+/// Loading: the header and skeleton rows with the shape of the final rows.
 class _RecapLoadingView extends StatelessWidget {
-  const _RecapLoadingView({super.key});
+  const _RecapLoadingView({super.key, required this.header});
+
+  final Widget header;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-      children: const [
-        ShimmerCard(
-          height: 92,
-          borderRadius: BorderRadius.all(Radius.circular(22)),
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      children: [
+        header,
+        const SizedBox(height: ExomSpacing.xxl),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              ExomSkeleton.row(),
+              ExomSkeleton.row(),
+              ExomSkeleton.row(),
+              ExomSkeleton.row(),
+            ],
+          ),
         ),
-        SizedBox(height: 16),
-        _RecapHistorySkeletonCard(),
-        SizedBox(height: 14),
-        _RecapHistorySkeletonCard(),
-        SizedBox(height: 14),
-        _RecapHistorySkeletonCard(),
       ],
     );
   }
 }
 
-class _RecapHistorySkeletonCard extends StatelessWidget {
-  const _RecapHistorySkeletonCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(18),
-      borderRadius: 22,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShimmerCard(
-                      height: 20,
-                      width: 152,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    SizedBox(height: 8),
-                    ShimmerCard(
-                      height: 14,
-                      width: 110,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    SizedBox(height: 10),
-                    ShimmerCard(
-                      height: 14,
-                      width: 172,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12),
-              ShimmerCard(
-                height: 28,
-                width: 78,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ShimmerCard(
-                height: 30,
-                width: 102,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-              ShimmerCard(
-                height: 30,
-                width: 108,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-              ShimmerCard(
-                height: 30,
-                width: 94,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ShimmerCard(
-              height: 40,
-              width: 116,
-              borderRadius: BorderRadius.all(Radius.circular(14)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// The list: header, the count of new trainer comments (or the headline alone)
+/// and one row per week. Empty, the invitation of the trainer.
 class _RecapListView extends StatelessWidget {
+  final Widget header;
   final List<RecapEntity> recaps;
   final Future<void> Function() onRefresh;
-  final VoidCallback onCreate;
   final Future<void> Function(RecapEntity recap) onOpenRecap;
   final String Function(RecapEntity recap) formatWeekRange;
 
   const _RecapListView({
     super.key,
+    required this.header,
     required this.recaps,
     required this.onRefresh,
-    required this.onCreate,
     required this.onOpenRecap,
     required this.formatWeekRange,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
     if (recaps.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 82,
-                height: 82,
-                decoration: BoxDecoration(
-                  color: palette.surfaceVariant,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Icon(
-                  ExomIcons.editCalendar,
-                  color: palette.primary,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n.youHaveNotSentAnyRecapYet,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.useThisSpaceToSummarizeYourWeek,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(ExomIcons.add),
-                label: Text(l10n.createMyFirstRecap),
-              ),
-            ],
+      return ListView(
+        padding: const EdgeInsets.only(top: 8, bottom: 24),
+        children: [
+          header,
+          const SizedBox(height: ExomSpacing.sm),
+          ExomEmptyState(
+            first: l10n.recapListEmptyHeadlineFirst,
+            second: l10n.recapListEmptyHeadlineSecond,
+            lead: l10n.youHaveNotSentAnyRecapYet,
+            body: l10n.useThisSpaceToSummarizeYourWeek,
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ExomCoachBlock(
+              // D16: the model carries no trainer name.
+              author: l10n.recapListCoachAuthor,
+              text: l10n.recapListEmptyCoachText,
+            ),
+          ),
+        ],
       );
     }
+
+    final unread = recaps
+        .where((recap) => recap.hasUnreadClientFeedback)
+        .length;
+    final trioNeeded = _RecapTrio.neededWidth(context, [
+      for (final recap in recaps) _RecapWeekRow.trioItems(l10n, recap),
+    ]);
 
     return RefreshIndicator(
       color: palette.primary,
       backgroundColor: palette.surface,
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        padding: const EdgeInsets.only(top: 8, bottom: 24),
         children: [
-          GlassCard(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(18),
-            borderRadius: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.yourWeeklyHistory,
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+          header,
+          const SizedBox(height: ExomSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: unread > 0
+                ? _UnreadHero(
+                    value: NumberFormat.decimalPattern(
+                      l10n.localeName,
+                    ).format(unread),
+                    label: l10n.recapListNewCommentsCount(unread),
+                  )
+                : ExomTwoLineHeadline(
+                    first: l10n.recapListHeadlineFirst,
+                    second: l10n.recapListHeadlineSecond,
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.trackYourWeeksReviewPreviousRecaps,
-                  style: TextStyle(
-                    color: palette.textSecondary,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
           ),
-          ...recaps.map(
-            (recap) => _RecapHistoryCard(
-              recap: recap,
-              weekLabel: formatWeekRange(recap),
-              onPressed: () async {
-                await onOpenRecap(recap);
-              },
-            ),
+          const SizedBox(height: ExomSpacing.xxl),
+          ExomFlatRowGroup(
+            children: [
+              for (final recap in recaps)
+                _RecapWeekRow(
+                  key: ValueKey('recap-row-${recap.id}'),
+                  recap: recap,
+                  weekLabel: formatWeekRange(recap),
+                  trioNeeded: trioNeeded,
+                  onTap: () async {
+                    await onOpenRecap(recap);
+                  },
+                ),
+            ],
           ),
         ],
       ),
@@ -640,123 +603,446 @@ class _RecapListView extends StatelessWidget {
   }
 }
 
-class _RecapHistoryCard extends StatelessWidget {
-  final RecapEntity recap;
-  final String weekLabel;
-  final VoidCallback onPressed;
-
-  const _RecapHistoryCard({
-    required this.recap,
-    required this.weekLabel,
-    required this.onPressed,
+/// Hero of the list with unread trainer comments: the headline first and, under
+/// it, the numeral with its label stuck below, read together as one node
+/// («1 comentario nuevo de tu entrenador»), so the headline never sits between
+/// the figure and what it counts.
+class _UnreadHero extends StatelessWidget {
+  const _UnreadHero({
+    required this.value,
+    required this.label,
   });
+
+  final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final trainingProgress = recap.trainingProgress;
-    final nutritionQuality = recap.nutritionQuality;
-    final mood = recap.mood;
-    final actionLabel = recap.isDraft ? l10n.continueButton : l10n.viewSummary;
-    final hasUnread = recap.hasUnreadClientFeedback;
-
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      borderRadius: 22,
-      accentColor: hasUnread ? palette.primary : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final palette = context.exomPalette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExomTwoLineHeadline(
+          first: l10n.recapListHeadlineFirst,
+          second: l10n.recapListHeadlineSecond,
+        ),
+        const SizedBox(height: ExomSpacing.md),
+        Semantics(
+          key: const ValueKey('recap-unread-hero'),
+          container: true,
+          label: '$value $label',
+          excludeSemantics: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      weekLabel,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${l10n.created} ${DateFormat('dd/MM/yyyy').format(recap.createdAt)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textDisabled,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (hasUnread) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            ExomIcons.chatUnread,
-                            size: 13,
-                            color: palette.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context).recapNewCoachComment,
-                            style: TextStyle(
-                              color: palette.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+              ExomNumeral(value: value, size: ExomNumeralSize.hero96),
+              const SizedBox(height: ExomSpacing.xs),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: AppTheme.bodyFontFamily,
+                  fontSize: 14,
+                  height: 1.35,
+                  color: palette.textSecondary,
                 ),
               ),
-              _StatusChip(status: recap.status),
             ],
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        ),
+      ],
+    );
+  }
+}
+
+/// One week (sketch `.x-row`): its range, its state, three values and a
+/// chevron. A recap with a new trainer comment is a featured block with the
+/// notice under the row (`.x-feat`).
+class _RecapWeekRow extends StatelessWidget {
+  final RecapEntity recap;
+  final String weekLabel;
+  final VoidCallback onTap;
+
+  /// Widest word of the whole list, so every row shares its trio columns.
+  final double trioNeeded;
+
+  const _RecapWeekRow({
+    super.key,
+    required this.recap,
+    required this.weekLabel,
+    required this.onTap,
+    required this.trioNeeded,
+  });
+
+  /// Label and raw value of the three cells of a week.
+  static List<(String, String?)> trioItems(
+    AppLocalizations l10n,
+    RecapEntity recap,
+  ) => [
+    (l10n.recapTraining, recap.trainingProgress),
+    (l10n.recapNutrition, recap.nutritionQuality),
+    (l10n.mood, recap.mood),
+  ];
+
+  static const EdgeInsetsGeometry _padding = EdgeInsetsDirectional.fromSTEB(
+    20,
+    12,
+    12,
+    12,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final featured = recap.hasUnreadClientFeedback;
+
+    final content = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _InfoPill(
-                icon: ExomIcons.train,
-                label: trainingProgress != null
-                    ? formatRecapOption(trainingProgress)
-                    : l10n.trainingNotRated,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    weekLabel,
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  _statusOf(context),
+                ],
               ),
-              _InfoPill(
-                icon: ExomIcons.diet,
-                label: nutritionQuality != null
-                    ? formatRecapOption(nutritionQuality)
-                    : l10n.nutritionNotRated,
-              ),
-              _InfoPill(
-                icon: ExomIcons.mood,
-                label: mood != null
-                    ? formatRecapOption(mood)
-                    : l10n.moodNotRated,
-              ),
+              const SizedBox(height: 6),
+              _RecapTrio(items: trioItems(l10n, recap), needed: trioNeeded),
             ],
           ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton(
-              onPressed: onPressed,
-              child: Text(actionLabel),
+        ),
+        Icon(ExomIcons.next, size: 22, color: palette.textSecondary),
+      ],
+    );
+
+    final row = MergeSemantics(
+      child: Semantics(
+        button: true,
+        child: featured
+            ? _FeaturedRowSurface(
+                onTap: onTap,
+                padding: _padding,
+                child: content,
+              )
+            : ExomRowSurface(
+                onTap: onTap,
+                minHeight: 72,
+                padding: _padding,
+                child: content,
+              ),
+      ),
+    );
+
+    if (!featured) return row;
+    // The bar belongs to its row: 16 dp of air above it (plus the 12 dp of the
+    // row before) and none between it and the row's own padding (12 dp).
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: ExomFeatureBlock(
+        topPadding: 0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            row,
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: ExcludeSemantics(
+                      child: Icon(
+                        ExomIcons.notifications,
+                        size: MediaQuery.textScalerOf(context).scale(18),
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.recapNewCoachComment,
+                      style: TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// D19: the list comes from the server, so a sent («Enviado») and a reviewed
+  /// recap are both confirmed (text colour with a check, never the «sending»
+  /// cloud, which means «uploading now»); a draft is pending (clock).
+  Widget _statusOf(BuildContext context) {
+    final state = switch (recap.status) {
+      'REVIEWED' || 'SUBMITTED' => ExomSyncState.confirmada,
+      _ => ExomSyncState.pendiente,
+    };
+    return ExomSyncStatus(
+      state: state,
+      label: recapCopy(context, recap.status),
+    );
+  }
+}
+
+/// Row surface of a featured recap: like [ExomRowSurface] without the top
+/// hairline, which the bar of the featured block replaces.
+class _FeaturedRowSurface extends StatelessWidget {
+  const _FeaturedRowSurface({
+    required this.child,
+    required this.onTap,
+    required this.padding,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: palette.surfaceElevated,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Padding(padding: padding, child: child),
+        ),
       ),
     );
   }
 }
+
+/// The three values of a week (`.c-trio`): label and value per cell, in as many
+/// columns as the width allows for the widest word of the whole list (measured
+/// once, with the real styles and the text scaler), so every row of the list
+/// shares its columns and no word is ever split.
+class _RecapTrio extends StatelessWidget {
+  const _RecapTrio({required this.items, required this.needed});
+
+  /// Label and raw value; a null or blank value is «Sin valorar».
+  final List<(String, String?)> items;
+
+  /// Width of the longest word of every visible row, from [neededWidth].
+  final double needed;
+
+  static const double _gap = 12;
+
+  static TextStyle _labelStyle(ExomThemePalette palette) => TextStyle(
+    fontFamily: AppTheme.bodyFontFamily,
+    fontSize: 13,
+    height: 1.3,
+    color: palette.textSecondary,
+  );
+
+  static TextStyle _notRatedStyle(ExomThemePalette palette) => TextStyle(
+    fontFamily: AppTheme.bodyFontFamily,
+    fontSize: 15,
+    height: 1.35,
+    color: palette.textSecondary,
+  );
+
+  static TextStyle _valueStyle(ExomThemePalette palette) => TextStyle(
+    fontFamily: AppTheme.displayFontFamily,
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    height: 1,
+    letterSpacing: -0.24,
+    color: palette.textPrimary,
+  );
+
+  static List<(String, String?)> _shown(
+    BuildContext context,
+    List<(String, String?)> items,
+  ) => [
+    for (final (label, value) in items)
+      (
+        label,
+        (value == null || value.trim().isEmpty)
+            ? null
+            : recapCopy(context, value).toUpperCase(),
+      ),
+  ];
+
+  /// Width of the longest word among the cells of all [rows].
+  static double neededWidth(
+    BuildContext context,
+    Iterable<List<(String, String?)>> rows,
+  ) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final labelStyle = _labelStyle(palette);
+    final notRatedStyle = _notRatedStyle(palette);
+    final valueStyle = _valueStyle(palette);
+
+    // Words split on plain whitespace only: a no-break space keeps its words.
+    double longestWord(String text, TextStyle style) {
+      var longest = 0.0;
+      for (final word in text.split(RegExp(r'[ \t\n]+'))) {
+        if (word.isEmpty) continue;
+        final painter = TextPainter(
+          text: TextSpan(text: word, style: style),
+          textDirection: direction,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        longest = math.max(longest, painter.width);
+        painter.dispose();
+      }
+      return longest;
+    }
+
+    var needed = 0.0;
+    for (final row in rows) {
+      for (final (label, value) in _shown(context, row)) {
+        needed = math.max(needed, longestWord(label, labelStyle));
+        needed = math.max(
+          needed,
+          value == null
+              ? longestWord(l10n.recapListNotRated, notRatedStyle)
+              : longestWord(value, valueStyle),
+        );
+      }
+    }
+    return needed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final labelStyle = _labelStyle(palette);
+    final notRatedStyle = _notRatedStyle(palette);
+    final valueStyle = _valueStyle(palette);
+    final shown = _shown(context, items);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        // Columns are as many as every word fits in whole; never a split word.
+        var columns = items.length;
+        while (columns > 1 &&
+            (width - _gap * (columns - 1)) / columns < needed + 1) {
+          columns--;
+        }
+        final cell = (width - _gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: _gap,
+          runSpacing: ExomSpacing.sm,
+          children: [
+            for (final (label, value) in shown)
+              SizedBox(
+                width: cell,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label, style: labelStyle),
+                    if (value == null)
+                      Text(l10n.recapListNotRated, style: notRatedStyle)
+                    else
+                      Text(value, style: valueStyle),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Load error in line (sketch C3 «Error»): headline with the second line in the
+/// error colour, the cause and «Reintentar».
+class _RecapErrorView extends StatelessWidget {
+  const _RecapErrorView({
+    super.key,
+    required this.header,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final Widget header;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      children: [
+        header,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExomTwoLineHeadline(
+                first: l10n.recapListErrorHeadlineFirst,
+                second: l10n.recapListErrorHeadlineSecond,
+                isError: true,
+              ),
+              const SizedBox(height: 14),
+              ExomInlineMessage(
+                kind: ExomMessageKind.error,
+                title: l10n.couldNotLoadRecap,
+                body: message,
+              ),
+              const SizedBox(height: 14),
+              ExomSecondaryButton(
+                key: const ValueKey('recap-retry'),
+                label: l10n.retry,
+                icon: ExomIcons.retry,
+                onPressed: onRetry,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// l5-c5-form: from here on, the step form (L5-C5) keeps its legacy vocabulary.
 
 class _RecapFormView extends StatelessWidget {
   final PageController pageController;
@@ -1037,89 +1323,6 @@ class _StepBadge extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String status;
-
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = switch (status) {
-      'REVIEWED' => semantic.success,
-      'SUBMITTED' => palette.primary,
-      _ => semantic.warning,
-    };
-
-    final invertedColor = color.computeLuminance() > 0.5
-        ? Colors.black
-        : Colors.white;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: isDark
-          ? BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 0.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                  spreadRadius: -4,
-                ),
-              ],
-            )
-          : GlassDecoration.accentCard(color, borderRadius: 999),
-      child: Text(
-        recapCopy(context, status),
-        style: TextStyle(
-          color: invertedColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _InfoPill({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: GlassDecoration.card(borderRadius: 999),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: palette.textSecondary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],

@@ -361,11 +361,13 @@ class _NavTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? activeColor : inactiveColor;
     final Widget glyph = icon == null
-        ? SvgPicture.asset(
-            'assets/images/logo_small.svg',
-            width: GlassBottomNav._iconSize,
-            height: GlassBottomNav._iconSize,
-            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        ? SizedBox.square(
+            dimension: GlassBottomNav._iconSize,
+            child: SvgPicture.asset(
+              'assets/images/exom_balance.svg',
+              fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
           )
         : Icon(icon, size: GlassBottomNav._iconSize, color: color);
 

@@ -26,14 +26,4 @@ const List<UiStringAllowance> uiStringAllowlist = [
     r'EXOM',
     'Brand name (decorative watermark, excluded from semantics).',
   ),
-  UiStringAllowance(
-    'lib/features/splash/presentation/pages/splash_page.dart',
-    r'EXOM',
-    'Brand name.',
-  ),
-  UiStringAllowance(
-    'lib/main.dart',
-    r'EXOM',
-    'Brand name (bootstrap screens, no locale available).',
-  ),
 ];

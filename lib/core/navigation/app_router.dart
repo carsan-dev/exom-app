@@ -8,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -786,12 +785,7 @@ class AppDrawer extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SvgPicture.asset(
-                        Theme.of(context).brightness == Brightness.light
-                            ? 'assets/images/logo_dark.svg'
-                            : 'assets/images/logo.svg',
-                        height: 24,
-                      ),
+                      const ExomBrandLogo(height: 24),
                       const SizedBox(height: 16),
                       Semantics(
                         header: true,

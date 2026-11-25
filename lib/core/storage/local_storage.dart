@@ -119,6 +119,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _legacyOnboardingCompleteKey = 'onboarding_complete';
   static const _onboardingIdentityKey = 'onboarding_complete_identity';
   static const _tutorialCompleteKey = 'tutorial_complete';
+  static const _recapSundayPromptOffKey = 'recap_sunday_prompt_off';
+  static const _recapSundayPromptLastKey = 'recap_sunday_prompt_last';
 
   // A process owns the Hive store for its lifetime. A second process fails
   // before opening cached boxes; a crash releases the OS lock automatically.
@@ -991,6 +993,44 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     final identity = resolveOnboardingIdentity(uid: uid, email: email);
     if (identity == null) return;
     await _settings.put('$_tutorialCompleteKey::$identity', true);
+  }
+
+  // Sunday recap reminder (in-app prompt), per identity like the tutorial.
+  bool isRecapSundayPromptOffFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return false;
+    return _settings.get(
+          '$_recapSundayPromptOffKey::$identity',
+          defaultValue: false,
+        ) ==
+        true;
+  }
+
+  Future<void> setRecapSundayPromptOffFor({
+    required String uid,
+    String? email,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return;
+    await _settings.put('$_recapSundayPromptOffKey::$identity', true);
+  }
+
+  /// Local day (`yyyy-MM-dd`) of the last Sunday the reminder was shown.
+  String? recapSundayPromptLastFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return null;
+    final value = _settings.get('$_recapSundayPromptLastKey::$identity');
+    return value is String ? value : null;
+  }
+
+  Future<void> setRecapSundayPromptLastFor({
+    required String uid,
+    String? email,
+    required String day,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return;
+    await _settings.put('$_recapSundayPromptLastKey::$identity', day);
   }
 
   dynamic _normalize(dynamic value) {

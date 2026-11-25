@@ -4358,6 +4358,30 @@ abstract class AppLocalizations {
   /// **'Omitir'**
   String get tutorialSkipButton;
 
+  /// No description provided for @promptDontShowAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'No volver a mostrar'**
+  String get promptDontShowAgain;
+
+  /// No description provided for @recapSundayPromptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy toca tu recap'**
+  String get recapSundayPromptTitle;
+
+  /// No description provided for @recapSundayPromptBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntame cómo ha ido la semana. Son cinco pasos.'**
+  String get recapSundayPromptBody;
+
+  /// No description provided for @recapSundayPromptFill.
+  ///
+  /// In es, this message translates to:
+  /// **'Rellenar recap'**
+  String get recapSundayPromptFill;
+
   /// No description provided for @tutorialHomeTitle.
   ///
   /// In es, this message translates to:

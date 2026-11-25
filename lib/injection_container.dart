@@ -1,5 +1,6 @@
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
+import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -170,6 +171,21 @@ bool isExecutionTimerOwnerCurrent(
     sl<ValidatedSessionGate>().isAuthenticated &&
     sl<ExecutionTimerCoordinator>().sessionRevision == sessionRevision &&
     sl<LocalStorage>().sessionStamp == ownerSession;
+
+/// In-app automatic prompts (quick tour, Sunday recap reminder): one
+/// coordinator per process, its memory is the app session. Needs
+/// [LocalStorage] and [GetMyRecapsUseCase] registered.
+void registerAutomaticPromptCoordinator({
+  DateTime Function() clock = DateTime.now,
+}) {
+  sl.registerLazySingleton(
+    () => AutomaticPromptCoordinator(
+      store: LocalStorageAutomaticPromptStore(sl<LocalStorage>()),
+      loadRecaps: () => sl<GetMyRecapsUseCase>()(),
+      clock: clock,
+    ),
+  );
+}
 
 Future<void> initDependencies() async {
   final packageInfo = await PackageInfo.fromPlatform();
@@ -448,6 +464,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => MarkRecapFeedbackReadUseCase(sl<RecapRepository>()),
   );
+
+  registerAutomaticPromptCoordinator();
 
   sl.registerFactory(
     () => RecapBloc(

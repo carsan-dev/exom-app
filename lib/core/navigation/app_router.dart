@@ -21,7 +21,6 @@ import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
-import 'package:exom_app/core/widgets/tutorial_prompt_dialog.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';
 
 // Auth pages
@@ -85,6 +84,8 @@ import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../core/auth/auth_token_provider.dart';
 import '../../core/auth/firebase_auth_service.dart';
 import '../../core/onboarding/onboarding_readers.dart';
+import '../../core/prompts/automatic_prompt_coordinator.dart';
+import '../../core/prompts/automatic_prompt_layer.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/storage/local_storage.dart';
 import '../../injection_container.dart';
@@ -492,9 +493,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _drawerItemKeys = List.generate(7, (_) => GlobalKey());
-  bool _showPrompt = false;
   bool _showTutorial = false;
-  bool _tutorialChecked = false;
   late final NotificationsBloc _notificationsBloc;
   late final HomeBloc _homeBloc;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
@@ -526,46 +525,14 @@ class _MainShellState extends State<MainShell> {
     return 2;
   }
 
-  void _checkTutorial() {
-    if (_tutorialChecked) return;
-    _tutorialChecked = true;
-
-    final session = sl<FirebaseAuthService>().currentSession;
-    if (session == null) return;
-
-    final storage = sl<LocalStorage>();
-    final resolution = resolveOnboardingForSession(
-      authState: context.read<AuthBloc>().state,
-      session: session,
-      storage: storage,
-    );
-    if (!isOnboardingSettled(resolution)) {
-      _tutorialChecked = false;
-      return;
-    }
-    final done = storage.isTutorialCompleteFor(
-      uid: session.uid,
-      email: session.email,
-    );
-
-    if (shouldOfferTutorial(resolution: resolution, tutorialDone: done)) {
-      setState(() => _showPrompt = true);
-    }
-  }
+  AutomaticPromptSession? _readPromptSession() => automaticPromptSessionFor(
+    authState: context.read<AuthBloc>().state,
+    session: sl<FirebaseAuthService>().currentSession,
+    storage: sl<LocalStorage>(),
+  );
 
   void _startTutorial() {
-    setState(() {
-      _showPrompt = false;
-      _showTutorial = true;
-    });
-  }
-
-  void _skipTutorial() {
-    _markTutorialComplete();
-    setState(() {
-      _showPrompt = false;
-      _showTutorial = false;
-    });
+    setState(() => _showTutorial = true);
   }
 
   void _completeTutorial() {
@@ -597,14 +564,6 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    // Only check tutorial on /home, and only after onboarding is complete.
-    // Avoids races during redirects (e.g. login→home→onboarding).
-    if (location == AppRoutes.home) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _checkTutorial();
-      });
-    }
 
     final selected = _currentIndex(location);
     final palette = context.exomPalette;
@@ -694,11 +653,16 @@ class _MainShellState extends State<MainShell> {
               onTap: (i) => context.go(MainShell._tabs[i]),
             ),
           ),
-          if (_showPrompt)
-            TutorialPromptDialog(
-              onStart: _startTutorial,
-              onSkip: _skipTutorial,
-            ),
+          // Automatic prompts only on /home, after the first frame and once
+          // the onboarding is settled (avoids races during redirects, e.g.
+          // login→home→onboarding).
+          AutomaticPromptLayer(
+            coordinator: sl<AutomaticPromptCoordinator>(),
+            active: location == AppRoutes.home,
+            readSession: _readPromptSession,
+            onStartTutorial: _startTutorial,
+            onOpenRecap: () => context.push(AppRoutes.recap),
+          ),
           if (_showTutorial)
             TutorialOverlay(
               onNavigate: (route) => context.go(route),

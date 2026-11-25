@@ -684,30 +684,25 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
             ),
           ],
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: KeyedSubtree(
-                key: const Key('progress-photos-scroll'),
-                child: _body(context),
-              ),
-            ),
-            // L5-F1 (L5-D21): «Nueva sesión» leaves the floating button for
-            // the pinned footer, visible in every state (list, empty, loading
-            // and error) and outside the list, so it never covers «Cargar
-            // más» or the last action. The one lime of the screen.
-            ExomPinnedFooter(
-              key: const Key('progress-photos-footer'),
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
-              child: ExomPrimaryButton(
-                key: const Key('progress-photos-new-session'),
-                label: l10n.progressPhotosNewSession,
-                trailingIcon: ExomIcons.add,
-                onPressed: _createSession,
-              ),
-            ),
-          ],
+        body: KeyedSubtree(
+          key: const Key('progress-photos-scroll'),
+          child: _body(context),
+        ),
+        // L5-F1 (L5-D21): «Nueva sesión» leaves the floating button for the
+        // pinned footer, visible in every state (list, empty, loading and
+        // error) and outside the list, so it never covers «Cargar más» or the
+        // last action. The one lime of the screen. In the Scaffold's bottom
+        // slot (L5-F1 r2) so the floating SnackBars sit above it instead of
+        // covering the button (the create error would hide its own retry).
+        bottomNavigationBar: ExomPinnedFooter(
+          key: const Key('progress-photos-footer'),
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+          child: ExomPrimaryButton(
+            key: const Key('progress-photos-new-session'),
+            label: l10n.progressPhotosNewSession,
+            trailingIcon: ExomIcons.add,
+            onPressed: _createSession,
+          ),
         ),
       ),
     );
@@ -778,8 +773,9 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
         itemCount: 1 + _sessions.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == 0) {
-            // The history arrives newest first (API order): the first
-            // session is the last one taken.
+            // «Última sesión» is the newest session date, not the first of
+            // the list: a session created with an older date is put first
+            // until the next reload (L5-F1 r2).
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -790,7 +786,7 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
                     l10n.progressPhotosLastSession(
                       progressPhotoSessionDateText(
                         context,
-                        _sessions.first.sessionDate,
+                        _newestSessionDate(_sessions),
                       ),
                     ),
                     style: TextStyle(
@@ -846,6 +842,12 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
 
 /// Date of a progress photo session (`yyyy-MM-dd`) as «18 nov 2026» in the
 /// active locale; the raw value when it does not parse.
+/// The newest `sessionDate` of [sessions] (civil dates `yyyy-MM-dd`, so the
+/// string order is the date order). [sessions] must not be empty.
+String _newestSessionDate(List<ProgressPhotoSession> sessions) => sessions
+    .map((session) => session.sessionDate)
+    .reduce((newest, date) => date.compareTo(newest) > 0 ? date : newest);
+
 String progressPhotoSessionDateText(BuildContext context, String sessionDate) {
   final date = DateTime.tryParse(sessionDate);
   return date == null
@@ -1207,9 +1209,18 @@ class _ViewTile extends StatelessWidget {
                   onTap: () => onReviewReplacement(pending!),
                 )
               else
-                ExomTextLink(label: l10n.retry, onTap: () => onRetry(pending!)),
+                ExomTextLink(
+                  label: l10n.retry,
+                  semanticsLabel: l10n.progressPhotosRetryView(
+                    viewLabel.toLowerCase(),
+                  ),
+                  onTap: () => onRetry(pending!),
+                ),
               ExomTextLink(
                 label: l10n.progressPhotosDiscard,
+                semanticsLabel: l10n.progressPhotosDiscardView(
+                  viewLabel.toLowerCase(),
+                ),
                 onTap: () => onDiscard(pending!),
               ),
             ],

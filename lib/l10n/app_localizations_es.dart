@@ -3368,6 +3368,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get progressPhotosEmptySecond => 'Todavía.';
 
   @override
+  String progressPhotosRetryView(String view) {
+    return 'Reintentar foto $view';
+  }
+
+  @override
+  String progressPhotosDiscardView(String view) {
+    return 'Descartar foto $view';
+  }
+
+  @override
   String progressPhotosSourceKicker(String view, String date) {
     return '$view · $date';
   }

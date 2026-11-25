@@ -210,4 +210,42 @@ void main() {
       });
     }
   });
+
+  // L5-F1 r2 (decisión recomendada tomada en autonomía, 2026-11-26): the icon
+  // and its gap scale with the label (accessibility). At 1.0x they keep the
+  // E5 18 px icon and 6 px gap, so no 1.0x golden changes.
+  group('icon scales with the text (L5-F1 r2)', () {
+    for (final (scale, iconSize, gap) in const [
+      (1.0, 18.0, 6.0),
+      (1.6, 28.8, 9.6),
+    ]) {
+      testWidgets('at ${scale}x the icon is $iconSize and the gap $gap', (
+        tester,
+      ) async {
+        await pumpComponent(
+          tester,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomTextLink(
+              label: 'Ver técnica',
+              icon: ExomIcons.play,
+              onTap: () {},
+            ),
+          ),
+          textScale: scale,
+        );
+        final icon = find.byIcon(ExomIcons.play);
+        expect(tester.getSize(icon).width, closeTo(iconSize, 0.01));
+        expect(tester.getSize(icon).height, closeTo(iconSize, 0.01));
+        final gapPx =
+            tester.getTopLeft(find.text('Ver técnica')).dx -
+            tester.getTopRight(icon).dx;
+        expect(gapPx, closeTo(gap, 0.01));
+        expect(
+          tester.getSize(find.byType(InkWell)).height,
+          greaterThanOrEqualTo(48),
+        );
+      });
+    }
+  });
 }

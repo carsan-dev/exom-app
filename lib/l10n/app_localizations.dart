@@ -5816,6 +5816,18 @@ abstract class AppLocalizations {
   /// **'Todavía.'**
   String get progressPhotosEmptySecond;
 
+  /// Accessible label of the short «Retry» link of a failed progress photo upload; view is the lowercase view name.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar foto {view}'**
+  String progressPhotosRetryView(String view);
+
+  /// Accessible label of the short «Discard» link of a failed progress photo upload; view is the lowercase view name.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar foto {view}'**
+  String progressPhotosDiscardView(String view);
+
   /// Kicker of the image source sheet: the progress photo view and the session date.
   ///
   /// In es, this message translates to:

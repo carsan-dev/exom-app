@@ -23,6 +23,7 @@ import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
+import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -448,4 +449,104 @@ void main() {
       expect(find.byKey(_newSession), findsOneWidget);
     });
   });
+
+  // L5-F1 r2 (revisión; decisiones recomendadas tomadas en autonomía,
+  // 2026-11-26).
+  group('r2', () {
+    testWidgets('«Última sesión» is the newest date even after creating an '
+        'older session', (tester) async {
+      final repository = listRepository();
+      await pumpPhotosScene(tester, repository: repository, height: 2400);
+      expect(find.text('Última sesión: 18 nov 2026'), findsOneWidget);
+      await _createSessionOn(tester, '01/01/2020');
+      expect(repository.createdDates, ['2020-01-01']);
+      // The created session is listed (first, as before r2) ...
+      expect(
+        tester
+            .widgetList<ExomNumberedSectionHeader>(
+              find.byType(ExomNumberedSectionHeader),
+            )
+            .map((h) => h.title),
+        ['1 ene 2020', '18 nov 2026', '4 nov 2026'],
+      );
+      // ... but the line under the title keeps the newest date.
+      expect(find.text('Última sesión: 18 nov 2026'), findsOneWidget);
+      expect(find.text('Última sesión: 1 ene 2020'), findsNothing);
+    });
+
+    testWidgets('the create-session error SnackBar sits above the footer, '
+        'never over «Nueva sesión»', (tester) async {
+      await pumpPhotosScene(tester, repository: _FailingCreateRepository());
+      await _createSessionOn(tester, null);
+      final snackBar = find.byType(SnackBar);
+      expect(snackBar, findsOneWidget);
+      expect(find.text('No se pudo crear la sesión de fotos'), findsOneWidget);
+      final snackRect = tester.getRect(snackBar);
+      final footerRect = tester.getRect(find.byKey(_footer));
+      expect(snackRect.overlaps(footerRect), isFalse);
+      expect(snackRect.bottom, lessThanOrEqualTo(footerRect.top));
+      // «Nueva sesión» stays tappable while the SnackBar is shown.
+      expect(
+        tester.getRect(find.byKey(_newSession)).overlaps(snackRect),
+        isFalse,
+      );
+    });
+
+    for (final (locale, retry, discard) in const [
+      (
+        Locale('es'),
+        'Reintentar foto lateral derecha',
+        'Descartar foto lateral derecha',
+      ),
+      (Locale('en'), 'Retry right side photo', 'Discard right side photo'),
+    ]) {
+      testWidgets('«Reintentar» and «Descartar» name the view '
+          '(${locale.languageCode})', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpPhotosScene(tester, height: 2400, locale: locale);
+        expect(find.bySemanticsLabel(retry), findsOneWidget);
+        expect(find.bySemanticsLabel(discard), findsOneWidget);
+        handle.dispose();
+      });
+    }
+  });
+}
+
+/// Opens the date picker from «Nueva sesión» and confirms it: with [typed]
+/// (dd/mm/yyyy) through the input mode, otherwise the initial date (today).
+Future<void> _createSessionOn(WidgetTester tester, String? typed) async {
+  await tester.tap(find.byKey(_newSession));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  final dialog = find.byType(DatePickerDialog);
+  expect(dialog, findsOneWidget);
+  final material = MaterialLocalizations.of(tester.element(dialog));
+  if (typed != null) {
+    await tester.tap(find.byTooltip(material.inputDateModeButtonLabel));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(
+      find.descendant(of: dialog, matching: find.byType(TextField)),
+      typed,
+    );
+    await tester.pump();
+  }
+  await tester.tap(find.text(material.okButtonLabel));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
+/// Creating a session fails (the SnackBar path of `_createSession`).
+class _FailingCreateRepository extends FakeRepository {
+  _FailingCreateRepository() {
+    final base = listRepository();
+    history = base.history;
+    histories.addAll(base.histories);
+  }
+
+  @override
+  Future<ProgressPhotoSession> createSession({
+    required String civilDate,
+    required String operationId,
+  }) => Future<ProgressPhotoSession>.error(StateError('offline'));
 }

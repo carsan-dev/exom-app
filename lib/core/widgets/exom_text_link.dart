@@ -30,8 +30,12 @@ class ExomTextLink extends StatelessWidget {
   final bool danger;
   final IconData? icon;
 
-  /// Icon size next to the 14 px label (1.3 em, as [ExomKicker]'s icon).
+  /// Icon size next to the 14 px label at 1.0x (1.3 em, as [ExomKicker]'s
+  /// icon); it scales with the label (L5-F1 r2).
   static const double _iconSize = 18;
+
+  /// Gap between icon and label at 1.0x; it scales with the label.
+  static const double _iconGap = 6;
 
   /// Spoken label; defaults to [label].
   final String? semanticsLabel;
@@ -56,6 +60,10 @@ class ExomTextLink extends StatelessWidget {
         ? palette.error
         : palette.data;
     final iconData = icon;
+    // The icon and its gap follow the label's effective scale (the label
+    // grows with the user's text size, so a fixed icon would shrink beside
+    // it). At 1.0x this is exactly 1, keeping 18 px and 6 px.
+    final scale = MediaQuery.textScalerOf(context).scale(_fontSize) / _fontSize;
     final text = Text(
       label,
       style: TextStyle(
@@ -95,8 +103,8 @@ class ExomTextLink extends StatelessWidget {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(iconData, size: _iconSize, color: ink),
-                          const SizedBox(width: 6),
+                          Icon(iconData, size: _iconSize * scale, color: ink),
+                          SizedBox(width: _iconGap * scale),
                           Flexible(child: text),
                         ],
                       ),

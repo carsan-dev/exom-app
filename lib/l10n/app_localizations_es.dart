@@ -4719,7 +4719,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recapListNotRated => 'Sin valorar';
 
   @override
-  String get recapListCoachAuthor => 'tu entrenador';
+  String get coachNameMoi => 'Moi';
 
   @override
   String get recapListEmptyHeadlineFirst => 'Sin recaps.';

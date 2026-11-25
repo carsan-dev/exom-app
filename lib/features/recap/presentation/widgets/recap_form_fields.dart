@@ -787,7 +787,7 @@ class RecapStepFrame extends StatelessWidget {
           ),
           const SizedBox(height: ExomSpacing.lg),
           ExomCoachBlock(
-            author: l10n.recapListCoachAuthor,
+            author: l10n.coachNameMoi,
             text: coach,
             avatar: kRecapCoachAvatar,
           ),

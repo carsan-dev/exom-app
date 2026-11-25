@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// colour, a byline (square initial, [author], optional [time]) and the
 /// [text] in 17 / 600.
 ///
-/// [author] comes from the caller (the real name, or "tu entrenador" when the
+/// [author] comes from the caller (the real name, or «Moi» when the
 /// model has none, D15/D16); the component never decides it. Assistive
 /// technology reads one node: `author, time. text`; the initial is decorative.
 ///

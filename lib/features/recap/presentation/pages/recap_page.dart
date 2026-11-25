@@ -1007,7 +1007,7 @@ class _RecapSentView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: ExomCoachBlock(
-            author: l10n.recapListCoachAuthor,
+            author: l10n.coachNameMoi,
             text: l10n.recapSentCoach,
             avatar: kRecapCoachAvatar,
           ),
@@ -1138,8 +1138,9 @@ class _RecapListView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ExomCoachBlock(
-              // D16: the model carries no trainer name.
-              author: l10n.recapListCoachAuthor,
+              // D16: the model carries no trainer name; the coach voice
+              // signs «Moi» (owner, L5-C5b).
+              author: l10n.coachNameMoi,
               text: l10n.recapListEmptyCoachText,
               avatar: kRecapCoachAvatar,
             ),
@@ -1882,7 +1883,13 @@ class _RecapFormViewState extends State<_RecapFormView>
           Expanded(
             child: RecapWeekScope(
               label: widget.formatWeekRange(state.formData),
-              child: ExomStepTransition(step: state.step, child: _stepBody()),
+              // A push, both steps opaque: the overlapped fade left a
+              // ghost of the previous step (owner, L5-C5b).
+              child: ExomStepTransition(
+                step: state.step,
+                style: ExomStepTransitionStyle.slide,
+                child: _stepBody(),
+              ),
             ),
           ),
           if (!_isStartStep)

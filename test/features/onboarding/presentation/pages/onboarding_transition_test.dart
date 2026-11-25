@@ -9,6 +9,9 @@
 // Until round 4 the exit and the entrance ran one after the other; the tests
 // of this file that fixed that order now fix the overlap, with the same
 // figures, sides, taps and semantics.
+// L5-C5b (owner): the overlap left a ghost; the standard step change is now a
+// push of the two opaque steps (280 ms, easeInOutCubic). Reduced motion keeps
+// the 100 ms crossfade.
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:exom_app/features/onboarding/presentation/widgets/onboarding_welcome_step.dart';
@@ -57,6 +60,25 @@ double _opacity(WidgetTester tester, [int? step]) => tester
     .opacity
     .value;
 
+/// Product of every opacity above the content of [step] (1 when nothing
+/// fades it).
+double _inkOpacity(WidgetTester tester, int step) {
+  final content = find
+      .descendant(of: _entrance(step), matching: find.byType(Transform))
+      .first;
+  var opacity = 1.0;
+  for (final widget in tester.widgetList<Widget>(
+    find.ancestor(of: content, matching: find.byWidgetPredicate((_) => true)),
+  )) {
+    if (widget is FadeTransition) opacity *= widget.opacity.value;
+    if (widget is Opacity) opacity *= widget.opacity;
+  }
+  return opacity;
+}
+
+/// Width of the slot of the step on screen.
+double _slotWidth(WidgetTester tester) => tester.getSize(_entrance()).width;
+
 /// Width factor of the segment of the rule that is still growing (null when
 /// every segment is complete).
 double? _growth(WidgetTester tester) {
@@ -83,58 +105,76 @@ Future<void> _tap(WidgetTester tester, String key) async {
 }
 
 void main() {
+  // L5-C5b (owner): the overlapped cross-fade left a faint ghost of the step
+  // that leaves. Now a push: the step that leaves moves fully out to one side
+  // while the new one enters from the other, both fully opaque, in 280 ms on
+  // easeInOutCubic. The pinned footer stays in place (the new step's at once).
   group('M9 standard', () {
-    testWidgets('advancing: the previous step leaves to the start in 100 ms '
-        'while the new one enters from the end in 240 ms', (tester) async {
+    testWidgets('advancing: a push to the start, both steps fully opaque, '
+        'in 280 ms', (tester) async {
       await _toBasics(tester);
+      final width = _slotWidth(tester);
       await _tap(tester, _basicsNext);
-      await tester.pump(const Duration(milliseconds: 50));
-      // Both painted: the previous step fading towards the start, taking no
-      // taps; the new one fading in from the end. While a step leaves the
-      // new one does not take taps either (no double tap through it).
+      await tester.pump(const Duration(milliseconds: 140));
+      // Both painted, neither faded: the previous one half out to the start,
+      // the new one half in from the end, side by side. While a step leaves
+      // the new one does not take taps either (no double tap through it).
       expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
       expect(find.byKey(const Key(_bodyNext)), findsOneWidget);
-      expect(_opacity(tester, _basics), allOf(greaterThan(0), lessThan(1)));
-      expect(_offset(tester, _basics), lessThan(0));
-      expect(_opacity(tester, _body), allOf(greaterThan(0), lessThan(1)));
-      expect(_offset(tester, _body), greaterThan(0));
+      expect(_inkOpacity(tester, _basics), 1);
+      expect(_inkOpacity(tester, _body), 1);
+      expect(_offset(tester, _basics), inExclusiveRange(-width, 0));
+      expect(_offset(tester, _body), inExclusiveRange(0, width));
+      expect(
+        _offset(tester, _body) - _offset(tester, _basics),
+        closeTo(width, 0.5),
+      );
       expect(find.byKey(const Key(_basicsNext)).hitTestable(), findsNothing);
-      // By 150 ms (the exit lasts 100 ms) the previous step is gone; the new one goes on entering,
-      // taking taps.
-      await tester.pump(const Duration(milliseconds: 50));
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byKey(const Key(_basicsNext)), findsNothing);
-      expect(find.byKey(const Key(_bodyNext)), findsOneWidget);
+      // Still moving just before 280 ms; in place and alone after it.
+      await tester.pump(const Duration(milliseconds: 130));
       expect(_offset(tester, _body), greaterThan(0));
-      expect(_opacity(tester, _body), allOf(greaterThan(0), lessThan(1)));
-      expect(find.byKey(const Key(_bodyNext)).hitTestable(), findsOneWidget);
-      // In place by 250 ms (the entrance lasts 240 ms).
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(_frame);
+      expect(find.byKey(const Key(_basicsNext)), findsNothing);
       expect(_offset(tester, _body), 0);
-      expect(_opacity(tester, _body), 1);
+      expect(find.byKey(const Key(_bodyNext)).hitTestable(), findsOneWidget);
       await settleOnboarding(tester);
       expect(_offset(tester), 0);
       expect(_opacity(tester), 1);
     });
 
-    testWidgets('back: the previous step leaves to the end while the new one '
-        'enters from the start', (tester) async {
+    testWidgets('back: the push goes the other way', (tester) async {
       await _toBasics(tester);
+      final width = _slotWidth(tester);
       await _tap(tester, _basicsNext);
       await settleOnboarding(tester);
       await _tap(tester, _back);
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 140));
       expect(find.byKey(const Key(_bodyNext)), findsOneWidget);
       expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
-      expect(_offset(tester, _body), greaterThan(0));
-      expect(_offset(tester, _basics), lessThan(0));
-      await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byKey(const Key(_bodyNext)), findsNothing);
-      expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
-      expect(_offset(tester, _basics), lessThan(0));
+      expect(_inkOpacity(tester, _basics), 1);
+      expect(_inkOpacity(tester, _body), 1);
+      expect(_offset(tester, _body), inExclusiveRange(0, width));
+      expect(_offset(tester, _basics), inExclusiveRange(-width, 0));
+      expect(
+        _offset(tester, _body) - _offset(tester, _basics),
+        closeTo(width, 0.5),
+      );
       await settleOnboarding(tester);
+      expect(find.byKey(const Key(_bodyNext)), findsNothing);
       expect(_offset(tester), 0);
       expect(find.byKey(const Key(_back)), findsNothing);
+    });
+
+    testWidgets('the content is clipped to its area', (tester) async {
+      await _toBasics(tester);
+      expect(
+        find.descendant(
+          of: _entrance(_basics),
+          matching: find.byType(ClipRect),
+        ),
+        findsWidgets,
+      );
     });
 
     testWidgets('the new segment of the rule grows in 300 ms when advancing '
@@ -146,9 +186,8 @@ void main() {
       final early = _growth(tester);
       expect(early, isNotNull);
       expect(early, allOf(greaterThan(0), lessThan(1)));
-      // The step is in place at 240 ms; the rule still has about 50 ms left.
+      // The rule still has about 50 ms left.
       await tester.pump(const Duration(milliseconds: 190));
-      expect(_opacity(tester, _body), 1);
       expect(_growth(tester), allOf(greaterThan(early!), lessThan(1)));
       await tester.pump(const Duration(milliseconds: 60));
       expect(_growth(tester), isNull);
@@ -164,63 +203,52 @@ void main() {
       expect(_growth(tester), isNull);
     });
 
-    testWidgets('an interruption while the step enters leaves from where it '
-        'is, not from 0', (tester) async {
-      await _toBasics(tester);
-      await _tap(tester, _basicsNext);
-      await tester.pump(const Duration(milliseconds: 120));
-      await tester.pump(_frame);
-      await tester.pump(const Duration(milliseconds: 100));
-      final before = _opacity(tester, _body);
-      final offsetBefore = _offset(tester, _body);
-      expect(before, allOf(greaterThan(0.3), lessThan(1)));
-      await _tap(tester, _back);
-      await tester.pump(_frame);
-      // Same step, same side, continuing from the current opacity.
-      expect(find.byKey(const Key(_bodyNext)), findsOneWidget);
-      expect(
-        _opacity(tester, _body),
-        allOf(greaterThan(0.2), lessThanOrEqualTo(before)),
-      );
-      expect(_offset(tester, _body), greaterThan(0));
-      // It goes back along the way it came: no jump to the far side.
-      expect(_offset(tester, _body), closeTo(offsetBefore, 6));
-      await settleOnboarding(tester);
-      expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
-      expect(find.byKey(const Key(_bodyNext)), findsNothing);
-      expect(_opacity(tester), 1);
-    });
-
-    testWidgets('an interruption while the step leaves brings it back from '
-        'where it is and the new one goes back the way it came', (
+    testWidgets('going back mid-push reverses it from where it is', (
       tester,
     ) async {
       await _toBasics(tester);
       await _tap(tester, _basicsNext);
-      await tester.pump(const Duration(milliseconds: 40));
-      final before = _opacity(tester, _basics);
-      final offsetBefore = _offset(tester, _basics);
-      final bodyBefore = _opacity(tester, _body);
-      final bodyOffsetBefore = _offset(tester, _body);
-      expect(before, allOf(greaterThan(0), lessThan(1)));
-      expect(bodyBefore, allOf(greaterThan(0), lessThan(1)));
-      // The state already says step 2: its arrow is there; going back.
+      await tester.pump(const Duration(milliseconds: 120));
+      final basicsBefore = _offset(tester, _basics);
+      final bodyBefore = _offset(tester, _body);
       await tapKey(tester, _back);
       await tester.pump();
       await tester.pump(_frame);
-      // The previous step rises from where it was, on its side; the new one
-      // fades from where it was towards the end it came from.
-      expect(_opacity(tester, _basics), greaterThan(before));
-      expect(_offset(tester, _basics), lessThan(0));
-      expect(_offset(tester, _basics), greaterThan(offsetBefore));
-      expect(_opacity(tester, _body), lessThan(bodyBefore));
-      expect(_offset(tester, _body), greaterThan(0));
-      expect(_offset(tester, _body), closeTo(bodyOffsetBefore, 6));
+      // No jump: both carry on from where they were, fully opaque.
+      expect(_offset(tester, _basics), closeTo(basicsBefore, 8));
+      expect(_offset(tester, _body), closeTo(bodyBefore, 8));
+      expect(_inkOpacity(tester, _basics), 1);
+      expect(_inkOpacity(tester, _body), 1);
       expect(find.byKey(const Key(_bodyNext)).hitTestable(), findsNothing);
       await settleOnboarding(tester);
       expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
       expect(find.byKey(const Key(_bodyNext)), findsNothing);
-      expect(_opacity(tester), 1);
+      expect(_offset(tester), 0);
+    });
+
+    testWidgets('a second change towards a third step mid-push jumps '
+        'cleanly: never more than two steps painted', (tester) async {
+      await _toBasics(tester);
+      await _tap(tester, _basicsNext);
+      await settleOnboarding(tester);
+      await _tap(tester, _bodyNext);
+      await settleOnboarding(tester);
+      // Goals (3) back to body (2), and back again to basics (1) mid-way.
+      await _tap(tester, _back);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tapKey(tester, _back);
+      await tester.pump();
+      for (var i = 0; i < 25; i++) {
+        expect(
+          find.byKey(const Key(_transition)).evaluate().length,
+          lessThanOrEqualTo(2),
+          reason: 'frame $i',
+        );
+        await tester.pump(_frame);
+      }
+      await settleOnboarding(tester);
+      expect(find.byKey(const Key(_basicsNext)), findsOneWidget);
+      expect(find.byKey(const Key(_transition)).evaluate(), hasLength(1));
       expect(_offset(tester), 0);
     });
   });

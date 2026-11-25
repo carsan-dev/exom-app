@@ -752,6 +752,11 @@ void main() {
       expect(find.byKey(_sweep), findsNothing);
       expect(find.byKey(_back).hitTestable(), findsOneWidget);
       expect(find.byType(ExomCoachBlock).hitTestable(), findsOneWidget);
+      // L5-C5b (owner): the coach voice signs «Moi».
+      expect(
+        tester.widget<ExomCoachBlock>(find.byType(ExomCoachBlock)).author,
+        'Moi',
+      );
     });
 
     testWidgets('system back mid-sweep shows the list, nothing dispatched', (

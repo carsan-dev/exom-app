@@ -139,6 +139,12 @@ abstract final class ExomMotion {
   static const Duration stepExit = Duration(milliseconds: 100);
   static const double stepOffset = 24;
   static const Curve stepCurve = sheetEnterCurve;
+  // M9 push (`ExomStepTransitionStyle.slide`, recap form and onboarding,
+  // L5-C5b): the step that leaves moves fully out to one side while the new
+  // one enters from the other, both opaque, in [stepSlide] on
+  // [stepSlideCurve] (norms 6 and 9). Reduced: the 100 ms fade above.
+  static const Duration stepSlide = Duration(milliseconds: 280);
+  static const Curve stepSlideCurve = Curves.easeInOutCubic;
   static const Duration stepProgressRule = growBar;
   static const Curve stepProgressRuleCurve = Curves.easeOut;
 

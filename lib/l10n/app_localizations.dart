@@ -7719,11 +7719,11 @@ abstract class AppLocalizations {
   /// **'Sin valorar'**
   String get recapListNotRated;
 
-  /// No description provided for @recapListCoachAuthor.
+  /// No description provided for @coachNameMoi.
   ///
   /// In es, this message translates to:
-  /// **'tu entrenador'**
-  String get recapListCoachAuthor;
+  /// **'Moi'**
+  String get coachNameMoi;
 
   /// No description provided for @recapListEmptyHeadlineFirst.
   ///

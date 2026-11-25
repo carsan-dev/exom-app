@@ -48,15 +48,16 @@ class _OnboardingView extends StatefulWidget {
 /// (D17-5) and forward without being sent; a step that is not painted is
 /// offstage: no paint, taps, semantics or tickers.
 ///
-/// A step change plays M9 with the two steps overlapped, as in the sketch:
-/// from the tap, the step on screen fades out in [ExomMotion.stepExit]
-/// towards the side the form leaves, while the new step enters from the side
-/// the form moves to in [ExomMotion.step]; advancing also grows the new
-/// segment of the progress rule ([ExomMotion.stepProgressRule]). There is no
-/// frame without a step: the opacities painted add up to at least ~0.9
-/// (round 5). Each step has its own controller (1 in place, 0 hidden), so a
-/// change in mid-flight goes on from the current value of every step instead
-/// of starting from 0. Reduced motion: a 100 ms crossfade, no offset.
+/// A step change plays M9 as a push (L5-C5b; until then the two steps
+/// overlapped with a fade, which left a ghost): from the tap, the step on
+/// screen moves fully out towards the side the form leaves while the new one
+/// enters from the side the form moves to, both opaque, in
+/// [ExomMotion.stepSlide] on [ExomMotion.stepSlideCurve]; advancing also
+/// grows the new segment of the progress rule
+/// ([ExomMotion.stepProgressRule]). Each step has its own controller (1 in
+/// place, 0 hidden): going back mid-push reverses it from the current value
+/// of both steps; a change towards a third step jumps (the step on screen
+/// leaves from its place). Reduced motion: a 100 ms crossfade, no offset.
 ///
 /// The step that leaves takes no taps and is out of the semantics (M9); for
 /// as long as a step is leaving the new one does not take taps either, so a
@@ -132,10 +133,11 @@ class _OnboardingViewState extends State<_OnboardingView>
     final step = state.currentStep;
     if (previous == step) return;
     final motion = ExomMotion.of(context);
+    final slides = motion.stepSlides;
     for (final controller in _steps) {
       controller
-        ..duration = motion.step
-        ..reverseDuration = ExomMotion.stepExit;
+        ..duration = slides ? ExomMotion.stepSlide : motion.step
+        ..reverseDuration = slides ? ExomMotion.stepSlide : ExomMotion.stepExit;
     }
     _rule.duration = motion.stepProgressRule;
     setState(() {
@@ -149,6 +151,23 @@ class _OnboardingViewState extends State<_OnboardingView>
       return;
     }
     final advancing = previous == null || step > previous;
+    if (slides && previous != null) {
+      final entering = _steps[step];
+      final reversal = !entering.isDismissed && entering.value < 1;
+      if (!reversal) {
+        // A change towards a third step mid-push jumps: the step on screen
+        // until now leaves from its place and any other one is gone, so two
+        // steps at most are ever painted. Going back to the step that is
+        // leaving reverses the push from where it is instead.
+        for (var i = 0; i < _stepCount; i++) {
+          if (i == previous) {
+            _steps[i].value = 1;
+          } else if (i != step && !_steps[i].isDismissed) {
+            _steps[i].value = 0;
+          }
+        }
+      }
+    }
     for (var i = 0; i < _stepCount; i++) {
       final value = _steps[i].value;
       if (value > 0 && value < 1) continue;
@@ -162,10 +181,10 @@ class _OnboardingViewState extends State<_OnboardingView>
     } else if (motion.isReduced) {
       _rule.value = 1;
     }
-    final enterCurve = motion.stepSlides ? ExomMotion.stepCurve : Curves.linear;
-    final exitCurve = motion.stepSlides
-        ? ExomMotion.sheetExitCurve
-        : Curves.linear;
+    // The push moves both steps on the same curve and duration, so they
+    // stay side by side.
+    final enterCurve = slides ? ExomMotion.stepSlideCurve : Curves.linear;
+    final exitCurve = slides ? ExomMotion.stepSlideCurve : Curves.linear;
     for (var i = 0; i < _stepCount; i++) {
       if (i == step) {
         _steps[i].animateTo(1, curve: enterCurve);

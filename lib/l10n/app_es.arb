@@ -1637,7 +1637,7 @@
   "recapListNewCommentsCount": "{count, plural, one{comentario nuevo de tu entrenador} other{comentarios nuevos de tu entrenador}}",
   "@recapListNewCommentsCount": {"placeholders": {"count": {"type": "int"}}},
   "recapListNotRated": "Sin valorar",
-  "recapListCoachAuthor": "tu entrenador",
+  "coachNameMoi": "Moi",
   "recapListEmptyHeadlineFirst": "Sin recaps.",
   "recapListEmptyHeadlineSecond": "Todavía.",
   "recapListEmptyCoachText": "Cuéntame cómo ha ido tu semana en cinco pasos.",

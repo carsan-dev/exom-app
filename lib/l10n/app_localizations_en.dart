@@ -2377,6 +2377,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialSkipButton => 'Skip';
 
   @override
+  String get promptDontShowAgain => 'Don\'t show again';
+
+  @override
+  String get recapSundayPromptTitle => 'It\'s recap day';
+
+  @override
+  String get recapSundayPromptBody =>
+      'Tell me how your week went. It takes five steps.';
+
+  @override
+  String get recapSundayPromptFill => 'Fill in recap';
+
+  @override
   String get tutorialHomeTitle => 'Home';
 
   @override
@@ -4662,7 +4675,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recapListNotRated => 'Not rated';
 
   @override
-  String get recapListCoachAuthor => 'your coach';
+  String get coachNameMoi => 'Moi';
 
   @override
   String get recapListEmptyHeadlineFirst => 'No recaps.';
@@ -4746,10 +4759,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recapNextStep => 'Next';
 
   @override
-  String recapChosenZones(int count) {
-    return 'Chosen areas · $count';
+  String recapZonesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count areas',
+      one: '$count area',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recapZonesMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get recapZonesNone => 'No areas selected';
+
+  @override
+  String recapZonesSemantics(int count, String zones) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count areas',
+      one: '$count area',
+    );
+    return '$_temp0: $zones';
   }
 
   @override
   String get recapImprovement => 'Improve';
+
+  @override
+  String get recapSentKicker => 'Five steps completed';
+
+  @override
+  String get recapSentTitleFirst => 'Recap';
+
+  @override
+  String get recapSentTitleSecond => 'sent.';
+
+  @override
+  String get recapSentCoach =>
+      'Thanks for telling me. I\'ll review it and leave my comment on your recap.';
+
+  @override
+  String get recapBackToRecaps => 'Back to recaps';
+
+  @override
+  String get recapSentClose => 'Close';
 }

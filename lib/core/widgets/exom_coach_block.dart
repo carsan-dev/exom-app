@@ -6,20 +6,29 @@ import 'package:flutter/material.dart';
 /// colour, a byline (square initial, [author], optional [time]) and the
 /// [text] in 17 / 600.
 ///
-/// [author] comes from the caller (the real name, or "tu entrenador" when the
+/// [author] comes from the caller (the real name, or «Moi» when the
 /// model has none, D15/D16); the component never decides it. Assistive
 /// technology reads one node: `author, time. text`; the initial is decorative.
+///
+/// With [avatar] the square shows that photo instead of the initial (same
+/// 32 px frame and fill, also decorative); if the photo fails to load the
+/// initial is shown.
 class ExomCoachBlock extends StatelessWidget {
   const ExomCoachBlock({
     super.key,
     required this.text,
     required this.author,
     this.time,
+    this.avatar,
   });
 
   final String text;
   final String author;
   final String? time;
+
+  /// Photo of the trainer for the square of the byline; null shows the
+  /// initial of [author].
+  final ImageProvider? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +50,12 @@ class ExomCoachBlock extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _Byline(author: author, time: time, showInitial: true),
+              _Byline(
+                author: author,
+                time: time,
+                showInitial: true,
+                avatar: avatar,
+              ),
               const SizedBox(height: 8),
               Text(
                 text,
@@ -125,11 +139,13 @@ class _Byline extends StatelessWidget {
     required this.author,
     required this.time,
     required this.showInitial,
+    this.avatar,
   });
 
   final String author;
   final String? time;
   final bool showInitial;
+  final ImageProvider? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +161,19 @@ class _Byline extends StatelessWidget {
       color: palette.textPrimary,
     );
     final timeText = time;
+    final Widget initialText = Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontFamily: AppTheme.displayFontFamily,
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          height: 1,
+          color: palette.textPrimary,
+        ),
+      ),
+    );
+    final photo = avatar;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 10,
@@ -156,18 +185,19 @@ class _Byline extends StatelessWidget {
             height: 32,
             child: ColoredBox(
               color: palette.surfaceElevated,
-              child: Center(
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    fontFamily: AppTheme.displayFontFamily,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                    color: palette.textPrimary,
-                  ),
-                ),
-              ),
+              child: photo == null
+                  ? initialText
+                  : ExcludeSemantics(
+                      child: Image(
+                        image: photo,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        filterQuality: FilterQuality.medium,
+                        errorBuilder: (_, _, _) => initialText,
+                      ),
+                    ),
             ),
           ),
         Text(author, style: style),

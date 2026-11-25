@@ -116,6 +116,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/coach/
     - assets/branding/
 
   fonts:

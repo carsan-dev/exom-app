@@ -174,6 +174,7 @@ Future<GoRouter> pumpRecapList(
   TextScaler textScaler = TextScaler.noScaling,
   bool settle = true,
   RecapListTestRepository? repository,
+  bool disableAnimations = false,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -211,7 +212,10 @@ Future<GoRouter> pumpRecapList(
       builder: (context, child) => HomeClock(
         now: () => recapListNow,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: textScaler,
+            disableAnimations: disableAnimations,
+          ),
           child: child!,
         ),
       ),
@@ -527,11 +531,11 @@ void main() {
       expect(headline.second, 'Todavía.');
       expect(find.text('Todavía no has enviado ningún recap'), findsOneWidget);
       expect(find.byType(ExomCoachBlock), findsOneWidget);
-      // D16: no trainer name in the model, so the signature is «tu entrenador»
-      // as the contract writes it (sketch: «Moi · tu entrenador»).
-      expect(find.text('tu entrenador'), findsOneWidget);
+      // L5-C5b (owner): the coach voice of the app signs «Moi» (sketch:
+      // «Moi · tu entrenador»), no longer the generic «tu entrenador».
+      expect(find.text('Moi'), findsOneWidget);
+      expect(find.text('tu entrenador'), findsNothing);
       expect(find.text('Tu entrenador'), findsNothing);
-      expect(find.text('Moi'), findsNothing);
       expect(
         find.descendant(
           of: newRecap,

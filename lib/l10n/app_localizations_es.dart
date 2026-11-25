@@ -2406,6 +2406,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tutorialSkipButton => 'Omitir';
 
   @override
+  String get promptDontShowAgain => 'No volver a mostrar';
+
+  @override
+  String get recapSundayPromptTitle => 'Hoy toca tu recap';
+
+  @override
+  String get recapSundayPromptBody =>
+      'Cuéntame cómo ha ido la semana. Son cinco pasos.';
+
+  @override
+  String get recapSundayPromptFill => 'Rellenar recap';
+
+  @override
   String get tutorialHomeTitle => 'Inicio';
 
   @override
@@ -4706,7 +4719,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recapListNotRated => 'Sin valorar';
 
   @override
-  String get recapListCoachAuthor => 'tu entrenador';
+  String get coachNameMoi => 'Moi';
 
   @override
   String get recapListEmptyHeadlineFirst => 'Sin recaps.';
@@ -4791,10 +4804,54 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recapNextStep => 'Siguiente';
 
   @override
-  String recapChosenZones(int count) {
-    return 'Zonas elegidas · $count';
+  String recapZonesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zonas',
+      one: '$count zona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recapZonesMore(int count) {
+    return '+$count más';
+  }
+
+  @override
+  String get recapZonesNone => 'Sin zonas marcadas';
+
+  @override
+  String recapZonesSemantics(int count, String zones) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zonas',
+      one: '$count zona',
+    );
+    return '$_temp0: $zones';
   }
 
   @override
   String get recapImprovement => 'Mejora';
+
+  @override
+  String get recapSentKicker => 'Cinco pasos completados';
+
+  @override
+  String get recapSentTitleFirst => 'Recap';
+
+  @override
+  String get recapSentTitleSecond => 'enviado.';
+
+  @override
+  String get recapSentCoach =>
+      'Gracias por contármelo. Lo reviso y te dejo mi comentario en tu recap.';
+
+  @override
+  String get recapBackToRecaps => 'Volver a recaps';
+
+  @override
+  String get recapSentClose => 'Cerrar';
 }

@@ -4,6 +4,7 @@ import 'package:exom_app/core/auth/auth_token_provider.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/onboarding/onboarding_readers.dart';
 import 'package:exom_app/core/onboarding/onboarding_resolver.dart';
+import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/auth/domain/entities/user_entity.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
@@ -136,5 +137,46 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  group('automatic prompt session', () {
+    AutomaticPromptSession? read(
+      AuthState state, {
+      LocalAuthSession? session,
+    }) => automaticPromptSessionFor(
+      authState: state,
+      session: session,
+      storage: storage,
+    );
+
+    final done = AuthAuthenticated(userFromServer(profile: doneProfile));
+
+    test('null without a local session or an authenticated user', () {
+      expect(read(done), isNull);
+      expect(read(const AuthUnauthenticated(), session: _sessionA), isNull);
+    });
+
+    test('null while the onboarding is still needed', () {
+      final pending = AuthAuthenticated(
+        userFromServer(profile: pendingProfile),
+      );
+      expect(read(pending, session: _sessionA), isNull);
+    });
+
+    test(
+      'settled: uid/email of the session, tour due until complete',
+      () async {
+        final first = read(done, session: _sessionA)!;
+        expect(first.uid, 'uid-A');
+        expect(first.email, 'a@exom.test');
+        expect(first.tutorialDue, isTrue);
+
+        await storage.setTutorialCompleteFor(
+          uid: 'uid-A',
+          email: 'a@exom.test',
+        );
+        expect(read(done, session: _sessionA)!.tutorialDue, isFalse);
+      },
+    );
   });
 }

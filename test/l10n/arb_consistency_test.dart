@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Spanish values that legitimately equal the English ones.
 const Map<String, String> identicalValueAllowlist = {
+  'coachNameMoi': 'Proper name of the coach voice "Moi" (owner, L5-C5b).',
   'feedbackMenuItem': 'Product term "Feedback" kept in Spanish by the owner.',
   'feedback': 'Product term "Feedback" kept in Spanish by the owner.',
   'tutorialFeedbackTitle':
@@ -13,6 +14,7 @@ const Map<String, String> identicalValueAllowlist = {
   'recapGeneral': 'Shared Spanish/English word "General".',
   'recapStepGeneralFirst': 'Shared Spanish/English word "General".',
   'general': 'Shared Spanish/English word "General".',
+  'recapSentTitleFirst': 'Shared Spanish/English word "Recap".',
   'resetEmailSentFirst': 'Cognate "Email" is the same word in both languages.',
   'weightBadgeLabel': 'Abbreviation shared by both languages.',
   'ingredientUnitG': 'Unit symbol "g".',

@@ -9,7 +9,6 @@ import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
-import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_scale_chips.dart';
 import 'package:exom_app/core/widgets/exom_step_header.dart';
@@ -463,23 +462,132 @@ class RecapBodyMapField extends StatelessWidget {
           selectedZoneIds: selectedZoneIds,
           onZoneSelected: _toggleZone,
         ),
-        if (values.isNotEmpty) ...[
-          const SizedBox(height: ExomSpacing.md),
-          ExomKicker(
-            AppLocalizations.of(context).recapChosenZones(values.length),
-          ),
-          const SizedBox(height: ExomSpacing.sm),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: ExomChoiceChips<String>.multi(
-              options: values,
-              selectedValues: values.toSet(),
-              labelOf: (zone) => _zoneLabel(context, zone),
-              onToggled: _toggleZone,
-            ),
-          ),
-        ],
+        const SizedBox(height: ExomSpacing.md),
+        _RecapZonesSummary(
+          labels: [for (final value in values) _zoneLabel(context, value)],
+        ),
       ],
+    );
+  }
+}
+
+/// Key of the selected-zones summary of the body map (tests).
+const ValueKey<String> recapZonesSummaryKey = ValueKey('recap-zones-summary');
+
+/// One-line summary under the figure: «4 zonas · Lumbar · Isquio izquierdo».
+/// It takes at most two lines: when the labels do not fit it shows the whole
+/// labels that do, then «+N más». Zones are deselected on the figure, so this
+/// is read-only; assistive technology reads the full list.
+class _RecapZonesSummary extends StatelessWidget {
+  final List<String> labels;
+
+  const _RecapZonesSummary({required this.labels});
+
+  static const int _maxLines = 2;
+  static const String _separator = ' · ';
+
+  TextSpan _span(
+    AppLocalizations l10n,
+    TextStyle base,
+    ExomThemePalette palette,
+    int shown,
+  ) {
+    final labelStyle = base.copyWith(color: palette.textSecondary);
+    return TextSpan(
+      style: labelStyle,
+      children: [
+        TextSpan(
+          text: l10n.recapZonesCount(labels.length),
+          style: base.copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        for (final label in labels.take(shown))
+          TextSpan(text: '$_separator$label'),
+        if (shown < labels.length)
+          TextSpan(
+            text: '$_separator${l10n.recapZonesMore(labels.length - shown)}',
+          ),
+      ],
+    );
+  }
+
+  /// Largest number of whole labels whose line (with the «+N más» tail when
+  /// some are left out) fits in [_maxLines] at [maxWidth].
+  int _fittingLabels(
+    BuildContext context,
+    AppLocalizations l10n,
+    TextStyle base,
+    ExomThemePalette palette,
+    double maxWidth,
+  ) {
+    if (!maxWidth.isFinite) return labels.length;
+    final painter = TextPainter(
+      maxLines: _maxLines,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+    );
+    try {
+      for (var shown = labels.length; shown > 0; shown--) {
+        painter.text = _span(l10n, base, palette, shown);
+        painter.layout(maxWidth: maxWidth);
+        if (!painter.didExceedMaxLines) return shown;
+      }
+    } finally {
+      painter.dispose();
+    }
+    return 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final base =
+        Theme.of(context).textTheme.bodyMedium ?? const TextStyle(fontSize: 14);
+
+    if (labels.isEmpty) {
+      return Semantics(
+        key: recapZonesSummaryKey,
+        container: true,
+        liveRegion: true,
+        label: l10n.recapZonesNone,
+        child: ExcludeSemantics(
+          child: Text(
+            l10n.recapZonesNone,
+            maxLines: _maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: base.copyWith(color: palette.textSecondary),
+          ),
+        ),
+      );
+    }
+
+    return Semantics(
+      key: recapZonesSummaryKey,
+      container: true,
+      liveRegion: true,
+      label: l10n.recapZonesSemantics(labels.length, labels.join(', ')),
+      child: ExcludeSemantics(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final shown = _fittingLabels(
+              context,
+              l10n,
+              base,
+              palette,
+              constraints.maxWidth,
+            );
+            return Text.rich(
+              _span(l10n, base, palette, shown),
+              maxLines: _maxLines,
+              overflow: TextOverflow.ellipsis,
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -668,6 +776,9 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
 /// Number of steps of the form after the start view.
 const int kRecapSteps = 5;
 
+/// Photo of the trainer for every coach block of Recap (L5-C5b).
+const AssetImage kRecapCoachAvatar = AssetImage('assets/images/coach/moi.png');
+
 /// The week the recap belongs to («16 nov - 22 nov»), for the steps of the
 /// form below it: a draft of an earlier week must say which week it is.
 class RecapWeekScope extends InheritedWidget {
@@ -783,7 +894,11 @@ class RecapStepFrame extends StatelessWidget {
             second: second,
           ),
           const SizedBox(height: ExomSpacing.lg),
-          ExomCoachBlock(author: l10n.recapListCoachAuthor, text: coach),
+          ExomCoachBlock(
+            author: l10n.coachNameMoi,
+            text: coach,
+            avatar: kRecapCoachAvatar,
+          ),
           const SizedBox(height: ExomSpacing.xxl),
           for (final question in questions) ...[
             question,

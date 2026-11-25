@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 /// Minimum height of the primary and secondary buttons (plan §6).
 const double kExomButtonMinHeight = 56;
 
+/// Foreground of the enabled primary (lime) button, for what leaves it.
+const Color kExomPrimaryForeground = AppColors.textOnPrimary;
+
 /// Minimum tap target of every EXOM control (plan §6).
 const double kExomMinTapTarget = 48;
 
@@ -43,12 +46,19 @@ class ExomPrimaryButton extends StatelessWidget {
     this.trailingIcon,
     this.busy = false,
     this.semanticLabel,
+    this.trailing,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? trailingIcon;
   final bool busy;
+
+  /// Replaces the static [trailingIcon] in its 22 px slot (for example an
+  /// icon that animates); an [Icon] inside takes the size and colour of the
+  /// label. Null keeps the [trailingIcon]; [busy] still shows the progress
+  /// indicator instead.
+  final Widget? trailing;
 
   /// Overrides the accessible label (defaults to [label]).
   final String? semanticLabel;
@@ -63,9 +73,9 @@ class ExomPrimaryButton extends StatelessWidget {
     final fill = disabled ? palette.borderSoft : AppColors.primary;
     final foreground = disabled
         ? (isDark ? palette.textDisabled : palette.textSecondary)
-        : AppColors.textOnPrimary;
+        : kExomPrimaryForeground;
 
-    final Widget? trailing = busy
+    final Widget? trailingSlot = busy
         ? ExcludeSemantics(
             child: SizedBox(
               width: 20,
@@ -75,6 +85,11 @@ class ExomPrimaryButton extends StatelessWidget {
                 color: foreground,
               ),
             ),
+          )
+        : trailing != null
+        ? IconTheme.merge(
+            data: IconThemeData(size: 22, color: foreground),
+            child: SizedBox.square(dimension: 22, child: trailing),
           )
         : trailingIcon == null
         ? null
@@ -103,7 +118,10 @@ class ExomPrimaryButton extends StatelessWidget {
                   style: _labelStyle(foreground),
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 12), trailing],
+              if (trailingSlot != null) ...[
+                const SizedBox(width: 12),
+                trailingSlot,
+              ],
             ],
           ),
         ),

@@ -23,10 +23,9 @@ Future<void> _next(WidgetTester tester, String key) async {
   await settleOnboarding(tester);
 }
 
-/// Plays the first ~140 ms of a step change (M9): the step that goes out
-/// (100 ms) is gone and the new one is still entering (240 ms, overlapped
-/// with the exit since round 5); the full transition has its own tests
-/// (`onboarding_transition_test.dart`).
+/// Plays the first ~140 ms of a step change (M9): the new step is still
+/// entering (since L5-C5b a 280 ms push with the step that goes out); the
+/// full transition has its own tests (`onboarding_transition_test.dart`).
 Future<void> _pastLeave(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 110));
@@ -34,12 +33,13 @@ Future<void> _pastLeave(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 16));
 }
 
-/// Horizontal offset of the step entrance (M9) right now.
+/// Horizontal offset of the step entrance (M9) right now: the step on
+/// screen or entering, which the page paints last.
 double _entranceOffset(WidgetTester tester) {
   final transform = tester.widget<Transform>(
     find
         .descendant(
-          of: find.byKey(const Key(_transition)),
+          of: find.byKey(const Key(_transition)).last,
           matching: find.byType(Transform),
         )
         .first,

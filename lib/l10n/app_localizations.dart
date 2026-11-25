@@ -4358,6 +4358,30 @@ abstract class AppLocalizations {
   /// **'Omitir'**
   String get tutorialSkipButton;
 
+  /// No description provided for @promptDontShowAgain.
+  ///
+  /// In es, this message translates to:
+  /// **'No volver a mostrar'**
+  String get promptDontShowAgain;
+
+  /// No description provided for @recapSundayPromptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy toca tu recap'**
+  String get recapSundayPromptTitle;
+
+  /// No description provided for @recapSundayPromptBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntame cómo ha ido la semana. Son cinco pasos.'**
+  String get recapSundayPromptBody;
+
+  /// No description provided for @recapSundayPromptFill.
+  ///
+  /// In es, this message translates to:
+  /// **'Rellenar recap'**
+  String get recapSundayPromptFill;
+
   /// No description provided for @tutorialHomeTitle.
   ///
   /// In es, this message translates to:
@@ -7695,11 +7719,11 @@ abstract class AppLocalizations {
   /// **'Sin valorar'**
   String get recapListNotRated;
 
-  /// No description provided for @recapListCoachAuthor.
+  /// No description provided for @coachNameMoi.
   ///
   /// In es, this message translates to:
-  /// **'tu entrenador'**
-  String get recapListCoachAuthor;
+  /// **'Moi'**
+  String get coachNameMoi;
 
   /// No description provided for @recapListEmptyHeadlineFirst.
   ///
@@ -7851,17 +7875,71 @@ abstract class AppLocalizations {
   /// **'Siguiente'**
   String get recapNextStep;
 
-  /// No description provided for @recapChosenZones.
+  /// No description provided for @recapZonesCount.
   ///
   /// In es, this message translates to:
-  /// **'Zonas elegidas · {count}'**
-  String recapChosenZones(int count);
+  /// **'{count, plural, one{{count} zona} other{{count} zonas}}'**
+  String recapZonesCount(int count);
+
+  /// No description provided for @recapZonesMore.
+  ///
+  /// In es, this message translates to:
+  /// **'+{count} más'**
+  String recapZonesMore(int count);
+
+  /// No description provided for @recapZonesNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin zonas marcadas'**
+  String get recapZonesNone;
+
+  /// No description provided for @recapZonesSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} zona} other{{count} zonas}}: {zones}'**
+  String recapZonesSemantics(int count, String zones);
 
   /// No description provided for @recapImprovement.
   ///
   /// In es, this message translates to:
   /// **'Mejora'**
   String get recapImprovement;
+
+  /// No description provided for @recapSentKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Cinco pasos completados'**
+  String get recapSentKicker;
+
+  /// No description provided for @recapSentTitleFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Recap'**
+  String get recapSentTitleFirst;
+
+  /// No description provided for @recapSentTitleSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'enviado.'**
+  String get recapSentTitleSecond;
+
+  /// No description provided for @recapSentCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Gracias por contármelo. Lo reviso y te dejo mi comentario en tu recap.'**
+  String get recapSentCoach;
+
+  /// No description provided for @recapBackToRecaps.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a recaps'**
+  String get recapBackToRecaps;
+
+  /// No description provided for @recapSentClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get recapSentClose;
 }
 
 class _AppLocalizationsDelegate

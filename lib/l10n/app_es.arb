@@ -1703,5 +1703,9 @@
   "recapSentTitleSecond": "enviado.",
   "recapSentCoach": "Gracias por contármelo. Lo reviso y te dejo mi comentario en tu recap.",
   "recapBackToRecaps": "Volver a recaps",
-  "recapSentClose": "Cerrar"
+  "recapSentClose": "Cerrar",
+  "trainingMilestoneTitle": "Sesión hecha.",
+  "trainingMilestoneName": "{name}.",
+  "@trainingMilestoneName": {"placeholders": {"name": {"type": "String"}}},
+  "trainingMilestoneBackHome": "Volver a Inicio"
 }

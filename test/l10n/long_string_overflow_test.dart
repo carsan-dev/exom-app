@@ -35,6 +35,8 @@ import '../features/trainings/presentation/pages/training_completion_sheet_test.
     show pumpCompletionSheet;
 import '../features/trainings/presentation/pages/training_detail_redesign_test.dart'
     show pumpTrainingDetail;
+import '../features/trainings/presentation/pages/training_milestone_test.dart'
+    show pumpMilestone;
 
 const _codes = [
   'progress_conflict_review_required',
@@ -426,6 +428,46 @@ void main() {
             expect(tester.takeException(), isNull);
           },
         );
+      }
+    }
+  });
+
+  // L5-E6a «Sesión terminada»: the milestone at 320 dp with 1.3x and 1.6x and
+  // at 360 dp with 1.6x (Android non-linear scaler), in both languages, with a
+  // short and a long session name, scrolled to the end (CC 3); 2.0x scrolling
+  // is in training_milestone_test.dart.
+  group('Sesión terminada does not overflow', () {
+    tearDown(() async => sl.reset());
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    const names = ['Pierna fuerza', 'Hipertrofia tren superior · Bloque A'];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final name in names) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $name',
+            (tester) async {
+              await pumpMilestone(
+                tester,
+                size: Size(width, 640),
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+                trainingName: name,
+              );
+              expect(tester.takeException(), isNull);
+              final scrollable = find
+                  .descendant(
+                    of: find.byKey(const Key('training-milestone')),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first;
+              for (var i = 0; i < 6; i++) {
+                await tester.drag(scrollable, const Offset(0, -200));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
       }
     }
   });

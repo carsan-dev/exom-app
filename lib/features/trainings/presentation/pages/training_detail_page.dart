@@ -46,6 +46,7 @@ import 'package:exom_app/features/trainings/domain/services/training_performance
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
+import 'package:exom_app/features/trainings/presentation/pages/training_milestone_page.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
@@ -538,6 +539,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   String? _locallyConfirmedSessionId;
   String? _completionReturnSessionId;
   bool _completionAccepted = false;
+  bool _milestoneOpen = false;
   StreamSubscription<void>? _syncChanges;
   StreamSubscription<FeedbackUploadNotice>? _feedbackChanges;
 
@@ -848,7 +850,36 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     if (router == null) return;
     _completionReturnSessionId = null;
     _completionAccepted = false;
-    router.go(AppRoutes.home, extra: HomeCompletionRefresh());
+    _openMilestone(router);
+  }
+
+  /// L5-E6a: the server confirmed the completion, so the milestone «Sesión
+  /// hecha» opens over the detail (local push, no router path). Leaving it runs
+  /// the navigation that used to happen here, once; if the account changed
+  /// meanwhile it closes without navigating.
+  Future<void> _openMilestone(GoRouter router) async {
+    if (_milestoneOpen) return;
+    _milestoneOpen = true;
+    final training = widget.state.training;
+    final stamp = widget.sessionStamp;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TrainingMilestonePage(
+          trainingName: training.name,
+          exercises: training.exercises.length,
+          sets: tallyPlannedSets(
+            training.exercises,
+            plannedSets: _plannedSetsOfExercise,
+            isCompleted: (_) => false,
+          ).total,
+          isSameSession: () =>
+              stamp != null && sl<LocalStorage>().sessionStamp == stamp,
+          onContinue: () =>
+              router.go(AppRoutes.home, extra: HomeCompletionRefresh()),
+        ),
+      ),
+    );
+    _milestoneOpen = false;
   }
 
   @override

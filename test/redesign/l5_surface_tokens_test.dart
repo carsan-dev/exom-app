@@ -70,6 +70,8 @@ const List<String> kRepaintedFiles = <String>[
   // L5-E2a · Detalle del entreno (piel). The closing dialog (E2b) carries no
   // legacy vocabulary, so the whole file is swept.
   'lib/features/trainings/presentation/pages/training_detail_page.dart',
+  // L5-E6a · Sesión terminada (hito, sin animación).
+  'lib/features/trainings/presentation/pages/training_milestone_page.dart',
   // L5-E4 · Hoja de serie (piel).
   'lib/features/trainings/presentation/widgets/set_performance_sheet.dart',
   'lib/features/trainings/presentation/widgets/set_value_text.dart',

@@ -1642,10 +1642,11 @@ class _RecapErrorView extends StatelessWidget {
 /// field and in a line above the buttons.
 ///
 /// «ENVIAR RECAP» (L5-C5b): the send is dispatched on the tap, once. From then
-/// on the form takes no taps and the paper plane flies up out of the button as
-/// feedback (drawn in the overlay, so no footer clips it). While the send is in
-/// flight ([submitting]) the button turns busy after
-/// [ExomMotion.busyIndicatorDelay]. With reduced motion there is no flight.
+/// on the form takes no taps and the paper plane flies out of the button and
+/// off the screen through its right edge as feedback (drawn in the root
+/// overlay, so nothing clips it). While the send is in flight ([submitting])
+/// the button turns busy after [ExomMotion.busyIndicatorDelay], once the plane
+/// has left. With reduced motion there is no flight.
 class _RecapFormView extends StatefulWidget {
   final RecapFormActive state;
   final void Function(String field, dynamic value) onFieldChanged;
@@ -1687,6 +1688,18 @@ class _RecapFormViewState extends State<_RecapFormView>
   late final AnimationController _flight;
   final LayerLink _sendSlot = LayerLink();
   final OverlayPortalController _plane = OverlayPortalController();
+  final GlobalKey _sendSlotKey = GlobalKey();
+
+  /// Keeps the portal's state when the button around it is remounted (its
+  /// press feedback swaps its wrapper when the reduced-motion preference
+  /// flips). A remount would dispose the old portal state after the new one
+  /// attached to [_plane], and that dispose detaches the controller: `show()`
+  /// would then show nothing (D1).
+  final GlobalKey _planePortalKey = GlobalKey();
+
+  /// Where the flight ends, from the slot's top-left: past the right edge of
+  /// the screen. Measured on the tap.
+  Offset _flightEnd = Offset.zero;
 
   /// The send was tapped: the form ignores taps from then on.
   bool _sending = false;
@@ -1736,24 +1749,44 @@ class _RecapFormViewState extends State<_RecapFormView>
     // The action starts on the tap; the flight only accompanies it.
     widget.onSubmit();
     final reduced = ExomMotion.of(context).isReduced;
+    final end = reduced ? null : _measureFlightEnd();
     setState(() {
       _sending = true;
-      _planeLaunched = !reduced;
+      _planeLaunched = end != null;
+      if (end != null) _flightEnd = end;
     });
     _busyDelay = Timer(ExomMotion.busyIndicatorDelay, () {
       if (mounted) setState(() => _busyDelayPassed = true);
     });
-    if (reduced) return;
+    if (end == null) return;
     _plane.show();
     _flight.forward(from: 0);
   }
 
-  void _onFlightStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed && mounted && _plane.isShowing) {
-      _plane.hide();
-    }
-    if (status == AnimationStatus.completed && mounted) widget.onFlightEnd();
+  /// End of the flight from the slot's top-left, past the right edge of the
+  /// screen by the size of the grown plane; null if the slot is not laid out
+  /// (then there is no flight).
+  Offset? _measureFlightEnd() {
+    final slot = _sendSlotKey.currentContext?.findRenderObject();
+    if (slot is! RenderBox || !slot.hasSize || !slot.attached) return null;
+    final origin = slot.localToGlobal(Offset.zero);
+    final screen = MediaQuery.sizeOf(context);
+    const margin = _FlyingSendIcon.size * _FlyingSendIcon.endScale;
+    final run = screen.width - origin.dx + margin;
+    return Offset(run, -run * _FlyingSendIcon.riseOverRun);
   }
+
+  void _onFlightStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    if (_plane.isShowing) _plane.hide();
+    // The busy indicator waits for the plane to have left.
+    setState(() {});
+    widget.onFlightEnd();
+  }
+
+  /// The plane is on its way (from the tap until it leaves the screen).
+  bool get _planeFlying =>
+      _planeLaunched && _flight.status != AnimationStatus.completed;
 
   @override
   void dispose() {
@@ -1801,10 +1834,13 @@ class _RecapFormViewState extends State<_RecapFormView>
   }
 
   /// Slot of the send icon in the button. The icon rests here; when it flies
-  /// it is drawn in the overlay, following this slot, and the slot is empty.
+  /// it is drawn in the root overlay (above everything), following this slot,
+  /// and the slot is empty.
   Widget _sendIconSlot() {
     return OverlayPortal(
+      key: _planePortalKey,
       controller: _plane,
+      overlayLocation: OverlayChildLocation.rootOverlay,
       overlayChildBuilder: (context) => Positioned(
         left: 0,
         top: 0,
@@ -1814,12 +1850,18 @@ class _RecapFormViewState extends State<_RecapFormView>
           child: IgnorePointer(
             child: SizedBox.square(
               dimension: _FlyingSendIcon.size,
-              child: _FlyingSendIcon(flight: _flight, iconKey: _sendIconKey),
+              child: _FlyingSendIcon(
+                flight: _flight,
+                iconKey: _sendIconKey,
+                launched: _planeLaunched,
+                end: _flightEnd,
+              ),
             ),
           ),
         ),
       ),
       child: CompositedTransformTarget(
+        key: _sendSlotKey,
         link: _sendSlot,
         child: _planeLaunched
             ? const SizedBox.square(dimension: _FlyingSendIcon.size)
@@ -1869,7 +1911,8 @@ class _RecapFormViewState extends State<_RecapFormView>
                     busy:
                         _isImprovementStep &&
                         widget.submitting &&
-                        _busyDelayPassed,
+                        _busyDelayPassed &&
+                        !_planeFlying,
                     onPressed: _isImprovementStep
                         ? (_hasValidationErrors ? null : _send)
                         : () => onStepChanged(state.step + 1),
@@ -1899,83 +1942,124 @@ class _RecapFormViewState extends State<_RecapFormView>
   }
 }
 
-/// Paper plane of «ENVIAR RECAP» in flight (280 ms, nothing before the send:
-/// it is dispatched on the tap). 60 ms of anticipation (a 3 dp dip with a
-/// slight squash), then 220 ms along a curved path up and to the right,
-/// accelerating, stretched along its motion mid-flight and shrinking and
-/// fading out in the last third. Builds nothing when it is not flying.
+/// Paper plane of «ENVIAR RECAP» in flight (300 ms, nothing before the send:
+/// it is dispatched on the tap). It flies where its nose points, like a thrown
+/// paper plane: 60 ms of wind-up at the button (it pulls back 3 dp down-left,
+/// against the throw, with a slight squash), then 240 ms along an arc that
+/// starts along the nose (45° up and to the right) and flattens to 15° as it
+/// glides, until it leaves the screen through its right edge. The flight
+/// accelerates (ease-in), the plane grows from 1 to [endScale] (it comes
+/// towards the viewer) and turns with the arc's tangent (0° at the launch,
+/// 30° clockwise at the end). It takes the page text colour once it is off
+/// the button. It builds nothing when it was not [launched] or has left.
 class _FlyingSendIcon extends AnimatedWidget {
   const _FlyingSendIcon({
     required Animation<double> flight,
     required this.iconKey,
+    required this.launched,
+    required this.end,
   }) : super(listenable: flight);
 
   final Key iconKey;
 
+  /// The plane left the button (the send was tapped, without reduced motion).
+  final bool launched;
+
+  /// End of the arc from the slot's top-left (off the screen, to the right).
+  final Offset end;
+
   static const double size = 22;
-  static const Duration duration = Duration(milliseconds: 280);
-  static const double _anticipation = 60 / 280;
-  static const double _dip = 3;
+  static const double endScale = 1.6;
+  static const Duration duration = Duration(milliseconds: 300);
+
+  /// Rise of the whole arc over its run. Heading from 45° to 15°, the rise
+  /// is always below the run.
+  static const double riseOverRun = 0.7;
+
+  static const double _anticipation = 60 / 300;
   static const double _squashX = 1.08;
   static const double _squashY = 0.9;
-  static const double _stretch = 0.12;
-  static const double _endScale = 0.6;
-  static const Offset _start = Offset(0, _dip);
-  static const Offset _control = Offset(2, -60);
-  static const Offset _end = Offset(28, -(kExomButtonMinHeight + 40));
-  static const Interval _fade = Interval(2 / 3, 1);
 
-  /// The plane leaves the lime button at ~40% of the arc; by 70% it has the
-  /// page text colour.
-  static const Interval _recolor = Interval(0.4, 0.7);
+  /// Wind-up: 3 dp down and to the left, against the throw.
+  static const Offset _pullBack = Offset(-3 / math.sqrt2, 3 / math.sqrt2);
+
+  /// Nose of the icon: up and to the right.
+  static const double _noseAngle = -math.pi / 4;
+
+  /// Heading at the end of the arc: 15° above the horizontal.
+  static const double _endAngle = -15 * math.pi / 180;
+
+  /// Handles of the arc, in runs: along the nose from the start and along the
+  /// final heading back from the end.
+  static const double _launchHandle = 0.4;
+  static const double _glideHandle = 0.3;
+
+  /// The plane is off the 56 dp button from its slot once its centre has
+  /// moved one plane size past the button's edge: 16 dp to the right edge
+  /// (padding), 17 dp to the top edge.
+  static const double _toRightEdge = 16;
+  static const double _toTopEdge = 17;
 
   Animation<double> get _flight => listenable as Animation<double>;
 
   @override
   Widget build(BuildContext context) {
-    if (!_flight.isAnimating) return const SizedBox.shrink();
+    if (!launched || _flight.status == AnimationStatus.completed) {
+      return const SizedBox.shrink();
+    }
     final value = _flight.value;
     final Matrix4 transform;
-    var opacity = 1.0;
     // Starts as the button's foreground; the overlay would otherwise give it
     // its own default icon colour.
     var color = kExomPrimaryForeground;
     if (value < _anticipation) {
-      final dip = Curves.easeOut.transform(value / _anticipation);
-      transform = Matrix4.translationValues(0, _dip * dip, 0).multiplied(
+      final pull = Curves.easeOut.transform(value / _anticipation);
+      final at = _pullBack * pull;
+      transform = Matrix4.translationValues(at.dx, at.dy, 0).multiplied(
         Matrix4.diagonal3Values(
-          1 + (_squashX - 1) * dip,
-          1 + (_squashY - 1) * dip,
+          1 + (_squashX - 1) * pull,
+          1 + (_squashY - 1) * pull,
           1,
         ),
       );
     } else {
       final f = (value - _anticipation) / (1 - _anticipation);
       final t = ExomMotion.sheetExitCurve.transform(f);
+      final run = end.dx - _pullBack.dx;
+      final p0 = _pullBack;
+      final p1 = p0 + Offset.fromDirection(_noseAngle, run * _launchHandle);
+      final p2 = end - Offset.fromDirection(_endAngle, run * _glideHandle);
       final u = 1 - t;
       final position =
-          _start * (u * u) + _control * (2 * u * t) + _end * (t * t);
+          p0 * (u * u * u) +
+          p1 * (3 * u * u * t) +
+          p2 * (3 * u * t * t) +
+          end * (t * t * t);
       final tangent =
-          (_control - _start) * (2 * u) + (_end - _control) * (2 * t);
-      final angle = tangent.direction;
-      // The squash of the anticipation is released in the first quarter.
+          (p1 - p0) * (3 * u * u) +
+          (p2 - p1) * (6 * u * t) +
+          (end - p2) * (3 * t * t);
+      final turn = tangent.direction - _noseAngle;
+      // The squash of the wind-up is released in the first quarter.
       final squash = (1 - f / 0.25).clamp(0.0, 1.0);
-      final along = 1 + _stretch * math.sin(math.pi * f);
-      final shrink = 1 - (1 - _endScale) * _fade.transform(f);
-      opacity = 1 - _fade.transform(f);
+      final grow = 1 + (endScale - 1) * t;
+      final offButton = math
+          .max(
+            (position.dx - _toRightEdge) / size,
+            (-position.dy - _toTopEdge) / size,
+          )
+          .clamp(0.0, 1.0);
       color = Color.lerp(
         kExomPrimaryForeground,
         context.exomPalette.textPrimary,
-        _recolor.transform(f),
+        offButton,
       )!;
       transform = Matrix4.translationValues(position.dx, position.dy, 0)
-          .multiplied(Matrix4.rotationZ(angle))
-          .multiplied(Matrix4.diagonal3Values(along, 1 / along, 1))
-          .multiplied(Matrix4.rotationZ(-angle))
+          .multiplied(Matrix4.rotationZ(turn))
           .multiplied(
             Matrix4.diagonal3Values(
-              (1 + (_squashX - 1) * squash) * shrink,
-              (1 + (_squashY - 1) * squash) * shrink,
+              (1 + (_squashX - 1) * squash) * grow,
+              (1 + (_squashY - 1) * squash) * grow,
               1,
             ),
           );
@@ -1983,10 +2067,7 @@ class _FlyingSendIcon extends AnimatedWidget {
     return Transform(
       alignment: Alignment.center,
       transform: transform,
-      child: Opacity(
-        opacity: opacity,
-        child: Icon(ExomIcons.send, key: iconKey, size: size, color: color),
-      ),
+      child: Icon(ExomIcons.send, key: iconKey, size: size, color: color),
     );
   }
 }

@@ -1,9 +1,16 @@
 // L5-C5b · Recap, motion of the send (plan §8 norms 1-9, 20):
 // * «ENVIAR RECAP» dispatches RecapSubmitRequested on the tap, once (norm 2:
-//   the action starts on tap). The paper plane flies as feedback in 280 ms
-//   (60 ms anticipation + 220 ms curved, accelerating flight), drawn where no
-//   footer clips it. While the send is in flight the form stays on screen,
-//   takes no taps and the button turns busy after the busy delay.
+//   the action starts on tap). The paper plane flies as feedback in 300 ms
+//   (60 ms wind-up + 240 ms accelerating arc along the nose, 45° flattening
+//   to 15°, that leaves the screen through its right edge, growing to 1.6
+//   and turning with the arc), drawn in the root
+//   overlay, whose portal keeps its state if the button is remounted (D1).
+//   While the send is in flight the form stays
+//   on screen, takes no taps and the button turns busy after the busy delay,
+//   once the plane has left.
+// * Owner 2026-11-25 («que se haga rápido y cuando termine pase a la página
+//   de enviado»): the old 280 ms flight that faded out 96 dp above the button
+//   was replaced by this one; its tests now check the new contract.
 // * «Enviado» (only after the server confirmed, norm 3) enters with a lime
 //   band one third of the body high that travels down in 450 ms and paints the
 //   page above its trailing edge (owner decision 2026-11-25: a weekly moment,
@@ -11,6 +18,7 @@
 //   landing of the «5», which left the screen with the old header.
 // * Reduced motion: no flight, no sweep; the send is still on tap.
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
@@ -56,6 +64,65 @@ class _SlowSubmitRepository extends RecapListTestRepository {
   }
 }
 
+/// Repository whose submit answers on its own after [delay], like a real
+/// server: the bloc goes RecapLoading → (delay) → RecapSubmitted.
+class _DelayedSubmitRepository extends RecapListTestRepository {
+  _DelayedSubmitRepository(super.recaps, this.delay);
+
+  final Duration delay;
+
+  @override
+  Future<void> submitRecap(String id) async {
+    await Future<void>.delayed(delay);
+    return super.submitRecap(id);
+  }
+}
+
+/// The plane is really painted: its follower layer is linked to the button
+/// (it has a transform this frame), no ancestor hides it (zero opacity or
+/// offstage), it has a size, and its centre lies on the screen.
+void _expectPlanePainted(WidgetTester tester, String when) {
+  final icon = find.byKey(_icon);
+  expect(icon, findsOneWidget, reason: '$when: plane built');
+  final box = tester.renderObject<RenderBox>(icon);
+  expect(box.attached, isTrue, reason: '$when: attached');
+  expect(box.size.isEmpty, isFalse, reason: '$when: size');
+  RenderObject? node = box;
+  var followers = 0;
+  while (node != null) {
+    if (node is RenderOpacity) {
+      expect(node.opacity, greaterThan(0), reason: '$when: opacity');
+    }
+    if (node is RenderOffstage) {
+      expect(node.offstage, isFalse, reason: '$when: offstage');
+    }
+    if (node is RenderFollowerLayer) {
+      followers++;
+      final layer = node.debugLayer;
+      expect(layer, isNotNull, reason: '$when: follower painted');
+      expect(layer!.attached, isTrue, reason: '$when: follower in the scene');
+      if (layer is FollowerLayer) {
+        expect(
+          layer.getLastTransform(),
+          isNotNull,
+          reason: '$when: follower linked to its target',
+        );
+      }
+    }
+    if (node is RenderBox && node.hasSize) {
+      expect(node.size.isEmpty, isFalse, reason: '$when: ${node.runtimeType}');
+    }
+    node = node.parent;
+  }
+  expect(followers, lessThanOrEqualTo(1));
+  final screen = Offset.zero & tester.view.physicalSize;
+  expect(
+    screen.contains(_globalRect(tester, icon).center),
+    isTrue,
+    reason: '$when: on screen',
+  );
+}
+
 const _action = ValueKey('recap-step-action');
 const _icon = ValueKey('recap-send-icon');
 const _sweep = ValueKey('recap-sent-sweep');
@@ -64,7 +131,15 @@ const _back = ValueKey('recap-sent-back');
 const _area = ValueKey('recap-sent-sweep-area');
 const _reveal = ValueKey('recap-sent-reveal');
 
-const _flightTotal = Duration(milliseconds: 280);
+const _flightTotal = Duration(milliseconds: 300);
+
+/// Taps «ENVIAR RECAP» and pumps the tap's frame, where the flight clock
+/// starts: from here on the pumped time is the flight's time.
+Future<void> _tapAndStartFlight(WidgetTester tester) async {
+  await tester.tap(find.byKey(_action));
+  await tester.pump();
+}
+
 const _sweepTotal = Duration(milliseconds: 450);
 
 Future<void> _settle(WidgetTester tester) async {
@@ -136,10 +211,12 @@ Rect _globalRect(WidgetTester tester, Finder finder) {
   );
 }
 
-/// No ancestor of [finder] clips it: every clip they apply contains it.
+/// No ancestor of [finder] clips it: every clip they apply contains it. The
+/// screen itself is not counted (the plane leaves it on purpose).
 void _expectNotClipped(WidgetTester tester, Finder finder) {
   final target = tester.renderObject(finder);
   final rect = _globalRect(tester, finder);
+  final screen = Offset.zero & tester.view.physicalSize;
   RenderObject child = target;
   var parent = child.parent;
   while (parent != null) {
@@ -149,6 +226,12 @@ void _expectNotClipped(WidgetTester tester, Finder finder) {
         parent.getTransformTo(null),
         clip,
       ).inflate(0.5);
+      if (global.contains(screen.topLeft) &&
+          global.contains(screen.bottomRight - const Offset(1, 1))) {
+        child = parent;
+        parent = parent.parent;
+        continue;
+      }
       expect(
         global.contains(rect.topLeft) && global.contains(rect.bottomRight),
         isTrue,
@@ -181,6 +264,76 @@ void main() {
     await sl.reset();
   });
 
+  group('D1: the plane is painted with the real send sequence', () {
+    testWidgets('real bloc, server answers after 900 ms: plane painted at '
+        '50, 120 and 200 ms', (tester) async {
+      await _openLastStep(
+        tester,
+        repository: _DelayedSubmitRepository(
+          recapListOpen(),
+          const Duration(milliseconds: 900),
+        ),
+      );
+      // A finger, not a synthetic tap: the press scale runs for a few frames
+      // before the release sends.
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(_action)),
+      );
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pump();
+      expect(_bloc(tester).state, isA<RecapLoading>());
+      await tester.pump(const Duration(milliseconds: 50));
+      _expectPlanePainted(tester, '50 ms');
+      await tester.pump(const Duration(milliseconds: 70));
+      _expectPlanePainted(tester, '120 ms');
+      await tester.pump(const Duration(milliseconds: 80));
+      _expectPlanePainted(tester, '200 ms');
+      await _settle(tester);
+      expect(find.byKey(_sent), findsOneWidget);
+      expect(spy.submits, 1);
+    });
+
+    // Root cause seen on the emulator (logcat of the overlay's lifecycle):
+    // the slot of the button (with its OverlayPortal) was remounted while
+    // step 5 was open, because the press feedback swaps its animated wrapper
+    // when the reduced-motion preference flips (TalkBack, or the
+    // accessibility session `uiautomator dump` opens). The old portal state
+    // is disposed after the new one attached, and its dispose detaches the
+    // shared controller: `show()` on the tap then shows nothing.
+    testWidgets('after the button is remounted (reduced motion on and off) '
+        'the plane is still painted', (tester) async {
+      await _openLastStep(
+        tester,
+        repository: _DelayedSubmitRepository(
+          recapListOpen(),
+          const Duration(milliseconds: 900),
+        ),
+      );
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
+      await tester.pump();
+      await tester.tap(find.byKey(_action));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      _expectPlanePainted(tester, '50 ms');
+      await tester.pump(const Duration(milliseconds: 70));
+      _expectPlanePainted(tester, '120 ms');
+      await tester.pump(const Duration(milliseconds: 80));
+      _expectPlanePainted(tester, '200 ms');
+      await _settle(tester);
+      expect(find.byKey(_sent), findsOneWidget);
+      expect(spy.submits, 1);
+    });
+  });
+
   group('«ENVIAR RECAP» sends on the tap; the plane is feedback', () {
     testWidgets('the event is emitted on the tap, before any frame, once', (
       tester,
@@ -207,35 +360,95 @@ void main() {
       expect(spy.submits, 1);
     });
 
-    testWidgets('flight: dip, then a curved path up and right, 280 ms', (
+    testWidgets('flight: wind-up down-left, launch along the nose (45°), an '
+        'arc that flattens and leaves through the right edge above the '
+        'button, growing and turning with the arc, at most 320 ms', (
       tester,
     ) async {
-      expect(_flightTotal.inMilliseconds, lessThanOrEqualTo(300));
+      expect(_flightTotal.inMilliseconds, lessThanOrEqualTo(320));
       // The server answers late, so the form (and the plane) stay on screen.
       await _openLastStep(
         tester,
         repository: _SlowSubmitRepository(recapListOpen()),
       );
-      final rest = tester.getCenter(find.byKey(_icon));
-      await tester.tap(find.byKey(_action));
-      await tester.pump();
+      final screen = Offset.zero & tester.view.physicalSize;
+      final button = tester.getRect(find.byKey(_action));
+      final rest = _globalRect(tester, find.byKey(_icon)).center;
+      Matrix4 matrix() => tester
+          .widget<Transform>(
+            find
+                .ancestor(
+                  of: find.byKey(_icon),
+                  matching: find.byType(Transform),
+                )
+                .first,
+          )
+          .transform;
+      double turn() => math.atan2(matrix().entry(1, 0), matrix().entry(0, 0));
+      double scale() => math.sqrt(
+        math.pow(matrix().entry(0, 0), 2) + math.pow(matrix().entry(1, 0), 2),
+      );
+      Offset centre() => _globalRect(tester, find.byKey(_icon)).center;
+      double degrees(Offset d) => math.atan2(-d.dy, d.dx) * 180 / math.pi;
+
+      await _tapAndStartFlight(tester);
       await tester.pump(const Duration(milliseconds: 40));
-      final dip = tester.getCenter(find.byKey(_icon));
-      expect(dip.dy, greaterThan(rest.dy), reason: 'anticipation goes down');
-      await tester.pump(const Duration(milliseconds: 110));
-      final mid = tester.getCenter(find.byKey(_icon));
-      await tester.pump(const Duration(milliseconds: 90));
-      final late = tester.getCenter(find.byKey(_icon));
-      expect(mid.dy, lessThan(rest.dy - 4));
-      expect(late.dy, lessThan(mid.dy));
-      expect(late.dx, greaterThan(rest.dx));
-      // Not a straight line: the middle point lies off the chord.
-      final chord = late - rest;
-      final toMid = mid - rest;
-      final cross = chord.dx * toMid.dy - chord.dy * toMid.dx;
-      expect(cross.abs() / chord.distance, greaterThan(1));
-      await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byKey(_icon), findsNothing, reason: 'the plane is gone');
+      final windUp = centre();
+      expect(windUp.dx, lessThan(rest.dx), reason: 'pulls back left');
+      expect(windUp.dy, greaterThan(rest.dy), reason: 'and down');
+      await tester.pump(const Duration(milliseconds: 20));
+      final launch = centre();
+      await tester.pump(const Duration(milliseconds: 30));
+      final early = centre() - launch;
+      expect(degrees(early), closeTo(45, 6), reason: 'along the nose: $early');
+      expect(turn().abs(), lessThan(4 * math.pi / 180), reason: 'no turn yet');
+
+      final centres = <Offset>[centre()];
+      final turns = <double>[turn()];
+      final scales = <double>[scale()];
+      final times = <int>[90];
+      var elapsed = 90;
+      Rect? exit;
+      while (elapsed < 299) {
+        await tester.pump(const Duration(milliseconds: 5));
+        elapsed += 5;
+        final rect = _globalRect(tester, find.byKey(_icon));
+        centres.add(rect.center);
+        turns.add(turn());
+        scales.add(scale());
+        times.add(elapsed);
+        if (exit == null && rect.left > screen.right) exit = rect;
+      }
+      for (var i = 1; i < centres.length; i++) {
+        final step = centres[i] - centres[i - 1];
+        expect(step.dx, greaterThan(0), reason: 'always to the right');
+        expect(step.dy, lessThan(0), reason: 'always rising');
+        // Grows once the squash of the wind-up is released (120 ms).
+        if (times[i - 1] >= 120) {
+          expect(scales[i], greaterThanOrEqualTo(scales[i - 1]));
+        }
+        expect(turns[i], greaterThanOrEqualTo(turns[i - 1] - 1e-9));
+        // The plane turns with the tangent of its path.
+        final heading = math.atan2(step.dy, step.dx) + math.pi / 4;
+        final mid = (turns[i] + turns[i - 1]) / 2;
+        expect(mid, closeTo(heading, 4 * math.pi / 180), reason: 'frame $i');
+        if (i > 1) {
+          final before = centres[i - 1] - centres[i - 2];
+          expect(
+            -step.dy / step.dx,
+            lessThanOrEqualTo(-before.dy / before.dx + 1e-6),
+            reason: 'flattens',
+          );
+        }
+      }
+      expect(turns.last * 180 / math.pi, closeTo(30, 4), reason: 'ends ~30°');
+      expect(scales.last, closeTo(1.6, 0.1));
+      expect(exit, isNotNull, reason: 'leaves through the right edge');
+      expect(exit!.bottom, lessThan(button.top), reason: 'above the button');
+      expect(exit.top, greaterThan(0), reason: 'not through the top');
+      await tester.pump(const Duration(milliseconds: 6));
+      expect(find.byKey(_icon), findsNothing, reason: 'gone by 305 ms');
+      expect(spy.submits, 1);
     });
 
     for (final dark in [false, true]) {
@@ -247,15 +460,15 @@ void main() {
           repository: _SlowSubmitRepository(recapListOpen()),
         );
         Color colour() => tester.widget<Icon>(find.byKey(_icon)).color!;
-        final palette = tester
-            .element(find.byKey(_action))
-            .exomPalette;
+        final palette = tester.element(find.byKey(_action)).exomPalette;
         await tester.tap(find.byKey(_action));
         await tester.pump();
         expect(colour(), kExomPrimaryForeground);
+        await tester.pump();
         await tester.pump(const Duration(milliseconds: 40));
         expect(colour(), kExomPrimaryForeground, reason: 'still on the button');
-        await tester.pump(const Duration(milliseconds: 215));
+        // Off the button before it leaves the screen.
+        await tester.pump(const Duration(milliseconds: 210));
         expect(find.byKey(_icon), findsOneWidget);
         expect(colour(), palette.textPrimary);
       });
@@ -275,8 +488,7 @@ void main() {
               ? const AndroidNonlinearTextScaler(2.0)
               : TextScaler.noScaling,
         );
-        await tester.tap(find.byKey(_action));
-        await tester.pump();
+        await _tapAndStartFlight(tester);
         for (final ms in const [80, 60, 60]) {
           await tester.pump(Duration(milliseconds: ms));
           _expectNotClipped(tester, find.byKey(_icon));
@@ -291,7 +503,7 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(Scaffold).first),
       );
-      await tester.tap(find.byKey(_action));
+      await _tapAndStartFlight(tester);
       await tester.pump(const Duration(milliseconds: 100));
       expect(_bloc(tester).state, isA<RecapLoading>());
       expect(find.byKey(const ValueKey('recap-form')), findsOneWidget);
@@ -307,22 +519,30 @@ void main() {
       await tester.pump();
       expect(spy.events.whereType<RecapStepChanged>(), hasLength(steps));
       expect(spy.events.whereType<RecapFormCancelled>(), isEmpty);
+      // Slow server: the band starts on the confirmation.
+      expect(find.byKey(_sent), findsNothing);
       repository.release.complete();
+      for (var i = 0; i < 5 && find.byKey(_sweep).evaluate().isEmpty; i++) {
+        await tester.pump();
+      }
+      expect(find.byKey(_sent), findsOneWidget);
+      expect(find.byKey(_sweep), findsOneWidget);
       await _settle(tester);
       expect(find.byKey(_sent), findsOneWidget);
       expect(spy.submits, 1);
     });
 
-    testWidgets('system back mid-flight leaves with the send already made', (
-      tester,
-    ) async {
+    testWidgets('system back mid-flight leaves with the send already made '
+        'and leaves no plane behind', (tester) async {
       final repository = _SlowSubmitRepository(recapListOpen());
       await _openLastStep(tester, repository: repository);
-      await tester.tap(find.byKey(_action));
+      await _tapAndStartFlight(tester);
       await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(_icon), findsOneWidget);
       await tester.binding.handlePopRoute();
       await _settle(tester);
       expect(find.byType(RecapPage), findsNothing);
+      expect(find.byKey(_icon), findsNothing, reason: 'no orphan overlay');
       repository.release.complete();
       await _settle(tester);
       expect(spy.submits, 1);
@@ -351,21 +571,23 @@ void main() {
 
   group('a fast confirmation waits for the plane to land', () {
     testWidgets('at 100 ms the plane still flies and «Enviado» is not shown; '
-        'after the flight it appears and the sweep runs', (tester) async {
+        'as it leaves the screen «Enviado» appears and the band starts on '
+        'the next frame', (tester) async {
       await _openLastStep(tester);
-      await tester.tap(find.byKey(_action));
-      await tester.pump();
+      await _tapAndStartFlight(tester);
       await tester.pump(const Duration(milliseconds: 100));
       expect(_bloc(tester).state, isA<RecapSubmitted>(), reason: 'confirmed');
       expect(find.byKey(_icon), findsOneWidget, reason: 'plane painted');
       expect(find.byKey(_sent), findsNothing);
       expect(find.byKey(const ValueKey('recap-form')), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byKey(_sent), findsNothing, reason: '200 ms: still flying');
-      await tester.pump(const Duration(milliseconds: 90));
-      expect(find.byKey(_sent), findsOneWidget);
-      await tester.pump();
-      expect(find.byKey(_sweep), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 195));
+      expect(find.byKey(_sent), findsNothing, reason: '295 ms: still flying');
+      expect(find.byKey(_icon), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.byKey(_icon), findsNothing, reason: 'left the screen');
+      expect(find.byKey(_sent), findsOneWidget, reason: 'same frame');
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.byKey(_sweep), findsOneWidget, reason: 'next frame');
       await tester.pump(const Duration(milliseconds: 100));
       final first = tester.getTopLeft(find.byKey(_sweep)).dy;
       await tester.pump(const Duration(milliseconds: 100));

@@ -11,6 +11,8 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -134,7 +136,10 @@ Future<_Harness> _mount(
   WidgetTester tester, {
   required _Repository repository,
   ThemeData? theme,
-  Size size = const Size(390, 900),
+  // Tall enough for the whole screen: the redesign adds a headline and the
+  // featured block above the measurements, so a retry in the notice would
+  // otherwise sit below the fold.
+  Size size = const Size(390, 1400),
   double textScale = 1.0,
   bool disableAnimations = false,
   Locale locale = const Locale('es'),
@@ -236,6 +241,21 @@ void _expectNoTextBelow13(WidgetTester tester) {
   );
 }
 
+/// The weight numeral as «68,4 kg» (the figure and its unit are two spans).
+String _hero(WidgetTester tester) {
+  final numeral = tester.widget<ExomNumeral>(find.byType(ExomNumeral));
+  return '${numeral.value} ${numeral.unit}';
+}
+
+/// Every figure of the measurement columns as «label: value unit».
+List<String> _figures(WidgetTester tester) => [
+  for (final columns in tester.widgetList<ExomFigureColumns>(
+    find.byType(ExomFigureColumns),
+  ))
+    for (final item in columns.items)
+      '${item.label}: ${item.value} ${item.unit}',
+];
+
 /// Painted text of the whole screen, including rich spans, in order.
 String _allText(WidgetTester tester) =>
     _textRuns(tester).map((r) => r.text).join('|');
@@ -278,8 +298,9 @@ void main() {
         repository: _Repository(history: _weekly, latest: _latest),
       );
       final text = _allText(tester);
-      expect(text, contains('68,4 kg'));
-      expect(text, contains('el 18 de noviembre'));
+      expect(_hero(tester), '68,4 kg');
+      // The kicker paints upper case.
+      expect(text, contains('EL 18 DE NOVIEMBRE'));
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
       expect(find.byType(LineChart), findsOneWidget);
     });
@@ -391,7 +412,7 @@ void main() {
         repository: _Repository(history: [_w(11, 18, 68.4)], latest: _latest),
       );
       final l10n = _l10n(tester);
-      expect(_allText(tester), contains('68,4 kg'));
+      expect(_hero(tester), '68,4 kg');
       expect(find.textContaining(' kg menos'), findsNothing);
       expect(find.textContaining(' kg más'), findsNothing);
       expect(find.byType(LineChart), findsNothing);
@@ -452,21 +473,12 @@ void main() {
         'progress-measure-waist_cm-2026-11-18',
         'progress-measure-weight_kg-2026-11-11',
       ]);
-      final first = find.byKey(
-        const ValueKey('progress-measure-waist_cm-2026-11-18'),
-      );
-      expect(
-        find.descendant(of: first, matching: find.text('Cintura')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: first, matching: find.text('18 nov')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: first, matching: find.text('74 cm')),
-        findsOneWidget,
-      );
+      // Columns (E9a): the label carries the date, the figure its unit.
+      expect(_figures(tester).take(3).toList(), [
+        'Peso · 18 nov: 68,4 kg',
+        'Cintura · 18 nov: 74 cm',
+        'Peso · 11 nov: 68,8 kg',
+      ]);
     });
 
     testWidgets('the photos row opens the existing progress photos route', (
@@ -477,8 +489,11 @@ void main() {
         repository: _Repository(history: _weekly, latest: _latest),
       );
       final row = find.byKey(const Key('progress-photos-row'));
-      await tester.ensureVisible(row);
-      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        row,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
       await tester.tap(row);
       await tester.pumpAndSettle();
@@ -515,8 +530,8 @@ void main() {
       expect(repository.saved, hasLength(1));
       expect(find.byType(MetricsFormPage), findsNothing);
       expect(repository.historyCalls, 2);
-      expect(_allText(tester), contains('68,1 kg'));
-      expect(_allText(tester), contains('el 25 de noviembre'));
+      expect(_hero(tester), '68,1 kg');
+      expect(_allText(tester), contains('EL 25 DE NOVIEMBRE'));
       // The chart keeps the last eight weights: 7 Oct (70,6) → 25 Nov (68,1).
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
     });
@@ -655,7 +670,7 @@ void main() {
       expect(find.text(l10n.retry), findsOneWidget);
       expect(find.text(l10n.progressLatestUnavailableOffline), findsNothing);
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
-      expect(find.text('74 cm'), findsOneWidget);
+      expect(_figures(tester), contains('Cintura · 18 nov: 74 cm'));
 
       final calls = repository.historyCalls;
       await tester.tap(find.text(l10n.retry));
@@ -671,7 +686,7 @@ void main() {
       await _mount(tester, repository: repository);
       final l10n = _l10n(tester);
       expect(find.text(l10n.progressCachedBanner), findsOneWidget);
-      expect(find.text('74 cm'), findsOneWidget);
+      expect(_figures(tester), contains('Cintura · 18 nov: 74 cm'));
       expect(find.text(l10n.retry), findsOneWidget);
     });
 
@@ -1089,7 +1104,7 @@ void main() {
         await _mount(
           tester,
           repository: _Repository(history: _weekly, latest: _latest),
-          size: const Size(390, 1400),
+          size: const Size(390, 2000),
         );
         final photos = find.byKey(const Key('progress-photos-row'));
         expect(photos, findsOneWidget);
@@ -1148,7 +1163,7 @@ void main() {
       expect(data.minY, 78);
       expect(data.maxY, 84);
       expect(data.gridData.horizontalInterval, 2);
-      expect(data.titlesData.leftTitles.sideTitles.interval, 2);
+      expect(data.titlesData.rightTitles.sideTitles.interval, 2);
       final labels = [
         for (final text in tester.widgetList<Text>(
           find.descendant(
@@ -1159,12 +1174,13 @@ void main() {
           text.data,
       ];
       expect(labels, containsAll(['78', '80', '82', '84']));
-      // The last dot (radius 4 + stroke) must fit inside the chart box.
+      // The axis sits on the right, so the room is for the first dot
+      // (radius 3.5 + stroke) at the left edge of the chart box.
       final box = tester.getRect(
         find.byKey(const Key('progress-weight-chart')),
       );
       final plot = tester.getRect(find.byType(LineChart));
-      expect(box.right - plot.right, greaterThanOrEqualTo(6));
+      expect(plot.left - box.left, greaterThanOrEqualTo(6));
       expect(tester.takeException(), isNull);
     });
   });

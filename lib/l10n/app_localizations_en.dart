@@ -4322,6 +4322,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progressTitle => 'Progress';
 
   @override
+  String get progressSubtitle => 'Weight, measures and photos';
+
+  @override
+  String get progressHeadlineFirst => 'Look back.';
+
+  @override
+  String get progressHeadlineSecond => 'Keep going.';
+
+  @override
   String get progressLatestMeasures => 'Latest measurements';
 
   @override

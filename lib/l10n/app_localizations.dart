@@ -7875,11 +7875,29 @@ abstract class AppLocalizations {
   /// **'Siguiente'**
   String get recapNextStep;
 
-  /// No description provided for @recapChosenZones.
+  /// No description provided for @recapZonesCount.
   ///
   /// In es, this message translates to:
-  /// **'Zonas elegidas · {count}'**
-  String recapChosenZones(int count);
+  /// **'{count, plural, one{{count} zona} other{{count} zonas}}'**
+  String recapZonesCount(int count);
+
+  /// No description provided for @recapZonesMore.
+  ///
+  /// In es, this message translates to:
+  /// **'+{count} más'**
+  String recapZonesMore(int count);
+
+  /// No description provided for @recapZonesNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin zonas marcadas'**
+  String get recapZonesNone;
+
+  /// No description provided for @recapZonesSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} zona} other{{count} zonas}}: {zones}'**
+  String recapZonesSemantics(int count, String zones);
 
   /// No description provided for @recapImprovement.
   ///

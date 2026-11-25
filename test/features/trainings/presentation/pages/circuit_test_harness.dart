@@ -286,6 +286,10 @@ Future<CircuitHarness> pumpCircuit(
   double width = 390,
   double height = 844,
   double textScale = 1.0,
+  // L5-E5: the overflow sweep uses the Android non-linear scaler and English;
+  // [textScaler] replaces the linear [textScale] when given.
+  TextScaler? textScaler,
+  Locale locale = const Locale('es'),
   Brightness brightness = Brightness.dark,
   String blockName = 'Circuito metabólico',
   bool Function(MarkExerciseCompleted event)? failWhen,
@@ -356,7 +360,7 @@ Future<CircuitHarness> pumpCircuit(
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         theme: circuitTheme(brightness),
-        locale: const Locale('es'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
@@ -365,7 +369,7 @@ Future<CircuitHarness> pumpCircuit(
           return MediaQuery(
             data: MediaQuery.of(
               context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
             child: child!,
           );
         },

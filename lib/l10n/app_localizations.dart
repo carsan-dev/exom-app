@@ -7140,6 +7140,12 @@ abstract class AppLocalizations {
   /// **'{name}: ahora'**
   String circuitRowNowA11y(String name);
 
+  /// No description provided for @circuitRowNowWithTargetA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}: ahora, {target}'**
+  String circuitRowNowWithTargetA11y(String name, String target);
+
   /// No description provided for @circuitRowNextA11y.
   ///
   /// In es, this message translates to:
@@ -7227,6 +7233,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{name}, ronda {round} · {status}'**
   String circuitSavedStatus(String name, int round, String status);
+
+  /// No description provided for @circuitStepExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}.'**
+  String circuitStepExercise(String name);
+
+  /// No description provided for @circuitStepPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio {current} de {total}.'**
+  String circuitStepPosition(int current, int total);
+
+  /// No description provided for @circuitTargetLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo'**
+  String get circuitTargetLabel;
+
+  /// No description provided for @circuitTargetLabelWithRir.
+  ///
+  /// In es, this message translates to:
+  /// **'Objetivo · RIR {rir}'**
+  String circuitTargetLabelWithRir(int rir);
+
+  /// No description provided for @exerciseLastTimeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Última vez'**
+  String get exerciseLastTimeLabel;
+
+  /// No description provided for @circuitRoundLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 registrado} other{{done} de {total} registrados}}'**
+  String circuitRoundLogged(int done, int total);
+
+  /// No description provided for @circuitRowLater.
+  ///
+  /// In es, this message translates to:
+  /// **'Después'**
+  String get circuitRowLater;
 
   /// No description provided for @progressTitle.
   ///

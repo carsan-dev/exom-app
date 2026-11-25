@@ -73,6 +73,10 @@ const List<String> kRepaintedFiles = <String>[
   // L5-E4 · Hoja de serie (piel).
   'lib/features/trainings/presentation/widgets/set_performance_sheet.dart',
   'lib/features/trainings/presentation/widgets/set_value_text.dart',
+  // L5-E5 · Circuito. The last-round video flow (E3c) carries no legacy
+  // vocabulary, so the whole file is swept.
+  'lib/features/trainings/presentation/pages/active_circuit_page.dart',
+  'lib/features/trainings/presentation/widgets/circuit_round_list.dart',
   // L5-B2 · Retos.
   'lib/features/challenges/presentation/pages/challenges_page.dart',
   'lib/features/challenges/presentation/widgets/achievement_tiles.dart',

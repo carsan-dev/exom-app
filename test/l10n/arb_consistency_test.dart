@@ -36,6 +36,8 @@ const Map<String, String> identicalValueAllowlist = {
   'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',
   // L4 unit 4 (Progreso): only placeholders and a separator, no prose.
   'progressMeasureSide': 'Placeholders "{measure} · {side}", no words.',
+  // L5-E5 (Circuito): the exercise name closed by a period, no words.
+  'circuitStepExercise': 'Placeholder "{name}." and a period, no words.',
 };
 
 /// English words that must not appear in Spanish values. "Feedback", "Recap"

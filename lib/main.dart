@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -41,7 +42,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _configureImageCache();
-  runApp(const ExomBootstrapApp());
+  await showBootstrapSplash();
 
   try {
     await _bootstrap().timeout(const Duration(seconds: 20));
@@ -50,6 +51,59 @@ Future<void> main() async {
     debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
     debugPrintStack(stackTrace: stackTrace);
     runApp(ExomBootstrapErrorApp(error: error.toString()));
+  }
+}
+
+/// Longest the native splash may be held for the symbol to be ready.
+const Duration _bootstrapSymbolCap = Duration(milliseconds: 500);
+
+/// Loader [ExomBrandSymbol] builds on the bootstrap screen (dark theme,
+/// symbol height [_bootstrapSymbolHeight]); same cache key as the widget's.
+@visibleForTesting
+SvgAssetLoader bootstrapSymbolLoader() => ExomBrandLogo.loaderFor(
+  Brightness.dark,
+  AppTheme.dark.extension<ExomThemePalette>()!,
+  height: _bootstrapSymbolHeight / ExomBrandLogo.symbolHeightEm,
+);
+
+/// Loads the recoloured symbol into flutter_svg's cache so the first
+/// [ExomBootstrapApp] build finds the bytes without waiting for the asset.
+@visibleForTesting
+Future<void> precacheBootstrapSymbol() async {
+  await bootstrapSymbolLoader().loadBytes(null);
+}
+
+/// Shows [ExomBootstrapApp] with the symbol already painted in the first
+/// frame: the first frame is deferred (the native splash stays) until the
+/// symbol is cached and has had two frames to resolve, capped at 500 ms in
+/// total. Any failure or the cap lets the first frame through anyway.
+@visibleForTesting
+Future<void> showBootstrapSplash({
+  Duration cap = _bootstrapSymbolCap,
+  void Function(Widget app) run = runApp,
+}) async {
+  final binding = WidgetsBinding.instance;
+  final clock = Stopwatch()..start();
+  binding.deferFirstFrame();
+  try {
+    try {
+      await precacheBootstrapSymbol().timeout(cap);
+    } catch (error) {
+      debugPrint('[BOOTSTRAP] Symbol precache skipped: $error');
+    }
+    run(const ExomBootstrapApp());
+    final left = cap - clock.elapsed;
+    if (left > Duration.zero) {
+      // The deferred frames still build, so the picture resolves meanwhile.
+      await (() async {
+        await binding.endOfFrame;
+        await binding.endOfFrame;
+      })().timeout(left);
+    }
+  } catch (error) {
+    debugPrint('[BOOTSTRAP] Symbol wait ended early: $error');
+  } finally {
+    binding.allowFirstFrame();
   }
 }
 
@@ -254,6 +308,16 @@ class ExomBootstrapErrorApp extends StatelessWidget {
   }
 }
 
+/// Transparent status bar, carbon navigation bar, light icons on both.
+@visibleForTesting
+const SystemUiOverlayStyle bootstrapSystemUiStyle = SystemUiOverlayStyle(
+  statusBarColor: Colors.transparent,
+  statusBarIconBrightness: Brightness.light,
+  statusBarBrightness: Brightness.dark,
+  systemNavigationBarColor: AppColors.background,
+  systemNavigationBarIconBrightness: Brightness.light,
+);
+
 class _BootstrapScaffold extends StatelessWidget {
   const _BootstrapScaffold({required this.child});
 
@@ -262,7 +326,7 @@ class _BootstrapScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: bootstrapSystemUiStyle,
       child: Scaffold(
         backgroundColor: AppColors.background,
         resizeToAvoidBottomInset: false,

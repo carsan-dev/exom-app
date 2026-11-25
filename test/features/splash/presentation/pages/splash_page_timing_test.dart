@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/auth/auth_token_provider.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/app_distribution_config.dart';
@@ -113,6 +114,9 @@ Future<void> _mount(WidgetTester tester, AuthBloc bloc) async {
       value: bloc,
       child: MaterialApp.router(
         routerConfig: router,
+        // The real splash is dark; the light symbol pads its viewBox for the
+        // outline, which changes the intrinsic aspect and so the width.
+        theme: AppTheme.dark,
         locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -248,8 +252,8 @@ void main() {
         112 * 112 / 120,
       );
       final symbol = tester.getSize(find.byType(ExomBrandSymbol));
-      expect(symbol.width, closeTo(112, 0.2));
-      expect(symbol.height, closeTo(112 * 112 / 120, 0.2));
+      expect(symbol.width, closeTo(112, 0.01));
+      expect(symbol.height, closeTo(112 * 112 / 120, 0.01));
       expect(
         tester.getSize(find.byType(ExomWordmark)).height,
         closeTo(32, 0.01),

@@ -42,6 +42,9 @@ void main() {
       );
       expect(region.value.statusBarIconBrightness, Brightness.light);
       expect(region.value.systemNavigationBarIconBrightness, Brightness.light);
+      expect(region.value.statusBarColor, Colors.transparent);
+      expect(region.value.systemNavigationBarColor, AppColors.background);
+      expect(region.value, bootstrapSystemUiStyle);
       await tester.pumpWidget(const SizedBox());
     });
 
@@ -134,6 +137,63 @@ void main() {
       expect(find.bySemanticsLabel('EXOM'), findsOneWidget);
       handle.dispose();
       await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  group('first-frame symbol', () {
+    // The decoded picture is wrapped in a FittedBox; the placeholder is not.
+    final painted = find.descendant(
+      of: find.byType(SvgPicture),
+      matching: find.byType(FittedBox),
+    );
+
+    setUp(svg.cache.clear);
+
+    testWidgets('after precache the first pump already holds the picture', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      await tester.runAsync(precacheBootstrapSymbol);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      // In flutter_test the asset load resolves synchronously, so this only
+      // guards the wiring; the cache-hit test below guards the device path.
+      expect(painted, findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('precache fills the key the widget loads (cache hit)', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      final key = bootstrapSymbolLoader().cacheKey(null);
+      await tester.runAsync(precacheBootstrapSymbol);
+      var loaded = false;
+      // A hit returns the cached bytes without running the loader.
+      await tester.runAsync(
+        () => svg.cache.putIfAbsent(key, () {
+          loaded = true;
+          throw StateError('cache miss');
+        }),
+      );
+      expect(loaded, isFalse);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      final widget = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      final loader = widget.bytesLoader as SvgAssetLoader;
+      final context = tester.element(find.byType(SvgPicture));
+      expect(loader, bootstrapSymbolLoader());
+      expect(loader.cacheKey(context), key);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('exhausted cap still shows the app and frees the frame', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      Widget? shown;
+      await tester.runAsync(
+        () => showBootstrapSplash(cap: Duration.zero, run: (w) => shown = w),
+      );
+      expect(shown, isA<ExomBootstrapApp>());
     });
   });
 

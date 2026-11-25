@@ -8,6 +8,7 @@
 import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/injection_container.dart';
@@ -146,6 +147,7 @@ void main() {
     testWidgets('the view replaces the list, without SnackBar or footer', (
       tester,
     ) async {
+      final semantics = tester.ensureSemantics();
       await sendRecapFromForm(tester);
       final l10n = _l10n(tester);
       expect(find.byKey(_sent), findsOneWidget);
@@ -153,7 +155,9 @@ void main() {
       expect(find.text(l10n.recapSentKicker.toUpperCase()), findsNothing);
       expect(find.text('RECAP'), findsOneWidget);
       expect(find.text('ENVIADO.'), findsOneWidget);
-      expect(find.text(l10n.recapSentStatus), findsOneWidget);
+      expect(find.byType(ExomSyncStatus), findsNothing);
+      expect(find.bySemanticsLabel(RegExp(r'Recap enviado\.')), findsOneWidget);
+      semantics.dispose();
       expect(find.text(l10n.recapSentCoach), findsOneWidget);
       expect(find.text(l10n.recapBackToRecaps), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
@@ -191,7 +195,8 @@ void main() {
       expect(find.text('WEEKLY RECAP'), findsOneWidget);
       expect(find.text('FIVE STEPS COMPLETED'), findsNothing);
       expect(find.text('SENT.'), findsOneWidget);
-      expect(find.text('Sent'), findsOneWidget);
+      expect(find.byType(ExomSyncStatus), findsNothing);
+      expect(find.text('Sent'), findsNothing);
       expect(
         find.text(
           "Thanks for telling me. I'll review it and leave my comment on "

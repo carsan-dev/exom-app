@@ -7923,12 +7923,6 @@ abstract class AppLocalizations {
   /// **'enviado.'**
   String get recapSentTitleSecond;
 
-  /// No description provided for @recapSentStatus.
-  ///
-  /// In es, this message translates to:
-  /// **'Enviado'**
-  String get recapSentStatus;
-
   /// No description provided for @recapSentCoach.
   ///
   /// In es, this message translates to:

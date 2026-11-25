@@ -4801,9 +4801,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recapSentTitleSecond => 'sent.';
 
   @override
-  String get recapSentStatus => 'Sent';
-
-  @override
   String get recapSentCoach =>
       'Thanks for telling me. I\'ll review it and leave my comment on your recap.';
 

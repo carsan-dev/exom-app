@@ -992,14 +992,6 @@ class _RecapSentView extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: ExomSpacing.md),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: ExomSyncStatus(
-                  state: ExomSyncState.confirmada,
-                  label: l10n.recapSentStatus,
-                ),
-              ),
             ],
           ),
         ),

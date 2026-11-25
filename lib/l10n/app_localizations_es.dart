@@ -2406,6 +2406,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tutorialSkipButton => 'Omitir';
 
   @override
+  String get promptDontShowAgain => 'No volver a mostrar';
+
+  @override
+  String get recapSundayPromptTitle => 'Hoy toca tu recap';
+
+  @override
+  String get recapSundayPromptBody =>
+      'Cuéntame cómo ha ido la semana. Son cinco pasos.';
+
+  @override
+  String get recapSundayPromptFill => 'Rellenar recap';
+
+  @override
   String get tutorialHomeTitle => 'Inicio';
 
   @override

@@ -65,6 +65,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/diets/presentation/pages/diets_page.dart',
   'lib/features/diets/presentation/widgets/meal_detail_sheet.dart',
   'lib/features/diets/presentation/widgets/diet_history_button.dart',
+  // L5-E9a · Progreso.
+  'lib/features/metrics/presentation/pages/metrics_progress_page.dart',
   // L5-B2 · Retos.
   'lib/features/challenges/presentation/pages/challenges_page.dart',
   'lib/features/challenges/presentation/widgets/achievement_tiles.dart',

@@ -7168,6 +7168,24 @@ abstract class AppLocalizations {
   /// **'Progreso'**
   String get progressTitle;
 
+  /// No description provided for @progressSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso, medidas y fotos'**
+  String get progressSubtitle;
+
+  /// No description provided for @progressHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Mira atrás.'**
+  String get progressHeadlineFirst;
+
+  /// No description provided for @progressHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue adelante.'**
+  String get progressHeadlineSecond;
+
   /// No description provided for @progressLatestMeasures.
   ///
   /// In es, this message translates to:

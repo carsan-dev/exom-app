@@ -8,8 +8,15 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -31,9 +38,11 @@ const int _kChartPoints = 8;
 /// Rows shown under «Últimas medidas».
 const int _kLatestRows = 6;
 
-/// «Progreso» frame of Métricas (sketch `t-progreso`): latest weight and its
-/// change, weight chart, latest measurements, progress photos and the pinned
-/// «Añadir medida» that opens the day form ([MetricsFormPage]).
+/// «Progreso» frame of Métricas (L5-E9a, sketch `e-migradas.html` «Progreso»):
+/// two-line headline, the latest weight at 96 with its change and chart in the
+/// featured block, the latest measurements in columns (01), the progress
+/// photos entry (02) and the pinned «Añadir medida» that opens the day form
+/// ([MetricsFormPage]).
 class MetricsProgressPage extends StatelessWidget {
   const MetricsProgressPage({super.key});
 
@@ -146,6 +155,7 @@ class _ProgressViewState extends State<_ProgressView> {
     final bloc = context.read<MetricsBloc>();
     if (state is MetricsHistoryFailure) {
       return [
+        const _Intro(),
         _HistoryMessage(
           message: state.offline
               ? AppLocalizations.of(context).progressHistoryOffline
@@ -153,7 +163,7 @@ class _ProgressViewState extends State<_ProgressView> {
           onRetry: () => bloc.add(const MetricsHistoryRequested()),
         ),
         const SizedBox(height: 24),
-        const _PhotosRow(),
+        const _PhotosSection(n: 1),
       ];
     }
     if (state is MetricsHistoryLoaded) {
@@ -187,17 +197,13 @@ class _ProgressViewState extends State<_ProgressView> {
             refreshing: refreshing,
             announce: !latestUnavailable,
           ),
-        _WeightSummary(points: shown, format: format),
+        const _Intro(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: shown.length < 2
-              ? _MutedText(l10n.progressChartEmpty)
-              : _WeightChart(points: shown, format: format),
+          padding: const EdgeInsets.only(top: 16),
+          child: _WeightFeature(points: shown, format: format),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-          child: _SectionTitle(l10n.progressLatestMeasures),
-        ),
+        const SizedBox(height: 8),
+        ExomNumberedSectionHeader(n: 1, title: l10n.progressLatestMeasures),
         _LatestMeasures(
           rows: _latestRows(series, state.latest, format),
           format: format,
@@ -209,6 +215,7 @@ class _ProgressViewState extends State<_ProgressView> {
           onRetry: retry,
           refreshing: refreshing,
         ),
+        const _PhotosSection(n: 2),
       ];
     }
     final l10n = AppLocalizations.of(context);
@@ -223,6 +230,33 @@ class _ProgressViewState extends State<_ProgressView> {
         ),
       ),
     ];
+  }
+}
+
+/// Subtitle and two-line headline under the title. They follow the cached band
+/// (when there is one) so the band stays next to the title, as before.
+class _Intro extends StatelessWidget {
+  const _Intro();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: _MutedText(l10n.progressSubtitle),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomTwoLineHeadline(
+            first: l10n.progressHeadlineFirst,
+            second: l10n.progressHeadlineSecond,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -372,13 +406,17 @@ class _MeasureRowData {
     required this.day,
     required this.label,
     required this.value,
+    required this.unit,
   });
 
   final String fieldKey;
   final int order;
   final DateTime day;
   final String label;
+
+  /// Figure already formatted for the locale, without its unit.
   final String value;
+  final String unit;
 }
 
 /// Newest values first: every type of the latest record plus the earlier
@@ -404,8 +442,11 @@ List<_MeasureRowData> _latestRows(
           day: day,
           label: field.label(format.l10n),
           value: field.kind == _Kind.weight
-              ? format.weight(value)
-              : format.length(value),
+              ? format.weightFigure(value)
+              : format.lengthFigure(value),
+          unit: field.kind == _Kind.weight
+              ? format.weightUnit
+              : format.lengthUnit,
         ),
       );
     }
@@ -418,7 +459,8 @@ List<_MeasureRowData> _latestRows(
         order: 0,
         day: point.day,
         label: format.l10n.weightSectionTitle,
-        value: format.weight(point.kg),
+        value: format.weightFigure(point.kg),
+        unit: format.weightUnit,
       ),
     );
   }
@@ -452,10 +494,13 @@ class _ProgressFormat {
 
   String weight(double kg) => '${number(displayWeight(kg))} $weightUnit';
 
-  String length(double cm) {
-    final display = UnitConverters.lengthToDisplay(cm, unitSystem);
-    return '${number(display)} ${lengthUnitSymbol(unitSystem)}';
-  }
+  /// The weight figure without its unit (the numeral paints the unit apart).
+  String weightFigure(double kg) => number(displayWeight(kg));
+
+  String get lengthUnit => lengthUnitSymbol(unitSystem);
+
+  String lengthFigure(double cm) =>
+      number(UnitConverters.lengthToDisplay(cm, unitSystem));
 
   String longDate(DateTime day) => _longDate.format(day);
 
@@ -469,33 +514,6 @@ class _ProgressFormat {
 }
 
 // ── Widgets ─────────────────────────────────────────────────────────────────
-
-/// Section title (sketch `.t2`): Barlow Condensed 800, 22 px, uppercase.
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      header: true,
-      label: text,
-      excludeSemantics: true,
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontFamily: AppTheme.displayFontFamily,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-          height: 0.95,
-          letterSpacing: -0.44,
-          color: context.exomPalette.textPrimary,
-        ),
-      ),
-    );
-  }
-}
 
 class _MutedText extends StatelessWidget {
   const _MutedText(this.text);
@@ -611,8 +629,11 @@ class _CachedBanner extends StatelessWidget {
   }
 }
 
-class _WeightSummary extends StatelessWidget {
-  const _WeightSummary({required this.points, required this.format});
+/// Featured block of the weight (sketch `.x-feat` + `.x-hero.e-wt`): kicker
+/// «Peso · el 18 de noviembre», the latest weight at 96 in the data colour with
+/// the change over the chart's weeks beside it, and the chart.
+class _WeightFeature extends StatelessWidget {
+  const _WeightFeature({required this.points, required this.format});
 
   final List<_WeightPoint> points;
   final _ProgressFormat format;
@@ -621,35 +642,16 @@ class _WeightSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = format.l10n;
-    final children = <Widget>[_SectionTitle(l10n.weightSectionTitle)];
+    final children = <Widget>[];
     if (points.isEmpty) {
       children.addAll([
-        const SizedBox(height: 8),
-        _MutedText(l10n.progressWeightEmpty),
+        _padded(ExomKicker(l10n.weightSectionTitle)),
+        const SizedBox(height: 12),
+        _padded(_MutedText(l10n.progressWeightEmpty)),
       ]);
     } else {
       final last = points.last;
-      children.addAll([
-        const SizedBox(height: 8),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: format.weight(last.kg),
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              TextSpan(
-                text: ' ${l10n.progressOnDate(format.longDate(last.day))}',
-              ),
-            ],
-          ),
-          style: TextStyle(
-            fontSize: 18,
-            height: 1.35,
-            color: palette.textPrimary,
-          ),
-        ),
-      ]);
+      Widget? side;
       if (points.length >= 2) {
         final first = points.first;
         final diff =
@@ -662,24 +664,68 @@ class _WeightSummary extends StatelessWidget {
             : rounded < 0
             ? l10n.progressDeltaLess(amount, period)
             : l10n.progressDeltaMore(amount, period);
-        children.addAll([const SizedBox(height: 4), _MutedText(sentence)]);
+        side = Text(
+          sentence,
+          style: TextStyle(
+            fontFamily: AppTheme.bodyFontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            color: palette.textPrimary,
+          ),
+        );
       }
+      children.addAll([
+        _padded(
+          ExomKicker(
+            '${l10n.weightSectionTitle} · '
+            '${l10n.progressOnDate(format.longDate(last.day))}',
+          ),
+        ),
+        const SizedBox(height: 16),
+        _padded(
+          ExomNumeral(
+            key: const Key('progress-weight-hero'),
+            value: format.weightFigure(last.kg),
+            unit: format.weightUnit,
+            size: ExomNumeralSize.hero96,
+            side: side,
+          ),
+        ),
+      ]);
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+    children.addAll([
+      const SizedBox(height: 16),
+      _padded(
+        points.length < 2
+            ? _MutedText(l10n.progressChartEmpty)
+            : _WeightChart(points: points, format: format),
+      ),
+    ]);
+    return ExomFeatureBlock(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
       ),
     );
   }
+
+  static Widget _padded(Widget child) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: child,
+  );
 }
 
-/// Line chart of [points] (sketch `.chart`): line and dots in the text
-/// colour, the last dot filled, kg axis on the left and first, middle and
-/// last dates below. Screen readers get a one-sentence summary instead.
+/// Line chart of [points] (sketch `.x-chart`): line and dots in the data
+/// colour, the last dot filled, kg axis on the right (the sketch's side) and
+/// first, middle and last dates below. Screen readers get a one-sentence
+/// summary instead.
 class _WeightChart extends StatelessWidget {
   const _WeightChart({required this.points, required this.format});
+
+  /// Gap between the plot's right edge (where the last dot sits) and the axis
+  /// labels: the dot's radius and stroke plus a visible margin.
+  static const double _axisGap = 12;
 
   final List<_WeightPoint> points;
   final _ProgressFormat format;
@@ -696,6 +742,13 @@ class _WeightChart extends StatelessWidget {
     final last = points.length - 1;
     final labelled = {0, if (points.length >= 3) last ~/ 2, last};
     final axisStyle = TextStyle(fontSize: 13, color: palette.textSecondary);
+    // The top label is centred on the plot's top edge, so it reaches half its
+    // line above it: leave that room under the unit. The last dot sits on the
+    // plot's right edge, so the labels start `_axisGap` clear of it and the
+    // reserved column grows with the text size.
+    final labelSize = MediaQuery.textScalerOf(context).scale(13);
+    final unitGap = labelSize * 0.65 + 4;
+    final axisWidth = math.max(44.0, _axisGap + labelSize * 1.9);
     final summary = format.l10n.progressChartSemantics(
       format.longDate(points.first.day),
       format.longDate(points.last.day),
@@ -712,11 +765,14 @@ class _WeightChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(format.weightUnit, style: axisStyle),
-          const SizedBox(height: 4),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Text(format.weightUnit, style: axisStyle),
+          ),
+          SizedBox(height: unitGap),
           Padding(
-            // Room for the last dot (radius 4 + stroke) at the right edge.
-            padding: const EdgeInsets.only(right: 10),
+            // Room for the first dot (radius 3.5 + stroke) at the left edge.
+            padding: const EdgeInsets.only(left: 6),
             child: SizedBox(
               height: 170,
               child: LineChart(
@@ -739,14 +795,15 @@ class _WeightChart extends StatelessWidget {
                   ),
                   titlesData: FlTitlesData(
                     topTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    leftTitles: AxisTitles(
+                    leftTitles: const AxisTitles(),
+                    rightTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 44,
+                        reservedSize: axisWidth,
                         interval: interval,
                         getTitlesWidget: (value, meta) => SideTitleWidget(
                           meta: meta,
+                          space: _axisGap,
                           child: Text(format.number(value), style: axisStyle),
                         ),
                       ),
@@ -782,16 +839,16 @@ class _WeightChart extends StatelessWidget {
                         for (var i = 0; i < values.length; i++)
                           FlSpot(i.toDouble(), values[i]),
                       ],
-                      color: palette.textPrimary,
-                      barWidth: 2,
+                      color: palette.data,
+                      barWidth: 2.5,
                       dotData: FlDotData(
                         getDotPainter: (spot, _, _, index) =>
                             FlDotCirclePainter(
-                              radius: index == last ? 4 : 3.5,
+                              radius: index == last ? 5 : 3.5,
                               color: index == last
-                                  ? palette.textPrimary
-                                  : palette.background,
-                              strokeColor: palette.textPrimary,
+                                  ? palette.data
+                                  : palette.surface,
+                              strokeColor: palette.data,
                               strokeWidth: 1.75,
                             ),
                       ),
@@ -807,8 +864,9 @@ class _WeightChart extends StatelessWidget {
   }
 }
 
-/// Flat rows (sketch `.rows`): type and date on the left, value on the right,
-/// then the progress photos row.
+/// Latest measurements (sketch `.x-cols`): the newest values in columns, three
+/// per row, each with its date in the label. [ExomFigureColumns] stacks the
+/// figures in one column when the width or the text size do not allow a row.
 class _LatestMeasures extends StatelessWidget {
   const _LatestMeasures({
     required this.rows,
@@ -817,6 +875,9 @@ class _LatestMeasures extends StatelessWidget {
     this.refreshing = false,
     this.unavailableNotice,
   });
+
+  /// Figures per row of columns (the sketch shows three).
+  static const int _perRow = 3;
 
   final List<_MeasureRowData> rows;
   final _ProgressFormat format;
@@ -837,7 +898,7 @@ class _LatestMeasures extends StatelessWidget {
       children: [
         if (notice != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -857,166 +918,64 @@ class _LatestMeasures extends StatelessWidget {
           )
         else if (rows.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: _MutedText(format.l10n.progressMeasuresEmpty),
           ),
-        for (final row in rows)
-          KeyedSubtree(
-            key: ValueKey(
-              'progress-measure-${row.fieldKey}-'
-              '${DateFormat('yyyy-MM-dd').format(row.day)}',
-            ),
-            child: _MeasureRow(
-              label: row.label,
-              date: format.shortDate(row.day),
-              value: row.value,
-            ),
+        for (var start = 0; start < rows.length; start += _perRow)
+          ExomFigureColumns(
+            numbered: false,
+            items: [
+              for (final row in rows.skip(start).take(_perRow))
+                ExomFigure(
+                  itemKey: ValueKey(
+                    'progress-measure-${row.fieldKey}-'
+                    '${DateFormat('yyyy-MM-dd').format(row.day)}',
+                  ),
+                  value: row.value,
+                  unit: row.unit,
+                  label: '${row.label} · ${format.shortDate(row.day)}',
+                ),
+            ],
           ),
-        const _PhotosRow(),
       ],
     );
   }
 }
 
-class _RowFrame extends StatelessWidget {
-  const _RowFrame({required this.child, this.last = false});
+/// «02 Fotos de progreso»: header and the entry that opens the existing
+/// progress photos route. No «Última sesión» subtitle or thumbnails: that data
+/// is only available through a new network read.
+class _PhotosSection extends StatelessWidget {
+  const _PhotosSection({required this.n});
 
-  final Widget child;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final rule = BorderSide(color: context.exomPalette.borderSoft, width: 1);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: rule, bottom: last ? rule : BorderSide.none),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _MeasureRow extends StatelessWidget {
-  const _MeasureRow({
-    required this.label,
-    required this.date,
-    required this.value,
-  });
-
-  final String label;
-  final String date;
-  final String value;
+  /// Number of the section header («01» when the measurements are not shown).
+  final int n;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    return _RowFrame(
-      child: Semantics(
-        container: true,
-        child: MergeSemantics(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.3,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          date,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.3,
-                            color: palette.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                ],
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExomNumberedSectionHeader(n: n, title: l10n.progressPhotosTitle),
+        ExomFlatRowGroup(
+          children: [
+            ExomFlatRow(
+              key: const Key('progress-photos-row'),
+              leading: ExcludeSemantics(
+                child: Icon(
+                  ExomIcons.camera,
+                  size: 22,
+                  color: palette.textPrimary,
+                ),
               ),
+              title: l10n.progressPhotosEntry,
+              onTap: () => context.push(AppRoutes.progressPhotos),
             ),
-          ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-/// Opens the existing progress photos route. No «Última sesión» subtitle:
-/// that data is only available through a new network read.
-class _PhotosRow extends StatelessWidget {
-  const _PhotosRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    return _RowFrame(
-      last: true,
-      child: Semantics(
-        container: true,
-        button: true,
-        child: InkWell(
-          key: const Key('progress-photos-row'),
-          onTap: () => context.push(AppRoutes.progressPhotos),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(
-                      ExomIcons.camera,
-                      size: 22,
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).progressPhotosEntry,
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ExcludeSemantics(
-                    child: Icon(
-                      ExomIcons.next,
-                      size: 22,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

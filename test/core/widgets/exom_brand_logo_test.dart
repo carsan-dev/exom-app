@@ -217,4 +217,94 @@ void main() {
     expect(find.bySemanticsLabel('EXOM'), findsNothing);
     handle.dispose();
   });
+
+  group('ExomBrandSymbol', () {
+    testWidgets('120:112 box of the given height, same asset and recolour', (
+      tester,
+    ) async {
+      await pumpComponent(
+        tester,
+        const Center(child: ExomBrandSymbol(height: 112)),
+      );
+      final size = tester.getSize(find.byType(SvgPicture));
+      expect(size.height, closeTo(112, 0.001));
+      expect(size.width, closeTo(120, 0.001));
+      final loader =
+          tester.widget<SvgPicture>(find.byType(SvgPicture)).bytesLoader
+              as SvgAssetLoader;
+      expect(loader.assetName, ExomBrandLogo.assetName);
+    });
+
+    testWidgets('symbol matches the lockup symbol (em 28 -> 26.88 high)', (
+      tester,
+    ) async {
+      await pumpComponent(
+        tester,
+        const Center(child: ExomBrandSymbol(height: 28 * 0.896)),
+      );
+      final alone = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      await pumpComponent(tester, const Center(child: ExomBrandLogo()));
+      final inLockup = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      expect(alone.width, closeTo(inLockup.width!, 0.001));
+      expect(alone.height, closeTo(inLockup.height!, 0.001));
+      expect(alone.bytesLoader, inLockup.bytesLoader);
+    });
+
+    testWidgets('semantics: EXOM by default, none when excluded', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(tester, const ExomBrandSymbol());
+      expect(find.bySemanticsLabel('EXOM'), findsOneWidget);
+      await pumpComponent(
+        tester,
+        const ExomBrandSymbol(excludeSemantics: true),
+      );
+      expect(find.bySemanticsLabel('EXOM'), findsNothing);
+      handle.dispose();
+    });
+  });
+
+  group('ExomWordmark', () {
+    for (final brightness in Brightness.values) {
+      testWidgets('letters and style (${brightness.name})', (tester) async {
+        await pumpComponent(
+          tester,
+          const Center(child: ExomWordmark(height: 32)),
+          brightness: brightness,
+        );
+        final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+        final text = tester.widget<Text>(find.byType(Text));
+        final root = text.textSpan! as TextSpan;
+        expect(root.style?.fontFamily, ExomBrandLogo.fontFamily);
+        expect(root.style?.fontWeight, FontWeight.w800);
+        expect(root.style?.fontSize, 32);
+        expect(root.style?.height, 1.0);
+        expect(root.style?.letterSpacing, closeTo(-1.28, 0.0001));
+        expect(text.textScaler, TextScaler.noScaling);
+        final spans = root.children!.cast<TextSpan>();
+        final xColor = brightness == Brightness.dark
+            ? AppColors.primary
+            : palette.textPrimary;
+        expect(spans.map((s) => s.style?.color).toList(), [
+          palette.textPrimary,
+          xColor,
+          palette.textPrimary,
+          palette.textPrimary,
+        ]);
+        expect(tester.getSize(find.byType(Text)).height, closeTo(32, 0.01));
+      });
+    }
+
+    testWidgets('semantics: EXOM by default, none when excluded', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(tester, const ExomWordmark());
+      expect(find.bySemanticsLabel('EXOM'), findsOneWidget);
+      await pumpComponent(tester, const ExomWordmark(excludeSemantics: true));
+      expect(find.bySemanticsLabel('EXOM'), findsNothing);
+      handle.dispose();
+    });
+  });
 }

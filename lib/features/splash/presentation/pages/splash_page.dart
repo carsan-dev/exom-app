@@ -438,9 +438,11 @@ class _LogoMark extends StatelessWidget {
             scale: scale,
             child: Opacity(
               opacity: fade,
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: ExomBrandLogo(height: 84),
+              // Symbol only (112 dp wide); the wordmark lives in the tagline,
+              // so its semantics are excluded here to announce EXOM once.
+              child: const ExomBrandSymbol(
+                height: 112 * 112 / 120,
+                excludeSemantics: true,
               ),
             ),
           ),
@@ -506,23 +508,7 @@ class _Tagline extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          'EXOM',
-          style: TextStyle(
-            color: palette.textPrimary,
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 8,
-            height: 1,
-            shadows: const [
-              Shadow(
-                color: Color(0x66000000),
-                blurRadius: 16,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-        ),
+        const ExomWordmark(height: 32),
         const SizedBox(height: 10),
         Container(
           width: 48,

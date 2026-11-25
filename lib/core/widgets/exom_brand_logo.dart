@@ -127,14 +127,6 @@ class ExomBrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final palette = context.exomPalette;
-    final isDark = brightness == Brightness.dark;
-    final letter = TextStyle(color: palette.textPrimary);
-    final accent = TextStyle(
-      color: isDark ? AppColors.primary : palette.textPrimary,
-    );
-
     return Semantics(
       label: semanticsLabel ?? 'EXOM',
       excludeSemantics: true,
@@ -142,37 +134,130 @@ class ExomBrandLogo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SvgPicture(
-            loaderFor(brightness, palette, height: height),
-            width: height * symbolWidthEm,
-            height: height * symbolHeightEm,
-            fit: BoxFit.contain,
-          ),
+          _symbolFor(context, height),
           SizedBox(width: height * gapEm),
-          Text.rich(
-            TextSpan(
-              style: TextStyle(
-                fontFamily: fontFamily,
-                fontWeight: FontWeight.w800,
-                fontSize: height,
-                height: 1.0,
-                letterSpacing: height * letterSpacingEm,
-                color: palette.textPrimary,
-              ),
-              children: [
-                TextSpan(text: 'E', style: letter),
-                TextSpan(text: 'X', style: accent),
-                TextSpan(text: 'O', style: letter),
-                TextSpan(text: 'M', style: letter),
-              ],
-            ),
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.clip,
-            textScaler: TextScaler.noScaling,
-          ),
+          _wordmarkFor(context, height),
         ],
       ),
+    );
+  }
+}
+
+/// Symbol of the lockup for an em of [em] logical px (symbol `.96em × .896em`).
+Widget _symbolFor(BuildContext context, double em) {
+  return SvgPicture(
+    ExomBrandLogo.loaderFor(
+      Theme.of(context).brightness,
+      context.exomPalette,
+      height: em,
+    ),
+    width: em * ExomBrandLogo.symbolWidthEm,
+    height: em * ExomBrandLogo.symbolHeightEm,
+    fit: BoxFit.contain,
+  );
+}
+
+/// «EXOM» text of the lockup for an em of [em] logical px.
+Widget _wordmarkFor(BuildContext context, double em) {
+  final palette = context.exomPalette;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final letter = TextStyle(color: palette.textPrimary);
+  final accent = TextStyle(
+    color: isDark ? AppColors.primary : palette.textPrimary,
+  );
+  return Text.rich(
+    TextSpan(
+      style: TextStyle(
+        fontFamily: ExomBrandLogo.fontFamily,
+        fontWeight: FontWeight.w800,
+        fontSize: em,
+        height: 1.0,
+        letterSpacing: em * ExomBrandLogo.letterSpacingEm,
+        color: palette.textPrimary,
+      ),
+      children: [
+        TextSpan(text: 'E', style: letter),
+        TextSpan(text: 'X', style: accent),
+        TextSpan(text: 'O', style: letter),
+        TextSpan(text: 'M', style: letter),
+      ],
+    ),
+    maxLines: 1,
+    softWrap: false,
+    overflow: TextOverflow.clip,
+    textScaler: TextScaler.noScaling,
+  );
+}
+
+/// Wraps [child] with the semantics rules shared by the standalone parts:
+/// excluded entirely when [excludeSemantics], otherwise one node labelled
+/// [semanticsLabel] (default `EXOM`) that replaces the children's semantics.
+Widget _semantic(
+  Widget child, {
+  required String? semanticsLabel,
+  required bool excludeSemantics,
+}) {
+  if (excludeSemantics) return ExcludeSemantics(child: child);
+  return Semantics(
+    label: semanticsLabel ?? 'EXOM',
+    excludeSemantics: true,
+    child: child,
+  );
+}
+
+/// The balance symbol alone, with the lockup's theme recolour (dark: bone and
+/// lime commas; light: carbon comma and lime comma with a 1 px carbon outline).
+///
+/// [height] is the symbol box height; its width follows the asset's 120:112
+/// aspect. Semantics: one node labelled `EXOM` (or [semanticsLabel]); set
+/// [excludeSemantics] when another widget on screen already announces the
+/// brand, so it is not announced twice.
+class ExomBrandSymbol extends StatelessWidget {
+  const ExomBrandSymbol({
+    super.key,
+    this.height = 28,
+    this.semanticsLabel,
+    this.excludeSemantics = false,
+  });
+
+  final double height;
+  final String? semanticsLabel;
+  final bool excludeSemantics;
+
+  @override
+  Widget build(BuildContext context) {
+    return _semantic(
+      _symbolFor(context, height / ExomBrandLogo.symbolHeightEm),
+      semanticsLabel: semanticsLabel,
+      excludeSemantics: excludeSemantics,
+    );
+  }
+}
+
+/// The «EXOM» wordmark alone, same style and colour rules as the lockup
+/// (Barlow Condensed 800, letter spacing `-.04em`, line height 1, no text
+/// scaling; X lime in dark, all letters `textPrimary` in light).
+///
+/// [height] is the em (font size, and the box height). Semantics as in
+/// [ExomBrandSymbol]: one `EXOM` node unless [excludeSemantics].
+class ExomWordmark extends StatelessWidget {
+  const ExomWordmark({
+    super.key,
+    this.height = 28,
+    this.semanticsLabel,
+    this.excludeSemantics = false,
+  });
+
+  final double height;
+  final String? semanticsLabel;
+  final bool excludeSemantics;
+
+  @override
+  Widget build(BuildContext context) {
+    return _semantic(
+      _wordmarkFor(context, height),
+      semanticsLabel: semanticsLabel,
+      excludeSemantics: excludeSemantics,
     );
   }
 }

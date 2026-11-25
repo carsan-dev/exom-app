@@ -1,0 +1,161 @@
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
+import 'package:exom_app/main.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'golden/redesign_scenes.dart' show loadRedesignFonts;
+
+const _fadeKey = ValueKey<String>('bootstrap-progress-fade');
+
+Future<void> _setSurface(
+  WidgetTester tester, {
+  bool insets = true,
+  bool reduceMotion = false,
+}) async {
+  tester.view.physicalSize = const Size(412, 915);
+  tester.view.devicePixelRatio = 1.0;
+  if (insets) {
+    tester.view.padding = const FakeViewPadding(top: 48, bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(top: 48, bottom: 34);
+  }
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      FakeAccessibilityFeatures(disableAnimations: reduceMotion);
+  addTearDown(tester.view.reset);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
+double _fadeOpacity(WidgetTester tester) =>
+    tester.widget<FadeTransition>(find.byKey(_fadeKey)).opacity.value;
+
+void main() {
+  group('ExomBootstrapApp', () {
+    testWidgets('carbon background, light system icons', (tester) async {
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, AppColors.background);
+      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+        find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
+      );
+      expect(region.value.statusBarIconBrightness, Brightness.light);
+      expect(region.value.systemNavigationBarIconBrightness, Brightness.light);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('symbol centred on the screen, 80.64 wide, no text', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      final symbol = find.byType(ExomBrandSymbol);
+      expect(symbol, findsOneWidget);
+      final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      expect(
+        (picture.bytesLoader as SvgAssetLoader).assetName,
+        'assets/images/exom_balance.svg',
+      );
+      final rect = tester.getRect(find.byType(SvgPicture));
+      expect(rect.width, closeTo(80.64, 0.01));
+      expect(rect.height, closeTo(75.264, 0.01));
+      expect(rect.center.dx, closeTo(412 / 2, 0.5));
+      expect(rect.center.dy, closeTo(915 / 2, 0.5));
+      expect(find.byType(Text), findsNothing);
+      expect(find.text('EXOM'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('indicator 24 dp lime, 32 dp under the symbol', (tester) async {
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      final indicator = find.byType(CircularProgressIndicator);
+      final widget = tester.widget<CircularProgressIndicator>(indicator);
+      expect(widget.strokeWidth, 2);
+      expect(widget.color, AppColors.primary);
+      final symbol = tester.getRect(find.byType(SvgPicture));
+      final box = tester.getRect(indicator);
+      expect(box.size, const Size(24, 24));
+      expect(box.center.dx, closeTo(206, 0.5));
+      expect(box.top, closeTo(symbol.bottom + 32, 0.5));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('indicator hidden 300 ms, then fades in over 200 ms', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      expect(_fadeOpacity(tester), 0);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(_fadeOpacity(tester), 0);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 100));
+      final mid = _fadeOpacity(tester);
+      expect(mid, greaterThan(0));
+      expect(mid, lessThan(1));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_fadeOpacity(tester), 1);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('ready before 300 ms: never visible, no pending timer', (
+      tester,
+    ) async {
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_fadeOpacity(tester), 0);
+      await tester.pumpWidget(const SizedBox());
+      // Timer cancelled on dispose: the framework would flag a pending one.
+    });
+
+    testWidgets('reduced motion: same delay, then shown without fade', (
+      tester,
+    ) async {
+      await _setSurface(tester, reduceMotion: true);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      expect(_fadeOpacity(tester), 0);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(_fadeOpacity(tester), 0);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(_fadeOpacity(tester), 1);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('semantics: EXOM on the symbol, default progress node', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapApp());
+      expect(find.bySemanticsLabel('EXOM'), findsOneWidget);
+      handle.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  group('ExomBootstrapErrorApp', () {
+    testWidgets('dark scaffold, full lockup 40, bone message', (tester) async {
+      await loadRedesignFonts();
+      await _setSurface(tester);
+      await tester.pumpWidget(const ExomBootstrapErrorApp(error: 'boom'));
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, AppColors.background);
+      final logo = tester.widget<ExomBrandLogo>(find.byType(ExomBrandLogo));
+      expect(logo.height, 40);
+      final text = tester.widget<Text>(find.byType(Text).last);
+      expect(text.style?.color, AppColors.textPrimary);
+      expect(text.style?.color, const Color(0xFFF2F1E9));
+      final logoRect = tester.getRect(find.byType(ExomBrandLogo));
+      final textRect = tester.getRect(find.byType(Text).last);
+      expect(logoRect.bottom, lessThanOrEqualTo(textRect.top));
+      // Dark lockup: dark brightness reaches the logo through the theme.
+      final context = tester.element(find.byType(ExomBrandLogo));
+      expect(Theme.of(context).brightness, Brightness.dark);
+      expect(find.text('boom'), findsNothing);
+    });
+  });
+}

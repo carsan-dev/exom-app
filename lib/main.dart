@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -21,6 +22,7 @@ import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
@@ -103,38 +105,104 @@ Future<void> _initializeProgressPhotoUploads() async {
   }
 }
 
+/// Symbol width of the native splash (dp); the bootstrap screen continues it.
+const double _bootstrapSymbolWidth = 80.64;
+const double _bootstrapSymbolHeight = _bootstrapSymbolWidth * 112 / 120;
+const double _bootstrapIndicatorSize = 24;
+const double _bootstrapIndicatorGap = 32;
+const Duration _bootstrapIndicatorDelay = Duration(milliseconds: 300);
+const Duration _bootstrapIndicatorFade = Duration(milliseconds: 200);
+
+/// Exact continuation of the native splash: the symbol at the screen centre
+/// (insets ignored). A progress indicator appears only after 300 ms.
 class ExomBootstrapApp extends StatelessWidget {
   const ExomBootstrapApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: _BootstrapScaffold(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      // AppTheme.dark is a pure static getter (no DI, no async), so it is safe
+      // before bootstrap and gives the brand widgets their dark palette.
+      theme: AppTheme.dark,
+      home: const _BootstrapScaffold(child: _BootstrapSplash()),
+    );
+  }
+}
+
+class _BootstrapSplash extends StatefulWidget {
+  const _BootstrapSplash();
+
+  @override
+  State<_BootstrapSplash> createState() => _BootstrapSplashState();
+}
+
+class _BootstrapSplashState extends State<_BootstrapSplash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: _bootstrapIndicatorFade,
+  );
+  late final Animation<double> _opacity = CurvedAnimation(
+    parent: _fade,
+    curve: Curves.easeOut,
+  );
+  Timer? _delay;
+
+  @override
+  void initState() {
+    super.initState();
+    _delay = Timer(_bootstrapIndicatorDelay, () {
+      if (!mounted) return;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _fade.value = 1;
+      } else {
+        _fade.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _delay?.cancel();
+    _fade.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final centerY = constraints.maxHeight / 2;
+        return Stack(
           children: [
-            Text(
-              'EXOM',
-              style: TextStyle(
-                color: Color(0xFFD7F58A),
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 8,
-              ),
+            const Center(
+              child: ExomBrandSymbol(height: _bootstrapSymbolHeight),
             ),
-            SizedBox(height: 18),
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFD7F58A),
+            Positioned(
+              left: 0,
+              right: 0,
+              top:
+                  centerY + _bootstrapSymbolHeight / 2 + _bootstrapIndicatorGap,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: FadeTransition(
+                  key: const ValueKey<String>('bootstrap-progress-fade'),
+                  opacity: _opacity,
+                  child: const SizedBox(
+                    width: _bootstrapIndicatorSize,
+                    height: _bootstrapIndicatorSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -158,32 +226,27 @@ class ExomBootstrapErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark,
       home: _BootstrapScaffold(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'EXOM',
-                style: TextStyle(
-                  color: Color(0xFFD7F58A),
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 8,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ExomBrandLogo(height: 40),
+                const SizedBox(height: 20),
+                Text(
+                  _bootstrapMessage(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _bootstrapMessage(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -198,9 +261,13 @@ class _BootstrapScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF241209),
-      body: Center(child: child),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        resizeToAvoidBottomInset: false,
+        body: child,
+      ),
     );
   }
 }

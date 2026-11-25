@@ -21,6 +21,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/features/splash/presentation/pages/splash_page.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 
 class _UpdateService extends Fake implements AppUpdateService {
   _UpdateService(this.decision);
@@ -99,10 +100,7 @@ Future<void> _mount(WidgetTester tester, AuthBloc bloc) async {
   final router = GoRouter(
     initialLocation: AppRoutes.splash,
     routes: [
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (_, _) => const SplashPage(),
-      ),
+      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashPage()),
       GoRoute(
         path: AppRoutes.login,
         builder: (_, _) => const Scaffold(body: Text('login-route')),
@@ -217,5 +215,54 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     await _pumpFor(tester, 5000);
     expect(find.text('login-route'), findsNothing);
+  });
+
+  group('brand', () {
+    Future<void> mountSplash(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(412, 915);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      sl.registerSingleton<AppUpdateService>(
+        _UpdateService(Future.value(_upToDate)),
+      );
+      final bloc = _authBloc()..add(const AuthCheckStatusRequested());
+      addTearDown(bloc.close);
+      await _mount(tester, bloc);
+      await _pumpFor(tester, 2150);
+    }
+
+    Future<void> unmount(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    testWidgets('disc has the symbol only; EXOM wordmark appears once', (
+      tester,
+    ) async {
+      await mountSplash(tester);
+      expect(find.byType(ExomBrandSymbol), findsOneWidget);
+      expect(find.byType(ExomWordmark), findsOneWidget);
+      expect(find.byType(ExomBrandLogo), findsNothing);
+      expect(
+        tester.widget<ExomBrandSymbol>(find.byType(ExomBrandSymbol)).height,
+        112 * 112 / 120,
+      );
+      final symbol = tester.getSize(find.byType(ExomBrandSymbol));
+      expect(symbol.width, closeTo(112, 0.2));
+      expect(symbol.height, closeTo(112 * 112 / 120, 0.2));
+      expect(
+        tester.getSize(find.byType(ExomWordmark)).height,
+        closeTo(32, 0.01),
+      );
+      await unmount(tester);
+    });
+
+    testWidgets('semantics announce EXOM exactly once', (tester) async {
+      final handle = tester.ensureSemantics();
+      await mountSplash(tester);
+      expect(find.bySemanticsLabel('EXOM'), findsOneWidget);
+      handle.dispose();
+      await unmount(tester);
+    });
   });
 }

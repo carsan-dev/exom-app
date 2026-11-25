@@ -194,6 +194,8 @@ void main() {
         () => showBootstrapSplash(cap: Duration.zero, run: (w) => shown = w),
       );
       expect(shown, isA<ExomBootstrapApp>());
+      // deferFirstFrame() makes sendFramesToEngine false until allowFirstFrame().
+      expect(WidgetsBinding.instance.sendFramesToEngine, isTrue);
     });
   });
 

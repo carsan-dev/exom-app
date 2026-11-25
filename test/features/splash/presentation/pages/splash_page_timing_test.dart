@@ -97,7 +97,11 @@ Future<void> _pumpFor(WidgetTester tester, int ms) async {
   }
 }
 
-Future<void> _mount(WidgetTester tester, AuthBloc bloc) async {
+Future<void> _mount(
+  WidgetTester tester,
+  AuthBloc bloc, {
+  ThemeData? theme,
+}) async {
   final router = GoRouter(
     initialLocation: AppRoutes.splash,
     routes: [
@@ -114,9 +118,10 @@ Future<void> _mount(WidgetTester tester, AuthBloc bloc) async {
       value: bloc,
       child: MaterialApp.router(
         routerConfig: router,
-        // The real splash is dark; the light symbol pads its viewBox for the
-        // outline, which changes the intrinsic aspect and so the width.
-        theme: AppTheme.dark,
+        // The app's MaterialApp.router uses theme light, darkTheme dark and a
+        // themeMode from prefs (default system), so the splash renders in both
+        // themes. Dark by default here; pass [theme] to exercise light.
+        theme: theme ?? AppTheme.dark,
         locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -222,7 +227,7 @@ void main() {
   });
 
   group('brand', () {
-    Future<void> mountSplash(WidgetTester tester) async {
+    Future<void> mountSplash(WidgetTester tester, {ThemeData? theme}) async {
       tester.view.physicalSize = const Size(412, 915);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -231,7 +236,7 @@ void main() {
       );
       final bloc = _authBloc()..add(const AuthCheckStatusRequested());
       addTearDown(bloc.close);
-      await _mount(tester, bloc);
+      await _mount(tester, bloc, theme: theme);
       await _pumpFor(tester, 2150);
     }
 
@@ -258,6 +263,35 @@ void main() {
         tester.getSize(find.byType(ExomWordmark)).height,
         closeTo(32, 0.01),
       );
+      await unmount(tester);
+    });
+
+    testWidgets('light theme: symbol only in the disc, carbon wordmark', (
+      tester,
+    ) async {
+      await mountSplash(tester, theme: AppTheme.light);
+      expect(find.byType(ExomBrandSymbol), findsOneWidget);
+      expect(find.byType(ExomWordmark), findsOneWidget);
+      expect(find.byType(ExomBrandLogo), findsNothing);
+      // In light the symbol's viewBox is padded for the 1 px outline, so the
+      // width derived from the intrinsic aspect drifts by less than 0.2 dp.
+      final symbol = tester.getSize(find.byType(ExomBrandSymbol));
+      expect(symbol.width, closeTo(112, 0.2));
+      final palette = AppTheme.light.extension<ExomThemePalette>()!;
+      final text = tester.widget<Text>(
+        find.descendant(
+          of: find.byType(ExomWordmark),
+          matching: find.byType(Text),
+        ),
+      );
+      final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
+      expect(spans.map((s) => s.style?.color).toList(), [
+        palette.textPrimary,
+        palette.textPrimary,
+        palette.textPrimary,
+        palette.textPrimary,
+      ]);
+      expect(palette.textPrimary, isNot(AppColors.primary));
       await unmount(tester);
     });
 

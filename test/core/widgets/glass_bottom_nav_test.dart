@@ -5,6 +5,7 @@ import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'exom_component_harness.dart';
@@ -60,6 +61,17 @@ void main() {
     for (final label in _labelsEs) {
       expect(find.text(label), findsOneWidget);
     }
+  });
+
+  testWidgets('home tab glyph is the exom_balance symbol (L5-LOGO)', (
+    tester,
+  ) async {
+    await pumpComponent(tester, _nav(), wrapInScaffold: false);
+    final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+    final loader = picture.bytesLoader as SvgAssetLoader;
+    expect(loader.assetName, 'assets/images/exom_balance.svg');
+    expect(picture.fit, BoxFit.contain);
+    expect(tester.getSize(find.byType(SvgPicture)), const Size(24, 24));
   });
 
   testWidgets('showLabels: false keeps the icon-only bar', (tester) async {

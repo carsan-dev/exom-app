@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:exom_app/features/diets/data/models/weekly_diet_model.dart';
 import 'package:exom_app/features/diets/data/models/monthly_diet_model.dart';
@@ -178,6 +180,38 @@ void main() {
     expect(current.id, 'ingredient-1');
     expect(cached.id, '');
   });
+
+  test(
+    'PDF header uses exom_balance + Barlow, not the old logo (L5-LOGO)',
+    () async {
+      final requested = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMessageHandler('flutter/assets', (message) async {
+        final key = utf8.decode(message!.buffer.asUint8List());
+        requested.add(key);
+        final bytes = await File(key).readAsBytes();
+        return ByteData.sublistView(bytes);
+      });
+      addTearDown(
+        () => messenger.setMockMessageHandler('flutter/assets', null),
+      );
+      final week = WeeklyDietEntity(
+        weekStart: DateTime(2026, 6, 15),
+        weekEnd: DateTime(2026, 6, 21),
+        days: const [],
+      );
+      final bytes = await const WeeklyDietPdfService().build(
+        week: week,
+        locale: 'es',
+        labels: _weeklyLabels,
+      );
+      expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
+      expect(requested, contains('assets/images/exom_balance.svg'));
+      expect(requested, contains('assets/fonts/barlow-condensed-800.ttf'));
+      expect(requested, isNot(contains('assets/images/logo.svg')));
+    },
+  );
 
   test('PDF service creates a valid localized document', () async {
     final week = WeeklyDietEntity(

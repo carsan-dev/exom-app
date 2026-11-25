@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -102,6 +103,14 @@ void main() {
       final palette = themeFor(brightness).extension<ExomThemePalette>()!;
       final drawer = tester.widget<Drawer>(find.byType(Drawer));
       expect(drawer.backgroundColor, palette.background);
+      // L5-LOGO: the drawer shows the unified EXOM lockup at h24, not a raw
+      // logo asset.
+      final logo = find.descendant(
+        of: find.byType(Drawer),
+        matching: find.byType(ExomBrandLogo),
+      );
+      expect(logo, findsOneWidget);
+      expect(tester.widget<ExomBrandLogo>(logo).height, 24);
       // «Cerrar sesión» is a secondary button (1.5 px `text` border), no
       // longer a red row.
       final logoutText = tester.widget<Text>(find.text('Cerrar sesión'));

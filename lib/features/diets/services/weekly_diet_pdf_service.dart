@@ -1,3 +1,5 @@
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -31,8 +33,80 @@ class WeeklyShoppingListPdfLabels {
   const WeeklyShoppingListPdfLabels({required this.title, required this.empty});
 }
 
+/// Assets of the EXOM lockup printed in the header (recoloured symbol + the
+/// Barlow Condensed 800 wordmark).
+class _PdfBrand {
+  const _PdfBrand({required this.symbolSvg, required this.font});
+
+  final String symbolSvg;
+  final pw.Font font;
+}
+
 class WeeklyDietPdfService {
   const WeeklyDietPdfService();
+
+  static const _logoWidth = 72.0;
+
+  /// Outline of the lime comma in viewBox units: 1 px at the app's h28 lockup
+  /// (112 / (0.896 * 28)), so the PDF header matches the light app logo.
+  static const _outlineWidth = 112 / (0.896 * 28);
+
+  /// Loads the symbol (light scheme: carbon bone comma, lime comma outlined in
+  /// carbon, colours from the light palette) and the wordmark font.
+  Future<_PdfBrand> _loadBrand() async {
+    final carbon = AppTheme.light.extension<ExomThemePalette>()!.textPrimary;
+    final svg = await rootBundle.loadString(ExomBrandLogo.assetName);
+    final font = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/barlow-condensed-800.ttf'),
+    );
+    return _PdfBrand(
+      symbolSvg: ExomBrandLogo.recolorSymbol(
+        svg,
+        bone: carbon,
+        lime: AppColors.primary,
+        outline: carbon,
+        outlineWidth: _outlineWidth,
+      ),
+      font: font,
+    );
+  }
+
+  /// Lockup as in the app (`ExomBrandLogo`, light scheme), scaled so its
+  /// total width is [_logoWidth] pt.
+  pw.Widget _brandLockup(_PdfBrand brand, pw.Context context) {
+    const ink = PdfColor.fromInt(0xFF101111);
+    final textEm = brand.font
+        .getFont(context)
+        .stringMetrics(
+          ExomBrandLogo.wordmark,
+          letterSpacing: ExomBrandLogo.letterSpacingEm,
+        )
+        .advanceWidth;
+    final totalEm = ExomBrandLogo.symbolWidthEm + ExomBrandLogo.gapEm + textEm;
+    final h = _logoWidth / totalEm;
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.SvgImage(
+          svg: brand.symbolSvg,
+          width: h * ExomBrandLogo.symbolWidthEm,
+          height: h * ExomBrandLogo.symbolHeightEm,
+        ),
+        pw.SizedBox(width: h * ExomBrandLogo.gapEm),
+        pw.Text(
+          ExomBrandLogo.wordmark,
+          style: pw.TextStyle(
+            font: brand.font,
+            fontSize: h,
+            height: 1.0,
+            letterSpacing: h * ExomBrandLogo.letterSpacingEm,
+            color: ink,
+          ),
+        ),
+      ],
+    );
+  }
 
   /// Room a day box needs to start on a page with its first lines: bottom
   /// margin (12) and padding (2 × 12) of the box, the 13 pt heading, the gap
@@ -52,7 +126,7 @@ class WeeklyDietPdfService {
     final bold = pw.Font.ttf(
       await rootBundle.load('assets/fonts/CabinetGrotesk-Bold.ttf'),
     );
-    final logo = await rootBundle.loadString('assets/images/logo.svg');
+    final brand = await _loadBrand();
     final document = pw.Document(
       theme: pw.ThemeData.withFont(base: regular, bold: bold),
     );
@@ -72,7 +146,7 @@ class WeeklyDietPdfService {
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.SvgImage(svg: logo, width: 72),
+              _brandLockup(brand, context),
               pw.Text(
                 labels.title,
                 style: pw.TextStyle(
@@ -129,7 +203,7 @@ class WeeklyDietPdfService {
     final bold = pw.Font.ttf(
       await rootBundle.load('assets/fonts/CabinetGrotesk-Bold.ttf'),
     );
-    final logo = await rootBundle.loadString('assets/images/logo.svg');
+    final brand = await _loadBrand();
     final dateFormat = DateFormat.yMMMMd(locale);
     final formatter = IngredientUnitFormatter(locale: locale);
     final document = pw.Document(
@@ -147,7 +221,7 @@ class WeeklyDietPdfService {
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.SvgImage(svg: logo, width: 72),
+              _brandLockup(brand, context),
               pw.Text(
                 labels.title,
                 style: pw.TextStyle(

@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
@@ -12,6 +11,7 @@ import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/injection_container.dart';
@@ -261,11 +261,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
-    final isLight = Theme.of(context).brightness == Brightness.light;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final logoAsset = isLight
-        ? 'assets/images/logo_dark.svg'
-        : 'assets/images/logo.svg';
 
     return Scaffold(
       backgroundColor: palette.gradientStart,
@@ -288,7 +284,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       children: [
                         const Spacer(flex: 3),
                         _LogoMark(
-                          asset: logoAsset,
                           scale: _logoScale.value,
                           fade: _logoFade.value,
                           glow: _glowOpacity.value,
@@ -357,7 +352,6 @@ class _RadialGlow extends StatelessWidget {
 
 class _LogoMark extends StatelessWidget {
   const _LogoMark({
-    required this.asset,
     required this.scale,
     required this.fade,
     required this.glow,
@@ -367,7 +361,6 @@ class _LogoMark extends StatelessWidget {
     required this.discFill,
   });
 
-  final String asset;
   final double scale;
   final double fade;
   final double glow;
@@ -445,7 +438,10 @@ class _LogoMark extends StatelessWidget {
             scale: scale,
             child: Opacity(
               opacity: fade,
-              child: SvgPicture.asset(asset, height: 84, fit: BoxFit.contain),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: ExomBrandLogo(height: 84),
+              ),
             ),
           ),
         ],

@@ -171,8 +171,9 @@ class OnboardingStepLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The footer of the step on screen or entering is there at once (the
-    // action is never missing); the one of a step that leaves fades with it,
-    // under the new one. The fade is always in the tree so the footer keeps
+    // action is never missing); the one of a step that leaves fades with it
+    // (cross-fade style) or goes at once (push style), under the new one. The
+    // fade is always in the tree so the footer keeps
     // its state when an interruption turns a leaving step into the new one.
     final scope = OnboardingStepEntranceScope.maybeOf(context);
     final Animation<double> footerOpacity;

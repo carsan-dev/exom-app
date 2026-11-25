@@ -161,16 +161,19 @@ class _StepEntryState extends State<_StepEntry> {
     // does not read it (L5-A4c), so the content is never announced twice.
     return IgnorePointer(
       ignoring: !widget.incoming,
-      child: ExcludeSemantics(
+      child: ExcludeFocus(
         excluding: !widget.incoming,
-        child: FadeTransition(
-          opacity: curved,
-          child: AnimatedBuilder(
-            animation: curved,
-            child: widget.child,
-            builder: (context, child) => Transform.translate(
-              offset: Offset((1 - curved.value) * offset, 0),
-              child: child,
+        child: ExcludeSemantics(
+          excluding: !widget.incoming,
+          child: FadeTransition(
+            opacity: curved,
+            child: AnimatedBuilder(
+              animation: curved,
+              child: widget.child,
+              builder: (context, child) => Transform.translate(
+                offset: Offset((1 - curved.value) * offset, 0),
+                child: child,
+              ),
             ),
           ),
         ),
@@ -296,11 +299,14 @@ class _StepPushState extends State<_StepPush>
       key: ValueKey<(String, int)>(('exom-step-push', step)),
       child: IgnorePointer(
         ignoring: !active,
-        child: ExcludeSemantics(
+        child: ExcludeFocus(
           excluding: !active,
-          child: Transform.translate(
-            offset: Offset(dx, 0),
-            child: KeyedSubtree(key: ValueKey<int>(step), child: child),
+          child: ExcludeSemantics(
+            excluding: !active,
+            child: Transform.translate(
+              offset: Offset(dx, 0),
+              child: KeyedSubtree(key: ValueKey<int>(step), child: child),
+            ),
           ),
         ),
       ),

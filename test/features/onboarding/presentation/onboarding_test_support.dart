@@ -31,6 +31,7 @@ Widget onboardingHarness(
   TextScaler textScaler = TextScaler.noScaling,
   bool disableAnimations = false,
   double keyboardInset = 0,
+  TextDirection? textDirection,
 }) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
@@ -47,7 +48,9 @@ Widget onboardingHarness(
           disableAnimations: disableAnimations,
           viewInsets: media.viewInsets.copyWith(bottom: keyboardInset),
         ),
-        child: app!,
+        child: textDirection == null
+            ? app!
+            : Directionality(textDirection: textDirection, child: app!),
       );
     },
     home: child,
@@ -78,6 +81,7 @@ Future<void> pumpOnboardingStep(
   TextScaler textScaler = TextScaler.noScaling,
   bool disableAnimations = true,
   double keyboardInset = 0,
+  TextDirection? textDirection,
 }) async {
   await loadRedesignFonts();
   setOnboardingSurface(tester, width: width, height: height);
@@ -187,6 +191,7 @@ Future<OnboardingBloc> pumpOnboardingPage(
   TextScaler textScaler = TextScaler.noScaling,
   bool disableAnimations = true,
   double keyboardInset = 0,
+  TextDirection? textDirection,
 }) async {
   await loadRedesignFonts();
   setOnboardingSurface(tester, width: width, height: height);
@@ -206,6 +211,7 @@ Future<OnboardingBloc> pumpOnboardingPage(
       textScaler: textScaler,
       disableAnimations: disableAnimations,
       keyboardInset: keyboardInset,
+      textDirection: textDirection,
     ),
   );
   await settleOnboarding(tester);

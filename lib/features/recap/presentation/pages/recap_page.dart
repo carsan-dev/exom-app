@@ -1739,6 +1739,7 @@ class _RecapFormViewState extends State<_RecapFormView>
     if (oldWidget.submitting && !widget.submitting) {
       _busyDelay?.cancel();
       _flight.value = 0;
+      if (_plane.isShowing) _plane.hide();
       _sending = false;
       _planeLaunched = false;
       _busyDelayPassed = false;

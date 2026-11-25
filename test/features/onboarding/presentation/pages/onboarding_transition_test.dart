@@ -143,6 +143,26 @@ void main() {
       expect(_opacity(tester), 1);
     });
 
+    testWidgets('right-to-left: the push goes the other way round', (
+      tester,
+    ) async {
+      await pumpOnboardingPage(
+        tester,
+        FakeOnboardingRepository(),
+        disableAnimations: false,
+        textDirection: TextDirection.rtl,
+      );
+      await tapKey(tester, 'onboarding-start');
+      await settleOnboarding(tester);
+      await _tap(tester, _basicsNext);
+      await tester.pump(const Duration(milliseconds: 140));
+      // The previous step moves to the right, the new one comes from the left.
+      expect(_offset(tester, _basics), greaterThan(0));
+      expect(_offset(tester, _body), lessThan(0));
+      await settleOnboarding(tester);
+      expect(_offset(tester), 0);
+    });
+
     testWidgets('back: the push goes the other way', (tester) async {
       await _toBasics(tester);
       final width = _slotWidth(tester);

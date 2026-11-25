@@ -34,6 +34,49 @@ double _dx(WidgetTester tester, int step) =>
     tester.getTopLeft(_step(step)).dx -
     tester.getTopLeft(find.byType(ExomStepTransition)).dx;
 
+class _FocusHost extends StatefulWidget {
+  const _FocusHost({super.key, required this.style});
+
+  final ExomStepTransitionStyle style;
+
+  @override
+  State<_FocusHost> createState() => _FocusHostState();
+}
+
+class _FocusHostState extends State<_FocusHost> {
+  int step = 0;
+  final FocusNode node = FocusNode();
+
+  void go(int value) => setState(() => step = value);
+
+  @override
+  void dispose() {
+    node.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.topLeft,
+    child: SizedBox(
+      width: _width,
+      height: 80,
+      child: ExomStepTransition(
+        step: step,
+        style: widget.style,
+        child: SizedBox(
+          key: Key('step-$step'),
+          width: _width,
+          height: 80,
+          child: step == 0
+              ? TextField(key: const Key('field'), focusNode: node)
+              : const Text('Paso 2'),
+        ),
+      ),
+    ),
+  );
+}
+
 class _SlideHost extends StatefulWidget {
   const _SlideHost({super.key, this.onTap});
 
@@ -204,6 +247,23 @@ void main() {
     await tester.pumpAndSettle();
     handle.dispose();
   });
+
+  for (final style in ExomStepTransitionStyle.values) {
+    testWidgets('${style.name}: a field focused in the step that leaves is '
+        'excluded from focus', (tester) async {
+      final key = GlobalKey<_FocusHostState>();
+      await pumpComponent(tester, _FocusHost(key: key, style: style));
+      await tester.tap(find.byKey(const Key('field')));
+      await tester.pump();
+      expect(key.currentState!.node.hasFocus, isTrue);
+      key.currentState!.go(1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(_step(0), findsOneWidget);
+      expect(key.currentState!.node.hasFocus, isFalse);
+      await tester.pumpAndSettle();
+    });
+  }
 
   testWidgets('reduced motion: the short fade of the default style', (
     tester,

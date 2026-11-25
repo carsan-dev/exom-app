@@ -7862,6 +7862,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mejora'**
   String get recapImprovement;
+
+  /// No description provided for @recapSentKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Cinco pasos completados'**
+  String get recapSentKicker;
+
+  /// No description provided for @recapSentTitleFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Recap'**
+  String get recapSentTitleFirst;
+
+  /// No description provided for @recapSentTitleSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'enviado.'**
+  String get recapSentTitleSecond;
+
+  /// No description provided for @recapSentStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviado'**
+  String get recapSentStatus;
+
+  /// No description provided for @recapSentCoach.
+  ///
+  /// In es, this message translates to:
+  /// **'Gracias por contármelo. Lo reviso y te dejo mi comentario en tu recap.'**
+  String get recapSentCoach;
+
+  /// No description provided for @recapBackToRecaps.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a recaps'**
+  String get recapBackToRecaps;
+
+  /// No description provided for @recapSentClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get recapSentClose;
 }
 
 class _AppLocalizationsDelegate

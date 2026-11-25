@@ -4797,4 +4797,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recapImprovement => 'Mejora';
+
+  @override
+  String get recapSentKicker => 'Cinco pasos completados';
+
+  @override
+  String get recapSentTitleFirst => 'Recap';
+
+  @override
+  String get recapSentTitleSecond => 'enviado.';
+
+  @override
+  String get recapSentStatus => 'Enviado';
+
+  @override
+  String get recapSentCoach =>
+      'Gracias por contármelo. Lo reviso y te dejo mi comentario en tu recap.';
+
+  @override
+  String get recapBackToRecaps => 'Volver a recaps';
+
+  @override
+  String get recapSentClose => 'Cerrar';
 }

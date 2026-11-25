@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:exom_app/core/api/api_error_helper.dart';
@@ -9,8 +10,10 @@ import 'package:exom_app/core/widgets/exom_empty_state.dart';
 import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_step_transition.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
@@ -64,6 +67,45 @@ class _RecapViewState extends State<_RecapView> {
   /// cannot tell a failed save from a failed load of the list.
   bool _formOpen = false;
 
+  /// «Enviado» is on screen: the server confirmed a send from the form and the
+  /// user has not left the screen yet. Page-local, the bloc already holds the
+  /// fresh list.
+  bool _sentVisible = false;
+
+  /// Week of the recap being sent, taken from the form that was open.
+  ({DateTime start, DateTime end})? _formWeek;
+
+  /// Week of the recap that was just sent, for the line of «Enviado».
+  ({DateTime start, DateTime end})? _sentWeek;
+
+  /// Leaving «Enviado» swaps the secondary button for the list's primary one
+  /// in the same spot; a second tap of a double tap must not reach it, so the
+  /// list footer ignores pointers while the body transition runs.
+  bool _footerLocked = false;
+  Timer? _footerLock;
+
+  static const Duration _footerLockDuration = Duration(milliseconds: 250);
+
+  void _dismissSent() {
+    if (!_sentVisible) return;
+    _footerLock?.cancel();
+    _footerLock = Timer(_footerLockDuration, () {
+      if (!mounted) return;
+      setState(() => _footerLocked = false);
+    });
+    setState(() {
+      _sentVisible = false;
+      _sentWeek = null;
+      _footerLocked = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _footerLock?.cancel();
+    super.dispose();
+  }
+
   /// Leaving the form towards the list: the reload that follows is a load of
   /// the list, so its failure is shown in line and not as a failed save.
   void _cancelForm(BuildContext context) {
@@ -76,32 +118,27 @@ class _RecapViewState extends State<_RecapView> {
     return BlocConsumer<RecapBloc, RecapState>(
       listener: (context, state) {
         final palette = context.exomPalette;
-        final semantic = context.exomSemantic;
-        final l10n = AppLocalizations.of(context);
 
         // D14-3: a failed load of the list is shown in line (the error view);
         // the SnackBar is only for a save or send that fails in the form.
         final errorFromForm = state is RecapError && _formOpen;
+        // The server confirmed a send that started in the form (read before
+        // `_formOpen` is reset): «Enviado» takes the place of the list.
+        final sentFromForm = state is RecapSubmitted && _formOpen;
         if (state is RecapFormActive) {
           _formOpen = true;
+          _formWeek = _weekOf(state.formData);
         } else if (state is! RecapLoading) {
           _formOpen = false;
         }
 
-        if (state is RecapSubmitted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n.recapSentSuccessfully,
-                style: TextStyle(color: palette.background),
-              ),
-              backgroundColor: semantic.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(ExomRadius.control),
-              ),
-            ),
-          );
+        if (sentFromForm) {
+          setState(() {
+            _sentVisible = true;
+            _sentWeek = _formWeek;
+          });
+        } else if (_sentVisible && state is! RecapListLoaded) {
+          _dismissSent();
         }
 
         if (errorFromForm) {
@@ -127,16 +164,19 @@ class _RecapViewState extends State<_RecapView> {
       builder: (context, state) {
         final formState = state is RecapFormActive ? state : null;
         final isFormActive = formState != null;
+        final showSent = _sentVisible && state is RecapListLoaded;
         final palette = context.exomPalette;
         final l10n = AppLocalizations.of(context);
 
-        return ExomStaticBackground(
+        final page = ExomStaticBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
             // Sketch C3: on the list the bar only carries «Volver» and the
             // reload action; the screen title is the first line of the body.
             appBar: AppBar(
-              title: isFormActive
+              title: showSent
+                  ? null
+                  : isFormActive
                   ? Text(
                       formState.step == 5
                           ? l10n.recapImprovementTitle
@@ -147,7 +187,14 @@ class _RecapViewState extends State<_RecapView> {
                   : null,
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
-              leading: isFormActive
+              leading: showSent
+                  ? IconButton(
+                      key: const ValueKey('recap-sent-close'),
+                      onPressed: _dismissSent,
+                      tooltip: l10n.recapSentClose,
+                      icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                    )
+                  : isFormActive
                   ? IconButton(
                       onPressed: () => _cancelForm(context),
                       tooltip: l10n.cancel,
@@ -162,7 +209,7 @@ class _RecapViewState extends State<_RecapView> {
                       icon: Icon(ExomIcons.back, color: palette.textPrimary),
                     )
                   : null,
-              actions: isFormActive
+              actions: isFormActive || showSent
                   ? null
                   : [
                       IconButton(
@@ -182,11 +229,23 @@ class _RecapViewState extends State<_RecapView> {
                     child: _buildBody(context, state),
                   ),
                 ),
-                if (state is RecapListLoaded)
-                  _buildFooter(context, state.recaps),
+                if (showSent)
+                  _buildSentFooter(context)
+                else if (state is RecapListLoaded)
+                  IgnorePointer(
+                    ignoring: _footerLocked,
+                    child: _buildFooter(context, state.recaps),
+                  ),
               ],
             ),
           ),
+        );
+        return PopScope(
+          canPop: !showSent,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _dismissSent();
+          },
+          child: page,
         );
       },
     );
@@ -246,7 +305,27 @@ class _RecapViewState extends State<_RecapView> {
     );
   }
 
+  /// Pinned action of «Enviado»: a secondary button, not the lime one.
+  Widget _buildSentFooter(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return ExomPinnedFooter(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+      child: ExomSecondaryButton(
+        key: const ValueKey('recap-sent-back'),
+        label: AppLocalizations.of(context).recapBackToRecaps,
+        onPressed: _dismissSent,
+      ),
+    );
+  }
+
   Widget _buildBody(BuildContext context, RecapState state) {
+    if (_sentVisible && state is RecapListLoaded) {
+      return _RecapSentView(
+        key: const ValueKey('recap-sent'),
+        weekLine: _sentWeekLine(context),
+      );
+    }
+
     if (state is RecapLoading || state is RecapInitial) {
       return _RecapLoadingView(
         key: const ValueKey('recap-loading'),
@@ -353,6 +432,27 @@ class _RecapViewState extends State<_RecapView> {
   }
 
   DateTime _today(BuildContext context) => HomeClock.todayOf(context);
+
+  /// Week of a form's data, or null when it carries no valid dates.
+  ({DateTime start, DateTime end})? _weekOf(Map<String, dynamic> formData) {
+    final start = DateTime.tryParse('${formData['week_start_date'] ?? ''}');
+    final end = DateTime.tryParse('${formData['week_end_date'] ?? ''}');
+    if (start == null || end == null) return null;
+    return (start: start, end: end);
+  }
+
+  /// «Semana del … al …» of the recap that was sent, formatted like the rows
+  /// of the list header; null when the week is not known.
+  String? _sentWeekLine(BuildContext context) {
+    final week = _sentWeek;
+    if (week == null) return null;
+    final format = DateFormat.MMMMd(
+      Localizations.localeOf(context).languageCode,
+    );
+    return AppLocalizations.of(
+      context,
+    ).recapListWeekSubtitle(format.format(week.start), format.format(week.end));
+  }
 
   RecapEntity? _findCurrentWeekDraft(List<RecapEntity> recaps) {
     for (final recap in recaps) {
@@ -471,6 +571,105 @@ class _RecapLoadingView extends StatelessWidget {
               ExomSkeleton.row(),
               ExomSkeleton.row(),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// «Enviado» (L5-C5b, sketch «C4 · (b) Enviado»): the milestone numeral on a
+/// plain band, the confirmed send in words, the week and the note of the
+/// trainer. The action to leave is pinned by the page.
+class _RecapSentView extends StatelessWidget {
+  const _RecapSentView({super.key, required this.weekLine});
+
+  /// «Semana del … al …»; null when the week of the recap is not known.
+  final String? weekLine;
+
+  static const int _steps = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final line = weekLine;
+    return ListView(
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      children: [
+        // Plain band, like the milestones of «Retos» (L5-D40): no crossed bands.
+        ExomBand(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExcludeSemantics(
+                child: ExomNumeral(
+                  value: '$_steps',
+                  size: ExomNumeralSize.hero140,
+                  isData: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, ExomSpacing.md, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ExomKicker(l10n.recapSentKicker),
+              ),
+              const SizedBox(height: ExomSpacing.md),
+              ExomTwoLineHeadline(
+                first: l10n.recapSentTitleFirst,
+                second: l10n.recapSentTitleSecond,
+                size: ExomHeadlineSize.screen,
+              ),
+              const SizedBox(height: ExomSpacing.md),
+              Semantics(
+                container: true,
+                label: l10n.exomStepOf(_steps, _steps),
+                child: const ExcludeSemantics(
+                  child: ExomProgressRule(
+                    value: 1,
+                    thickness: ExomRule.bar,
+                    segments: _steps,
+                  ),
+                ),
+              ),
+              if (line != null) ...[
+                const SizedBox(height: ExomSpacing.md),
+                Text(
+                  line,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 15,
+                    height: 1.35,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: ExomSpacing.md),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ExomSyncStatus(
+                  state: ExomSyncState.confirmada,
+                  label: l10n.recapSentStatus,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: ExomSpacing.xxl),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ExomCoachBlock(
+            author: l10n.recapListCoachAuthor,
+            text: l10n.recapSentCoach,
           ),
         ),
       ],

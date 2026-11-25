@@ -4752,4 +4752,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapImprovement => 'Improve';
+
+  @override
+  String get recapSentKicker => 'Five steps completed';
+
+  @override
+  String get recapSentTitleFirst => 'Recap';
+
+  @override
+  String get recapSentTitleSecond => 'sent.';
+
+  @override
+  String get recapSentStatus => 'Sent';
+
+  @override
+  String get recapSentCoach =>
+      'Thanks for telling me. I\'ll review it and leave my comment on your recap.';
+
+  @override
+  String get recapBackToRecaps => 'Back to recaps';
+
+  @override
+  String get recapSentClose => 'Close';
 }

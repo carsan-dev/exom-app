@@ -31,6 +31,8 @@ import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_scale_chips.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
@@ -74,148 +76,287 @@ class TrainingCompletionInput {
   final String? notes;
 }
 
-Future<TrainingCompletionInput?> _confirmCompleteTraining(
-  BuildContext context,
-  AppLocalizations l10n, {
+/// Opens the closing sheet «Terminar sesión» (L5-E2b, decision L5-D22; sketch
+/// `e-migradas.html`, frame `f-fin-hoja`) and returns the RPE and note to send
+/// with `CompleteTrainingRequested`, or null when nothing must be sent.
+///
+/// Same contract as the confirmation dialog it replaces: the RPE (1-10) is
+/// required; the note is returned trimmed, or null when blank; the completion
+/// draft of [executionId] is read when the sheet opens (its note wins over
+/// [initialNote]) and written on every change, and again (awaiting the pending
+/// writes) before cancelling or confirming. If that last write fails (for
+/// example the local session changed) the sheet stays open. Cancel, a tap
+/// outside, back, a drag down and a router location change close it without
+/// a result. A repeated tap on «Terminar sesión» sends once. When
+/// [pendingExercises] is positive it warns that confirming marks every pending
+/// exercise as completed (owner decision 2026-11-25).
+Future<TrainingCompletionInput?> showCompleteTrainingSheet(
+  BuildContext context, {
   required LocalStorage storage,
   required String trainingId,
   required String date,
   required String executionId,
   required String? sessionStamp,
+  String? trainingName,
   String? initialNote,
-}) => showDialog<TrainingCompletionInput>(
-  context: context,
-  builder: (_) => CompleteTrainingConfirmationDialog(
-    l10n: l10n, storage: storage, trainingId: trainingId, date: date,
-    executionId: executionId, sessionStamp: sessionStamp, initialNote: initialNote,
-  ),
-);
+  int pendingExercises = 0,
+}) async {
+  final form = _CompletionForm(
+    storage: storage, trainingId: trainingId, date: date,
+    executionId: executionId, sessionStamp: sessionStamp,
+    initialNote: initialNote);
+  try {
+    return await showExomSheet<TrainingCompletionInput>(
+      context: context,
+      builder: (_) => _CompletionSheetBody(form: form,
+        trainingName: trainingName, pendingExercises: pendingExercises),
+      actions: [
+        _CompletionConfirmAction(form: form),
+        _CompletionCancelAction(form: form),
+      ],
+    );
+  } finally {
+    // The sheet subtree is gone; release the note once pending writes end.
+    form.releaseWhenIdle();
+  }
+}
 
-class CompleteTrainingConfirmationDialog extends StatefulWidget {
-  const CompleteTrainingConfirmationDialog({super.key, required this.l10n,
-    required this.storage, required this.trainingId, required this.date,
-    required this.executionId, required this.sessionStamp, this.initialNote});
+enum _CompletionSaving { none, cancel, confirm }
 
-  final AppLocalizations l10n;
+/// State of the closing sheet, shared by its body and its pinned actions.
+class _CompletionForm extends ChangeNotifier {
+  _CompletionForm({required this.storage, required this.trainingId,
+    required this.date, required this.executionId, required this.sessionStamp,
+    String? initialNote}) {
+    final draft = storage.getTrainingCompletionDraft(trainingId, date, executionId);
+    rpe = draft?['rpe'] as int?;
+    note = TextEditingController(text: draft?['notes'] as String? ?? initialNote);
+  }
+
   final LocalStorage storage;
   final String trainingId;
   final String date;
   final String executionId;
   final String? sessionStamp;
-  final String? initialNote;
-
-  @override
-  State<CompleteTrainingConfirmationDialog> createState() =>
-      _CompleteTrainingConfirmationDialogState();
-}
-
-class _CompleteTrainingConfirmationDialogState extends State<CompleteTrainingConfirmationDialog> {
-  late final TextEditingController _note;
-  int? _rpe;
-  bool _saving = false;
+  int? rpe;
+  late final TextEditingController note;
+  _CompletionSaving saving = _CompletionSaving.none;
   Future<void> _pendingSave = Future<void>.value();
+  bool _released = false;
 
-  void _saveDraft() {
+  bool get isSaving => saving != _CompletionSaving.none;
+
+  void selectRpe(int? value) {
+    if (isSaving) return;
+    rpe = value;
+    notifyListeners();
+    saveDraft();
+  }
+
+  void saveDraft() {
     _pendingSave = _pendingSave.then((_) => _persist()).catchError((Object _) {
       // The confirm path retries persistence and stays open if it fails.
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    final draft = widget.storage.getTrainingCompletionDraft(
-      widget.trainingId, widget.date, widget.executionId);
-    _rpe = draft?['rpe'] as int?;
-    _note = TextEditingController(text: draft?['notes'] as String? ?? widget.initialNote);
-  }
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
-
   Future<void> _persist() async {
-    if (widget.sessionStamp == null || widget.storage.sessionStamp != widget.sessionStamp) {
+    if (sessionStamp == null || storage.sessionStamp != sessionStamp) {
       throw const LocalSessionChanged();
     }
-    await widget.storage.saveTrainingCompletionDraft(
-      widget.trainingId, widget.date, widget.executionId,
-      rpe: _rpe, notes: _note.text);
+    await storage.saveTrainingCompletionDraft(trainingId, date, executionId,
+      rpe: rpe, notes: note.text);
   }
+
+  void _setSaving(_CompletionSaving value) {
+    if (_released) return;
+    saving = value;
+    notifyListeners();
+  }
+
+  /// Waits for the pending draft writes and writes the draft once more.
+  Future<bool> _flush(_CompletionSaving reason) async {
+    _setSaving(reason);
+    final done = _pendingSave.then((_) => _persist());
+    _pendingSave = done.catchError((Object _) {});
+    try {
+      await done;
+      return true;
+    } catch (_) {
+      _setSaving(_CompletionSaving.none);
+      return false;
+    }
+  }
+
+  Future<void> cancel(BuildContext context) async {
+    if (isSaving) return;
+    if (await _flush(_CompletionSaving.cancel) && context.mounted) {
+      _popIfCurrent(context, null);
+    }
+  }
+
+  Future<void> confirm(BuildContext context) async {
+    if (isSaving || rpe == null) return;
+    if (await _flush(_CompletionSaving.confirm) && context.mounted) {
+      final text = note.text.trim();
+      _popIfCurrent(context, TrainingCompletionInput(
+        rpe: rpe, notes: text.isEmpty ? null : text));
+    }
+  }
+
+  /// Pops the sheet with [result] only while it is still the current route:
+  /// once a router change (or anything else) has closed it, a late write must
+  /// not pop the page underneath nor deliver a result. If the sheet is still
+  /// open under another route, its actions are freed instead.
+  void _popIfCurrent(BuildContext context, TrainingCompletionInput? result) {
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent) {
+      _setSaving(_CompletionSaving.none);
+      return;
+    }
+    Navigator.of(context).pop(result);
+  }
+
+  void releaseWhenIdle() {
+    _pendingSave.whenComplete(() {
+      _released = true;
+      note.dispose();
+      dispose();
+    });
+  }
+}
+
+/// Body of the closing sheet (`f-fin-hoja`): the session as kicker, the
+/// title, the warning about pending exercises (only when there are any), the
+/// RPE question with its explanation and the 1-10 scale (D16), and the
+/// optional note.
+class _CompletionSheetBody extends StatelessWidget {
+  const _CompletionSheetBody({required this.form, required this.trainingName,
+    required this.pendingExercises});
+
+  final _CompletionForm form;
+  final String? trainingName;
+  final int pendingExercises;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      key: const Key('complete-training-confirmation'),
-      title: Text(widget.l10n.completeTrainingConfirmTitle),
-      content: SingleChildScrollView(child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.l10n.completeTrainingConfirmMessage),
-          const SizedBox(height: 12),
-          Text(widget.l10n.completeTrainingRpeLabel),
-          const SizedBox(height: 4),
-          Text(widget.l10n.completeTrainingRpeExplanation,
-            style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 8),
-          if (_rpe != null) const SizedBox(key: Key('completion-rpe-selected')),
-          Wrap(spacing: 4, children: [
-            for (var value = 1; value <= 10; value++)
-              ChoiceChip(
-                key: Key('completion-rpe-$value'),
-                label: Text('$value'),
-                selected: _rpe == value,
-                onSelected: _saving ? null : (_) {
-                  setState(() => _rpe = _rpe == value ? null : value);
-                  _saveDraft();
-                },
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final name = trainingName?.trim() ?? '';
+    final title = l10n.completeTrainingSheetTitle;
+    final labelStyle = TextStyle(fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 16, fontWeight: FontWeight.w600, height: 1.3,
+      color: palette.textPrimary);
+    return ListenableBuilder(
+      listenable: form,
+      builder: (context, _) => Padding(
+        key: const Key('complete-training-confirmation'),
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (name.isNotEmpty) ...[
+              Align(alignment: AlignmentDirectional.centerStart,
+                child: ExomKicker(name)),
+              const SizedBox(height: ExomSpacing.xs),
+            ],
+            Semantics(
+              header: true,
+              label: title,
+              excludeSemantics: true,
+              child: Text(title.toUpperCase(),
+                style: ExomType.headline2Section.copyWith(color: palette.textPrimary)),
+            ),
+            if (pendingExercises > 0) ...[
+              const SizedBox(height: 10),
+              Text(l10n.completeTrainingConfirmMessage,
+                key: const Key('completion-pending-notice'),
+                style: TextStyle(fontFamily: AppTheme.bodyFontFamily,
+                  fontSize: 14, height: 1.35, color: palette.textSecondary)),
+            ],
+            const SizedBox(height: 18),
+            Text(l10n.completeTrainingRpeQuestion, style: labelStyle),
+            const SizedBox(height: 6),
+            Text(l10n.completeTrainingRpeExplanation,
+              style: TextStyle(fontFamily: AppTheme.bodyFontFamily,
+                fontSize: 14, height: 1.35, color: palette.textSecondary)),
+            const SizedBox(height: 12),
+            if (form.rpe != null) const SizedBox(key: Key('completion-rpe-selected')),
+            ExomScaleChips(
+              min: 1,
+              max: 10,
+              selected: form.rpe,
+              allowDeselect: true,
+              chipKeyOf: (value) => Key('completion-rpe-$value'),
+              onChanged: form.isSaving ? null : form.selectRpe,
+            ),
+            const SizedBox(height: 18),
+            MergeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(l10n.addQuickNoteOptional, style: labelStyle),
+                  const SizedBox(height: 6),
+                  TextField(
+                    key: const Key('completion-note'),
+                    controller: form.note,
+                    onChanged: (_) => form.saveDraft(),
+                    minLines: 3,
+                    maxLines: 4,
+                    style: TextStyle(fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 16, color: palette.textPrimary),
+                  ),
+                ],
               ),
-          ]),
-          TextField(
-            key: const Key('completion-note'),
-            controller: _note,
-            onChanged: (_) => _saveDraft(),
-            maxLines: 2,
-            decoration: InputDecoration(labelText: widget.l10n.addQuickNoteOptional),
-          ),
-        ],
-      )),
-      actions: [
-        TextButton(
-          key: const Key('cancel-complete-training'),
-          onPressed: _saving ? null : () async {
-            setState(() => _saving = true);
-            try {
-              await _pendingSave;
-              await _persist();
-              if (context.mounted) Navigator.of(context).pop();
-            } catch (_) {
-              if (mounted) setState(() => _saving = false);
-            }
-          },
-          child: Text(widget.l10n.cancel),
+            ),
+          ],
         ),
-        FilledButton(
-          key: const Key('confirm-complete-training'),
-          onPressed: _saving || _rpe == null ? null : () async {
-            setState(() => _saving = true);
-            try {
-              await _pendingSave;
-              await _persist();
-              if (context.mounted) {
-                Navigator.of(context).pop(TrainingCompletionInput(
-                  rpe: _rpe, notes: _note.text.trim().isEmpty ? null : _note.text.trim()));
-              }
-            } catch (_) {
-              if (mounted) setState(() => _saving = false);
-            }
-          },
-          child: Text(widget.l10n.completeTrainingConfirmAction),
-        ),
-      ],
+      ),
+    );
+  }
+}
+
+/// «Terminar sesión»: disabled until an RPE is chosen, busy while the last
+/// draft write runs (a repeated tap is ignored).
+class _CompletionConfirmAction extends StatelessWidget {
+  const _CompletionConfirmAction({required this.form});
+
+  final _CompletionForm form;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListenableBuilder(
+      listenable: form,
+      builder: (context, _) => ExomPrimaryButton(
+        key: const Key('confirm-complete-training'),
+        label: l10n.completeTrainingSheetAction,
+        trailingIcon: ExomIcons.check,
+        busy: form.saving == _CompletionSaving.confirm,
+        onPressed: form.rpe == null || form.saving == _CompletionSaving.cancel
+            ? null
+            : () => form.confirm(context),
+      ),
+    );
+  }
+}
+
+class _CompletionCancelAction extends StatelessWidget {
+  const _CompletionCancelAction({required this.form});
+
+  final _CompletionForm form;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListenableBuilder(
+      listenable: form,
+      builder: (context, _) => ExomQuietButton(
+        key: const Key('cancel-complete-training'),
+        label: l10n.cancel,
+        onPressed: form.isSaving ? null : () => form.cancel(context),
+      ),
     );
   }
 }
@@ -640,11 +781,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final input = execution?['status'] == 'failed'
         ? TrainingCompletionInput(
             rpe: saved?['rpe'] as int?, notes: saved?['notes'] as String?)
-        : await _confirmCompleteTraining(context, l10n,
+        : await showCompleteTrainingSheet(context,
             storage: storage, trainingId: training.id,
             date: widget.state.selectedDate, executionId: sessionId,
-            sessionStamp: widget.sessionStamp,
-            initialNote: _notesController.text.trim());
+            sessionStamp: widget.sessionStamp, trainingName: training.name,
+            initialNote: _notesController.text.trim(),
+            pendingExercises: training.exercises
+                .where((exercise) => !_progress.ids.contains(exercise.id))
+                .length);
     if (!mounted) return;
     setState(() => _completeConfirmationOpen = false);
     if (!_sameSession || input == null) return;
@@ -1125,7 +1269,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             : pendingSync || blocker != null || needsConflictReview || locallyCompleted
                 ? null : _completeSelectedTraining;
     final completeLabel = blockerLabel ?? (needsConflictReview ? l10n.trainingSyncConflict : pendingSync ? l10n.trainingPendingSync : locallyCompleted ? l10n.workoutCompletedMessage : hasFailedExecution ? l10n.trainingRetryCompletion : allDone && _sessionId != null
-        ? l10n.workoutCompletedMessage
+        ? l10n.completeTrainingSheetTitle
         : l10n.completeTrainingConfirmAction);
     // One lime action per state: "next" while work remains; once every
     // exercise is done the completion button takes the primary style.

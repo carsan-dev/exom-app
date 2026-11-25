@@ -17,6 +17,9 @@ import 'package:flutter/material.dart';
 /// its selected state. Tapping the selected value does nothing unless
 /// [allowDeselect], which clears it (`onChanged(null)`). A null [onChanged]
 /// disables the scale.
+///
+/// [chipKeyOf] (optional, L5-E2b) keys each value's chip; without it the
+/// chips have no key.
 class ExomScaleChips extends StatelessWidget {
   const ExomScaleChips({
     super.key,
@@ -28,6 +31,7 @@ class ExomScaleChips extends StatelessWidget {
     this.highLabel,
     this.semanticLabelOf,
     this.allowDeselect = false,
+    this.chipKeyOf,
   }) : assert(min < max, 'min must be below max');
 
   final int min;
@@ -42,6 +46,9 @@ class ExomScaleChips extends StatelessWidget {
   /// maximum when the scale stands alone in a form.
   final String Function(int value)? semanticLabelOf;
   final bool allowDeselect;
+
+  /// Key of the chip of each value; null leaves the chips without a key.
+  final Key Function(int value)? chipKeyOf;
 
   static const int _columns = 5;
 
@@ -73,6 +80,7 @@ class ExomScaleChips extends StatelessWidget {
                 return '$v';
               },
           columns: _columns,
+          chipKeyOf: chipKeyOf,
           labelStyle: const TextStyle(
             fontFamily: AppTheme.displayFontFamily,
             fontSize: 24,

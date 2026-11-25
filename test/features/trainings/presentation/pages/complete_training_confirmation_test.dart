@@ -16,6 +16,7 @@ import 'package:exom_app/injection_container.dart';
 import '../../../../core/services/offline_sync_service_test.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
@@ -106,14 +107,12 @@ void main() {
         home: Builder(
           builder: (context) => FilledButton(
             onPressed: () async {
-              dialogResult = await showDialog<TrainingCompletionInput>(
-                context: context,
-                builder: (dialogContext) => CompleteTrainingConfirmationDialog(
-                  l10n: AppLocalizations.of(dialogContext),
-                  storage: storage,
-                  trainingId: 'training', date: '2026-09-05',
-                  executionId: 'execution', sessionStamp: storage.sessionStamp,
-                ),
+              // L5-E2b: the confirmation is the closing sheet.
+              dialogResult = await showCompleteTrainingSheet(
+                context,
+                storage: storage,
+                trainingId: 'training', date: '2026-09-05',
+                executionId: 'execution', sessionStamp: storage.sessionStamp,
               );
             },
             child: const Text('Abrir'),
@@ -133,15 +132,16 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    // L5-E2b (copy approved in L5-D43): the RPE label is now the question.
     for (final (locale, label, explanation) in [
-      (const Locale('es'), 'RPE (obligatorio, 1–10)', 'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'),
-      (const Locale('en'), 'RPE (required, 1–10)', 'RPE measures how hard the workout felt to you: 1 is very easy, 10 is your maximum effort.'),
+      (const Locale('es'), '¿Cuánto te ha costado? (RPE)', 'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'),
+      (const Locale('en'), 'How hard was it? (RPE)', 'RPE measures how hard the workout felt to you: 1 is very easy, 10 is your maximum effort.'),
     ]) {
       await openDialog(tester, locale: locale);
       expect(find.text(label), findsOneWidget);
       expect(find.text(explanation), findsOneWidget);
       expect(tester.takeException(), isNull);
-      expect(tester.widget<FilledButton>(
+      expect(tester.widget<ExomPrimaryButton>(
         find.byKey(const Key('confirm-complete-training'))).onPressed, isNull);
       await tester.tap(find.byKey(const Key('cancel-complete-training')));
       await tester.pumpAndSettle();
@@ -171,11 +171,13 @@ void main() {
 
   testWidgets('confirm action is explicit', (tester) async {
     await openDialog(tester);
-    expect(find.text('Completar todo'), findsOneWidget);
+    // L5-E2b: the action reads «Terminar sesión» (painted upper case).
+    expect(find.text('TERMINAR SESIÓN'), findsNWidgets(2));
     expect(find.byKey(const Key('completion-rpe-selected')), findsNothing);
-    expect(tester.widget<FilledButton>(
+    expect(tester.widget<ExomPrimaryButton>(
       find.byKey(const Key('confirm-complete-training'))).onPressed, isNull);
-    await tester.tap(find.byKey(const Key('confirm-complete-training')));
+    await tester.tap(find.byKey(const Key('confirm-complete-training')),
+      warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
     expect(dialogResult, isNull);

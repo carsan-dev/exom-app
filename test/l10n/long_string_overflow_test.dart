@@ -31,6 +31,8 @@ import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
     show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
+import '../features/trainings/presentation/pages/training_completion_sheet_test.dart'
+    show pumpCompletionSheet;
 import '../features/trainings/presentation/pages/training_detail_redesign_test.dart'
     show pumpTrainingDetail;
 
@@ -379,6 +381,51 @@ void main() {
             },
           );
         }
+      }
+    }
+  });
+
+  // L5-E2b «Hoja de cierre (RPE y nota)»: the closing sheet at 320 dp with
+  // 1.3x and 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end (CC 3); 2.0x scrolling is in
+  // training_completion_sheet_test.dart.
+  group('Hoja de cierre does not overflow', () {
+    tearDown(() async => sl.reset());
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        testWidgets(
+          'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}',
+          (tester) async {
+            await pumpCompletionSheet(
+              tester,
+              size: Size(width, 640),
+              locale: locale,
+              textScaler: AndroidNonlinearTextScaler(scale),
+              // With the pending-exercises warning (the longest sheet).
+              pending: true,
+            );
+            expect(tester.takeException(), isNull);
+            expect(
+              find.byKey(const Key('completion-pending-notice')),
+              findsOneWidget,
+            );
+            final scrollable = find
+                .descendant(
+                  of: find.byKey(const Key('exom-sheet-panel')),
+                  matching: find.byType(Scrollable),
+                )
+                .first;
+            for (var i = 0; i < 8; i++) {
+              await tester.drag(scrollable, const Offset(0, -200));
+              await tester.pump();
+              expect(tester.takeException(), isNull);
+            }
+            await tester.tap(find.byKey(const Key('completion-rpe-10')));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          },
+        );
       }
     }
   });

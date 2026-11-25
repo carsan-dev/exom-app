@@ -2022,6 +2022,15 @@ class AppLocalizationsEs extends AppLocalizations {
       'Registra el rendimiento obligatorio de todas las series antes de completar todo.';
 
   @override
+  String get completeTrainingSheetTitle => 'Terminar sesión';
+
+  @override
+  String get completeTrainingSheetAction => 'Terminar sesión';
+
+  @override
+  String get completeTrainingRpeQuestion => '¿Cuánto te ha costado? (RPE)';
+
+  @override
   String get circuitExerciseRestTitle => 'Descanso entre ejercicios';
 
   @override

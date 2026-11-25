@@ -3656,6 +3656,24 @@ abstract class AppLocalizations {
   /// **'Registra el rendimiento obligatorio de todas las series antes de completar todo.'**
   String get completeTrainingTrackingRequired;
 
+  /// No description provided for @completeTrainingSheetTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar sesión'**
+  String get completeTrainingSheetTitle;
+
+  /// No description provided for @completeTrainingSheetAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar sesión'**
+  String get completeTrainingSheetAction;
+
+  /// No description provided for @completeTrainingRpeQuestion.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuánto te ha costado? (RPE)'**
+  String get completeTrainingRpeQuestion;
+
   /// No description provided for @circuitExerciseRestTitle.
   ///
   /// In es, this message translates to:

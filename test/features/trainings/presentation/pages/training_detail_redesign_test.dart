@@ -116,6 +116,7 @@ class _Storage extends LocalStorage {
   final UnitSystem unitSystem;
   List<Map<String, dynamic>> actions = [];
   final Map<String, ActiveWorkoutHiveModel> drafts = {};
+  List<Map<String, dynamic>> confirmed = [];
 
   @override
   String? get sessionStamp => 'owner:1:test';
@@ -132,7 +133,7 @@ class _Storage extends LocalStorage {
   List<Map<String, dynamic>> getConfirmedTrainingExecutions(
     String trainingId,
     String date,
-  ) => const [];
+  ) => [...confirmed];
   @override
   List<Map<String, dynamic>> getPendingTrainingExecutions() => const [
     {
@@ -523,7 +524,9 @@ void main() {
     expect(find.byKey(const Key('confirm-complete-training')), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.byKey(const Key('confirm-complete-training')))
+          .widget<ExomPrimaryButton>(
+            find.byKey(const Key('confirm-complete-training')),
+          )
           .onPressed,
       isNull,
     );
@@ -604,6 +607,40 @@ void main() {
     await tester.pump();
     expect(find.text(l10n.syncStatusPending), findsNothing);
     expect(find.text(l10n.syncStatusConfirmed), findsNWidgets(2));
+  });
+
+  testWidgets('footer: all done and open says Terminar sesión, closed says completed', (
+    tester,
+  ) async {
+    final all = {for (var i = 1; i <= 5; i++) 'te-$i'};
+    await _mount(tester, completed: all, size: const Size(390, 1600));
+    final l10n = _l10n(tester);
+    expect(
+      find.descendant(
+        of: completeButton,
+        matching: find.text(l10n.completeTrainingSheetTitle),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.workoutCompletedMessage), findsNothing);
+    expect(tester.widget<ElevatedButton>(completeButton).onPressed, isNotNull);
+
+    await _mount(
+      tester,
+      completed: all,
+      size: const Size(390, 1600),
+      seed: (storage) => storage.confirmed = const [
+        {'id': _execution, 'status': 'completed'},
+      ],
+    );
+    expect(
+      find.descendant(
+        of: completeButton,
+        matching: find.text(l10n.workoutCompletedMessage),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.widget<ElevatedButton>(completeButton).onPressed, isNull);
   });
 
   testWidgets('rows completed by "Completar todo" follow complete_training', (

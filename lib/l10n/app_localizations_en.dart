@@ -1997,6 +1997,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Record the required performance for every set before completing all.';
 
   @override
+  String get completeTrainingSheetTitle => 'Finish session';
+
+  @override
+  String get completeTrainingSheetAction => 'Finish session';
+
+  @override
+  String get completeTrainingRpeQuestion => 'How hard was it? (RPE)';
+
+  @override
   String get circuitExerciseRestTitle => 'Rest between exercises';
 
   @override

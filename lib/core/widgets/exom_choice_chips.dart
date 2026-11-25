@@ -28,6 +28,9 @@ import 'package:flutter/material.dart';
 /// the longest word of any label does not fit its chip at the current text
 /// scale, all labels shrink together until it fits, so a word never breaks
 /// inside. Off by default: the labels keep their size and wrap.
+///
+/// [chipKeyOf] (optional, L5-E2b) gives each chip a key (for example to keep
+/// the test keys of a migrated control). Without it the chips have no key.
 class ExomChoiceChips<T> extends StatelessWidget {
   const ExomChoiceChips({
     super.key,
@@ -39,6 +42,7 @@ class ExomChoiceChips<T> extends StatelessWidget {
     this.columns,
     this.labelStyle,
     this.fitLabels = false,
+    this.chipKeyOf,
   }) : selectedValues = null;
 
   /// Multi-select chips: [selectedValues] are the selected options and
@@ -54,6 +58,7 @@ class ExomChoiceChips<T> extends StatelessWidget {
     this.columns,
     this.labelStyle,
     this.fitLabels = false,
+    this.chipKeyOf,
   }) : selected = null,
        onSelected = onToggled;
 
@@ -76,6 +81,9 @@ class ExomChoiceChips<T> extends StatelessWidget {
 
   /// With [columns], shrink every label together so no word breaks inside.
   final bool fitLabels;
+
+  /// Key of each chip; null leaves the chips without a key.
+  final Key Function(T option)? chipKeyOf;
 
   static const double _spacing = 8;
   static const double _minChip = 48;
@@ -159,6 +167,7 @@ class ExomChoiceChips<T> extends StatelessWidget {
     List<Widget> chipsWith([double? fontSize]) => [
       for (final option in options)
         _Chip(
+          key: chipKeyOf?.call(option),
           label: labelOf(option),
           semanticLabel: semanticLabelOf?.call(option) ?? labelOf(option),
           selected: multi == null ? option == selected : multi.contains(option),
@@ -213,6 +222,7 @@ class ExomChoiceChips<T> extends StatelessWidget {
 
 class _Chip extends StatelessWidget {
   const _Chip({
+    super.key,
     required this.label,
     required this.semanticLabel,
     required this.selected,

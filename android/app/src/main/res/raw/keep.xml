@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The status-bar icon is referenced by name from Dart (flutter_local_notifications)
+     and from the FCM manifest meta-data; keep it when shrinking release resources. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_exom" />

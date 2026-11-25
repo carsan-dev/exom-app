@@ -1,4 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -100,5 +101,55 @@ void main() {
       brightness: Brightness.light,
     );
     expectNoLimeInk(tester);
+  });
+
+  // L5-E5 (owner decision 2026-11-25): optional leading icon («Ver técnica»
+  // with a play icon when there is a video). Without it the link is as before.
+  group('icon (L5-E5)', () {
+    testWidgets('default has no icon', (tester) async {
+      await pumpComponent(tester, _link());
+      expect(
+        find.descendant(
+          of: find.byType(ExomTextLink),
+          matching: find.byType(Icon),
+        ),
+        findsNothing,
+      );
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('icon before the label in the link ink; target still 48 '
+          '(${brightness.name})', (tester) async {
+        final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+        final handle = tester.ensureSemantics();
+        await pumpComponent(
+          tester,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomTextLink(
+              label: 'Ver técnica',
+              icon: ExomIcons.play,
+              onTap: () {},
+            ),
+          ),
+          brightness: brightness,
+        );
+        final icon = tester.widget<Icon>(find.byIcon(ExomIcons.play));
+        expect(icon.color, palette.textPrimary);
+        expect(
+          tester.getTopRight(find.byIcon(ExomIcons.play)).dx,
+          lessThanOrEqualTo(tester.getTopLeft(find.text('Ver técnica')).dx),
+        );
+        final size = tester.getSize(find.byType(InkWell));
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+        await expectTapTargetGuidelines(tester);
+        final data = tester
+            .getSemantics(find.byType(ExomTextLink))
+            .getSemanticsData();
+        expect(data.label, 'Ver técnica');
+        handle.dispose();
+      });
+    }
   });
 }

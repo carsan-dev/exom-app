@@ -12,6 +12,8 @@ import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.da
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart'
+    show SetPerformance;
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:exom_app/injection_container.dart';
@@ -31,6 +33,8 @@ import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
     show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
+import '../features/trainings/presentation/pages/circuit_test_harness.dart'
+    show circuitExercise, preL3State, pumpCircuit;
 import '../features/trainings/presentation/pages/training_detail_redesign_test.dart'
     show pumpTrainingDetail;
 
@@ -367,6 +371,87 @@ void main() {
               expect(tester.takeException(), isNull);
               final scrollable = find.byType(Scrollable).first;
               for (var i = 0; i < 12; i++) {
+                await tester.drag(scrollable, const Offset(0, -300));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
+      }
+    }
+  });
+
+  // L5-E5 «Circuito»: executing in the middle of a round (step, columns,
+  // numbered round list with a done, a current and a later row) and the round
+  // rest, with long names, at 320 dp with 1.3x and 1.6x and at 360 dp with 1.6x
+  // (Android non-linear scaler), in both languages, scrolled to the end (CC 3);
+  // 2.0x scrolling is in active_circuit_redesign_test.dart («L3b P5c»).
+  group('Circuito does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    final exercises = [
+      circuitExercise(
+        'a',
+        'Press militar con mancuernas sentado en banco inclinado',
+        targetRir: 2,
+        restSeconds: 30,
+      ),
+      circuitExercise('b', 'Zancada alterna con salto y giro', restSeconds: 20),
+      circuitExercise('c', 'Plancha frontal con toque de hombro', targetValue: 45),
+    ];
+    const logged = {
+      'a': [
+        {'set_number': 1, 'reps': 12, 'weight_kg': 62.5, 'rir': 2},
+        {'set_number': 2, 'reps': 11, 'weight_kg': 62.5, 'rir': 1},
+      ],
+      'b': [
+        {'set_number': 1, 'reps': 12},
+      ],
+      'c': [
+        {'set_number': 1, 'reps': 45},
+      ],
+    };
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final resting in const [false, true]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, '
+            '${resting ? 'round rest' : 'executing'}',
+            (tester) async {
+              await pumpCircuit(
+                tester,
+                exercises: exercises,
+                rounds: 3,
+                restBetweenRounds: 60,
+                width: width,
+                height: 640,
+                textScaler: AndroidNonlinearTextScaler(scale),
+                locale: locale,
+                blockName: 'Circuito metabólico de tren inferior y core',
+                previous: {
+                  'a': const [
+                    SetPerformance(setNumber: 2, reps: 10, weightKg: 60, rir: 2),
+                  ],
+                },
+                restored: resting
+                    ? preL3State(
+                        round: 1,
+                        exerciseIndex: 2,
+                        status: 'roundResting',
+                        restEndsAt: DateTime.now().add(
+                          const Duration(seconds: 60),
+                        ),
+                        performances: logged,
+                      )
+                    : preL3State(
+                        round: 2,
+                        exerciseIndex: 1,
+                        performances: logged,
+                      ),
+              );
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 10; i++) {
                 await tester.drag(scrollable, const Offset(0, -300));
                 await tester.pump();
                 expect(tester.takeException(), isNull);

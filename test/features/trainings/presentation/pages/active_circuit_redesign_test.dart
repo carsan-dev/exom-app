@@ -225,7 +225,9 @@ void main() {
       final l10n = circuitL10n(tester);
 
       expect(tester.takeException(), isNull);
-      expect(find.text(l10n.circuitRoundOf(2, 2)), findsOneWidget);
+      // L5-E5: the round is the step kicker (rest kicker in a rest), painted
+      // in upper case.
+      expect(find.text(l10n.circuitRoundOf(2, 2).toUpperCase()), findsOneWidget);
       expect(find.text(l10n.restTimerTitle.toUpperCase()), findsOneWidget);
       expect(_restFooter(end), findsOneWidget);
       expect(
@@ -692,7 +694,9 @@ void main() {
       await settleFrames(tester);
       expect(h.storage.lastWrite['round'], 2);
       expect(h.storage.lastWrite['exercise_index'], 0);
-      expect(find.text(l10n.circuitRoundOf(2, 2)), findsOneWidget);
+      // L5-E5: the round is the step kicker (rest kicker in a rest), painted
+      // in upper case.
+      expect(find.text(l10n.circuitRoundOf(2, 2).toUpperCase()), findsOneWidget);
     });
 
     testWidgets('final rest: «+30 s» then skip ends into ready and completes '
@@ -842,7 +846,7 @@ void main() {
       expect(((h.storage.lastWrite['performances'] as Map)['a'] as List), hasLength(1));
     });
 
-    testWidgets('prefill: previous session same round, «Anterior» and «Tu '
+    testWidgets('prefill: previous session same round, «Última vez» and «Tu '
         'peso»; the device icon line says only «Guardada en este móvil»', (
       tester,
     ) async {
@@ -857,7 +861,10 @@ void main() {
       );
       final l10n = circuitL10n(tester);
       expect(find.text('Tu peso: 22,5 kg'), findsOneWidget);
-      expect(find.text('Anterior: 10 × 22,5 kg · RIR 2'), findsOneWidget);
+      // L5-E5: the previous set is the «Última vez» column; its weight and
+      // RIR go in the detail below the figure (no «Anterior» line).
+      expect(find.text('× 22,5 kg · RIR 2'), findsOneWidget);
+      expect(find.textContaining('Anterior'), findsNothing);
       expect(find.text(l10n.activeExerciseRestAfter(30)), findsOneWidget);
       await _openSheet(tester);
       expect(_text(tester, _countField), '10');

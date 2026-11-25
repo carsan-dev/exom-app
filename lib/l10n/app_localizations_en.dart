@@ -4277,6 +4277,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String circuitRowNowWithTargetA11y(String name, String target) {
+    return '$name: now, $target';
+  }
+
+  @override
   String circuitRowNextA11y(String name, String target) {
     return '$name: later, $target';
   }
@@ -4339,6 +4344,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String circuitSavedStatus(String name, int round, String status) {
     return '$name, round $round · $status';
   }
+
+  @override
+  String circuitStepExercise(String name) {
+    return '$name.';
+  }
+
+  @override
+  String circuitStepPosition(int current, int total) {
+    return 'Exercise $current of $total.';
+  }
+
+  @override
+  String get circuitTargetLabel => 'Target';
+
+  @override
+  String circuitTargetLabelWithRir(int rir) {
+    return 'Target · RIR $rir';
+  }
+
+  @override
+  String get exerciseLastTimeLabel => 'Last time';
+
+  @override
+  String circuitRoundLogged(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total logged',
+      one: '$done of 1 logged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circuitRowLater => 'Later';
 
   @override
   String get progressTitle => 'Progress';

@@ -7,12 +7,19 @@ import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
@@ -1277,13 +1284,15 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               children: [
                 _CircuitHeader(
                   blockName: widget.args.blockName,
-                  round: l10n.circuitRoundOf(_currentRound, widget.args.rounds),
                   closeTooltip: l10n.circuitCloseA11y,
                   onClose: _close,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    // L5-E5: no side padding here; the columns and the round
+                    // list run edge to edge (sketch `.x-cols`, `.x-rows`) and
+                    // every other block carries [_sidePadding].
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
                     child: resting
                         ? _restBody(context, l10n, weightText)
                         : _executingBody(context, l10n, weightText),
@@ -1350,6 +1359,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     );
   }
 
+  /// Side padding of every block that does not run edge to edge.
+  static const EdgeInsets _sidePadding = EdgeInsets.symmetric(horizontal: 20);
+
   TextStyle _sectionStyle(BuildContext context) => TextStyle(
     fontFamily: AppTheme.displayFontFamily,
     fontSize: 22,
@@ -1374,60 +1386,68 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   );
 
   /// «Esta ronda»: what was logged in the current round and what is left.
+  /// Rows are numbered by their position in the circuit (index + 1), never
+  /// by the exercise's `order`.
   Widget _roundList(AppLocalizations l10n, WeightText weightText) {
     final roundDone =
         _readyToFinish ||
         _status == _CircuitStatus.roundResting ||
         _status == _CircuitStatus.finalResting;
     final exercises = widget.args.exercises;
+    final rows = [
+      for (var index = 0; index < exercises.length; index++)
+        () {
+          final exercise = exercises[index];
+          final logged = _exactRound(
+            _performances[exercise.id],
+            _currentRound,
+          );
+          final CircuitRowState state;
+          String? value;
+          if (roundDone || index < _currentExerciseIndex) {
+            state = logged == null
+                ? CircuitRowState.notLogged
+                : CircuitRowState.done;
+            value = logged == null
+                ? null
+                : setValueLabel(
+                        l10n,
+                        logged,
+                        weightText,
+                        withUnit: false,
+                      ) ??
+                      setValueLabel(
+                        l10n,
+                        logged,
+                        weightText,
+                        withUnit: false,
+                        withRir: true,
+                      ) ??
+                      l10n.activeExerciseSetDone;
+          } else if (index == _currentExerciseIndex &&
+              _status == _CircuitStatus.executing) {
+            state = CircuitRowState.now;
+            value = PrescriptionTarget.of(exercise).shortLabel(l10n);
+          } else {
+            state = CircuitRowState.next;
+            value = PrescriptionTarget.of(exercise).shortLabel(l10n);
+          }
+          return (
+            key: ValueKey('circuit-row-$index'),
+            name: exercise.exercise.name,
+            state: state,
+            value: value,
+          );
+        }(),
+    ];
+    final logged = rows
+        .where((row) => row.state == CircuitRowState.done)
+        .length;
     return CircuitRoundList(
       key: const Key('circuit-round-list'),
       title: l10n.circuitThisRound,
-      rows: [
-        for (var index = 0; index < exercises.length; index++)
-          () {
-            final exercise = exercises[index];
-            final logged = _exactRound(
-              _performances[exercise.id],
-              _currentRound,
-            );
-            final CircuitRowState state;
-            String? value;
-            if (roundDone || index < _currentExerciseIndex) {
-              state = logged == null
-                  ? CircuitRowState.notLogged
-                  : CircuitRowState.done;
-              value = logged == null
-                  ? null
-                  : setValueLabel(
-                          l10n,
-                          logged,
-                          weightText,
-                          withUnit: false,
-                        ) ??
-                        setValueLabel(
-                          l10n,
-                          logged,
-                          weightText,
-                          withUnit: false,
-                          withRir: true,
-                        ) ??
-                        l10n.activeExerciseSetDone;
-            } else if (index == _currentExerciseIndex &&
-                _status == _CircuitStatus.executing) {
-              state = CircuitRowState.now;
-            } else {
-              state = CircuitRowState.next;
-              value = PrescriptionTarget.of(exercise).shortLabel(l10n);
-            }
-            return (
-              key: ValueKey('circuit-row-$index'),
-              name: exercise.exercise.name,
-              state: state,
-              value: value,
-            );
-          }(),
-      ],
+      summary: l10n.circuitRoundLogged(logged, rows.length),
+      rows: rows,
     );
   }
 
@@ -1437,17 +1457,20 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       const SizedBox(height: 28),
       _roundList(l10n, weightText),
       if (saved != null) ...[
-        const SizedBox(height: 10),
-        Semantics(
-          container: true,
-          liveRegion: true,
-          child: ExomSyncStatus(
-            key: const Key('circuit-set-status'),
-            state: ExomSyncState.guardadaEnMovil,
-            label: l10n.circuitSavedStatus(
-              saved.name,
-              saved.round,
-              l10n.syncStatusSavedOnDevice,
+        const SizedBox(height: 12),
+        Padding(
+          padding: _sidePadding,
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            child: ExomSyncStatus(
+              key: const Key('circuit-set-status'),
+              state: ExomSyncState.guardadaEnMovil,
+              label: l10n.circuitSavedStatus(
+                saved.name,
+                saved.round,
+                l10n.syncStatusSavedOnDevice,
+              ),
             ),
           ),
         ),
@@ -1477,6 +1500,65 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         : l10n.circuitEndsAfter;
   }
 
+  /// «Última vez» (sketch `.x-cols`, `.e-ref`): the count of the previous
+  /// session's same round, in the unit of the target, in the text colour at
+  /// 56, with the rest of that set (weight in the user's unit, RIR) in the
+  /// detail below: «10 reps» / «× 22,5 kg · RIR 2». A set without a count
+  /// (only weight or RIR) shows no figure, only its detail. Null when there
+  /// is no previous set or it carries nothing to show.
+  ExomFigure? _lastTimeFigure(
+    AppLocalizations l10n,
+    SetPerformance? previous,
+    PrescriptionTarget target,
+    WeightText weightText,
+  ) {
+    if (previous == null) return null;
+    final full = setValueLabel(l10n, previous, weightText, withRir: true);
+    if (full == null || full.isEmpty) return null;
+    final kg = previous.weightKg;
+    final reps = previous.reps;
+    final seconds = previous.seconds;
+    final rir = previous.rir;
+    final String value;
+    final String? unit;
+    final List<String> rest;
+    if (reps != null) {
+      value = '$reps';
+      unit = l10n.activeExerciseUnitReps;
+      rest = [
+        if (kg != null) '× ${weightText(kg)}',
+        if (seconds != null) '$seconds ${l10n.activeExerciseUnitSeconds}',
+      ];
+    } else if (seconds != null) {
+      final inMinutes =
+          target.timeUnit == TimePerformanceUnit.minutes && seconds % 60 == 0;
+      value = '${inMinutes ? seconds ~/ 60 : seconds}';
+      unit = inMinutes
+          ? l10n.activeExerciseUnitMinutes
+          : l10n.activeExerciseUnitSeconds;
+      rest = [if (kg != null) weightText(kg)];
+    } else {
+      return ExomFigure(
+        value: '',
+        label: l10n.exerciseLastTimeLabel,
+        detail: full,
+        tone: ExomFigureTone.text,
+        semanticsLabel: '${l10n.exerciseLastTimeLabel}: $full',
+        itemKey: const Key('circuit-last-time'),
+      );
+    }
+    final detail = [...rest, if (rir != null) l10n.activeExerciseRir(rir)];
+    return ExomFigure(
+      value: value,
+      unit: unit,
+      label: l10n.exerciseLastTimeLabel,
+      tone: ExomFigureTone.text,
+      detail: detail.isEmpty ? null : detail.join(' · '),
+      semanticsLabel: '${l10n.exerciseLastTimeLabel}: $full',
+      itemKey: const Key('circuit-last-time'),
+    );
+  }
+
   Widget _executingBody(
     BuildContext context,
     AppLocalizations l10n,
@@ -1486,12 +1568,6 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     final ready = _readyToFinish;
     final trainingExercise = _currentExercise;
     final exercise = trainingExercise.exercise;
-    final heading = ready
-        ? l10n.circuitReadyTitle
-        : l10n.activeExercisePosition(
-            _currentExerciseIndex + 1,
-            widget.args.exercises.length,
-          );
     final weightKg = ready
         ? null
         : _weightPrefill(trainingExercise, _currentRound);
@@ -1506,84 +1582,155 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     final sections = _techniqueSections(l10n, exercise);
     final hasTechnique = _hasVideo(exercise) || sections.isNotEmpty;
     final mutedStyle = _mutedStyle(context);
+    final target = PrescriptionTarget.of(trainingExercise);
+    final targetNumeral = target.numeral;
+    final targetRir = trainingExercise.targetRir;
+    final lastTime = _lastTimeFigure(l10n, previous, target, weightText);
+    // The previous set is told by the «Última vez» column when there is one;
+    // the «Anterior» / «Sin datos anteriores» line stays only without it
+    // (timed interval, free-text prescription, no previous set).
+    final showsColumns =
+        !_showsExecutionTimer && !ready && targetNumeral != null;
+    final showsPreviousLine = !showsColumns || lastTime == null;
+
+    // The heading changes inside the screen (next exercise, next round):
+    // announced as a live region.
+    final Widget title = ready
+        ? Semantics(
+            header: true,
+            liveRegion: true,
+            child: Text(
+              l10n.circuitReadyTitle.toUpperCase(),
+              style: ExomType.headline2Section.copyWith(
+                color: palette.textPrimary,
+              ),
+            ),
+          )
+        : Semantics(
+            container: true,
+            liveRegion: true,
+            child: ExomTwoLineHeadline(
+              key: const Key('circuit-exercise-name'),
+              first: l10n.circuitStepExercise(exercise.name),
+              second: l10n.circuitStepPosition(
+                _currentExerciseIndex + 1,
+                widget.args.exercises.length,
+              ),
+            ),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The heading changes inside the screen (next exercise, next round):
-        // announced as a live region.
-        Semantics(
-          header: true,
-          liveRegion: true,
-          child: Text(heading.toUpperCase(), style: _sectionStyle(context)),
-        ),
-        if (!ready) ...[
-          const SizedBox(height: 8),
-          Text(
-            exercise.name,
-            key: const Key('circuit-exercise-name'),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.bodyFontFamily,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              height: 1.25,
-              color: palette.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_showsExecutionTimer)
-          CircuitExecutionTimer(
-            key: ValueKey('${trainingExercise.id}:$_currentRound'),
-            store: _executionStore!,
-            exercise: trainingExercise,
-            trainingId: widget.trainingId,
-            date: widget.args.assignmentDate,
+        Padding(
+          padding: _sidePadding,
+          child: _CircuitStep(
+            key: const Key('circuit-step'),
             round: _currentRound,
-            runKey: (widget.args.sessionId, widget.args.blockId),
-            coordinator: sl<ExecutionTimerCoordinator>(),
-            isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
-              _ownerSession,
-              _timerSessionRevision,
-            ),
-          )
-        else if (!ready)
-          PrescriptionHero(
-            target: PrescriptionTarget.of(trainingExercise),
-            targetRir: trainingExercise.targetRir,
-            prescription: formatExercisePrescription(trainingExercise),
-            numeralKey: const Key('circuit-target'),
+            rounds: widget.args.rounds,
+            kicker: l10n.circuitRoundOf(_currentRound, widget.args.rounds),
+            title: title,
           ),
-        if (!ready) ...[
-          if (weightKg != null) ...[
-            const SizedBox(height: 24),
-            Text(
-              l10n.activeExerciseYourWeight(weightText(weightKg)),
-              key: const Key('circuit-your-weight'),
-              style: _bigStyle(context),
+        ),
+        if (_showsExecutionTimer) ...[
+          const SizedBox(height: 24),
+          Padding(
+            padding: _sidePadding,
+            child: CircuitExecutionTimer(
+              key: ValueKey('${trainingExercise.id}:$_currentRound'),
+              store: _executionStore!,
+              exercise: trainingExercise,
+              trainingId: widget.trainingId,
+              date: widget.args.assignmentDate,
+              round: _currentRound,
+              runKey: (widget.args.sessionId, widget.args.blockId),
+              coordinator: sl<ExecutionTimerCoordinator>(),
+              isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                _ownerSession,
+                _timerSessionRevision,
+              ),
             ),
-          ],
-          SizedBox(height: weightKg == null ? 24 : 4),
-          Text(
-            previousLabel == null || previousLabel.isEmpty
-                ? l10n.activeExerciseNoPrevious
-                : l10n.setPerformancePrevious(previousLabel),
-            key: const Key('circuit-previous'),
-            style: mutedStyle,
           ),
-          if (after != null)
-            Text(after, key: const Key('circuit-after'), style: mutedStyle),
+        ] else if (!ready && targetNumeral != null) ...[
+          const SizedBox(height: 24),
+          ExomFigureColumns(
+            numbered: false,
+            labelsAbove: true,
+            items: [
+              ExomFigure(
+                value: targetNumeral,
+                unit: target.unitLabel(l10n),
+                label: l10n.circuitTargetLabel,
+                detail: targetRir == null
+                    ? null
+                    : l10n.activeExerciseRir(targetRir),
+                size: ExomFigureSize.s64,
+                itemKey: const Key('circuit-target'),
+              ),
+              ?lastTime,
+            ],
+          ),
+        ] else if (!ready) ...[
+          // Free-text prescription: shown as it is, as before L5.
+          const SizedBox(height: 24),
+          Padding(
+            padding: _sidePadding,
+            child: PrescriptionHero(
+              target: target,
+              targetRir: targetRir,
+              prescription: formatExercisePrescription(trainingExercise),
+              numeralKey: const Key('circuit-target'),
+            ),
+          ),
         ],
+        if (!ready)
+          Padding(
+            padding: _sidePadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (weightKg != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.activeExerciseYourWeight(weightText(weightKg)),
+                    key: const Key('circuit-your-weight'),
+                    style: _bigStyle(context),
+                  ),
+                ],
+                if (showsPreviousLine) ...[
+                  SizedBox(height: weightKg == null ? 16 : 4),
+                  Text(
+                    previousLabel == null || previousLabel.isEmpty
+                        ? l10n.activeExerciseNoPrevious
+                        : l10n.setPerformancePrevious(previousLabel),
+                    key: const Key('circuit-previous'),
+                    style: mutedStyle,
+                  ),
+                ] else
+                  SizedBox(height: weightKg == null ? 16 : 4),
+                if (after != null)
+                  Text(
+                    after,
+                    key: const Key('circuit-after'),
+                    style: mutedStyle,
+                  ),
+              ],
+            ),
+          ),
         ..._roundSection(l10n, weightText),
         if (!ready && hasTechnique) ...[
           const SizedBox(height: 20),
-          ExomSecondaryButton(
-            key: const Key('circuit-technique'),
-            label: l10n.activeExerciseTechniqueButton,
-            icon: _hasVideo(exercise) ? ExomIcons.play : null,
-            onPressed: () => _openTechnique(l10n),
+          Padding(
+            padding: _sidePadding,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomTextLink(
+                key: const Key('circuit-technique'),
+                label: l10n.activeExerciseTechniqueButton,
+                icon: _hasVideo(exercise) ? ExomIcons.play : null,
+                onTap: () => _openTechnique(l10n),
+              ),
+            ),
           ),
         ],
       ],
@@ -1636,31 +1783,49 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: Text(title.toUpperCase(), style: _sectionStyle(context)),
-        ),
-        if (kind == CircuitRestKind.round) ...[
-          const SizedBox(height: 8),
-          Text(
-            l10n.circuitRoundDone(_currentRound),
-            style: _mutedStyle(context),
+        Padding(
+          padding: _sidePadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The round left the header (L5-E5): during a rest it stays on
+              // screen as the kicker of the rest title.
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ExomKicker(
+                  l10n.circuitRoundOf(_currentRound, widget.args.rounds),
+                  key: const Key('circuit-round'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Semantics(
+                header: true,
+                child: Text(title.toUpperCase(), style: _sectionStyle(context)),
+              ),
+              if (kind == CircuitRestKind.round) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.circuitRoundDone(_currentRound),
+                  style: _mutedStyle(context),
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (restEndsAt != null)
+                RestCountdown(
+                  key: ValueKey(
+                    'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+                  ),
+                  restEndsAt: restEndsAt,
+                  totalSeconds: total,
+                ),
+              const SizedBox(height: 16),
+              Text(
+                next,
+                key: const Key('circuit-rest-next'),
+                style: _bigStyle(context),
+              ),
+            ],
           ),
-        ],
-        const SizedBox(height: 16),
-        if (restEndsAt != null)
-          RestCountdown(
-            key: ValueKey(
-              'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
-            ),
-            restEndsAt: restEndsAt,
-            totalSeconds: total,
-          ),
-        const SizedBox(height: 16),
-        Text(
-          next,
-          key: const Key('circuit-rest-next'),
-          style: _bigStyle(context),
         ),
         ..._roundSection(l10n, weightText),
       ],
@@ -1679,19 +1844,19 @@ double _trainingFooterBottomPadding(BuildContext context) {
       : navigationInset + margin;
 }
 
-/// Header of the active circuit (as the active exercise's): close (48x48,
-/// labelled; it goes through `_confirmExit` like system back), block name
-/// in the display face (wraps, never ellipsized) and «Ronda 2 de 3».
+/// Header of the active circuit (sketch `.hdr-push`): close (48x48,
+/// labelled; it goes through `_confirmExit` like system back) and the block
+/// name in the display face (wraps, never ellipsized). Since L5-E5 the round
+/// is not here: it is the protagonist of [_CircuitStep] and the kicker of a
+/// rest.
 class _CircuitHeader extends StatelessWidget {
   const _CircuitHeader({
     required this.blockName,
-    required this.round,
     required this.closeTooltip,
     required this.onClose,
   });
 
   final String blockName;
-  final String round;
   final String closeTooltip;
   final VoidCallback onClose;
 
@@ -1730,23 +1895,84 @@ class _CircuitHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    round,
-                    key: const Key('circuit-round'),
-                    style: TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      fontSize: 14,
-                      height: 1.4,
-                      color: palette.textSecondary,
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Step of the active circuit (sketch `.x-step`, L5-E5): the round as the
+/// protagonist, «2/3» at 120 in the data colour with the total muted, then
+/// the [kicker] «Ronda 2 de 3» and the [title] (the exercise headline, or the
+/// ready title), and under them a rule of one segment per round with the
+/// rounds up to the current one filled. The numeral sits beside the title
+/// when both fit and above it otherwise (`flex-wrap`).
+///
+/// The numeral and the rule are painted only: the kicker already says the
+/// round to assistive technology.
+class _CircuitStep extends StatelessWidget {
+  const _CircuitStep({
+    super.key,
+    required this.round,
+    required this.rounds,
+    required this.kicker,
+    required this.title,
+  });
+
+  final int round;
+  final int rounds;
+  final String kicker;
+  final Widget title;
+
+  /// `.x-step > .x-segs > i { height: 6px }`.
+  static const double _ruleThickness = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            ExcludeSemantics(
+              child: ExomNumeral(
+                value: '$round',
+                unit: '/$rounds',
+                unitColor: palette.textMuted,
+                size: ExomNumeralSize.hero120,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ExomKicker(kicker, key: const Key('circuit-round')),
+                const SizedBox(height: 6),
+                title,
+              ],
+            ),
+          ],
+        ),
+        if (rounds > 0) ...[
+          const SizedBox(height: 12),
+          ExcludeSemantics(
+            child: ExomProgressRule(
+              value: round / rounds,
+              thickness: _ruleThickness,
+              segments: rounds,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

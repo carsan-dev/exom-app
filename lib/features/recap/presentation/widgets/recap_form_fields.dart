@@ -668,6 +668,9 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
 /// Number of steps of the form after the start view.
 const int kRecapSteps = 5;
 
+/// Photo of the trainer for every coach block of Recap (L5-C5b).
+const AssetImage kRecapCoachAvatar = AssetImage('assets/images/coach/moi.png');
+
 /// The week the recap belongs to («16 nov - 22 nov»), for the steps of the
 /// form below it: a draft of an earlier week must say which week it is.
 class RecapWeekScope extends InheritedWidget {
@@ -783,7 +786,11 @@ class RecapStepFrame extends StatelessWidget {
             second: second,
           ),
           const SizedBox(height: ExomSpacing.lg),
-          ExomCoachBlock(author: l10n.recapListCoachAuthor, text: coach),
+          ExomCoachBlock(
+            author: l10n.recapListCoachAuthor,
+            text: coach,
+            avatar: kRecapCoachAvatar,
+          ),
           const SizedBox(height: ExomSpacing.xxl),
           for (final question in questions) ...[
             question,

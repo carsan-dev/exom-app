@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
@@ -59,7 +60,7 @@ class _RecapView extends StatefulWidget {
   State<_RecapView> createState() => _RecapViewState();
 }
 
-class _RecapViewState extends State<_RecapView> {
+class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
   final DateFormat _apiDateFormat = DateFormat('yyyy-MM-dd');
 
   /// The form was open since the list was last shown. Saving and sending go
@@ -86,8 +87,91 @@ class _RecapViewState extends State<_RecapView> {
 
   static const Duration _footerLockDuration = Duration(milliseconds: 250);
 
+  /// Lime sweep that draws «Enviado» from top to bottom when it enters. At
+  /// rest (value 1) it shows nothing; while it runs the screen takes no taps.
+  late final AnimationController _sweep;
+
+  /// Landing of the «5» once the sweep is over (secondary action). At rest
+  /// (value 1) the numeral has its own size.
+  late final AnimationController _land;
+
+  /// The sweep that runs was started by «Enviado» and lands the numeral when
+  /// it ends (not when it is cut short by leaving the screen).
+  bool _landAfterSweep = false;
+
+  /// A send was dispatched from the form and the bloc has not answered yet:
+  /// while it is `RecapLoading` the page keeps showing [_lastForm] (with its
+  /// footer busy) instead of the loading skeleton.
+  bool _submitInFlight = false;
+
+  /// Last form state received, shown while its send is in flight.
+  RecapFormActive? _lastForm;
+
+  /// The paper plane is still flying (it started on the tap and the form has
+  /// not reported its end yet). Never true with reduced motion.
+  bool _flightActive = false;
+
+  /// The server confirmed the send while the plane was still flying: the form
+  /// stays on screen until the flight ends, then «Enviado» takes over. The
+  /// confirmation is already real; only its presentation waits.
+  bool _sentPending = false;
+
+  /// The plane landed: if the confirmation already arrived, show «Enviado».
+  void _onFlightEnd() {
+    _flightActive = false;
+    if (!_sentPending || !mounted) return;
+    _sentPending = false;
+    setState(() {
+      _sentVisible = true;
+      _sentWeek = _formWeek;
+    });
+    _startSweep();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sweep = AnimationController(
+      vsync: this,
+      duration: _SentSweep.duration,
+      value: 1,
+    )..addStatusListener(_onSweepStatus);
+    _land = AnimationController(
+      vsync: this,
+      duration: _RecapSentView.landDuration,
+      value: 1,
+    );
+  }
+
+  bool get _sweeping => _sweep.isAnimating;
+
+  void _onSweepStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && _landAfterSweep) {
+      _landAfterSweep = false;
+      _land.forward(from: 0);
+    }
+    if (mounted) setState(() {});
+  }
+
+  /// Starts the sweep of «Enviado» and, after it, the landing of the
+  /// numeral; with reduced motion it appears at once, without either.
+  void _startSweep() {
+    if (ExomMotion.of(context).isReduced) {
+      _landAfterSweep = false;
+      _sweep.value = 1;
+      _land.value = 1;
+      return;
+    }
+    _landAfterSweep = true;
+    _land.value = 0;
+    _sweep.forward(from: 0);
+  }
+
   void _dismissSent() {
     if (!_sentVisible) return;
+    _landAfterSweep = false;
+    _sweep.value = 1;
+    _land.value = 1;
     _footerLock?.cancel();
     _footerLock = Timer(_footerLockDuration, () {
       if (!mounted) return;
@@ -103,6 +187,8 @@ class _RecapViewState extends State<_RecapView> {
   @override
   void dispose() {
     _footerLock?.cancel();
+    _sweep.dispose();
+    _land.dispose();
     super.dispose();
   }
 
@@ -126,17 +212,30 @@ class _RecapViewState extends State<_RecapView> {
         // `_formOpen` is reset): «Enviado» takes the place of the list.
         final sentFromForm = state is RecapSubmitted && _formOpen;
         if (state is RecapFormActive) {
+          _flightActive = false;
+          _sentPending = false;
           _formOpen = true;
           _formWeek = _weekOf(state.formData);
+          _lastForm = state;
         } else if (state is! RecapLoading) {
           _formOpen = false;
         }
+        // The send in flight ends with any answer of the bloc.
+        if (state is! RecapLoading) _submitInFlight = false;
 
-        if (sentFromForm) {
+        if (_sentPending && state is! RecapSubmitted) _sentPending = false;
+        if (state is RecapError) _flightActive = false;
+
+        if (sentFromForm && _flightActive) {
+          // The plane is still flying: wait for it (at most its remaining
+          // flight) instead of cutting it with «Enviado».
+          setState(() => _sentPending = true);
+        } else if (sentFromForm) {
           setState(() {
             _sentVisible = true;
             _sentWeek = _formWeek;
           });
+          _startSweep();
         } else if (_sentVisible && state is! RecapListLoaded) {
           _dismissSent();
         }
@@ -162,7 +261,17 @@ class _RecapViewState extends State<_RecapView> {
         }
       },
       builder: (context, state) {
-        final formState = state is RecapFormActive ? state : null;
+        // While its send is in flight the form stays on screen (the bloc is
+        // `RecapLoading`), so the plane is seen leaving and the button turns
+        // busy in place.
+        final submitting =
+            _lastForm != null &&
+            ((state is RecapLoading && _submitInFlight) || _sentPending);
+        final formState = state is RecapFormActive
+            ? state
+            : submitting
+            ? _lastForm
+            : null;
         final isFormActive = formState != null;
         final showSent = _sentVisible && state is RecapListLoaded;
         final palette = context.exomPalette;
@@ -188,17 +297,24 @@ class _RecapViewState extends State<_RecapView> {
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
               leading: showSent
-                  ? IconButton(
-                      key: const ValueKey('recap-sent-close'),
-                      onPressed: _dismissSent,
-                      tooltip: l10n.recapSentClose,
-                      icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                  ? IgnorePointer(
+                      ignoring: _sweeping,
+                      child: IconButton(
+                        key: const ValueKey('recap-sent-close'),
+                        onPressed: _dismissSent,
+                        tooltip: l10n.recapSentClose,
+                        icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                      ),
                     )
                   : isFormActive
-                  ? IconButton(
-                      onPressed: () => _cancelForm(context),
-                      tooltip: l10n.cancel,
-                      icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                  ? IgnorePointer(
+                      // The send is already dispatched: nothing to cancel.
+                      ignoring: submitting,
+                      child: IconButton(
+                        onPressed: () => _cancelForm(context),
+                        tooltip: l10n.cancel,
+                        icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                      ),
                     )
                   : context.canPop()
                   ? IconButton(
@@ -221,22 +337,32 @@ class _RecapViewState extends State<_RecapView> {
                       ),
                     ],
             ),
-            body: Column(
-              children: [
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: _buildBody(context, state),
+            body: _SentSweep(
+              sweep: _sweep,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: _bodyTransition,
+                      // «Enviado» replaces what was there at once: the sweep
+                      // draws it over the plain background.
+                      layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.center,
+                        children: [if (!showSent) ...previous, ?current],
+                      ),
+                      child: _buildBody(context, state, formState),
+                    ),
                   ),
-                ),
-                if (showSent)
-                  _buildSentFooter(context)
-                else if (state is RecapListLoaded)
-                  IgnorePointer(
-                    ignoring: _footerLocked,
-                    child: _buildFooter(context, state.recaps),
-                  ),
-              ],
+                  if (showSent)
+                    _buildSentFooter(context)
+                  else if (state is RecapListLoaded)
+                    IgnorePointer(
+                      ignoring: _footerLocked,
+                      child: _buildFooter(context, state.recaps),
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -249,6 +375,15 @@ class _RecapViewState extends State<_RecapView> {
         );
       },
     );
+  }
+
+  /// Fade of the body switcher; «Enviado» does not fade in (the sweep, or
+  /// nothing with reduced motion, brings it) but still fades out when leaving.
+  static Widget _bodyTransition(Widget child, Animation<double> animation) {
+    if (child.key == const ValueKey('recap-sent')) {
+      return _FadeOutOnly(animation: animation, child: child);
+    }
+    return FadeTransition(opacity: animation, child: child);
   }
 
   /// Pinned action of the list (D14-1): «Nuevo recap», «Continuar borrador»
@@ -318,25 +453,24 @@ class _RecapViewState extends State<_RecapView> {
     );
   }
 
-  Widget _buildBody(BuildContext context, RecapState state) {
+  Widget _buildBody(
+    BuildContext context,
+    RecapState state,
+    RecapFormActive? form,
+  ) {
     if (_sentVisible && state is RecapListLoaded) {
       return _RecapSentView(
         key: const ValueKey('recap-sent'),
         weekLine: _sentWeekLine(context),
+        landing: _land,
       );
     }
 
-    if (state is RecapLoading || state is RecapInitial) {
-      return _RecapLoadingView(
-        key: const ValueKey('recap-loading'),
-        header: _buildListHeader(context),
-      );
-    }
-
-    if (state is RecapFormActive) {
+    if (form != null) {
       return _RecapFormView(
         key: const ValueKey('recap-form'),
-        state: state,
+        state: form,
+        submitting: state is RecapLoading || _sentPending,
         onFieldChanged: (field, value) => context.read<RecapBloc>().add(
           RecapFieldUpdated(field: field, value: value),
         ),
@@ -344,11 +478,24 @@ class _RecapViewState extends State<_RecapView> {
             context.read<RecapBloc>().add(RecapStepChanged(step)),
         onSaveDraft: () =>
             context.read<RecapBloc>().add(const RecapSaveRequested()),
-        onSubmit: () => context.read<RecapBloc>().add(
-          RecapSubmitRequested(recapId: state.recapId),
-        ),
+        // Dispatched on the tap itself; the flight of the icon is feedback.
+        onSubmit: () {
+          _submitInFlight = true;
+          _flightActive = !ExomMotion.of(context).isReduced;
+          context.read<RecapBloc>().add(
+            RecapSubmitRequested(recapId: form.recapId),
+          );
+        },
         onCancel: () => _cancelForm(context),
+        onFlightEnd: _onFlightEnd,
         formatWeekRange: _formatWeekRange,
+      );
+    }
+
+    if (state is RecapLoading || state is RecapInitial) {
+      return _RecapLoadingView(
+        key: const ValueKey('recap-loading'),
+        header: _buildListHeader(context),
       );
     }
 
@@ -549,6 +696,102 @@ class _RecapViewState extends State<_RecapView> {
   }
 }
 
+/// Fades [child] out when [animation] runs in reverse; entering it is opaque.
+class _FadeOutOnly extends AnimatedWidget {
+  const _FadeOutOnly({
+    required Animation<double> animation,
+    required this.child,
+  }) : super(listenable: animation);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = listenable as Animation<double>;
+    final opacity = animation.status == AnimationStatus.reverse
+        ? animation.value
+        : 1.0;
+    return Opacity(opacity: opacity, child: child);
+  }
+}
+
+/// Entry of «Enviado» (L5-C5b): in 300 ms (slow in and out) a 6 px lime band
+/// travels from the top of the body to the bottom of the pinned footer; above
+/// it the screen is drawn, below it only the page background shows. It does
+/// not stop at the bottom: it fades out over the last fifth of the body
+/// (follow-through), fully transparent when it reaches the bottom edge. While it runs the screen takes no taps. At rest (value 1)
+/// [child] is shown as is.
+class _SentSweep extends StatelessWidget {
+  const _SentSweep({required this.sweep, required this.child});
+
+  final AnimationController sweep;
+  final Widget child;
+
+  static const Duration duration = Duration(milliseconds: 300);
+  static const Curve _curve = Curves.easeInOutCubic;
+  static const double _band = 6;
+
+  /// Fraction of the body height where the band starts fading out.
+  static const double _fadeStart = 0.8;
+
+  @override
+  Widget build(BuildContext context) {
+    final lime = context.exomPalette.data;
+    return LayoutBuilder(
+      builder: (context, constraints) => AnimatedBuilder(
+        animation: sweep,
+        child: child,
+        builder: (context, content) {
+          final running = sweep.isAnimating;
+          final height = constraints.maxHeight;
+          final bottom = _curve.transform(sweep.value) * height;
+          final top = bottom - _band;
+          final fadeStart = height * _fadeStart;
+          final fade = height > fadeStart
+              ? ((bottom - fadeStart) / (height - fadeStart)).clamp(0.0, 1.0)
+              : 0.0;
+          return Stack(
+            fit: StackFit.passthrough,
+            children: [
+              ClipRect(
+                clipper: _TopClipper(math.min(bottom, height)),
+                clipBehavior: running ? Clip.hardEdge : Clip.none,
+                child: IgnorePointer(ignoring: running, child: content),
+              ),
+              if (running)
+                Positioned(
+                  key: const ValueKey('recap-sent-sweep'),
+                  top: top,
+                  left: 0,
+                  right: 0,
+                  height: _band,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 1 - fade,
+                      child: ColoredBox(color: lime),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TopClipper extends CustomClipper<Rect> {
+  const _TopClipper(this.bottom);
+
+  final double bottom;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(0, 0, size.width, bottom);
+
+  @override
+  bool shouldReclip(_TopClipper oldClipper) => oldClipper.bottom != bottom;
+}
+
 /// Loading: the header and skeleton rows with the shape of the final rows.
 class _RecapLoadingView extends StatelessWidget {
   const _RecapLoadingView({super.key, required this.header});
@@ -581,13 +824,28 @@ class _RecapLoadingView extends StatelessWidget {
 /// «Enviado» (L5-C5b, sketch «C4 · (b) Enviado»): the milestone numeral on a
 /// plain band, the confirmed send in words, the week and the note of the
 /// trainer. The action to leave is pinned by the page.
+///
+/// After the sweep the «5» lands ([landing], 180 ms, ease-out): a small squash
+/// from 1.06 through 0.98 to its own size, on its baseline.
 class _RecapSentView extends StatelessWidget {
-  const _RecapSentView({super.key, required this.weekLine});
+  const _RecapSentView({
+    super.key,
+    required this.weekLine,
+    required this.landing,
+  });
 
   /// «Semana del … al …»; null when the week of the recap is not known.
   final String? weekLine;
 
+  /// Landing of the numeral; at 1 it has its own size.
+  final Animation<double> landing;
+
   static const int _steps = 5;
+  static const Duration landDuration = Duration(milliseconds: 180);
+  static final Animatable<double> _landScale = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1.06, end: 0.98), weight: 1),
+    TweenSequenceItem(tween: Tween(begin: 0.98, end: 1.0), weight: 1),
+  ]).chain(CurveTween(curve: Curves.easeOut));
 
   @override
   Widget build(BuildContext context) {
@@ -604,10 +862,17 @@ class _RecapSentView extends StatelessWidget {
             child: Align(
               alignment: AlignmentDirectional.centerStart,
               child: ExcludeSemantics(
-                child: ExomNumeral(
-                  value: '$_steps',
-                  size: ExomNumeralSize.hero140,
-                  isData: false,
+                child: ScaleTransition(
+                  key: const ValueKey('recap-sent-numeral-land'),
+                  scale: landing.drive(_landScale),
+                  alignment: AlignmentDirectional.bottomStart.resolve(
+                    Directionality.of(context),
+                  ),
+                  child: ExomNumeral(
+                    value: '$_steps',
+                    size: ExomNumeralSize.hero140,
+                    isData: false,
+                  ),
                 ),
               ),
             ),
@@ -670,6 +935,7 @@ class _RecapSentView extends StatelessWidget {
           child: ExomCoachBlock(
             author: l10n.recapListCoachAuthor,
             text: l10n.recapSentCoach,
+            avatar: kRecapCoachAvatar,
           ),
         ),
       ],
@@ -718,6 +984,7 @@ class _RecapListView extends StatelessWidget {
               // D16: the model carries no trainer name.
               author: l10n.recapListCoachAuthor,
               text: l10n.recapListEmptyCoachText,
+              avatar: kRecapCoachAvatar,
             ),
           ),
         ],
@@ -1216,7 +1483,13 @@ class _RecapErrorView extends StatelessWidget {
 /// action of the step pinned below. A failed save or send still shows its own
 /// SnackBar (it is not a validation); an invalid value is explained under its
 /// field and in a line above the buttons.
-class _RecapFormView extends StatelessWidget {
+///
+/// «ENVIAR RECAP» (L5-C5b): the send is dispatched on the tap, once. From then
+/// on the form takes no taps and the paper plane flies up out of the button as
+/// feedback (drawn in the overlay, so no footer clips it). While the send is in
+/// flight ([submitting]) the button turns busy after
+/// [ExomMotion.busyIndicatorDelay]. With reduced motion there is no flight.
+class _RecapFormView extends StatefulWidget {
   final RecapFormActive state;
   final void Function(String field, dynamic value) onFieldChanged;
   final ValueChanged<int> onStepChanged;
@@ -1224,6 +1497,12 @@ class _RecapFormView extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
   final String Function(Map<String, dynamic> formData) formatWeekRange;
+
+  /// The plane finished its flight.
+  final VoidCallback onFlightEnd;
+
+  /// The send of this form is in flight (the bloc has not answered yet).
+  final bool submitting;
 
   const _RecapFormView({
     super.key,
@@ -1234,15 +1513,97 @@ class _RecapFormView extends StatelessWidget {
     required this.onSubmit,
     required this.onCancel,
     required this.formatWeekRange,
+    required this.onFlightEnd,
+    this.submitting = false,
   });
 
+  @override
+  State<_RecapFormView> createState() => _RecapFormViewState();
+}
+
+class _RecapFormViewState extends State<_RecapFormView>
+    with SingleTickerProviderStateMixin {
   static const int _stepStart = 0;
   static const int _stepImprovement = 5;
+  static const Key _sendIconKey = ValueKey('recap-send-icon');
+
+  late final AnimationController _flight;
+  final LayerLink _sendSlot = LayerLink();
+  final OverlayPortalController _plane = OverlayPortalController();
+
+  /// The send was tapped: the form ignores taps from then on.
+  bool _sending = false;
+
+  /// The plane left its slot in the button (not with reduced motion).
+  bool _planeLaunched = false;
+
+  /// [ExomMotion.busyIndicatorDelay] passed since the tap: if the send is
+  /// still in flight the button shows it is busy.
+  bool _busyDelayPassed = false;
+  Timer? _busyDelay;
+
+  RecapFormActive get state => widget.state;
+  ValueChanged<int> get onStepChanged => widget.onStepChanged;
+  void Function(String field, dynamic value) get onFieldChanged =>
+      widget.onFieldChanged;
 
   bool get _isStartStep => state.step == _stepStart;
   bool get _isImprovementStep => state.step == _stepImprovement;
   bool get _hasValidationErrors =>
       !isValidRecapAverageDailySteps(state.formData['average_daily_steps']);
+
+  @override
+  void initState() {
+    super.initState();
+    _flight = AnimationController(
+      vsync: this,
+      duration: _FlyingSendIcon.duration,
+    )..addStatusListener(_onFlightStatus);
+  }
+
+  @override
+  void didUpdateWidget(_RecapFormView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The bloc answered with the form again: it takes taps once more.
+    if (oldWidget.submitting && !widget.submitting) {
+      _busyDelay?.cancel();
+      _flight.value = 0;
+      _sending = false;
+      _planeLaunched = false;
+      _busyDelayPassed = false;
+    }
+  }
+
+  void _send() {
+    if (_sending) return;
+    // The action starts on the tap; the flight only accompanies it.
+    widget.onSubmit();
+    final reduced = ExomMotion.of(context).isReduced;
+    setState(() {
+      _sending = true;
+      _planeLaunched = !reduced;
+    });
+    _busyDelay = Timer(ExomMotion.busyIndicatorDelay, () {
+      if (mounted) setState(() => _busyDelayPassed = true);
+    });
+    if (reduced) return;
+    _plane.show();
+    _flight.forward(from: 0);
+  }
+
+  void _onFlightStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && mounted && _plane.isShowing) {
+      _plane.hide();
+    }
+    if (status == AnimationStatus.completed && mounted) widget.onFlightEnd();
+  }
+
+  @override
+  void dispose() {
+    _busyDelay?.cancel();
+    _flight.dispose();
+    super.dispose();
+  }
 
   Widget _stepBody() {
     switch (state.step) {
@@ -1274,12 +1635,40 @@ class _RecapFormView extends StatelessWidget {
       default:
         return RecapStartView(
           formData: state.formData,
-          weekLabel: formatWeekRange(state.formData),
+          weekLabel: widget.formatWeekRange(state.formData),
           onStart: () => onStepChanged(1),
           onReviewAndSend: () => onStepChanged(5),
-          onCancel: onCancel,
+          onCancel: widget.onCancel,
         );
     }
+  }
+
+  /// Slot of the send icon in the button. The icon rests here; when it flies
+  /// it is drawn in the overlay, following this slot, and the slot is empty.
+  Widget _sendIconSlot() {
+    return OverlayPortal(
+      controller: _plane,
+      overlayChildBuilder: (context) => Positioned(
+        left: 0,
+        top: 0,
+        child: CompositedTransformFollower(
+          link: _sendSlot,
+          showWhenUnlinked: false,
+          child: IgnorePointer(
+            child: SizedBox.square(
+              dimension: _FlyingSendIcon.size,
+              child: _FlyingSendIcon(flight: _flight, iconKey: _sendIconKey),
+            ),
+          ),
+        ),
+      ),
+      child: CompositedTransformTarget(
+        link: _sendSlot,
+        child: _planeLaunched
+            ? const SizedBox.square(dimension: _FlyingSendIcon.size)
+            : Icon(ExomIcons.send, key: _sendIconKey),
+      ),
+    );
   }
 
   @override
@@ -1287,58 +1676,160 @@ class _RecapFormView extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Column(
-      children: [
-        Expanded(
-          child: RecapWeekScope(
-            label: formatWeekRange(state.formData),
-            child: ExomStepTransition(step: state.step, child: _stepBody()),
-          ),
-        ),
-        if (!_isStartStep)
-          ExomPinnedFooter(
-            padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_hasValidationErrors) ...[
-                  ExomInlineMessage(
-                    kind: ExomMessageKind.error,
-                    title: l10n.correctInvalidRecapFields,
-                  ),
-                  const SizedBox(height: ExomSpacing.md),
-                ],
-                ExomPrimaryButton(
-                  key: const ValueKey('recap-step-action'),
-                  label: _isImprovementStep
-                      ? l10n.sendRecap
-                      : l10n.recapNextStep,
-                  trailingIcon: _isImprovementStep
-                      ? ExomIcons.send
-                      : ExomIcons.forward,
-                  onPressed: _isImprovementStep
-                      ? (_hasValidationErrors ? null : onSubmit)
-                      : () => onStepChanged(state.step + 1),
-                ),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    ExomQuietButton(
-                      label: l10n.previous,
-                      onPressed: () => onStepChanged(state.step - 1),
-                    ),
-                    ExomQuietButton(
-                      label: l10n.recapSaveDraft,
-                      onPressed: _hasValidationErrors ? null : onSaveDraft,
-                    ),
-                  ],
-                ),
-              ],
+    return IgnorePointer(
+      ignoring: _sending,
+      child: Column(
+        children: [
+          Expanded(
+            child: RecapWeekScope(
+              label: widget.formatWeekRange(state.formData),
+              child: ExomStepTransition(step: state.step, child: _stepBody()),
             ),
           ),
-      ],
+          if (!_isStartStep)
+            ExomPinnedFooter(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_hasValidationErrors) ...[
+                    ExomInlineMessage(
+                      kind: ExomMessageKind.error,
+                      title: l10n.correctInvalidRecapFields,
+                    ),
+                    const SizedBox(height: ExomSpacing.md),
+                  ],
+                  ExomPrimaryButton(
+                    key: const ValueKey('recap-step-action'),
+                    label: _isImprovementStep
+                        ? l10n.sendRecap
+                        : l10n.recapNextStep,
+                    trailingIcon: _isImprovementStep
+                        ? ExomIcons.send
+                        : ExomIcons.forward,
+                    trailing: _isImprovementStep ? _sendIconSlot() : null,
+                    busy:
+                        _isImprovementStep &&
+                        widget.submitting &&
+                        _busyDelayPassed,
+                    onPressed: _isImprovementStep
+                        ? (_hasValidationErrors ? null : _send)
+                        : () => onStepChanged(state.step + 1),
+                  ),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ExomQuietButton(
+                        label: l10n.previous,
+                        onPressed: () => onStepChanged(state.step - 1),
+                      ),
+                      ExomQuietButton(
+                        label: l10n.recapSaveDraft,
+                        onPressed: _hasValidationErrors
+                            ? null
+                            : widget.onSaveDraft,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Paper plane of «ENVIAR RECAP» in flight (280 ms, nothing before the send:
+/// it is dispatched on the tap). 60 ms of anticipation (a 3 dp dip with a
+/// slight squash), then 220 ms along a curved path up and to the right,
+/// accelerating, stretched along its motion mid-flight and shrinking and
+/// fading out in the last third. Builds nothing when it is not flying.
+class _FlyingSendIcon extends AnimatedWidget {
+  const _FlyingSendIcon({
+    required Animation<double> flight,
+    required this.iconKey,
+  }) : super(listenable: flight);
+
+  final Key iconKey;
+
+  static const double size = 22;
+  static const Duration duration = Duration(milliseconds: 280);
+  static const double _anticipation = 60 / 280;
+  static const double _dip = 3;
+  static const double _squashX = 1.08;
+  static const double _squashY = 0.9;
+  static const double _stretch = 0.12;
+  static const double _endScale = 0.6;
+  static const Offset _start = Offset(0, _dip);
+  static const Offset _control = Offset(2, -60);
+  static const Offset _end = Offset(28, -(kExomButtonMinHeight + 40));
+  static const Interval _fade = Interval(2 / 3, 1);
+
+  /// The plane leaves the lime button at ~40% of the arc; by 70% it has the
+  /// page text colour.
+  static const Interval _recolor = Interval(0.4, 0.7);
+
+  Animation<double> get _flight => listenable as Animation<double>;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_flight.isAnimating) return const SizedBox.shrink();
+    final value = _flight.value;
+    final Matrix4 transform;
+    var opacity = 1.0;
+    // Starts as the button's foreground; the overlay would otherwise give it
+    // its own default icon colour.
+    var color = kExomPrimaryForeground;
+    if (value < _anticipation) {
+      final dip = Curves.easeOut.transform(value / _anticipation);
+      transform = Matrix4.translationValues(0, _dip * dip, 0).multiplied(
+        Matrix4.diagonal3Values(
+          1 + (_squashX - 1) * dip,
+          1 + (_squashY - 1) * dip,
+          1,
+        ),
+      );
+    } else {
+      final f = (value - _anticipation) / (1 - _anticipation);
+      final t = ExomMotion.sheetExitCurve.transform(f);
+      final u = 1 - t;
+      final position =
+          _start * (u * u) + _control * (2 * u * t) + _end * (t * t);
+      final tangent =
+          (_control - _start) * (2 * u) + (_end - _control) * (2 * t);
+      final angle = tangent.direction;
+      // The squash of the anticipation is released in the first quarter.
+      final squash = (1 - f / 0.25).clamp(0.0, 1.0);
+      final along = 1 + _stretch * math.sin(math.pi * f);
+      final shrink = 1 - (1 - _endScale) * _fade.transform(f);
+      opacity = 1 - _fade.transform(f);
+      color = Color.lerp(
+        kExomPrimaryForeground,
+        context.exomPalette.textPrimary,
+        _recolor.transform(f),
+      )!;
+      transform = Matrix4.translationValues(position.dx, position.dy, 0)
+          .multiplied(Matrix4.rotationZ(angle))
+          .multiplied(Matrix4.diagonal3Values(along, 1 / along, 1))
+          .multiplied(Matrix4.rotationZ(-angle))
+          .multiplied(
+            Matrix4.diagonal3Values(
+              (1 + (_squashX - 1) * squash) * shrink,
+              (1 + (_squashY - 1) * squash) * shrink,
+              1,
+            ),
+          );
+    }
+    return Transform(
+      alignment: Alignment.center,
+      transform: transform,
+      child: Opacity(
+        opacity: opacity,
+        child: Icon(ExomIcons.send, key: iconKey, size: size, color: color),
+      ),
     );
   }
 }

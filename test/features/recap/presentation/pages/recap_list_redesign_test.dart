@@ -174,6 +174,7 @@ Future<GoRouter> pumpRecapList(
   TextScaler textScaler = TextScaler.noScaling,
   bool settle = true,
   RecapListTestRepository? repository,
+  bool disableAnimations = false,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -211,7 +212,10 @@ Future<GoRouter> pumpRecapList(
       builder: (context, child) => HomeClock(
         now: () => recapListNow,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: textScaler,
+            disableAnimations: disableAnimations,
+          ),
           child: child!,
         ),
       ),

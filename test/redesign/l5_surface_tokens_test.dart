@@ -98,6 +98,9 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/onboarding/presentation/widgets/onboarding_summary_step.dart',
   'lib/features/onboarding/presentation/widgets/onboarding_progress_indicator.dart',
   'lib/features/onboarding/presentation/widgets/onboarding_step_layout.dart',
+  // L5-E9b · Formulario de métricas.
+  'lib/features/metrics/presentation/pages/metrics_page.dart',
+  'lib/core/widgets/anatomy_selector.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

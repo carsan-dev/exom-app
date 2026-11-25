@@ -1754,6 +1754,24 @@ abstract class AppLocalizations {
   /// **'Actualizar métricas'**
   String get metricsPageTitle;
 
+  /// No description provided for @metricsFormSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso, altura, masa muscular, sueño y medidas'**
+  String get metricsFormSubtitle;
+
+  /// No description provided for @metricsWeightDecrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Restar {step}'**
+  String metricsWeightDecrease(String step);
+
+  /// No description provided for @metricsWeightIncrease.
+  ///
+  /// In es, this message translates to:
+  /// **'Sumar {step}'**
+  String metricsWeightIncrease(String step);
+
   /// No description provided for @recordDateTitle.
   ///
   /// In es, this message translates to:
@@ -1789,6 +1807,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Entrada manual'**
   String get manualEntryToggle;
+
+  /// No description provided for @metricsWeightTypeHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca la cifra para escribirla.'**
+  String get metricsWeightTypeHint;
 
   /// No description provided for @weightUpdateNote.
   ///

@@ -350,12 +350,26 @@
   },
   "noChangesMessage": "No has modificado ninguna métrica para guardar.",
   "metricsPageTitle": "Actualizar métricas",
+  "metricsFormSubtitle": "Peso, altura, masa muscular, sueño y medidas",
+  "metricsWeightDecrease": "Restar {step}",
+  "@metricsWeightDecrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "metricsWeightIncrease": "Sumar {step}",
+  "@metricsWeightIncrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
   "recordDateTitle": "Fecha del registro",
   "recordDateDescription": "El registro se guardará para la fecha seleccionada. Así puedes apuntar métricas y sueño de días anteriores.",
   "heightSectionTitle": "Altura",
   "heightDescription": "La altura se guarda en tu histórico de métricas y también actualiza tu perfil para mantener coherencia con el cálculo SEEN.",
   "weightSectionTitle": "Peso",
   "manualEntryToggle": "Entrada manual",
+  "metricsWeightTypeHint": "Toca la cifra para escribirla.",
   "weightUpdateNote": "El peso solo se guarda si lo modificas en esta actualización.",
   "muscleMassSectionTitle": "Masa muscular",
   "muscleMassDescription": "Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.",

@@ -156,9 +156,9 @@ Future<void> _openBodyMap(WidgetTester tester) async {
 
 const _baseline = <String, String>{
   'es 390.0 1.0':
-      'neck:20.00,332.00,95.42,48.00 shoulders:20.00,395.11,95.42,48.00 chest:20.00,473.33,95.42,49.00 waist:20.00,552.56,95.42,49.00 hips:20.00,631.78,95.42,48.00 upperArm:274.58,381.80,95.42,68.00 forearm:274.58,466.40,95.42,48.00 thigh:274.58,564.20,95.42,48.00 calf:274.58,645.40,95.42,48.00',
+      'neck:20.00,356.00,95.42,48.00 shoulders:20.00,419.11,95.42,48.00 chest:20.00,497.33,95.42,49.00 waist:20.00,576.56,95.42,49.00 hips:20.00,655.78,95.42,48.00 upperArm:274.58,405.80,95.42,68.00 forearm:274.58,490.40,95.42,48.00 thigh:274.58,588.20,95.42,48.00 calf:274.58,669.40,95.42,48.00',
   'en 390.0 1.0':
-      'neck:20.00,332.00,95.42,48.00 shoulders:20.00,395.11,95.42,48.00 chest:20.00,473.33,95.42,49.00 waist:20.00,552.56,95.42,49.00 hips:20.00,631.78,95.42,48.00 upperArm:274.58,381.80,95.42,68.00 forearm:274.58,466.40,95.42,48.00 thigh:274.58,564.20,95.42,48.00 calf:274.58,645.40,95.42,48.00',
+      'neck:20.00,356.00,95.42,48.00 shoulders:20.00,419.11,95.42,48.00 chest:20.00,497.33,95.42,49.00 waist:20.00,576.56,95.42,49.00 hips:20.00,655.78,95.42,48.00 upperArm:274.58,405.80,95.42,68.00 forearm:274.58,490.40,95.42,48.00 thigh:274.58,588.20,95.42,48.00 calf:274.58,669.40,95.42,48.00',
 };
 
 const _zones = [
@@ -278,6 +278,8 @@ void main() {
   group('side-by-side layout is kept where the names fit', () {
     // Zone control rects (left, top, width, height) of the default case
     // (390 dp, 1.0x), measured on the layout before this change.
+    // L5-E9b: the numbered section headers moved the scrolled body map
+    // 24 dp down; lefts, widths and heights are unchanged.
     for (final locale in const ['es', 'en']) {
       testWidgets('$locale 390dp x1.0', (tester) async {
         await _mount(tester, latest: _metric, locale: Locale(locale));

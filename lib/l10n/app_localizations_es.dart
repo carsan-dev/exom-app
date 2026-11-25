@@ -944,6 +944,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get metricsPageTitle => 'Actualizar métricas';
 
   @override
+  String get metricsFormSubtitle =>
+      'Peso, altura, masa muscular, sueño y medidas';
+
+  @override
+  String metricsWeightDecrease(String step) {
+    return 'Restar $step';
+  }
+
+  @override
+  String metricsWeightIncrease(String step) {
+    return 'Sumar $step';
+  }
+
+  @override
   String get recordDateTitle => 'Fecha del registro';
 
   @override
@@ -962,6 +976,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get manualEntryToggle => 'Entrada manual';
+
+  @override
+  String get metricsWeightTypeHint => 'Toca la cifra para escribirla.';
 
   @override
   String get weightUpdateNote =>

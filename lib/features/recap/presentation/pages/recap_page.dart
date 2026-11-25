@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
@@ -22,6 +23,7 @@ import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
@@ -33,6 +35,7 @@ import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_sent_check.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_start_view.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_general.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_step_improvement.dart';
@@ -87,17 +90,25 @@ class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
 
   static const Duration _footerLockDuration = Duration(milliseconds: 250);
 
-  /// Lime sweep that draws «Enviado» from top to bottom when it enters. At
+  /// Lime band that paints «Enviado» from top to bottom when it enters. At
   /// rest (value 1) it shows nothing; while it runs the screen takes no taps.
   late final AnimationController _sweep;
 
-  /// Landing of the «5» once the sweep is over (secondary action). At rest
-  /// (value 1) the numeral has its own size.
-  late final AnimationController _land;
+  /// «Sello» of the check next to the headline (secondary action). At rest
+  /// (value 1) the check is whole.
+  late final AnimationController _check;
 
-  /// The sweep that runs was started by «Enviado» and lands the numeral when
-  /// it ends (not when it is cut short by leaving the screen).
-  bool _landAfterSweep = false;
+  /// The running sweep was started by «Enviado» and starts the check once its
+  /// trailing edge passes the headline (not when it is cut short by leaving).
+  bool _checkArmed = false;
+
+  /// The check is being drawn and its stamp (with the haptic) is still due.
+  bool _stampPending = false;
+
+  /// Area painted by the sweep (body and pinned footer) and the headline row
+  /// of «Enviado», to know when the band has passed the headline.
+  final GlobalKey _sweepAreaKey = GlobalKey();
+  final GlobalKey _headlineRowKey = GlobalKey();
 
   /// A send was dispatched from the form and the bloc has not answered yet:
   /// while it is `RecapLoading` the page keeps showing [_lastForm] (with its
@@ -131,47 +142,82 @@ class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _sweep = AnimationController(
+    _sweep =
+        AnimationController(
+            vsync: this,
+            duration: _SentSweep.duration,
+            value: 1,
+          )
+          ..addListener(_onSweepTick)
+          ..addStatusListener(_onSweepStatus);
+    _check = AnimationController(
       vsync: this,
-      duration: _SentSweep.duration,
+      duration: RecapSentCheck.duration,
       value: 1,
-    )..addStatusListener(_onSweepStatus);
-    _land = AnimationController(
-      vsync: this,
-      duration: _RecapSentView.landDuration,
-      value: 1,
-    );
+    )..addListener(_onCheckTick);
   }
 
   bool get _sweeping => _sweep.isAnimating;
 
   void _onSweepStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed && _landAfterSweep) {
-      _landAfterSweep = false;
-      _land.forward(from: 0);
-    }
+    // A sweep that ended without passing the headline (it was not laid out)
+    // still stamps the check.
+    if (status == AnimationStatus.completed && _checkArmed) _startCheck();
     if (mounted) setState(() {});
   }
 
-  /// Starts the sweep of «Enviado» and, after it, the landing of the
-  /// numeral; with reduced motion it appears at once, without either.
+  /// Starts the check once the trailing edge of the band has passed the bottom
+  /// of the headline row (norm 3: the check is staged after the headline).
+  void _onSweepTick() {
+    if (!_checkArmed) return;
+    final area = _sweepAreaKey.currentContext?.findRenderObject();
+    final row = _headlineRowKey.currentContext?.findRenderObject();
+    if (area is! RenderBox || row is! RenderBox) return;
+    if (!area.hasSize || !row.hasSize || !row.attached) return;
+    final rowBottom = row
+        .localToGlobal(Offset(0, row.size.height), ancestor: area)
+        .dy;
+    final trailing = _SentSweep.trailingEdge(_sweep.value, area.size.height);
+    if (trailing >= rowBottom) _startCheck();
+  }
+
+  void _startCheck() {
+    _checkArmed = false;
+    _stampPending = true;
+    _check.forward(from: 0);
+  }
+
+  /// One light haptic at the start of the stamp.
+  void _onCheckTick() {
+    if (!_stampPending || _check.value < RecapSentCheck.stampStart) return;
+    _stampPending = false;
+    unawaited(HapticFeedback.lightImpact());
+  }
+
+  /// Starts the sweep of «Enviado» and, while it runs, the «Sello» of the
+  /// check; with reduced motion the page and the whole check appear at once,
+  /// without stamp or haptic.
   void _startSweep() {
     if (ExomMotion.of(context).isReduced) {
-      _landAfterSweep = false;
+      _checkArmed = false;
+      _stampPending = false;
+      _check.value = 1;
       _sweep.value = 1;
-      _land.value = 1;
       return;
     }
-    _landAfterSweep = true;
-    _land.value = 0;
+    _stampPending = false;
+    _check.value = 0;
+    _checkArmed = true;
     _sweep.forward(from: 0);
   }
 
   void _dismissSent() {
     if (!_sentVisible) return;
-    _landAfterSweep = false;
+    // Disarm first: ending the sweep below must not start the check.
+    _checkArmed = false;
+    _stampPending = false;
+    _check.value = 1;
     _sweep.value = 1;
-    _land.value = 1;
     _footerLock?.cancel();
     _footerLock = Timer(_footerLockDuration, () {
       if (!mounted) return;
@@ -188,7 +234,7 @@ class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
   void dispose() {
     _footerLock?.cancel();
     _sweep.dispose();
-    _land.dispose();
+    _check.dispose();
     super.dispose();
   }
 
@@ -338,6 +384,7 @@ class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
                     ],
             ),
             body: _SentSweep(
+              key: _sweepAreaKey,
               sweep: _sweep,
               child: Column(
                 children: [
@@ -462,7 +509,8 @@ class _RecapViewState extends State<_RecapView> with TickerProviderStateMixin {
       return _RecapSentView(
         key: const ValueKey('recap-sent'),
         weekLine: _sentWeekLine(context),
-        landing: _land,
+        check: _check,
+        headlineRowKey: _headlineRowKey,
       );
     }
 
@@ -715,81 +763,127 @@ class _FadeOutOnly extends AnimatedWidget {
   }
 }
 
-/// Entry of «Enviado» (L5-C5b): in 300 ms (slow in and out) a 6 px lime band
-/// travels from the top of the body to the bottom of the pinned footer; above
-/// it the screen is drawn, below it only the page background shows. It does
-/// not stop at the bottom: it fades out over the last fifth of the body
-/// (follow-through), fully transparent when it reaches the bottom edge. While it runs the screen takes no taps. At rest (value 1)
-/// [child] is shown as is.
+/// Entry of «Enviado» (L5-C5b, owner decision 2026-11-25: «una franja verde
+/// lima grande que a medida que baja pinta la página»). A solid lime band one
+/// third of the area high (body and pinned footer) enters from above the top
+/// edge, travels down and leaves completely past the bottom edge. Above its
+/// trailing (top) edge the screen is shown, below its leading (bottom) edge
+/// only the page background; the top [_fade] of the band fades into the page.
+/// While it runs the screen takes no taps. At rest (value 1) [child] is shown
+/// as is.
+///
+/// 450 ms with `easeInOutCubic` (norm 6). Norm 9 caps ordinary transitions at
+/// 300 ms; this is the weekly moment of the recap (norm 20), an exception the
+/// owner decided on 2026-11-25.
+///
+/// Per frame nothing is built or laid out again: the page is a repaint
+/// boundary under a clip that reclips on [sweep], and the band is a static
+/// child moved by a fractional translation.
 class _SentSweep extends StatelessWidget {
-  const _SentSweep({required this.sweep, required this.child});
+  const _SentSweep({super.key, required this.sweep, required this.child});
 
   final AnimationController sweep;
   final Widget child;
 
-  static const Duration duration = Duration(milliseconds: 300);
+  static const Duration duration = Duration(milliseconds: 450);
   static const Curve _curve = Curves.easeInOutCubic;
-  static const double _band = 6;
 
-  /// Fraction of the body height where the band starts fading out.
-  static const double _fadeStart = 0.8;
+  /// Height of the band as a fraction of the area.
+  static const double _bandFraction = 1 / 3;
+
+  /// Soft trailing edge of the band.
+  static const double _fade = 16;
+
+  /// Position of the band's top in band heights: -1 (just above the area) at
+  /// the start, [1 / _bandFraction] (just below it) at the end.
+  static double _bandOffset(double value) =>
+      -1 + _curve.transform(value) * (1 / _bandFraction + 1);
+
+  /// Trailing (top) edge of the band at [value] in an area [height] high.
+  static double trailingEdge(double value, double height) =>
+      _bandOffset(value) * height * _bandFraction;
 
   @override
   Widget build(BuildContext context) {
-    final lime = context.exomPalette.data;
-    return LayoutBuilder(
-      builder: (context, constraints) => AnimatedBuilder(
-        animation: sweep,
-        child: child,
-        builder: (context, content) {
-          final running = sweep.isAnimating;
-          final height = constraints.maxHeight;
-          final bottom = _curve.transform(sweep.value) * height;
-          final top = bottom - _band;
-          final fadeStart = height * _fadeStart;
-          final fade = height > fadeStart
-              ? ((bottom - fadeStart) / (height - fadeStart)).clamp(0.0, 1.0)
-              : 0.0;
-          return Stack(
-            fit: StackFit.passthrough,
-            children: [
-              ClipRect(
-                clipper: _TopClipper(math.min(bottom, height)),
-                clipBehavior: running ? Clip.hardEdge : Clip.none,
-                child: IgnorePointer(ignoring: running, child: content),
-              ),
-              if (running)
-                Positioned(
-                  key: const ValueKey('recap-sent-sweep'),
-                  top: top,
-                  left: 0,
-                  right: 0,
-                  height: _band,
-                  child: IgnorePointer(
-                    child: Opacity(
-                      opacity: 1 - fade,
-                      child: ColoredBox(color: lime),
+    final lime = context.exomPalette.limeFill;
+    final running = sweep.isAnimating;
+    return Stack(
+      key: const ValueKey('recap-sent-sweep-area'),
+      fit: StackFit.passthrough,
+      children: [
+        ClipRect(
+          key: const ValueKey('recap-sent-reveal'),
+          clipper: _RevealClipper(sweep),
+          clipBehavior: running ? Clip.hardEdge : Clip.none,
+          child: RepaintBoundary(
+            child: IgnorePointer(ignoring: running, child: child),
+          ),
+        ),
+        if (running)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ClipRect(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: _bandFraction,
+                    widthFactor: 1,
+                    child: AnimatedBuilder(
+                      animation: sweep,
+                      builder: (context, band) => FractionalTranslation(
+                        translation: Offset(0, _bandOffset(sweep.value)),
+                        child: band,
+                      ),
+                      child: KeyedSubtree(
+                        key: const ValueKey('recap-sent-sweep'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              key: const ValueKey('recap-sent-sweep-fade'),
+                              height: _fade,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [lime.withValues(alpha: 0), lime],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(child: ColoredBox(color: lime)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-            ],
-          );
-        },
-      ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _TopClipper extends CustomClipper<Rect> {
-  const _TopClipper(this.bottom);
+/// Shows the page down to the leading (bottom) edge of the band; reclips on
+/// every tick of [sweep] without rebuilding or relaying out the page.
+class _RevealClipper extends CustomClipper<Rect> {
+  _RevealClipper(this.sweep) : super(reclip: sweep);
 
-  final double bottom;
+  final Animation<double> sweep;
 
   @override
-  Rect getClip(Size size) => Rect.fromLTRB(0, 0, size.width, bottom);
+  Rect getClip(Size size) {
+    final leading =
+        _SentSweep.trailingEdge(sweep.value, size.height) +
+        size.height * _SentSweep._bandFraction;
+    return Rect.fromLTRB(0, 0, size.width, leading.clamp(0.0, size.height));
+  }
 
   @override
-  bool shouldReclip(_TopClipper oldClipper) => oldClipper.bottom != bottom;
+  bool shouldReclip(_RevealClipper oldClipper) => oldClipper.sweep != sweep;
 }
 
 /// Loading: the header and skeleton rows with the shape of the final rows.
@@ -821,31 +915,29 @@ class _RecapLoadingView extends StatelessWidget {
   }
 }
 
-/// «Enviado» (L5-C5b, sketch «C4 · (b) Enviado»): the milestone numeral on a
-/// plain band, the confirmed send in words, the week and the note of the
-/// trainer. The action to leave is pinned by the page.
-///
-/// After the sweep the «5» lands ([landing], 180 ms, ease-out): a small squash
-/// from 1.06 through 0.98 to its own size, on its baseline.
+/// «Enviado» (L5-C5b, owner decision 2026-11-25: option C «Sin cabecera» of
+/// the sketch `c5b-enviado-cabecera` with the check of option B to the right
+/// of the headline): the kicker «Recap semanal», the two-line headline with
+/// the check, the full segment rule, the week, the confirmed send and the note
+/// of the trainer. The action to leave is pinned by the page.
 class _RecapSentView extends StatelessWidget {
   const _RecapSentView({
     super.key,
     required this.weekLine,
-    required this.landing,
+    required this.check,
+    required this.headlineRowKey,
   });
 
   /// «Semana del … al …»; null when the week of the recap is not known.
   final String? weekLine;
 
-  /// Landing of the numeral; at 1 it has its own size.
-  final Animation<double> landing;
+  /// «Sello» of the check; at 1 it is whole and at rest.
+  final Animation<double> check;
+
+  /// Key of the headline row, so the page knows when the sweep has passed it.
+  final GlobalKey headlineRowKey;
 
   static const int _steps = 5;
-  static const Duration landDuration = Duration(milliseconds: 180);
-  static final Animatable<double> _landScale = TweenSequence<double>([
-    TweenSequenceItem(tween: Tween(begin: 1.06, end: 0.98), weight: 1),
-    TweenSequenceItem(tween: Tween(begin: 0.98, end: 1.0), weight: 1),
-  ]).chain(CurveTween(curve: Curves.easeOut));
 
   @override
   Widget build(BuildContext context) {
@@ -855,44 +947,26 @@ class _RecapSentView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       children: [
-        // Plain band, like the milestones of «Retos» (L5-D40): no crossed bands.
-        ExomBand(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: ExcludeSemantics(
-                child: ScaleTransition(
-                  key: const ValueKey('recap-sent-numeral-land'),
-                  scale: landing.drive(_landScale),
-                  alignment: AlignmentDirectional.bottomStart.resolve(
-                    Directionality.of(context),
-                  ),
-                  child: ExomNumeral(
-                    value: '$_steps',
-                    size: ExomNumeralSize.hero140,
-                    isData: false,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, ExomSpacing.md, 20, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: ExomKicker(l10n.recapSentKicker),
+                child: ExomKicker(l10n.weeklyRecapTitle),
               ),
               const SizedBox(height: ExomSpacing.md),
-              ExomTwoLineHeadline(
-                first: l10n.recapSentTitleFirst,
-                second: l10n.recapSentTitleSecond,
-                size: ExomHeadlineSize.screen,
+              KeyedSubtree(
+                key: const ValueKey('recap-sent-headline-row'),
+                child: _SentHeadline(
+                  key: headlineRowKey,
+                  first: l10n.recapSentTitleFirst,
+                  second: l10n.recapSentTitleSecond,
+                  check: check,
+                  color: palette.data,
+                ),
               ),
               const SizedBox(height: ExomSpacing.md),
               Semantics(
@@ -939,6 +1013,89 @@ class _RecapSentView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The two-line headline of «Enviado» with the check to its right, centred on
+/// both lines. The check is 56 dp at text scale 1 and grows with the headline;
+/// when the widest line leaves no room for it (large text on a narrow screen)
+/// it shrinks down to [_minCheck], and below that it goes under the headline.
+class _SentHeadline extends StatelessWidget {
+  const _SentHeadline({
+    super.key,
+    required this.first,
+    required this.second,
+    required this.check,
+    required this.color,
+  });
+
+  final String first;
+  final String second;
+  final Animation<double> check;
+  final Color color;
+
+  static const double _check = 56;
+  static const double _minCheck = 32;
+  static const double _gap = ExomSpacing.md;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final style = ExomType.headline2Screen;
+    final base = style.fontSize ?? 44;
+    final wanted = _check * scaler.scale(base) / base;
+    final direction = Directionality.of(context);
+    final headline = ExomTwoLineHeadline(
+      first: first,
+      second: second,
+      size: ExomHeadlineSize.screen,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var widest = 0.0;
+        for (final text in [first, second]) {
+          final painter = TextPainter(
+            text: TextSpan(text: text.toUpperCase(), style: style),
+            textScaler: scaler,
+            textDirection: direction,
+            maxLines: 1,
+          )..layout();
+          widest = math.max(widest, painter.width);
+          painter.dispose();
+        }
+        final room = constraints.maxWidth - widest - _gap;
+        if (room >= _minCheck) {
+          final size = math.min(wanted, room);
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: headline),
+              const SizedBox(width: _gap),
+              RecapSentCheck(
+                key: const ValueKey('recap-sent-check'),
+                progress: check,
+                color: color,
+                size: size,
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            headline,
+            const SizedBox(height: _gap),
+            RecapSentCheck(
+              key: const ValueKey('recap-sent-check'),
+              progress: check,
+              color: color,
+              size: math.min(wanted, constraints.maxWidth),
+            ),
+          ],
+        );
+      },
     );
   }
 }

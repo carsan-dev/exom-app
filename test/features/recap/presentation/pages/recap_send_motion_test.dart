@@ -4,10 +4,12 @@
 //   (60 ms anticipation + 220 ms curved, accelerating flight), drawn where no
 //   footer clips it. While the send is in flight the form stays on screen,
 //   takes no taps and the button turns busy after the busy delay.
-// * «Enviado» (only after the server confirmed, norm 3) enters with a 300 ms
-//   lime sweep that carries on past the bottom edge, then the «5» lands with
-//   a small squash (180 ms).
-// * Reduced motion: no flight, no sweep, no squash; the send is still on tap.
+// * «Enviado» (only after the server confirmed, norm 3) enters with a lime
+//   band one third of the body high that travels down in 450 ms and paints the
+//   page above its trailing edge (owner decision 2026-11-25: a weekly moment,
+//   norm 20, so above the 300 ms of norm 9). It replaced the 6 dp band and the
+//   landing of the «5», which left the screen with the old header.
+// * Reduced motion: no flight, no sweep; the send is still on tap.
 import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -18,6 +20,7 @@ import 'package:exom_app/features/recap/presentation/pages/recap_page.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -58,11 +61,11 @@ const _icon = ValueKey('recap-send-icon');
 const _sweep = ValueKey('recap-sent-sweep');
 const _sent = ValueKey('recap-sent');
 const _back = ValueKey('recap-sent-back');
-const _land = ValueKey('recap-sent-numeral-land');
+const _area = ValueKey('recap-sent-sweep-area');
+const _reveal = ValueKey('recap-sent-reveal');
 
 const _flightTotal = Duration(milliseconds: 280);
-const _sweepTotal = Duration(milliseconds: 300);
-const _landTotal = Duration(milliseconds: 180);
+const _sweepTotal = Duration(milliseconds: 450);
 
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
@@ -157,8 +160,14 @@ void _expectNotClipped(WidgetTester tester, Finder finder) {
   }
 }
 
-double _scaleOf(WidgetTester tester) =>
-    tester.widget<ScaleTransition>(find.byKey(_land)).scale.value;
+/// Bottom of the page shown by the reveal clip, in the coordinates of the
+/// sweep area.
+double _revealBottom(WidgetTester tester) {
+  final clip = tester.renderObject<RenderClipRect>(find.byKey(_reveal));
+  final clipper = clip.clipper;
+  if (clipper == null) return clip.size.height;
+  return clipper.getClip(clip.size).bottom;
+}
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es'));
@@ -396,11 +405,10 @@ void main() {
     });
   });
 
-  group('«Enviado» enters with a lime sweep, then the 5 lands', () {
-    testWidgets('the band moves down in 300 ms, then the view is whole', (
+  group('«Enviado» enters with a big lime band that paints the page', () {
+    testWidgets('450 ms, ease-in-out; band one third of the body high', (
       tester,
     ) async {
-      expect(_sweepTotal.inMilliseconds, lessThanOrEqualTo(300));
       await _openLastStep(tester);
       await _sendUntilSent(tester);
       await tester.pump();
@@ -410,73 +418,118 @@ void main() {
         findsNothing,
         reason: 'below the band is the plain background, not the skeleton',
       );
-      final first = tester.getTopLeft(find.byKey(_sweep)).dy;
-      await tester.pump(const Duration(milliseconds: 100));
-      final second = tester.getTopLeft(find.byKey(_sweep)).dy;
-      await tester.pump(const Duration(milliseconds: 100));
-      final third = tester.getTopLeft(find.byKey(_sweep)).dy;
-      expect(second, greaterThan(first));
-      expect(third, greaterThan(second));
-
-      // Taps during the sweep do not leave «Enviado».
-      await tester.tap(find.byKey(_back), warnIfMissed: false);
-      await tester.pump(const Duration(milliseconds: 110));
-      expect(find.byKey(_sweep), findsNothing);
-      expect(find.byKey(_sent), findsOneWidget);
-      await _advance(tester, _landTotal);
-      expect(find.byKey(_back).hitTestable(), findsOneWidget);
-      expect(find.byType(ExomCoachBlock).hitTestable(), findsOneWidget);
-    });
-
-    testWidgets('the band fades over the last fifth and is gone at the edge', (
-      tester,
-    ) async {
-      await _openLastStep(tester);
-      await _sendUntilSent(tester);
-      final edge =
-          tester.view.physicalSize.height / tester.view.devicePixelRatio;
-      double opacityOf() => tester
-          .widget<Opacity>(
-            find.descendant(
-              of: find.byKey(_sweep),
-              matching: find.byType(Opacity),
-            ),
-          )
-          .opacity;
-      var sawFading = false;
-      var last = 1.0;
-      for (var i = 0; i < 120 && find.byKey(_sweep).evaluate().isNotEmpty; i++) {
-        final band = tester.getRect(find.byKey(_sweep));
-        expect(band.bottom, lessThanOrEqualTo(edge + 0.01));
-        last = opacityOf();
-        if (band.bottom >= edge * 0.9) {
-          sawFading = true;
-          expect(last, lessThan(1));
-        }
-        if (band.bottom <= edge * 0.8) expect(last, 1);
-        await tester.pump(const Duration(milliseconds: 5));
+      final area = tester.getRect(find.byKey(_area));
+      final band = tester.getRect(find.byKey(_sweep));
+      expect(band.height, closeTo(area.height / 3, 0.5));
+      expect(band.width, closeTo(area.width, 0.5));
+      expect(
+        band.bottom,
+        lessThanOrEqualTo(area.top + 1),
+        reason: 'enters from above the top edge',
+      );
+      final palette = tester.element(find.byKey(_sent)).exomPalette;
+      expect(
+        tester
+            .widgetList<ColoredBox>(
+              find.descendant(
+                of: find.byKey(_sweep),
+                matching: find.byType(ColoredBox),
+              ),
+            )
+            .map((box) => box.color),
+        contains(palette.limeFill),
+      );
+      var lastTop = band.top;
+      var frames = 0;
+      while (find.byKey(_sweep).evaluate().isNotEmpty && frames < 100) {
+        await tester.pump(const Duration(milliseconds: 10));
+        frames++;
+        if (find.byKey(_sweep).evaluate().isEmpty) break;
+        final now = tester.getRect(find.byKey(_sweep));
+        expect(now.top, greaterThanOrEqualTo(lastTop), reason: 'monotonic');
+        expect(now.height, closeTo(area.height / 3, 0.5));
+        lastTop = now.top;
       }
-      expect(sawFading, isTrue);
-      expect(last, lessThan(0.15), reason: 'nearly transparent at the end');
-      expect(find.byKey(_sweep), findsNothing);
+      expect(frames, inInclusiveRange(44, 47), reason: '450 ms');
+      expect(find.byKey(_sweep), findsNothing, reason: 'gone at the end');
+      expect(lastTop, greaterThan(area.bottom - area.height / 3));
     });
 
-    testWidgets('after the sweep the 5 squashes (1.06 → 0.98 → 1.0)', (
-      tester,
-    ) async {
+    testWidgets('above the trailing edge the page, below the leading edge '
+        'the background', (tester) async {
       await _openLastStep(tester);
       await _sendUntilSent(tester);
-      expect(_scaleOf(tester), closeTo(1.06, 0.001), reason: 'before landing');
-      await _advance(tester, _sweepTotal);
-      final samples = <double>[];
-      for (var i = 0; i < 20; i++) {
-        samples.add(_scaleOf(tester));
+      await tester.pump();
+      final area = tester.getRect(find.byKey(_area));
+      for (var i = 0; i < 40 && find.byKey(_sweep).evaluate().isNotEmpty; i++) {
+        final band = tester.getRect(find.byKey(_sweep));
+        final bottom = _revealBottom(tester);
+        final trailing = band.top - area.top;
+        final leading = band.bottom - area.top;
+        expect(bottom, greaterThanOrEqualTo(trailing.clamp(0.0, area.height)));
+        expect(
+          bottom,
+          closeTo(leading.clamp(0.0, area.height), 0.5),
+          reason: 'nothing of the page below the band',
+        );
         await tester.pump(const Duration(milliseconds: 10));
       }
-      expect(samples.any((s) => s < 1), isTrue, reason: 'squash below 1');
-      expect(samples.reduce((a, b) => a < b ? a : b), closeTo(0.98, 0.01));
-      await _advance(tester, _landTotal);
-      expect(_scaleOf(tester), 1.0);
+      // The page is a repaint boundary under the reveal clip.
+      expect(
+        find.descendant(
+          of: find.byKey(_reveal),
+          matching: find.byType(RepaintBoundary),
+        ),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('the trailing edge fades into the page over 16 dp', (
+      tester,
+    ) async {
+      await _openLastStep(tester);
+      await _sendUntilSent(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      final fade = find.descendant(
+        of: find.byKey(_sweep),
+        matching: find.byKey(const ValueKey('recap-sent-sweep-fade')),
+      );
+      expect(fade, findsOneWidget);
+      expect(tester.getSize(fade).height, closeTo(16, 0.01));
+      expect(
+        tester.getTopLeft(fade).dy,
+        closeTo(tester.getTopLeft(find.byKey(_sweep)).dy, 0.01),
+      );
+    });
+
+    testWidgets('the view is built at most twice during the sweep', (
+      tester,
+    ) async {
+      await _openLastStep(tester);
+      await _sendUntilSent(tester);
+      var builds = 0;
+      final previous = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, builtOnce) {
+        if (element.widget.key == _sent) builds++;
+      };
+      addTearDown(() => debugOnRebuildDirtyWidget = previous);
+      await _advance(tester, _sweepTotal + const Duration(milliseconds: 40));
+      debugOnRebuildDirtyWidget = previous;
+      expect(find.byKey(_sweep), findsNothing);
+      expect(builds, lessThanOrEqualTo(2), reason: 'not one build per frame');
+    });
+
+    testWidgets('taps are blocked only during the sweep', (tester) async {
+      await _openLastStep(tester);
+      await _sendUntilSent(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.byKey(_back), warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.byKey(_sent), findsOneWidget);
+      await _advance(tester, _sweepTotal);
+      expect(find.byKey(_sweep), findsNothing);
+      expect(find.byKey(_back).hitTestable(), findsOneWidget);
+      expect(find.byType(ExomCoachBlock).hitTestable(), findsOneWidget);
     });
 
     testWidgets('system back mid-sweep shows the list, nothing dispatched', (
@@ -500,17 +553,17 @@ void main() {
     ) async {
       await _openLastStep(tester);
       await _sendUntilSent(tester);
-      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.byKey(_sweep), findsOneWidget);
       tester.view.physicalSize = const Size(400, 844);
       tester.platformDispatcher.textScaleFactorTestValue = 1.5;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 160));
+      await tester.pump(const Duration(milliseconds: 210));
       expect(find.byKey(_sweep), findsNothing, reason: 'ended on time');
     });
 
-    testWidgets('reduced motion: no sweep and no squash', (tester) async {
+    testWidgets('reduced motion: no band, the page at once', (tester) async {
       await _openLastStep(tester, reduced: true);
       await tester.tap(find.byKey(_action));
       for (var i = 0; i < 40 && find.byKey(_sent).evaluate().isEmpty; i++) {
@@ -519,7 +572,6 @@ void main() {
       expect(find.byKey(_sent), findsOneWidget);
       for (var i = 0; i < 6; i++) {
         expect(find.byKey(_sweep), findsNothing);
-        expect(_scaleOf(tester), 1.0);
         await tester.pump(const Duration(milliseconds: 50));
       }
       expect(find.byKey(_back).hitTestable(), findsOneWidget);

@@ -10,9 +10,11 @@ import 'package:flutter/material.dart';
 /// visible text is smaller. Assistive technology gets one node that is both a
 /// link and a button with the label as text. The label wraps, never ellipsised.
 ///
-/// An optional [icon] (L5-E5, e.g. play for «Ver técnica» with a video) goes
-/// before the label in the link ink; it is decorative (the label is what is
-/// read). Without it the link is exactly as before.
+/// An optional [icon] (L5-E5, e.g. play for «Ver técnica» with a video; L5-F1
+/// camera and image icons) goes before the label in the link ink; it is
+/// decorative (the label is what is read). An optional [semanticsLabel]
+/// (L5-F1) replaces the spoken label when the visible one is a short form;
+/// null reads [label]. Without them the link is exactly as before.
 class ExomTextLink extends StatelessWidget {
   const ExomTextLink({
     super.key,
@@ -20,6 +22,7 @@ class ExomTextLink extends StatelessWidget {
     required this.onTap,
     this.danger = false,
     this.icon,
+    this.semanticsLabel,
   });
 
   final String label;
@@ -30,8 +33,13 @@ class ExomTextLink extends StatelessWidget {
   /// Icon size next to the 14 px label (1.3 em, as [ExomKicker]'s icon).
   static const double _iconSize = 18;
 
+  /// Spoken label; defaults to [label].
+  final String? semanticsLabel;
+
   /// Minimum touch target on each axis (plan §2 and §11).
   static const double minTarget = 48;
+
+  static const double _fontSize = 14;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +60,7 @@ class ExomTextLink extends StatelessWidget {
       label,
       style: TextStyle(
         fontFamily: AppTheme.bodyFontFamily,
-        fontSize: 14,
+        fontSize: _fontSize,
         fontWeight: FontWeight.w600,
         height: 1.3,
         color: ink,
@@ -65,7 +73,7 @@ class ExomTextLink extends StatelessWidget {
       link: true,
       button: true,
       enabled: enabled,
-      label: label,
+      label: semanticsLabel ?? label,
       onTap: onTap,
       excludeSemantics: true,
       child: Material(

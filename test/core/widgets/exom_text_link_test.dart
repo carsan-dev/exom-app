@@ -94,6 +94,64 @@ void main() {
     });
   }
 
+  // L5-F1 (sketch `.x-link.f-ic`): optional leading icon and accessible
+  // label; without them the link is exactly as before.
+  testWidgets('default: no icon and the visible label is the spoken one', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pumpComponent(tester, _link());
+    expect(
+      find.descendant(
+        of: find.byType(ExomTextLink),
+        matching: find.byType(Icon),
+      ),
+      findsNothing,
+    );
+    expect(
+      tester.getSemantics(find.byType(ExomTextLink)).getSemanticsData().label,
+      'Ver todo',
+    );
+    handle.dispose();
+  });
+
+  for (final brightness in Brightness.values) {
+    final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+    testWidgets('icon in the label colour, semantics label '
+        'overrides the visible one (${brightness.name})', (tester) async {
+      final handle = tester.ensureSemantics();
+      var taps = 0;
+      await pumpComponent(
+        tester,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ExomTextLink(
+            label: 'Añadir',
+            semanticsLabel: 'Añadir Espalda',
+            icon: ExomIcons.add,
+            onTap: () => taps++,
+          ),
+        ),
+        brightness: brightness,
+      );
+      final icon = tester.widget<Icon>(find.byIcon(ExomIcons.add));
+      expect(icon.color, palette.textPrimary);
+      final iconLeft = tester.getTopLeft(find.byIcon(ExomIcons.add)).dx;
+      final textLeft = tester.getTopLeft(find.text('Añadir')).dx;
+      expect(iconLeft, lessThan(textLeft));
+      final data = tester
+          .getSemantics(find.byType(ExomTextLink))
+          .getSemanticsData();
+      expect(data.label, 'Añadir Espalda');
+      expect(data.flagsCollection.isLink, isTrue);
+      final size = tester.getSize(find.byType(InkWell));
+      expect(size.height, greaterThanOrEqualTo(48));
+      await tester.tap(find.byIcon(ExomIcons.add));
+      expect(taps, 1);
+      handle.dispose();
+    });
+  }
+
   testWidgets('danger has no lime ink in the light theme', (tester) async {
     await pumpComponent(
       tester,

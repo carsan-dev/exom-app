@@ -7,8 +7,19 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
@@ -287,26 +298,32 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
     final expected = _sessionStamp();
     if (expected == null) return;
     final l10n = AppLocalizations.of(context);
-    final source = await showDialog<ImageSource>(
+    // L5-F1 (L5-D21, sketch f1-origen): a straight EXOM sheet instead of the
+    // AlertDialog. «Cancelar», a tap outside, back and a router location
+    // change close it with null: no source is chosen and nothing is queued.
+    // The picker opens only after the sheet is gone (showExomSheet waits for
+    // its disposal), as it did after the dialog.
+    final source = await showExomSheet<ImageSource>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.progressPhotosChooseSource),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(ExomIcons.camera),
-              title: Text(l10n.progressPhotosCamera),
-              onTap: () => Navigator.pop(dialogContext, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(ExomIcons.gallery),
-              title: Text(l10n.progressPhotosGallery),
-              onTap: () => Navigator.pop(dialogContext, ImageSource.gallery),
-            ),
-          ],
+      builder: (sheetContext) => _SourceSheetContent(
+        kicker: l10n.progressPhotosSourceKicker(
+          view.label(l10n),
+          progressPhotoSessionDateText(context, session.sessionDate),
         ),
+        title: l10n.progressPhotosChooseSource,
+        cameraLabel: l10n.progressPhotosCamera,
+        galleryLabel: l10n.progressPhotosGallery,
+        onCamera: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+        onGallery: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
       ),
+      actions: [
+        Builder(
+          builder: (sheetContext) => ExomQuietButton(
+            label: l10n.cancel,
+            onPressed: () => Navigator.of(sheetContext).pop(),
+          ),
+        ),
+      ],
     );
     if (source == null || !mounted || _sessionStamp() != expected) return;
     await _pickAndQueue(
@@ -645,11 +662,15 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
       return Scaffold(body: Center(child: Text(l10n.progressPhotosLoading)));
     }
     final palette = context.exomPalette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        // Sketch f1 (`.hdr-push`): the bar only carries «Volver» and the
+        // reload action; the screen title is the first line of the body.
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             icon: Icon(ExomIcons.back, color: palette.textPrimary),
@@ -663,102 +684,139 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
             ),
           ],
         ),
-        // The one lime action of the screen (plan §6): carbon label, radius 4;
-        // in the light theme a 1.5 px carbon border (lime is never text).
-        floatingActionButton: FloatingActionButton.extended(
-          tooltip: l10n.progressPhotosCreateSession,
-          onPressed: _createSession,
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          elevation: 0,
-          focusElevation: 0,
-          hoverElevation: 0,
-          highlightElevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-            side: isDark
-                ? BorderSide.none
-                : const BorderSide(color: AppColors.textOnPrimary, width: 1.5),
-          ),
-          icon: const Icon(ExomIcons.add),
-          label: Text(
-            l10n.progressPhotosNewSession,
-            style: const TextStyle(
-              fontFamily: AppTheme.bodyFontFamily,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-              child: HomeTitle(l10n.progressPhotosTitle),
+            Expanded(
+              child: KeyedSubtree(
+                key: const Key('progress-photos-scroll'),
+                child: _body(context),
+              ),
             ),
-            Expanded(child: _body(context)),
+            // L5-F1 (L5-D21): «Nueva sesión» leaves the floating button for
+            // the pinned footer, visible in every state (list, empty, loading
+            // and error) and outside the list, so it never covers «Cargar
+            // más» or the last action. The one lime of the screen.
+            ExomPinnedFooter(
+              key: const Key('progress-photos-footer'),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+              child: ExomPrimaryButton(
+                key: const Key('progress-photos-new-session'),
+                label: l10n.progressPhotosNewSession,
+                trailingIcon: ExomIcons.add,
+                onPressed: _createSession,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  /// Screen title (sketch `.t1`), the first line of every state.
+  Widget _title(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+    child: HomeTitle(AppLocalizations.of(context).progressPhotosTitle),
+  );
+
   Widget _body(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
-    final message = TextStyle(
-      color: palette.textSecondary,
-      fontSize: 16,
-      height: 1.4,
-    );
     if (_loading) {
-      return Center(child: Text(l10n.progressPhotosLoading, style: message));
+      // Skeleton with the shape of a session (sketch f1-carga-error); the
+      // current loading text is its accessible label.
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          _title(context),
+          Semantics(
+            container: true,
+            label: l10n.progressPhotosLoading,
+            child: const _SessionSkeleton(),
+          ),
+        ],
+      );
     }
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.progressPhotosLoadError,
-                textAlign: TextAlign.center,
-                style: message,
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _load,
-                child: Text(l10n.progressPhotosRetry),
-              ),
-            ],
+      // Load error, also without connection: in line with icon, red edge and
+      // «Reintentar» (sketch f1-carga-error).
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          _title(context),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            child: ExomInlineMessage(
+              kind: ExomMessageKind.error,
+              title: l10n.progressPhotosLoadError,
+              actionLabel: l10n.progressPhotosRetry,
+              onAction: _load,
+            ),
           ),
-        ),
+        ],
       );
     }
     if (_sessions.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            l10n.progressPhotosEmpty,
-            textAlign: TextAlign.center,
-            style: message,
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          _title(context),
+          const SizedBox(height: 16),
+          ExomEmptyState(
+            first: l10n.progressPhotosEmptyFirst,
+            second: l10n.progressPhotosEmptySecond,
+            body: l10n.progressPhotosEmpty,
           ),
-        ),
+        ],
       );
     }
+    final hasMore = _nextPage != null;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 100),
-        itemCount: _sessions.length + (_nextPage == null ? 0 : 1),
+        padding: const EdgeInsets.only(bottom: 24),
+        itemCount: 1 + _sessions.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _sessions.length) {
+          if (index == 0) {
+            // The history arrives newest first (API order): the first
+            // session is the last one taken.
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _title(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Text(
+                    l10n.progressPhotosLastSession(
+                      progressPhotoSessionDateText(
+                        context,
+                        _sessions.first.sessionDate,
+                      ),
+                    ),
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      height: 1.4,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: ExomTwoLineHeadline(
+                    first: l10n.progressPhotosHeadlineFirst,
+                    second: l10n.progressPhotosHeadlineSecond,
+                  ),
+                ),
+              ],
+            );
+          }
+          final sessionIndex = index - 1;
+          if (sessionIndex == _sessions.length) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Center(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
                 child: OutlinedButton(
                   onPressed: _loadingMore ? null : _loadMore,
                   child: Text(
@@ -770,8 +828,9 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
               ),
             );
           }
-          return _SessionCard(
-            session: _sessions[index],
+          return _SessionSection(
+            n: sessionIndex + 1,
+            session: _sessions[sessionIndex],
             views: _views,
             pendingFor: _pendingFor,
             onAdd: _choosePhoto,
@@ -785,8 +844,188 @@ class _ProgressPhotosPageState extends State<ProgressPhotosPage> {
   }
 }
 
-class _SessionCard extends StatelessWidget {
-  const _SessionCard({
+/// Date of a progress photo session (`yyyy-MM-dd`) as «18 nov 2026» in the
+/// active locale; the raw value when it does not parse.
+String progressPhotoSessionDateText(BuildContext context, String sessionDate) {
+  final date = DateTime.tryParse(sessionDate);
+  return date == null
+      ? sessionDate
+      : DateFormat(
+          'd MMM yyyy',
+          Localizations.localeOf(context).toLanguageTag(),
+        ).format(date);
+}
+
+const double _viewGap = 12;
+const double _viewRowGap = 20;
+
+/// Columns of the views of a session (sketch `.f-views`: columns of at least
+/// 9 em, at most two; one column when the text grows).
+int _viewColumns(BuildContext context, double width) {
+  final minColumn = MediaQuery.textScalerOf(context).scale(16) * 9;
+  return width >= minColumn * 2 + _viewGap ? 2 : 1;
+}
+
+/// Lays out [children] in one or two columns of equal width; each child is
+/// built with its column width.
+class _ViewGrid extends StatelessWidget {
+  const _ViewGrid({required this.width, required this.children});
+
+  final double width;
+  final List<Widget Function(double columnWidth)> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = _viewColumns(context, width);
+    final columnWidth = columns == 2 ? (width - _viewGap) / 2 : width;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < children.length; index += columns) ...[
+          if (index > 0) const SizedBox(height: _viewRowGap),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var c = 0; c < columns; c++) ...[
+                if (c > 0) const SizedBox(width: _viewGap),
+                SizedBox(
+                  width: columnWidth,
+                  child: index + c < children.length
+                      ? children[index + c](columnWidth)
+                      : null,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Loading skeleton with the shape of a session: date and state lines and
+/// four 3:4 views (sketch f1-carga-error).
+///
+/// Text lines and photo blocks are [ExomSkeleton.rule] given a tight box: the
+/// rule fills the size it is given, so it keeps the shared colour and pulse.
+class _SessionSkeleton extends StatelessWidget {
+  const _SessionSkeleton();
+
+  static Widget _line(double widthFactor, double height) => Align(
+    alignment: AlignmentDirectional.centerStart,
+    child: FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: SizedBox(height: height, child: const ExomSkeleton.rule()),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _line(0.4, 12.8),
+          const SizedBox(height: 24),
+          _line(0.6, 16),
+          const SizedBox(height: 8),
+          _line(0.4, 12.8),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) => _ViewGrid(
+              width: constraints.maxWidth,
+              children: [
+                for (var i = 0; i < 4; i++)
+                  (_) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _line(0.4, 12.8),
+                      const SizedBox(height: 6),
+                      const AspectRatio(
+                        aspectRatio: 3 / 4,
+                        child: ExomSkeleton.rule(),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Content of the image source sheet (sketch f1-origen): the view and date as
+/// kicker, the title, and the two sources as a numbered index.
+class _SourceSheetContent extends StatelessWidget {
+  const _SourceSheetContent({
+    required this.kicker,
+    required this.title,
+    required this.cameraLabel,
+    required this.galleryLabel,
+    required this.onCamera,
+    required this.onGallery,
+  });
+
+  final String kicker;
+  final String title;
+  final String cameraLabel;
+  final String galleryLabel;
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExomKicker(kicker),
+              const SizedBox(height: ExomSpacing.xs),
+              Semantics(
+                header: true,
+                label: title,
+                excludeSemantics: true,
+                child: Text(
+                  title.toUpperCase(),
+                  style: ExomType.headline2Section.copyWith(
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ExomIndexList(
+          items: [
+            ExomIndexItem(
+              title: cameraLabel,
+              icon: ExomIcons.camera,
+              onTap: onCamera,
+            ),
+            ExomIndexItem(title: galleryLabel, onTap: onGallery),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One session: numbered header with the date and a rule, its state and the
+/// four views, without boxes (sketch f1-lista).
+class _SessionSection extends StatelessWidget {
+  const _SessionSection({
+    required this.n,
     required this.session,
     required this.views,
     required this.pendingFor,
@@ -796,6 +1035,7 @@ class _SessionCard extends StatelessWidget {
     required this.onDiscard,
   });
 
+  final int n;
   final ProgressPhotoSession session;
   final List<_CanonicalView> views;
   final Map<String, dynamic>? Function(String sessionId, String view)
@@ -814,107 +1054,63 @@ class _SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final date = DateTime.tryParse(session.sessionDate);
-    final dateText = date == null
-        ? session.sessionDate
-        : DateFormat(
-            'd MMM yyyy',
-            Localizations.localeOf(context).toLanguageTag(),
-          ).format(date);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                dateText,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTheme.displayFontFamily,
-                  color: palette.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  height: 1.05,
-                ),
-              ),
+    final dateText = progressPhotoSessionDateText(context, session.sessionDate);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ExomNumberedSectionHeader(n: n, title: dateText),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            session.isComplete
+                ? l10n.progressPhotosComplete
+                : l10n.progressPhotosIncomplete,
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              color: palette.textSecondary,
+              fontSize: 14,
+              height: 1.4,
             ),
-            const SizedBox(height: 4),
-            Text(
-              session.isComplete
-                  ? l10n.progressPhotosComplete
-                  : l10n.progressPhotosIncomplete,
-              style: TextStyle(
-                color: palette.textSecondary,
-                fontSize: 14,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                const gap = 12.0;
-                final tileWidth = (constraints.maxWidth - gap) / 2;
-                final tiles = views
-                    .map((view) {
-                      final active = session.photos
-                          .where((photo) => photo.view == view.apiValue)
-                          .firstOrNull;
-                      return _ViewTile(
-                        session: session,
-                        view: view,
-                        active: active,
-                        pending: pendingFor(session.id, view.apiValue),
-                        tileWidth: tileWidth,
-                        onAdd: onAdd,
-                        onRetry: onRetry,
-                        onReviewReplacement: onReviewReplacement,
-                        onDiscard: onDiscard,
-                      );
-                    })
-                    .toList(growable: false);
-                // Rows of two tiles sized to their content: IntrinsicHeight
-                // gives both tiles of a row the height of the taller one so
-                // the actions line up at the bottom.
-                return Column(
-                  children: [
-                    for (var index = 0; index < tiles.length; index += 2) ...[
-                      if (index > 0) const SizedBox(height: gap),
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: tiles[index]),
-                            const SizedBox(width: gap),
-                            Expanded(
-                              child: index + 1 < tiles.length
-                                  ? tiles[index + 1]
-                                  : const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: LayoutBuilder(
+            builder: (context, constraints) => _ViewGrid(
+              width: constraints.maxWidth,
+              children: [
+                for (final view in views)
+                  (columnWidth) => _ViewTile(
+                    key: Key(
+                      'progress-photo-view-${session.id}-${view.apiValue}',
+                    ),
+                    session: session,
+                    dateText: dateText,
+                    view: view,
+                    active: session.photos
+                        .where((photo) => photo.view == view.apiValue)
+                        .firstOrNull,
+                    pending: pendingFor(session.id, view.apiValue),
+                    tileWidth: columnWidth,
+                    onAdd: onAdd,
+                    onRetry: onRetry,
+                    onReviewReplacement: onReviewReplacement,
+                    onDiscard: onDiscard,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _ViewTile extends StatelessWidget {
   const _ViewTile({
+    super.key,
     required this.session,
+    required this.dateText,
     required this.view,
     required this.active,
     required this.pending,
@@ -926,6 +1122,7 @@ class _ViewTile extends StatelessWidget {
   });
 
   final ProgressPhotoSession session;
+  final String dateText;
   final _CanonicalView view;
   final ProgressPhoto? active;
   final Map<String, dynamic>? pending;
@@ -940,18 +1137,6 @@ class _ViewTile extends StatelessWidget {
   final Future<void> Function(Map<String, dynamic> item) onReviewReplacement;
   final Future<void> Function(Map<String, dynamic> item) onDiscard;
 
-  // 48 px tap target (plan §6), DM Sans 14/600: no text below 13.
-  static final _compactAction = TextButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
-    tapTargetSize: MaterialTapTargetSize.padded,
-    textStyle: const TextStyle(
-      fontFamily: AppTheme.bodyFontFamily,
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -962,105 +1147,81 @@ class _ViewTile extends StatelessWidget {
     final actionLabel = active != null
         ? l10n.progressPhotosReplace(viewLabel)
         : l10n.progressPhotosAdd(viewLabel);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: palette.borderSoft, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          viewLabel,
+          style: TextStyle(
+            fontFamily: AppTheme.bodyFontFamily,
+            color: palette.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 6),
+        // 3:4 at the full width of the column, square corners (`.x-thumb`).
+        AspectRatio(
+          key: Key('progress-photo-${session.id}-${view.apiValue}'),
+          aspectRatio: 3 / 4,
+          child: active == null
+              ? _missingPhoto(
+                  palette,
+                  uploadState == null ? l10n.progressPhotosMissing : null,
+                )
+              : _photo(context, palette, l10n.progressPhotosEnlarge(viewLabel)),
+        ),
+        if (uploadState != null) ...[
+          const SizedBox(height: 6),
+          ProgressPhotoUploadStatus(
+            key: Key('upload-status-${session.id}-${view.apiValue}'),
+            state: uploadState,
+          ),
+        ],
+        // Actions as 48 dp text links (`.f-acts`). The short visible label
+        // keeps the full "Replace/Add <view>" text as accessible label and
+        // tooltip.
+        Wrap(
+          spacing: 16,
+          runSpacing: 0,
           children: [
-            Text(
-              viewLabel,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: palette.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            AspectRatio(
-              aspectRatio: 3 / 4,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: active == null
-                    ? _missingPhoto(
-                        palette,
-                        uploadState == null ? l10n.progressPhotosMissing : null,
-                      )
-                    : _photo(
-                        context,
-                        palette,
-                        l10n.progressPhotosEnlarge(viewLabel),
-                      ),
-              ),
-            ),
-            if (uploadState != null) ...[
-              const SizedBox(height: 8),
-              ProgressPhotoUploadStatus(
-                key: Key('upload-status-${session.id}-${view.apiValue}'),
-                state: uploadState,
-              ),
-            ],
-            const Spacer(),
-            // Short visible label; the full "Replace/Add <view>" text stays the
-            // accessible label and the tooltip.
             Tooltip(
               message: actionLabel,
               excludeFromSemantics: true,
-              child: TextButton.icon(
-                style: _compactAction,
-                onPressed: active != null
+              child: ExomTextLink(
+                label: active != null
+                    ? l10n.progressPhotosReplaceShort
+                    : l10n.progressPhotosAddShort,
+                semanticsLabel: actionLabel,
+                icon: active != null ? null : ExomIcons.add,
+                onTap: active != null
                     ? () => onAdd(session, view, replacement: active)
                     : () => onAdd(session, view),
-                icon: Icon(
-                  active != null ? ExomIcons.swap : ExomIcons.add,
-                  size: 18,
-                ),
-                label: Text(
-                  active != null
-                      ? l10n.progressPhotosReplaceShort
-                      : l10n.progressPhotosAddShort,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  semanticsLabel: actionLabel,
-                ),
               ),
             ),
-            if (pending?['status'] == 'failed')
-              Wrap(
-                spacing: 4,
-                runSpacing: 0,
-                children: [
-                  if (staleReplacement)
-                    TextButton(
-                      style: _compactAction,
-                      onPressed: () => onReviewReplacement(pending!),
-                      child: Text(l10n.progressPhotosReviewReplacement),
-                    )
-                  else
-                    TextButton(
-                      style: _compactAction,
-                      onPressed: () => onRetry(pending!),
-                      child: Text(l10n.retry),
-                    ),
-                  TextButton(
-                    style: _compactAction,
-                    onPressed: () => onDiscard(pending!),
-                    child: Text(l10n.progressPhotosDiscard),
-                  ),
-                ],
+            if (pending?['status'] == 'failed') ...[
+              if (staleReplacement)
+                ExomTextLink(
+                  label: l10n.progressPhotosReviewReplacement,
+                  onTap: () => onReviewReplacement(pending!),
+                )
+              else
+                ExomTextLink(label: l10n.retry, onTap: () => onRetry(pending!)),
+              ExomTextLink(
+                label: l10n.progressPhotosDiscard,
+                onTap: () => onDiscard(pending!),
               ),
+            ],
           ],
         ),
-      ),
+      ],
     );
   }
 
+  /// The active photo. Tapping it opens the viewer; there is no magnifier
+  /// over it (L5-D21). The placeholder is the flat `raised` block of
+  /// `.x-thumb`.
   Widget _photo(
     BuildContext context,
     ExomThemePalette palette,
@@ -1074,71 +1235,38 @@ class _ViewTile extends StatelessWidget {
         button: true,
         label: enlargeLabel,
         child: InkWell(
-          onTap: () => _showEnlarged(context, photo, view),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              CachedNetworkImage(
-                imageUrl: photo.imageUrl,
-                useOldImageOnUrlChange: true,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                width: double.infinity,
-                height: double.infinity,
-                memCacheWidth:
-                    (tileWidth * MediaQuery.devicePixelRatioOf(context))
-                        .round(),
-                placeholder: (_, _) => ColoredBox(
-                  color: palette.surface,
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                ),
-                errorWidget: (_, _, _) => ColoredBox(
-                  color: palette.surface,
-                  child: Center(
-                    child: Icon(view.icon, color: palette.textSecondary),
-                  ),
+          onTap: () => _showEnlarged(context, photo),
+          child: ClipRect(
+            child: CachedNetworkImage(
+              imageUrl: photo.imageUrl,
+              useOldImageOnUrlChange: true,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              width: double.infinity,
+              height: double.infinity,
+              memCacheWidth:
+                  (tileWidth * MediaQuery.devicePixelRatioOf(context)).round(),
+              placeholder: (_, _) => ColoredBox(color: palette.surfaceElevated),
+              errorWidget: (_, _, _) => ColoredBox(
+                color: palette.surfaceElevated,
+                child: Center(
+                  child: Icon(view.icon, color: palette.textSecondary),
                 ),
               ),
-              Positioned(
-                right: 6,
-                bottom: 6,
-                child: ExcludeSemantics(
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: const BoxDecoration(
-                      color: Color(0x8C000000),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      ExomIcons.zoomIn,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Placeholder of a view without active photo. [message] is the "missing"
-  /// text; it is null when the tile carries an upload status (shown under the
-  /// photo), so the same state is never said twice.
+  /// Placeholder of a view without active photo: a 1 px rule outline and the
+  /// camera icon (`.f-miss`). [message] is the "missing" text; it is null
+  /// when the tile carries an upload status (shown under it), so the same
+  /// state is never said twice.
   Widget _missingPhoto(ExomThemePalette palette, String? message) =>
       DecoratedBox(
         decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(4),
           border: Border.all(color: palette.borderSoft),
         ),
         child: Padding(
@@ -1148,7 +1276,7 @@ class _ViewTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ExcludeSemantics(
-                  child: Icon(view.icon, color: palette.textSecondary),
+                  child: Icon(ExomIcons.camera, color: palette.textSecondary),
                 ),
                 if (message != null) ...[
                   const SizedBox(height: 6),
@@ -1158,6 +1286,7 @@ class _ViewTile extends StatelessWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
                       color: palette.textSecondary,
                       fontSize: 14,
                     ),
@@ -1169,33 +1298,84 @@ class _ViewTile extends StatelessWidget {
         ),
       );
 
-  void _showEnlarged(
-    BuildContext context,
-    ProgressPhoto photo,
-    _CanonicalView view,
-  ) {
+  /// Full-screen viewer (sketch f1-visor): a minimal bar with the 48 dp close
+  /// button, the view in Barlow and the session date under it; the photo to
+  /// the edges with pinch zoom.
+  void _showEnlarged(BuildContext context, ProgressPhoto photo) {
+    final l10n = AppLocalizations.of(context);
+    final viewLabel = view.label(l10n);
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => Dialog.fullscreen(
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              tooltip: AppLocalizations.of(context).progressPhotosCloseImage,
-              icon: const Icon(ExomIcons.close),
-              onPressed: () => Navigator.pop(dialogContext),
+      builder: (dialogContext) {
+        final palette = dialogContext.exomPalette;
+        return Dialog.fullscreen(
+          key: const Key('progress-photos-viewer'),
+          backgroundColor: palette.background,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 20, 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: l10n.progressPhotosCloseImage,
+                        constraints: const BoxConstraints(
+                          minWidth: kExomMinTapTarget,
+                          minHeight: kExomMinTapTarget,
+                        ),
+                        icon: Icon(ExomIcons.close, color: palette.textPrimary),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Semantics(
+                              header: true,
+                              label: viewLabel,
+                              excludeSemantics: true,
+                              child: Text(
+                                viewLabel.toUpperCase(),
+                                style: ExomType.section.copyWith(
+                                  color: palette.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              dateText,
+                              style: TextStyle(
+                                fontFamily: AppTheme.bodyFontFamily,
+                                fontSize: 14,
+                                height: 1.4,
+                                color: palette.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: InteractiveViewer(
+                    child: CachedNetworkImage(
+                      imageUrl: photo.imageUrl,
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            title: Text(view.label(AppLocalizations.of(context))),
           ),
-          body: Center(
-            child: InteractiveViewer(
-              child: CachedNetworkImage(
-                imageUrl: photo.imageUrl,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

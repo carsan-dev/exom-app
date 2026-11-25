@@ -275,6 +275,20 @@ class RecapAnatomySelector extends StatefulWidget {
   @visibleForTesting
   static Offset? debugZoneCentre(String zoneId) => _zoneCentres[zoneId];
 
+  /// Plate tones the figure paints with in the theme of [context].
+  @visibleForTesting
+  static ({Color idle, Color neutral, Color selected, Color gap, Color? outline})
+  debugPlateTones(BuildContext context) {
+    final tones = _PlateTones.of(context);
+    return (
+      idle: tones.idle,
+      neutral: tones.neutral,
+      selected: tones.selected,
+      gap: tones.gap,
+      outline: tones.outline,
+    );
+  }
+
   @override
   State<RecapAnatomySelector> createState() => _RecapAnatomySelectorState();
 }
@@ -400,9 +414,10 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector>
   }
 }
 
-/// Plate colours of treatment A «Placas» from the palette tokens: the mockup
-/// tones sit between two surface tokens of each theme, the selection is the
-/// lime fill and the gaps are the page background.
+/// Plate colours of treatment A «Placas» from the palette tokens: plates are
+/// lerps between two grey tokens of each theme, chosen so the figure reads at
+/// 3:1 against the page; the selection is the lime fill and the gaps are the
+/// page background.
 @immutable
 class _PlateTones {
   final Color idle;
@@ -411,8 +426,8 @@ class _PlateTones {
   final Color gap;
 
   /// Outline of a selected plate: the lime-fill outline token, which only the
-  /// light theme sets (there lime against the idle plate is below 3:1, WCAG
-  /// 1.4.11).
+  /// light theme sets (lime against the idle plate is only just above 3:1
+  /// there, so the dark outline carries the shape of the selected plate).
   final Color? outline;
 
   const _PlateTones({
@@ -426,13 +441,15 @@ class _PlateTones {
   factory _PlateTones.of(BuildContext context) {
     final palette = context.exomPalette;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    // Idle plates are graphical objects: 3:1 against the page (WCAG 1.4.11)
+    // and, in the light theme, against the lime fill as well. Neutral plates
+    // sit between the page and the idle ones (above 2:1 against the page).
+    final idle = dark
+        ? Color.lerp(palette.borderSoft, palette.textDisabled, 0.5)!
+        : Color.lerp(palette.borderSoft, palette.textDisabled, 0.8)!;
     return _PlateTones(
-      idle: dark
-          ? Color.lerp(palette.surfaceElevated, palette.borderSoft, 0.5)!
-          : Color.lerp(palette.borderSoft, palette.textDisabled, 1 / 6)!,
-      neutral: dark
-          ? Color.lerp(palette.surface, palette.surfaceElevated, 1 / 3)!
-          : Color.lerp(palette.surfaceElevated, palette.borderSoft, 0.4)!,
+      idle: idle,
+      neutral: Color.lerp(palette.background, idle, 0.65)!,
       selected: palette.limeFill,
       gap: palette.background,
       outline: palette.limeFillOutline,

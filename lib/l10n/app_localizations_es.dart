@@ -4804,8 +4804,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recapNextStep => 'Siguiente';
 
   @override
-  String recapChosenZones(int count) {
-    return 'Zonas elegidas · $count';
+  String recapZonesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zonas',
+      one: '$count zona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recapZonesMore(int count) {
+    return '+$count más';
+  }
+
+  @override
+  String get recapZonesNone => 'Sin zonas marcadas';
+
+  @override
+  String recapZonesSemantics(int count, String zones) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zonas',
+      one: '$count zona',
+    );
+    return '$_temp0: $zones';
   }
 
   @override

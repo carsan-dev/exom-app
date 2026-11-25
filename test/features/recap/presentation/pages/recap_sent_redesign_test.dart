@@ -1,9 +1,14 @@
 // L5-C5b · Recap, «Enviado»: the screen shown after the server confirmed the
-// send (sketch «C4 · (b) Enviado»): milestone numeral on a plain band, kicker,
-// two-line headline, full segment rule, the week, the confirmed state, the
-// trainer's note and «Volver a recaps» in the pinned footer. Failed sends keep
-// their SnackBar and never show it.
+// send. Owner decision 2026-11-25 (sketch c5b-enviado-cabecera, option C «Sin
+// cabecera» + the check of option B): no band and no «5»; the kicker «Recap
+// semanal», the two-line headline with a large check to its right, the full
+// segment rule, the week, the confirmed state, the trainer's note and «Volver
+// a recaps» in the pinned footer. Failed sends keep their SnackBar and never
+// show it.
+import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -15,6 +20,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/android_nonlinear_text_scaler.dart';
+import '../../../../golden/redesign_scenes.dart' show loadRedesignFonts;
 import '../../../../core/widgets/exom_component_harness.dart'
     show expectNoOverflow;
 import 'recap_list_redesign_test.dart'
@@ -44,6 +50,24 @@ class _FailingSubmitRepository extends RecapListTestRepository {
 const _sent = ValueKey('recap-sent');
 const _back = ValueKey('recap-sent-back');
 const _close = ValueKey('recap-sent-close');
+const _check = ValueKey('recap-sent-check');
+const _headlineRow = ValueKey('recap-sent-headline-row');
+
+Finder _inSent(Finder matching) =>
+    find.descendant(of: find.byKey(_sent), matching: matching);
+
+/// The check stands next to (or, when there is no room, under) the headline,
+/// never on top of it, and inside the screen.
+void _expectCheckBesideHeadline(WidgetTester tester) {
+  final headline = tester.getRect(_inSent(find.byType(ExomTwoLineHeadline)));
+  final check = tester.getRect(find.byKey(_check));
+  final screen =
+      Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio;
+  expect(check.overlaps(headline), isFalse, reason: '$check vs $headline');
+  expect(check.right, lessThanOrEqualTo(screen.right - 20 + 0.01));
+  expect(check.left, greaterThanOrEqualTo(20 - 0.01));
+  expect(check.width, greaterThan(0));
+}
 
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(Scaffold).first));
@@ -104,6 +128,9 @@ void main() {
   setUpAll(() async {
     await initializeDateFormatting('es');
     await initializeDateFormatting('en');
+    // The bundled fonts, so the headline has its real width and the check
+    // finds its real room next to it (Ahem squares are far wider).
+    await loadRedesignFonts();
   });
   late _EventSpy spy;
   setUp(() {
@@ -122,7 +149,8 @@ void main() {
       await sendRecapFromForm(tester);
       final l10n = _l10n(tester);
       expect(find.byKey(_sent), findsOneWidget);
-      expect(find.text(l10n.recapSentKicker.toUpperCase()), findsOneWidget);
+      expect(find.text(l10n.weeklyRecapTitle.toUpperCase()), findsOneWidget);
+      expect(find.text(l10n.recapSentKicker.toUpperCase()), findsNothing);
       expect(find.text('RECAP'), findsOneWidget);
       expect(find.text('ENVIADO.'), findsOneWidget);
       expect(find.text(l10n.recapSentStatus), findsOneWidget);
@@ -160,7 +188,8 @@ void main() {
     testWidgets('en locale copy', (tester) async {
       await sendRecapFromForm(tester, locale: const Locale('en'));
       expect(find.byKey(_sent), findsOneWidget);
-      expect(find.text('FIVE STEPS COMPLETED'), findsOneWidget);
+      expect(find.text('WEEKLY RECAP'), findsOneWidget);
+      expect(find.text('FIVE STEPS COMPLETED'), findsNothing);
       expect(find.text('SENT.'), findsOneWidget);
       expect(find.text('Sent'), findsOneWidget);
       expect(
@@ -183,6 +212,62 @@ void main() {
         expect(find.textContaining('View summary'), findsNothing);
       });
     }
+  });
+
+  group('header: option C (no band, no «5») with the check', () {
+    testWidgets('no band, no numeral, no «Cinco pasos completados»', (
+      tester,
+    ) async {
+      await sendRecapFromForm(tester);
+      expect(_inSent(find.byType(ExomBand)), findsNothing);
+      expect(_inSent(find.byType(ExomNumeral)), findsNothing);
+      expect(_inSent(find.text('5')), findsNothing);
+      expect(find.text('CINCO PASOS COMPLETADOS'), findsNothing);
+    });
+
+    testWidgets('kicker, then the headline with the check to its right', (
+      tester,
+    ) async {
+      await sendRecapFromForm(tester);
+      final kicker = tester.getRect(find.text('RECAP SEMANAL'));
+      final headline = tester.getRect(
+        _inSent(find.byType(ExomTwoLineHeadline)),
+      );
+      final check = tester.getRect(find.byKey(_check));
+      expect(kicker.bottom, lessThanOrEqualTo(headline.top));
+      expect(check.left, greaterThanOrEqualTo(headline.right));
+      expect(check.center.dy, closeTo(headline.center.dy, 1));
+      expect(check.width, closeTo(56, 0.01));
+      expect(check.height, closeTo(56, 0.01));
+      expect(
+        find.descendant(
+          of: find.byKey(_headlineRow),
+          matching: find.byKey(_check),
+        ),
+        findsOneWidget,
+      );
+      _expectCheckBesideHeadline(tester);
+    });
+
+    testWidgets('the check is decorative: no semantics node of its own', (
+      tester,
+    ) async {
+      await sendRecapFromForm(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(_check),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(_check),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   group('a failed send does not show «Enviado»', () {
@@ -297,6 +382,7 @@ void main() {
         );
         expect(find.byKey(_sent), findsOneWidget);
         expectNoOverflow(tester);
+        _expectCheckBesideHeadline(tester);
         final back = find.byKey(_back);
         expect(back, findsOneWidget);
         expect(
@@ -306,6 +392,21 @@ void main() {
         await tester.tap(back);
         await _settle(tester);
         expect(find.byKey(const ValueKey('recap-list')), findsOneWidget);
+      });
+
+      testWidgets('320x480, text scale 2.0, ${dark ? 'dark' : 'light'}: '
+          'the check fits beside or under the headline', (tester) async {
+        await sendRecapFromForm(
+          tester,
+          dark: dark,
+          width: 320,
+          height: 480,
+          textScaler: const AndroidNonlinearTextScaler(2.0),
+        );
+        expect(find.byKey(_sent), findsOneWidget);
+        expect(find.byKey(_check), findsOneWidget);
+        expectNoOverflow(tester);
+        _expectCheckBesideHeadline(tester);
       });
     }
   });

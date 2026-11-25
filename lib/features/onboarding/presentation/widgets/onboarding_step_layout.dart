@@ -95,10 +95,11 @@ class OnboardingStepEntranceScope extends InheritedWidget {
       oldWidget.leaving != leaving;
 }
 
-/// M9 on the content of a step: it enters [ExomMotion.stepOffset] dp from
-/// the side the form moves to with a fade, in [ExomMotion.step], and leaves
-/// the other way in 100 ms; reduced motion is a fade without offset. Without a scope (a step shown alone) it
-/// paints [child] as is. Taps reach the new step from the first frame.
+/// M9 on the content of a step, a push (L5-C5b): it enters from the side
+/// the form moves to, a full width away, and leaves the other way, always
+/// opaque and clipped to its area while it moves; reduced motion is a fade
+/// without offset. Without a scope (a step shown alone) it paints [child] as
+/// is. Taps reach the new step from the first frame.
 class OnboardingStepEntrance extends StatelessWidget {
   const OnboardingStepEntrance({super.key, required this.child});
 
@@ -113,22 +114,42 @@ class OnboardingStepEntrance extends StatelessWidget {
     if (scope == null) return child;
     final motion = ExomMotion.of(context);
     final rtl = Directionality.of(context) == TextDirection.rtl;
-    final distance = motion.stepSlides
-        ? motion.stepOffset * scope.direction * (rtl ? -1 : 1)
-        : 0.0;
-    final curved = motion.stepSlides ? scope.curved : scope.animation;
+    if (motion.stepSlides) {
+      final curved = scope.curved;
+      final side = scope.direction * (rtl ? -1 : 1);
+      return KeyedSubtree(
+        key: transitionKey,
+        // Always opaque: no fade, so no ghost of the step that leaves.
+        child: FadeTransition(
+          opacity: kAlwaysCompleteAnimation,
+          child: LayoutBuilder(
+            builder: (context, constraints) => AnimatedBuilder(
+              animation: curved,
+              child: child,
+              builder: (context, child) => ClipRect(
+                // Clipped only while it moves, so a step at rest paints as
+                // it did.
+                clipBehavior: curved.value < 1 ? Clip.hardEdge : Clip.none,
+                child: Transform.translate(
+                  offset: Offset(
+                    (1 - curved.value) * side * constraints.maxWidth,
+                    0,
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    // Reduced motion: a fade in place (the zero offset keeps the shape of
+    // the push, which tests read).
     return KeyedSubtree(
       key: transitionKey,
       child: FadeTransition(
-        opacity: curved,
-        child: AnimatedBuilder(
-          animation: curved,
-          child: child,
-          builder: (context, child) => Transform.translate(
-            offset: Offset((1 - curved.value) * distance, 0),
-            child: child,
-          ),
-        ),
+        opacity: scope.animation,
+        child: Transform.translate(offset: Offset.zero, child: child),
       ),
     );
   }
@@ -156,8 +177,10 @@ class OnboardingStepLayout extends StatelessWidget {
     final scope = OnboardingStepEntranceScope.maybeOf(context);
     final Animation<double> footerOpacity;
     if (scope != null && scope.leaving) {
+      // With the push (L5-C5b) the footer stays in place: the new step's is
+      // there at once and the leaving one's goes at once, with no fade.
       footerOpacity = ExomMotion.of(context).stepSlides
-          ? scope.curved
+          ? kAlwaysDismissedAnimation
           : scope.animation;
     } else {
       footerOpacity = kAlwaysCompleteAnimation;

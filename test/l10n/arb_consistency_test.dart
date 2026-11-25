@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Spanish values that legitimately equal the English ones.
 const Map<String, String> identicalValueAllowlist = {
+  'coachNameMoi': 'Proper name of the coach voice "Moi" (owner, L5-C5b).',
   'feedbackMenuItem': 'Product term "Feedback" kept in Spanish by the owner.',
   'feedback': 'Product term "Feedback" kept in Spanish by the owner.',
   'tutorialFeedbackTitle':

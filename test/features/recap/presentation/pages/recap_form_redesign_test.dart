@@ -2,6 +2,7 @@
 // map with a Frontal/Posterior segmented control that keeps the selection, the
 // M9 step transition with its reduced variant, and the copy of the form (D15).
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_scale_chips.dart';
@@ -274,6 +275,70 @@ void main() {
       await _settle(tester);
       expect(slide(tester), 0);
     });
+
+    // L5-C5b (owner): no cross-fade ghost; the steps push each other
+    // sideways, both fully opaque, in 280 ms.
+    testWidgets('the steps push each other, fully opaque, no ghost', (
+      tester,
+    ) async {
+      double opacityOf(Finder finder) {
+        var opacity = 1.0;
+        for (final widget in tester.widgetList<Widget>(
+          find.ancestor(
+            of: finder,
+            matching: find.byWidgetPredicate((_) => true),
+          ),
+        )) {
+          if (widget is FadeTransition) opacity *= widget.opacity.value;
+          if (widget is Opacity) opacity *= widget.opacity;
+        }
+        return opacity;
+      }
+
+      Finder stepOf(int step) => find
+          .descendant(
+            of: find.byType(ExomStepTransition),
+            matching: find.byKey(ValueKey<int>(step)),
+          )
+          .first;
+
+      await _openStep(tester, 1);
+      _bloc(tester).add(const RecapStepChanged(2));
+      // The state arrives by microtask: the push starts on the second frame.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 140));
+      final origin = tester.getTopLeft(find.byType(ExomStepTransition)).dx;
+      final oldDx = tester.getTopLeft(stepOf(1)).dx - origin;
+      final newDx = tester.getTopLeft(stepOf(2)).dx - origin;
+      expect(opacityOf(stepOf(1)), 1);
+      expect(opacityOf(stepOf(2)), 1);
+      expect(oldDx, lessThan(0));
+      expect(newDx, greaterThan(0));
+      await tester.pump(const Duration(milliseconds: 140));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(
+        find.descendant(
+          of: find.byType(ExomStepTransition),
+          matching: find.byKey(const ValueKey<int>(1)),
+        ),
+        findsNothing,
+      );
+      expect(slide(tester), 0);
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      testWidgets('the coach voice of a step signs «Moi» '
+          '(${locale.languageCode})', (tester) async {
+        await _openStep(tester, 1, locale: locale);
+        expect(
+          tester
+              .widget<ExomCoachBlock>(find.byType(ExomCoachBlock).first)
+              .author,
+          'Moi',
+        );
+      });
+    }
 
     testWidgets('reduced motion: the step fades and does not slide', (
       tester,

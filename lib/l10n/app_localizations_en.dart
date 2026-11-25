@@ -4675,7 +4675,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recapListNotRated => 'Not rated';
 
   @override
-  String get recapListCoachAuthor => 'your coach';
+  String get coachNameMoi => 'Moi';
 
   @override
   String get recapListEmptyHeadlineFirst => 'No recaps.';

@@ -531,11 +531,11 @@ void main() {
       expect(headline.second, 'Todavía.');
       expect(find.text('Todavía no has enviado ningún recap'), findsOneWidget);
       expect(find.byType(ExomCoachBlock), findsOneWidget);
-      // D16: no trainer name in the model, so the signature is «tu entrenador»
-      // as the contract writes it (sketch: «Moi · tu entrenador»).
-      expect(find.text('tu entrenador'), findsOneWidget);
+      // L5-C5b (owner): the coach voice of the app signs «Moi» (sketch:
+      // «Moi · tu entrenador»), no longer the generic «tu entrenador».
+      expect(find.text('Moi'), findsOneWidget);
+      expect(find.text('tu entrenador'), findsNothing);
       expect(find.text('Tu entrenador'), findsNothing);
-      expect(find.text('Moi'), findsNothing);
       expect(
         find.descendant(
           of: newRecap,

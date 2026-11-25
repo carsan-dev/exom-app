@@ -5,6 +5,7 @@ import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
@@ -27,6 +28,19 @@ typedef SetPerformanceResult = ({
   int? rir,
   bool skipped,
 });
+
+/// Smallest size of the fitted value numeral (the size before L5-E4).
+const double _numeralMinSize = 36;
+
+/// Room kept for the caret and the suffix gap when fitting the numeral.
+const double _numeralFitSlack = 8;
+
+/// Style of the unit after a typed value (`ExomStepper`'s suffix).
+const TextStyle _unitStyle = TextStyle(
+  fontFamily: AppTheme.bodyFontFamily,
+  fontSize: 16,
+  fontWeight: FontWeight.w600,
+);
 
 /// Upper bounds of decision D3 (typo guards; the API has none).
 const int kMaxSetReps = 999;
@@ -423,6 +437,49 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     ));
   }
 
+  /// [style] (Barlow 64) shrunk so that [text] and its [unit] fit between the
+  /// ± buttons of a stepper [width] wide, instead of scrolling inside the
+  /// field at large text sizes: the numeral scales down like `ExomNumeral`
+  /// (sketch `.numstep-v .num64{font-size:min(4em,18cqw)}`). Never below 36,
+  /// the size before L5-E4; the text itself is never touched.
+  TextStyle _fitNumeral(
+    BuildContext context,
+    TextStyle style,
+    String text,
+    String? unit,
+    double width,
+  ) {
+    final size = style.fontSize ?? _numeralMinSize;
+    if (!width.isFinite) return style;
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    double measure(String value, TextStyle textStyle) {
+      final painter = TextPainter(
+        text: TextSpan(text: value, style: textStyle),
+        textDirection: direction,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final measured = painter.width;
+      painter.dispose();
+      return measured;
+    }
+
+    final unitWidth = unit == null
+        ? 0.0
+        : measure(unit, _unitStyle) + _numeralFitSlack;
+    final room =
+        width -
+        2 * ExomStepper.buttonSize -
+        2 * 8 -
+        unitWidth -
+        _numeralFitSlack;
+    final needed = measure(text.isEmpty ? '0' : text, style);
+    if (needed <= room || room <= 0) return style;
+    final fitted = math.max(_numeralMinSize, size * room / needed);
+    return style.copyWith(fontSize: fitted.floorToDouble());
+  }
+
   // ---- build ----
 
   @override
@@ -481,6 +538,13 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     final weightUp = weightValid ? _stepWeightValue(1) : null;
     final stepText = '${_formatDisplay(_step)} $_unitSymbol';
 
+    // L5-E4: the values are Barlow 64 numerals in the data colour (sketch
+    // `.numstep`, `.num64.x-d`), typed or not, as in `ExomNumeralStepper`.
+    final numeralStyle = ExomType.hero64.copyWith(
+      height: 1,
+      color: palette.data,
+    );
+
     final countLabel = !_timed
         ? l10n.setSheetRepsLabel
         : _minutes
@@ -496,12 +560,8 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
             header: true,
             child: Text(
               widget.title.toUpperCase(),
-              style: TextStyle(
-                fontFamily: AppTheme.displayFontFamily,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                height: 1.0,
-                letterSpacing: -0.44,
+              // Sketch `.t1b` (L5-E4): the section size, 28.
+              style: ExomType.headline2Section.copyWith(
                 color: palette.textPrimary,
               ),
             ),
@@ -525,37 +585,46 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
           const SizedBox(height: 18),
           Text(countLabel, style: labelStyle),
           const SizedBox(height: 6),
-          ExomStepper<String>(
-            key: _countKey,
-            value: _countController.text,
-            formatValue: (text) => text,
-            label: countLabel,
-            decrementLabel: !_timed
-                ? l10n.setSheetRepsDecrement
-                : _minutes
-                ? l10n.setSheetMinutesDecrement
-                : l10n.setSheetSecondsDecrement(_countStep),
-            incrementLabel: !_timed
-                ? l10n.setSheetRepsIncrement
-                : _minutes
-                ? l10n.setSheetMinutesIncrement
-                : l10n.setSheetSecondsIncrement(_countStep),
-            onDecrement: countDown == null ? null : () => _stepCount(-1),
-            onIncrement: countUp == null ? null : () => _stepCount(1),
-            decreasedValue: countDown == null ? null : '$countDown',
-            increasedValue: countUp == null ? null : '$countUp',
-            unit: _countUnitSymbol,
-            textController: _countController,
-            textFieldKey: const Key('set-sheet-count-field'),
-            focusNode: _countFocus,
-            textInputAction: TextInputAction.next,
-            keyboardType: TextInputType.number,
-            inputFormatters: [LengthLimitingTextInputFormatter(10)],
-            onTextChanged: _onCountChanged,
-            onTextSubmitted: (_) => _weightFocus.requestFocus(),
-            errorText: _countError,
-            errorBelowRow: true,
-            errorIcon: ExomIcons.error,
+          LayoutBuilder(
+            builder: (context, constraints) => ExomStepper<String>(
+              key: _countKey,
+              value: _countController.text,
+              formatValue: (text) => text,
+              label: countLabel,
+              decrementLabel: !_timed
+                  ? l10n.setSheetRepsDecrement
+                  : _minutes
+                  ? l10n.setSheetMinutesDecrement
+                  : l10n.setSheetSecondsDecrement(_countStep),
+              incrementLabel: !_timed
+                  ? l10n.setSheetRepsIncrement
+                  : _minutes
+                  ? l10n.setSheetMinutesIncrement
+                  : l10n.setSheetSecondsIncrement(_countStep),
+              onDecrement: countDown == null ? null : () => _stepCount(-1),
+              onIncrement: countUp == null ? null : () => _stepCount(1),
+              decreasedValue: countDown == null ? null : '$countDown',
+              increasedValue: countUp == null ? null : '$countUp',
+              unit: _countUnitSymbol,
+              textController: _countController,
+              textFieldKey: const Key('set-sheet-count-field'),
+              focusNode: _countFocus,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.number,
+              inputFormatters: [LengthLimitingTextInputFormatter(10)],
+              onTextChanged: _onCountChanged,
+              onTextSubmitted: (_) => _weightFocus.requestFocus(),
+              errorText: _countError,
+              errorBelowRow: true,
+              errorIcon: ExomIcons.error,
+              valueStyle: _fitNumeral(
+                context,
+                numeralStyle,
+                _countController.text,
+                _countUnitSymbol,
+                constraints.maxWidth,
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -568,32 +637,46 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
             ],
           ),
           const SizedBox(height: 6),
-          ExomStepper<String>(
-            key: _weightKey,
-            value: _weightController.text,
-            formatValue: (text) =>
-                text.isEmpty ? text : '$text $_unitSymbol',
-            label: widget.unitSystem == UnitSystem.imperial
-                ? l10n.setSheetWeightLbA11y
-                : l10n.setSheetWeightKgA11y,
-            decrementLabel: l10n.setSheetWeightDecrement(stepText),
-            incrementLabel: l10n.setSheetWeightIncrement(stepText),
-            onDecrement: weightDown == null ? null : () => _stepWeight(-1),
-            onIncrement: weightUp == null ? null : () => _stepWeight(1),
-            decreasedValue: weightDown == null ? null : _formatDisplay(weightDown),
-            increasedValue: weightUp == null ? null : _formatDisplay(weightUp),
-            unit: _unitSymbol,
-            textController: _weightController,
-            textFieldKey: const Key('set-sheet-weight-field'),
-            focusNode: _weightFocus,
-            textInputAction: TextInputAction.done,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            // No filtering formatter: invalid text must stay as typed (D3).
-            inputFormatters: [LengthLimitingTextInputFormatter(10)],
-            onTextChanged: _onWeightChanged,
-            errorText: _weightError,
-            errorBelowRow: true,
-            errorIcon: ExomIcons.error,
+          LayoutBuilder(
+            builder: (context, constraints) => ExomStepper<String>(
+              key: _weightKey,
+              value: _weightController.text,
+              formatValue: (text) => text.isEmpty ? text : '$text $_unitSymbol',
+              label: widget.unitSystem == UnitSystem.imperial
+                  ? l10n.setSheetWeightLbA11y
+                  : l10n.setSheetWeightKgA11y,
+              decrementLabel: l10n.setSheetWeightDecrement(stepText),
+              incrementLabel: l10n.setSheetWeightIncrement(stepText),
+              onDecrement: weightDown == null ? null : () => _stepWeight(-1),
+              onIncrement: weightUp == null ? null : () => _stepWeight(1),
+              decreasedValue: weightDown == null
+                  ? null
+                  : _formatDisplay(weightDown),
+              increasedValue: weightUp == null
+                  ? null
+                  : _formatDisplay(weightUp),
+              unit: _unitSymbol,
+              textController: _weightController,
+              textFieldKey: const Key('set-sheet-weight-field'),
+              focusNode: _weightFocus,
+              textInputAction: TextInputAction.done,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              // No filtering formatter: invalid text must stay as typed (D3).
+              inputFormatters: [LengthLimitingTextInputFormatter(10)],
+              onTextChanged: _onWeightChanged,
+              errorText: _weightError,
+              errorBelowRow: true,
+              errorIcon: ExomIcons.error,
+              valueStyle: _fitNumeral(
+                context,
+                numeralStyle,
+                _weightController.text,
+                _unitSymbol,
+                constraints.maxWidth,
+              ),
+            ),
           ),
           ...[
             const SizedBox(height: 18),

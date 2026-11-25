@@ -17,13 +17,26 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:intl/intl.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/planned_sets.dart';
@@ -303,250 +316,61 @@ class _TrainingDetailView extends StatelessWidget {
   }
 }
 
+/// Loading state with the shape of the loaded detail (L5 skeletons): the photo
+/// slot, the title, the figures rule and the exercise rows, with the pinned
+/// footer below. Same back action as the loaded page.
 class _TrainingDetailLoadingScaffold extends StatelessWidget {
   const _TrainingDetailLoadingScaffold();
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: GlassAppBar(
           leading: _DetailBackButton(onPressed: () => context.pop()),
-          title: const ShimmerCard(
-            height: 18,
-            width: 164,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
         ),
-        body: SizedBox.expand(
-          child: Stack(
-            children: [
-              ListView(
-                padding: EdgeInsets.only(
-                  bottom: 160 + MediaQuery.of(context).padding.bottom,
+        body: ListView(
+          padding: const EdgeInsets.only(bottom: ExomSpacing.xxl),
+          children: [
+            ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(top: ExomSpacing.lg),
+                child: SizedBox(
+                  height: HomeSessionPhoto.height,
+                  child: ColoredBox(color: palette.surfaceElevated),
                 ),
-                children: const [
-                  GlassCard(
-                    margin: EdgeInsets.all(16),
-                    padding: EdgeInsets.all(20),
-                    borderRadius: 24,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ShimmerCard(
-                              height: 24,
-                              width: 72,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(20),
-                              ),
-                            ),
-                            ShimmerCard(
-                              height: 24,
-                              width: 68,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(20),
-                              ),
-                            ),
-                            ShimmerCard(
-                              height: 24,
-                              width: 84,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(20),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 14),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            ShimmerCard(
-                              height: 18,
-                              width: 54,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(8),
-                              ),
-                            ),
-                            ShimmerCard(
-                              height: 18,
-                              width: 62,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(8),
-                              ),
-                            ),
-                            ShimmerCard(
-                              height: 18,
-                              width: 58,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  _TrainingDetailSectionTitleSkeleton(showTrailing: false),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                    child: ShimmerCard(
-                      height: 92,
-                      borderRadius: BorderRadius.all(Radius.circular(18)),
-                    ),
-                  ),
-                  _TrainingDetailSectionTitleSkeleton(showTrailing: true),
-                  _TrainingExerciseSkeletonCard(),
-                  _TrainingExerciseSkeletonCard(),
-                  _TrainingExerciseSkeletonCard(),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: ShimmerCard(
-                      height: 78,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExomSkeleton.headline(),
+                  SizedBox(height: ExomSpacing.lg),
+                  ExomSkeleton.rule(),
                 ],
               ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    16,
-                    16 + MediaQuery.of(context).padding.bottom,
-                  ),
-                  decoration: _trainingStickyBarDecoration(context),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          ShimmerCard(
-                            height: 14,
-                            width: 126,
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                          ),
-                          Spacer(),
-                          ShimmerCard(
-                            height: 14,
-                            width: 38,
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      ShimmerCard(
-                        height: 8,
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
-                      ),
-                      SizedBox(height: 12),
-                      ShimmerCard(
-                        height: 48,
-                        borderRadius: BorderRadius.all(Radius.circular(14)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
+            for (var i = 0; i < 4; i++) const ExomSkeleton.row(),
+          ],
+        ),
+        bottomNavigationBar: ExomPinnedFooter(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            12 + MediaQuery.of(context).padding.bottom,
+          ),
+          child: ExcludeSemantics(
+            child: SizedBox(
+              height: kExomButtonMinHeight,
+              child: ColoredBox(color: palette.surfaceElevated),
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TrainingDetailSectionTitleSkeleton extends StatelessWidget {
-  const _TrainingDetailSectionTitleSkeleton({required this.showTrailing});
-
-  final bool showTrailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        children: [
-          const ShimmerCard(
-            height: 18,
-            width: 118,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-          const Spacer(),
-          if (showTrailing)
-            const ShimmerCard(
-              height: 14,
-              width: 86,
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrainingExerciseSkeletonCard extends StatelessWidget {
-  const _TrainingExerciseSkeletonCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.all(16),
-      borderRadius: 20,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Row(
-            children: [
-              ShimmerCard(
-                height: 52,
-                width: 52,
-                borderRadius: BorderRadius.all(Radius.circular(14)),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShimmerCard(
-                      height: 18,
-                      width: 164,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    SizedBox(height: 8),
-                    ShimmerCard(
-                      height: 14,
-                      width: 118,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12),
-              ShimmerCard(
-                height: 22,
-                width: 22,
-                borderRadius: BorderRadius.all(Radius.circular(11)),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          ShimmerCard(
-            height: 14,
-            width: 210,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-        ],
       ),
     );
   }
@@ -1059,11 +883,13 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     TrainingExerciseEntity ex,
     List<TrainingExerciseEntity> blockExercises,
     List<Map<String, dynamic>> actions,
+    int number,
   ) {
     final completedCount = blockExercises
         .where((blockExercise) => _progress.ids.contains(blockExercise.id))
         .length;
     return _CircuitCard(
+      number: number,
       name: ex.blockName ?? 'Circuito',
       rounds: ex.blockRounds ?? 1,
       restBetweenRoundsSeconds: ex.restBetweenRoundsSeconds ?? 60,
@@ -1121,6 +947,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     TrainingExerciseEntity ex,
     List<Map<String, dynamic>> actions,
     _WeightText weightText,
+    int number,
   ) {
     final l10n = AppLocalizations.of(context);
     final isCompleted = _progress.ids.contains(ex.id);
@@ -1159,6 +986,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     }
 
     return _ExerciseCard(
+      number: number,
       trainingExercise: ex,
       trainingTypes: training.types,
       accentColorHex: training.accentColor,
@@ -1167,7 +995,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       weightUsed: effectiveWeight,
       weightText: weightText,
       currentPerformances: _progress.performances[ex.id],
-      previousLabel: _previousLabel(
+      previousValue: _previousValue(
         l10n, widget.state.previousPerformances[ex.id], weightText),
       todayLabel: todayLabel,
       hasPartialProgress: hasPartialProgress,
@@ -1313,7 +1141,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         children: [
           _DetailHeader(
             training: training,
-            completedLabel: '$completed/$total ${l10n.completedExercisesLabel}',
+            selectedDate: widget.state.selectedDate,
+            completed: completed,
+            total: total,
+            completedSets: tallyPlannedSets(
+              training.exercises,
+              plannedSets: _plannedSetsOfExercise,
+              isCompleted: (item) => _progress.ids.contains(item.id),
+            ).completed,
           ),
 
           // Warmup
@@ -1338,22 +1173,30 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 ),
               ),
             ),
-          // Exercise list: rule-separated rows straight under the header
-          // (sketch «Detalle del entreno»); the header already counts them.
-          for (final group in groups)
+          // Exercise list (sketch «Detalle del entreno»): section header with
+          // the done count, then numbered rows with their thumbnail.
+          _SectionTitle(
+            title: l10n.exercises,
+            trailing: l10n.trainingDetailExercisesDone(completed, total),
+          ),
+          // Rows are numbered by their position in the list (01, 02…), each
+          // exercise or circuit once: `order` is the API sort key (0-based,
+          // x1000 with circuits), not a label.
+          for (final (index, group) in groups.indexed)
             ValueListenableBuilder(
               valueListenable: activeWorkouts,
               builder: (context, box, _) {
                 final circuit = group.blockExercises;
                 return circuit == null
-                    ? _buildExerciseRow(
-                        context, training, group.leader, pendingActions, weightText)
+                    ? _buildExerciseRow(context, training, group.leader,
+                        pendingActions, weightText, index + 1)
                     : _buildCircuitRow(
                         context,
                         training,
                         group.leader,
                         circuit,
                         pendingActions,
+                        index + 1,
                       );
               },
             ),
@@ -1501,8 +1344,9 @@ String? _setValueLabel(
   return parts.isEmpty ? null : parts.join(' · ');
 }
 
-/// «Anterior 8 × 60 kg» from the first logged set of the previous session.
-String? _previousLabel(
+/// «8 × 60 kg» from the first logged set of the previous session; the row
+/// paints it inside «Anterior …» (`trainingDetailPrevious`).
+String? _previousValue(
   AppLocalizations l10n,
   List<SetPerformance>? previous,
   _WeightText weightText,
@@ -1512,7 +1356,7 @@ String? _previousLabel(
     ..sort((a, b) => a.setNumber.compareTo(b.setNumber));
   for (final set in sorted) {
     final value = _setValueLabel(l10n, set, weightText);
-    if (value != null) return l10n.trainingDetailPrevious(value);
+    if (value != null) return value;
   }
   return null;
 }
@@ -1551,6 +1395,9 @@ String _todaySetLabel(
   return parts.join(' · ');
 }
 
+/// Note of the day and the trainer's reply (L5-E2a): the note flat on the page
+/// under its label, the reply as the shared [ExomReplyBlock] (T0.3b) signed
+/// «Respuesta de tu entrenador» (the model has no trainer name, D15/D16).
 class TrainingNoteReplyCard extends StatelessWidget {
   const TrainingNoteReplyCard({super.key, this.note, this.reply,
     this.historicalDayNote = false});
@@ -1561,74 +1408,48 @@ class TrainingNoteReplyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final noteText = note;
+    final replyText = reply;
 
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (note != null) ...[
-            Row(
-              children: [
-                Icon(
-                  ExomIcons.note,
-                  size: 18,
-                  color: palette.textSecondary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    historicalDayNote
-                        ? AppLocalizations.of(context).historicalDayNoteUnattributed
-                        : AppLocalizations.of(context).yourTrainingNote,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+          if (noteText != null) ...[
+            Text(
+              historicalDayNote
+                  ? l10n.historicalDayNoteUnattributed
+                  : l10n.yourTrainingNote,
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                color: palette.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(note!, style: theme.textTheme.bodyMedium),
-          ],
-          if (note != null && reply != null) const SizedBox(height: 16),
-          if (reply != null) ...[
-            Row(
-              children: [
-                Icon(
-                  ExomIcons.chatRead,
-                  size: 18,
-                  color: palette.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  AppLocalizations.of(context).trainerReply,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: palette.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+            const SizedBox(height: ExomSpacing.xs),
+            Text(
+              noteText,
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                color: palette.textPrimary,
+                fontSize: 15,
+                height: 1.4,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(reply!, style: theme.textTheme.bodyMedium),
           ],
+          if (noteText != null && replyText != null)
+            const SizedBox(height: ExomSpacing.lg),
+          if (replyText != null)
+            ExomReplyBlock(text: replyText, author: l10n.trainerReply),
         ],
       ),
     );
   }
-}
-
-BoxDecoration _trainingStickyBarDecoration(BuildContext context) {
-  final palette = context.exomPalette;
-  return BoxDecoration(
-    color: palette.background,
-    border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-  );
 }
 
 /// Back button of the detail with the platform's localized tooltip, which is
@@ -1648,26 +1469,63 @@ class _DetailBackButton extends StatelessWidget {
   }
 }
 
-/// Flat top of the detail (sketch «Detalle del entreno»): training name in
-/// the display face, then muted meta lines and the progress line.
+/// Planned sets of one exercise of the detail (circuit exercises weigh sets x
+/// rounds, the shared rule of Inicio, L4b-D5).
+int _plannedSetsOfExercise(TrainingExerciseEntity item) => plannedSetsOf(
+  sets: item.sets,
+  inBlock: item.blockId != null,
+  blockRounds: item.blockRounds,
+);
+
+/// Photo of a session: the `thumbnailUrl` of its first exercise, by `order`,
+/// that is a usable http(s) URL (same rule as Inicio and Entrenar, L4b-D1).
+String? _sessionPhotoUrl(TrainingEntity training) {
+  final ordered = training.exercises.indexed.toList()
+    ..sort((a, b) {
+      final byOrder = a.$2.order.compareTo(b.$2.order);
+      return byOrder != 0 ? byOrder : a.$1.compareTo(b.$1);
+    });
+  for (final (_, item) in ordered) {
+    final url = item.exercise.thumbnailUrl?.trim();
+    if (url == null || url.isEmpty) continue;
+    final uri = Uri.tryParse(url);
+    if (uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty) {
+      return url;
+    }
+  }
+  return null;
+}
+
+/// Top of the detail (sketch «Detalle del entreno», L5-E2a): the session photo
+/// bleeding edge to edge, the name in the display face (shared title hero with
+/// Entrenar), the day and the muted facts; then, before the first exercise is
+/// done, the numbered figures (exercises, planned sets, approximate minutes)
+/// and, once one is done, the session progress as a figure in a featured
+/// block (frame «a mitad»). Only data the page already has: no week number.
 class _DetailHeader extends StatelessWidget {
-  const _DetailHeader({required this.training, required this.completedLabel});
+  const _DetailHeader({
+    required this.training,
+    required this.selectedDate,
+    required this.completed,
+    required this.total,
+    required this.completedSets,
+  });
 
   final TrainingEntity training;
-  final String completedLabel;
+  final String selectedDate;
+  final int completed;
+  final int total;
+  final int completedSets;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    // Same rule as Inicio (circuit exercises weigh sets x rounds).
     final totalSets = tallyPlannedSets(
       training.exercises,
-      plannedSets: (item) => plannedSetsOf(
-        sets: item.sets,
-        inBlock: item.blockId != null,
-        blockRounds: item.blockRounds,
-      ),
+      plannedSets: _plannedSetsOfExercise,
       isCompleted: (_) => false,
     ).total;
     final duration = training.estimatedDurationMin;
@@ -1675,79 +1533,180 @@ class _DetailHeader extends StatelessWidget {
       ...trainingTypeLabels(context, training.types),
       if (training.level.trim().isNotEmpty)
         _trainingLevelLabel(l10n, training.level),
-    ].join(' · ');
-    final volume = [
-      l10n.trainingDetailExercises(training.exercises.length),
-      l10n.trainingDetailSets(totalSets),
-      if (duration != null) l10n.trainingDetailDuration(duration),
+      // Calories stay as a fact (the old volume line carried them).
       if (training.estimatedCalories != null)
         '${training.estimatedCalories} kcal',
     ].join(' · ');
+    final day = DateTime.tryParse(selectedDate);
+    final dateLabel = day == null
+        ? null
+        : toBeginningOfSentenceCase(
+            DateFormat.MMMMEEEEd(
+              Localizations.localeOf(context).toString(),
+            ).format(day),
+          );
+    final photo = _sessionPhotoUrl(training);
     final mutedStyle = TextStyle(
       fontFamily: AppTheme.bodyFontFamily,
       color: palette.textSecondary,
       fontSize: 14,
       height: 1.4,
     );
-    final titleStyle = TextStyle(
-      fontFamily: AppTheme.displayFontFamily,
-      fontSize: 44,
-      fontWeight: FontWeight.w800,
-      height: 0.95,
-      letterSpacing: -0.88,
-      color: palette.textPrimary,
-    );
+    final figures = [
+      if (training.exercises.isNotEmpty) ...[
+        ExomFigure(
+          value: formatFigure(context, training.exercises.length),
+          label: l10n.exercises.toLowerCase(),
+        ),
+        ExomFigure(
+          value: formatFigure(context, totalSets),
+          label: l10n.sets.toLowerCase(),
+        ),
+      ],
+      if (duration != null)
+        ExomFigure(
+          value: formatFigure(context, duration),
+          label: l10n.trainingsFigureMinutesApprox,
+        ),
+    ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Hero(
-            tag: 'training-${training.id}-title',
-            flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
-              return Material(
-                color: Colors.transparent,
-                child: Text(
-                  training.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.374,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (photo != null) HomeSessionPhoto(url: photo),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Hero(
+                tag: 'training-${training.id}-title',
+                flightShuttleBuilder: (flightCtx, anim, dir, fromCtx, toCtx) {
+                  return Material(
+                    color: Colors.transparent,
+                    child: Text(
+                      training.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.374,
+                      ),
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      training.name.toUpperCase(),
+                      style: ExomType.screenTitle.copyWith(
+                        color: palette.textPrimary,
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
-            child: Material(
-              color: Colors.transparent,
-              child: Semantics(
-                header: true,
-                child: Text(training.name.toUpperCase(), style: titleStyle),
+              ),
+              if (dateLabel != null) ...[
+                const SizedBox(height: ExomSpacing.sm),
+                Text(dateLabel, style: mutedStyle),
+              ],
+              if (kind.isNotEmpty) ...[
+                const SizedBox(height: ExomSpacing.xs),
+                Text(kind, style: mutedStyle),
+              ],
+              if (training.tags.isNotEmpty)
+                Text(
+                  training.tags.map((tag) => '#$tag').join(' '),
+                  style: mutedStyle.copyWith(fontSize: 13),
+                ),
+            ],
+          ),
+        ),
+        if (completed > 0)
+          _SessionProgress(
+            completed: completed,
+            total: total,
+            completedSets: completedSets,
+            totalSets: totalSets,
+          )
+        else if (figures.isNotEmpty)
+          ExomFigureColumns(items: figures),
+      ],
+    );
+  }
+}
+
+/// Session progress (sketch `.x-feat` «Progreso de la sesión»): exercises done
+/// as the protagonist figure («2/6», data colour), the planned sets of the
+/// done exercises beside it and one segment per exercise.
+class _SessionProgress extends StatelessWidget {
+  const _SessionProgress({
+    required this.completed,
+    required this.total,
+    required this.completedSets,
+    required this.totalSets,
+  });
+
+  final int completed;
+  final int total;
+  final int completedSets;
+  final int totalSets;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    return ExomFeatureBlock(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExomKicker(l10n.trainingDetailProgressKicker),
+            const SizedBox(height: ExomSpacing.md),
+            ExomNumeral(
+              value: formatFigure(context, completed),
+              unit: '/${formatFigure(context, total)}',
+              side: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n
+                        .trainingDetailSetsDoneOf(completedSets, totalSets)
+                        .toUpperCase(),
+                    style: ExomType.section.copyWith(
+                      fontSize: 28,
+                      height: 0.95,
+                      letterSpacing: -0.28,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    l10n.trainingDetailSetsDoneLabel,
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      color: palette.textSecondary,
+                      fontSize: 14,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          if (kind.isNotEmpty) Text(kind, style: mutedStyle),
-          Text(volume, style: mutedStyle),
-          if (training.tags.isNotEmpty)
-            Text(
-              training.tags.map((tag) => '#$tag').join(' '),
-              style: mutedStyle.copyWith(fontSize: 13),
-            ),
-          const SizedBox(height: 12),
-          Text(
-            completedLabel,
-            style: TextStyle(
-              fontFamily: AppTheme.bodyFontFamily,
-              color: palette.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              height: 1.35,
-            ),
-          ),
-        ],
+            if (total > 0) ...[
+              const SizedBox(height: ExomSpacing.lg),
+              ExomProgressRule(
+                value: completed / total,
+                segments: total,
+                thickness: 10,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1791,17 +1750,20 @@ class _CompleteTrainingButton extends StatelessWidget {
             minimumSize: const Size.fromHeight(kExomButtonMinHeight),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             textStyle: textStyle,
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.textOnPrimary,
-            iconColor: AppColors.textOnPrimary,
+            backgroundColor: palette.limeFill,
+            foregroundColor: palette.onLimeFill,
+            iconColor: palette.onLimeFill,
             disabledBackgroundColor: palette.borderSoft,
             disabledForegroundColor:
                 isDark ? palette.textDisabled : palette.textSecondary,
             disabledIconColor:
                 isDark ? palette.textDisabled : palette.textSecondary,
-            side: isDark || onPressed == null
+            side: palette.limeFillOutline == null || onPressed == null
                 ? null
-                : const BorderSide(color: AppColors.textOnPrimary, width: 1.5),
+                : BorderSide(
+                    color: palette.limeFillOutline!,
+                    width: ExomRule.outline,
+                  ),
           )
         : ElevatedButton.styleFrom(
             elevation: 0,
@@ -1834,30 +1796,50 @@ class _CompleteTrainingButton extends StatelessWidget {
   }
 }
 
-/// Section heading (warm-up, exercises, cool-down): display face, uppercase.
+/// Section heading (warm-up, exercises, cool-down): display face, uppercase,
+/// with an optional muted [trailing] fact at the end of the line that wraps
+/// below the title when there is no room (sketch `.x-sh-row`).
 class _SectionTitle extends StatelessWidget {
   final String title;
+  final String? trailing;
 
-  const _SectionTitle({required this.title});
+  const _SectionTitle({required this.title, this.trailing});
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final heading = Semantics(
+      header: true,
+      label: title,
+      excludeSemantics: true,
+      child: Text(
+        title.toUpperCase(),
+        style: ExomType.section.copyWith(color: palette.textPrimary),
+      ),
+    );
+    final fact = trailing;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-      child: Semantics(
-        header: true,
-        child: Text(
-          title.toUpperCase(),
-          style: TextStyle(
-            fontFamily: AppTheme.displayFontFamily,
-            color: palette.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            height: 1.1,
-          ),
-        ),
-      ),
+      child: fact == null
+          ? heading
+          : Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: ExomSpacing.md,
+              runSpacing: ExomSpacing.xs,
+              children: [
+                heading,
+                Text(
+                  fact,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    color: palette.textSecondary,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -1886,39 +1868,98 @@ class _DescriptionText extends StatelessWidget {
   }
 }
 
-/// Rule-separated list row: hairline on top, full-width tap target, at least
-/// 56 high. The list closes with a [Divider] after the last row.
-class _RuledRow extends StatelessWidget {
-  const _RuledRow({required this.onTap, required this.child});
+/// Numbered list row of the detail (sketch `.x-row` with `.e-rno`): the index
+/// «01» in the data colour, a 56 square [thumb], the [body] and the trailing
+/// mark centred on the row. Hairline on top, full-width tap target at least 72
+/// high and the raised fill while pressed ([ExomRowSurface], M6). One merged
+/// semantics node, a button. The list closes with a [Divider].
+class _NumberedRow extends StatelessWidget {
+  const _NumberedRow({
+    required this.number,
+    required this.thumb,
+    required this.body,
+    required this.trailing,
+    required this.onTap,
+  });
 
+  final int number;
+  final Widget thumb;
+  final Widget body;
+  final Widget trailing;
   final VoidCallback onTap;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return MergeSemantics(
       child: Semantics(
         button: true,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: context.exomPalette.borderSoft),
+        child: ExomRowSurface(
+          onTap: onTap,
+          minHeight: 72,
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 12, 12),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 30),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: ExomIndexNumber(number),
+                    ),
+                  ),
                 ),
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 56),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: child,
-                ),
-              ),
+                const SizedBox(width: ExomSpacing.md),
+                Align(alignment: AlignmentDirectional.topStart, child: thumb),
+                const SizedBox(width: 14),
+                Expanded(child: body),
+                Center(child: trailing),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 56 square of a row (`.x-thumb`): the exercise thumbnail, or [icon] on the
+/// raised fill when there is none. Decorative.
+class _RowThumb extends StatelessWidget {
+  const _RowThumb({super.key, required this.url, required this.icon});
+
+  final String? url;
+  final IconData icon;
+
+  static const double size = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final imageUrl = url?.trim();
+    return ExcludeSemantics(
+      child: SizedBox.square(
+        dimension: size,
+        child: imageUrl == null || imageUrl.isEmpty
+            ? ColoredBox(
+                color: palette.surfaceElevated,
+                child: Icon(icon, size: 24, color: palette.textSecondary),
+              )
+            : CachedNetworkImage(
+                imageUrl: imageUrl,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                memCacheWidth: PerformanceProfile.imageCacheWidth(
+                  context,
+                  size,
+                ),
+                placeholder: (context, imageUrl) => _ThumbnailBackground(),
+                errorWidget: (context, imageUrl, error) =>
+                    _ThumbnailBackground(),
+              ),
       ),
     );
   }
@@ -1943,8 +1984,9 @@ TextStyle _rowLineStyle(BuildContext context, {Color? color}) => TextStyle(
   fontFeatures: const [FontFeature.tabularFigures()],
 );
 
-/// Trailing mark of a row: a check in text colour when done (never lime), a
-/// chevron otherwise.
+/// Trailing mark of a row: when done, a check in the data colour («hecha» is
+/// the client's data, D19; the sync status says whether it is confirmed);
+/// otherwise a chevron.
 class _RowTrailing extends StatelessWidget {
   const _RowTrailing({required this.done});
 
@@ -1954,17 +1996,18 @@ class _RowTrailing extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsetsDirectional.only(start: 8),
       child: Icon(
         done ? ExomIcons.check : ExomIcons.next,
-        color: done ? palette.textPrimary : palette.textSecondary,
-        size: 24,
+        color: done ? palette.data : palette.textSecondary,
+        size: done ? 24 : 22,
       ),
     );
   }
 }
 
 class _CircuitCard extends StatelessWidget {
+  final int number;
   final String name;
   final int rounds;
   final int restBetweenRoundsSeconds;
@@ -1976,6 +2019,7 @@ class _CircuitCard extends StatelessWidget {
   final VoidCallback? onMarkPending;
 
   const _CircuitCard({
+    required this.number,
     required this.name,
     required this.rounds,
     required this.restBetweenRoundsSeconds,
@@ -1996,40 +2040,30 @@ class _CircuitCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _RuledRow(
+        _NumberedRow(
+          number: number,
           onTap: onStart,
-          child: Row(
+          thumb: const _RowThumb(url: null, icon: ExomIcons.repeat),
+          body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 36,
-                child: ExcludeSemantics(
-                  child: Icon(
-                    ExomIcons.repeat,
-                    color: palette.textSecondary,
-                    size: 22,
-                  ),
-                ),
+              Text(name, style: _rowNameStyle(context, done: isCompleted)),
+              const SizedBox(height: 2),
+              Text(
+                '${l10n.circuitSummary(rounds, exerciseCount)} · '
+                '${restBetweenRoundsSeconds}s ${l10n.rest}',
+                style: _rowLineStyle(context),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: _rowNameStyle(context, done: isCompleted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${l10n.circuitSummary(rounds, exerciseCount)} · '
-                      '${restBetweenRoundsSeconds}s ${l10n.rest}',
-                      style: _rowLineStyle(context),
-                    ),
-                    if (syncState != null) ...[
-                      const SizedBox(height: 4),
-                      ExomSyncStatus(state: syncState!),
-                    ],
-                  ],
-                ),
-              ),
+              if (syncState != null) ...[
+                const SizedBox(height: 4),
+                ExomSyncStatus(state: syncState!),
+              ],
+            ],
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               const SizedBox(width: 8),
               Text(
                 '$completedCount/$exerciseCount',
@@ -2040,7 +2074,7 @@ class _CircuitCard extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(56, 0, 12, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(62, 0, 12, 8),
           child: Row(
             children: [
               Flexible(
@@ -2078,6 +2112,8 @@ class _CircuitCard extends StatelessWidget {
 }
 
 class _ExerciseCard extends StatelessWidget {
+  /// Position of the row in the list (1-based), shown as «01», «02»…
+  final int number;
   final TrainingExerciseEntity trainingExercise;
   final List<String> trainingTypes;
   final String? accentColorHex;
@@ -2086,7 +2122,7 @@ class _ExerciseCard extends StatelessWidget {
   final double? weightUsed;
   final _WeightText weightText;
   final List<SetPerformance>? currentPerformances;
-  final String? previousLabel;
+  final String? previousValue;
   final String? todayLabel;
   final bool hasPartialProgress;
   final ExomSyncState? syncState;
@@ -2094,6 +2130,7 @@ class _ExerciseCard extends StatelessWidget {
   final void Function(bool completed, {double? weightUsed}) onToggle;
 
   const _ExerciseCard({
+    required this.number,
     required this.trainingExercise,
     required this.trainingTypes,
     required this.accentColorHex,
@@ -2104,102 +2141,92 @@ class _ExerciseCard extends StatelessWidget {
     required this.onToggle,
     this.weightUsed,
     this.currentPerformances,
-    this.previousLabel,
+    this.previousValue,
     this.todayLabel,
     this.hasPartialProgress = false,
     this.syncState,
   });
+
+  /// «Anterior 8 × 60 kg» with the value in the text colour, 600 (sketch
+  /// `.e-b`); the whole line is one text for assistive technology.
+  Widget _previousLine(BuildContext context, String value) {
+    final palette = context.exomPalette;
+    final line = AppLocalizations.of(context).trainingDetailPrevious(value);
+    final at = line.indexOf(value);
+    final style = _rowLineStyle(context);
+    if (at < 0) return Text(line, style: style);
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (at > 0) TextSpan(text: line.substring(0, at)),
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (at + value.length < line.length)
+            TextSpan(text: line.substring(at + value.length)),
+        ],
+      ),
+      style: style,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final ex = trainingExercise.exercise;
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final thumbnailUrl = ex.thumbnailUrl?.trim();
-    final hasThumbnail = thumbnailUrl != null && thumbnailUrl.isNotEmpty;
-    const thumbnailSize = 56.0;
+    final previous = previousValue;
 
-    return _RuledRow(
+    return _NumberedRow(
+      number: number,
       onTap: () => _showExerciseDetail(context),
-      child: Row(
+      thumb: _RowThumb(
+        key: Key('training-exercise-thumb-${trainingExercise.id}'),
+        url: ex.thumbnailUrl,
+        icon: ExomIcons.train,
+      ),
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 36,
-            child: Text(
-              '${trainingExercise.order}',
-              style: TextStyle(
-                fontFamily: AppTheme.displayFontFamily,
-                color: isCompleted ? palette.textSecondary : palette.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                height: 1.1,
-              ),
+          Text(ex.name, style: _rowNameStyle(context, done: isCompleted)),
+          const SizedBox(height: 2),
+          Text(
+            l10n.trainingDetailPrescription(
+              trainingExercise.sets,
+              formatExercisePrescription(trainingExercise),
+              trainingExercise.restSeconds,
             ),
+            style: _rowLineStyle(context),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(ex.name, style: _rowNameStyle(context, done: isCompleted)),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.trainingDetailPrescription(
-                    trainingExercise.sets,
-                    formatExercisePrescription(trainingExercise),
-                    trainingExercise.restSeconds,
-                  ),
-                  style: _rowLineStyle(context),
-                ),
-                if (previousLabel != null)
-                  Text(previousLabel!, style: _rowLineStyle(context)),
-                if (todayLabel != null)
-                  Text(
-                    todayLabel!,
-                    style: _rowLineStyle(context, color: palette.textPrimary),
-                  ),
-                if (syncState != null) ...[
-                  const SizedBox(height: 4),
-                  ExomSyncStatus(state: syncState!),
-                ],
-              ],
+          if (previous != null) _previousLine(context, previous),
+          if (todayLabel != null)
+            Text(
+              todayLabel!,
+              style: _rowLineStyle(context, color: palette.textPrimary),
             ),
-          ),
-          if (hasThumbnail) ...[
-            const SizedBox(width: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: CachedNetworkImage(
-                imageUrl: thumbnailUrl,
-                width: thumbnailSize,
-                height: thumbnailSize,
-                fit: BoxFit.cover,
-                memCacheWidth: PerformanceProfile.imageCacheWidth(
-                  context,
-                  thumbnailSize,
-                ),
-                placeholder: (context, imageUrl) => _ThumbnailBackground(),
-                errorWidget: (context, imageUrl, error) =>
-                    _ThumbnailBackground(),
-              ),
-            ),
+          if (syncState != null) ...[
+            const SizedBox(height: 4),
+            ExomSyncStatus(state: syncState!),
           ],
-          _RowTrailing(done: isCompleted),
         ],
       ),
+      trailing: _RowTrailing(done: isCompleted),
     );
   }
 
   void _showExerciseDetail(BuildContext context) async {
     final ex = trainingExercise.exercise;
+    // No explicit background: the sheet takes `bottomSheetTheme` (palette
+    // surface) from the live theme, so a theme change while it is open
+    // repaints it instead of keeping the colour captured when it was opened.
     final result = await showPageAwareModalBottomSheet<_SheetCompletionResult>(
       context: context,
-      backgroundColor: context.exomPalette.surface,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.7,
@@ -2489,12 +2516,12 @@ class _ExerciseDetailSheet extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: hasVideo ? () => _openVideo(context) : null,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(ExomRadius.control),
             child: Ink(
               height: 196,
               decoration: BoxDecoration(
                 color: palette.surfaceVariant,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(ExomRadius.control),
                 border: Border.all(color: palette.borderSoft),
               ),
               child: Stack(
@@ -2502,7 +2529,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(ExomRadius.control),
                       child: hasThumbnail
                           ? CachedNetworkImage(
                               imageUrl: thumbnailUrl,
@@ -2588,7 +2615,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: palette.surfaceVariant.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(ExomRadius.square),
               border: Border.all(color: palette.divider),
             ),
             child: Column(
@@ -2706,11 +2733,11 @@ class _SheetHeaderAction extends StatelessWidget {
       color: highlighted
           ? palette.surfaceVariant.withValues(alpha: 0.9)
           : palette.surface.withValues(alpha: 0.72),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExomRadius.control)),
       child: InkWell(
         onTap: onTap,
         customBorder: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(ExomRadius.control),
         ),
         child: Tooltip(
           message: tooltip,
@@ -2784,7 +2811,7 @@ class _InfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: emphasized ? 0.16 : 0.08),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(ExomRadius.control),
         border: Border.all(color: color.withValues(alpha: 0.16)),
       ),
       child: Row(

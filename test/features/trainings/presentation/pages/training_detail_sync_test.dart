@@ -526,8 +526,9 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
@@ -566,7 +567,7 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('1/1 ${AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel}'), findsOneWidget);
+    expect(find.text(AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0, reason: 'hydration must not finalize the execution');
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
@@ -601,8 +602,9 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0);
     expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
@@ -690,8 +692,9 @@ void main() {
         home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
       ));
       await tester.pumpAndSettle();
-      final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-      expect(find.text('0/1 $label'), findsOneWidget);
+      // L5-E2a: the done count moved to the exercises header («0 de 1 hechos»).
+      final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+      expect(find.text(progress(0, 1), skipOffstage: false), findsOneWidget);
       expect(repository.completions, 0);
       await tester.pumpWidget(const SizedBox.shrink());
       await sl.reset();
@@ -780,8 +783,9 @@ void main() {
         selectedExecutionId: _session),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
@@ -793,7 +797,7 @@ void main() {
     expect(storage.completionDrafts[_session]?['rpe'], 8);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     expect(find.text('Pendiente de sincronización'), findsOneWidget);
-    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
 
     storage.status = 'confirmed';
     storage.actionStatus = null;
@@ -806,7 +810,7 @@ void main() {
     sync.notify();
     await tester.pumpAndSettle();
     expect(find.text('Pendiente de sincronización'), findsNothing);
-    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
     expect(repository.completions, 1);
@@ -817,7 +821,7 @@ void main() {
     ];
     sync.notify();
     await tester.pumpAndSettle();
-    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
     expect(find.text('Pendiente de sincronización'), findsNothing,
       reason: 'another execution queued for the same training/date must not affect the selected ACK');

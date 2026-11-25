@@ -9,7 +9,14 @@ import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -27,11 +34,17 @@ import 'package:exom_app/features/trainings/presentation/pages/active_exercise_p
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../core/widgets/exom_component_harness.dart'
+    show expectTapTargetGuidelines;
+import '../../../../core/widgets/expect_no_lime_ink.dart';
 
 const _date = '2026-09-05';
 const _execution = 'execution-1';
@@ -249,8 +262,10 @@ Future<_Harness> _mount(
   ThemeData? theme,
   Size size = const Size(390, 844),
   double textScale = 1.0,
+  TextScaler? textScaler,
   void Function(_Storage storage)? seed,
   Locale locale = const Locale('es'),
+  ValueListenable<ThemeMode>? themeMode,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -309,20 +324,29 @@ Future<_Harness> _mount(
     ],
   );
   addTearDown(router.dispose);
+  final fixedMode = ValueNotifier(ThemeMode.light);
+  addTearDown(fixedMode.dispose);
   await tester.pumpWidget(
     BlocProvider<AppPreferencesCubit>.value(
       value: preferences,
-      child: MaterialApp.router(
-        routerConfig: router,
-        theme: theme ?? AppTheme.dark,
-        locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
-          child: child!,
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeMode ?? fixedMode,
+        builder: (context, mode, _) => MaterialApp.router(
+          routerConfig: router,
+          // With [themeMode] the app follows it between both themes;
+          // otherwise [theme] (dark by default) is the only theme.
+          theme: themeMode == null ? theme ?? AppTheme.dark : AppTheme.light,
+          darkTheme: themeMode == null ? null : AppTheme.dark,
+          themeMode: mode,
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
+            child: child!,
+          ),
         ),
       ),
     ),
@@ -331,6 +355,35 @@ Future<_Harness> _mount(
   await tester.pump(const Duration(milliseconds: 500));
   return _Harness(storage, sync, pushed, router);
 }
+
+/// The detail of [training] (by default five exercises) for the overflow
+/// sweep of `test/l10n/long_string_overflow_test.dart` (CC 3).
+Future<void> pumpTrainingDetail(
+  WidgetTester tester, {
+  TrainingEntity? training,
+  Set<String> completed = const {},
+  required double width,
+  required Locale locale,
+  required TextScaler textScaler,
+  Brightness brightness = Brightness.dark,
+}) async {
+  await _mount(
+    tester,
+    training: training,
+    completed: completed,
+    size: Size(width, 640),
+    textScaler: textScaler,
+    locale: locale,
+    theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+  );
+}
+
+/// (value, label) of each figure of the header columns.
+List<(String, String)> _figures(WidgetTester tester) => [
+  for (final item
+      in tester.widget<ExomFigureColumns>(find.byType(ExomFigureColumns)).items)
+    (item.value, item.label),
+];
 
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(TrainingDetailPage)));
@@ -600,6 +653,14 @@ void main() {
       expect(find.textContaining(label), findsOneWidget);
       expect(find.textContaining('INTERMEDIATE'), findsNothing);
 
+      // L5-E2a: the header with its figures can push the row below the
+      // fold with the test font; bring it on stage first.
+      await tester.scrollUntilVisible(
+        find.text('Peso muerto rumano'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Peso muerto rumano'));
       await tester.pumpAndSettle();
       expect(find.text(label), findsOneWidget);
@@ -625,7 +686,10 @@ void main() {
   testWidgets('weights follow the unit preference for display only', (
     tester,
   ) async {
-    await _mount(tester, completed: {'te-1'});
+    // L5-E2a: a tall surface keeps both rows with a previous set on stage
+    // under the session progress block.
+    const tall = Size(390, 1600);
+    await _mount(tester, completed: {'te-1'}, size: tall);
     final l10n = _l10n(tester);
     expect(
       find.text(l10n.trainingDetailPrevious('8 × 60 kg')),
@@ -636,7 +700,12 @@ void main() {
       findsOneWidget,
     );
 
-    await _mount(tester, completed: {'te-1'}, unitSystem: UnitSystem.imperial);
+    await _mount(
+      tester,
+      completed: {'te-1'},
+      unitSystem: UnitSystem.imperial,
+      size: tall,
+    );
     expect(
       find.text(l10n.trainingDetailPrevious('8 × 132,28 lb')),
       findsNWidgets(2),
@@ -720,6 +789,8 @@ void main() {
       ),
       size: const Size(320, 640),
     );
+    await tester.ensureVisible(find.text(longName, skipOffstage: false));
+    await tester.pumpAndSettle();
     final text = tester.widget<Text>(find.text(longName));
     expect(text.maxLines, isNull);
     expect(text.overflow, isNot(TextOverflow.ellipsis));
@@ -807,7 +878,11 @@ void main() {
           _exercise(6, 'Press'),
         ]),
       );
-      expect(find.textContaining('6 ejercicios · 18 series'), findsOneWidget);
+      // L5-E2a: the totals moved from the fact line to the numbered figures.
+      expect(_figures(tester), [
+        ('6', 'ejercicios'),
+        ('18', 'series'),
+      ]);
     });
 
     testWidgets('without circuits the total is the plain sum', (tester) async {
@@ -815,7 +890,235 @@ void main() {
         tester,
         training: session([_exercise(1, 'Remo'), _exercise(2, 'Press')]),
       );
-      expect(find.textContaining('2 ejercicios · 6 series'), findsOneWidget);
+      expect(_figures(tester), [
+        ('2', 'ejercicios'),
+        ('6', 'series'),
+      ]);
+    });
+  });
+  // L5-E2a «Detalle del entreno (piel)»: photo on top, title and date,
+  // progress as a figure, numbered rows with a thumbnail (sketch
+  // e-migradas.html, frames f-det and f-det-mitad). A tall surface keeps every
+  // row on stage: the test font (Ahem) is wider than the bundled faces and
+  // stacks the figure columns.
+  group('L5-E2a skin', () {
+    const tall = Size(390, 1600);
+
+    TrainingExerciseEntity photoExercise(int order, String name, int sets) =>
+        TrainingExerciseEntity(
+          id: 'te-$order',
+          order: order,
+          sets: sets,
+          repsOrDuration: '8',
+          restSeconds: 90,
+          exercise: ExerciseEntity(
+            id: 'ex-$order',
+            name: name,
+            muscleGroups: const [],
+            thumbnailUrl: order == 1 ? null : 'https://example.test/$order.jpg',
+          ),
+        );
+
+    final withPhotos = TrainingEntity(
+      id: _trainingId,
+      name: 'Pierna fuerza',
+      types: const ['FUERZA'],
+      level: 'INTERMEDIATE',
+      estimatedDurationMin: 55,
+      tags: const [],
+      exercises: [
+        photoExercise(1, 'Sentadilla búlgara', 4),
+        photoExercise(2, 'Peso muerto rumano', 3),
+        photoExercise(3, 'Elevación de gemelos', 3),
+      ],
+    );
+
+    testWidgets('before starting: photo, date, numbered figures and rows', (
+      tester,
+    ) async {
+      await _mount(tester, training: withPhotos, size: tall);
+      final l10n = _l10n(tester);
+      // The session photo is the first usable exercise thumbnail.
+      expect(
+        tester.widget<HomeSessionPhoto>(find.byType(HomeSessionPhoto)).url,
+        'https://example.test/2.jpg',
+      );
+      final date = toBeginningOfSentenceCase(
+        DateFormat.MMMMEEEEd('es').format(DateTime(2026, 9, 5)),
+      );
+      expect(find.text(date), findsOneWidget);
+      expect(_figures(tester), [
+        ('3', 'ejercicios'),
+        ('10', 'series'),
+        ('55', l10n.trainingsFigureMinutesApprox),
+      ]);
+      expect(find.byType(ExomFeatureBlock), findsNothing);
+      expect(find.text(l10n.exercises.toUpperCase()), findsOneWidget);
+      expect(find.text(l10n.trainingDetailExercisesDone(0, 3)), findsOneWidget);
+      // Three numbered figures plus one index per row.
+      expect(find.byType(ExomIndexNumber), findsNWidgets(6));
+      for (final id in const ['te-1', 'te-2', 'te-3']) {
+        expect(find.byKey(Key('training-exercise-thumb-$id')), findsOneWidget);
+      }
+      expect(find.byType(GlassCard), findsNothing);
+    });
+
+    testWidgets('in progress: the progress is a figure in a featured block', (
+      tester,
+    ) async {
+      await _mount(tester, completed: {'te-1'}, size: tall);
+      final l10n = _l10n(tester);
+      expect(find.byType(ExomFeatureBlock), findsOneWidget);
+      expect(find.byType(ExomFigureColumns), findsNothing);
+      final numeral = tester.widget<ExomNumeral>(find.byType(ExomNumeral));
+      expect(numeral.value, '1');
+      expect(numeral.unit, '/5');
+      expect(
+        find.text(l10n.trainingDetailSetsDoneOf(4, 16).toUpperCase()),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.trainingDetailSetsDoneLabel), findsOneWidget);
+      final rule = tester.widget<ExomProgressRule>(
+        find.byType(ExomProgressRule),
+      );
+      expect(rule.segments, 5);
+      expect(rule.value, closeTo(0.2, 1e-9));
+      expect(find.text(l10n.trainingDetailExercisesDone(1, 5)), findsOneWidget);
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('a done row marks «hecha» in the data colour, never as a '
+          'system state (D19, ${brightness.name})', (tester) async {
+        final theme = brightness == Brightness.dark
+            ? AppTheme.dark
+            : AppTheme.light;
+        await _mount(tester, completed: {'te-1'}, theme: theme, size: tall);
+        final palette = theme.extension<ExomThemePalette>()!;
+        expect(tester.widget<Icon>(_rowCheck).color, palette.data);
+      });
+    }
+
+    // CC 4: every golden scene of the batch (detalle, detalle_en_curso,
+    // detalle_hecho) in both themes: no lime ink in light, contrast and
+    // tap-target guidelines.
+    const scenes = {
+      'detalle': <String>{},
+      'detalle_en_curso': {'te-1', 'te-2'},
+      'detalle_hecho': {'te-1', 'te-2', 'te-3', 'te-4', 'te-5'},
+    };
+    for (final brightness in Brightness.values) {
+      for (final scene in scenes.entries) {
+        testWidgets('${scene.key} (${brightness.name}): no lime ink, contrast '
+            'and tap targets', (tester) async {
+          await _mount(
+            tester,
+            completed: scene.value,
+            theme: brightness == Brightness.dark
+                ? AppTheme.dark
+                : AppTheme.light,
+            size: tall,
+          );
+          expect(tester.takeException(), isNull);
+          if (brightness == Brightness.light) expectNoLimeInk(tester);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await expectTapTargetGuidelines(tester);
+        });
+      }
+    }
+
+    // O1 (emulator pass): the API stores `order` 0-based and, with circuits,
+    // multiplied by 1000. The index is the position of each top-level row
+    // (exercise or circuit) as painted, never the raw `order`.
+    testWidgets('rows are numbered by position, not by the raw order', (
+      tester,
+    ) async {
+      TrainingExerciseEntity member(int order, String name, int position) =>
+          TrainingExerciseEntity(
+            id: 'te-$order',
+            order: order,
+            sets: 3,
+            repsOrDuration: '10',
+            restSeconds: 30,
+            blockId: 'block-1',
+            positionInBlock: position,
+            blockName: 'Circuito final',
+            blockRounds: 3,
+            restBetweenRoundsSeconds: 45,
+            exercise: ExerciseEntity(
+              id: 'ex-$order',
+              name: name,
+              muscleGroups: const [],
+            ),
+          );
+      await _mount(
+        tester,
+        size: tall,
+        training: TrainingEntity(
+          id: _trainingId,
+          name: 'Mixto',
+          types: const ['FUERZA'],
+          level: 'INTERMEDIATE',
+          tags: const [],
+          exercises: [
+            _exercise(0, 'Press de banca'),
+            _exercise(1000, 'Remo'),
+            _exercise(2000, 'Zancadas'),
+            member(3000, 'Burpees', 0),
+            member(4000, 'Comba', 1),
+          ],
+        ),
+      );
+      final rowIndexes = find.byWidgetPredicate(
+        (widget) => widget is ExomIndexNumber,
+      ).evaluate().where(
+        (element) =>
+            element.findAncestorWidgetOfExactType<ExomFigureColumns>() == null,
+      ).map((element) => (element.widget as ExomIndexNumber).n);
+      expect(rowIndexes.toList(), [1, 2, 3, 4]);
+      for (final label in const ['01', '02', '03', '04']) {
+        expect(find.text(label), findsWidgets);
+      }
+      for (final raw in const ['00', '1000', '2000', '3000', '4000']) {
+        expect(find.text(raw), findsNothing);
+      }
+      // The order of the rows themselves is unchanged.
+      final press = tester.getTopLeft(find.text('Press de banca')).dy;
+      final remo = tester.getTopLeft(find.text('Remo')).dy;
+      final zancadas = tester.getTopLeft(find.text('Zancadas')).dy;
+      final circuit = tester.getTopLeft(find.text('Circuito final')).dy;
+      expect(press < remo && remo < zancadas && zancadas < circuit, isTrue);
+    });
+
+    // O3 (emulator pass): switching the theme with the exercise sheet open
+    // must repaint the sheet in the new theme, not keep the colour captured
+    // when it was opened.
+    testWidgets('the exercise sheet follows a theme change while open', (
+      tester,
+    ) async {
+      final mode = ValueNotifier(ThemeMode.light);
+      addTearDown(mode.dispose);
+      await _mount(tester, size: tall, themeMode: mode);
+      await tester.tap(find.text('Sentadilla búlgara'));
+      await tester.pumpAndSettle();
+      final sheetMaterial = find
+          .descendant(
+            of: find.byType(BottomSheet),
+            matching: find.byType(Material),
+          )
+          .first;
+      expect(
+        tester.widget<Material>(sheetMaterial).color,
+        AppTheme.light.extension<ExomThemePalette>()!.surface,
+      );
+
+      mode.value = ThemeMode.dark;
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(
+        tester.widget<Material>(sheetMaterial).color,
+        AppTheme.dark.extension<ExomThemePalette>()!.surface,
+      );
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
     });
   });
 }

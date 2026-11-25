@@ -31,6 +31,8 @@ import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
     show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
+import '../features/trainings/presentation/pages/training_detail_redesign_test.dart'
+    show pumpTrainingDetail;
 
 const _codes = [
   'progress_conflict_review_required',
@@ -339,6 +341,41 @@ void main() {
       );
     });
     expect(tester.takeException(), isNull);
+  });
+
+  // L5-E2a «Detalle del entreno»: before starting (figures) and in progress
+  // (session progress block) at 320 dp with 1.3x and 1.6x and at 360 dp with
+  // 1.6x (Android non-linear scaler), in both languages, scrolled to the end
+  // (CC 3); 2.0x scrolling is in training_detail_redesign_test.dart.
+  group('Detalle del entreno does not overflow', () {
+    tearDown(() async => sl.reset());
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final started in const [false, true]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, '
+            '${started ? 'in progress' : 'before starting'}',
+            (tester) async {
+              await pumpTrainingDetail(
+                tester,
+                completed: started ? const {'te-1'} : const {},
+                width: width,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 12; i++) {
+                await tester.drag(scrollable, const Offset(0, -300));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
+      }
+    }
   });
 
   group('MetricsFormPage does not overflow', () {

@@ -6698,6 +6698,30 @@ abstract class AppLocalizations {
   /// **'Guardada en este móvil · pendiente de sincronizar'**
   String get trainingDetailCompletionSavedPending;
 
+  /// No description provided for @trainingDetailExercisesDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 hecho} other{{done} de {total} hechos}}'**
+  String trainingDetailExercisesDone(int done, int total);
+
+  /// No description provided for @trainingDetailProgressKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso de la sesión'**
+  String get trainingDetailProgressKicker;
+
+  /// No description provided for @trainingDetailSetsDoneOf.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total}'**
+  String trainingDetailSetsDoneOf(int done, int total);
+
+  /// No description provided for @trainingDetailSetsDoneLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'series hechas'**
+  String get trainingDetailSetsDoneLabel;
+
   /// No description provided for @activeExerciseCloseA11y.
   ///
   /// In es, this message translates to:

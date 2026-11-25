@@ -316,6 +316,13 @@ void main() {
     markCompleted(blocOf(tester), 1);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    // L5-E2a: the first done exercise adds the session progress block above
+    // the list, so bring the row back on stage before checking it.
+    await tester.scrollUntilVisible(
+      find.text('Single exercise 1'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(_rowCheck, findsOneWidget);
   });
 
@@ -340,6 +347,11 @@ void main() {
   });
 
   testWidgets('a new training revision regroups circuits', (tester) async {
+    // L5-E2a: the header (photo, date and figures) and the 72 dp rows are
+    // taller; a tall surface keeps the whole revised list on stage.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final fixture = await _mount(tester);
     fixture.repository.training = const TrainingEntity(
       id: 'training-1',

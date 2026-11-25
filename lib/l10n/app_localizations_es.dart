@@ -4031,6 +4031,28 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guardada en este móvil · pendiente de sincronizar';
 
   @override
+  String trainingDetailExercisesDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done de $total hechos',
+      one: '$done de 1 hecho',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trainingDetailProgressKicker => 'Progreso de la sesión';
+
+  @override
+  String trainingDetailSetsDoneOf(int done, int total) {
+    return '$done de $total';
+  }
+
+  @override
+  String get trainingDetailSetsDoneLabel => 'series hechas';
+
+  @override
   String get activeExerciseCloseA11y => 'Cerrar ejercicio';
 
   @override

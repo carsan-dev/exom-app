@@ -45,6 +45,8 @@ class ExomNumeralStepper extends StatefulWidget {
     required this.acceptsTypedOutOfRange,
     this.onInvalidInput,
     this.errorText,
+    this.rejectsSignedInput = false,
+    this.onSubmittedInvalid,
   }) : assert(min <= max, 'min must not exceed max'),
        assert(step > 0, 'step must be positive');
 
@@ -63,6 +65,16 @@ class ExomNumeralStepper extends StatefulWidget {
   final bool acceptsTypedOutOfRange;
   final ValueChanged<String>? onInvalidInput;
   final String? errorText;
+
+  /// Whether a typed or pasted «+» or «-» reaches the field. By default the
+  /// input filter drops it, so «-5» becomes «5»; when true the sign is kept
+  /// and the text, which does not parse, goes to [onInvalidInput].
+  final bool rejectsSignedInput;
+
+  /// Called with the raw text when the keyboard action (Enter / Done) is
+  /// pressed while the typed text is invalid. Typing stays open and keeps
+  /// the focus; by default nothing else happens.
+  final ValueChanged<String>? onSubmittedInvalid;
 
   /// Key of the tappable numeral, for tests.
   static const Key valueKey = ValueKey('exom-numeral-stepper-value');
@@ -153,6 +165,16 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
     }
   }
 
+  void _onSubmitted(String raw) {
+    if (_editing && !_typedValid) {
+      // The keyboard action drops the focus; typing stays open.
+      _focus.requestFocus();
+      widget.onSubmittedInvalid?.call(raw);
+      return;
+    }
+    _finish();
+  }
+
   void _step(int direction) {
     final change = widget.onChanged;
     if (change == null) return;
@@ -187,10 +209,16 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
       focusNode: _focus,
       autofocus: true,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(
+          widget.rejectsSignedInput
+              ? RegExp(r'[0-9.,+\-]')
+              : RegExp(r'[0-9.,]'),
+        ),
+      ],
       textInputAction: TextInputAction.done,
       onTextChanged: _onText,
-      onTextSubmitted: (_) => _finish(),
+      onTextSubmitted: _onSubmitted,
       errorText: widget.errorText,
       errorBelowRow: true,
       errorIcon: ExomIcons.error,

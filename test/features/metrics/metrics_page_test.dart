@@ -9,6 +9,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/anatomy_selector.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -217,6 +218,32 @@ Finder _fieldWithText(String text) => find.byWidgetPredicate(
   (w) => w is TextFormField && w.controller?.text == text,
 );
 
+/// The weight stepper (L5-E9b, D14-4: replaces the slider and the manual
+/// entry switch).
+Finder _weightStepper() => find.byKey(const Key('metrics-weight-stepper'));
+
+/// The figure painted in the weight stepper.
+Finder _weightFigure(String text) => find.descendant(
+  of: _weightStepper(),
+  matching: find.textContaining(text, findRichText: true),
+);
+
+/// Taps the weight figure to type it (the old manual entry).
+Future<void> _startTypingWeight(WidgetTester tester) async {
+  final numeral = find.descendant(
+    of: _weightStepper(),
+    matching: find.byKey(ExomNumeralStepper.valueKey),
+  );
+  await tester.ensureVisible(numeral);
+  await tester.tap(numeral);
+  await tester.pump();
+}
+
+Finder _weightField() => find.descendant(
+  of: _weightStepper(),
+  matching: find.byKey(ExomNumeralStepper.fieldKey),
+);
+
 /// Scrolls [target] clear of the pinned save bar so it can be tapped.
 Future<void> _scrollTo(WidgetTester tester, Finder target) async {
   await tester.scrollUntilVisible(
@@ -260,12 +287,10 @@ void main() {
       _expectNoTextBelow13(tester);
     });
 
-    testWidgets('empty day, manual weight entry', (tester) async {
+    testWidgets('empty day, typing the weight', (tester) async {
       await _mount(tester);
-      final l10n = _l10n(tester);
-      await tester.tap(find.byType(Switch));
-      await tester.pump();
-      expect(find.text(l10n.manualEntryToggle), findsOneWidget);
+      await _startTypingWeight(tester);
+      expect(_weightField(), findsOneWidget);
       _expectNoTextBelow13(tester);
     });
 
@@ -445,7 +470,8 @@ void main() {
         containsAll(['180,5', '32,5', '7,5', '74,5', '35,5', '36,0']),
       );
       expect(fieldTexts(tester).where((t) => t.contains('.')), isEmpty);
-      expect(find.text('68,4 kg'), findsOneWidget);
+      expect(_weightFigure('68,4'), findsWidgets);
+      expect(_weightFigure('68.4'), findsNothing);
     });
 
     testWidgets('en shows the loaded values with a point', (tester) async {
@@ -460,7 +486,8 @@ void main() {
         containsAll(['180.5', '32.5', '7.5', '74.5', '35.5', '36.0']),
       );
       expect(fieldTexts(tester).where((t) => t.contains(',')), isEmpty);
-      expect(find.text('68.4 kg'), findsOneWidget);
+      expect(_weightFigure('68.4'), findsWidgets);
+      expect(_weightFigure('68,4'), findsNothing);
     });
 
     testWidgets('choosing sleep hours fills the field with the locale sep', (
@@ -589,10 +616,8 @@ void main() {
           size: const Size(390, 6000),
         );
         expect(_fieldWithText(height), findsOneWidget);
-        // The weight field is shown in manual entry mode.
-        await tester.tap(find.byType(Switch));
-        await tester.pump();
-        expect(_fieldWithText(weight), findsOneWidget);
+        // The weight stepper shows the profile weight with the separator.
+        expect(_weightFigure(weight), findsWidgets);
       });
     }
 
@@ -605,13 +630,8 @@ void main() {
         latestGate: Completer<void>(),
         size: const Size(390, 6000),
       );
-      await tester.tap(find.byType(Switch));
-      await tester.pump();
       final height = tester
           .widget<TextFormField>(_fieldWithText('180,0'))
-          .controller!;
-      final weight = tester
-          .widget<TextFormField>(_fieldWithText('72,5'))
           .controller!;
       // A theme change notifies the page's inherited dependencies (so would
       // a locale or keyboard change).
@@ -622,17 +642,19 @@ void main() {
       }
 
       await tester.enterText(_fieldWithText('180,0'), '175,5');
-      await tester.enterText(_fieldWithText('72,5'), '80,5');
+      await _startTypingWeight(tester);
+      await tester.enterText(_weightField(), '80,5');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
       await changeDependencies(AppTheme.light);
       expect(height.text, '175,5');
-      expect(weight.text, '80,5');
+      expect(_weightFigure('80,5'), findsWidgets);
 
       // A field the user emptied stays empty: the preload runs once.
       height.clear();
-      weight.clear();
       await changeDependencies(AppTheme.dark);
       expect(height.text, isEmpty);
-      expect(weight.text, isEmpty);
+      expect(_weightFigure('80,5'), findsWidgets);
     });
 
     for (final (locale, estimatePattern, asmiPattern) in [

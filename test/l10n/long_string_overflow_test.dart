@@ -122,6 +122,7 @@ Future<void> _pumpMetricsForm(
   required double width,
   required double scale,
   required UnitSystem unitSystem,
+  bool nonlinear = false,
 }) async {
   tester.view.physicalSize = Size(width, 900);
   tester.view.devicePixelRatio = 1;
@@ -146,7 +147,11 @@ Future<void> _pumpMetricsForm(
         supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light,
         builder: (context, app) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: nonlinear
+                ? AndroidNonlinearTextScaler(scale)
+                : TextScaler.linear(scale),
+          ),
           child: app!,
         ),
         home: const MetricsFormPage(),
@@ -415,39 +420,56 @@ void main() {
       expect(steps, greaterThan(0), reason: '$label is not scrollable');
     }
 
+    // L5-E9b (CC 3): 320 dp at 1.3x and 1.6x and 360 dp at 1.6x, with the
+    // linear scaler and the Android 14+ nonlinear one, and 2.0x reachable by
+    // scrolling.
+    const cases = [
+      (320.0, 1.3, false),
+      (320.0, 1.3, true),
+      (320.0, 1.6, false),
+      (320.0, 1.6, true),
+      (360.0, 1.6, false),
+      (360.0, 1.6, true),
+      (320.0, 2.0, false),
+    ];
     for (final locale in const ['es', 'en']) {
       for (final unit in UnitSystem.values) {
-        testWidgets('$locale ${unit.name} 320dp x1.3 full form', (tester) async {
-          await _pumpMetricsForm(
-            tester,
-            locale: Locale(locale),
-            width: 320,
-            scale: 1.3,
-            unitSystem: unit,
-          );
-          final l10n = AppLocalizations.of(tester.element(find.byType(MetricsFormPage)));
-          expect(find.byType(MetricsFormPage), findsOneWidget);
-          expect(tester.takeException(), isNull);
-          // List mode of the measurements.
-          await sweep(tester, 'list');
-          expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
-          // Body-map mode, front and back views.
-          await tester.ensureVisible(find.text(l10n.bodyViewToggle));
-          await tester.pump();
-          await tester.tap(find.text(l10n.bodyViewToggle));
-          await tester.pump();
-          expect(tester.takeException(), isNull);
-          await sweep(tester, 'body map front');
-          final back = find.text(l10n.backViewLabel);
-          expect(back, findsOneWidget);
-          await tester.ensureVisible(back);
-          await tester.pump();
-          await tester.tap(back);
-          await tester.pump();
-          expect(tester.takeException(), isNull);
-          await sweep(tester, 'body map back');
-          expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
-        });
+        for (final (width, scale, nonlinear) in cases) {
+          final scaler = nonlinear ? 'android' : 'linear';
+          testWidgets('$locale ${unit.name} ${width.toInt()}dp x$scale $scaler '
+              'full form', (tester) async {
+            await _pumpMetricsForm(
+              tester,
+              locale: Locale(locale),
+              width: width,
+              scale: scale,
+              unitSystem: unit,
+              nonlinear: nonlinear,
+            );
+            final l10n = AppLocalizations.of(tester.element(find.byType(MetricsFormPage)));
+            expect(find.byType(MetricsFormPage), findsOneWidget);
+            expect(tester.takeException(), isNull);
+            // List mode of the measurements.
+            await sweep(tester, 'list');
+            expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
+            // Body-map mode, front and back views.
+            await tester.ensureVisible(find.text(l10n.bodyViewToggle));
+            await tester.pump();
+            await tester.tap(find.text(l10n.bodyViewToggle));
+            await tester.pump();
+            expect(tester.takeException(), isNull);
+            await sweep(tester, 'body map front');
+            final back = find.text(l10n.backViewLabel);
+            expect(back, findsOneWidget);
+            await tester.ensureVisible(back);
+            await tester.pump();
+            await tester.tap(back);
+            await tester.pump();
+            expect(tester.takeException(), isNull);
+            await sweep(tester, 'body map back');
+            expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
+          });
+        }
       }
     }
   });

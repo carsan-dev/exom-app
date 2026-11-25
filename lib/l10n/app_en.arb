@@ -328,12 +328,26 @@
   "measurementReviewTemplate": "Review the {measurement} measurement before saving.",
   "noChangesMessage": "You have not changed any metrics to save.",
   "metricsPageTitle": "Update metrics",
+  "metricsFormSubtitle": "Weight, height, muscle mass, sleep and measurements",
+  "metricsWeightDecrease": "Subtract {step}",
+  "@metricsWeightDecrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "metricsWeightIncrease": "Add {step}",
+  "@metricsWeightIncrease": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
   "recordDateTitle": "Record date",
   "recordDateDescription": "The record will be saved for the selected date, so you can log metrics and sleep from previous days.",
   "heightSectionTitle": "Height",
   "heightDescription": "Height is saved in your metrics history and also updates your profile to keep the SEEN calculation consistent.",
   "weightSectionTitle": "Weight",
   "manualEntryToggle": "Manual entry",
+  "metricsWeightTypeHint": "Tap the number to type it.",
   "weightUpdateNote": "Weight is saved only if you change it in this update.",
   "muscleMassSectionTitle": "Muscle mass",
   "muscleMassDescription": "Log your current estimate to compare your progress with your profile goal.",

@@ -12,7 +12,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/formatters/weight_input.dart'
-    show decimalSeparatorFor;
+    show decimalSeparatorFor, formatDisplayDecimal;
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -20,8 +20,13 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_segmented_control.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -56,16 +61,38 @@ class _MetricsViewState extends State<_MetricsView> {
     'https://www.seen.es/calculadoras/calculadora-masa-muscular-esqueletica',
   );
 
-  double _weight = 75.0;
-  bool _useManualWeight = false;
+  /// Weight of the form in kilograms (D14-4: the stepper replaces the slider
+  /// and the manual switch). Only sent when [_weightTouched].
+  double _weightKg = 75.0;
+
+  /// Whether the typed weight does not parse (empty or not a number): the
+  /// save is blocked with `validWeightRequired`, as the manual mode did.
+  bool _weightInputInvalid = false;
+
+  /// Whether the invalid typed weight shows its error inline: set when the
+  /// keyboard action is pressed on invalid text, cleared by a valid value or
+  /// a reload.
+  bool _weightErrorShown = false;
+
+  /// Range and step of the ± of the weight, in kilograms (the old slider:
+  /// 40–160 kg, 240 divisions). In imperial they are shown in pounds and the
+  /// step stays 0.5 kg (contract, table «Rangos de los steppers»).
+  static const double _weightMinKg = 40.0;
+  static const double _weightMaxKg = 160.0;
+  static const double _weightStepKg = 0.5;
+
   final _sleepController = TextEditingController();
-  final _weightController = TextEditingController();
   final _heightController = TextEditingController();
   final _muscleMassController = TextEditingController();
   DateTime _selectedMetricDate = DateUtils.dateOnly(DateTime.now());
-  double _sleepHours = 8.0;
   bool _heightTouched = false;
   bool _weightTouched = false;
+
+  /// Bumped whenever the form is filled from a load, so the weight stepper
+  /// is rebuilt and leaves any typing: the field then shows exactly the
+  /// weight that would be sent, as the old manual field did when its
+  /// controller was refilled.
+  int _weightFieldGeneration = 0;
   bool _muscleMassTouched = false;
   bool _sleepTouched = false;
   final Set<String> _touchedMeasures = <String>{};
@@ -134,7 +161,6 @@ class _MetricsViewState extends State<_MetricsView> {
   @override
   void dispose() {
     _sleepController.dispose();
-    _weightController.dispose();
     _heightController.dispose();
     _muscleMassController.dispose();
     for (final c in _measureControllers.values) {
@@ -233,13 +259,6 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  String _weightHint(AppLocalizations l10n, UnitSystem unitSystem) {
-    return localizedInputExample(
-      l10n,
-      unitSystem == UnitSystem.imperial ? 166.4 : 75.5,
-    );
-  }
-
   String _heightHint(AppLocalizations l10n, UnitSystem unitSystem) {
     final imperial = unitSystem == UnitSystem.imperial;
     return localizedInputExample(
@@ -294,9 +313,58 @@ class _MetricsViewState extends State<_MetricsView> {
 
   void _setSleepValue(double value) {
     setState(() {
-      _sleepHours = value;
       _sleepController.text = _fieldNumber(value.toStringAsFixed(1));
       _sleepTouched = true;
+    });
+  }
+
+  /// A value from the weight stepper, in the display unit. A ± in imperial
+  /// arrives in pounds; it is taken as the 0.5 kg step itself so the sent
+  /// kilograms do not carry the pound round trip (the old slider sent exact
+  /// multiples of its step). Anything else was typed and is converted as the
+  /// manual mode did.
+  void _onWeightChanged(double display, UnitSystem unitSystem) {
+    final kg =
+        _steppedWeightKg(display, unitSystem) ??
+        UnitConverters.weightFromDisplay(display, unitSystem);
+    setState(() {
+      _weightKg = kg;
+      _weightTouched = true;
+      _weightInputInvalid = false;
+      _weightErrorShown = false;
+    });
+  }
+
+  /// The kilograms of a ± from the current weight when [display] is that
+  /// step shown in pounds; null otherwise (metric needs no conversion). The
+  /// stepper rounds its stepped value to 1e-6, so a typed value only matches
+  /// with six exact decimals, and then differs from it by less than 1e-6 kg.
+  double? _steppedWeightKg(double display, UnitSystem unitSystem) {
+    if (unitSystem != UnitSystem.imperial) return null;
+    for (final direction in const [-1, 1]) {
+      final kg = (_weightKg + direction * _weightStepKg)
+          .clamp(_weightMinKg, _weightMaxKg)
+          .toDouble();
+      if ((UnitConverters.weightToDisplay(kg, unitSystem) - display).abs() <
+          1e-6) {
+        return kg;
+      }
+    }
+    return null;
+  }
+
+  void _onWeightInvalidInput(String _) {
+    setState(() {
+      _weightTouched = true;
+      _weightInputInvalid = true;
+    });
+  }
+
+  void _onWeightSubmittedInvalid(String _) {
+    setState(() {
+      _weightTouched = true;
+      _weightInputInvalid = true;
+      _weightErrorShown = true;
     });
   }
 
@@ -317,10 +385,8 @@ class _MetricsViewState extends State<_MetricsView> {
       _heightController.text = _lengthField(heightCm, unitSystem);
     }
 
-    if (weightKg != null && _weightController.text.isEmpty) {
-      _weight = weightKg.clamp(40.0, 160.0);
-      _weightController.text = _weightField(weightKg, unitSystem);
-      _useManualWeight = weightKg < 40.0 || weightKg > 160.0;
+    if (weightKg != null && !_weightTouched) {
+      _weightKg = weightKg;
     }
   }
 
@@ -330,22 +396,18 @@ class _MetricsViewState extends State<_MetricsView> {
     final profileWeightKg = _cachedProfileNumber('current_weight');
 
     setState(() {
-      _weight = (profileWeightKg ?? 75.0).clamp(40.0, 160.0);
-      _sleepHours = 8.0;
+      _weightKg = profileWeightKg ?? 75.0;
+      _weightInputInvalid = false;
+      _weightErrorShown = false;
+      _weightFieldGeneration++;
       _heightTouched = false;
       _weightTouched = false;
       _muscleMassTouched = false;
       _sleepTouched = false;
       _touchedMeasures.clear();
-      _useManualWeight =
-          profileWeightKg != null &&
-          (profileWeightKg < 40.0 || profileWeightKg > 160.0);
     });
     _heightController.text = profileHeightCm != null
         ? _lengthField(profileHeightCm, unitSystem)
-        : '';
-    _weightController.text = profileWeightKg != null
-        ? _weightField(profileWeightKg, unitSystem)
         : '';
     _muscleMassController.clear();
     _sleepController.clear();
@@ -662,21 +724,13 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     if (_weightTouched) {
-      if (_useManualWeight) {
-        final manualWeight = _parseDouble(_weightController.text);
-        if (manualWeight == null) {
-          _showValidationMessage(
-            AppLocalizations.of(context).validWeightRequired,
-          );
-          return;
-        }
-        data['weight_kg'] = UnitConverters.weightFromDisplay(
-          manualWeight,
-          unitSystem,
+      if (_weightInputInvalid) {
+        _showValidationMessage(
+          AppLocalizations.of(context).validWeightRequired,
         );
-      } else {
-        data['weight_kg'] = _weight;
+        return;
       }
+      data['weight_kg'] = _weightKg;
     } else if (currentWeightKg != null) {
       data['weight_kg'] = currentWeightKg;
     } else if (currentMetric == null && profileWeightKg != null) {
@@ -1076,12 +1130,11 @@ class _MetricsViewState extends State<_MetricsView> {
     setState(() {
       final weightKg = metric.weightKg;
       if (weightKg != null) {
-        _weight = weightKg.clamp(40.0, 160.0);
+        _weightKg = weightKg;
       }
-      final sleepHours = metric.sleepHours;
-      if (sleepHours != null) {
-        _sleepHours = sleepHours.clamp(4.0, 12.0);
-      }
+      _weightInputInvalid = false;
+      _weightErrorShown = false;
+      _weightFieldGeneration++;
       _heightTouched = false;
       _weightTouched = false;
       _muscleMassTouched = false;
@@ -1092,9 +1145,6 @@ class _MetricsViewState extends State<_MetricsView> {
         ? _lengthField(metric.heightCm, unitSystem)
         : profileHeightCm != null
         ? _lengthField(profileHeightCm, unitSystem)
-        : '';
-    _weightController.text = metric.weightKg != null
-        ? _weightField(metric.weightKg, unitSystem)
         : '';
     final sleepHours = metric.sleepHours;
     _sleepController.text = sleepHours != null
@@ -1214,6 +1264,18 @@ class _MetricsViewState extends State<_MetricsView> {
                 fontSize: 14,
                 height: 1.45,
               );
+              // Units next to a typed value: semibold so the two thin letters
+              // keep their contrast in the light theme.
+              final unitStyle = secondary.copyWith(fontWeight: FontWeight.w600);
+              final fieldStyle = TextStyle(
+                color: palette.textPrimary,
+                fontSize: 18,
+              );
+              final weightUnit = weightUnitSymbol(unitSystem);
+              double weightDisplay(double kg) =>
+                  UnitConverters.weightToDisplay(kg, unitSystem);
+              final weightStepText =
+                  '${formatDisplayDecimal(weightDisplay(_weightStepKg), decimalSeparator: decimalSeparatorFor(Localizations.localeOf(context).languageCode))} $weightUnit';
               return Column(
                 children: [
                   Expanded(
@@ -1221,376 +1283,232 @@ class _MetricsViewState extends State<_MetricsView> {
                       padding: const EdgeInsets.only(bottom: 24),
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                          child: HomeTitle(l10n.metricsPageTitle),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              HomeTitle(l10n.metricsPageTitle),
+                              const SizedBox(height: ExomSpacing.sm),
+                              Text(l10n.metricsFormSubtitle, style: secondary),
+                            ],
+                          ),
                         ),
-                        _SectionCard(
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 1,
                           title: l10n.recordDateTitle,
-                          icon: ExomIcons.calendar,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.recordDateDescription,
-                                style: secondary,
-                              ),
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                onPressed: _pickMetricDate,
-                                icon: const Icon(
-                                  ExomIcons.event,
-                                  size: 18,
-                                ),
-                                label: Text(_selectedDateLabel(context)),
-                              ),
-                            ],
-                          ),
                         ),
-                        _SectionCard(
-                          title: l10n.heightSectionTitle,
-                          icon: ExomIcons.height,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(l10n.heightDescription, style: secondary),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _heightController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                style: TextStyle(
-                                  color: palette.textPrimary,
-                                  fontSize: 18,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: _heightHint(l10n, unitSystem),
-                                  suffixText: lengthUnitSymbol(unitSystem),
-                                  suffixStyle: secondary,
-                                ),
-                                onChanged: (_) => _heightTouched = true,
-                              ),
-                            ],
-                          ),
+                        _FormSection(
+                          children: [
+                            _DateField(
+                              label: _selectedDateLabel(context),
+                              onTap: _pickMetricDate,
+                            ),
+                            Text(l10n.recordDateDescription, style: secondary),
+                          ],
                         ),
-                        _SectionCard(
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 2,
                           title: l10n.weightSectionTitle,
-                          icon: ExomIcons.weight,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      l10n.manualEntryToggle,
-                                      style: secondary,
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: _useManualWeight,
-                                    onChanged: (val) =>
-                                        setState(() => _useManualWeight = val),
-                                    activeThumbColor: palette.primary,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                l10n.weightUpdateNote,
-                                style: secondary.copyWith(fontSize: 13),
-                              ),
-                              if (_useManualWeight) ...[
-                                const SizedBox(height: 12),
-                                TextFormField(
-                                  controller: _weightController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  style: TextStyle(
-                                    color: palette.textPrimary,
-                                    fontSize: 18,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: _weightHint(l10n, unitSystem),
-                                    suffixText: weightUnitSymbol(unitSystem),
-                                    suffixStyle: secondary,
-                                  ),
-                                  onChanged: (_) => _weightTouched = true,
-                                ),
-                              ] else ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Text(
-                                      formatWeight(40, unitSystem, decimals: 0),
-                                      style: secondary.copyWith(fontSize: 13),
-                                    ),
-                                    Expanded(
-                                      child: Center(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            _fieldNumber(
-                                              formatWeight(_weight, unitSystem),
-                                            ),
-                                            style: TextStyle(
-                                              fontFamily:
-                                                  AppTheme.displayFontFamily,
-                                              color: palette.textPrimary,
-                                              fontSize: 40,
-                                              fontWeight: FontWeight.w800,
-                                              height: 1.0,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      formatWeight(
-                                        160,
-                                        unitSystem,
-                                        decimals: 0,
-                                      ),
-                                      style: secondary.copyWith(fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                                Slider(
-                                  value: _weight,
-                                  min: 40.0,
-                                  max: 160.0,
-                                  divisions: 240,
-                                  activeColor: palette.textPrimary,
-                                  inactiveColor: palette.surfaceVariant,
-                                  onChanged: (val) => setState(() {
-                                    _weight = val;
-                                    _weightTouched = true;
-                                  }),
-                                ),
-                              ],
-                            ],
-                          ),
                         ),
-                        _SectionCard(
-                          title: l10n.muscleMassSectionTitle,
-                          icon: ExomIcons.train,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.muscleMassDescription,
-                                style: secondary,
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _muscleMassController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                style: TextStyle(
-                                  color: palette.textPrimary,
-                                  fontSize: 18,
+                        _FormSection(
+                          children: [
+                            KeyedSubtree(
+                              key: ValueKey(_weightFieldGeneration),
+                              child: ExomNumeralStepper(
+                                key: const Key('metrics-weight-stepper'),
+                                value: weightDisplay(_weightKg),
+                                min: weightDisplay(_weightMinKg),
+                                max: weightDisplay(_weightMaxKg),
+                                step: weightDisplay(_weightStepKg),
+                                unit: weightUnit,
+                                label: l10n.weightSectionTitle,
+                                decrementLabel: l10n.metricsWeightDecrease(
+                                  weightStepText,
                                 ),
-                                decoration: InputDecoration(
-                                  hintText: localizedInputExample(
-                                    l10n,
-                                    unitSystem == UnitSystem.imperial
-                                        ? 71.7
-                                        : 32.5,
-                                  ),
-                                  suffixText: weightUnitSymbol(unitSystem),
-                                  suffixStyle: secondary,
+                                incrementLabel: l10n.metricsWeightIncrease(
+                                  weightStepText,
                                 ),
-                                onChanged: (_) => _muscleMassTouched = true,
-                              ),
-                              const SizedBox(height: 16),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: palette.borderSoft,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.seenCalculatorTitle,
-                                        style: TextStyle(
-                                          color: palette.textPrimary,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        l10n.seenCalculatorDescription,
-                                        style: secondary,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _SeenSourceLink(
-                                        text: l10n.seenSourceLink,
-                                        onTap: _openSeenSource,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: OutlinedButton.icon(
-                                          onPressed: () =>
-                                              _openSeenEstimateCalculator(
-                                                context,
-                                              ),
-                                          icon: const Icon(
-                                            ExomIcons.calculate,
-                                          ),
-                                          label: Text(
-                                            l10n.calculateEstimateButton,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _SectionCard(
-                          title: l10n.sleepHoursSectionTitle,
-                          icon: ExomIcons.sleep,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.sleepHoursDescription,
-                                style: secondary,
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _sleepController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                style: TextStyle(
-                                  color: palette.textPrimary,
-                                  fontSize: 18,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: localizedInputExample(l10n, 7.5),
-                                  suffixText: 'h',
-                                  suffixStyle: secondary,
-                                ),
-                                onChanged: (value) {
-                                  _sleepTouched = true;
-                                  final parsed = _parseDouble(value);
-                                  if (parsed != null) {
-                                    _sleepHours = parsed.clamp(0.0, 24.0);
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [6.0, 7.0, 8.0, 9.0]
-                                    .map((value) {
-                                      return ActionChip(
-                                        label: Text(
-                                          '${value.toStringAsFixed(0)} h',
-                                        ),
-                                        onPressed: () => _setSleepValue(value),
-                                      );
-                                    })
-                                    .toList(growable: false),
-                              ),
-                              const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: _SleepEmoji(_sleepHours),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _SectionCard(
-                          title: l10n.bodyMeasurementsTitle,
-                          icon: ExomIcons.ruler,
-                          trailing: InkWell(
-                            onTap: () => setState(() {
-                              _bodyMapMode = !_bodyMapMode;
-                              _selectedMeasure = null;
-                            }),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                minHeight: kExomMinTapTarget,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _bodyMapMode
-                                        ? ExomIcons.grid
-                                        : ExomIcons.body,
-                                    color: palette.textPrimary,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      _bodyMapMode
-                                          ? l10n.listViewToggle
-                                          : l10n.bodyViewToggle,
-                                      style: TextStyle(
-                                        color: palette.textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: palette.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                // The manual mode took any typed value.
+                                acceptsTypedOutOfRange: true,
+                                onChanged: (value) =>
+                                    _onWeightChanged(value, unitSystem),
+                                onInvalidInput: _onWeightInvalidInput,
+                                // A sign is invalid, not silently dropped.
+                                rejectsSignedInput: true,
+                                onSubmittedInvalid: _onWeightSubmittedInvalid,
+                                errorText: _weightErrorShown
+                                    ? l10n.validWeightRequired
+                                    : null,
                               ),
                             ),
-                          ),
-                          child: _bodyMapMode
-                              ? _buildBodyMapMeasurements()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: GridView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 2,
-                                          crossAxisSpacing: 12,
-                                          mainAxisSpacing: 8,
-                                          mainAxisExtent:
-                                              112 *
-                                              math.max(
-                                                1.0,
-                                                MediaQuery.textScalerOf(
-                                                      context,
-                                                    ).scale(14) /
-                                                    14,
-                                              ),
-                                        ),
-                                    itemCount: _measureZones.length,
-                                    itemBuilder: (context, index) {
-                                      final zone = _measureZones[index].zone;
-                                      return _buildMeasureEditor(context, zone);
-                                    },
+                            Text(l10n.metricsWeightTypeHint, style: secondary),
+                            Text(l10n.weightUpdateNote, style: secondary),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 3,
+                          title: l10n.heightSectionTitle,
+                        ),
+                        _FormSection(
+                          children: [
+                            TextFormField(
+                              controller: _heightController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
                                   ),
+                              style: fieldStyle,
+                              decoration: InputDecoration(
+                                hintText: _heightHint(l10n, unitSystem),
+                                suffixText: lengthUnitSymbol(unitSystem),
+                                suffixStyle: unitStyle,
+                              ),
+                              onChanged: (_) => _heightTouched = true,
+                            ),
+                            Text(l10n.heightDescription, style: secondary),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 4,
+                          title: l10n.muscleMassSectionTitle,
+                        ),
+                        _FormSection(
+                          children: [
+                            TextFormField(
+                              controller: _muscleMassController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              style: fieldStyle,
+                              decoration: InputDecoration(
+                                hintText: localizedInputExample(
+                                  l10n,
+                                  unitSystem == UnitSystem.imperial
+                                      ? 71.7
+                                      : 32.5,
                                 ),
+                                suffixText: weightUnit,
+                                suffixStyle: unitStyle,
+                              ),
+                              onChanged: (_) => _muscleMassTouched = true,
+                            ),
+                            Text(l10n.muscleMassDescription, style: secondary),
+                            const SizedBox(height: ExomSpacing.sm),
+                            Text(
+                              l10n.seenCalculatorTitle,
+                              style: TextStyle(
+                                color: palette.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              l10n.seenCalculatorDescription,
+                              style: secondary,
+                            ),
+                            _SeenSourceLink(
+                              text: l10n.seenSourceLink,
+                              onTap: _openSeenSource,
+                            ),
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: ExomTextLink(
+                                label: l10n.calculateEstimateButton,
+                                onTap: () =>
+                                    _openSeenEstimateCalculator(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 5,
+                          title: l10n.sleepHoursSectionTitle,
+                        ),
+                        _FormSection(
+                          children: [
+                            TextFormField(
+                              controller: _sleepController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              style: fieldStyle,
+                              decoration: InputDecoration(
+                                hintText: localizedInputExample(l10n, 7.5),
+                                suffixText: 'h',
+                                suffixStyle: unitStyle,
+                              ),
+                              onChanged: (_) => _sleepTouched = true,
+                            ),
+                            Text(l10n.sleepHoursDescription, style: secondary),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [6.0, 7.0, 8.0, 9.0]
+                                  .map((value) {
+                                    return ActionChip(
+                                      label: Text(
+                                        '${value.toStringAsFixed(0)} h',
+                                      ),
+                                      onPressed: () => _setSleepValue(value),
+                                    );
+                                  })
+                                  .toList(growable: false),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        ExomNumberedSectionHeader(
+                          n: 6,
+                          title: l10n.bodyMeasurementsTitle,
+                        ),
+                        _FormSection(
+                          children: [
+                            ExomSegmentedControl<bool>(
+                              options: const [true, false],
+                              selected: _bodyMapMode,
+                              labelOf: (bodyMap) => bodyMap
+                                  ? l10n.bodyViewToggle
+                                  : l10n.listViewToggle,
+                              onChanged: (bodyMap) => setState(() {
+                                _bodyMapMode = bodyMap;
+                                _selectedMeasure = null;
+                              }),
+                            ),
+                            if (_bodyMapMode)
+                              _buildBodyMapMeasurements()
+                            else
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 8,
+                                      mainAxisExtent:
+                                          112 *
+                                          math.max(
+                                            1.0,
+                                            MediaQuery.textScalerOf(
+                                                  context,
+                                                ).scale(14) /
+                                                14,
+                                          ),
+                                    ),
+                                itemCount: _measureZones.length,
+                                itemBuilder: (context, index) {
+                                  final zone = _measureZones[index].zone;
+                                  return _buildMeasureEditor(context, zone);
+                                },
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -1599,6 +1517,7 @@ class _MetricsViewState extends State<_MetricsView> {
                     padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
                     child: ExomPrimaryButton(
                       label: l10n.saveMetricsButton,
+                      trailingIcon: ExomIcons.check,
                       busy: isSaving,
                       onPressed: _save,
                     ),
@@ -1660,66 +1579,85 @@ class _SeenSourceLink extends StatelessWidget {
   }
 }
 
-/// Flat section of the form: 1 px `rule` on top, muted icon and the title in
-/// Barlow Condensed (plan §6 "Paneles planos, con filetes finos"). The optional
-/// [trailing] control sits under the title so a long label never fights it for
-/// the row.
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget child;
-  final Widget? trailing;
+/// Body of a numbered section (`.pad.mt8.stack.g8` under an `.x-sh` of the
+/// sketch «Formulario de métricas»): 20 dp sides, 8 dp from the header and
+/// between its children.
+class _FormSection extends StatelessWidget {
+  const _FormSection({required this.children});
 
-  const _SectionCard({
-    required this.title,
-    required this.icon,
-    required this.child,
-    this.trailing,
-  });
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ExomSpacing.xl,
+        ExomSpacing.sm,
+        ExomSpacing.xl,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(height: ExomSpacing.sm),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The record date as a field that opens the date picker (`.input` with the
+/// calendar icon): 56 high, 1.5 px muted border, radius 4. One button node
+/// for assistive technology with the date as its label.
+class _DateField extends StatelessWidget {
+  const _DateField({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: palette.borderSoft, width: 1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(
+              horizontal: ExomSpacing.md,
+              vertical: ExomSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: palette.textSecondary, width: 1.5),
+            ),
+            child: Row(
               children: [
-                ExcludeSemantics(
-                  child: Icon(icon, color: palette.textSecondary, size: 20),
-                ),
-                const SizedBox(width: 10),
+                Icon(ExomIcons.calendar, color: palette.textPrimary, size: 20),
+                const SizedBox(width: ExomSpacing.sm),
                 Expanded(
-                  child: Semantics(
-                    header: true,
-                    label: title,
-                    excludeSemantics: true,
-                    child: Text(
-                      title.toUpperCase(),
-                      style: TextStyle(
-                        fontFamily: AppTheme.displayFontFamily,
-                        color: palette.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        height: 1.05,
-                        letterSpacing: 0.2,
-                      ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: 18,
+                      height: 1.3,
                     ),
                   ),
                 ),
               ],
             ),
-            if (trailing != null) ...[const SizedBox(height: 4), trailing!],
-            const SizedBox(height: 8),
-            child,
-          ],
+          ),
         ),
       ),
     );
@@ -1773,7 +1711,11 @@ class _MeasureInput extends StatelessWidget {
           decoration: InputDecoration(
             hintText: _measureHint(context, unitSystem),
             suffixText: lengthUnitSymbol(unitSystem),
-            suffixStyle: TextStyle(color: palette.textSecondary, fontSize: 14),
+            suffixStyle: TextStyle(
+              color: palette.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 10,
@@ -1885,47 +1827,6 @@ class _BilateralMeasureInput extends StatelessWidget {
               onChanged: onRightChanged,
             ),
           ],
-        ),
-      ],
-    );
-  }
-}
-
-class _SleepEmoji extends StatelessWidget {
-  final double hours;
-
-  const _SleepEmoji(this.hours);
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-    final String emoji;
-    final String label;
-    if (hours < 6) {
-      emoji = '😴';
-      label = l10n.sleepVeryLow;
-    } else if (hours < 7) {
-      emoji = '😕';
-      label = l10n.sleepInsufficient;
-    } else if (hours <= 9) {
-      emoji = '😊';
-      label = l10n.sleepOptimal;
-    } else {
-      emoji = '😪';
-      label = l10n.sleepTooMuch;
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 20)),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            label,
-            style: TextStyle(color: palette.textSecondary, fontSize: 14),
-          ),
         ),
       ],
     );

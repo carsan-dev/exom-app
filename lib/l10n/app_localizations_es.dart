@@ -3101,6 +3101,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.';
 
   @override
+  String get circuitLastRoundVideoSaveError =>
+      'No se pudo guardar el vídeo. La ronda está guardada; te lo pediremos al terminar.';
+
+  @override
   String get mediaPickerPermissionTitle => 'Permiso necesario';
 
   @override

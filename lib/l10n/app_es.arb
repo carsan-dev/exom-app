@@ -1089,6 +1089,7 @@
   "@requiredCircuitVideos": {"placeholders": {"circuitName": {"type": "String"}}},
   "setPerformanceMinutes": "Minutos",
   "circuitSaveError": "No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.",
+  "circuitLastRoundVideoSaveError": "No se pudo guardar el vídeo. La ronda está guardada; te lo pediremos al terminar.",
   "mediaPickerPermissionTitle": "Permiso necesario",
   "mediaPickerPermissionMessage": "Da acceso a la cámara o a la galería desde Ajustes y vuelve a intentarlo.",
   "mediaPickerErrorTitle": "No se pudo abrir el archivo",

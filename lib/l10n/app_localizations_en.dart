@@ -3066,6 +3066,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The circuit could not be saved. Your data is still here; try again.';
 
   @override
+  String get circuitLastRoundVideoSaveError =>
+      'Couldn\'t save the video. The round is saved; we\'ll ask for it when you finish.';
+
+  @override
   String get mediaPickerPermissionTitle => 'Permission required';
 
   @override

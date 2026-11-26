@@ -1446,6 +1446,8 @@
   "lastSetVideoChosenSet": "Set {setNumber} · {performance}",
   "@lastSetVideoChosenSet": {"placeholders": {"setNumber": {"type": "int"}, "performance": {"type": "String"}}},
   "changeVideoA11y": "Change video",
+  "videoReadyWithDurationA11y": "Video ready, duration {duration}",
+  "@videoReadyWithDurationA11y": {"placeholders": {"duration": {"type": "String"}}},
   "setSheetObjective": "Target {objective}",
   "@setSheetObjective": {"placeholders": {"objective": {"type": "String"}}},
   "setSheetObjectiveWithPrevious": "Target {objective} — Last time {previous}",

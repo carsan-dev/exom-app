@@ -7284,6 +7284,12 @@ abstract class AppLocalizations {
   /// **'Cambiar vídeo'**
   String get changeVideoA11y;
 
+  /// No description provided for @videoReadyWithDurationA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo preparado, duración {duration}'**
+  String videoReadyWithDurationA11y(String duration);
+
   /// No description provided for @setSheetObjective.
   ///
   /// In es, this message translates to:

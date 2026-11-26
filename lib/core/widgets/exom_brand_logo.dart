@@ -144,7 +144,11 @@ class ExomBrandLogo extends StatelessWidget {
 }
 
 /// Symbol of the lockup for an em of [em] logical px (symbol `.96em × .896em`).
-Widget _symbolFor(BuildContext context, double em) {
+Widget _symbolFor(
+  BuildContext context,
+  double em, {
+  WidgetBuilder? placeholderBuilder,
+}) {
   return SvgPicture(
     ExomBrandLogo.loaderFor(
       Theme.of(context).brightness,
@@ -154,6 +158,7 @@ Widget _symbolFor(BuildContext context, double em) {
     width: em * ExomBrandLogo.symbolWidthEm,
     height: em * ExomBrandLogo.symbolHeightEm,
     fit: BoxFit.contain,
+    placeholderBuilder: placeholderBuilder,
   );
 }
 
@@ -218,16 +223,24 @@ class ExomBrandSymbol extends StatelessWidget {
     this.height = 28,
     this.semanticsLabel,
     this.excludeSemantics = false,
+    this.placeholderBuilder,
   });
 
   final double height;
   final String? semanticsLabel;
   final bool excludeSemantics;
 
+  /// Shown while the picture decodes (default: an empty box of its size).
+  final WidgetBuilder? placeholderBuilder;
+
   @override
   Widget build(BuildContext context) {
     return _semantic(
-      _symbolFor(context, height / ExomBrandLogo.symbolHeightEm),
+      _symbolFor(
+        context,
+        height / ExomBrandLogo.symbolHeightEm,
+        placeholderBuilder: placeholderBuilder,
+      ),
       semanticsLabel: semanticsLabel,
       excludeSemantics: excludeSemantics,
     );

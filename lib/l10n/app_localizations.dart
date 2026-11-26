@@ -254,6 +254,24 @@ abstract class AppLocalizations {
   /// **'Entrena. Come. Evoluciona.'**
   String get splashTagline;
 
+  /// No description provided for @splashWelcomeFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Vamos a por'**
+  String get splashWelcomeFirst;
+
+  /// No description provided for @splashWelcomeSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'tu cambio.'**
+  String get splashWelcomeSecond;
+
+  /// No description provided for @splashSlowStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectando…'**
+  String get splashSlowStart;
+
   /// No description provided for @emailFieldLabel.
   ///
   /// In es, this message translates to:
@@ -3007,6 +3025,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo abrir la tienda de aplicaciones.'**
   String get updateStoreNotOpenedError;
+
+  /// No description provided for @updateStoreRetryHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pulsa «Actualizar» para reintentar.'**
+  String get updateStoreRetryHint;
 
   /// No description provided for @privacyPolicyNotOpenedError.
   ///

@@ -94,11 +94,17 @@ flutter_launcher_icons:
   remove_alpha_ios: true
 
 flutter_native_splash:
-  color: "#101111"
-  image: assets/branding/splash_logo.png
+  # Follows the system theme (L5-D3, D3-Q2): paper (light theme background)
+  # with the light symbol, carbon with the dark symbol.
+  color: "#F2F1E9"
+  image: assets/branding/splash_logo_light.png
+  color_dark: "#101111"
+  image_dark: assets/branding/splash_logo.png
   android_12:
-    color: "#101111"
-    image: assets/branding/splash_android12.png
+    color: "#F2F1E9"
+    image: assets/branding/splash_android12_light.png
+    color_dark: "#101111"
+    image_dark: assets/branding/splash_android12.png
   android: true
   ios: true
 

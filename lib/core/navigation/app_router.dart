@@ -18,6 +18,7 @@ import 'package:exom_app/core/widgets/exom_index_list.dart';
 import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
+import 'package:exom_app/features/splash/presentation/v4d/v4d_handoff.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';
@@ -119,6 +120,96 @@ class AppRoutes {
   static const settings = '/settings';
   static const help = '/help';
 }
+
+/// Page of the main `ShellRoute` (L5-D3). The same as the default
+/// `MaterialPage` of a `builder` route, except when it is created during the
+/// V4d hand-off ([V4dHandoff.active]): then Inicio appears at once under the
+/// splash curtain, with no entry transition, so the window of the X shows it
+/// in place. The screen's later transitions (covered by a pushed route) are
+/// unchanged.
+@visibleForTesting
+class ShellEntryPage<T> extends Page<T> {
+  const ShellEntryPage({
+    required this.child,
+    super.key,
+    super.name,
+    super.arguments,
+    super.restorationId,
+  });
+
+  final Widget child;
+
+  @override
+  Route<T> createRoute(BuildContext context) =>
+      _ShellEntryRoute<T>(page: this, instant: V4dHandoff.active);
+}
+
+/// The main shell's page: [MainShell] in [V4dHomeEntrance], with the keys
+/// GoRouter gives a `builder` route's `MaterialPage`.
+Page<void> _mainShellPage(GoRouterState state, Widget child) =>
+    ShellEntryPage<void>(
+      key: state.pageKey,
+      name: state.name ?? state.path,
+      arguments: <String, String>{
+        ...state.pathParameters,
+        ...state.uri.queryParameters,
+      },
+      restorationId: state.pageKey.value,
+      child: V4dHomeEntrance(child: MainShell(child: child)),
+    );
+
+class _ShellEntryRoute<T> extends MaterialPageRoute<T> {
+  _ShellEntryRoute({required ShellEntryPage<T> page, required this.instant})
+    : super(settings: page, builder: _unused);
+
+  static Widget _unused(BuildContext context) => const SizedBox.shrink();
+
+  /// Created during the V4d hand-off: no entry transition. Only the entry:
+  /// its exit (popped) uses the normal reverse transition, whose duration
+  /// [MaterialRouteTransitionMixin.reverseTransitionDuration] already gives.
+  final bool instant;
+
+  @override
+  Widget buildContent(BuildContext context) =>
+      (settings as ShellEntryPage<T>).child;
+
+  @override
+  Duration get transitionDuration =>
+      instant ? Duration.zero : super.transitionDuration;
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => super.buildTransitions(
+    context,
+    instant && animation.status != AnimationStatus.reverse
+        ? kAlwaysCompleteAnimation
+        : animation,
+    secondaryAnimation,
+    child,
+  );
+}
+
+/// Page of the login route: a 600 ms fade, except when the splash hands off
+/// to the login under its curtain (L5-D3, D3-Q9, [V4dHandoff.loginEntry]).
+/// Then the login appears at once under the X, which opens onto it. Every
+/// other entry to the login (logout, expired session) keeps the fade.
+@visibleForTesting
+Page<void> loginRoutePage({required LocalKey key, required Widget child}) =>
+    CustomTransitionPage(
+      key: key,
+      child: child,
+      transitionDuration: V4dHandoff.loginEntry.value
+          ? Duration.zero
+          : const Duration(milliseconds: 600),
+      transitionsBuilder: (ctx, animation, secondary, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+        child: child,
+      ),
+    );
 
 /// Build a platform-aware [Page]: native iOS swipe-back via [CupertinoPage],
 /// Material slide on Android. Used for full-screen routes outside the shell.
@@ -244,19 +335,8 @@ class AppRouter {
       // Auth
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const LoginPage(),
-          transitionDuration: const Duration(milliseconds: 600),
-          transitionsBuilder: (ctx, animation, secondary, child) =>
-              FadeTransition(
-                opacity: CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                ),
-                child: child,
-              ),
-        ),
+        pageBuilder: (context, state) =>
+            loginRoutePage(key: state.pageKey, child: const LoginPage()),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
@@ -279,7 +359,9 @@ class AppRouter {
 
       // Main shell with bottom nav
       ShellRoute(
-        builder: (context, state, child) => MainShell(child: child),
+        // L5-D3: Inicio under the splash. Only the splash navigates here
+        // during the hand-off, after the gates resolve with a valid session.
+        pageBuilder: (context, state, child) => _mainShellPage(state, child),
         routes: [
           GoRoute(
             path: AppRoutes.home,
@@ -472,6 +554,12 @@ bool _isCompletingAuth(BuildContext context) {
   }
 }
 
+/// Inicio shows its data (from the cache or the network), not the skeleton
+/// nor an error: the V4d opening may start (L5-D3 r3, D3-Q6).
+@visibleForTesting
+bool isInicioContent(HomeState state) =>
+    state is HomeLoaded || state is HomeRestDay;
+
 class MainShell extends StatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
@@ -496,11 +584,17 @@ class _MainShellState extends State<MainShell> {
   late final NotificationsBloc _notificationsBloc;
   late final HomeBloc _homeBloc;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
+  StreamSubscription<HomeState>? _inicioContent;
 
   @override
   void initState() {
     super.initState();
     _homeBloc = sl<HomeBloc>()..add(const HomeLoadRequested());
+    // L5-D3 r3 (D3-Q6): under the splash, the opening waits for this.
+    _inicioContent = V4dHandoff.watchInicioContent(
+      () => _homeBloc.stream,
+      isInicioContent,
+    );
     _notificationsBloc = sl<NotificationsBloc>()
       ..add(const NotificationsUnreadCountRefreshRequested());
     _fcmSubscription = sl<FcmService>().onIncomingMessage.listen((_) {
@@ -511,6 +605,7 @@ class _MainShellState extends State<MainShell> {
   @override
   void dispose() {
     _fcmSubscription?.cancel();
+    _inicioContent?.cancel();
     _homeBloc.close();
     super.dispose();
   }
@@ -585,7 +680,8 @@ class _MainShellState extends State<MainShell> {
             extendBodyBehindAppBar: true,
             extendBody: true,
             appBar: GlassAppBar(
-              title: const ExomBrandLogo(height: 28),
+              // L5-D3: the header logo lands at the end of the V4d opening.
+              title: const V4dHeaderLanding(child: ExomBrandLogo(height: 28)),
               actions: [
                 BlocBuilder<NotificationsBloc, NotificationsState>(
                   builder: (context, state) {

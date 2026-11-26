@@ -24,6 +24,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
+import 'package:exom_app/core/widgets/exom_launch_symbol.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
@@ -43,9 +44,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _configureImageCache();
   await showBootstrapSplash();
+  // L5-D3 r3 (D3-E1): the splash's first frame draws this decoded symbol.
+  final launchSymbol = precacheLaunchSymbol();
 
   try {
     await _bootstrap().timeout(const Duration(seconds: 20));
+    await launchSymbol.timeout(_launchSymbolCap, onTimeout: () {});
     runApp(const ExomApp());
   } catch (error, stackTrace) {
     debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
@@ -57,14 +61,21 @@ Future<void> main() async {
 /// Longest the native splash may be held for the symbol to be ready.
 const Duration _bootstrapSymbolCap = Duration(milliseconds: 500);
 
-/// Loader [ExomBrandSymbol] builds on the bootstrap screen (dark theme,
-/// symbol height [_bootstrapSymbolHeight]); same cache key as the widget's.
+/// Loader [ExomBrandSymbol] builds on the bootstrap screen for [brightness]
+/// (default: the platform's, as the screen follows the system like the native
+/// splash; symbol height [ExomLaunchSymbol.height]); same cache key as the
+/// widget's.
 @visibleForTesting
-SvgAssetLoader bootstrapSymbolLoader() => ExomBrandLogo.loaderFor(
-  Brightness.dark,
-  AppTheme.dark.extension<ExomThemePalette>()!,
-  height: _bootstrapSymbolHeight / ExomBrandLogo.symbolHeightEm,
-);
+SvgAssetLoader bootstrapSymbolLoader([Brightness? brightness]) {
+  return ExomLaunchSymbol.loaderFor(
+    brightness ?? WidgetsBinding.instance.platformDispatcher.platformBrightness,
+  );
+}
+
+/// AppTheme.light/dark are pure static getters (no DI, no async), so they are
+/// safe before bootstrap and give the brand widgets their palette.
+ThemeData _bootstrapTheme(Brightness brightness) =>
+    brightness == Brightness.dark ? AppTheme.dark : AppTheme.light;
 
 /// Loads the recoloured symbol into flutter_svg's cache so the first
 /// [ExomBootstrapApp] build finds the bytes without waiting for the asset.
@@ -104,6 +115,23 @@ Future<void> showBootstrapSplash({
     debugPrint('[BOOTSTRAP] Symbol wait ended early: $error');
   } finally {
     binding.allowFirstFrame();
+  }
+}
+
+/// Longest [main] waits for [precacheLaunchSymbol] once the rest of the
+/// bootstrap is done.
+const Duration _launchSymbolCap = Duration(milliseconds: 300);
+
+/// Decodes the launch symbol the splash draws on its first frame (L5-D3 r3,
+/// D3-E1): without it that frame showed the background alone while the
+/// splash's own symbol was decoded. [main] starts it while the bootstrap
+/// screen is up, together with the bootstrap. Never throws.
+@visibleForTesting
+Future<void> precacheLaunchSymbol() async {
+  try {
+    await ExomLaunchSymbol.precachePictures();
+  } catch (error) {
+    debugPrint('[BOOTSTRAP] Launch symbol skipped: $error');
   }
 }
 
@@ -159,16 +187,16 @@ Future<void> _initializeProgressPhotoUploads() async {
   }
 }
 
-/// Symbol width of the native splash (dp); the bootstrap screen continues it.
-const double _bootstrapSymbolWidth = 80.64;
-const double _bootstrapSymbolHeight = _bootstrapSymbolWidth * 112 / 120;
 const double _bootstrapIndicatorSize = 24;
 const double _bootstrapIndicatorGap = 32;
 const Duration _bootstrapIndicatorDelay = Duration(milliseconds: 300);
 const Duration _bootstrapIndicatorFade = Duration(milliseconds: 200);
 
 /// Exact continuation of the native splash: the symbol at the screen centre
-/// (insets ignored). A progress indicator appears only after 300 ms.
+/// (insets ignored, geometry in [ExomLaunchSymbol]). Like the native splash it
+/// follows the system brightness (carbon in dark, paper in light), not the
+/// theme chosen in the app, which is not loaded yet. A progress indicator
+/// appears only after 300 ms.
 class ExomBootstrapApp extends StatelessWidget {
   const ExomBootstrapApp({super.key});
 
@@ -176,9 +204,9 @@ class ExomBootstrapApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // AppTheme.dark is a pure static getter (no DI, no async), so it is safe
-      // before bootstrap and gives the brand widgets their dark palette.
-      theme: AppTheme.dark,
+      theme: _bootstrapTheme(Brightness.light),
+      darkTheme: _bootstrapTheme(Brightness.dark),
+      themeMode: ThemeMode.system,
       home: const _BootstrapScaffold(child: _BootstrapSplash()),
     );
   }
@@ -231,24 +259,26 @@ class _BootstrapSplashState extends State<_BootstrapSplash>
         return Stack(
           children: [
             const Center(
-              child: ExomBrandSymbol(height: _bootstrapSymbolHeight),
+              child: ExomBrandSymbol(height: ExomLaunchSymbol.height),
             ),
             Positioned(
               left: 0,
               right: 0,
               top:
-                  centerY + _bootstrapSymbolHeight / 2 + _bootstrapIndicatorGap,
+                  centerY +
+                  ExomLaunchSymbol.height / 2 +
+                  _bootstrapIndicatorGap,
               child: Align(
                 alignment: Alignment.topCenter,
                 child: FadeTransition(
                   key: const ValueKey<String>('bootstrap-progress-fade'),
                   opacity: _opacity,
-                  child: const SizedBox(
+                  child: SizedBox(
                     width: _bootstrapIndicatorSize,
                     height: _bootstrapIndicatorSize,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.primary,
+                      color: context.exomPalette.primary,
                     ),
                   ),
                 ),
@@ -308,7 +338,8 @@ class ExomBootstrapErrorApp extends StatelessWidget {
   }
 }
 
-/// Transparent status bar, carbon navigation bar, light icons on both.
+/// Dark bootstrap bars: transparent status bar, carbon navigation bar, light
+/// icons on both.
 @visibleForTesting
 const SystemUiOverlayStyle bootstrapSystemUiStyle = SystemUiOverlayStyle(
   statusBarColor: Colors.transparent,
@@ -318,6 +349,22 @@ const SystemUiOverlayStyle bootstrapSystemUiStyle = SystemUiOverlayStyle(
   systemNavigationBarIconBrightness: Brightness.light,
 );
 
+/// Bootstrap bars for [brightness]: [bootstrapSystemUiStyle] in dark; in light
+/// a transparent status bar, paper navigation bar and dark icons on both.
+SystemUiOverlayStyle bootstrapSystemUiStyleFor(Brightness brightness) {
+  if (brightness == Brightness.dark) return bootstrapSystemUiStyle;
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: _bootstrapTheme(
+      brightness,
+    ).extension<ExomThemePalette>()!.background,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
+}
+
+/// Scaffold of the bootstrap screens, in the palette of the ambient theme.
 class _BootstrapScaffold extends StatelessWidget {
   const _BootstrapScaffold({required this.child});
 
@@ -326,9 +373,9 @@ class _BootstrapScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: bootstrapSystemUiStyle,
+      value: bootstrapSystemUiStyleFor(Theme.of(context).brightness),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.exomPalette.background,
         resizeToAvoidBottomInset: false,
         body: child,
       ),

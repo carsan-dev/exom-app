@@ -98,6 +98,12 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/onboarding/presentation/widgets/onboarding_summary_step.dart',
   'lib/features/onboarding/presentation/widgets/onboarding_progress_indicator.dart',
   'lib/features/onboarding/presentation/widgets/onboarding_step_layout.dart',
+  // L5-D3 · Arranque V4d y avisos de actualización.
+  'lib/features/splash/presentation/pages/splash_page.dart',
+  'lib/features/splash/presentation/v4d/v4d_scene.dart',
+  'lib/features/splash/presentation/v4d/v4d_curtain.dart',
+  'lib/features/splash/presentation/v4d/v4d_handoff.dart',
+  'lib/features/splash/presentation/widgets/splash_update_dialog.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

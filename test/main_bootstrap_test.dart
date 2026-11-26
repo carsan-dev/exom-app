@@ -1,5 +1,6 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
+import 'package:exom_app/core/widgets/exom_launch_symbol.dart';
 import 'package:exom_app/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,9 +15,14 @@ Future<void> _setSurface(
   WidgetTester tester, {
   bool insets = true,
   bool reduceMotion = false,
+  Brightness brightness = Brightness.dark,
 }) async {
   tester.view.physicalSize = const Size(412, 915);
   tester.view.devicePixelRatio = 1.0;
+  // The bootstrap screen follows the system brightness, like the native
+  // splash; flutter_test defaults to light, so each test sets it.
+  tester.platformDispatcher.platformBrightnessTestValue = brightness;
+  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   if (insets) {
     tester.view.padding = const FakeViewPadding(top: 48, bottom: 34);
     tester.view.viewPadding = const FakeViewPadding(top: 48, bottom: 34);
@@ -138,6 +144,106 @@ void main() {
       handle.dispose();
       await tester.pumpWidget(const SizedBox());
     });
+  });
+
+  group('follows the system brightness (native splash, D3-Q2)', () {
+    const paper = Color(0xFFF2F1E9);
+    const carbon = Color(0xFF101111);
+    const lightAccent = Color(0xFF4F6B00);
+    const screen = Size(412, 915);
+
+    for (final brightness in Brightness.values) {
+      final isDark = brightness == Brightness.dark;
+      final background = isDark ? carbon : paper;
+      final icons = isDark ? Brightness.light : Brightness.dark;
+
+      testWidgets('${brightness.name}: background and system bars', (
+        tester,
+      ) async {
+        await _setSurface(tester, brightness: brightness);
+        await tester.pumpWidget(const ExomBootstrapApp());
+        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.backgroundColor, background);
+        final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
+        );
+        expect(region.value.statusBarColor, Colors.transparent);
+        expect(region.value.statusBarIconBrightness, icons);
+        expect(region.value.statusBarBrightness, brightness);
+        expect(region.value.systemNavigationBarColor, background);
+        expect(region.value.systemNavigationBarIconBrightness, icons);
+        await tester.pumpWidget(const SizedBox());
+      });
+
+      testWidgets('${brightness.name}: symbol recoloured, same geometry', (
+        tester,
+      ) async {
+        await _setSurface(tester, brightness: brightness);
+        await tester.pumpWidget(const ExomBootstrapApp());
+        final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+        expect(picture.bytesLoader, bootstrapSymbolLoader(brightness));
+        final context = tester.element(find.byType(SvgPicture));
+        expect(Theme.of(context).brightness, brightness);
+        final rect = tester.getRect(find.byType(SvgPicture));
+        final expected = ExomLaunchSymbol.rectIn(screen);
+        expect(rect.center.dx, closeTo(expected.center.dx, 0.01));
+        expect(rect.center.dy, closeTo(expected.center.dy, 0.01));
+        expect(rect.height, closeTo(75.264, 0.01));
+        // In light the outlined symbol's padded viewBox makes the picture box
+        // 80.57 wide instead of 80.64 (ExomBrandSymbol, L5-LOGO).
+        expect(rect.width, closeTo(80.64, isDark ? 0.01 : 0.1));
+        await tester.pumpWidget(const SizedBox());
+      });
+
+      testWidgets('${brightness.name}: indicator in the theme accent', (
+        tester,
+      ) async {
+        await _setSurface(tester, brightness: brightness);
+        await tester.pumpWidget(const ExomBootstrapApp());
+        final widget = tester.widget<CircularProgressIndicator>(
+          find.byType(CircularProgressIndicator),
+        );
+        expect(widget.color, isDark ? AppColors.primary : lightAccent);
+        await tester.pumpWidget(const SizedBox());
+      });
+
+      testWidgets('${brightness.name}: precache fills that brightness key', (
+        tester,
+      ) async {
+        svg.cache.clear();
+        await _setSurface(tester, brightness: brightness);
+        await tester.runAsync(precacheBootstrapSymbol);
+        var loaded = false;
+        await tester.runAsync(
+          () => svg.cache.putIfAbsent(
+            bootstrapSymbolLoader(brightness).cacheKey(null),
+            () {
+              loaded = true;
+              throw StateError('cache miss');
+            },
+          ),
+        );
+        expect(loaded, isFalse);
+      });
+
+      testWidgets('golden first frame ${brightness.name}', (tester) async {
+        svg.cache.clear();
+        await _setSurface(tester, brightness: brightness);
+        await tester.runAsync(precacheBootstrapSymbol);
+        await tester.pumpWidget(const ExomBootstrapApp());
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(
+            'golden/goldens/arranque_inicializacion_${brightness.name}.png',
+          ),
+        );
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
   });
 
   group('first-frame symbol', () {

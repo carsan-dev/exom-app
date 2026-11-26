@@ -103,6 +103,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splashTagline => 'Train. Eat. Evolve.';
 
   @override
+  String get splashWelcomeFirst => 'Let\'s go for';
+
+  @override
+  String get splashWelcomeSecond => 'your change.';
+
+  @override
+  String get splashSlowStart => 'Connecting…';
+
+  @override
   String get emailFieldLabel => 'Email';
 
   @override
@@ -1613,6 +1622,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateStoreNotOpenedError => 'Could not open the app store.';
+
+  @override
+  String get updateStoreRetryHint => 'Tap «Update» to try again.';
 
   @override
   String get privacyPolicyNotOpenedError =>

@@ -26,6 +26,8 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import '../core/widgets/android_nonlinear_text_scaler.dart';
 import '../features/challenges/challenges_test_support.dart';
+import '../features/diets/shopping_list_scene.dart'
+    show pumpShoppingListScene, pumpShoppingSetupScene;
 import '../features/profile/presentation/profile_scene.dart' as perfil;
 import '../features/progress_photos/progress_photos_redesign_scene.dart'
     show pumpPhotosScene;
@@ -686,6 +688,49 @@ void main() {
             await sweep(tester, 'body map back');
             expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
           });
+        }
+      }
+    }
+  });
+
+  // L5-E8 «Lista de la compra»: «Elige tus alternativas» and the list with
+  // its marks at 320 dp with 1.3x and 1.6x and at 360 dp with 1.6x (Android
+  // non-linear scaler), in both languages, scrolled to the end with the
+  // pinned action (CC 3); 2.0x scrolling is in shopping_list_redesign_test.
+  group('Lista de la compra does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final setup in [true, false]) {
+          testWidgets(
+            '${setup ? 'choice' : 'list'} at ${width.toInt()}dp, ${scale}x, '
+            '${locale.languageCode}',
+            (tester) async {
+              final pump = setup
+                  ? pumpShoppingSetupScene
+                  : pumpShoppingListScene;
+              await pump(
+                tester,
+                locale: locale,
+                width: width,
+                height: 640,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 20; i++) {
+                await tester.drag(scrollable, const Offset(0, -250));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+              expect(
+                find.byKey(
+                  Key(setup ? 'shopping-list-generate' : 'shopping-list-share'),
+                ),
+                findsOneWidget,
+              );
+            },
+          );
         }
       }
     }

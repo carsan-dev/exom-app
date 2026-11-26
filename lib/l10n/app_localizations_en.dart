@@ -2632,6 +2632,79 @@ class AppLocalizationsEn extends AppLocalizations {
       'There are no ingredients in this week\'s meals';
 
   @override
+  String get shoppingListSetupFirst => 'Pick your';
+
+  @override
+  String get shoppingListSetupSecond => 'alternatives.';
+
+  @override
+  String shoppingListMealsWithOptions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'meals',
+      one: 'meal',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shoppingListMealsWithOptionsFoot => 'with alternatives';
+
+  @override
+  String get shoppingListSetupNote =>
+      'The list is built from the option chosen for each meal.';
+
+  @override
+  String shoppingListQuestion(String day, String meal) {
+    return '$day · $meal';
+  }
+
+  @override
+  String shoppingListWeekRange(String start, String end) {
+    return 'Week from $start to $end';
+  }
+
+  @override
+  String get shoppingListResultFirst => 'Your list.';
+
+  @override
+  String get shoppingListResultSecondWeek => 'This week.';
+
+  @override
+  String get shoppingListResultSecondMonth => 'This month.';
+
+  @override
+  String shoppingListResultSecondWeekOf(String start) {
+    return 'Week of $start.';
+  }
+
+  @override
+  String shoppingListProducts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'products',
+      one: 'product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shoppingListCheckedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count checked',
+      one: '$count checked',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shoppingListShare => 'Share list';
+
+  @override
   String get ingredientToTaste => 'to taste';
 
   @override

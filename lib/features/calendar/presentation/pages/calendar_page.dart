@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
@@ -629,6 +628,24 @@ class _CalendarViewState extends State<_CalendarView> {
       );
       if (format == null || !context.mounted) return;
 
+      final mealTypes = {
+        'BREAKFAST': l10n.mealTypeBreakfast,
+        'LUNCH': l10n.mealTypeLunch,
+        'SNACK': l10n.mealTypeSnack,
+        'DINNER': l10n.mealTypeDinner,
+      };
+      if (format == WeeklyDietExportFormat.shoppingList) {
+        // L5-E8: the shopping list is a pair of screens that build the PDF
+        // themselves («Compartir lista»); the export ends when they close.
+        await openShoppingList(
+          context,
+          period: period,
+          calendarMonth: exportPeriod == _DietExportPeriod.month,
+          mealTypes: mealTypes,
+        );
+        return;
+      }
+
       final labels = WeeklyDietPdfLabels(
         title: exportPeriod == _DietExportPeriod.month
             ? l10n.monthlyDietPdfTitle
@@ -636,39 +653,19 @@ class _CalendarViewState extends State<_CalendarView> {
         noDiet: l10n.weeklyDietNoDiet,
         ingredients: l10n.weeklyDietIngredients,
         alternatives: l10n.weeklyDietAlternatives,
-        mealTypes: {
-          'BREAKFAST': l10n.mealTypeBreakfast,
-          'LUNCH': l10n.mealTypeLunch,
-          'SNACK': l10n.mealTypeSnack,
-          'DINNER': l10n.mealTypeDinner,
-        },
+        mealTypes: mealTypes,
       );
-      late final Uint8List bytes;
-      late final String filename;
-      if (format == WeeklyDietExportFormat.menu) {
-        bytes = await GetIt.I<WeeklyDietPdfService>().build(
-          week: period,
-          locale: locale,
-          labels: labels,
-        );
-        filename = dietExportFilename(
-          shoppingList: false,
-          start: period.start,
-          end: period.end,
-          calendarMonth: exportPeriod == _DietExportPeriod.month,
-        );
-      } else {
-        final result = await buildWeeklyShoppingListPdf(
-          context,
-          period: period,
-          calendarMonth: exportPeriod == _DietExportPeriod.month,
-          skipSelectorWithoutVariants: true,
-          mealTypes: labels.mealTypes,
-        );
-        if (result == null) return;
-        bytes = result.bytes;
-        filename = result.filename;
-      }
+      final bytes = await GetIt.I<WeeklyDietPdfService>().build(
+        week: period,
+        locale: locale,
+        labels: labels,
+      );
+      final filename = dietExportFilename(
+        shoppingList: false,
+        start: period.start,
+        end: period.end,
+        calendarMonth: exportPeriod == _DietExportPeriod.month,
+      );
       if (!context.mounted) return;
 
       await printOrSharePdf(context, bytes: bytes, filename: filename);

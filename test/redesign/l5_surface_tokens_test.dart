@@ -124,6 +124,9 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/splash/presentation/v4d/v4d_curtain.dart',
   'lib/features/splash/presentation/v4d/v4d_handoff.dart',
   'lib/features/splash/presentation/widgets/splash_update_dialog.dart',
+  // L5-E8 · Lista de la compra.
+  'lib/features/diets/presentation/pages/shopping_list_pages.dart',
+  'lib/features/diets/presentation/widgets/weekly_shopping_list_flow.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

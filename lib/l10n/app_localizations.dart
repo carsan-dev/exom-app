@@ -4826,6 +4826,90 @@ abstract class AppLocalizations {
   /// **'No hay ingredientes en las comidas de esta semana'**
   String get weeklyShoppingListEmpty;
 
+  /// No description provided for @shoppingListSetupFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige tus'**
+  String get shoppingListSetupFirst;
+
+  /// No description provided for @shoppingListSetupSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'alternativas.'**
+  String get shoppingListSetupSecond;
+
+  /// No description provided for @shoppingListMealsWithOptions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{comida} other{comidas}}'**
+  String shoppingListMealsWithOptions(int count);
+
+  /// No description provided for @shoppingListMealsWithOptionsFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'con alternativa'**
+  String get shoppingListMealsWithOptionsFoot;
+
+  /// No description provided for @shoppingListSetupNote.
+  ///
+  /// In es, this message translates to:
+  /// **'La lista se genera con la opción elegida de cada comida.'**
+  String get shoppingListSetupNote;
+
+  /// No description provided for @shoppingListQuestion.
+  ///
+  /// In es, this message translates to:
+  /// **'{day} · {meal}'**
+  String shoppingListQuestion(String day, String meal);
+
+  /// No description provided for @shoppingListWeekRange.
+  ///
+  /// In es, this message translates to:
+  /// **'Semana del {start} al {end}'**
+  String shoppingListWeekRange(String start, String end);
+
+  /// No description provided for @shoppingListResultFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu lista.'**
+  String get shoppingListResultFirst;
+
+  /// No description provided for @shoppingListResultSecondWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta semana.'**
+  String get shoppingListResultSecondWeek;
+
+  /// No description provided for @shoppingListResultSecondMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Este mes.'**
+  String get shoppingListResultSecondMonth;
+
+  /// No description provided for @shoppingListResultSecondWeekOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Semana del {start}.'**
+  String shoppingListResultSecondWeekOf(String start);
+
+  /// No description provided for @shoppingListProducts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{producto} other{productos}}'**
+  String shoppingListProducts(int count);
+
+  /// No description provided for @shoppingListCheckedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{{count} marcado} other{{count} marcados}}'**
+  String shoppingListCheckedCount(int count);
+
+  /// No description provided for @shoppingListShare.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir lista'**
+  String get shoppingListShare;
+
   /// No description provided for @ingredientToTaste.
   ///
   /// In es, this message translates to:

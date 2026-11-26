@@ -134,6 +134,7 @@ import 'package:exom_app/features/notifications/domain/usecases/get_unread_count
 import 'package:exom_app/features/notifications/domain/usecases/mark_all_notifications_as_read_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/mark_notification_as_read_usecase.dart';
 import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc.dart';
+import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc_session_scope.dart';
 
 // Onboarding
 import 'package:exom_app/core/onboarding/onboarding_sync_coordinator.dart';
@@ -184,6 +185,34 @@ void registerAutomaticPromptCoordinator({
       loadRecaps: () => sl<GetMyRecapsUseCase>()(),
       clock: clock,
     ),
+  );
+}
+
+/// Owner of the signed-in session: account and sign-in generation, null when
+/// signed out. Changes on every sign-in and sign-out.
+String? currentSessionOwnerKey() {
+  final session = sl<FirebaseAuthService>().currentSession;
+  return session == null ? null : '${session.uid}:${session.generation}';
+}
+
+/// The [NotificationsBloc] shared by the shell bell and the notifications
+/// page, one per signed-in session (see [NotificationsBlocSessionScope]).
+/// Needs the notification use cases and [FirebaseAuthService].
+void registerAppNotificationsBloc() {
+  sl.registerLazySingleton(
+    () => NotificationsBlocSessionScope(
+      create: () => NotificationsBloc(
+        getMyNotifications: sl<GetMyNotificationsUseCase>(),
+        getUnreadCount: sl<GetUnreadCountUseCase>(),
+        markAsRead: sl<MarkNotificationAsReadUseCase>(),
+        markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
+        deleteRead: sl<DeleteReadNotificationsUseCase>(),
+      ),
+      sessionKey: currentSessionOwnerKey,
+    ),
+  );
+  sl.registerFactory<NotificationsBloc>(
+    () => sl<NotificationsBlocSessionScope>().current,
   );
 }
 
@@ -597,15 +626,7 @@ Future<void> initDependencies() async {
     () => DeleteReadNotificationsUseCase(sl<NotificationsRepository>()),
   );
 
-  sl.registerLazySingleton(
-    () => NotificationsBloc(
-      getMyNotifications: sl<GetMyNotificationsUseCase>(),
-      getUnreadCount: sl<GetUnreadCountUseCase>(),
-      markAsRead: sl<MarkNotificationAsReadUseCase>(),
-      markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
-      deleteRead: sl<DeleteReadNotificationsUseCase>(),
-    ),
-  );
+  registerAppNotificationsBloc();
 
   // ── Onboarding ────────────────────────────────────────────────────────────
   sl.registerLazySingleton<OnboardingRemoteDataSource>(

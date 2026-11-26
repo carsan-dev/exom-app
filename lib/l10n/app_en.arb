@@ -1383,6 +1383,8 @@
   "trainingDetailSetsDoneOf": "{done} of {total}",
   "@trainingDetailSetsDoneOf": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
   "trainingDetailSetsDoneLabel": "sets done",
+  "trainingDetailProgressSemantics": "{done} of {total} exercises done, {setsDone} of {setsTotal} sets done",
+  "@trainingDetailProgressSemantics": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}, "setsDone": {"type": "int"}, "setsTotal": {"type": "int"}}},
   "activeExerciseCloseA11y": "Close exercise",
   "activeExercisePosition": "Exercise {current} of {total}",
   "@activeExercisePosition": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},

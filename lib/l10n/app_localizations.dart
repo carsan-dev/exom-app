@@ -7028,6 +7028,17 @@ abstract class AppLocalizations {
   /// **'series hechas'**
   String get trainingDetailSetsDoneLabel;
 
+  /// No description provided for @trainingDetailProgressSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total} ejercicios hechos, {setsDone} de {setsTotal} series hechas'**
+  String trainingDetailProgressSemantics(
+    int done,
+    int total,
+    int setsDone,
+    int setsTotal,
+  );
+
   /// No description provided for @activeExerciseCloseA11y.
   ///
   /// In es, this message translates to:

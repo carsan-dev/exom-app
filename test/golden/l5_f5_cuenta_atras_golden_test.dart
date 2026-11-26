@@ -63,6 +63,23 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  // Halfway through the 180 ms change «5» -> «4»: only one figure is drawn
+  // (the old one already left, the new one is fading in); before the fix the
+  // two digits overlapped at half opacity as a lime block.
+  testWidgets('golden cuenta_atras_transicion_dark_1_0x', (tester) async {
+    final clock = CountdownClock();
+    await pumpStartCountdown(tester, clock: clock);
+    await clock.advance(tester, const Duration(milliseconds: 950));
+    await clock.advance(tester, const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 90));
+    expectNoOverflow(tester);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/cuenta_atras_transicion_dark_1_0x.png'),
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('golden cuenta_atras_reducido_dark_1_0x', (tester) async {
     final clock = CountdownClock();
     await pumpStartCountdown(tester, clock: clock, disableAnimations: true);

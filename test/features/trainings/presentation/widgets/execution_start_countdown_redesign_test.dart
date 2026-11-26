@@ -225,6 +225,44 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('the figure change never shows two figures at once (no lime '
+      'block of overlapped digits)', (tester) async {
+    final clock = CountdownClock();
+    await pumpStartCountdown(tester, clock: clock);
+    // 950 ms: still «5»; the next tick reaches 4000 ms remaining: «4».
+    await clock.advance(tester, const Duration(milliseconds: 950));
+    await clock.advance(tester, const Duration(milliseconds: 50));
+    expect(find.text('4'), findsOneWidget);
+    final switcher = find.byType(AnimatedSwitcher);
+    // Visible opacity of a figure: product of its fades inside the switcher.
+    double opacityOf(String figure) {
+      final text = find.descendant(of: switcher, matching: find.text(figure));
+      if (text.evaluate().isEmpty) return 0;
+      return tester
+          .widgetList<FadeTransition>(
+            find.ancestor(of: text, matching: find.byType(FadeTransition)),
+          )
+          .fold<double>(1, (o, fade) => o * fade.opacity.value);
+    }
+
+    var sawNew = false;
+    for (var ms = 0; ms <= 180; ms += 10) {
+      final old = opacityOf('5');
+      final now = opacityOf('4');
+      expect(
+        old > 0.001 && now > 0.001,
+        isFalse,
+        reason: 'at $ms ms «5» ($old) and «4» ($now) overlap',
+      );
+      if (now > 0) sawNew = true;
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(sawNew, isTrue);
+    expect(opacityOf('5'), 0);
+    expect(opacityOf('4'), 1);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final removeAnimations in [false, true]) {
     testWidgets('fires exactly at the 5 s deadline '
         '(Android «Remove animations»: $removeAnimations)', (tester) async {

@@ -1023,6 +1023,54 @@ void main() {
       expect(find.text(l10n.trainingDetailExercisesDone(1, 5)), findsOneWidget);
     });
 
+    testWidgets('in progress: the big figure is labelled «ejercicios» like '
+        '«series hechas» and the block reads both counts', (tester) async {
+      await _mount(tester, completed: {'te-1'}, size: tall);
+      final l10n = _l10n(tester);
+      final block = find.byType(ExomFeatureBlock);
+      final exercisesLabel = find.descendant(
+        of: block,
+        matching: find.text(l10n.exercises.toLowerCase()),
+      );
+      final setsLabel = find.descendant(
+        of: block,
+        matching: find.text(l10n.trainingDetailSetsDoneLabel),
+      );
+      expect(exercisesLabel, findsOneWidget);
+      // Same style as «series hechas».
+      final exercisesStyle = tester.widget<Text>(exercisesLabel).style!;
+      final setsStyle = tester.widget<Text>(setsLabel).style!;
+      expect(exercisesStyle.fontFamily, setsStyle.fontFamily);
+      expect(exercisesStyle.fontSize, setsStyle.fontSize);
+      expect(exercisesStyle.height, setsStyle.height);
+      expect(exercisesStyle.color, setsStyle.color);
+      // Same relative position as «series hechas»: right under its figure
+      // and start-aligned with it (the pair may wrap to two runs).
+      void expectCaptionUnder(Finder caption, Rect figure) {
+        final rect = tester.getRect(caption);
+        expect(rect.top - figure.bottom, inInclusiveRange(-0.5, 4));
+        expect(rect.left, closeTo(figure.left, 0.5));
+      }
+
+      expectCaptionUnder(
+        exercisesLabel,
+        tester.getRect(find.byKey(ExomNumeral.valueKey)),
+      );
+      expectCaptionUnder(
+        setsLabel,
+        tester.getRect(
+          find.text(l10n.trainingDetailSetsDoneOf(4, 16).toUpperCase()),
+        ),
+      );
+      // One accessible summary for the block with both counts.
+      expect(
+        find.bySemanticsLabel(
+          l10n.trainingDetailProgressSemantics(1, 5, 4, 16),
+        ),
+        findsOneWidget,
+      );
+    });
+
     for (final brightness in Brightness.values) {
       testWidgets('a done row marks «hecha» in the data colour, never as a '
           'system state (D19, ${brightness.name})', (tester) async {

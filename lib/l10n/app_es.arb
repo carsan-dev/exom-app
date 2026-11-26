@@ -1492,6 +1492,8 @@
   "trainingDetailSetsDoneOf": "{done} de {total}",
   "@trainingDetailSetsDoneOf": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
   "trainingDetailSetsDoneLabel": "series hechas",
+  "trainingDetailProgressSemantics": "{done} de {total} ejercicios hechos, {setsDone} de {setsTotal} series hechas",
+  "@trainingDetailProgressSemantics": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}, "setsDone": {"type": "int"}, "setsTotal": {"type": "int"}}},
   "activeExerciseCloseA11y": "Cerrar ejercicio",
   "activeExercisePosition": "Ejercicio {current} de {total}",
   "@activeExercisePosition": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},

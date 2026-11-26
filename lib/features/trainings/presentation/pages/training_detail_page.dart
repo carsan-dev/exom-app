@@ -1815,8 +1815,9 @@ class _DetailHeader extends StatelessWidget {
 }
 
 /// Session progress (sketch `.x-feat` «Progreso de la sesión»): exercises done
-/// as the protagonist figure («2/6», data colour), the planned sets of the
-/// done exercises beside it and one segment per exercise.
+/// as the protagonist figure («2/6», data colour) captioned «ejercicios», the
+/// planned sets of the done exercises beside it captioned «series hechas» and
+/// one segment per exercise.
 class _SessionProgress extends StatelessWidget {
   const _SessionProgress({
     required this.completed,
@@ -1834,6 +1835,12 @@ class _SessionProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final captionStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      color: palette.textSecondary,
+      fontSize: 14,
+      height: 1.35,
+    );
     return ExomFeatureBlock(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1842,32 +1849,57 @@ class _SessionProgress extends StatelessWidget {
           children: [
             ExomKicker(l10n.trainingDetailProgressKicker),
             const SizedBox(height: ExomSpacing.md),
-            ExomNumeral(
-              value: formatFigure(context, completed),
-              unit: '/${formatFigure(context, total)}',
-              side: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+            // One accessible summary of both counts; the figure alone («1/5»)
+            // does not say it counts exercises.
+            Semantics(
+              container: true,
+              label: l10n.trainingDetailProgressSemantics(
+                completed,
+                total,
+                completedSets,
+                totalSets,
+              ),
+              excludeSemantics: true,
+              // Each figure carries its caption right below it, in the same
+              // style, so «1/5» reads as exercises next to «4 de 16 / series
+              // hechas» (same layout as ExomNumeral with a side: wrap, 18 dp
+              // apart, bottoms aligned so both captions share a line).
+              child: Wrap(
+                spacing: 18,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
-                  Text(
-                    l10n
-                        .trainingDetailSetsDoneOf(completedSets, totalSets)
-                        .toUpperCase(),
-                    style: ExomType.section.copyWith(
-                      fontSize: 28,
-                      height: 0.95,
-                      letterSpacing: -0.28,
-                      color: palette.textPrimary,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ExomNumeral(
+                        value: formatFigure(context, completed),
+                        unit: '/${formatFigure(context, total)}',
+                      ),
+                      Text(l10n.exercises.toLowerCase(), style: captionStyle),
+                    ],
                   ),
-                  Text(
-                    l10n.trainingDetailSetsDoneLabel,
-                    style: TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      color: palette.textSecondary,
-                      fontSize: 14,
-                      height: 1.35,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n
+                            .trainingDetailSetsDoneOf(completedSets, totalSets)
+                            .toUpperCase(),
+                        style: ExomType.section.copyWith(
+                          fontSize: 28,
+                          height: 0.95,
+                          letterSpacing: -0.28,
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        l10n.trainingDetailSetsDoneLabel,
+                        style: captionStyle,
+                      ),
+                    ],
                   ),
                 ],
               ),

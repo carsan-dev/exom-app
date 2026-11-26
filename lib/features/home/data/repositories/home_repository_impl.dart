@@ -30,6 +30,7 @@ class HomeRepositoryImpl implements HomeRepository {
               id: training.id,
               name: training.name,
               completed: training.completed,
+              unfinished: training.unfinished,
               thumbnailUrl: training.thumbnailUrl,
             ),
           )

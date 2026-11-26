@@ -15,6 +15,7 @@ import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
@@ -47,6 +48,7 @@ class HomeSessionPlan {
     required this.heroId,
     required this.heroName,
     required this.heroCompleted,
+    required this.heroUnfinished,
     required this.heroThumbnailUrl,
     required this.others,
   });
@@ -61,6 +63,7 @@ class HomeSessionPlan {
         heroId: hero.id,
         heroName: hero.name,
         heroCompleted: hero.completed,
+        heroUnfinished: hero.unfinished,
         heroThumbnailUrl: hero.thumbnailUrl,
         others: summary.trainings
             .where((training) => !identical(training, hero))
@@ -71,6 +74,10 @@ class HomeSessionPlan {
       heroId: summary.trainingId,
       heroName: summary.trainingName,
       heroCompleted: summary.trainingCompleted,
+      heroUnfinished:
+          !summary.trainingCompleted &&
+          summary.totalExercises > 0 &&
+          summary.exercisesCompleted >= summary.totalExercises,
       heroThumbnailUrl: summary.trainingThumbnailUrl,
       others: const [],
     );
@@ -79,6 +86,10 @@ class HomeSessionPlan {
   final String? heroId;
   final String? heroName;
   final bool heroCompleted;
+
+  /// L5-D49 O5: every exercise of the hero is marked but «Terminar sesión»
+  /// was not pressed: «Sin terminar» instead of «Hecha».
+  final bool heroUnfinished;
 
   /// L4b-D1: photo of the hero session (first exercise with a thumbnail).
   final String? heroThumbnailUrl;
@@ -116,6 +127,10 @@ class TodayTrainingCard extends StatelessWidget {
     final inProgress = _inProgress;
     final remaining = summary.remainingTrainingDurationMin;
     final duration = summary.trainingDurationMin;
+    // L5-D49 O5 r2: a «Sin terminar» hero with nothing else left to do
+    // shows no minutes: neither «≈0» left nor the planned duration.
+    final nothingLeft =
+        HomeSessionPlan.of(summary).heroUnfinished && (remaining ?? 0) == 0;
     return [
       if (summary.totalExercises > 0)
         inProgress
@@ -139,13 +154,13 @@ class TodayTrainingCard extends StatelessWidget {
           label: l10n.homeFigureSets(summary.totalSets),
           semanticsLabel: l10n.homeFactSets(summary.totalSets),
         ),
-      if (inProgress && remaining != null)
+      if (!nothingLeft && inProgress && remaining != null)
         ExomFigure(
           value: '≈${figure(remaining)}',
           label: l10n.homeFigureMinutesLeft,
           semanticsLabel: l10n.remainingTrainingMinutes(remaining),
         )
-      else if (!summary.trainingCompleted && duration != null)
+      else if (!nothingLeft && !summary.trainingCompleted && duration != null)
         ExomFigure(
           value: figure(duration),
           label: l10n.homeFigureMinutes,
@@ -204,7 +219,9 @@ class TodayTrainingCard extends StatelessWidget {
                     url: photoUrl,
                     pill: isToday ? l10n.todayLabel : null,
                   ),
-                if (plan.heroCompleted || plan.others.isNotEmpty)
+                if (plan.heroCompleted ||
+                    plan.heroUnfinished ||
+                    plan.others.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Wrap(
@@ -217,7 +234,9 @@ class TodayTrainingCard extends StatelessWidget {
                             l10n.homeFactSessions(summary.trainings.length),
                           ),
                         if (plan.heroCompleted)
-                          HomeDoneStatus(label: l10n.homeSessionDone),
+                          HomeDoneStatus(label: l10n.homeSessionDone)
+                        else if (plan.heroUnfinished)
+                          _UnfinishedStatus(label: l10n.homeSessionUnfinished),
                       ],
                     ),
                   ),
@@ -256,6 +275,8 @@ class TodayTrainingCard extends StatelessWidget {
                 title: training.name,
                 trailing: training.completed
                     ? HomeDoneStatus(label: l10n.homeSessionDone)
+                    : training.unfinished
+                    ? _UnfinishedStatus(label: l10n.homeSessionUnfinished)
                     : null,
                 onTap: () => openHomeTraining(
                   context,
@@ -268,6 +289,20 @@ class TodayTrainingCard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// L5-D49 O5: «Sin terminar», a session with every exercise marked whose
+/// «Terminar sesión» is missing. Same status line as a local session pending
+/// to be finished (`trainingPendingFinalize`): icon and text, never colour
+/// alone.
+class _UnfinishedStatus extends StatelessWidget {
+  const _UnfinishedStatus({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) =>
+      ExomSyncStatus(state: ExomSyncState.pendiente, label: label);
 }
 
 /// Header of a day without training (L5-E1, sketch «Inicio · día de

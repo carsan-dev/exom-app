@@ -174,24 +174,35 @@ class HomeSummaryModel {
         (progress?['trainings_completed'] as List? ?? const [])
             .map((id) => id.toString())
             .toSet();
+    // L5-D49 O5 r2: the API rule (`legacySingleCompletion` in
+    // training-completion.ts): one training, the day flag set and no stored
+    // ids is done, whatever exercise entries the day holds.
     final legacyDayCompletion =
         dayTrainings.length == 1 &&
         progress?['training_completed'] == true &&
-        completedEntries.isEmpty &&
         completedTrainingIds.isEmpty;
+    // L5-D49 O5: a training is done only once it is finished («Terminar
+    // sesión»): the server lists it in `trainings_completed` (the pending
+    // `complete_training` actions are overlaid there too) or flags the
+    // legacy single-training day. Marked exercises alone, on the server or
+    // only on this phone, never finish it.
     bool isTrainingCompleted(Map<String, dynamic> item) {
       final trainingId = item['id']?.toString();
       if (trainingId != null && completedTrainingIds.contains(trainingId)) {
         return true;
       }
+      return legacyDayCompletion;
+    }
+
+    bool isTrainingUnfinished(Map<String, dynamic> item) {
+      if (isTrainingCompleted(item)) return false;
       final exercises = exercisesFor(item);
-      return (exercises.isNotEmpty &&
-              exercises.every(
-                (exercise) => completedCurrentOccurrenceIds.contains(
-                  exercise['id']?.toString(),
-                ),
-              )) ||
-          legacyDayCompletion;
+      return exercises.isNotEmpty &&
+          exercises.every(
+            (exercise) => completedCurrentOccurrenceIds.contains(
+              exercise['id']?.toString(),
+            ),
+          );
     }
 
     final trainingCompleted =
@@ -221,7 +232,10 @@ class HomeSummaryModel {
     final remainingTrainingDuration = trainingDuration == null
         ? null
         : dayTrainings.fold<int>(0, (sum, item) {
-            if (isTrainingCompleted(item)) return sum;
+            // «Sin terminar» has no exercise left: it adds no minutes.
+            if (isTrainingCompleted(item) || isTrainingUnfinished(item)) {
+              return sum;
+            }
             final duration = (item['estimated_duration_min'] as num?)!.toInt();
             final remaining = setsOf(item).remainingMinutes(duration);
             return sum + (remaining ?? duration);
@@ -290,6 +304,7 @@ class HomeSummaryModel {
               id: item['id'] as String? ?? '',
               name: item['name'] as String? ?? '',
               completed: isTrainingCompleted(item),
+              unfinished: isTrainingUnfinished(item),
               thumbnailUrl: _firstThumbnail(exercisesFor(item)),
             ),
           )
@@ -392,12 +407,16 @@ class HomeTrainingItemModel {
   final String id;
   final String name;
   final bool completed;
+
+  /// L5-D49 O5: every exercise marked, session not finished.
+  final bool unfinished;
   final String? thumbnailUrl;
 
   const HomeTrainingItemModel({
     required this.id,
     required this.name,
     required this.completed,
+    this.unfinished = false,
     this.thumbnailUrl,
   });
 }

@@ -330,4 +330,43 @@ void main() {
       );
     });
   });
+
+  // L5-D49 O5: a session with every exercise marked but not finished is
+  // «Sin terminar»; the confirmed completion still marks it done at once.
+  test('the confirmed completion of an unfinished session marks it done', () async {
+    final loaded = await _loaded(
+      summary: const HomeSummaryEntity(
+        trainingId: 't-1',
+        trainings: [
+          HomeTrainingItemEntity(
+            id: 't-1',
+            name: 'One',
+            completed: false,
+            unfinished: true,
+          ),
+          HomeTrainingItemEntity(id: 't-2', name: 'Two', completed: true),
+        ],
+        totalExercises: 4,
+        exercisesCompleted: 4,
+      ),
+    );
+    final before = loaded.bloc.state as HomeLoaded;
+    expect(_todaySessions(before.weekMarks!), const HomeDaySessions(2, 1));
+    expect(before.weekMarks!.markFor(DateTime.now()), HomeDayMark.pending);
+
+    expect(
+      loaded.bloc.applyConfirmedCompletion(
+        trainingId: 't-1',
+        date: _today(),
+        sessionStamp: _stamp,
+      ),
+      isTrue,
+    );
+    final state = loaded.bloc.state as HomeLoaded;
+    expect(state.summary.trainings.map((t) => t.completed), [true, true]);
+    expect(state.summary.trainings.map((t) => t.unfinished), [false, false]);
+    expect(state.summary.trainingCompleted, isTrue);
+    expect(_todaySessions(state.weekMarks!), const HomeDaySessions(2, 2));
+    expect(state.weekMarks!.markFor(DateTime.now()), HomeDayMark.done);
+  });
 }

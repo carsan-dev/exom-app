@@ -1457,6 +1457,7 @@
   "homeStartSessionButton": "Empezar sesión",
   "homeContinueSessionButton": "Continuar sesión",
   "homeSessionDone": "Hecha",
+  "homeSessionUnfinished": "Sin terminar",
   "homeRestDayTitle": "Descanso",
   "homeRestDayToday": "Hoy no tienes entrenamiento asignado.",
   "homeRestDayOther": "Este día no tienes entrenamiento asignado.",

@@ -191,7 +191,14 @@ void main() {
 
     expect(summary.totalExercises, 3);
     expect(summary.exercisesCompleted, 2);
+    // L5-D49 O5: every exercise of training-2 is marked, but without
+    // «Terminar sesión» (no `trainings_completed`) it is «Sin terminar», not
+    // done.
     expect(summary.trainings.map((training) => training.completed), [
+      false,
+      false,
+    ]);
+    expect(summary.trainings.map((training) => training.unfinished), [
       false,
       true,
     ]);

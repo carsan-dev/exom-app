@@ -1,7 +1,14 @@
 class HomeTrainingItemEntity {
   final String id;
   final String name;
+
+  /// Finished: «Terminar sesión» was pressed, confirmed by the server or
+  /// queued offline (L5-D49 O5).
   final bool completed;
+
+  /// L5-D49 O5: every exercise is marked but the session is not finished
+  /// («Sin terminar»). Never true together with [completed].
+  final bool unfinished;
 
   /// L4b-D1: thumbnail of its first exercise that has one, if any.
   final String? thumbnailUrl;
@@ -10,6 +17,7 @@ class HomeTrainingItemEntity {
     required this.id,
     required this.name,
     required this.completed,
+    this.unfinished = false,
     this.thumbnailUrl,
   });
 }

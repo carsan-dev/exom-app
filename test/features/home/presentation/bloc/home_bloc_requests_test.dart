@@ -56,6 +56,9 @@ class _RecordingAdapter implements HttpClientAdapter {
   /// `exercises_completed` returned by `/progress`.
   List<Map<String, Object?>> completedExercises = const [];
 
+  /// `trainings_completed` returned by `/progress`.
+  List<String> completedTrainings = const [];
+
   final calendarMonths = <String>[];
 
   /// When true every `/calendar/month` request waits in [pendingCalendar]
@@ -135,7 +138,10 @@ class _RecordingAdapter implements HttpClientAdapter {
         'current_weight': 61.5,
       },
       '/metrics/latest' => {'date': '2026-10-30', 'sleep_hours': 7.5},
-      '/progress' => {'exercises_completed': completedExercises},
+      '/progress' => {
+        'exercises_completed': completedExercises,
+        'trainings_completed': completedTrainings,
+      },
       _ => null,
     };
     return ResponseBody.fromString(
@@ -364,10 +370,13 @@ void main() {
       final f = _fixture(withCalendar: true);
       // The server calendar still says pending, but the progress (with the
       // pending offline actions overlaid) already completes the session.
+      // L5-D49 O5: completing means finishing it (`trainings_completed`);
+      // marked exercises alone do not.
       f.adapter.calendarDays = {'2026-11-18': pending()};
       f.adapter.completedExercises = const [
         {'training_exercise_id': 'te-1', 'exercise_id': 'e-1'},
       ];
+      f.adapter.completedTrainings = const ['t-2026-11-18'];
       await _settled(
         f.bloc,
         () => f.bloc.add(HomeLoadRequested(date: DateTime(2026, 11, 18))),

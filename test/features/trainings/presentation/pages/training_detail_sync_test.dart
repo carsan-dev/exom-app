@@ -455,10 +455,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Exercise'));
       await tester.pumpAndSettle();
+      // L5-D47: the start action is the pinned lime button, which paints its
+      // label in upper case.
       final openExercise = status == 'confirmed'
           ? find.text('Editar datos')
           : find.text(AppLocalizations.of(
-              tester.element(find.byType(TrainingDetailPage))).startExerciseButton);
+              tester.element(find.byType(TrainingDetailPage)))
+              .startExerciseButton.toUpperCase());
       await tester.scrollUntilVisible(openExercise, 200,
         scrollable: find.descendant(of: find.byType(DraggableScrollableSheet),
           matching: find.byType(Scrollable)).first);

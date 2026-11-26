@@ -1853,5 +1853,10 @@
   "trainingMilestoneTitle": "Sesión hecha.",
   "trainingMilestoneName": "{name}.",
   "@trainingMilestoneName": {"placeholders": {"name": {"type": "String"}}},
-  "trainingMilestoneBackHome": "Volver a Inicio"
+  "trainingMilestoneBackHome": "Volver a Inicio",
+  "exerciseSheetFeedbackHint": "Opcional · sobre este ejercicio",
+  "exerciseSheetWatchVideo": "Ver vídeo de {name}",
+  "@exerciseSheetWatchVideo": {"placeholders": {"name": {"type": "String"}}},
+  "exerciseSheetWeightUsed": "Peso usado: {weight}",
+  "@exerciseSheetWeightUsed": {"placeholders": {"weight": {"type": "String"}}}
 }

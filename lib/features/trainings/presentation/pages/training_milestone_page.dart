@@ -329,11 +329,15 @@ class _MilestoneHeadline extends StatelessWidget {
   static const double _firstSize = 66;
   static const double _secondSize = 58;
 
+  /// Line height .95, not the sketch's .86: in Barlow Condensed 800 the
+  /// capital diacritics reach .883 em (Á É Í Ó Ú), .899 (Ñ) and .92 (Ü), so
+  /// at .86 the acute of «VÍDEO» touched the line above. .95 leaves .03 em of
+  /// air over a Ü, the same line height as the ExomType two-line headlines.
   static TextStyle _style(double size, [Color? color]) => TextStyle(
     fontFamily: AppTheme.displayFontFamily,
     fontSize: size,
     fontWeight: FontWeight.w800,
-    height: 0.86,
+    height: 0.95,
     letterSpacing: -0.02 * size,
     color: color,
   );

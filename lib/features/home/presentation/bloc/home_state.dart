@@ -16,8 +16,10 @@ class HomeLoaded extends HomeState {
   final HomeSummaryEntity summary;
   final DateTime selectedDate;
 
-  /// Set only on the state that repeats the content already on screen after
-  /// a reload failed, so a pull-to-refresh can end and report the failure.
+  /// Set on the state that repeats the content already on screen after a
+  /// reload failed, so a pull-to-refresh can end and report the failure, and
+  /// (E1 D1) on content the data layer answered from the saved copy because
+  /// a request failed ([HomeSummaryEntity.staleReason]).
   final String? refreshError;
 
   /// L4b-D4: session marks of the week of [selectedDate]; `null` when the

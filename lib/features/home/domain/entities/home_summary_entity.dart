@@ -53,6 +53,12 @@ class HomeSummaryEntity {
   /// [trainings]; otherwise each item carries its own.
   final String? trainingThumbnailUrl;
 
+  /// E1 D1: why part of this summary is the saved copy (or nothing) instead
+  /// of a fresh answer, as `ApiException(status): message` (status 0 = no
+  /// network or timeout). `null` when every request answered. Describes this
+  /// load only: [withSharedFieldsFrom] keeps this summary's own reason.
+  final String? staleReason;
+
   const HomeSummaryEntity({
     this.trainingId,
     this.trainingName,
@@ -83,6 +89,7 @@ class HomeSummaryEntity {
     this.programDay,
     this.totalSets = 0,
     this.trainingThumbnailUrl,
+    this.staleReason,
   });
 
   /// Returns a copy that takes the date-independent profile fields (streak,
@@ -118,6 +125,69 @@ class HomeSummaryEntity {
       programDay: programDay,
       totalSets: totalSets,
       trainingThumbnailUrl: trainingThumbnailUrl,
+      staleReason: staleReason,
+    );
+  }
+
+  /// E6a: a copy with the training [trainingId] done, as the server
+  /// confirmed it, or `null` when this summary does not hold that training.
+  /// The day is done once every one of its trainings is. Only the completion
+  /// flags change: progress figures, minutes left and the streak are not
+  /// deducible from the confirmation and stay as they were.
+  HomeSummaryEntity? withTrainingCompleted(String trainingId) {
+    final List<HomeTrainingItemEntity> items;
+    if (trainings.isNotEmpty) {
+      if (!trainings.any((training) => training.id == trainingId)) return null;
+      items = [
+        for (final training in trainings)
+          training.id == trainingId && !training.completed
+              ? HomeTrainingItemEntity(
+                  id: training.id,
+                  name: training.name,
+                  completed: true,
+                  thumbnailUrl: training.thumbnailUrl,
+                )
+              : training,
+      ];
+    } else if (this.trainingId == trainingId) {
+      items = trainings;
+    } else {
+      return null;
+    }
+    return HomeSummaryEntity(
+      trainingId: this.trainingId,
+      trainingName: trainingName,
+      trainingTypes: trainingTypes,
+      trainingAccentColor: trainingAccentColor,
+      trainingDurationMin: trainingDurationMin,
+      remainingTrainingDurationMin: remainingTrainingDurationMin,
+      trainingCompleted:
+          trainingCompleted ||
+          items.isEmpty ||
+          items.every((training) => training.completed),
+      trainings: items,
+      exercisesCompleted: exercisesCompleted,
+      totalExercises: totalExercises,
+      dietId: dietId,
+      dietName: dietName,
+      nextMealId: nextMealId,
+      nextMealName: nextMealName,
+      totalCalories: totalCalories,
+      remainingCalories: remainingCalories,
+      mealsCompleted: mealsCompleted,
+      totalMeals: totalMeals,
+      isRestDay: isRestDay,
+      streakDays: streakDays,
+      clientName: clientName,
+      avatarUrl: avatarUrl,
+      lastWeightKg: lastWeightKg,
+      lastWeightDate: lastWeightDate,
+      lastSleepHours: lastSleepHours,
+      programWeek: programWeek,
+      programDay: programDay,
+      totalSets: totalSets,
+      trainingThumbnailUrl: trainingThumbnailUrl,
+      staleReason: staleReason,
     );
   }
 }

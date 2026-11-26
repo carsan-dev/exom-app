@@ -53,17 +53,88 @@ enum HomeDayPlan {
   }
 }
 
+/// Sessions (trainings) of one day for «Tu semana» (E1 O1): how many the
+/// day holds and how many of them are done.
+class HomeDaySessions {
+  const HomeDaySessions(this.total, this.done);
+
+  final int total;
+  final int done;
+
+  static const none = HomeDaySessions(0, 0);
+
+  /// One session per day with a mark: the count before the API sent the
+  /// per-day counts (older API or older saved calendar).
+  static HomeDaySessions ofMark(HomeDayMark mark) => switch (mark) {
+    HomeDayMark.none => none,
+    HomeDayMark.pending => const HomeDaySessions(1, 0),
+    HomeDayMark.done => const HomeDaySessions(1, 1),
+  };
+
+  /// Sessions of a `/calendar/month` day from `trainings_assigned`,
+  /// `trainings_done` and `training_completion_mode`. A rest day or a day
+  /// without training has none, as its mark. The day's done flag is the
+  /// canonical completion: a done day has all its sessions done.
+  static HomeDaySessions ofCalendarDay(CalendarDayEntity day) {
+    final mark = HomeDayMark.ofCalendarDay(day);
+    final assigned = day.trainingsAssigned;
+    if (mark == HomeDayMark.none || assigned == null || assigned < 1) {
+      return ofMark(mark);
+    }
+    final sessions = HomeDaySessions(
+      assigned,
+      mark == HomeDayMark.done
+          ? assigned
+          : (day.trainingsDone ?? 0).clamp(0, assigned),
+    );
+    return day.trainingCompletionMode == 'ANY' ? sessions.asAnyOf() : sessions;
+  }
+
+  /// Sessions of a loaded Inicio summary: its trainings and which are done
+  /// (local state, newer than the calendar).
+  static HomeDaySessions ofSummary(HomeSummaryEntity summary) {
+    final mark = HomeDayMark.ofSummary(summary);
+    if (mark == HomeDayMark.none || summary.trainings.isEmpty) {
+      return ofMark(mark);
+    }
+    final total = summary.trainings.length;
+    return HomeDaySessions(
+      total,
+      summary.trainingCompleted
+          ? total
+          : summary.trainings.where((t) => t.completed).length,
+    );
+  }
+
+  /// A day that completes with any one of its trainings
+  /// (`training_completion_mode` `ANY`) prescribes one session.
+  HomeDaySessions asAnyOf() =>
+      total == 0 ? this : HomeDaySessions(1, done > 0 ? 1 : 0);
+
+  @override
+  bool operator ==(Object other) =>
+      other is HomeDaySessions && other.total == total && other.done == done;
+
+  @override
+  int get hashCode => Object.hash(total, done);
+}
+
 /// Marks of the seven days (Monday first) of one week.
 class HomeWeekMarks {
   HomeWeekMarks({
     required DateTime weekStart,
     required List<HomeDayMark> days,
     List<HomeDayPlan>? plans,
+    List<HomeDaySessions>? sessions,
   }) : weekStart = weekStartOf(weekStart),
        days = List.unmodifiable(days),
-       plans = List.unmodifiable(plans ?? List.filled(7, HomeDayPlan.unknown)) {
+       plans = List.unmodifiable(plans ?? List.filled(7, HomeDayPlan.unknown)),
+       sessions = List.unmodifiable(
+         sessions ?? days.map(HomeDaySessions.ofMark),
+       ) {
     assert(days.length == 7, 'A week has seven days');
     assert(this.plans.length == 7, 'A week has seven days');
+    assert(this.sessions.length == 7, 'A week has seven days');
   }
 
   /// Local midnight of the Monday of the week.
@@ -76,12 +147,16 @@ class HomeWeekMarks {
   /// when the calendar did not say.
   final List<HomeDayPlan> plans;
 
-  /// Days of the week with a session (pending or done): the «M» of «N de M
-  /// sesiones hechas».
-  int get sessionCount => days.where((d) => d != HomeDayMark.none).length;
+  /// Sessions of each day, Monday first (E1 O1). Without them, one per day
+  /// with a mark.
+  final List<HomeDaySessions> sessions;
 
-  /// Days of the week whose sessions are all done.
-  int get doneCount => days.where((d) => d == HomeDayMark.done).length;
+  /// Sessions of the week: the «M» of «N de M sesiones hechas» (E1 O1:
+  /// sessions, not days).
+  int get sessionCount => sessions.fold(0, (sum, day) => sum + day.total);
+
+  /// Done sessions of the week: the «N».
+  int get doneCount => sessions.fold(0, (sum, day) => sum + day.done);
 
   /// Local midnight of the Monday of [day]'s week. Calendar arithmetic, not a
   /// `Duration` subtracted from a local `DateTime`: around a clock change that
@@ -129,6 +204,7 @@ class HomeWeekMarks {
     for (var i = 0; i < days.length; i++) {
       if (days[i] != other.days[i]) return false;
       if (plans[i] != other.plans[i]) return false;
+      if (sessions[i] != other.sessions[i]) return false;
     }
     return true;
   }

@@ -24,9 +24,27 @@ import 'package:exom_app/features/home/presentation/widgets/today_training_card.
 import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+/// Return to Inicio from «Sesión hecha» (E6a): reloads Inicio and, with the
+/// identity of what the server confirmed, lets HomeBloc paint that session
+/// done at once (owner decision 2026-11-26). Each navigation passes a new
+/// instance; the same instance again (a route rebuild) does nothing.
 class HomeCompletionRefresh {
-  const HomeCompletionRefresh();
+  const HomeCompletionRefresh({this.trainingId, this.date, this.sessionStamp});
+
+  /// The confirmed training.
+  final String? trainingId;
+
+  /// Its assignment date, `yyyy-mm-dd`.
+  final String? date;
+
+  /// The session (account and sign-in generation) that confirmed it.
+  final String? sessionStamp;
 }
+
+/// Instances whose patch was applied already: a route rebuilt with the same
+/// retained `extra` must not paint a completion that the reload may have
+/// said undone since. Identity based, nothing persisted.
+final Expando<bool> _consumedRefreshes = Expando<bool>('HomeCompletionRefresh');
 
 /// Inicio, direction A «Sesión de hoy» (redesign L3), repainted in L5-E1
 /// (sketch `e-migradas.html` «Inicio»).
@@ -53,6 +71,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  /// Bumped when HomeBloc patched a confirmed completion: the view is built
+  /// anew so every part of Inicio reads the patched content in its first
+  /// frame (a mounted bloc builder would paint its previous state until the
+  /// bloc's asynchronous emission reaches it).
+  int _patches = 0;
+
   @override
   void initState() {
     super.initState();
@@ -67,15 +91,35 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Called from [initState] and [didUpdateWidget], so the patch is in
+  /// place before the build that follows. One reload either way.
   void _refreshCompletion() {
-    if (widget.completionRefresh != null) {
-      context.read<HomeBloc>().add(const HomeLoadRequested());
+    final refresh = widget.completionRefresh;
+    if (refresh == null) return;
+    final bloc = context.read<HomeBloc>();
+    final trainingId = refresh.trainingId;
+    final date = refresh.date;
+    final fresh = _consumedRefreshes[refresh] != true;
+    _consumedRefreshes[refresh] = true;
+    if (fresh &&
+        trainingId != null &&
+        date != null &&
+        bloc.applyConfirmedCompletion(
+          trainingId: trainingId,
+          date: date,
+          sessionStamp: refresh.sessionStamp,
+        )) {
+      _patches++;
     }
+    bloc.add(const HomeLoadRequested());
   }
 
   @override
   Widget build(BuildContext context) {
-    return HomeClock(now: widget.now, child: const _HomeView());
+    return HomeClock(
+      now: widget.now,
+      child: _HomeView(key: ValueKey(_patches)),
+    );
   }
 }
 
@@ -117,7 +161,7 @@ class _ReloadFailure {
 }
 
 class _HomeView extends StatefulWidget {
-  const _HomeView();
+  const _HomeView({super.key});
 
   @override
   State<_HomeView> createState() => _HomeViewState();

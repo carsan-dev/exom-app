@@ -55,6 +55,7 @@ class HomeRepositoryImpl implements HomeRepository {
       programDay: model.programDay,
       totalSets: model.totalSets,
       trainingThumbnailUrl: model.trainingThumbnailUrl,
+      staleReason: model.staleReason,
     );
   }
 }

@@ -720,6 +720,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(harness.homeVisits, 1);
       expect(harness.homeExtra, isA<HomeCompletionRefresh>());
+      // What the server confirmed, so Inicio can paint it at once.
+      final refresh = harness.homeExtra! as HomeCompletionRefresh;
+      expect(refresh.trainingId, _trainingId);
+      expect(refresh.date, _date);
+      expect(refresh.sessionStamp, _owner);
       expect(_milestone, findsNothing);
       expect(find.byType(TrainingDetailPage), findsNothing);
       expect(find.text('home-destination'), findsOneWidget);

@@ -46,6 +46,8 @@ import '../features/trainings/presentation/pages/training_completion_sheet_test.
     show pumpCompletionSheet;
 import '../features/trainings/presentation/pages/training_detail_redesign_test.dart'
     show pumpTrainingDetail;
+import '../features/trainings/presentation/widgets/exercise_technique_sheet_test.dart'
+    show pumpTechniqueSheet;
 
 const _codes = [
   'progress_conflict_review_required',
@@ -437,6 +439,51 @@ void main() {
             expect(tester.takeException(), isNull);
           },
         );
+      }
+    }
+  });
+
+  // L5-F4 «Hoja de técnica»: with and without video at 320 dp with 1.3x and
+  // 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end with «Cerrar» still in place (CC 3).
+  group('Hoja de técnica does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final hasVideo in const [true, false]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, '
+            '${hasVideo ? 'with' : 'without'} video',
+            (tester) async {
+              await pumpTechniqueSheet(
+                tester,
+                hasVideo: hasVideo,
+                exerciseName:
+                    'Sentadilla búlgara con mancuernas y pausa isométrica',
+                size: Size(width, 640),
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              expect(tester.takeException(), isNull);
+              final close = find.byKey(const Key('technique-sheet-close'));
+              final before = tester.getRect(close);
+              final scrollable = find
+                  .descendant(
+                    of: find.byKey(const Key('exom-sheet-panel')),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first;
+              for (var i = 0; i < 8; i++) {
+                await tester.drag(scrollable, const Offset(0, -200));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+              await tester.pumpAndSettle();
+              expect(tester.getRect(close), before);
+              expect(close.hitTestable(), findsOneWidget);
+            },
+          );
+        }
       }
     }
   });

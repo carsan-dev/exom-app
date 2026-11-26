@@ -6878,6 +6878,12 @@ abstract class AppLocalizations {
   /// **'Ver técnica'**
   String get activeExerciseTechniqueButton;
 
+  /// No description provided for @activeExerciseTechniqueClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get activeExerciseTechniqueClose;
+
   /// No description provided for @activeExerciseLogSetButton.
   ///
   /// In es, this message translates to:

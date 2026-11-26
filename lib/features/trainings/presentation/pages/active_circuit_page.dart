@@ -522,16 +522,14 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
 
   Future<void> _openTechnique(AppLocalizations l10n) async {
     final exercise = _currentExercise.exercise;
-    await showExomSheet<void>(
-      context: context,
-      builder: (_) => ExerciseTechniqueSheet(
-        exerciseName: exercise.name,
-        hasVideo: _hasVideo(exercise),
-        videoUrl: exercise.videoUrl,
-        thumbnailUrl: exercise.thumbnailUrl,
-        onOpenVideo: _openVideoPlayer,
-        sections: _techniqueSections(l10n, exercise),
-      ),
+    await showExerciseTechniqueSheet(
+      context,
+      exerciseName: exercise.name,
+      hasVideo: _hasVideo(exercise),
+      videoUrl: exercise.videoUrl,
+      thumbnailUrl: exercise.thumbnailUrl,
+      onOpenVideo: _openVideoPlayer,
+      sections: _techniqueSections(l10n, exercise),
     );
   }
 

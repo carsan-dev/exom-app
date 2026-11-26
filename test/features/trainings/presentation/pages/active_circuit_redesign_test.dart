@@ -1050,4 +1050,82 @@ void main() {
     expect(skip.hitTestable(), findsOneWidget);
     expect(extend.hitTestable(), findsOneWidget);
   });
+
+  // L5-F4 «Hoja de técnica»: smoke of the opening from the circuit (the
+  // circuit had no test that opened the sheet).
+  group('technique sheet (L5-F4)', () {
+    const technique = TrainingExerciseEntity(
+      id: 't',
+      order: 0,
+      sets: 1,
+      repsOrDuration: '12',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 12,
+      restSeconds: 0,
+      blockId: circuitBlockId,
+      exercise: ExerciseEntity(
+        id: 'ex-t',
+        name: 'Remo con barra',
+        muscleGroups: [],
+        techniqueText: 'Espalda recta y tronco inclinado.',
+        explanationText: 'Trabaja la espalda alta.',
+      ),
+    );
+
+    testWidgets('«Ver técnica» opens the sheet with the texts and closes it', (
+      tester,
+    ) async {
+      await pumpCircuit(tester, exercises: [technique, _b]);
+      final open = find.byKey(const Key('circuit-technique'));
+      await tester.ensureVisible(open);
+      await tester.pumpAndSettle();
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      expect(find.text('Espalda recta y tronco inclinado.'), findsOneWidget);
+      expect(find.text('Trabaja la espalda alta.'), findsOneWidget);
+      final close = find.text(
+        MaterialLocalizations.of(
+          tester.element(find.byType(ActiveCircuitPage)),
+        ).closeButtonLabel,
+      );
+      expect(close, findsOneWidget);
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+      expect(find.text('Espalda recta y tronco inclinado.'), findsNothing);
+      expect(find.byType(ActiveCircuitPage), findsOneWidget);
+    });
+
+    testWidgets('the present texts are numbered 01-02 and «Cerrar» sits in '
+        'the pinned footer', (tester) async {
+      await pumpCircuit(tester, exercises: [technique, _b]);
+      final l10n = circuitL10n(tester);
+      final open = find.byKey(const Key('circuit-technique'));
+      await tester.ensureVisible(open);
+      await tester.pumpAndSettle();
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const Key('exom-sheet-panel'));
+      Finder inPanel(String text) =>
+          find.descendant(of: panel, matching: find.text(text));
+      expect(inPanel('01'), findsOneWidget);
+      expect(inPanel('02'), findsOneWidget);
+      expect(inPanel('03'), findsNothing);
+      // Without common mistakes, «Explicación» takes number 02.
+      expect(
+        tester.getTopLeft(inPanel('02')).dy,
+        lessThan(tester.getBottomLeft(inPanel(l10n.explanation)).dy),
+      );
+      expect(
+        tester.getTopLeft(inPanel('02')).dy,
+        greaterThan(tester.getTopLeft(inPanel(l10n.technique).last).dy),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('exom-sheet-actions')),
+          matching: find.text('Cerrar'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 }

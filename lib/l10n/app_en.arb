@@ -1349,6 +1349,7 @@
   "activeExerciseSetSavedStatus": "Set {setNumber} · {status}",
   "@activeExerciseSetSavedStatus": {"placeholders": {"setNumber": {"type": "int"}, "status": {"type": "String"}}},
   "activeExerciseTechniqueButton": "View technique",
+  "activeExerciseTechniqueClose": "Close",
   "activeExerciseLogSetButton": "Log set",
   "activeExerciseRestNext": "Next: Set {setNumber} · {target}",
   "@activeExerciseRestNext": {"placeholders": {"setNumber": {"type": "int"}, "target": {"type": "String"}}},

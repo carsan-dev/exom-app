@@ -951,6 +951,64 @@ void main() {
     expect(find.text('Pie trasero apoyado en el banco.'), findsOneWidget);
   });
 
+  testWidgets('L5-F4 smoke: the technique sheet closes and the page stays', (
+    tester,
+  ) async {
+    await _pumpPage(tester);
+    await tester.tap(find.byKey(const Key('active-exercise-technique')));
+    await tester.pumpAndSettle();
+    final close = find.text(
+      MaterialLocalizations.of(
+        tester.element(find.byType(ActiveExercisePage)),
+      ).closeButtonLabel,
+    );
+    expect(close, findsOneWidget);
+    await tester.tap(close);
+    await tester.pumpAndSettle();
+    expect(find.text('Pie trasero apoyado en el banco.'), findsNothing);
+    expect(find.byType(ActiveExercisePage), findsOneWidget);
+  });
+
+  testWidgets('L5-F4: the present texts are numbered 01-02 and «Cerrar» sits '
+      'in the pinned footer', (tester) async {
+    await _pumpPage(
+      tester,
+      exercise: const TrainingExerciseEntity(
+        id: 'te-1',
+        order: 1,
+        sets: 3,
+        repsOrDuration: '8',
+        measureType: ExerciseMeasureType.reps,
+        targetValue: 8,
+        restSeconds: 90,
+        exercise: ExerciseEntity(
+          id: 'ex-1',
+          name: 'Sentadilla búlgara',
+          muscleGroups: [],
+          techniqueText: 'Pie trasero apoyado en el banco.',
+          commonErrorsText: 'Rodilla hacia dentro.',
+        ),
+      ),
+    );
+    final l10n = _l10n(tester);
+    await tester.tap(find.byKey(const Key('active-exercise-technique')));
+    await tester.pumpAndSettle();
+    final panel = find.byKey(const Key('exom-sheet-panel'));
+    Finder inPanel(String text) =>
+        find.descendant(of: panel, matching: find.text(text));
+    expect(inPanel('01'), findsOneWidget);
+    expect(inPanel('02'), findsOneWidget);
+    expect(inPanel('03'), findsNothing);
+    expect(inPanel(l10n.commonMistakes), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('exom-sheet-actions')),
+        matching: find.text('Cerrar'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('L3b P5c: at 320x568 and 2.0x the footer is bounded in '
       'executing and rest and the page stays reachable', (tester) async {
     await _pumpPage(

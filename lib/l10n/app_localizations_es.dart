@@ -4156,6 +4156,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get activeExerciseTechniqueButton => 'Ver técnica';
 
   @override
+  String get activeExerciseTechniqueClose => 'Cerrar';
+
+  @override
   String get activeExerciseLogSetButton => 'Registrar serie';
 
   @override

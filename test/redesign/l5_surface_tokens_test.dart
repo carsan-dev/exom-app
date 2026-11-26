@@ -123,6 +123,8 @@ const List<String> kRepaintedFiles = <String>[
   // L5-E9b · Formulario de métricas.
   'lib/features/metrics/presentation/pages/metrics_page.dart',
   'lib/core/widgets/anatomy_selector.dart',
+  // L5-F4 · Hoja de técnica.
+  'lib/features/trainings/presentation/widgets/exercise_technique_sheet.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

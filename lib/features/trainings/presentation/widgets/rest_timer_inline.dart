@@ -9,11 +9,12 @@ import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// Compact rest timer (L5-E3a skin of the sketch «Descanso»): the title, the
-/// remaining seconds at 96 in the data colour over the 50-mark rule
-/// ([RestTickRule]), an optional subtitle and «Saltar» as a quiet action. Flat
-/// on the page: no card, no ring. Same ticker and callbacks as before; the
-/// rule drains every frame from [restEndsAt] ([RestDrainRule], L5-E3e) and the
-/// figures change on its whole seconds ([untilFigureChange], round r3).
+/// remaining seconds at 96 in the data colour over the rule «N1 · Barra con
+/// tic» ([RestStepRule], L5-D48), an optional subtitle and «Saltar» as a quiet
+/// action. Flat on the page: no card, no ring. Same ticker and callbacks as
+/// before; the figures change on the whole seconds of [restEndsAt]
+/// ([untilFigureChange], round r3), the bar steps in the same rebuild and the
+/// figures beat over the last seconds ([RestFigurePulse]).
 class RestTimerInline extends StatefulWidget {
   final int totalSeconds;
   final DateTime restEndsAt;
@@ -40,7 +41,8 @@ class RestTimerInline extends StatefulWidget {
   State<RestTimerInline> createState() => _RestTimerInlineState();
 }
 
-class _RestTimerInlineState extends State<RestTimerInline> {
+class _RestTimerInlineState extends State<RestTimerInline>
+    with WidgetsBindingObserver {
   Timer? _ticker;
   Timer? _figure;
   bool _didFinish = false;
@@ -49,6 +51,16 @@ class _RestTimerInlineState extends State<RestTimerInline> {
   void initState() {
     super.initState();
     _startTicker();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Back from the background (round r2): the timers may not have run while
+  /// the app slept, so the figure and the bar read the clock at once.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _handleTick();
+    _scheduleFigure();
   }
 
   @override
@@ -63,6 +75,7 @@ class _RestTimerInlineState extends State<RestTimerInline> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     _figure?.cancel();
     super.dispose();
@@ -120,6 +133,7 @@ class _RestTimerInlineState extends State<RestTimerInline> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final remaining = _remainingSeconds;
     final secondary = TextStyle(
       fontFamily: AppTheme.bodyFontFamily,
       fontSize: 14,
@@ -140,24 +154,28 @@ class _RestTimerInlineState extends State<RestTimerInline> {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: ExomType.hero96.fontSize! * 0.025),
-              child: Text(
-                '$_remainingSeconds',
-                maxLines: 1,
-                softWrap: false,
-                style: ExomType.hero96.copyWith(
-                  color: palette.data,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+            child: RestFigurePulse(
+              seconds: remaining,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: ExomType.hero96.fontSize! * 0.025,
+                ),
+                child: Text(
+                  '$remaining',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: ExomType.hero96.copyWith(
+                    color: palette.data,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          RestDrainRule(
-            restEndsAt: widget.restEndsAt,
+          const SizedBox(height: RestStepRule.gapAbove),
+          RestStepRule(
+            remainingSeconds: remaining,
             totalSeconds: widget.totalSeconds,
-            now: widget.now,
           ),
           if (widget.subtitle != null && widget.subtitle!.trim().isNotEmpty) ...[
             const SizedBox(height: 14),

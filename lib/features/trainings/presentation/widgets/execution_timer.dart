@@ -1,7 +1,6 @@
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'execution_start_countdown.dart';
@@ -238,36 +237,28 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
     super.dispose();
   }
 
-  /// Rule and scale of the current phase at this instant (L5-E3e). Phase,
-  /// marks, scale and value come from one reading of the clock, so a phase
-  /// change (e.g. «Corre» → «Camina») redraws all of them in the same frame
-  /// instead of waiting for the 200 ms refresh (round r2). Once finished every
-  /// mark is off and the scale keeps the last phase. Reduced motion: whole
-  /// seconds, so the value steps once a second.
-  Widget _ruleFrame(
-    int total,
-    TimedPrescription config, {
-    required bool reduced,
-  }) {
-    final phase = config.phase(total, widget.state.elapsedAt(_now));
+  /// Rule of the current phase (L5-E3e, L5-D48 «N1 · Barra con tic»): the
+  /// whole seconds left of the phase over its length, from the same reading of
+  /// the clock as the clock line, so the bar steps in the rebuild of the
+  /// figures ([_scheduleFigure]) and the 200 ms refresh only repaints it when
+  /// nothing changed. Each phase (e.g. «Corre» → «Camina») gets a fresh rule,
+  /// full and without animating; once finished the bar is empty and the scale
+  /// keeps the last phase.
+  Widget _phaseRule(int total, TimedPrescription config, TimedPhase phase) {
     final done = phase.totalRemainingMilliseconds == 0;
     final length = done
         ? config.phase(total, total * 1000 - 1).durationMilliseconds
         : phase.durationMilliseconds;
-    final seconds = (length / 1000).ceil();
-    final left = reduced
-        ? (phase.remainingMilliseconds / 1000).ceil() * 1000
-        : phase.remainingMilliseconds;
-    final value = done || length <= 0
-        ? 0.0
-        : (left / length).clamp(0.0, 1.0).toDouble();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RestTickRule(value: value, totalSeconds: seconds),
-        const SizedBox(height: 6),
-        RestTickScale(totalSeconds: seconds),
-      ],
+    return RestStepRule(
+      // Time left after this phase: the same for all of it, and 0 for the
+      // last phase, which the finished state keeps.
+      key: ValueKey(
+        phase.totalRemainingMilliseconds - phase.remainingMilliseconds,
+      ),
+      remainingSeconds: done || length <= 0
+          ? 0
+          : (phase.remainingMilliseconds / 1000).ceil(),
+      totalSeconds: (length / 1000).ceil(),
     );
   }
 
@@ -320,25 +311,16 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
                   ),
             style: body,
           ),
-          // Same rule, scale and spacing as the rest countdown (L5-E3a). It
-          // reads the deadline-derived phase every frame while running (no
-          // tween), so a paused timer leaves it still; reduced motion: whole
-          // seconds on the existing refresh. Decorative: the clock line above
-          // carries the semantics.
-          const SizedBox(height: 16),
+          // Same rule, scale and spacing as the rest countdown (L5-E3a,
+          // L5-D48), on the deadline-derived phase, so a paused timer leaves
+          // it still. Decorative: the clock line above carries the semantics.
+          const SizedBox(height: RestStepRule.gapAbove),
           // The key marks the rule and its scale for tests and debugging;
           // round r2 moved it here from the bare rule (no reader in lib/ or
           // test/ used it at that point).
           ExcludeSemantics(
             key: const Key('execution-timer-rule'),
-            child: LiveTickRule.builder(
-              running: running,
-              builder: (context, _) => _ruleFrame(
-                total,
-                config,
-                reduced: ExomMotion.of(context).isReduced,
-              ),
-            ),
+            child: _phaseRule(total, config, phase),
           ),
           const SizedBox(height: 12),
           if (phase.nextAction != null)

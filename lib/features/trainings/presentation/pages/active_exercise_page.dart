@@ -1164,12 +1164,25 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           ),
           const SizedBox(height: 16),
           pad(
-            RestCountdown(
-              key: ValueKey(
-                'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+            // L5-D48: «+30 s» re-keys the countdown; the scope keeps the bar
+            // growing to the new total instead of starting over.
+            RestCountdownScope(
+              // Same rest while the exercise, its session and the set that
+              // started it are the same; «+30 s» only moves the deadline.
+              restId: (
+                widget.exerciseId,
+                state.sessionId,
+                state.completedSets,
+                state.currentSet,
+                state.status,
               ),
-              restEndsAt: restEndsAt,
-              totalSeconds: state.restSeconds,
+              child: RestCountdown(
+                key: ValueKey(
+                  'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+                ),
+                restEndsAt: restEndsAt,
+                totalSeconds: state.restSeconds,
+              ),
             ),
           ),
           if (nextSet != null && targetLabel != null) ...[

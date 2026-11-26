@@ -1932,12 +1932,19 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               ],
               const SizedBox(height: 16),
               if (restEndsAt != null)
-                RestCountdown(
-                  key: ValueKey(
-                    'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+                // L5-D48: «+30 s» re-keys the countdown; the scope keeps
+                // the bar growing to the new total instead of starting over.
+                RestCountdownScope(
+                  // Same rest while the round, the exercise and the kind of
+                  // rest are the same; «+30 s» only moves the deadline.
+                  restId: (_currentRound, _currentExerciseIndex, kind),
+                  child: RestCountdown(
+                    key: ValueKey(
+                      'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+                    ),
+                    restEndsAt: restEndsAt,
+                    totalSeconds: total,
                   ),
-                  restEndsAt: restEndsAt,
-                  totalSeconds: total,
                 ),
               const SizedBox(height: 16),
               Text(

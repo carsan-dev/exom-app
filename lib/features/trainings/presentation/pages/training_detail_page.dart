@@ -28,6 +28,7 @@ import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
@@ -1315,8 +1316,6 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     return _ExerciseCard(
       number: number,
       trainingExercise: ex,
-      trainingTypes: training.types,
-      accentColorHex: training.accentColor,
       trainingLevel: training.level,
       isCompleted: isCompleted,
       weightUsed: effectiveWeight,
@@ -2636,8 +2635,6 @@ class _ExerciseCard extends StatelessWidget {
   /// Position of the row in the list (1-based), shown as «01», «02»…
   final int number;
   final TrainingExerciseEntity trainingExercise;
-  final List<String> trainingTypes;
-  final String? accentColorHex;
   final String trainingLevel;
   final bool isCompleted;
   final double? weightUsed;
@@ -2656,8 +2653,6 @@ class _ExerciseCard extends StatelessWidget {
   const _ExerciseCard({
     required this.number,
     required this.trainingExercise,
-    required this.trainingTypes,
-    required this.accentColorHex,
     required this.trainingLevel,
     required this.isCompleted,
     required this.weightText,
@@ -2765,8 +2760,6 @@ class _ExerciseCard extends StatelessWidget {
           isCompleted: isCompleted,
           weightUsed: weightUsed,
           weightText: weightText,
-          trainingTypes: trainingTypes,
-          accentColorHex: accentColorHex,
           trainingLevel: trainingLevel,
           hasPartialProgress: hasPartialProgress,
           currentPerformances: currentPerformances,
@@ -2893,6 +2886,15 @@ String _trainingLevelLabel(AppLocalizations l10n, String level) =>
       _ => level,
     };
 
+/// Exercise sheet (L5-D47, sketch `g-hoja-ejercicio.html` variant «A · media
+/// arriba»): the thumbnail or video at full bleed (not painted without
+/// either), the name in the display face, the prescription, level and muscles
+/// as facts, today's block with the data bar, the numbered texts and a pinned
+/// foot with «Enviar feedback» and the exercise action. The header only has
+/// the handle and close.
+///
+/// No background of its own: the bottom sheet takes `bottomSheetTheme` from
+/// the live theme (E2a), and the foot is transparent over it.
 class _ExerciseDetailSheet extends StatelessWidget {
   final ExerciseEntity exercise;
   final TrainingExerciseEntity trainingExercise;
@@ -2900,8 +2902,6 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final bool isCompleted;
   final double? weightUsed;
   final _WeightText weightText;
-  final List<String> trainingTypes;
-  final String? accentColorHex;
   final String trainingLevel;
   final bool hasPartialProgress;
   final List<SetPerformance>? currentPerformances;
@@ -2912,21 +2912,15 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.scrollController,
     required this.isCompleted,
     required this.weightText,
-    required this.trainingTypes,
-    required this.accentColorHex,
     required this.trainingLevel,
     this.weightUsed,
     this.hasPartialProgress = false,
     this.currentPerformances,
   });
 
-  Color _typeColor(BuildContext context) {
-    return trainingAccentColor(
-      context,
-      accentColor: accentColorHex,
-      types: trainingTypes,
-    );
-  }
+  /// Largest share of the sheet the pinned foot may take; beyond it (large
+  /// text on the smallest sheet size) the foot scrolls on its own.
+  static const double _footMaxFraction = 0.5;
 
   String _buildMetadata(AppLocalizations l10n) {
     return l10n.exerciseMetadata(
@@ -2995,11 +2989,16 @@ class _ExerciseDetailSheet extends StatelessWidget {
     Navigator.of(context).pop(const _SheetCompletionResult(openFeedback: true));
   }
 
+  void _openActiveExercise(BuildContext context) {
+    Navigator.of(
+      context,
+    ).pop(const _SheetCompletionResult(openActiveExercise: true));
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final typeColor = _typeColor(context);
     final thumbnailUrl = exercise.thumbnailUrl?.trim();
     final videoUrl = exercise.videoUrl?.trim();
     final hasThumbnail = thumbnailUrl != null && thumbnailUrl.isNotEmpty;
@@ -3008,484 +3007,567 @@ class _ExerciseDetailSheet extends StatelessWidget {
         .map((group) => group.trim())
         .where((group) => group.isNotEmpty)
         .toList();
-    final weightLabel = weightUsed == null ? null : weightText(weightUsed!);
+    final weight = weightUsed;
     final currentPerformanceLabels =
         (currentPerformances ?? const <SetPerformance>[])
             .map((set) => _todaySetLabel(l10n, set, weightText))
             .where((label) => label.isNotEmpty)
             .toList(growable: false);
+    final sections = [
+      if (_hasContent(exercise.techniqueText))
+        (l10n.technique, exercise.techniqueText!),
+      if (_hasContent(exercise.commonErrorsText))
+        (l10n.commonMistakes, exercise.commonErrorsText!),
+      if (_hasContent(exercise.explanationText))
+        (l10n.explanation, exercise.explanationText!),
+    ];
 
-    return ListView(
+    final body = ListView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      padding: const EdgeInsets.only(bottom: 20),
       children: [
-        SizedBox(
-          height: 48,
-          child: Stack(
-            alignment: Alignment.topCenter,
+        _ExerciseSheetHeader(onClose: () => Navigator.of(context).pop()),
+        if (hasThumbnail || hasVideo)
+          _ExerciseSheetMedia(
+            key: const Key('exercise-sheet-media'),
+            thumbnailUrl: hasThumbnail ? thumbnailUrl : null,
+            semanticLabel: l10n.exerciseSheetWatchVideo(exercise.name),
+            onPlay: hasVideo ? () => _openVideo(context) : null,
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 10),
-                decoration: BoxDecoration(
+              Text(
+                exercise.name.toUpperCase(),
+                semanticsLabel: exercise.name,
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _buildMetadata(l10n),
+                style: TextStyle(
+                  fontFamily: AppTheme.bodyFontFamily,
                   color: palette.textSecondary,
-                  borderRadius: BorderRadius.circular(2),
+                  fontSize: 14,
+                  height: 1.4,
                 ),
               ),
-              Align(
-                alignment: Alignment.topLeft,
-                child: _SheetHeaderAction(
-                  icon: ExomIcons.feedback,
-                  label: l10n.feedbackSendFromExercise,
-                  onTap: () => _openFeedback(context),
-                  tooltip: l10n.feedbackSendFromExercise,
-                ),
+              const SizedBox(height: 14),
+              _ExerciseSheetFact(
+                icon: ExomIcons.streak,
+                text: _trainingLevelLabel(l10n, trainingLevel),
               ),
-              Align(
-                alignment: Alignment.topRight,
-                child: _SheetHeaderAction(
-                  icon: ExomIcons.close,
-                  onTap: () => Navigator.of(context).pop(),
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  highlighted: true,
+              if (muscleGroups.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                _ExerciseSheetFact(
+                  icon: ExomIcons.target,
+                  text: muscleGroups.join(', '),
                 ),
-              ),
+              ],
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          exercise.name,
-          style: TextStyle(
-            fontFamily: AppTheme.bodyFontFamily,
-            color: palette.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            height: 1.25,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _buildMetadata(l10n),
-          style: TextStyle(
-            color: palette.textSecondary,
-            fontSize: 14,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Divider(color: palette.divider, height: 1),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _InfoChip(
-              icon: ExomIcons.streak,
-              label: _trainingLevelLabel(l10n, trainingLevel),
-              color: typeColor,
-              emphasized: true,
-            ),
-            if (muscleGroups.isNotEmpty)
-              _InfoChip(
-                icon: ExomIcons.target,
-                label: muscleGroups.join(', '),
-                color: palette.textSecondary,
-                maxWidth: MediaQuery.sizeOf(context).width - 128,
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: hasVideo ? () => _openVideo(context) : null,
-            borderRadius: BorderRadius.circular(ExomRadius.control),
-            child: Ink(
-              height: 196,
-              decoration: BoxDecoration(
-                color: palette.surfaceVariant,
-                borderRadius: BorderRadius.circular(ExomRadius.control),
-                border: Border.all(color: palette.borderSoft),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(ExomRadius.control),
-                      child: hasThumbnail
-                          ? CachedNetworkImage(
-                              imageUrl: thumbnailUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: PerformanceProfile.imageCacheWidth(
-                                context,
-                                MediaQuery.sizeOf(context).width,
-                              ),
-                              placeholder: (context, imageUrl) =>
-                                  Container(color: palette.surfaceVariant),
-                              errorWidget: (context, imageUrl, error) =>
-                                  Container(
-                                    color: palette.surfaceVariant,
-                                    alignment: Alignment.center,
-                                    child: Icon(
-                                      ExomIcons.train,
-                                      color: palette.textDisabled,
-                                      size: 44,
-                                    ),
-                                  ),
-                            )
-                          : Container(
-                              color: palette.surfaceVariant,
-                              alignment: Alignment.center,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    ExomIcons.train,
-                                    color: palette.textDisabled,
-                                    size: 40,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    l10n.video,
-                                    style: TextStyle(
-                                      color: palette.textDisabled,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                  ),
-                  if (hasVideo)
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: palette.surface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: palette.borderSoft),
-                      ),
-                      child: Icon(
-                        ExomIcons.play,
-                        color: palette.textPrimary,
-                        size: 44,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (weightLabel != null) ...[
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _InfoChip(
-              icon: ExomIcons.train,
-              label: weightLabel,
-              color: palette.textPrimary,
-              emphasized: true,
-            ),
-          ),
-        ],
-        if (currentPerformanceLabels.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: palette.surfaceVariant.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(ExomRadius.square),
-              border: Border.all(color: palette.divider),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context).registeredSetsToday,
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                for (final label in currentPerformanceLabels)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        if (_hasContent(exercise.techniqueText)) ...[
+        if (weight != null || currentPerformanceLabels.isNotEmpty) ...[
           const SizedBox(height: 24),
-          _VisibleDetailSection(
-            title: l10n.technique,
-            text: exercise.techniqueText!,
-            bulletItems: _extractBulletItems(exercise.techniqueText!),
+          _ExerciseSheetToday(
+            weight: weight,
+            weightText: weightText,
+            setLabels: currentPerformanceLabels,
           ),
         ],
-        if (_hasContent(exercise.commonErrorsText)) ...[
-          const SizedBox(height: 20),
-          _VisibleDetailSection(
-            title: l10n.commonMistakes,
-            text: exercise.commonErrorsText!,
-            bulletItems: _extractBulletItems(exercise.commonErrorsText!),
+        for (final (index, (title, text)) in sections.indexed) ...[
+          const SizedBox(height: 24),
+          ExomNumberedSectionHeader(n: index + 1, title: title),
+          _ExerciseSheetText(text: text, bulletItems: _extractBulletItems(text)),
+        ],
+      ],
+    );
+
+    final foot = _ExerciseSheetFoot(
+      onFeedback: () => _openFeedback(context),
+      children: isCompleted
+          ? [
+              ExomSecondaryButton(
+                icon: ExomIcons.editNote,
+                label: l10n.editData,
+                onPressed: () => _openActiveExercise(context),
+              ),
+              const SizedBox(height: 4),
+              ExomQuietButton(
+                label: l10n.markExercisePendingButton,
+                onPressed: () {
+                  Navigator.of(
+                    context,
+                  ).pop(const _SheetCompletionResult(markPending: true));
+                },
+              ),
+            ]
+          : [
+              ExomPrimaryButton(
+                label: hasPartialProgress
+                    ? l10n.resumeExerciseButton
+                    : l10n.startExerciseButton,
+                semanticLabel: hasPartialProgress
+                    ? l10n.resumeExerciseButton
+                    : l10n.startExerciseButton,
+                trailingIcon: ExomIcons.play,
+                onPressed: () => _openActiveExercise(context),
+              ),
+            ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        children: [
+          Expanded(child: body),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: constraints.maxHeight * _footMaxFraction,
+            ),
+            child: foot,
           ),
         ],
-        if (_hasContent(exercise.explanationText)) ...[
-          const SizedBox(height: 20),
-          _VisibleDetailSection(
-            title: l10n.explanation,
-            text: exercise.explanationText!,
-            bulletItems: _extractBulletItems(exercise.explanationText!),
+      ),
+    );
+  }
+}
+
+/// Handle and close (`.grab`, `.g-shdr`): the header has no other action.
+class _ExerciseSheetHeader extends StatelessWidget {
+  const _ExerciseSheetHeader({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Column(
+      children: [
+        Container(
+          width: 40,
+          height: 4,
+          margin: const EdgeInsets.only(top: 10, bottom: 2),
+          decoration: BoxDecoration(
+            color: palette.borderSoft,
+            borderRadius: BorderRadius.circular(2),
           ),
-        ],
-        if (isCompleted) ...[
-          const SizedBox(height: 28),
-          ExomSecondaryButton(
-            icon: ExomIcons.editNote,
-            label: AppLocalizations.of(context).editData,
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).pop(const _SheetCompletionResult(openActiveExercise: true));
-            },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 10, 6),
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: IconButton(
+              onPressed: onClose,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              color: palette.textPrimary,
+              iconSize: 24,
+              style: IconButton.styleFrom(
+                minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ExomRadius.control),
+                ),
+              ),
+              icon: const Icon(ExomIcons.close),
+            ),
           ),
-          const SizedBox(height: 8),
-          ExomQuietButton(
-            label: l10n.markExercisePendingButton,
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).pop(const _SheetCompletionResult(markPending: true));
-            },
-          ),
-        ] else ...[
-          const SizedBox(height: 28),
-          ExomSecondaryButton(
-            icon: ExomIcons.play,
-            label: hasPartialProgress
-                ? l10n.resumeExerciseButton
-                : l10n.startExerciseButton,
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).pop(const _SheetCompletionResult(openActiveExercise: true));
-            },
-          ),
-        ],
-        const SizedBox(height: 32),
+        ),
       ],
     );
   }
 }
 
-class _SheetHeaderAction extends StatelessWidget {
-  final IconData icon;
-  final String? label;
-  final VoidCallback onTap;
-  final String tooltip;
-  final bool highlighted;
-
-  const _SheetHeaderAction({
-    required this.icon,
-    this.label,
-    required this.onTap,
-    required this.tooltip,
-    this.highlighted = false,
+/// Full-bleed media (`.x-photo.g-media-a`, 200 high): the thumbnail, or the
+/// neutral fill when only the video exists, with the play square when there
+/// is a video; the whole block opens the player.
+class _ExerciseSheetMedia extends StatelessWidget {
+  const _ExerciseSheetMedia({
+    super.key,
+    required this.thumbnailUrl,
+    required this.semanticLabel,
+    required this.onPlay,
   });
+
+  final String? thumbnailUrl;
+  final String semanticLabel;
+  final VoidCallback? onPlay;
+
+  static const double _height = 200;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final hasLabel = label != null && label!.trim().isNotEmpty;
-
-    return Material(
-      color: highlighted
-          ? palette.surfaceVariant.withValues(alpha: 0.9)
-          : palette.surface.withValues(alpha: 0.72),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExomRadius.control)),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ExomRadius.control),
-        ),
-        child: Tooltip(
-          message: tooltip,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: hasLabel ? 12 : 10,
-                  vertical: 10,
+    final url = thumbnailUrl;
+    final play = onPlay;
+    final fill = ColoredBox(color: palette.surfaceVariant);
+    final image = url == null
+        ? fill
+        : CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            memCacheWidth: PerformanceProfile.imageCacheWidth(
+              context,
+              MediaQuery.sizeOf(context).width,
+            ),
+            placeholder: (context, imageUrl) => fill,
+            errorWidget: (context, imageUrl, error) => ColoredBox(
+              color: palette.surfaceVariant,
+              child: Center(
+                child: Icon(
+                  ExomIcons.train,
+                  color: palette.textDisabled,
+                  size: 44,
                 ),
+              ),
+            ),
+          );
+    final stack = SizedBox(
+      height: _height,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          image,
+          if (play != null)
+            Center(
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: palette.surface,
+                  borderRadius: BorderRadius.circular(ExomRadius.control),
+                  border: Border.all(color: palette.borderSoft),
+                ),
+                child: Icon(
+                  ExomIcons.play,
+                  color: palette.textPrimary,
+                  size: 28,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (play == null) return ExcludeSemantics(child: stack);
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(onTap: play, child: stack),
+      ),
+    );
+  }
+}
+
+/// Level or muscles (`.g-meta li`): a fact with its icon, not a chip.
+class _ExerciseSheetFact extends StatelessWidget {
+  const _ExerciseSheetFact({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 18, color: palette.textPrimary),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              color: palette.textSecondary,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Today's block (`.x-feat.g-today`): the weight used as a display figure and
+/// the sets registered today, numbered.
+class _ExerciseSheetToday extends StatelessWidget {
+  const _ExerciseSheetToday({
+    required this.weight,
+    required this.weightText,
+    required this.setLabels,
+  });
+
+  final double? weight;
+  final _WeightText weightText;
+  final List<String> setLabels;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final kg = weight;
+    final rule = BorderSide(color: palette.borderSoft, width: ExomRule.hairline);
+    return ExomFeatureBlock(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (kg != null)
+              Semantics(
+                label: l10n.exerciseSheetWeightUsed(weightText(kg)),
+                excludeSemantics: true,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      icon,
-                      color: highlighted
-                          ? palette.textPrimary
-                          : palette.textSecondary,
-                      size: 18,
+                    Icon(ExomIcons.train, size: 20, color: palette.textPrimary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              formatWeightDisplay(
+                                kg,
+                                weightText.unitSystem,
+                                decimalSeparator: weightText.decimalSeparator,
+                              ),
+                              style: ExomType.headline2Section.copyWith(
+                                fontSize: 40,
+                                height: 0.9,
+                                letterSpacing: -0.8,
+                                color: palette.data,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            weightUnitSymbol(weightText.unitSystem),
+                            style: TextStyle(
+                              fontFamily: AppTheme.bodyFontFamily,
+                              color: palette.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    if (hasLabel) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        label!,
-                        style: TextStyle(
-                          color: highlighted
-                              ? palette.textPrimary
-                              : palette.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  ],
+                ),
+              ),
+            if (kg != null && setLabels.isNotEmpty) const SizedBox(height: 12),
+            if (setLabels.isNotEmpty) ...[
+              ExomKicker(l10n.registeredSetsToday),
+              const SizedBox(height: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(border: Border(top: rule)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (index, label) in setLabels.indexed)
+                      DecoratedBox(
+                        decoration: BoxDecoration(border: Border(bottom: rule)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                ),
+                                child: ExomIndexNumber(index + 1),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.bodyFontFamily,
+                                    color: palette.textPrimary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool emphasized;
-  final double? maxWidth;
+/// Body of a numbered section (`.g-sec`): dash bullets (`.g-bul`) when the
+/// text is a list, otherwise a paragraph (`.g-par`).
+class _ExerciseSheetText extends StatelessWidget {
+  const _ExerciseSheetText({required this.text, required this.bulletItems});
 
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.emphasized = false,
-    this.maxWidth,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final labelText = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
-    );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: emphasized ? 0.16 : 0.08),
-        borderRadius: BorderRadius.circular(ExomRadius.control),
-        border: Border.all(color: color.withValues(alpha: 0.16)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 15),
-          const SizedBox(width: 8),
-          if (maxWidth != null)
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth!),
-              child: labelText,
-            )
-          else
-            labelText,
-        ],
-      ),
-    );
-  }
-}
-
-class _VisibleDetailSection extends StatelessWidget {
-  final String title;
   final String text;
   final List<String> bulletItems;
 
-  const _VisibleDetailSection({
-    required this.title,
-    required this.text,
-    required this.bulletItems,
-  });
+  static const double _fontSize = 14;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: palette.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Divider(color: palette.divider, height: 1),
-        const SizedBox(height: 12),
-        if (bulletItems.isNotEmpty)
-          ...bulletItems.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '•',
-                    style: TextStyle(
-                      color: palette.textSecondary,
-                      fontSize: 14,
-                      height: 1.5,
+    TextStyle style(double height) => TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      color: palette.textSecondary,
+      fontSize: _fontSize,
+      height: height,
+    );
+    // The dash sits on the first line's x-height (`top: .62em`), at the
+    // scaled size.
+    final dashTop = MediaQuery.textScalerOf(context).scale(_fontSize) * 0.62;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      child: bulletItems.isEmpty
+          ? Text(text.trim(), style: style(1.6))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (index, item) in bulletItems.indexed)
+                  Padding(
+                    padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(top: dashTop),
+                          child: ExcludeSemantics(
+                            child: Container(
+                              width: 6,
+                              height: 2,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(child: Text(item, style: style(1.5))),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 14,
-                        height: 1.5,
+              ],
+            ),
+    );
+  }
+}
+
+/// Pinned foot of the sheet (`.sheet-act`): the «Enviar feedback» row (L5-D47
+/// alternative F) above the exercise action. Transparent over the live sheet
+/// background; past its height limit it scrolls on its own.
+class _ExerciseSheetFoot extends StatelessWidget {
+  const _ExerciseSheetFoot({required this.onFeedback, required this.children});
+
+  final VoidCallback onFeedback;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    return DecoratedBox(
+      key: const Key('exercise-sheet-footer'),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: palette.borderSoft)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          // Not the sheet's scrollable: the body list owns the drag.
+          primary: false,
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MergeSemantics(
+                child: Semantics(
+                  button: true,
+                  child: InkWell(
+                    key: const Key('exercise-sheet-feedback'),
+                    onTap: onFeedback,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 56),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: palette.borderSoft),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            ExomIcons.feedback,
+                            size: 22,
+                            color: palette.textPrimary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  l10n.feedbackSendFromExercise,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.bodyFontFamily,
+                                    color: palette.textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                Text(
+                                  l10n.exerciseSheetFeedbackHint,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.bodyFontFamily,
+                                    color: palette.textSecondary,
+                                    fontSize: 14,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            ExomIcons.next,
+                            size: 22,
+                            color: palette.textSecondary,
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 10),
+              ...children,
+            ],
           ),
-        if (bulletItems.isEmpty)
-          Text(
-            text.trim(),
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.6,
-            ),
-          ),
-      ],
+        ),
+      ),
     );
   }
 }

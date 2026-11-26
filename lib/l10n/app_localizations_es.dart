@@ -5341,4 +5341,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get trainingMilestoneBackHome => 'Volver a Inicio';
+
+  @override
+  String get exerciseSheetFeedbackHint => 'Opcional · sobre este ejercicio';
+
+  @override
+  String exerciseSheetWatchVideo(String name) {
+    return 'Ver vídeo de $name';
+  }
+
+  @override
+  String exerciseSheetWeightUsed(String weight) {
+    return 'Peso usado: $weight';
+  }
 }

@@ -8605,6 +8605,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Volver a Inicio'**
   String get trainingMilestoneBackHome;
+
+  /// No description provided for @exerciseSheetFeedbackHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional · sobre este ejercicio'**
+  String get exerciseSheetFeedbackHint;
+
+  /// No description provided for @exerciseSheetWatchVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver vídeo de {name}'**
+  String exerciseSheetWatchVideo(String name);
+
+  /// No description provided for @exerciseSheetWeightUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso usado: {weight}'**
+  String exerciseSheetWeightUsed(String weight);
 }
 
 class _AppLocalizationsDelegate

@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:exom_app/core/api/api_client.dart';
+import 'package:exom_app/core/navigation/app_router.dart' show AppRoutes;
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -13,9 +14,13 @@ import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
+    show FeedbackPageArgs;
 import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -31,6 +36,7 @@ import 'package:exom_app/features/trainings/domain/usecases/unmark_exercise_comp
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
+import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -44,6 +50,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/exom_component_harness.dart'
     show expectTapTargetGuidelines;
+import '../../../../core/widgets/android_nonlinear_text_scaler.dart';
 import '../../../../core/widgets/expect_no_lime_ink.dart';
 
 const _date = '2026-09-05';
@@ -197,9 +204,21 @@ class _Sync extends OfflineSyncService {
 }
 
 class _Repository extends Fake implements TrainingRepository {
-  _Repository(this.training, this.completed);
+  _Repository(this.training, this.completed, [this.performances = const {}]);
   final TrainingEntity training;
   final Set<String> completed;
+
+  /// Sets registered today, by training exercise id.
+  final Map<String, List<SetPerformance>> performances;
+
+  @override
+  Future<void> unmarkExerciseCompleted(
+    String trainingExerciseId,
+    String date, {
+    String? sessionId,
+  }) async {
+    completed.remove(trainingExerciseId);
+  }
 
   @override
   Future<TrainingEntity> getTraining(String id, {String? date}) async =>
@@ -211,6 +230,7 @@ class _Repository extends Fake implements TrainingRepository {
           _execution: TrainingDayProgress(
             ids: completed,
             weights: {for (final id in completed) id: 62.5},
+            performances: performances,
           ),
         },
         sessionTrainings: const {_execution: _trainingId},
@@ -267,6 +287,7 @@ Future<_Harness> _mount(
   void Function(_Storage storage)? seed,
   Locale locale = const Locale('es'),
   ValueListenable<ThemeMode>? themeMode,
+  Map<String, List<SetPerformance>> performances = const {},
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -276,7 +297,11 @@ Future<_Harness> _mount(
   final storage = _Storage(unitSystem: unitSystem)..actions = [...actions];
   seed?.call(storage);
   final sync = _Sync(storage);
-  final repository = _Repository(training ?? _training, completed);
+  final repository = _Repository(
+    training ?? _training,
+    {...completed},
+    performances,
+  );
   sl.registerSingleton<LocalStorage>(storage);
   sl.registerSingleton<OfflineSyncService>(sync);
   sl.registerFactory<TrainingBloc>(
@@ -320,6 +345,13 @@ Future<_Harness> _mount(
         builder: (_, state) {
           pushed.add(state.extra);
           return const Scaffold(body: Text('active-circuit-route'));
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.feedback,
+        builder: (_, state) {
+          pushed.add(state.extra);
+          return const Scaffold(body: Text('feedback-route'));
         },
       ),
     ],
@@ -376,6 +408,131 @@ Future<void> pumpTrainingDetail(
     textScaler: textScaler,
     locale: locale,
     theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+  );
+}
+
+/// Training of the exercise sheet scenes (L5-D47): the first exercise has its
+/// muscles, the three texts and, optionally, a video (no thumbnail: the tests
+/// load no network image).
+TrainingEntity _sheetTraining({String? videoUrl, String? thumbnailUrl}) => TrainingEntity(
+  id: _trainingId,
+  name: 'Pierna fuerza',
+  types: const ['FUERZA'],
+  level: 'INTERMEDIATE',
+  estimatedDurationMin: 55,
+  tags: const [],
+  exercises: [
+    TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 4,
+      repsOrDuration: '8',
+      targetRir: 2,
+      restSeconds: 90,
+      exercise: ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla búlgara',
+        muscleGroups: const ['Cuádriceps', 'glúteo mayor', 'isquiotibiales'],
+        videoUrl: videoUrl,
+        thumbnailUrl: thumbnailUrl,
+        techniqueText:
+            '- Pie trasero apoyado en el banco, con el empeine abajo.\n'
+            '- Baja en vertical hasta que la rodilla trasera casi toque el '
+            'suelo.\n'
+            '- Empuja con el talón delantero para subir.',
+        commonErrorsText:
+            '- La rodilla delantera se va hacia dentro.\n'
+            '- El tronco se inclina demasiado al bajar.',
+        explanationText:
+            'Trabaja cada pierna por separado y mejora el equilibrio. Ayuda a '
+            'igualar la fuerza entre los dos lados.',
+      ),
+    ),
+    _exercise(2, 'Peso muerto rumano'),
+  ],
+);
+
+const _sheetVideoUrl = 'https://video.example.test/clip.mp4';
+
+const _todaySets = {
+  'te-1': [
+    SetPerformance(setNumber: 1, reps: 8, weightKg: 62.5, rir: 2),
+    SetPerformance(setNumber: 2, reps: 8, weightKg: 62.5, rir: 2),
+  ],
+};
+
+/// State of the exercise in the sheet scenes.
+enum ExerciseSheetScene {
+  /// Two sets logged in a local draft: «Continuar ejercicio».
+  inProgress,
+
+  /// Completed with 62,5 kg: «Editar datos» and «Marcar como pendiente».
+  completed,
+}
+
+Future<_Harness> _openExerciseSheet(
+  WidgetTester tester, {
+  ExerciseSheetScene scene = ExerciseSheetScene.inProgress,
+  Brightness brightness = Brightness.dark,
+  TextScaler textScaler = TextScaler.noScaling,
+  Size size = const Size(390, 844),
+  String? videoUrl = _sheetVideoUrl,
+  String? thumbnailUrl,
+}) async {
+  final harness = await _mount(
+    tester,
+    training: _sheetTraining(videoUrl: videoUrl, thumbnailUrl: thumbnailUrl),
+    completed: scene == ExerciseSheetScene.completed ? {'te-1'} : const {},
+    performances: _todaySets,
+    theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+    size: size,
+    textScaler: textScaler,
+    seed: scene == ExerciseSheetScene.inProgress
+        ? (storage) => storage.drafts['te-1:$_date:$_execution'] =
+              ActiveWorkoutHiveModel(
+                trainingId: _trainingId,
+                exerciseId: 'te-1:$_date:$_execution',
+                currentSet: 3,
+                completedSets: 2,
+                lastWeightKg: 62.5,
+                completedSetData: const [
+                  {'set_number': 1, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+                  {'set_number': 2, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+                ],
+              )
+        : null,
+  );
+  await _tapSheetRow(tester);
+  return harness;
+}
+
+/// Brings the first exercise row on stage (the header figures can push it
+/// below the fold) and opens its sheet.
+Future<void> _tapSheetRow(WidgetTester tester) async {
+  final row = find.text('Sentadilla búlgara');
+  await tester.scrollUntilVisible(
+    row,
+    100,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(row);
+  await tester.pumpAndSettle();
+}
+
+/// The exercise sheet (L5-D47) open over the training detail, for the golden
+/// of test/golden/l5_hoja_ejercicio_golden_test.dart.
+Future<void> pumpExerciseSheet(
+  WidgetTester tester, {
+  required ExerciseSheetScene scene,
+  required Brightness brightness,
+  TextScaler textScaler = TextScaler.noScaling,
+}) async {
+  await _openExerciseSheet(
+    tester,
+    scene: scene,
+    brightness: brightness,
+    textScaler: textScaler,
   );
 }
 
@@ -1205,5 +1362,373 @@ void main() {
       );
       await expectLater(tester, meetsGuideline(textContrastGuideline));
     });
+  });
+
+  // L5-D47: exercise sheet, variant «A · media arriba» of
+  // docs/bocetos/rediseno-exom-app/extension/g-hoja-ejercicio.html.
+  group('exercise sheet (L5-D47)', () {
+    final sheet = find.byType(BottomSheet);
+    final sheetList = find
+        .descendant(
+          of: find.byType(DraggableScrollableSheet),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final footer = find.byKey(const Key('exercise-sheet-footer'));
+    final feedbackRow = find.byKey(const Key('exercise-sheet-feedback'));
+    final media = find.byKey(const Key('exercise-sheet-media'));
+    Finder inSheet(Finder finder) =>
+        find.descendant(of: sheet, matching: finder);
+    final primary = find.descendant(
+      of: footer,
+      matching: find.byType(ExomPrimaryButton),
+    );
+
+    testWidgets('without video or thumbnail the media slot is not painted', (
+      tester,
+    ) async {
+      await _openExerciseSheet(tester, videoUrl: null);
+      final l10n = _l10n(tester);
+      expect(media, findsNothing);
+      expect(inSheet(find.text(l10n.video)), findsNothing);
+      // The sheet starts with the name, right under the header.
+      final name = inSheet(find.text('SENTADILLA BÚLGARA'));
+      expect(name, findsOneWidget);
+      expect(
+        tester.getTopLeft(name).dy - tester.getTopLeft(sheet).dy,
+        lessThan(96),
+      );
+    });
+
+    testWidgets('with a video, the media shows play and opens the player', (
+      tester,
+    ) async {
+      await _openExerciseSheet(tester);
+      expect(media, findsOneWidget);
+      expect(
+        find.descendant(of: media, matching: find.byIcon(ExomIcons.play)),
+        findsOneWidget,
+      );
+      // Media first, then the name.
+      expect(
+        tester.getBottomLeft(media).dy,
+        lessThanOrEqualTo(
+          tester.getTopLeft(inSheet(find.text('SENTADILLA BÚLGARA'))).dy,
+        ),
+      );
+      await tester.tap(media);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(ExerciseVideoPlayerPage), findsOneWidget);
+    });
+
+    testWidgets('with a thumbnail and no video the media has no play and is '
+        'not tappable', (tester) async {
+      await _openExerciseSheet(
+        tester,
+        videoUrl: null,
+        thumbnailUrl: 'https://example.test/sheet.jpg',
+      );
+      expect(media, findsOneWidget);
+      expect(
+        find.descendant(of: media, matching: find.byIcon(ExomIcons.play)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: media, matching: find.byType(InkWell)),
+        findsNothing,
+      );
+      await tester.tap(media, warnIfMissed: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(ExerciseVideoPlayerPage), findsNothing);
+    });
+
+    testWidgets('the lime button is announced in lower case', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _openExerciseSheet(tester);
+      final l10n = _l10n(tester);
+      expect(
+        find.descendant(
+          of: footer,
+          matching: find.bySemanticsLabel(l10n.resumeExerciseButton),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(l10n.resumeExerciseButton.toUpperCase()),
+        findsNothing,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('feedback is a row at the foot, above the main action', (
+      tester,
+    ) async {
+      final harness = await _openExerciseSheet(tester);
+      final l10n = _l10n(tester);
+      expect(find.descendant(of: footer, matching: feedbackRow), findsOneWidget);
+      expect(
+        find.descendant(
+          of: feedbackRow,
+          matching: find.text(l10n.feedbackSendFromExercise),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: feedbackRow,
+          matching: find.text(l10n.exerciseSheetFeedbackHint),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: feedbackRow, matching: find.byIcon(ExomIcons.next)),
+        findsOneWidget,
+      );
+      expect(
+        tester.getBottomLeft(feedbackRow).dy,
+        lessThanOrEqualTo(tester.getTopLeft(primary).dy),
+      );
+
+      await tester.tap(feedbackRow);
+      await tester.pumpAndSettle();
+      expect(find.text('feedback-route'), findsOneWidget);
+      final args = harness.pushed.last! as FeedbackPageArgs;
+      expect(args.exercise?.key, 'te-1');
+      expect(args.exercise?.exerciseId, 'ex-1');
+      expect(args.exercise?.exerciseName, 'Sentadilla búlgara');
+    });
+
+    testWidgets('the header only has the handle and close', (tester) async {
+      await _openExerciseSheet(tester);
+      final l10n = _l10n(tester);
+      final context = tester.element(sheet);
+      // «Enviar feedback» appears once, in the foot row, never in the header.
+      expect(inSheet(find.text(l10n.feedbackSendFromExercise)), findsOneWidget);
+      expect(inSheet(find.byIcon(ExomIcons.feedback)), findsOneWidget);
+      expect(
+        find.descendant(of: footer, matching: find.byIcon(ExomIcons.feedback)),
+        findsOneWidget,
+      );
+      final close = inSheet(
+        find.byTooltip(MaterialLocalizations.of(context).closeButtonTooltip),
+      );
+      expect(close, findsOneWidget);
+      expect(
+        tester.getBottomLeft(close).dy,
+        lessThanOrEqualTo(tester.getTopLeft(media).dy),
+      );
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+    });
+
+    testWidgets('the lime action stays pinned with the sheet scrolled', (
+      tester,
+    ) async {
+      final harness = await _openExerciseSheet(tester);
+      final l10n = _l10n(tester);
+      expect(
+        find.descendant(
+          of: primary,
+          matching: find.text(l10n.resumeExerciseButton.toUpperCase()),
+        ),
+        findsOneWidget,
+      );
+      for (var i = 0; i < 4; i++) {
+        await tester.drag(sheetList, const Offset(0, -400));
+        await tester.pumpAndSettle();
+      }
+      final position = tester.state<ScrollableState>(sheetList).position;
+      expect(position.pixels, greaterThan(0));
+      expect(primary, findsOneWidget);
+      final rect = tester.getRect(primary);
+      expect(rect.bottom, lessThanOrEqualTo(844));
+      expect(rect.top, greaterThan(tester.getBottomLeft(sheetList).dy - 1));
+      await tester.tap(primary);
+      await tester.pumpAndSettle();
+      expect(find.text('active-exercise-route'), findsOneWidget);
+      expect(harness.pushedRoutes, 1);
+    });
+
+    testWidgets('pending without progress offers «Empezar ejercicio»', (
+      tester,
+    ) async {
+      await _mount(tester, training: _sheetTraining());
+      await _tapSheetRow(tester);
+      final l10n = _l10n(tester);
+      expect(
+        find.descendant(
+          of: primary,
+          matching: find.text(l10n.startExerciseButton.toUpperCase()),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'completed: «Editar datos» and «Marcar como pendiente», no lime action',
+      (tester) async {
+        await _openExerciseSheet(tester, scene: ExerciseSheetScene.completed);
+        final l10n = _l10n(tester);
+        expect(inSheet(find.byType(ExomPrimaryButton)), findsNothing);
+        expect(
+          find.descendant(
+            of: footer,
+            matching: find.widgetWithText(ExomSecondaryButton, l10n.editData),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: footer,
+            matching: find.widgetWithText(
+              ExomQuietButton,
+              l10n.markExercisePendingButton,
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: footer, matching: feedbackRow),
+          findsOneWidget,
+        );
+        // The feedback row sits above both actions.
+        expect(
+          tester.getBottomLeft(feedbackRow).dy,
+          lessThanOrEqualTo(
+            tester.getTopLeft(find.byType(ExomSecondaryButton)).dy,
+          ),
+        );
+        await tester.tap(find.text(l10n.editData));
+        await tester.pumpAndSettle();
+        expect(find.text('active-exercise-route'), findsOneWidget);
+      },
+    );
+
+    testWidgets('«Marcar como pendiente» closes the sheet and the row goes '
+        'pending', (tester) async {
+      await _openExerciseSheet(tester, scene: ExerciseSheetScene.completed);
+      final l10n = _l10n(tester);
+      await tester.tap(find.text(l10n.markExercisePendingButton));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      // The row is pending again: its sheet offers the lime action, not
+      // «Marcar como pendiente».
+      await _tapSheetRow(tester);
+      expect(primary, findsOneWidget);
+      expect(find.text(l10n.markExercisePendingButton), findsNothing);
+    });
+
+    testWidgets('the level is neutral, not the training type colour', (
+      tester,
+    ) async {
+      await _openExerciseSheet(tester);
+      final l10n = _l10n(tester);
+      final context = tester.element(sheet);
+      final palette = context.exomPalette;
+      final level = inSheet(find.text(l10n.intermediateLevel));
+      expect(level, findsOneWidget);
+      final colour = tester.widget<Text>(level).style?.color;
+      expect(colour, palette.textSecondary);
+      expect(
+        colour,
+        isNot(trainingAccentColor(context, types: const ['FUERZA'])),
+      );
+      // A fact, not a chip: nothing tappable around it.
+      expect(
+        find.ancestor(of: level, matching: find.byType(InkWell)),
+        findsNothing,
+      );
+      final muscles = inSheet(
+        find.text('Cuádriceps, glúteo mayor, isquiotibiales'),
+      );
+      expect(tester.widget<Text>(muscles).style?.color, palette.textSecondary);
+    });
+
+    testWidgets('today block and numbered sections 01-03 in order', (
+      tester,
+    ) async {
+      await _openExerciseSheet(
+        tester,
+        scene: ExerciseSheetScene.completed,
+        size: const Size(390, 1600),
+      );
+      final l10n = _l10n(tester);
+      final block = inSheet(find.byType(ExomFeatureBlock));
+      expect(block, findsOneWidget);
+      expect(
+        find.descendant(of: block, matching: find.text('62,5')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: block,
+          matching: find.text(l10n.registeredSetsToday.toUpperCase()),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: block, matching: find.byType(ExomIndexNumber)),
+        findsNWidgets(2),
+      );
+      // The list builds lazily: collect the headers while scrolling down.
+      final headers = <(int, String)>{};
+      for (var i = 0; i < 6; i++) {
+        headers.addAll(
+          tester
+              .widgetList<ExomNumberedSectionHeader>(
+                inSheet(find.byType(ExomNumberedSectionHeader)),
+              )
+              .map((header) => (header.n, header.title)),
+        );
+        await tester.drag(sheetList, const Offset(0, -300));
+        await tester.pumpAndSettle();
+      }
+      expect(headers.toList(), [
+        (1, l10n.technique),
+        (2, l10n.commonMistakes),
+        (3, l10n.explanation),
+      ]);
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('${brightness.name}: contrast and tap targets', (
+        tester,
+      ) async {
+        for (final scene in ExerciseSheetScene.values) {
+          await _openExerciseSheet(
+            tester,
+            scene: scene,
+            brightness: brightness,
+          );
+          expect(tester.takeException(), isNull);
+          if (brightness == Brightness.light) expectNoLimeInk(tester);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await expectTapTargetGuidelines(tester);
+        }
+      });
+
+      testWidgets('${brightness.name}: text at 1.6 (Android) never overflows', (
+        tester,
+      ) async {
+        for (final scene in ExerciseSheetScene.values) {
+          await _openExerciseSheet(
+            tester,
+            scene: scene,
+            brightness: brightness,
+            textScaler: const AndroidNonlinearTextScaler(1.6),
+          );
+          expect(tester.takeException(), isNull);
+          for (var i = 0; i < 6; i++) {
+            await tester.drag(sheetList, const Offset(0, -300));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          }
+          await expectTapTargetGuidelines(tester);
+        }
+      });
+    }
   });
 }

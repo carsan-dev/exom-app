@@ -738,6 +738,13 @@
   "feedbackFromGallery": "From gallery",
   "feedbackUploading": "Uploading...",
   "feedbackSendFromExercise": "Send feedback",
+  "feedbackChosenFileA11y": "{kind}, {duration}",
+  "@feedbackChosenFileA11y": {
+    "placeholders": {
+      "kind": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "circuitFeedbackAction": "Send videos",
   "circuitFeedbackTitle": "Circuit videos",
   "circuitFeedbackDescription": "Add a video and an optional note to each exercise you want reviewed.",

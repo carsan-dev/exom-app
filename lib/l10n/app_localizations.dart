@@ -3782,6 +3782,12 @@ abstract class AppLocalizations {
   /// **'Enviar feedback'**
   String get feedbackSendFromExercise;
 
+  /// No description provided for @feedbackChosenFileA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'{kind}, {duration}'**
+  String feedbackChosenFileA11y(String kind, String duration);
+
   /// No description provided for @circuitFeedbackAction.
   ///
   /// In es, this message translates to:

@@ -775,6 +775,13 @@
   "feedbackFromGallery": "Desde galería",
   "feedbackUploading": "Subiendo...",
   "feedbackSendFromExercise": "Enviar feedback",
+  "feedbackChosenFileA11y": "{kind}, {duration}",
+  "@feedbackChosenFileA11y": {
+    "placeholders": {
+      "kind": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "circuitFeedbackAction": "Enviar vídeos",
   "circuitFeedbackTitle": "Vídeos del circuito",
   "circuitFeedbackDescription": "Añade un vídeo y una nota opcional a los ejercicios que quieras revisar.",

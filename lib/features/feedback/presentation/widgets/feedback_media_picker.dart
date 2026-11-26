@@ -10,6 +10,7 @@ import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/local_video_thumbnail.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -253,45 +254,11 @@ class _FileAnswer extends StatelessWidget {
 
     final file = selectedFile;
     if (file != null) {
-      final clear = onClear;
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: ExcludeSemantics(
-              child: Icon(
-                isVideo ? ExomIcons.video : ExomIcons.image,
-                color: palette.textSecondary,
-                size: MediaQuery.textScalerOf(context).scale(20),
-              ),
-            ),
-          ),
-          const SizedBox(width: ExomSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  file.path.split('/').last,
-                  style: TextStyle(
-                    fontFamily: AppTheme.bodyFontFamily,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                    color: palette.textPrimary,
-                  ),
-                ),
-                Text(isVideo ? l10n.video : l10n.image, style: secondary),
-              ],
-            ),
-          ),
-          if (clear != null) ...[
-            const SizedBox(width: ExomSpacing.sm),
-            ExomTextLink(label: l10n.feedbackRemoveFile, onTap: clear),
-          ],
-        ],
+      return _ChosenFile(
+        key: ValueKey<String>(file.path),
+        file: file,
+        isVideo: isVideo,
+        onClear: onClear,
       );
     }
 
@@ -300,6 +267,129 @@ class _FileAnswer extends StatelessWidget {
       label: l10n.feedbackChooseFile,
       icon: isVideo ? ExomIcons.video : ExomIcons.addPhoto,
       onPressed: onChoose,
+    );
+  }
+}
+
+/// The chosen file (L5-E3d-P1, as «Vídeo preparado»): a 56 dp thumbnail, the
+/// kind («Vídeo · 0:12» once the clip's duration is known, «Imagen») and
+/// «Quitar». The file name is never shown.
+class _ChosenFile extends StatefulWidget {
+  const _ChosenFile({
+    super.key,
+    required this.file,
+    required this.isVideo,
+    required this.onClear,
+  });
+
+  final File file;
+  final bool isVideo;
+  final VoidCallback? onClear;
+
+  @override
+  State<_ChosenFile> createState() => _ChosenFileState();
+}
+
+class _ChosenFileState extends State<_ChosenFile> {
+  static const Key _thumbnailKey = Key('feedback-file-thumbnail');
+
+  Duration? _duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final clear = widget.onClear;
+    final kind = widget.isVideo ? l10n.video : l10n.image;
+    final duration = widget.isVideo ? _duration : null;
+    final time = duration == null ? null : formatClipDuration(duration);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final thumbnail = widget.isVideo
+        ? LocalVideoThumbnail(
+            key: _thumbnailKey,
+            file: widget.file,
+            onDuration: (value) {
+              if (mounted) setState(() => _duration = value);
+            },
+          )
+        : _ImageThumbnail(
+            key: _thumbnailKey,
+            file: widget.file,
+            cacheWidth: (_ImageThumbnail.size * dpr).ceil(),
+          );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        thumbnail,
+        const SizedBox(width: ExomSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                label: time == null
+                    ? kind
+                    : l10n.feedbackChosenFileA11y(kind, time),
+                excludeSemantics: true,
+                child: Text(
+                  time == null ? kind : '$kind · $time',
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                    color: palette.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              if (clear != null)
+                ExomTextLink(label: l10n.feedbackRemoveFile, onTap: clear),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The 56 dp box of the chosen image: the picture (cover) with the outline of
+/// the video thumbnail, or [ExomIcons.image] in the same box if it cannot be
+/// decoded. Decorative: excluded from semantics.
+class _ImageThumbnail extends StatelessWidget {
+  const _ImageThumbnail({
+    super.key,
+    required this.file,
+    required this.cacheWidth,
+  });
+
+  static const double size = 56;
+
+  final File file;
+  final int cacheWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          border: Border.all(color: palette.borderSoft),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+          cacheWidth: cacheWidth,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Icon(ExomIcons.image, size: 24, color: palette.textPrimary),
+          ),
+        ),
+      ),
     );
   }
 }

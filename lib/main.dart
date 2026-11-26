@@ -30,6 +30,7 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_service_starter.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
+import 'package:exom_app/features/feedback/presentation/feedback_notice_session.dart';
 import 'package:exom_app/features/feedback/presentation/feedback_notice_snack_bars.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
@@ -409,6 +410,9 @@ class _ExomAppView extends StatefulWidget {
 
 class _ExomAppViewState extends State<_ExomAppView> {
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
+  final _feedbackNoticeSession = FeedbackNoticeSession(
+    sessionKey: currentSessionOwnerKey,
+  );
   late final NotificationNavigationCoordinator _notificationNavigation;
   late final ValidatedSessionServiceStarter _authenticatedServices;
 
@@ -430,6 +434,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
     _schedulePendingNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _feedbackNoticeSession.handle(context.read<AuthBloc>().state);
       _authenticatedServices.handle(context.read<AuthBloc>().state);
     });
   }
@@ -465,6 +470,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
   }
 
   void _showFeedbackNotice(FeedbackUploadNotice notice) {
+    if (!_feedbackNoticeSession.acceptsNotices) return;
     if (notice.kind == FeedbackUploadNoticeKind.preparing ||
         notice.kind == FeedbackUploadNoticeKind.uploading ||
         notice.kind == FeedbackUploadNoticeKind.processing ||
@@ -476,6 +482,9 @@ class _ExomAppViewState extends State<_ExomAppView> {
     if (messenger == null || context == null) return;
     final l10n = AppLocalizations.of(context);
     final isFailure = notice.kind == FeedbackUploadNoticeKind.failed;
+    final retry = _feedbackNoticeSession.guardRetry(
+      sl<FeedbackUploadQueueService>().retry,
+    );
     final message = switch (notice.kind) {
       FeedbackUploadNoticeKind.queued => l10n.feedbackQueued,
       FeedbackUploadNoticeKind.completed => l10n.feedbackSentSuccessfully,
@@ -493,7 +502,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
               label: l10n.retry,
               textColor: Theme.of(context).colorScheme.inversePrimary,
               onPressed: () =>
-                  unawaited(sl<FeedbackUploadQueueService>().retry(notice.id)),
+                  unawaited(retry(notice.id)),
             )
           : null,
     );
@@ -511,6 +520,7 @@ class _ExomAppViewState extends State<_ExomAppView> {
     _schedulePendingNotification();
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
+        _feedbackNoticeSession.handle(state);
         _authenticatedServices.handle(state);
         AppRouter.router.refresh();
         _schedulePendingNotification();

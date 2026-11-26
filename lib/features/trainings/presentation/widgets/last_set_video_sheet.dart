@@ -40,6 +40,8 @@ class LastSetVideoSheet extends StatefulWidget {
     required this.pickVideo,
     this.setLabel,
     this.previewFactory = createPlayerLocalVideoPreview,
+    this.initialVideo,
+    this.onCancel,
   });
 
   /// «Sentadilla búlgara · serie 4».
@@ -55,13 +57,23 @@ class LastSetVideoSheet extends StatefulWidget {
   /// uses `video_player`. Tests pass a fake.
   final LocalVideoPreviewFactory previewFactory;
 
+  /// A video already chosen before the sheet opens (the one the picker
+  /// recovered after Android recreated the activity, P-E3b-1): the sheet
+  /// opens in «Vídeo preparado». Null (the default) opens it in the source.
+  final File? initialVideo;
+
+  /// Called when «Cancelar» is tapped (not on a scrim, drag or back
+  /// dismissal), right before the sheet closes with null. Null (the
+  /// default): nothing else happens.
+  final VoidCallback? onCancel;
+
   @override
   State<LastSetVideoSheet> createState() => _LastSetVideoSheetState();
 }
 
 class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
   final _notes = TextEditingController();
-  File? _file;
+  late File? _file = widget.initialVideo;
 
   /// Duration of [_file] once its preview knows it; null hides it.
   Duration? _duration;
@@ -114,6 +126,7 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
   void _cancel() {
     if (_done) return;
     _done = true;
+    widget.onCancel?.call();
     Navigator.of(context).pop();
   }
 

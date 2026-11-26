@@ -33,6 +33,7 @@ import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/features/feedback/presentation/feedback_notice_snack_bars.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/progress_photos/services/progress_photo_upload_queue_service.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/pending_last_set_restoration.dart';
 import 'package:exom_app/injection_container.dart';
 
 @pragma('vm:entry-point')
@@ -42,6 +43,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // P-E3b-1 r2: asked now, while the splash and the bootstrap run, so that
+  // the app's restoration scope gets the data synchronously at runApp.
+  final restorationData = RestorationDataPreload.start();
   _configureImageCache();
   await showBootstrapSplash();
   // L5-D3 r3 (D3-E1): the splash's first frame draws this decoded symbol.
@@ -50,7 +54,10 @@ Future<void> main() async {
   try {
     await _bootstrap().timeout(const Duration(seconds: 20));
     await launchSymbol.timeout(_launchSymbolCap, onTimeout: () {});
-    runApp(const ExomApp());
+    final restorationReady = await restorationData.ready(
+      cap: _restorationDataCap,
+    );
+    runApp(ExomApp(restorationReady: restorationReady));
   } catch (error, stackTrace) {
     debugPrint('[BOOTSTRAP] Failed to start EXOM: $error');
     debugPrintStack(stackTrace: stackTrace);
@@ -121,6 +128,12 @@ Future<void> showBootstrapSplash({
 /// Longest [main] waits for [precacheLaunchSymbol] once the rest of the
 /// bootstrap is done.
 const Duration _launchSymbolCap = Duration(milliseconds: 300);
+
+/// Longest [main] waits, once the rest of the bootstrap is done, for the
+/// restoration data asked at its start. Android answers from the activity's
+/// `onCreate`, long before; without an answer by then the app starts without
+/// restoration instead of drawing an empty frame after the splash.
+const Duration _restorationDataCap = Duration(milliseconds: 300);
 
 /// Decodes the launch symbol the splash draws on its first frame (L5-D3 r3,
 /// D3-E1): without it that frame showed the background alone while the
@@ -384,7 +397,11 @@ class _BootstrapScaffold extends StatelessWidget {
 }
 
 class ExomApp extends StatelessWidget {
-  const ExomApp({super.key});
+  const ExomApp({super.key, this.restorationReady = false});
+
+  /// The restoration data is already in the manager
+  /// ([RestorationDataPreload.ready]); otherwise the app has no restoration.
+  final bool restorationReady;
 
   @override
   Widget build(BuildContext context) {
@@ -395,13 +412,15 @@ class ExomApp extends StatelessWidget {
           create: (_) => sl<AuthBloc>()..add(const AuthCheckStatusRequested()),
         ),
       ],
-      child: const _ExomAppView(),
+      child: _ExomAppView(restorationReady: restorationReady),
     );
   }
 }
 
 class _ExomAppView extends StatefulWidget {
-  const _ExomAppView();
+  const _ExomAppView({required this.restorationReady});
+
+  final bool restorationReady;
 
   @override
   State<_ExomAppView> createState() => _ExomAppViewState();
@@ -508,6 +527,18 @@ class _ExomAppViewState extends State<_ExomAppView> {
 
   @override
   Widget build(BuildContext context) {
+    // Bounded restoration (P-E3b-1): only the last set waiting for its video
+    // is kept in the saved instance state. The router and the pages are not
+    // restored (no restorationScopeId on MaterialApp.router), so the app
+    // still starts at the splash. The data was loaded before runApp, so the
+    // first frame after the bootstrap splash is already the app (r2).
+    return BoundedRestorationScope(
+      restorationReady: widget.restorationReady,
+      child: _buildApp(context),
+    );
+  }
+
+  Widget _buildApp(BuildContext context) {
     _schedulePendingNotification();
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {

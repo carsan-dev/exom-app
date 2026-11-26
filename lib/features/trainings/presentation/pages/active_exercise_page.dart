@@ -37,6 +37,7 @@ import 'package:exom_app/features/trainings/presentation/widgets/active_exercise
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_reminder.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/pending_last_set_restoration.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
@@ -160,6 +161,19 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
 
+  /// Saved instance state for the pending last set (P-E3b-1); null when the
+  /// app has no restoration scope (tests, other hosts).
+  PendingLastSetStore? _restoration;
+
+  /// The entry this page wrote or applied, cleared again when the set is
+  /// dispatched or the page goes away.
+  PendingLastSetEntry? _ownEntry;
+
+  /// [_ownEntry] came back after Android recreated the activity: it is kept
+  /// until it is applied or explicitly discarded, also when the page goes
+  /// away (P-E3b-1 r2).
+  bool _recovered = false;
+
   /// True from the tap on «Registrar serie» until the set is dispatched or
   /// abandoned: repeated taps are ignored (motion card 8a).
   bool _logging = false;
@@ -168,6 +182,26 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _restoration ??= PendingLastSetRestoration.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    // What was recovered after a recreation stays in the saved state until
+    // it is applied or explicitly discarded, so leaving the page keeps it
+    // (r2). A set typed on this page and never recovered is dropped, as
+    // before P-E3b-1. A destroyed activity never gets here and keeps both.
+    if (_recovered) {
+      _ownEntry = null;
+    } else {
+      _forgetPendingLastSet();
+    }
+    super.dispose();
   }
 
   void _popOnce() {
@@ -230,16 +264,175 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     final activeState = await startedState;
     if (!mounted) return;
+    final recoveryFailed = await _restorePendingLastSet(activeState);
+    if (!mounted) return;
 
     setState(() {
       _bootstrapped = true;
     });
+    if (recoveryFailed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).lastSetVideoRecoveryError,
+            ),
+          ),
+        );
+      });
+    }
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
     if (activeState.isDone) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _beginCompletion(activeState);
       });
     }
+  }
+
+  bool get _sameSessionNow =>
+      _ownerSession != null &&
+      sl<LocalStorage>().sessionStamp == _ownerSession;
+
+  /// [entry] is this account's entry for this exercise and execution.
+  bool _isOwnEntry(PendingLastSetEntry entry, String? sessionId) {
+    final storage = sl<LocalStorage>();
+    return entry.belongsTo(storage.ownerId, storage.environment) &&
+        entry.isFor(
+          trainingId: widget.trainingId,
+          trainingExerciseId: widget.args.trainingExercise.id,
+          assignmentDate: widget.args.assignmentDate,
+          sessionId: sessionId,
+        );
+  }
+
+  /// After Android recreated the activity (P-E3b-1): takes back the last set
+  /// that was waiting for its video, and the video the picker recovered, if
+  /// they belong to this account, exercise, execution and set and Hive has
+  /// not moved on. Anything else is left untouched and never queued. True
+  /// when the picker could not recover the video (the page says so).
+  Future<bool> _restorePendingLastSet(ActiveExerciseState state) async {
+    final store = _restoration;
+    if (store == null || !widget.args.requiresLastSetVideo) return false;
+    await store.settled;
+    if (!mounted || !_sameSessionNow) return false;
+    final storage = sl<LocalStorage>();
+    final entry = store.entryFor(storage.ownerId, storage.environment);
+    if (entry == null || !_isOwnEntry(entry, state.sessionId)) return false;
+    if (state.isDone ||
+        state.currentSet != entry.setNumber ||
+        state.currentSet != state.totalSets) {
+      store.remove(entry);
+      return false;
+    }
+    _ownEntry = entry;
+    _recovered = true;
+    _pendingLastSetPerformance = entry.performance;
+    _pendingLastSetNumber = entry.setNumber;
+    // A feedback already attached in Hive is reused: never a second one.
+    if (state.lastSetFeedbackClientUploadId != null) return false;
+    final path = entry.videoPath;
+    // The video sheet opens with it in «Vídeo preparado» ([_keptVideo]).
+    if (path != null && File(path).existsSync()) return false;
+    if (!entry.videoLost && path == null) return false;
+    // Said once; the set stays pending and the video is asked again.
+    final acknowledged = entry.copyWith(videoLost: false, clearVideoPath: true);
+    store.replace(entry, acknowledged);
+    _ownEntry = acknowledged;
+    return true;
+  }
+
+  /// Keeps the last set waiting for its video in the saved instance state,
+  /// for this account only.
+  void _rememberPendingLastSet(
+    SetPerformanceResult performance,
+    ActiveExerciseState state,
+  ) {
+    final store = _restoration;
+    final storage = sl<LocalStorage>();
+    final ownerId = storage.ownerId;
+    if (store == null || ownerId == null || !_sameSessionNow) return;
+    final existing = store.entryFor(ownerId, storage.environment);
+    if (existing != null &&
+        existing.setNumber == state.currentSet &&
+        _isOwnEntry(existing, state.sessionId)) {
+      _ownEntry = existing;
+      return;
+    }
+    final entry = PendingLastSetEntry(
+      ownerId: ownerId,
+      environment: storage.environment,
+      trainingId: widget.trainingId,
+      trainingExerciseId: widget.args.trainingExercise.id,
+      assignmentDate: widget.args.assignmentDate,
+      sessionId: state.sessionId,
+      setNumber: state.currentSet,
+      reps: performance.reps,
+      seconds: performance.seconds,
+      weightKg: performance.weight,
+      rir: performance.rir,
+      skipped: performance.skipped,
+    );
+    store.write(entry);
+    _ownEntry = entry;
+  }
+
+  /// Clears this page's entry (if it is still the stored one for the same
+  /// set).
+  void _forgetPendingLastSet() {
+    final own = _ownEntry;
+    _ownEntry = null;
+    _recovered = false;
+    if (own != null) _restoration?.remove(own);
+  }
+
+  /// This page's entry as stored now, if it is still for the same set.
+  PendingLastSetEntry? get _storedOwnEntry {
+    final own = _ownEntry;
+    if (own == null) return null;
+    final current = _restoration?.entryFor(own.ownerId, own.environment);
+    return current != null && current.isSameSet(own) ? current : null;
+  }
+
+  /// Applies [change] to this page's entry if it is still the stored one.
+  void _updateOwnEntry(
+    PendingLastSetEntry Function(PendingLastSetEntry entry) change,
+  ) {
+    final current = _storedOwnEntry;
+    if (current == null) return;
+    final next = change(current);
+    if (next != current) _restoration?.replace(current, next);
+    _ownEntry = next;
+  }
+
+  /// Marks this page's entry as having the picker open (or not).
+  void _markPicking(bool picking) =>
+      _updateOwnEntry((entry) => entry.copyWith(picking: picking));
+
+  /// The video kept in this page's entry (recovered by the picker, or chosen
+  /// before Android recreated the activity), if the file is still there.
+  File? get _keptVideo {
+    final path = _storedOwnEntry?.videoPath;
+    if (path == null) return null;
+    final file = File(path);
+    return file.existsSync() ? file : null;
+  }
+
+  /// The video sheet closed without «Usar vídeo». «Cancelar» is an explicit
+  /// discard: the kept video is forgotten and, if the sheet offered the
+  /// recovered one, the set becomes an ordinary pending set again (dropped
+  /// when leaving the page, as before P-E3b-1). Any other dismissal (scrim,
+  /// drag, back) keeps what was recovered; a video chosen on this page is
+  /// dropped, as the sheet itself does.
+  void _videoSheetClosed({
+    required bool cancelled,
+    required bool offeredKeptVideo,
+  }) {
+    if (!cancelled && _recovered) return;
+    _updateOwnEntry(
+      (entry) => entry.copyWith(clearVideoPath: true, videoLost: false),
+    );
+    if (cancelled && offeredKeptVideo) _recovered = false;
   }
 
   Future<bool> _confirmExit() async {
@@ -346,6 +539,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     if (state.currentSet == state.totalSets &&
         widget.args.requiresLastSetVideo &&
         feedbackId == null) {
+      _rememberPendingLastSet(performance, state);
       feedbackId = await _prepareLastSetVideo(
         performance,
         state.currentSet,
@@ -360,6 +554,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     _pendingLastSetPerformance = null;
     _pendingLastSetNumber = null;
+    _forgetPendingLastSet();
     context.read<ActiveExerciseBloc>().add(
       performance.skipped
           ? CompleteSet(lastSetFeedbackClientUploadId: feedbackId)
@@ -508,6 +703,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
             ),
             weightText,
           );
+    final keptVideo = _keptVideo;
+    var cancelled = false;
     final choice = await showExomSheet<LastSetVideoChoice>(
       context: context,
       builder: (_) => LastSetVideoSheet(
@@ -516,8 +713,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
             ? l10n.setPerformanceTitle(setNumber)
             : l10n.lastSetVideoChosenSet(setNumber, performed),
         pickVideo: _pickLastSetVideo,
+        initialVideo: keptVideo,
+        onCancel: () => cancelled = true,
       ),
     );
+    if (choice == null && mounted) {
+      _videoSheetClosed(
+        cancelled: cancelled,
+        offeredKeptVideo: keptVideo != null,
+      );
+    }
     if (choice == null || !mounted || !context.mounted ||
         _ownerSession == null ||
         sl<LocalStorage>().sessionStamp != _ownerSession) {
@@ -553,13 +758,30 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   Future<File?> _pickLastSetVideo(ImageSource initialSource) async {
     var source = initialSource;
     while (mounted) {
+      if (_ownEntry != null) {
+        // Into the saved state before the picker can stop the activity.
+        _markPicking(true);
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return null;
+      }
       try {
         final picked = await ImagePicker().pickVideo(
           source: source,
           maxDuration: const Duration(minutes: 2),
         );
-        return picked == null ? null : File(picked.path);
+        if (picked == null) return null;
+        // Kept until «Usar vídeo», in case Android recreates the activity
+        // with the sheet still open (r2).
+        _updateOwnEntry(
+          (entry) => entry.copyWith(
+            picking: false,
+            videoPath: picked.path,
+            videoLost: false,
+          ),
+        );
+        return File(picked.path);
       } on Object catch (error) {
+        _markPicking(false);
         if (!mounted) return null;
         final action = await showMediaPickerErrorDialog(
           context,
@@ -571,6 +793,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         } else if (action != MediaPickerRecoveryAction.retry) {
           return null;
         }
+      } finally {
+        _markPicking(false);
       }
     }
     return null;

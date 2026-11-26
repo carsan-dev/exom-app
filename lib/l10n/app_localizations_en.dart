@@ -3180,6 +3180,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'It is required to complete this exercise.';
 
   @override
+  String get lastSetVideoRecoveryError =>
+      'We could not recover your last set\'s video. Record or choose it again.';
+
+  @override
   String get videoReadyTitle => 'Video ready';
 
   @override

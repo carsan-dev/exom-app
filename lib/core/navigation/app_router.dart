@@ -585,6 +585,8 @@ class _MainShellState extends State<MainShell> {
   late final HomeBloc _homeBloc;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
   StreamSubscription<HomeState>? _inicioContent;
+  StreamSubscription<HomeState>? _bellRecovery;
+  bool _inicioUnavailable = false;
 
   @override
   void initState() {
@@ -600,12 +602,34 @@ class _MainShellState extends State<MainShell> {
     _fcmSubscription = sl<FcmService>().onIncomingMessage.listen((_) {
       _notificationsBloc.add(const NotificationsUnreadCountRefreshRequested());
     });
+    _bellRecovery = _homeBloc.stream.listen(_refreshBellOnReconnection);
+  }
+
+  /// L5-D49: the counter failed silently while offline, so when Inicio goes
+  /// from stale data (or an error) to fresh data, which means the network is
+  /// back, the bell asks again: once per transition, to the bloc of the
+  /// session that is current now, never one held from another account.
+  void _refreshBellOnReconnection(HomeState state) {
+    final summary = switch (state) {
+      HomeLoaded(:final summary) || HomeRestDay(:final summary) => summary,
+      _ => null,
+    };
+    if (state is HomeError ||
+        (summary != null && summary.staleReason != null)) {
+      _inicioUnavailable = true;
+    } else if (summary != null && _inicioUnavailable) {
+      _inicioUnavailable = false;
+      sl<NotificationsBloc>().add(
+        const NotificationsUnreadCountRefreshRequested(),
+      );
+    }
   }
 
   @override
   void dispose() {
     _fcmSubscription?.cancel();
     _inicioContent?.cancel();
+    _bellRecovery?.cancel();
     _homeBloc.close();
     super.dispose();
   }

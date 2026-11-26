@@ -99,6 +99,7 @@ class TimedPrescription {
         action: 'Ejercicio',
         remainingMilliseconds: totalMs - elapsed,
         totalRemainingMilliseconds: totalMs - elapsed,
+        durationMilliseconds: totalMs,
       );
     }
     final cycleMs = segments.fold<int>(0, (sum, s) => sum + s.seconds * 1000);
@@ -114,6 +115,8 @@ class TimedPrescription {
               : null,
           remainingMilliseconds: remaining,
           totalRemainingMilliseconds: totalMs - elapsed,
+          // A phase cut by the end of the total lasts only what was left.
+          durationMilliseconds: position + remaining,
         );
       }
       position -= duration;
@@ -127,11 +130,16 @@ class TimedPhase {
   final String? nextAction;
   final int remainingMilliseconds;
   final int totalRemainingMilliseconds;
+
+  /// Length of this phase: the segment's, or less when the end of the total
+  /// time cuts it; the whole time without segments; 0 once finished.
+  final int durationMilliseconds;
   const TimedPhase({
     required this.action,
     this.nextAction,
     required this.remainingMilliseconds,
     required this.totalRemainingMilliseconds,
+    this.durationMilliseconds = 0,
   });
 }
 

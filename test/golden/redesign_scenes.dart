@@ -16,6 +16,10 @@
 //    real time, so the visible value is 90 for any machine speed below 1 s.
 //  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
 //    after "now" («1:00»).
+//  - The rest rule (L5-E3e r2) reads the real remaining time every frame, so
+//    the rest scenes fix its clock to the instant of the seed
+//    (`RestDrainRule.debugNow`): the rule shows the full rest, like the
+//    figures, whatever real time passes before the capture.
 import 'dart:convert';
 import 'dart:io';
 
@@ -53,6 +57,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -364,7 +369,7 @@ const _circuitExercises = [
   ),
 ];
 
-Map<String, dynamic> _circuitSceneState(RedesignScene scene) {
+Map<String, dynamic> _circuitSceneState(RedesignScene scene, DateTime now) {
   const round1 = <String, Map<String, Object>>{
     'tc-1': {'set_number': 1, 'reps': 12},
     'tc-2': {'set_number': 1, 'reps': 15, 'weight_kg': 16.0, 'rir': 1},
@@ -376,9 +381,7 @@ Map<String, dynamic> _circuitSceneState(RedesignScene scene) {
       'round': 1,
       'exercise_index': 2,
       'status': 'roundResting',
-      'rest_ends_at': DateTime.now()
-          .add(const Duration(seconds: 60))
-          .toIso8601String(),
+      'rest_ends_at': now.add(const Duration(seconds: 60)).toIso8601String(),
       'ready_to_finish': false,
       'performances': {
         for (final entry in round1.entries) entry.key: [entry.value],
@@ -742,7 +745,11 @@ Future<SceneHandle> pumpRedesignScene(
 
   // Limit: the countdown shows 90 only if under 1 s of real time passes between
   // this seed and the build. Fake-async pumps do not advance DateTime.now, and
-  // L0 allows no hook in lib/ to inject a clock.
+  // L0 allows no hook in lib/ to inject a clock into the page; the rest rule
+  // alone takes a test clock fixed to this instant (L5-E3e r2).
+  final restSeedNow = DateTime.now();
+  RestDrainRule.debugNow = () => restSeedNow;
+  addTearDown(() => RestDrainRule.debugNow = null);
   final restSeed =
       scene == RedesignScene.descanso || scene == RedesignScene.descansoMas30
       ? ActiveWorkoutHiveModel(
@@ -750,7 +757,7 @@ Future<SceneHandle> pumpRedesignScene(
           exerciseId: '$_exerciseKey:$_date',
           currentSet: 2,
           completedSets: 1,
-          restEndsAt: DateTime.now().add(const Duration(seconds: 90)),
+          restEndsAt: restSeedNow.add(const Duration(seconds: 90)),
           lastWeightKg: 60,
           completedSetData: const [
             {'set_number': 1, 'reps': 8, 'weight_kg': 60.0, 'rir': 2},
@@ -800,7 +807,7 @@ Future<SceneHandle> pumpRedesignScene(
     _ => false,
   };
   if (circuitScene) {
-    storage.circuitState = _circuitSceneState(scene);
+    storage.circuitState = _circuitSceneState(scene, restSeedNow);
     sl.registerSingleton<FirebaseAuthService>(_SceneAuth());
     sl.registerSingleton<FeedbackUploadQueueService>(_SceneFeedbackQueue());
   }

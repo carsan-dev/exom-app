@@ -3242,6 +3242,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
 
   @override
+  String get pendingSyncWaitsOwnVideo =>
+      'It will be sent once the last-set video is uploaded.';
+
+  @override
+  String get pendingSyncWaitsBehindVideo =>
+      'It will be sent after another exercise of this workout that is waiting for its video.';
+
+  @override
+  String get pendingSyncWaitsBehindDayVideo =>
+      'It will be sent after other activity from this day that is waiting for a video.';
+
+  @override
   String pendingUploadsCountSubtitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

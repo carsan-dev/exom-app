@@ -171,6 +171,13 @@ class _Sync extends OfflineSyncService {
   _Sync(LocalStorage storage) : super(ApiClient(useAuth: false), storage);
   final controller = StreamController<void>.broadcast();
   CompletionSyncBlockerKind? kind;
+
+  /// COLA r3: the wait reason of each queued action, by id (the rule itself
+  /// is covered by `progress_feedback_wait_test.dart`).
+  final waits = <String, ProgressFeedbackWait>{};
+  @override
+  ProgressFeedbackWait? feedbackWaitOf(Map<String, dynamic> action) =>
+      waits[action['id']];
   @override
   Stream<void> get changes => controller.stream;
   @override
@@ -905,6 +912,279 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         expectInside(tester, line);
+      });
+    }
+  });
+
+  // COLA r3 (decision of 26-11): the detail also says why its queued progress
+  // waits for a video, with the text «Subidas pendientes» shows, under the
+  // pending status of the session completion. One line for the training:
+  // its own video, then behind another exercise, then behind the day.
+  group('wait reason of the queued progress', () {
+    Map<String, dynamic> action(String id, String type,
+            {String training = _trainingId,
+            String session = _execution,
+            String? exercise}) => {
+          'id': id,
+          'type': type,
+          'training_id': training,
+          'date': _date,
+          'training_session_id': session,
+          'training_exercise_id': ?exercise,
+          'status': 'queued',
+          'attempts': 0,
+          'format_version': 2,
+        };
+    final waitLine = find.byKey(const Key('training-completion-wait'));
+
+    Future<_Harness> mountWaiting(WidgetTester tester,
+        Map<String, ProgressFeedbackWait> waits,
+        {Locale locale = const Locale('es'),
+        double width = 390,
+        TextScaler? textScaler,
+        TrainingEntity? training}) async {
+      final harness = await _mount(tester, locale: locale, width: width,
+          textScaler: textScaler, training: training);
+      harness.storage.actions = [
+        action('mark-1', 'mark_exercise_completed', exercise: 'te-1'),
+        action('mark-2', 'mark_exercise_completed', exercise: 'te-2'),
+        action('complete-1', 'complete_training'),
+      ];
+      harness.sync.waits.addAll(waits);
+      harness.sync.kind = CompletionSyncBlockerKind.feedbackWaiting;
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      return harness;
+    }
+
+    testWidgets('held by its own video', (tester) async {
+      await mountWaiting(tester, {
+        'mark-1': ProgressFeedbackWait.ownVideo,
+        'mark-2': ProgressFeedbackWait.behindVideo,
+        'complete-1': ProgressFeedbackWait.behindVideo,
+      });
+      final l10n = _l10n(tester);
+      expect(waitLine, findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: waitLine,
+          matching: find.text(l10n.pendingSyncWaitsOwnVideo)), findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: waitLine,
+          matching: find.text(l10n.pendingSyncWaitsBehindVideo)), findsNothing);
+    });
+
+    testWidgets('behind another exercise of this training', (tester) async {
+      await mountWaiting(tester, {
+        'mark-2': ProgressFeedbackWait.behindDayVideo,
+        'complete-1': ProgressFeedbackWait.behindVideo,
+      });
+      final l10n = _l10n(tester);
+      expect(waitLine, findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: waitLine,
+          matching: find.text(l10n.pendingSyncWaitsBehindVideo)), findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: waitLine,
+          matching: find.text(l10n.pendingSyncWaitsBehindDayVideo)), findsNothing);
+    });
+
+    testWidgets('behind other activity of the day', (tester) async {
+      await mountWaiting(tester, {
+        'complete-1': ProgressFeedbackWait.behindDayVideo,
+      });
+      expect(waitLine, findsOneWidget);
+      expect(find.text(_l10n(tester).pendingSyncWaitsBehindDayVideo),
+          findsOneWidget);
+    });
+
+    testWidgets('nothing held: no line; it follows the queue', (tester) async {
+      final harness = await mountWaiting(tester, {});
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.trainingFeedbackWaiting), findsOneWidget);
+      expect(waitLine, findsNothing);
+      // Held work of another training or execution is not this one's wait.
+      harness.storage.actions = [
+        ...harness.storage.actions,
+        action('other-training', 'mark_exercise_completed',
+            training: 'training-2', exercise: 'te-9'),
+        action('other-session', 'mark_exercise_completed',
+            session: 'execution-2', exercise: 'te-1'),
+      ];
+      harness.sync.waits.addAll({
+        'other-training': ProgressFeedbackWait.ownVideo,
+        'other-session': ProgressFeedbackWait.ownVideo,
+      });
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      expect(waitLine, findsNothing);
+      // A queue change that holds this training's work shows it at once.
+      harness.sync.waits['mark-2'] = ProgressFeedbackWait.ownVideo;
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.pendingSyncWaitsOwnVideo), findsOneWidget);
+      // And it goes once the video is through.
+      harness.sync.waits.remove('mark-2');
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      expect(waitLine, findsNothing);
+    });
+
+    testWidgets('the same line under «pendiente de sincronizar» of a queued '
+        'completion', (tester) async {
+      final harness = await mountWaiting(tester, {
+        'complete-1': ProgressFeedbackWait.behindVideo,
+      });
+      harness.sync.kind = null;
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.trainingDetailCompletionSavedPending),
+          findsOneWidget);
+      expect(find.text(l10n.pendingSyncWaitsBehindVideo), findsOneWidget);
+      final style = tester.widget<Text>(waitLine).style!;
+      expect(style.fontSize, 14);
+      expect(style.fontFamily, AppTheme.bodyFontFamily);
+      expect(style.color, tester.element(waitLine).exomPalette.textSecondary);
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      testWidgets('${locale.languageCode} at 2.0× on 320 dp: the line fits',
+          (tester) async {
+        await mountWaiting(tester, {
+          'complete-1': ProgressFeedbackWait.behindDayVideo,
+        }, locale: locale, width: 320,
+            textScaler: const AndroidNonlinearTextScaler(2.0));
+        expect(tester.takeException(), isNull);
+        await tester.ensureVisible(waitLine);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text(_l10n(tester).pendingSyncWaitsBehindDayVideo),
+            findsOneWidget);
+        final rect = tester.getRect(waitLine);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(320));
+        await tester.ensureVisible(_complete);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
+  // COLA r4: the row of a held exercise also says why its progress waits,
+  // under its «Pendiente de sincronizar». When the pending completion's
+  // footer already gives the same text, the row does not repeat it.
+  group('wait reason on the exercise row', () {
+    Map<String, dynamic> action(String id, String type, {String? exercise}) => {
+          'id': id,
+          'type': type,
+          'training_id': _trainingId,
+          'date': _date,
+          'training_session_id': _execution,
+          'training_exercise_id': ?exercise,
+          'status': 'queued',
+          'attempts': 0,
+          'format_version': 2,
+        };
+    Finder rowWait(String exercise) =>
+        find.byKey(Key('training-exercise-wait-$exercise'));
+    final footerWait = find.byKey(const Key('training-completion-wait'));
+
+    Future<_Harness> mountRows(WidgetTester tester,
+        Map<String, ProgressFeedbackWait> waits,
+        {bool completion = false,
+        Locale locale = const Locale('es'),
+        double width = 390,
+        TextScaler? textScaler,
+        TrainingEntity? training}) async {
+      final harness = await _mount(tester, locale: locale, width: width,
+          textScaler: textScaler, training: training);
+      harness.storage.actions = [
+        action('mark-1', 'mark_exercise_completed', exercise: 'te-1'),
+        action('mark-2', 'mark_exercise_completed', exercise: 'te-2'),
+        if (completion) action('complete-1', 'complete_training'),
+      ];
+      harness.sync.waits.addAll(waits);
+      if (completion) {
+        harness.sync.kind = CompletionSyncBlockerKind.feedbackWaiting;
+      }
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      return harness;
+    }
+
+    testWidgets('each held row says its own wait', (tester) async {
+      await mountRows(tester, {
+        'mark-1': ProgressFeedbackWait.ownVideo,
+        'mark-2': ProgressFeedbackWait.behindVideo,
+      });
+      final l10n = _l10n(tester);
+      expect(footerWait, findsNothing);
+      expect(find.descendant(matchRoot: true, of: rowWait('te-1'),
+          matching: find.text(l10n.pendingSyncWaitsOwnVideo)), findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: rowWait('te-2'),
+          matching: find.text(l10n.pendingSyncWaitsBehindVideo)),
+          findsOneWidget);
+      expect(find.text(l10n.syncStatusPending), findsNWidgets(2));
+      final style = tester.widget<Text>(rowWait('te-1')).style!;
+      expect(style.fontSize, 14);
+      expect(style.fontFamily, AppTheme.bodyFontFamily);
+      expect(style.color,
+          tester.element(rowWait('te-1')).exomPalette.textSecondary);
+    });
+
+    testWidgets('behind other activity of the day', (tester) async {
+      await mountRows(tester, {'mark-2': ProgressFeedbackWait.behindDayVideo});
+      expect(rowWait('te-1'), findsNothing);
+      expect(find.descendant(matchRoot: true, of: rowWait('te-2'),
+          matching: find.text(_l10n(tester).pendingSyncWaitsBehindDayVideo)),
+          findsOneWidget);
+    });
+
+    testWidgets('nothing held: no line; it follows the queue', (tester) async {
+      final harness = await mountRows(tester, {});
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.syncStatusPending), findsNWidgets(2));
+      expect(rowWait('te-1'), findsNothing);
+      expect(rowWait('te-2'), findsNothing);
+      harness.sync.waits['mark-1'] = ProgressFeedbackWait.ownVideo;
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      expect(rowWait('te-1'), findsOneWidget);
+      harness.sync.waits.clear();
+      harness.sync.controller.add(null);
+      await tester.pumpAndSettle();
+      expect(rowWait('te-1'), findsNothing);
+    });
+
+    testWidgets('a row does not repeat the footer\'s wait', (tester) async {
+      await mountRows(tester, {
+        'mark-1': ProgressFeedbackWait.ownVideo,
+        'mark-2': ProgressFeedbackWait.behindVideo,
+        'complete-1': ProgressFeedbackWait.behindVideo,
+      }, completion: true);
+      final l10n = _l10n(tester);
+      expect(find.descendant(matchRoot: true, of: footerWait,
+          matching: find.text(l10n.pendingSyncWaitsOwnVideo)), findsOneWidget);
+      expect(rowWait('te-1'), findsNothing);
+      expect(find.text(l10n.pendingSyncWaitsOwnVideo), findsOneWidget);
+      expect(find.descendant(matchRoot: true, of: rowWait('te-2'),
+          matching: find.text(l10n.pendingSyncWaitsBehindVideo)),
+          findsOneWidget);
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      testWidgets('${locale.languageCode} at 2.0× on 320 dp: the row line '
+          'fits', (tester) async {
+        await mountRows(tester, {
+          'mark-1': ProgressFeedbackWait.ownVideo,
+          'mark-2': ProgressFeedbackWait.behindDayVideo,
+        }, locale: locale, width: 320,
+            textScaler: const AndroidNonlinearTextScaler(2.0));
+        expect(tester.takeException(), isNull);
+        for (final exercise in const ['te-1', 'te-2']) {
+          await tester.ensureVisible(rowWait(exercise));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          final rect = tester.getRect(rowWait(exercise));
+          expect(rect.left, greaterThanOrEqualTo(0));
+          expect(rect.right, lessThanOrEqualTo(320));
+        }
       });
     }
   });

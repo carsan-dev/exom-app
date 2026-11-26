@@ -5636,6 +5636,24 @@ abstract class AppLocalizations {
   /// **'Hay cambios en conflicto. Tus datos pendientes se conservan. Revisa el entrenamiento y descarta expresamente las acciones antiguas antes de registrar el cambio elegido.'**
   String get pendingSyncConflict;
 
+  /// No description provided for @pendingSyncWaitsOwnVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Se enviará cuando se suba el vídeo de la última serie.'**
+  String get pendingSyncWaitsOwnVideo;
+
+  /// No description provided for @pendingSyncWaitsBehindVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Se enviará después de otro ejercicio de este entreno que espera su vídeo.'**
+  String get pendingSyncWaitsBehindVideo;
+
+  /// No description provided for @pendingSyncWaitsBehindDayVideo.
+  ///
+  /// In es, this message translates to:
+  /// **'Se enviará después de otra actividad de este día que espera un vídeo.'**
+  String get pendingSyncWaitsBehindDayVideo;
+
   /// No description provided for @pendingUploadsCountSubtitle.
   ///
   /// In es, this message translates to:

@@ -2490,6 +2490,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialDoneButton => 'Done';
 
   @override
+  String tutorialStepProgress(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
   String get deleteAccountOption => 'Delete account';
 
   @override

@@ -1,5 +1,5 @@
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'exom_component_harness.dart';
@@ -28,11 +28,12 @@ void main() {
           wrapInScaffold: false,
         );
         for (var i = 0; i < 6; i++) {
-          await tester.tap(find.byType(ElevatedButton));
+          await tester.tap(find.byType(ExomPrimaryButton));
           await tester.pump(const Duration(milliseconds: 400));
           await tester.pump(const Duration(milliseconds: 400));
         }
-        expect(find.text('Recap semanal'), findsOneWidget);
+        // L5-F3: the step title is painted upper case.
+        expect(find.text('RECAP SEMANAL'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }

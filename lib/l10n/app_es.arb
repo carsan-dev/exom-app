@@ -942,6 +942,13 @@
   "tutorialFeedbackDesc": "También en el menú. Envía dudas, incidencias o feedback directamente a tu entrenador.",
   "tutorialNextButton": "Siguiente",
   "tutorialDoneButton": "Listo",
+  "tutorialStepProgress": "Paso {current} de {total}",
+  "@tutorialStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "deleteAccountOption": "Eliminar cuenta",
   "deleteAccountDescription": "Elimina permanentemente tu cuenta y todos tus datos",
   "deleteAccountDialogTitle": "¿Eliminar tu cuenta?",

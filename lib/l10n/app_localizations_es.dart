@@ -2519,6 +2519,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tutorialDoneButton => 'Listo';
 
   @override
+  String tutorialStepProgress(int current, int total) {
+    return 'Paso $current de $total';
+  }
+
+  @override
   String get deleteAccountOption => 'Eliminar cuenta';
 
   @override

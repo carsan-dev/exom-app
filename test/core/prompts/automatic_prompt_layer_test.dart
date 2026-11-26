@@ -11,8 +11,10 @@ import 'package:go_router/go_router.dart';
 
 import 'automatic_prompt_fakes.dart';
 
+// L5-F3: only the quick-tour prompt is repainted (title upper case, lime
+// action); the Sunday reminder keeps its C5b look.
 const _sundayTitle = 'Hoy toca tu recap';
-const _tutorialTitle = '¿Quieres un recorrido rápido?';
+const _tutorialTitle = '¿QUIERES UN RECORRIDO RÁPIDO?';
 const _dontShowAgain = 'No volver a mostrar';
 
 /// The prompt layer as MainShell mounts it: on /home, over the shell, with a
@@ -251,7 +253,7 @@ void main() {
       await harness.pump(tester);
       await tester.tap(find.text(_dontShowAgain));
       await tester.pump();
-      await tester.tap(find.text('Empezar guía'));
+      await tester.tap(find.text('EMPEZAR GUÍA'));
       await tester.pump();
       expect(harness.tutorialStarts, 1);
       expect(find.text(_tutorialTitle), findsNothing);

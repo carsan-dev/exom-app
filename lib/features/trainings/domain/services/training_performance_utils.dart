@@ -65,6 +65,8 @@ String formatExercisePrescription(
   }
   final suffix = exercise.measureType == ExerciseMeasureType.seconds
       ? 's'
+      : exercise.targetValue == 1
+      ? ' rep'
       : ' reps';
   final target = exercise.targetValue != null
       ? '${exercise.targetValue}$suffix'
@@ -103,7 +105,7 @@ SetPerformance? performanceForSet(
 String formatSetPerformance(SetPerformance performance) {
   final parts = <String>[];
   if (performance.reps != null) {
-    parts.add('${performance.reps} reps');
+    parts.add(performance.reps == 1 ? '1 rep' : '${performance.reps} reps');
   }
   if (performance.seconds != null) {
     parts.add('${performance.seconds}s');

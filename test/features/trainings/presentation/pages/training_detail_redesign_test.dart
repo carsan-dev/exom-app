@@ -1014,7 +1014,7 @@ void main() {
         find.text(l10n.trainingDetailSetsDoneOf(4, 16).toUpperCase()),
         findsOneWidget,
       );
-      expect(find.text(l10n.trainingDetailSetsDoneLabel), findsOneWidget);
+      expect(find.text(l10n.trainingDetailSetsDoneLabel(16)), findsOneWidget);
       final rule = tester.widget<ExomProgressRule>(
         find.byType(ExomProgressRule),
       );
@@ -1034,7 +1034,7 @@ void main() {
       );
       final setsLabel = find.descendant(
         of: block,
-        matching: find.text(l10n.trainingDetailSetsDoneLabel),
+        matching: find.text(l10n.trainingDetailSetsDoneLabel(16)),
       );
       expect(exercisesLabel, findsOneWidget);
       // Same style as «series hechas».
@@ -1205,5 +1205,50 @@ void main() {
       );
       await expectLater(tester, meetsGuideline(textContrastGuideline));
     });
+  });
+
+  group('plural of the counted units with a single set', () {
+    TrainingEntity single() => TrainingEntity(
+      id: _trainingId,
+      name: 'Una serie',
+      types: const ['FUERZA'],
+      level: 'INTERMEDIATE',
+      tags: const [],
+      exercises: [
+        TrainingExerciseEntity(
+          id: 'te-1',
+          order: 1,
+          sets: 1,
+          repsOrDuration: '1',
+          measureType: ExerciseMeasureType.reps,
+          targetValue: 1,
+          restSeconds: 90,
+          exercise: const ExerciseEntity(
+            id: 'ex-1',
+            name: 'Dominada',
+            muscleGroups: [],
+          ),
+        ),
+      ],
+    );
+
+    for (final (locale, set, rep, wrongSet, wrongRep) in [
+      ('es', 'serie', '1 rep ', 'series', '1 reps'),
+      ('en', 'set', '1 rep ', 'sets', '1 reps'),
+    ]) {
+      testWidgets('$locale: header caption and prescription read in singular', (
+        tester,
+      ) async {
+        await _mount(tester, training: single(), locale: Locale(locale));
+        final texts = [
+          for (final t in tester.widgetList<Text>(find.byType(Text)))
+            if (t.data != null) t.data!,
+        ];
+        expect(texts, contains(set));
+        expect(texts, isNot(contains(wrongSet)));
+        expect(texts.where((t) => t.contains(rep)), isNotEmpty);
+        expect(texts.where((t) => t.contains(wrongRep)), isEmpty);
+      });
+    }
   });
 }

@@ -1139,7 +1139,7 @@ abstract class AppLocalizations {
   /// No description provided for @exerciseMetadata.
   ///
   /// In es, this message translates to:
-  /// **'{sets} series x {reps} · Descanso {rest}s'**
+  /// **'{sets, plural, =1{1 serie} other{{sets} series}} x {reps} · Descanso {rest}s'**
   String exerciseMetadata(int sets, String reps, int rest);
 
   /// No description provided for @description.
@@ -3521,7 +3521,7 @@ abstract class AppLocalizations {
   /// No description provided for @activeExerciseCloseMessage.
   ///
   /// In es, this message translates to:
-  /// **'Has completado {completed} de {total} series. Podrás retomarlo después.'**
+  /// **'Has completado {completed} de {total, plural, =1{1 serie} other{{total} series}}. Podrás retomarlo después.'**
   String activeExerciseCloseMessage(int completed, int total);
 
   /// No description provided for @activeExerciseDiscardTitle.
@@ -7163,13 +7163,13 @@ abstract class AppLocalizations {
   /// No description provided for @trainingDetailSetsDoneLabel.
   ///
   /// In es, this message translates to:
-  /// **'series hechas'**
-  String get trainingDetailSetsDoneLabel;
+  /// **'{total, plural, =1{serie hecha} other{series hechas}}'**
+  String trainingDetailSetsDoneLabel(int total);
 
   /// No description provided for @trainingDetailProgressSemantics.
   ///
   /// In es, this message translates to:
-  /// **'{done} de {total} ejercicios hechos, {setsDone} de {setsTotal} series hechas'**
+  /// **'{done} de {total, plural, =1{1 ejercicio hecho} other{{total} ejercicios hechos}}, {setsDone} de {setsTotal, plural, =1{1 serie hecha} other{{setsTotal} series hechas}}'**
   String trainingDetailProgressSemantics(
     int done,
     int total,

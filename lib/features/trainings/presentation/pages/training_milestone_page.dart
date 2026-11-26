@@ -183,8 +183,8 @@ class _TrainingMilestonePageState extends State<TrainingMilestonePage>
           _MilestoneFigures(
             exercises: widget.exercises,
             sets: widget.sets,
-            exercisesLabel: l10n.exercises.toLowerCase(),
-            setsLabel: l10n.sets.toLowerCase(),
+            exercisesLabel: l10n.homeFigureExercises(widget.exercises),
+            setsLabel: l10n.homeFigureSets(widget.sets),
             play: play,
           ),
         ],

@@ -592,7 +592,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String exerciseMetadata(int sets, String reps, int rest) {
-    return '$sets sets x $reps · Rest ${rest}s';
+    String _temp0 = intl.Intl.pluralLogic(
+      sets,
+      locale: localeName,
+      other: '$sets sets',
+      one: '1 set',
+    );
+    return '$_temp0 x $reps · Rest ${rest}s';
   }
 
   @override
@@ -1916,7 +1922,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String activeExerciseCloseMessage(int completed, int total) {
-    return 'You have completed $completed of $total sets. You can resume later.';
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total sets',
+      one: '1 set',
+    );
+    return 'You have completed $completed of $_temp0. You can resume later.';
   }
 
   @override
@@ -4337,7 +4349,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get trainingDetailSetsDoneLabel => 'sets done';
+  String trainingDetailSetsDoneLabel(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'sets done',
+      one: 'set done',
+    );
+    return '$_temp0';
+  }
 
   @override
   String trainingDetailProgressSemantics(
@@ -4346,7 +4366,19 @@ class AppLocalizationsEn extends AppLocalizations {
     int setsDone,
     int setsTotal,
   ) {
-    return '$done of $total exercises done, $setsDone of $setsTotal sets done';
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total exercises done',
+      one: '1 exercise done',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      setsTotal,
+      locale: localeName,
+      other: '$setsTotal sets done',
+      one: '1 set done',
+    );
+    return '$done of $_temp0, $setsDone of $_temp1';
   }
 
   @override

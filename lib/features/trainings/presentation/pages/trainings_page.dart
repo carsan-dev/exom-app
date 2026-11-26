@@ -538,7 +538,7 @@ String? _trainingFacts(
     if (minutes != null)
       '${formatFigure(context, minutes)} ${l10n.activeExerciseUnitMinutes}',
     if (exercises != null)
-      '${formatFigure(context, exercises)} ${l10n.exercises.toLowerCase()}',
+      l10n.homeFactExercises(exercises),
     if (labels.isNotEmpty) trainingTypesSummaryLabel(context, types),
   ];
   return parts.isEmpty ? null : parts.join(' · ');
@@ -735,11 +735,11 @@ class _TodaySession extends StatelessWidget {
       if (training.exercises.isNotEmpty) ...[
         ExomFigure(
           value: formatFigure(context, training.exercises.length),
-          label: l10n.exercises.toLowerCase(),
+          label: l10n.homeFigureExercises(training.exercises.length),
         ),
         ExomFigure(
           value: formatFigure(context, sets),
-          label: l10n.sets.toLowerCase(),
+          label: l10n.homeFigureSets(sets),
         ),
       ],
       if (minutes != null)

@@ -41,20 +41,7 @@ void main() {
       final kicker = tester.getRect(
         find.descendant(of: _historyBand, matching: find.byType(ExomKicker)),
       );
-      // ignore: avoid_print
-      print(
-        'MEASURE $label band.top = ${band.top}, kicker.left = '
-        '${kicker.left}',
-      );
-      for (final rule in probeFullWidthRules(tester, _list, _width)) {
-        // ignore: avoid_print
-        print('MEASURE $label $rule');
-      }
       final problems = probeRuleProblems(tester, _list, _width);
-      for (final problem in problems) {
-        // ignore: avoid_print
-        print('MEASURE $label separator: $problem');
-      }
       expect(kicker.left, 20);
       final top = band.top.toStringAsFixed(1);
       expect(

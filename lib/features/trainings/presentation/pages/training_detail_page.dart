@@ -1919,11 +1919,11 @@ class _DetailHeader extends StatelessWidget {
       if (training.exercises.isNotEmpty) ...[
         ExomFigure(
           value: formatFigure(context, training.exercises.length),
-          label: l10n.exercises.toLowerCase(),
+          label: l10n.homeFigureExercises(training.exercises.length),
         ),
         ExomFigure(
           value: formatFigure(context, totalSets),
-          label: l10n.sets.toLowerCase(),
+          label: l10n.homeFigureSets(totalSets),
         ),
       ],
       if (duration != null)
@@ -2065,7 +2065,10 @@ class _SessionProgress extends StatelessWidget {
                         value: formatFigure(context, completed),
                         unit: '/${formatFigure(context, total)}',
                       ),
-                      Text(l10n.exercises.toLowerCase(), style: captionStyle),
+                      Text(
+                        l10n.homeFigureExercises(total),
+                        style: captionStyle,
+                      ),
                     ],
                   ),
                   Column(
@@ -2084,7 +2087,7 @@ class _SessionProgress extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        l10n.trainingDetailSetsDoneLabel,
+                        l10n.trainingDetailSetsDoneLabel(totalSets),
                         style: captionStyle,
                       ),
                     ],

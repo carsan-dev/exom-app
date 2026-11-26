@@ -27,8 +27,6 @@ void main() {
     final failures = <String>[];
     void edges(String label, Finder finder, {bool right = true}) {
       final rect = tester.getRect(finder.first);
-      // ignore: avoid_print
-      print('MEASURE $label left = ${rect.left}, right = ${rect.right}');
       if (rect.left != _start) failures.add('$label.left = ${rect.left}');
       if (right && rect.right != _end) {
         failures.add('$label.right = ${rect.right}');

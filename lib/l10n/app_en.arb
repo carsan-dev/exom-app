@@ -213,7 +213,7 @@
   "sets": "Sets",
   "repsOrTime": "Reps/Time",
   "restLabel": "Rest",
-  "exerciseMetadata": "{sets} sets x {reps} · Rest {rest}s",
+  "exerciseMetadata": "{sets, plural, =1{1 set} other{{sets} sets}} x {reps} · Rest {rest}s",
   "@exerciseMetadata": {
     "placeholders": {
       "sets": { "type": "int" },
@@ -678,7 +678,7 @@
     }
   },
   "activeExerciseCloseTitle": "Leave exercise",
-  "activeExerciseCloseMessage": "You have completed {completed} of {total} sets. You can resume later.",
+  "activeExerciseCloseMessage": "You have completed {completed} of {total, plural, =1{1 set} other{{total} sets}}. You can resume later.",
   "@activeExerciseCloseMessage": {
     "placeholders": {
       "completed": { "type": "int" },
@@ -1411,8 +1411,9 @@
   "trainingDetailProgressKicker": "Session progress",
   "trainingDetailSetsDoneOf": "{done} of {total}",
   "@trainingDetailSetsDoneOf": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
-  "trainingDetailSetsDoneLabel": "sets done",
-  "trainingDetailProgressSemantics": "{done} of {total} exercises done, {setsDone} of {setsTotal} sets done",
+  "trainingDetailSetsDoneLabel": "{total, plural, =1{set done} other{sets done}}",
+  "@trainingDetailSetsDoneLabel": {"placeholders": {"total": {"type": "int"}}},
+  "trainingDetailProgressSemantics": "{done} of {total, plural, =1{1 exercise done} other{{total} exercises done}}, {setsDone} of {setsTotal, plural, =1{1 set done} other{{setsTotal} sets done}}",
   "@trainingDetailProgressSemantics": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}, "setsDone": {"type": "int"}, "setsTotal": {"type": "int"}}},
   "activeExerciseCloseA11y": "Close exercise",
   "activeExercisePosition": "Exercise {current} of {total}",

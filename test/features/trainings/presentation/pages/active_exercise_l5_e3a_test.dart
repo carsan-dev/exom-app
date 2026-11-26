@@ -316,9 +316,10 @@ void main() {
         final clockText = tester.widget<Text>(clock);
         expect(clockText.style?.fontSize, ExomType.hero140.fontSize);
         expect(clockText.style?.color, palette.data);
+        // L5-E3e: time-based marks; 90 s → tall every 5 s, 54 marks.
         expect(
           find.byKey(const ValueKey('rest-countdown-mark')),
-          findsNWidgets(50),
+          findsNWidgets(RestTickLayout.forSeconds(90).marks.length),
         );
         expect(find.text('0'), findsOneWidget);
         expect(find.text('90 s'), findsOneWidget);
@@ -665,10 +666,16 @@ void main() {
   });
 
   group('rest rule motion (principle 5, CC 5)', () {
-    /// Filled share of the rule: data-coloured height over 50 full marks.
+    /// Filled share of the rule: data-coloured area over the area of all the
+    /// marks (L5-E3e: marks are as wide as the time they stand for).
     double filled(WidgetTester tester) {
       final palette = tester.element(find.byType(RestTickRule)).exomPalette;
-      var total = 0.0;
+      var lit = 0.0;
+      var all = 0.0;
+      for (final element
+          in find.byKey(const ValueKey('rest-countdown-mark')).evaluate()) {
+        all += element.size!.width * RestTickRule.height;
+      }
       for (final element
           in find
               .descendant(
@@ -677,17 +684,17 @@ void main() {
               )
               .evaluate()) {
         if ((element.widget as ColoredBox).color == palette.data) {
-          total += element.size!.height;
+          lit += element.size!.width * element.size!.height;
         }
       }
-      return total / (RestTickRule.count * RestTickRule.height);
+      return lit / all;
     }
 
     for (final reduced in const [false, true]) {
       testWidgets(
         reduced
             ? 'reduced motion: the rule steps once a second'
-            : 'the rule drains linearly towards the next second',
+            : 'the rule drains every frame from the deadline (L5-E3e)',
         (tester) async {
           var now = DateTime(2026, 11, 25, 10);
           final endsAt = now.add(const Duration(seconds: 90));
@@ -696,19 +703,22 @@ void main() {
             RestCountdown(restEndsAt: endsAt, totalSeconds: 90, now: () => now),
             disableAnimations: reduced,
           );
-          // Reduced: exactly the remaining share; otherwise already aiming at
-          // the next whole second.
-          expect(filled(tester), closeTo(reduced ? 1.0 : 89 / 90, 0.001));
+          // Both start full: the real remaining share (r2: the rule no
+          // longer starts a second ahead of the deadline).
+          expect(filled(tester), closeTo(1.0, 0.001));
 
+          // L5-E3e: the former contract chained a 1 s tween per tick (the
+          // rule stood still between them); it now reads the clock every
+          // frame, so the clock moves with the pumps.
           now = now.add(const Duration(seconds: 1));
           await tester.pump(const Duration(seconds: 1));
+          now = now.add(const Duration(milliseconds: 500));
           await tester.pump(const Duration(milliseconds: 500));
           if (reduced) {
             expect(filled(tester), closeTo(89 / 90, 0.001));
           } else {
-            final value = filled(tester);
-            expect(value, lessThan(89 / 90 - 0.001));
-            expect(value, greaterThan(88 / 90 + 0.001));
+            // r2: exactly the real remaining time read from the deadline.
+            expect(filled(tester), closeTo(88.5 / 90, 0.001));
           }
           await tester.pumpWidget(const SizedBox());
         },

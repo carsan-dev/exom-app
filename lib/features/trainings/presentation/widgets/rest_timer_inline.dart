@@ -11,7 +11,9 @@ import 'package:exom_app/l10n/app_localizations.dart';
 /// Compact rest timer (L5-E3a skin of the sketch «Descanso»): the title, the
 /// remaining seconds at 96 in the data colour over the 50-mark rule
 /// ([RestTickRule]), an optional subtitle and «Saltar» as a quiet action. Flat
-/// on the page: no card, no ring. Same ticker and callbacks as before.
+/// on the page: no card, no ring. Same ticker and callbacks as before; the
+/// rule drains every frame from [restEndsAt] ([RestDrainRule], L5-E3e) and the
+/// figures change on its whole seconds ([untilFigureChange], round r3).
 class RestTimerInline extends StatefulWidget {
   final int totalSeconds;
   final DateTime restEndsAt;
@@ -28,7 +30,11 @@ class RestTimerInline extends StatefulWidget {
     required this.onFinished,
     this.title,
     this.subtitle,
+    this.now,
   });
+
+  /// Clock override for tests.
+  final DateTime Function()? now;
 
   @override
   State<RestTimerInline> createState() => _RestTimerInlineState();
@@ -36,6 +42,7 @@ class RestTimerInline extends StatefulWidget {
 
 class _RestTimerInlineState extends State<RestTimerInline> {
   Timer? _ticker;
+  Timer? _figure;
   bool _didFinish = false;
 
   @override
@@ -57,25 +64,39 @@ class _RestTimerInlineState extends State<RestTimerInline> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _figure?.cancel();
     super.dispose();
   }
 
+  int get _remainingMs => widget.restEndsAt
+      .difference(widget.now?.call() ?? DateTime.now())
+      .inMilliseconds;
+
   int get _remainingSeconds {
-    final remainingMs =
-        widget.restEndsAt.difference(DateTime.now()).inMilliseconds;
+    final remainingMs = _remainingMs;
     if (remainingMs <= 0) return 0;
     return (remainingMs / 1000).ceil();
-  }
-
-  double get _progressValue {
-    if (widget.totalSeconds <= 0) return 0;
-    return _remainingSeconds.clamp(0, widget.totalSeconds) / widget.totalSeconds;
   }
 
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _handleTick());
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleTick());
+    _scheduleFigure();
+  }
+
+  /// Repaints the figure on the next whole second of the deadline (round r3,
+  /// D1). The once-a-second tick above still dispatches [onFinished].
+  void _scheduleFigure() {
+    _figure?.cancel();
+    final wait = untilFigureChange(_remainingMs);
+    _figure = wait == null
+        ? null
+        : Timer(wait, () {
+            if (!mounted || _didFinish) return;
+            setState(() {});
+            _scheduleFigure();
+          });
   }
 
   void _handleTick() {
@@ -133,7 +154,11 @@ class _RestTimerInlineState extends State<RestTimerInline> {
             ),
           ),
           const SizedBox(height: 16),
-          RestTickRule(value: _progressValue),
+          RestDrainRule(
+            restEndsAt: widget.restEndsAt,
+            totalSeconds: widget.totalSeconds,
+            now: widget.now,
+          ),
           if (widget.subtitle != null && widget.subtitle!.trim().isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(widget.subtitle!, style: secondary),

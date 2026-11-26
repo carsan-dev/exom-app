@@ -1,9 +1,11 @@
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'execution_start_countdown.dart';
+import 'rest_countdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
@@ -87,6 +89,7 @@ class ExecutionTimer extends StatefulWidget {
 
 class _ExecutionTimerState extends State<ExecutionTimer> {
   Timer? _refresh;
+  Timer? _figure;
   final Object _fallbackKey = Object();
   Object? _scheduledKey;
   bool _preparing = false;
@@ -98,6 +101,33 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
   void didUpdateWidget(ExecutionTimer oldWidget) {
     super.didUpdateWidget(oldWidget);
     _synchronize();
+    _scheduleFigure();
+  }
+
+  /// Repaints the «m:ss» figures on the next whole second of the segment or
+  /// of the total while running (round r3, D1), so they change in the same
+  /// frame as the rule instead of up to 200 ms later. Display only: the end
+  /// is still dispatched by the coordinator and the 200 ms refresh stays.
+  void _scheduleFigure() {
+    _figure?.cancel();
+    _figure = null;
+    final state = widget.state;
+    final total = state.timedTotalSeconds;
+    if (state.timedStartedAt == null || total == null) return;
+    final config =
+        state.timedPrescription ??
+        const TimedPrescription(unit: TimeDisplayUnit.seconds);
+    final phase = config.phase(total, state.elapsedAt(_now));
+    final waits = [
+      untilFigureChange(phase.remainingMilliseconds),
+      untilFigureChange(phase.totalRemainingMilliseconds),
+    ].whereType<Duration>();
+    if (waits.isEmpty) return;
+    _figure = Timer(waits.reduce((a, b) => a < b ? a : b), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleFigure();
+    });
   }
 
   void _synchronize() {
@@ -185,11 +215,13 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
     _refresh = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (mounted) setState(() {});
     });
+    _scheduleFigure();
   }
 
   @override
   void dispose() {
     _refresh?.cancel();
+    _figure?.cancel();
     final key = _scheduledKey;
     if (key != null) {
       unawaited(widget.coordinator?.cancel(key) ?? Future<void>.value());
@@ -204,6 +236,39 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
       });
     }
     super.dispose();
+  }
+
+  /// Rule and scale of the current phase at this instant (L5-E3e). Phase,
+  /// marks, scale and value come from one reading of the clock, so a phase
+  /// change (e.g. «Corre» → «Camina») redraws all of them in the same frame
+  /// instead of waiting for the 200 ms refresh (round r2). Once finished every
+  /// mark is off and the scale keeps the last phase. Reduced motion: whole
+  /// seconds, so the value steps once a second.
+  Widget _ruleFrame(
+    int total,
+    TimedPrescription config, {
+    required bool reduced,
+  }) {
+    final phase = config.phase(total, widget.state.elapsedAt(_now));
+    final done = phase.totalRemainingMilliseconds == 0;
+    final length = done
+        ? config.phase(total, total * 1000 - 1).durationMilliseconds
+        : phase.durationMilliseconds;
+    final seconds = (length / 1000).ceil();
+    final left = reduced
+        ? (phase.remainingMilliseconds / 1000).ceil() * 1000
+        : phase.remainingMilliseconds;
+    final value = done || length <= 0
+        ? 0.0
+        : (left / length).clamp(0.0, 1.0).toDouble();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RestTickRule(value: value, totalSeconds: seconds),
+        const SizedBox(height: 6),
+        RestTickScale(totalSeconds: seconds),
+      ],
+    );
   }
 
   String clock(int milliseconds) {
@@ -255,6 +320,27 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
                   ),
             style: body,
           ),
+          // Same rule, scale and spacing as the rest countdown (L5-E3a). It
+          // reads the deadline-derived phase every frame while running (no
+          // tween), so a paused timer leaves it still; reduced motion: whole
+          // seconds on the existing refresh. Decorative: the clock line above
+          // carries the semantics.
+          const SizedBox(height: 16),
+          // The key marks the rule and its scale for tests and debugging;
+          // round r2 moved it here from the bare rule (no reader in lib/ or
+          // test/ used it at that point).
+          ExcludeSemantics(
+            key: const Key('execution-timer-rule'),
+            child: LiveTickRule.builder(
+              running: running,
+              builder: (context, _) => _ruleFrame(
+                total,
+                config,
+                reduced: ExomMotion.of(context).isReduced,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           if (phase.nextAction != null)
             Text(l10n.timerNextAction(phase.nextAction!), style: secondary),
           if (!done)

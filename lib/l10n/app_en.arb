@@ -1348,6 +1348,7 @@
   "homeStartSessionButton": "Start session",
   "homeContinueSessionButton": "Continue session",
   "homeSessionDone": "Done",
+  "homeSessionUnfinished": "Not finished",
   "homeRestDayTitle": "Rest",
   "homeRestDayToday": "No training assigned for today.",
   "homeRestDayOther": "No training assigned for this day.",

@@ -6926,6 +6926,12 @@ abstract class AppLocalizations {
   /// **'Hecha'**
   String get homeSessionDone;
 
+  /// No description provided for @homeSessionUnfinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin terminar'**
+  String get homeSessionUnfinished;
+
   /// No description provided for @homeRestDayTitle.
   ///
   /// In es, this message translates to:

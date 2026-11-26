@@ -4120,6 +4120,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeSessionDone => 'Hecha';
 
   @override
+  String get homeSessionUnfinished => 'Sin terminar';
+
+  @override
   String get homeRestDayTitle => 'Descanso';
 
   @override

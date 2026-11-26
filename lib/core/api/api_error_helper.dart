@@ -89,6 +89,14 @@ String? localizedErrorCode(AppLocalizations l10n, String? raw) {
     case 'UPLOAD_OPERATION_CONFLICT':
     case 'upload_operation_conflict_exhausted':
       return l10n.errorUploadOperationConflict;
+    case 'file_missing':
+      return l10n.errorFileMissing;
+    case 'LAST_SET_VIDEO_REQUIRED':
+      return l10n.errorLastSetVideoRequired;
+    case 'LAST_SET_FEEDBACK_PENDING':
+      return l10n.errorLastSetFeedbackPending;
+    case 'LAST_SET_FEEDBACK_INVALID':
+      return l10n.errorLastSetFeedbackInvalid;
     default:
       return null;
   }

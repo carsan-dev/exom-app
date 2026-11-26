@@ -952,6 +952,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       trainingExerciseId: trainingExercise.id,
       assignmentDate: widget.args.assignmentDate,
       sessionId: widget.args.sessionId,
+      exerciseName: trainingExercise.exercise.name,
     );
   }
 

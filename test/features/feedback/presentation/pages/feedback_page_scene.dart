@@ -64,6 +64,7 @@ class SceneFeedbackQueue extends Fake implements FeedbackUploadQueueService {
     String? trainingExerciseId,
     String? assignmentDate,
     String? sessionId,
+    String? exerciseName,
   }) async {
     final error = enqueueError;
     if (error != null) throw error;

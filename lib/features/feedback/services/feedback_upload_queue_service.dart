@@ -140,6 +140,7 @@ class FeedbackUploadQueueService {
     String? trainingExerciseId,
     String? assignmentDate,
     String? sessionId,
+    String? exerciseName,
   }) async {
     final session = _storage.sessionStamp;
     if (session == null ||
@@ -173,6 +174,8 @@ class FeedbackUploadQueueService {
         'training_exercise_id': ?trainingExerciseId,
         'assignment_date': ?assignmentDate,
         'training_session_id': ?sessionId,
+        if (exerciseName != null && exerciseName.trim().isNotEmpty)
+          'exercise_name': exerciseName.trim(),
         'status': 'queued',
         'attempts': 0,
         'queued_at': DateTime.now().toUtc().toIso8601String(),
@@ -182,6 +185,170 @@ class FeedbackUploadQueueService {
     _report(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.queued));
     unawaited(processQueue());
     return id;
+  }
+
+  /// FB1: replaces the failed last-set video [id] with [file] and returns the
+  /// id of the new upload. Every queued reference to [id] (exercise and
+  /// training completion, drafts) then stands for the new upload; the old one
+  /// is never sent and its files are removed.
+  ///
+  /// Write order, so that a crash at any point leaves either the old or the
+  /// new state, both recoverable:
+  /// 1. The new file is copied next to the queue (an unreferenced copy is all
+  ///    a crash here leaves, as in [enqueue]).
+  /// 2. One write of the upload queue adds the new row and marks the old one
+  ///    `replaced_by` + `discard_requested`. This is the commit point: from
+  ///    here on [resolveFeedbackReplacement] maps the old id to the new one
+  ///    for replay and diagnosis, before anything else is rewritten.
+  /// 3. The queued actions and drafts are rewritten to the new id
+  ///    ([OfflineSyncService.redirectFeedbackDependency]).
+  /// 4. The old row's files are removed and the row stays as a `superseded`
+  ///    tombstone for late references (a restored circuit snapshot).
+  /// Steps 3-4 are idempotent and the queue sweep of `discard_requested`
+  /// rows repeats them after a crash. A second call for the same [id] (double
+  /// tap, retry after a crash) returns the committed replacement. Once the
+  /// commit is written the replacement has happened: a failure in steps 3-4
+  /// is left to that sweep and never reported as a failed replacement.
+  Future<String> replaceFailed(
+    String id, {
+    required File file,
+    required String contentType,
+    String? notes,
+    String? expectedSession,
+  }) => _storage.sessionTask(() async {
+    final session = _storage.sessionStamp;
+    if (session == null ||
+        (expectedSession != null && expectedSession != session)) {
+      throw const LocalSessionChanged();
+    }
+    final committed = _replacementOf(id);
+    if (committed != null) {
+      await _finishCommittedReplacement(id, committed);
+      return committed;
+    }
+    _replaceable(_storage.getFeedbackUploadQueue(), id);
+    final fresh = newOperationId();
+    final support = await _applicationSupportDirectory();
+    await FeedbackPreparationFiles.rejectSource(file, support: support);
+    final directory = Directory('${support.path}/feedback_uploads');
+    await directory.create(recursive: true);
+    final extension = file.path.split('.').last.toLowerCase();
+    final stableFile = await file.copy('${directory.path}/$fresh.$extension');
+    String? earlier;
+    try {
+      earlier = await _queueMutex.protect(() async {
+        if (_storage.sessionStamp != session) {
+          throw const LocalSessionChanged();
+        }
+        final queue = _storage.getFeedbackUploadQueue();
+        final index = queue.indexWhere((row) => row['id'] == id);
+        final previous = index < 0 ? null : queue[index]['replaced_by'];
+        if (previous is String) return previous;
+        final old = _replaceable(queue, id);
+        final now = DateTime.now().toUtc().toIso8601String();
+        final trimmed = notes?.trim();
+        queue[index] = {
+          ...old,
+          'status': 'discarding',
+          'discard_requested': true,
+          'dismissed': true,
+          'replaced_by': fresh,
+          'replaced_at': now,
+        };
+        queue.add({
+          'id': fresh,
+          ..._storage.queueIdentity,
+          'file_path': stableFile.path,
+          'content_type': contentType,
+          'media_type': old['media_type'],
+          if (trimmed != null && trimmed.isNotEmpty)
+            'notes': trimmed
+          else if (old['notes'] != null)
+            'notes': old['notes'],
+          for (final key in _replacementIdentity)
+            if (old[key] != null) key: old[key],
+          'replaces_feedback_id': id,
+          'status': 'queued',
+          'attempts': 0,
+          'queued_at': now,
+        });
+        await _storage.saveFeedbackUploadQueue(queue);
+        return null;
+      });
+    } catch (_) {
+      await _deleteUncommittedCopy(stableFile.path);
+      rethrow;
+    }
+    if (earlier != null) {
+      await _deleteUncommittedCopy(stableFile.path);
+      await _finishCommittedReplacement(id, earlier);
+      return earlier;
+    }
+    _report(FeedbackUploadNotice(fresh, FeedbackUploadNoticeKind.queued));
+    await _finishCommittedReplacement(id, fresh);
+    unawaited(processQueue());
+    return fresh;
+  });
+
+  /// Fields that bind an upload to its exercise, execution and display name;
+  /// a replacement keeps them so the server receives the same binding.
+  static const _replacementIdentity = [
+    'exercise_id',
+    'feedback_kind',
+    'training_id',
+    'training_exercise_id',
+    'assignment_date',
+    'training_session_id',
+    'exercise_name',
+  ];
+
+  String? _replacementOf(String id) {
+    final rows = _storage.getFeedbackUploadQueue().where(
+      (row) => row['id'] == id,
+    );
+    final replacement = rows.isEmpty ? null : rows.first['replaced_by'];
+    return replacement is String ? replacement : null;
+  }
+
+  /// The owned, failed, last-set video row [id]; anything else is refused
+  /// (another account's row is not even visible here).
+  Map<String, dynamic> _replaceable(
+    List<Map<String, dynamic>> queue,
+    String id,
+  ) {
+    final rows = queue.where((row) => row['id'] == id).toList();
+    if (rows.length != 1 ||
+        _storage.rawFeedbackOperationCount(id) != 1 ||
+        rows.single['status'] != 'failed' ||
+        rows.single['discard_requested'] == true ||
+        rows.single['replaced_by'] != null ||
+        rows.single['feedback_kind'] != 'LAST_SET' ||
+        rows.single['media_type'] != 'VIDEO') {
+      throw StateError('Feedback upload cannot be replaced');
+    }
+    return rows.single;
+  }
+
+  /// Steps 3-4 of [replaceFailed] after its commit. The old row is already
+  /// `replaced_by` + `discard_requested`, so whatever fails here (a storage
+  /// error, the old files, a session change) is repeated by the queue sweep
+  /// of `discard_requested` rows, and every reader resolves the old id to
+  /// [fresh] meanwhile: it is not a failure of the replacement.
+  Future<void> _finishCommittedReplacement(String id, String fresh) async {
+    try {
+      await _offlineSync.redirectFeedbackDependency(id, fresh);
+      await _discard(id);
+    } catch (_) {
+      // Left to the queue sweep (see above).
+    }
+  }
+
+  Future<void> _deleteUncommittedCopy(String path) async {
+    try {
+      await _deleteFile(path);
+    } on FileSystemException {
+      // An unreferenced copy, as after a crash during [enqueue].
+    }
   }
 
   static bool canRetry(Map<String, dynamic> item) =>
@@ -301,7 +468,14 @@ class FeedbackUploadQueueService {
     String? token,
   }) async {
     if (item['discard_cleanup_complete'] == true) return;
-    await _offlineSync.removeActionsDependingOnFeedback(id);
+    // A replaced video hands its dependants to the replacement (FB1); only a
+    // plain discard fails them.
+    final replacement = item['replaced_by'];
+    if (replacement is String) {
+      await _offlineSync.redirectFeedbackDependency(id, replacement);
+    } else {
+      await _offlineSync.removeActionsDependingOnFeedback(id);
+    }
     _storage.guardSession();
     final filePath = item['file_path'] as String?;
     final prepared =
@@ -315,14 +489,24 @@ class FeedbackUploadQueueService {
         deletedAttempt = await _deletePrepared(item, prepared, token: token);
       }
     } on FileSystemException catch (error) {
-      await _mutateById(
-        id,
-        (current) => {
-          ...current,
+      // Two cleanups of the same row can run at once (a replacement and the
+      // queue sweep, FB1): when the other one already finished it, its files
+      // are gone and its final state stays; this one is not a failure.
+      final finishedElsewhere = await _queueMutex.protect(() async {
+        final queue = _storage.getFeedbackUploadQueue();
+        final index = queue.indexWhere((entry) => entry['id'] == id);
+        if (index < 0 || queue[index]['discard_cleanup_complete'] == true) {
+          return true;
+        }
+        queue[index] = {
+          ...queue[index],
           'status': 'failed',
           'last_error': 'cleanup_failed: $error',
-        },
-      );
+        };
+        await _storage.saveFeedbackUploadQueue(queue);
+        return false;
+      });
+      if (finishedElsewhere) return;
       rethrow;
     }
     await _queueMutex.protect(() async {
@@ -339,7 +523,18 @@ class FeedbackUploadQueueService {
                   attempt?.attempt != deletedAttempt?.attempt;
             }).toList()
           : const [];
-      if (adopted.isEmpty) {
+      if (replacement is String) {
+        // Kept as a tombstone: a late reference to [id] (a circuit snapshot
+        // restored after the replacement) still resolves to the new upload.
+        queue[index] = {
+          ...queue[index],
+          feedbackPreparationAttempts: adopted,
+          'status': 'superseded',
+          'dismissed': true,
+          'discard_cleanup_complete': true,
+        }..remove('training_session_id')..remove('assignment_date');
+        if (adopted.isEmpty) queue[index].remove(feedbackPreparationAttempts);
+      } else if (adopted.isEmpty) {
         queue.removeAt(index);
       } else {
         queue[index] =
@@ -354,7 +549,13 @@ class FeedbackUploadQueueService {
       }
       await _storage.saveFeedbackUploadQueue(queue);
     });
-    _notices.add(FeedbackUploadNotice(id, FeedbackUploadNoticeKind.discarded));
+    // A replaced video was not discarded by the user: pages holding its id
+    // (a circuit in progress) keep it, and it resolves to the replacement.
+    if (replacement is! String) {
+      _notices.add(
+        FeedbackUploadNotice(id, FeedbackUploadNoticeKind.discarded),
+      );
+    }
   }
 
   Future<void> processQueue() =>
@@ -1135,10 +1336,11 @@ class FeedbackUploadQueueService {
     await _deleteFile(path);
   }
 
+  /// Status of [id], or of the upload that replaced it (FB1).
   String? statusOf(String id) {
-    final item = _storage.getFeedbackUploadQueue().where(
-      (entry) => entry['id'] == id,
-    );
+    final queue = _storage.getFeedbackUploadQueue();
+    final current = resolveFeedbackReplacement(queue, id);
+    final item = queue.where((entry) => entry['id'] == current);
     return item.isEmpty ? null : item.first['status'] as String?;
   }
 

@@ -454,6 +454,7 @@ class _CircuitFeedbackFormState extends State<CircuitFeedbackForm> {
       mediaType: 'VIDEO',
       notes: upload.notes,
       exerciseId: upload.target.exerciseId,
+      exerciseName: upload.target.exerciseName,
     );
   }
 

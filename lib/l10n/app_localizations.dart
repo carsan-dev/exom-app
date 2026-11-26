@@ -5192,6 +5192,120 @@ abstract class AppLocalizations {
   /// **'Completa cada ejercicio y adjunta el vídeo de su última serie.'**
   String get trainingLastSetVideoRequired;
 
+  /// FB1: completion blocked because these exercises (comma-separated names) never got their last-set video.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta el vídeo de la última serie de: {exercises}.'**
+  String trainingLastSetVideoMissingFor(String exercises);
+
+  /// No description provided for @trainingLastSetVideoOpenExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir al ejercicio'**
+  String get trainingLastSetVideoOpenExercise;
+
+  /// No description provided for @trainingFeedbackFailedFor.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo enviar el vídeo de: {exercises}'**
+  String trainingFeedbackFailedFor(String exercises);
+
+  /// No description provided for @trainingFeedbackWaitingFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Esperando el vídeo de: {exercises}'**
+  String trainingFeedbackWaitingFor(String exercises);
+
+  /// No description provided for @lastSetVideoPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo pendiente de enviar'**
+  String get lastSetVideoPending;
+
+  /// No description provided for @lastSetVideoSending.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviando el vídeo'**
+  String get lastSetVideoSending;
+
+  /// No description provided for @lastSetVideoSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Vídeo enviado'**
+  String get lastSetVideoSent;
+
+  /// No description provided for @lastSetVideoMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta el vídeo de la última serie'**
+  String get lastSetVideoMissing;
+
+  /// FB1: row status of a failed last-set video; reason is one of the lastSetVideoReason* texts.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo enviar el vídeo: {reason}'**
+  String lastSetVideoFailed(String reason);
+
+  /// No description provided for @lastSetVideoMemberFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercise}: no se pudo enviar el vídeo ({reason})'**
+  String lastSetVideoMemberFailed(String exercise, String reason);
+
+  /// No description provided for @lastSetVideoReasonFileMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'el archivo ya no está en el móvil'**
+  String get lastSetVideoReasonFileMissing;
+
+  /// No description provided for @lastSetVideoReasonTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'el archivo es demasiado grande'**
+  String get lastSetVideoReasonTooLarge;
+
+  /// No description provided for @lastSetVideoReasonUnsupported.
+  ///
+  /// In es, this message translates to:
+  /// **'el formato no es compatible'**
+  String get lastSetVideoReasonUnsupported;
+
+  /// No description provided for @lastSetVideoReasonPreparation.
+  ///
+  /// In es, this message translates to:
+  /// **'no se pudo preparar el vídeo'**
+  String get lastSetVideoReasonPreparation;
+
+  /// No description provided for @lastSetVideoReasonRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'el servidor no lo aceptó'**
+  String get lastSetVideoReasonRejected;
+
+  /// No description provided for @lastSetVideoRerecord.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a grabar'**
+  String get lastSetVideoRerecord;
+
+  /// No description provided for @lastSetVideoRerecordFor.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a grabar el vídeo de {exercise}'**
+  String lastSetVideoRerecordFor(String exercise);
+
+  /// No description provided for @lastSetVideoRerecordFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el nuevo vídeo. El anterior sigue en el móvil.'**
+  String get lastSetVideoRerecordFailed;
+
+  /// No description provided for @pendingEvidenceExerciseUnnamed.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio de un entreno'**
+  String get pendingEvidenceExerciseUnnamed;
+
   /// No description provided for @pendingFeedbackError.
   ///
   /// In es, this message translates to:
@@ -6151,6 +6265,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El archivo no llegó al servidor. Vuelve a subirlo.'**
   String get errorUploadObjectMissing;
+
+  /// No description provided for @errorFileMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'El archivo ya no está en este móvil. Vuelve a grabarlo o elige otro.'**
+  String get errorFileMissing;
+
+  /// No description provided for @errorLastSetVideoRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta el vídeo de la última serie.'**
+  String get errorLastSetVideoRequired;
+
+  /// No description provided for @errorLastSetFeedbackPending.
+  ///
+  /// In es, this message translates to:
+  /// **'El vídeo de la última serie aún no se ha confirmado.'**
+  String get errorLastSetFeedbackPending;
+
+  /// No description provided for @errorLastSetFeedbackInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'El vídeo de la última serie no corresponde a esta sesión. Vuelve a grabarlo.'**
+  String get errorLastSetFeedbackInvalid;
 
   /// No description provided for @errorUploadSessionChanged.
   ///

@@ -771,6 +771,17 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> removeActiveWorkout(String exerciseId) =>
       _activeWorkouts.delete(_key(exerciseId));
 
+  /// FB1: drafts of this owner that hold the replaced last-set video [from]
+  /// point at its replacement [to] (what `AttachLastSetFeedback` stored).
+  Future<void> replaceDraftLastSetFeedback(String from, String to) async {
+    for (final draft in getActiveWorkouts()) {
+      if (draft.lastSetFeedbackClientUploadId != from) continue;
+      await saveActiveWorkout(
+        draft.copyWith(lastSetFeedbackClientUploadId: to),
+      );
+    }
+  }
+
   Future<void> clearForeignActiveWorkouts(String trainingId) async {
     final keys = getActiveWorkouts()
         .where((entry) => entry.trainingId != trainingId)

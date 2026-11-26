@@ -254,6 +254,7 @@ class CircuitQueue extends Fake implements FeedbackUploadQueueService {
     String? trainingExerciseId,
     String? assignmentDate,
     String? sessionId,
+    String? exerciseName,
   }) async {
     final failure = failNextEnqueue;
     if (failure != null) {

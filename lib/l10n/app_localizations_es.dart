@@ -3008,6 +3008,77 @@ class AppLocalizationsEs extends AppLocalizations {
       'Completa cada ejercicio y adjunta el vídeo de su última serie.';
 
   @override
+  String trainingLastSetVideoMissingFor(String exercises) {
+    return 'Falta el vídeo de la última serie de: $exercises.';
+  }
+
+  @override
+  String get trainingLastSetVideoOpenExercise => 'Ir al ejercicio';
+
+  @override
+  String trainingFeedbackFailedFor(String exercises) {
+    return 'No se pudo enviar el vídeo de: $exercises';
+  }
+
+  @override
+  String trainingFeedbackWaitingFor(String exercises) {
+    return 'Esperando el vídeo de: $exercises';
+  }
+
+  @override
+  String get lastSetVideoPending => 'Vídeo pendiente de enviar';
+
+  @override
+  String get lastSetVideoSending => 'Enviando el vídeo';
+
+  @override
+  String get lastSetVideoSent => 'Vídeo enviado';
+
+  @override
+  String get lastSetVideoMissing => 'Falta el vídeo de la última serie';
+
+  @override
+  String lastSetVideoFailed(String reason) {
+    return 'No se pudo enviar el vídeo: $reason';
+  }
+
+  @override
+  String lastSetVideoMemberFailed(String exercise, String reason) {
+    return '$exercise: no se pudo enviar el vídeo ($reason)';
+  }
+
+  @override
+  String get lastSetVideoReasonFileMissing =>
+      'el archivo ya no está en el móvil';
+
+  @override
+  String get lastSetVideoReasonTooLarge => 'el archivo es demasiado grande';
+
+  @override
+  String get lastSetVideoReasonUnsupported => 'el formato no es compatible';
+
+  @override
+  String get lastSetVideoReasonPreparation => 'no se pudo preparar el vídeo';
+
+  @override
+  String get lastSetVideoReasonRejected => 'el servidor no lo aceptó';
+
+  @override
+  String get lastSetVideoRerecord => 'Volver a grabar';
+
+  @override
+  String lastSetVideoRerecordFor(String exercise) {
+    return 'Volver a grabar el vídeo de $exercise';
+  }
+
+  @override
+  String get lastSetVideoRerecordFailed =>
+      'No se pudo guardar el nuevo vídeo. El anterior sigue en el móvil.';
+
+  @override
+  String get pendingEvidenceExerciseUnnamed => 'Ejercicio de un entreno';
+
+  @override
   String get pendingFeedbackError =>
       'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.';
 
@@ -3602,6 +3673,21 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorUploadObjectMissing =>
       'El archivo no llegó al servidor. Vuelve a subirlo.';
+
+  @override
+  String get errorFileMissing =>
+      'El archivo ya no está en este móvil. Vuelve a grabarlo o elige otro.';
+
+  @override
+  String get errorLastSetVideoRequired => 'Falta el vídeo de la última serie.';
+
+  @override
+  String get errorLastSetFeedbackPending =>
+      'El vídeo de la última serie aún no se ha confirmado.';
+
+  @override
+  String get errorLastSetFeedbackInvalid =>
+      'El vídeo de la última serie no corresponde a esta sesión. Vuelve a grabarlo.';
 
   @override
   String get errorUploadSessionChanged =>

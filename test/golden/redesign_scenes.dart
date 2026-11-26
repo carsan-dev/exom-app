@@ -16,10 +16,8 @@
 //    real time, so the visible value is 90 for any machine speed below 1 s.
 //  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
 //    after "now" («1:00»).
-//  - The rest rule (L5-E3e r2) reads the real remaining time every frame, so
-//    the rest scenes fix its clock to the instant of the seed
-//    (`RestDrainRule.debugNow`): the rule shows the full rest, like the
-//    figures, whatever real time passes before the capture.
+//  - The rest bar (L5-D48) steps with the figures of the countdown, from the
+//    same reading of the clock, so it shows the full rest like them.
 import 'dart:convert';
 import 'dart:io';
 
@@ -57,7 +55,6 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
-import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -745,11 +742,9 @@ Future<SceneHandle> pumpRedesignScene(
 
   // Limit: the countdown shows 90 only if under 1 s of real time passes between
   // this seed and the build. Fake-async pumps do not advance DateTime.now, and
-  // L0 allows no hook in lib/ to inject a clock into the page; the rest rule
-  // alone takes a test clock fixed to this instant (L5-E3e r2).
+  // L0 allows no hook in lib/ to inject a clock into the page; the rest bar
+  // reads the same clock as the figures (L5-D48).
   final restSeedNow = DateTime.now();
-  RestDrainRule.debugNow = () => restSeedNow;
-  addTearDown(() => RestDrainRule.debugNow = null);
   final restSeed =
       scene == RedesignScene.descanso || scene == RedesignScene.descansoMas30
       ? ActiveWorkoutHiveModel(

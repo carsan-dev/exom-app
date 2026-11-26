@@ -1,8 +1,8 @@
-// Redesign L5-E3e goldens: the timer of a timed set with the 50-mark rule of
-// the rest (`.x-ticks`) and its scale «0 · N s» under the clock line. Scene:
-// 24 min of «Corre 2 min / Camina 1 min», running, 60 s into the first
-// «Corre» (half of the phase left: 25 marks lit, scale «0 · 120 s»), in dark
-// and light at text scale 1.0 and 1.6 on 390x844, with an injected clock.
+// Redesign L5-E3e goldens: the timer of a timed set with the rule of the rest
+// (L5-D48, «N1 · Barra con tic») under the clock line. Scene: 24 min of
+// «Corre 2 min / Camina 1 min», running, 60 s into the first «Corre» (half of
+// the bar lit, scale «0 · 30 · 60 · 90 · 120 s»), in dark and light at text
+// scale 1.0 and 1.6 on 390x844, with an injected clock.
 //
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:

@@ -293,7 +293,7 @@ void main() {
       });
 
       testWidgets('rest: «Descanso. / Después, serie N.», countdown at 140 '
-          'with the 50-mark rule, next set in a band, no lime button', (
+          'with the bar rule (N1), next set in a band, no lime button', (
         tester,
       ) async {
         await pumpActiveExercise(
@@ -316,13 +316,20 @@ void main() {
         final clockText = tester.widget<Text>(clock);
         expect(clockText.style?.fontSize, ExomType.hero140.fontSize);
         expect(clockText.style?.color, palette.data);
-        // L5-E3e: time-based marks; 90 s → tall every 5 s, 54 marks.
+        // L5-D48: one bar (N1) with the scale «0 · 30 · 60 · 90 s».
+        final rule = find.byType(RestStepRule);
+        expect(rule, findsOneWidget);
+        expect(tester.widget<RestStepRule>(rule).totalSeconds, 90);
         expect(
-          find.byKey(const ValueKey('rest-countdown-mark')),
-          findsNWidgets(RestTickLayout.forSeconds(90).marks.length),
+          [
+            for (final e
+                in find
+                    .descendant(of: rule, matching: find.byType(Text))
+                    .evaluate())
+              (e.widget as Text).data,
+          ],
+          ['0', '30', '60', '90 s'],
         );
-        expect(find.text('0'), findsOneWidget);
-        expect(find.text('90 s'), findsOneWidget);
 
         final band = find.byType(ExomBand);
         expect(band, findsOneWidget);
@@ -665,61 +672,42 @@ void main() {
     expect(link.hitTestable(), findsOneWidget);
   });
 
-  group('rest rule motion (principle 5, CC 5)', () {
-    /// Filled share of the rule: data-coloured area over the area of all the
-    /// marks (L5-E3e: marks are as wide as the time they stand for).
-    double filled(WidgetTester tester) {
-      final palette = tester.element(find.byType(RestTickRule)).exomPalette;
-      var lit = 0.0;
-      var all = 0.0;
-      for (final element
-          in find.byKey(const ValueKey('rest-countdown-mark')).evaluate()) {
-        all += element.size!.width * RestTickRule.height;
-      }
-      for (final element
-          in find
-              .descendant(
-                of: find.byType(RestTickRule),
-                matching: find.byType(ColoredBox),
-              )
-              .evaluate()) {
-        if ((element.widget as ColoredBox).color == palette.data) {
-          lit += element.size!.width * element.size!.height;
-        }
-      }
-      return lit / all;
-    }
+  group('rest rule motion (principle 5, CC 5, L5-D48)', () {
+    /// Painted share of the bar: lit width over the track width.
+    double filled(WidgetTester tester) =>
+        tester.getSize(find.byKey(const Key('rest-step-bar'))).width /
+        tester.getSize(find.byKey(const Key('rest-step-track'))).width;
 
     for (final reduced in const [false, true]) {
       testWidgets(
         reduced
-            ? 'reduced motion: the rule steps once a second'
-            : 'the rule drains every frame from the deadline (L5-E3e)',
+            ? 'reduced motion: the bar jumps once a second'
+            : 'the bar steps once a second in 140 ms',
         (tester) async {
-          var now = DateTime(2026, 11, 25, 10);
-          final endsAt = now.add(const Duration(seconds: 90));
+          DateTime now() => tester.binding.clock.now();
+          final endsAt = now().add(const Duration(seconds: 90));
           await pumpComponent(
             tester,
-            RestCountdown(restEndsAt: endsAt, totalSeconds: 90, now: () => now),
+            RestCountdown(restEndsAt: endsAt, totalSeconds: 90, now: now),
             disableAnimations: reduced,
           );
-          // Both start full: the real remaining share (r2: the rule no
-          // longer starts a second ahead of the deadline).
           expect(filled(tester), closeTo(1.0, 0.001));
 
-          // L5-E3e: the former contract chained a 1 s tween per tick (the
-          // rule stood still between them); it now reads the clock every
-          // frame, so the clock moves with the pumps.
-          now = now.add(const Duration(seconds: 1));
+          // The whole second: the figures and the bar change together.
           await tester.pump(const Duration(seconds: 1));
-          now = now.add(const Duration(milliseconds: 500));
-          await tester.pump(const Duration(milliseconds: 500));
+          expect(find.text('1:29'), findsOneWidget);
           if (reduced) {
             expect(filled(tester), closeTo(89 / 90, 0.001));
           } else {
-            // r2: exactly the real remaining time read from the deadline.
-            expect(filled(tester), closeTo(88.5 / 90, 0.001));
+            // The 140 ms step starts from the previous second.
+            expect(filled(tester), closeTo(1.0, 0.001));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 140));
+            expect(filled(tester), closeTo(89 / 90, 0.001));
           }
+          // Half a second later nothing drained: one step per second.
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(filled(tester), closeTo(89 / 90, 0.001));
           await tester.pumpWidget(const SizedBox());
         },
       );

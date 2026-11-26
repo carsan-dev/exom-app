@@ -606,11 +606,55 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       // Monday of 2026-11-18, the same week the calendar export reads.
       expect(h.repository.weeklyReads, ['2026-11-16']);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsOneWidget);
-      expect(find.text(l10n.weeklyGenerateShoppingList), findsOneWidget);
+      // L5-E8: the choice is a screen; its action is painted upper case.
+      expect(find.byKey(const Key('shopping-list-setup')), findsOneWidget);
+      expect(
+        find.text(l10n.weeklyGenerateShoppingList.toUpperCase()),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('no alternatives: no selector, goes straight to generation', (
+    // L5-E8 (D16): the configuration is a pushed screen, not a sheet, and
+    // back returns to Dietas.
+    testWidgets('opens the list as a screen; back returns to Dietas', (
+      tester,
+    ) async {
+      final h = await _mount(tester, diet: _diet);
+      h.repository.week = WeeklyDietEntity(
+        weekStart: DateTime(2026, 11, 16),
+        weekEnd: DateTime(2026, 11, 22),
+        days: [
+          WeeklyDietDayEntity(
+            date: DateTime(2026, 11, 18),
+            diet: DietEntity(
+              id: 'd',
+              name: 'D',
+              meals: [
+                _meal('a', 'LUNCH', 'A', variants: [_meal('b', 'LUNCH', 'B')]),
+              ],
+            ),
+          ),
+        ],
+      );
+      await _revealIndex(tester);
+      await tester.ensureVisible(row());
+      await tester.tap(row());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      final setup = find.byKey(const Key('shopping-list-setup'));
+      expect(setup, findsOneWidget);
+      expect(ModalRoute.of(tester.element(setup)), isA<PageRoute<dynamic>>());
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(setup, findsNothing);
+      expect(find.byType(DietsPage), findsOneWidget);
+      expect(ModalRoute.of(tester.element(find.byType(DietsPage)))!.isCurrent,
+          isTrue);
+    });
+
+    // L5-E8: straight to the list screen; «Compartir lista» builds the PDF.
+    testWidgets('no alternatives: no selector, goes straight to the list', (
       tester,
     ) async {
       final h = await _mount(tester, diet: _diet);
@@ -639,8 +683,12 @@ void main() {
       await tester.tap(row());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
-      expect(find.text(l10n.weeklyGenerateShoppingList), findsNothing);
+      expect(find.byKey(const Key('shopping-list-setup')), findsNothing);
+      expect(find.byKey(const Key('shopping-list-result')), findsOneWidget);
+      expect(pdf.shoppingLists, 0);
+      await tester.tap(find.text(l10n.shoppingListShare.toUpperCase()));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(pdf.shoppingLists, 1);
       expect(find.text(l10n.weeklyDietPrint), findsOneWidget);
     });

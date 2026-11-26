@@ -200,8 +200,10 @@ Future<_Harness> _mount(WidgetTester tester) async {
   return _Harness(diets, pdf);
 }
 
+// The root Navigator (under the app's Localizations): the calendar is
+// offstage while a pushed shopping-list screen covers it (L5-E8).
 AppLocalizations _l10n(WidgetTester tester) =>
-    AppLocalizations.of(tester.element(find.byType(CalendarPage)));
+    AppLocalizations.of(tester.element(find.byType(Navigator).first));
 
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
@@ -233,6 +235,19 @@ Future<void> _startShoppingList(WidgetTester tester, {String? period}) async {
   await _pickPeriod(tester, period: period);
   await _tapText(tester, _l10n(tester).weeklyExportShoppingList.toUpperCase());
 }
+
+/// L5-E8: «Elige tus alternativas» and the list are pushed screens.
+final _setup = find.byKey(const Key('shopping-list-setup'));
+final _result = find.byKey(const Key('shopping-list-result'));
+
+/// «Generar lista» of the choice screen (painted upper case).
+Future<void> _generate(WidgetTester tester) =>
+    _tapText(tester, _l10n(tester).weeklyGenerateShoppingList.toUpperCase());
+
+/// «Compartir lista» of the list screen: builds the PDF and offers
+/// print / share, as «Generar lista» did before L5-E8.
+Future<void> _share(WidgetTester tester) =>
+    _tapText(tester, _l10n(tester).shoppingListShare.toUpperCase());
 
 /// The flow that the Dietas shopping-list row starts, for the same date.
 Future<void> _runDietsFlow(WidgetTester tester) async {
@@ -298,19 +313,26 @@ void main() {
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
       expect(h.repository.weeklyReads, ['2026-11-16']);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsOneWidget);
-      expect(find.text(l10n.weeklyGenerateShoppingList), findsOneWidget);
+      expect(_setup, findsOneWidget);
+      expect(
+        find.text(l10n.weeklyGenerateShoppingList.toUpperCase()),
+        findsOneWidget,
+      );
       expect(h.pdf.shoppingLists, isEmpty);
     });
 
-    testWidgets('generate builds the PDF once and offers print / share', (
+    // L5-E8: «Generar lista» opens the list; «Compartir lista» builds the
+    // PDF once and offers print / share.
+    testWidgets('generate opens the list; share builds the PDF once', (
       tester,
     ) async {
       final h = await _mount(tester);
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
-      await _tapText(tester, l10n.weeklyGenerateShoppingList);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
+      await _generate(tester);
+      expect(_result, findsOneWidget);
+      expect(h.pdf.shoppingLists, isEmpty);
+      await _share(tester);
       expect(h.pdf.shoppingLists, hasLength(1));
       final call = h.pdf.shoppingLists.single;
       expect(call.title, l10n.weeklyShoppingListPdfTitle);
@@ -319,13 +341,13 @@ void main() {
       expect(find.text(l10n.weeklyDietShare), findsOneWidget);
     });
 
-    testWidgets('closing the selector builds nothing and leaves no error', (
+    testWidgets('leaving the choice builds nothing and leaves no error', (
       tester,
     ) async {
       final h = await _mount(tester);
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
-      await tester.tap(find.byIcon(ExomIcons.close));
+      await tester.tap(find.byIcon(ExomIcons.back));
       await _settle(tester);
       expect(h.pdf.shoppingLists, isEmpty);
       expect(find.text(l10n.weeklyDietExportError), findsNothing);
@@ -341,33 +363,81 @@ void main() {
       await _startShoppingList(tester, period: l10n.exportFullMonth);
       expect(h.repository.monthlyReads, ['2026-11']);
       expect(h.repository.weeklyReads, isEmpty);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsOneWidget);
+      expect(_setup, findsOneWidget);
+    });
+  });
+
+  // L5-E8 (D16, L4-I25b): the configuration is a pushed screen, back returns
+  // to the Calendar, and the month questions carry weekday and date.
+  group('L5-E8: configuration as a screen', () {
+    testWidgets('opens a pushed screen; back returns to the Calendar', (
+      tester,
+    ) async {
+      await _mount(tester);
+      final l10n = _l10n(tester);
+      await _startShoppingList(tester);
+      final setup = find.byKey(const Key('shopping-list-setup'));
+      expect(setup, findsOneWidget);
+      expect(ModalRoute.of(tester.element(setup)), isA<PageRoute<dynamic>>());
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      expect(setup, findsNothing);
+      expect(find.text(l10n.exportDietButton), findsOneWidget);
+    });
+
+    testWidgets('month: two Wednesdays, each with its date', (tester) async {
+      final h = await _mount(tester);
+      MealEntity lunch(String id) => _meal(
+        id,
+        'A',
+        ingredients: [_ingredient('i-a', 'Arroz')],
+        variants: [
+          _meal('$id-b', 'B', ingredients: [_ingredient('i-b', 'Pasta')]),
+        ],
+      );
+      h.repository.month = DietPeriodEntity(
+        start: DateTime(2026, 11, 1),
+        end: DateTime(2026, 11, 30),
+        days: [
+          for (final day in [18, 25])
+            DietPeriodDayEntity(
+              date: DateTime(2026, 11, day),
+              diet: DietEntity(id: 'd$day', name: 'D', meals: [lunch('m$day')]),
+            ),
+        ],
+      );
+      final l10n = _l10n(tester);
+      await _startShoppingList(tester, period: l10n.exportFullMonth);
+      expect(find.text('Miércoles 18 · ${l10n.mealTypeLunch}'), findsOneWidget);
+      expect(find.text('Miércoles 25 · ${l10n.mealTypeLunch}'), findsOneWidget);
     });
   });
 
   group('I7: without alternatives the empty sheet is not offered', () {
-    testWidgets('week: no selector, goes straight to generation', (
+    testWidgets('week: no choice screen, goes straight to the list', (
       tester,
     ) async {
       final h = await _mount(tester);
       h.repository.week = _withoutVariants;
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
-      expect(find.text(l10n.weeklyGenerateShoppingList), findsNothing);
+      expect(_setup, findsNothing);
+      expect(_result, findsOneWidget);
+      await _share(tester);
       expect(h.pdf.shoppingLists, hasLength(1));
       expect(find.text(l10n.weeklyDietPrint), findsOneWidget);
     });
 
-    testWidgets('month: no selector, goes straight to generation', (
+    testWidgets('month: no choice screen, goes straight to the list', (
       tester,
     ) async {
       final h = await _mount(tester);
       h.repository.month = _withoutVariants;
       final l10n = _l10n(tester);
       await _startShoppingList(tester, period: l10n.exportFullMonth);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
-      expect(find.text(l10n.weeklyGenerateShoppingList), findsNothing);
+      expect(_setup, findsNothing);
+      expect(_result, findsOneWidget);
+      await _share(tester);
       expect(h.pdf.shoppingLists, hasLength(1));
       expect(
         h.pdf.shoppingLists.single.title,
@@ -412,7 +482,7 @@ void main() {
       final l10n = _l10n(tester);
       await _pickPeriod(tester);
       expect(find.text(l10n.dietPeriodEmpty), findsOneWidget);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
+      expect(_setup, findsNothing);
       expect(find.text(l10n.exportDietButton), findsOneWidget);
       expect(find.text(l10n.weeklyDietPreparing), findsNothing);
     });
@@ -423,19 +493,31 @@ void main() {
       final l10n = _l10n(tester);
       await _pickPeriod(tester);
       expect(find.text(l10n.weeklyDietExportError), findsOneWidget);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
+      expect(_setup, findsNothing);
       expect(find.text(l10n.exportDietButton), findsOneWidget);
     });
 
-    testWidgets('PDF failure: export error, button restored', (tester) async {
+    // L5-E8: the PDF is built on the list screen; its failure is shown there
+    // in line (the list stays, «Compartir lista» can be retried) and the
+    // calendar's button is restored once the screens close.
+    testWidgets('PDF failure: error on the list, button restored', (
+      tester,
+    ) async {
       final h = await _mount(tester);
       h.pdf.error = StateError('pdf');
       final l10n = _l10n(tester);
       await _startShoppingList(tester);
-      await _tapText(tester, l10n.weeklyGenerateShoppingList);
+      await _generate(tester);
+      await _share(tester);
+      expect(_result, findsOneWidget);
       expect(find.text(l10n.weeklyDietExportError), findsOneWidget);
       expect(find.text(l10n.weeklyDietPrint), findsNothing);
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
       expect(find.text(l10n.exportDietButton), findsOneWidget);
+      expect(find.text(l10n.weeklyDietPreparing), findsNothing);
     });
   });
 
@@ -444,16 +526,17 @@ void main() {
       tester,
     ) async {
       final h = await _mount(tester);
-      final l10n = _l10n(tester);
 
       await _startShoppingList(tester);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsOneWidget);
-      await _tapText(tester, l10n.weeklyGenerateShoppingList);
+      expect(_setup, findsOneWidget);
+      await _generate(tester);
+      await _share(tester);
       final fromCalendar = h.pdf.shoppingLists.single;
 
       await _runDietsFlow(tester);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsOneWidget);
-      await _tapText(tester, l10n.weeklyGenerateShoppingList);
+      expect(_setup, findsOneWidget);
+      await _generate(tester);
+      await _share(tester);
       final fromDiets = h.pdf.shoppingLists.last;
 
       expect(h.pdf.shoppingLists, hasLength(2));
@@ -471,14 +554,15 @@ void main() {
     ) async {
       final h = await _mount(tester);
       h.repository.week = _withoutVariants;
-      final l10n = _l10n(tester);
 
       await _startShoppingList(tester);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
+      expect(_setup, findsNothing);
+      await _share(tester);
       final fromCalendar = h.pdf.shoppingLists.single;
 
       await _runDietsFlow(tester);
-      expect(find.text(l10n.weeklyVariantSelectorTitle), findsNothing);
+      expect(_setup, findsNothing);
+      await _share(tester);
       expect(h.pdf.shoppingLists, hasLength(2));
       expect(
         h.pdf.shoppingLists.last.items.map((i) => i.name),

@@ -140,6 +140,9 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/trainings/presentation/widgets/exercise_technique_sheet.dart',
   // L5-F5 · Cuenta atrás de inicio.
   'lib/features/trainings/presentation/widgets/execution_start_countdown.dart',
+  // L5-E8 · Lista de la compra.
+  'lib/features/diets/presentation/pages/shopping_list_pages.dart',
+  'lib/features/diets/presentation/widgets/weekly_shopping_list_flow.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

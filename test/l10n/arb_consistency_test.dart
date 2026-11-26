@@ -44,6 +44,8 @@ const Map<String, String> identicalValueAllowlist = {
   'circuitStepExercise': 'Placeholder "{name}." and a period, no words.',
   // L5-F1 (Fotos de progreso): kicker of the image source sheet.
   'progressPhotosSourceKicker': 'Placeholders "{view} · {date}", no words.',
+  // L5-E8 (Lista de la compra): question label of each meal with options.
+  'shoppingListQuestion': 'Placeholders "{day} · {meal}", no words.',
 };
 
 /// English words that must not appear in Spanish values. "Feedback", "Recap"

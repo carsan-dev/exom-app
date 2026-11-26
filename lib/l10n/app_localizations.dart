@@ -5342,6 +5342,12 @@ abstract class AppLocalizations {
   /// **'No se pudo guardar el circuito. Tus datos siguen aquí; vuelve a intentarlo.'**
   String get circuitSaveError;
 
+  /// No description provided for @circuitLastRoundVideoSaveError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el vídeo. La ronda está guardada; te lo pediremos al terminar.'**
+  String get circuitLastRoundVideoSaveError;
+
   /// No description provided for @mediaPickerPermissionTitle.
   ///
   /// In es, this message translates to:

@@ -885,7 +885,11 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       // E3c r3: the state stays «ready to finish»; the retry asks again.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).circuitSaveError)),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).circuitLastRoundVideoSaveError,
+            ),
+          ),
         );
       }
       return true;

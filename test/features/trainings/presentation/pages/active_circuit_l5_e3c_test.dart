@@ -524,7 +524,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('r3: a throwing enqueue in the round shows circuitSaveError, '
+    testWidgets('r3: a throwing enqueue in the round shows circuitLastRoundVideoSaveError, '
         'keeps «ready to finish» and the retry asks for the video again', (
       tester,
     ) async {
@@ -546,10 +546,11 @@ void main() {
       await settleFrames(tester, 6);
 
       expect(tester.takeException(), isNull);
-      expect(find.text(l10n.circuitSaveError), findsOneWidget);
+      expect(find.text(l10n.circuitLastRoundVideoSaveError), findsOneWidget);
+      expect(find.text(l10n.circuitSaveError), findsNothing);
       // r4: not covered by the missing-videos sheet (no rest: same path).
       expect(find.byType(CircuitFeedbackForm), findsNothing);
-      expect(find.text(l10n.circuitSaveError).hitTestable(), findsOneWidget);
+      expect(find.text(l10n.circuitLastRoundVideoSaveError).hitTestable(), findsOneWidget);
       expect(h.queue.calls, hasLength(1));
       expect(find.byType(ActiveCircuitPage), findsOneWidget);
       expect(h.storage.lastWrite['ready_to_finish'], isTrue);
@@ -564,7 +565,7 @@ void main() {
     });
 
     testWidgets('r4 (D1): final rest over + a throwing enqueue: the '
-        'circuitSaveError SnackBar is not covered by the missing-videos '
+        'circuitLastRoundVideoSaveError SnackBar is not covered by the missing-videos '
         'sheet; «Terminar circuito» then asks for the video', (tester) async {
       final h = await pumpWithRest(
         tester,
@@ -580,7 +581,7 @@ void main() {
       expect(tester.takeException(), isNull);
       // Visible: nothing modal on top of the page's SnackBar.
       expect(find.byType(CircuitFeedbackForm), findsNothing);
-      expect(find.text(l10n.circuitSaveError).hitTestable(), findsOneWidget);
+      expect(find.text(l10n.circuitLastRoundVideoSaveError).hitTestable(), findsOneWidget);
       expect(h.queue.calls, isEmpty);
       expect(h.bloc.events, isEmpty);
       expect(find.byType(ActiveCircuitPage), findsOneWidget);
@@ -610,7 +611,7 @@ void main() {
       await settleFrames(tester, 6);
       expect(tester.takeException(), isNull);
       expect(find.byType(CircuitFeedbackForm), findsNothing);
-      expect(find.text(l10n.circuitSaveError).hitTestable(), findsOneWidget);
+      expect(find.text(l10n.circuitLastRoundVideoSaveError).hitTestable(), findsOneWidget);
       expect(h.queue.calls, isEmpty);
 
       await outlastRest(tester);

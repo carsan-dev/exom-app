@@ -1052,6 +1052,7 @@
   "@requiredCircuitVideos": {"placeholders": {"circuitName": {"type": "String"}}},
   "setPerformanceMinutes": "Minutes",
   "circuitSaveError": "The circuit could not be saved. Your data is still here; try again.",
+  "circuitLastRoundVideoSaveError": "Couldn't save the video. The round is saved; we'll ask for it when you finish.",
   "mediaPickerPermissionTitle": "Permission required",
   "mediaPickerPermissionMessage": "Allow camera or gallery access in Settings and try again.",
   "mediaPickerErrorTitle": "The file could not be opened",

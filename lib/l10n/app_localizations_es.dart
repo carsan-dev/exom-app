@@ -4295,6 +4295,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trainingDetailSetsDoneLabel => 'series hechas';
 
   @override
+  String trainingDetailProgressSemantics(
+    int done,
+    int total,
+    int setsDone,
+    int setsTotal,
+  ) {
+    return '$done de $total ejercicios hechos, $setsDone de $setsTotal series hechas';
+  }
+
+  @override
   String get activeExerciseCloseA11y => 'Cerrar ejercicio';
 
   @override

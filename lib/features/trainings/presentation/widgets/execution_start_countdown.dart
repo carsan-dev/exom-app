@@ -13,6 +13,18 @@ import 'package:flutter/material.dart';
 /// Fade of each figure of the countdown (sketch `f5-demo`: 180 ms).
 const Duration _figureFade = Duration(milliseconds: 180);
 
+/// The figure change is sequential, never a cross-fade: the default
+/// [AnimatedSwitcher] fades the old and the new figure at once in the same
+/// stack, so mid-change both 140 px digits drew at about half opacity on top
+/// of each other, a lime block behind the figure. The old figure leaves in the
+/// first 40 % of [_figureFade] (72 ms) and the new one enters in the remaining
+/// 60 % (108 ms), both easing out.
+///
+/// The outgoing curve runs on a reversing animation (1 -> 0), so its visible
+/// part is the top of the range and its curve is flipped to ease out in time.
+const Curve _figureIn = Interval(0.4, 1, curve: Curves.easeOut);
+const Curve _figureOut = Interval(0.6, 1, curve: FlippedCurve(Curves.easeOut));
+
 /// Five-second start countdown of a timed exercise (L5-F5, sketch
 /// `f-resto.html` frames f5-cuenta, f5-demo and f5-160).
 ///
@@ -179,13 +191,16 @@ class _ExecutionStartCountdownState extends State<ExecutionStartCountdown>
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                // Display only: the figure fades in over
+                                // Display only: the figure changes over
                                 // 180 ms (cut with reduced motion); the
-                                // deadline never waits for it.
+                                // deadline never waits for it. Out, then
+                                // in: two lime digits never overlap.
                                 AnimatedSwitcher(
                                   duration: reducedMotion
                                       ? Duration.zero
                                       : _figureFade,
+                                  switchInCurve: _figureIn,
+                                  switchOutCurve: _figureOut,
                                   child: Text(
                                     '$seconds',
                                     key: ValueKey(seconds),

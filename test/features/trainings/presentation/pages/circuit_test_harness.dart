@@ -4,6 +4,7 @@
 // GoRouter so the page can pop back to the detail as in the app.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
@@ -29,6 +30,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../golden/redesign_scenes.dart' show loadRedesignFonts;
+import 'last_set_video_test_support.dart' show EnqueueCall;
 
 const circuitTrainingId = 'training';
 const circuitBlockId = 'block';
@@ -88,6 +90,9 @@ class CircuitStorage extends LocalStorage {
   final settings = <String, Object?>{'last_set_video_reminder_enabled': false};
   final drafts = CircuitDraftStore();
 
+  /// L5-E3c: when true, `saveSetting` throws (the «Recordármelo» revert).
+  bool failSettingSaves = false;
+
   Map<String, dynamic> get lastWrite => writes.last;
 
   /// When set, every cache write is recorded at once (call order, as Hive
@@ -125,8 +130,10 @@ class CircuitStorage extends LocalStorage {
   }
 
   @override
-  Future<void> saveSetting(String key, dynamic value) async =>
-      settings[key] = value;
+  Future<void> saveSetting(String key, dynamic value) async {
+    if (failSettingSaves) throw StateError('settings write failed');
+    settings[key] = value;
+  }
 
   @override
   ActiveWorkoutLocalStore bindActiveWorkoutStore() => drafts;
@@ -228,6 +235,47 @@ class CircuitQueue extends Fake implements FeedbackUploadQueueService {
   final events = StreamController<FeedbackUploadNotice>.broadcast();
   final statuses = <String, String>{};
 
+  /// L5-E3c: every `enqueue` with all the fields the page passes.
+  final calls = <EnqueueCall>[];
+
+  /// L5-E3c r3: thrown once by the next `enqueue` (nothing is recorded).
+  Object? failNextEnqueue;
+
+  @override
+  Future<String> enqueue({
+    required File file,
+    String? expectedSession,
+    required String contentType,
+    required String mediaType,
+    String? notes,
+    String? exerciseId,
+    String? feedbackKind,
+    String? trainingId,
+    String? trainingExerciseId,
+    String? assignmentDate,
+    String? sessionId,
+  }) async {
+    final failure = failNextEnqueue;
+    if (failure != null) {
+      failNextEnqueue = null;
+      throw failure;
+    }
+    calls.add((
+      path: file.path,
+      expectedSession: expectedSession,
+      contentType: contentType,
+      mediaType: mediaType,
+      notes: notes,
+      exerciseId: exerciseId,
+      feedbackKind: feedbackKind,
+      trainingId: trainingId,
+      trainingExerciseId: trainingExerciseId,
+      assignmentDate: assignmentDate,
+      sessionId: sessionId,
+    ));
+    return 'fb-${calls.length}';
+  }
+
   @override
   Stream<FeedbackUploadNotice> get notices => events.stream;
 
@@ -297,9 +345,12 @@ Future<CircuitHarness> pumpCircuit(
   Map<String, String> queueStatuses = const {},
   // L5-E3b (E4-O4): with [themeMode] the app follows it between both themes.
   ValueListenable<ThemeMode>? themeMode,
+  // L5-E3c: `last_set_video_reminder_enabled` before the first frame.
+  bool lastSetVideoReminder = false,
 }) async {
   await sl.reset();
   final storage = CircuitStorage(restored: restored, unitSystem: unitSystem);
+  storage.settings['last_set_video_reminder_enabled'] = lastSetVideoReminder;
   final native = RecordingRestTimer();
   final bloc = RecordingTrainingBloc()..failWhen = failWhen;
   final queue = CircuitQueue()..statuses.addAll(queueStatuses);

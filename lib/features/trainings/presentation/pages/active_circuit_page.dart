@@ -33,6 +33,8 @@ import 'package:exom_app/features/trainings/presentation/pages/exercise_video_pl
 import 'package:exom_app/features/trainings/presentation/widgets/circuit_round_list.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_reminder.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
@@ -256,6 +258,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   final Map<String, String> _lastSetFeedbackIds = {};
   final Map<String, String> _lastSetFeedbackStatuses = {};
   final Map<String, Map<String, dynamic>> _completionActions = {};
+  // «Recordármelo» as shown; read once from `last_set_video_reminder_enabled`.
+  bool? _reminderEnabled;
+  // E3c r2: true from the logged transition that will ask the last round's
+  // video until its sheet has closed and its id (if any) is saved. Meanwhile
+  // the end of the final rest only saves «ready to finish»; the completion
+  // runs once, when the sheet closes (never the missing-videos sheet on top).
+  bool _lastRoundVideoPending = false;
   StreamSubscription<FeedbackUploadNotice>? _feedbackSubscription;
   final String? _ownerSession = sl<LocalStorage>().sessionStamp;
   late final int _timerSessionRevision =
@@ -598,6 +607,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     try {
       await _completeCurrentSeries(weightText);
     } finally {
+      // Every exit of the series (also a failed write or a thrown enqueue)
+      // ends the pending last-round video (E3c r2).
+      _lastRoundVideoPending = false;
       if (mounted) setState(() => _seriesBusy = false);
     }
   }
@@ -609,16 +621,19 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       return;
     }
 
-    if (widget.args.requiresLastSetVideo &&
-        _currentRound == widget.args.rounds &&
-        !_lastSetFeedbackIds.containsKey(_currentExercise.id)) {
-      await _showLastRoundReminder(_currentExercise);
-      if (!mounted) return;
-    }
-
     final tracking = await _requestPerformance(_currentExercise, weightText);
     // Null: dismissed, cancelled or a repeated trigger. Nothing happened.
     if (!mounted || tracking == null) return;
+    // L5-D23 (ii, iv): with «Recordármelo» on, saving the last round asks for
+    // its video, but only once the round is persisted (never a typed round
+    // kept only in memory while the camera is open: the circuit does not
+    // inherit P-E3b-1). Off, it is asked at the end, as before E3c.
+    final videoExercise = _currentExercise;
+    final videoRound = _currentRound;
+    final asksVideo = _asksLastRoundVideo(videoExercise) && _reminderOn;
+    // Before the rest starts: a final rest ending at any point until the
+    // sheet closes defers the completion (cleared by `_onPrimaryPressed`).
+    if (asksVideo) _lastRoundVideoPending = true;
     // «Completar sin registrar» advances without a set, as before L3.
     final performance = tracking.skipped
         ? null
@@ -654,6 +669,18 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       setState(() => _circuitReadyToFinish = true);
       if (!await _persistLoggedTransition(logged)) return;
       await _executionStore?.removeActiveWorkout(completedTimerKey);
+      if (asksVideo && mounted && !_exited) {
+        final enqueueFailed = await _offerLastRoundVideo(
+          videoExercise,
+          tracking,
+          videoRound,
+          weightText,
+        );
+        if (!mounted) return;
+        // E3c r4 (D1): the error SnackBar stays visible; the missing-videos
+        // sheet would cover it. «Terminar circuito» asks for the video.
+        if (enqueueFailed) return;
+      }
       await _finishCircuit();
       return;
     }
@@ -684,26 +711,43 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       await _executionStore?.removeActiveWorkout(completedTimerKey);
       // Never arm a native rest the page already left (skipped meanwhile)
       // or that the user abandoned by leaving.
-      if (!mounted ||
-          _exited ||
-          !_isResting ||
-          restEndsAt == null ||
-          _restEndsAt != restEndsAt) {
-        return;
+      if (mounted &&
+          !_exited &&
+          _isResting &&
+          restEndsAt != null &&
+          _restEndsAt == restEndsAt) {
+        final id = _restSessionId(restEndsAt);
+        _nativeRestId = id;
+        await sl<RestTimerCoordinator>().start(
+          RestTimerSession(
+            id: id,
+            exerciseName: _currentExercise.exercise.name,
+            durationSeconds: progression.restSeconds,
+            endsAt: restEndsAt,
+          ),
+        );
       }
-      final id = _restSessionId(restEndsAt);
-      _nativeRestId = id;
-      await sl<RestTimerCoordinator>().start(
-        RestTimerSession(
-          id: id,
-          exerciseName: _currentExercise.exercise.name,
-          durationSeconds: progression.restSeconds,
-          endsAt: restEndsAt,
-        ),
-      );
     }
     if (progression.restKind == CircuitRestKind.none) {
       await _executionStore?.removeActiveWorkout(completedTimerKey);
+    }
+    // The round is persisted (and its rest armed): now its video.
+    if (asksVideo && mounted && !_exited) {
+      final enqueueFailed = await _offerLastRoundVideo(
+        videoExercise,
+        tracking,
+        videoRound,
+        weightText,
+      );
+      _lastRoundVideoPending = false;
+      // The final rest ran out with the sheet open (it only saved «ready to
+      // finish»): complete now, once, with the video just queued (if any).
+      // The rest already finished its native timer. E3c r4 (D1): not after a
+      // failed enqueue, whose SnackBar the missing-videos sheet would cover;
+      // «Terminar circuito» asks for the video.
+      if (mounted && !_exited && _circuitReadyToFinish && !enqueueFailed) {
+        await _finishCircuit(cancelRestTimer: false);
+      }
     }
   }
 
@@ -735,81 +779,117 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return true;
   }
 
-  Future<void> _showLastRoundReminder(
-    TrainingExerciseEntity trainingExercise,
-  ) async {
-    final storage = sl<LocalStorage>();
-    final remindersEnabled =
-        storage.getSetting<bool>(
-          'last_set_video_reminder_enabled',
-          defaultValue: true,
-        ) ??
-        true;
-    if (!remindersEnabled) return;
-    var hideAgain = false;
-    final attach = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(AppLocalizations.of(context).lastSetReminderTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                AppLocalizations.of(
-                  context,
-                ).lastSetReminderMessage(trainingExercise.exercise.name),
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: hideAgain,
-                onChanged: (value) =>
-                    setDialogState(() => hideAgain = value ?? false),
-                title: Text(AppLocalizations.of(context).doNotShowAgain),
-              ),
-            ],
+  bool _asksLastRoundVideo(TrainingExerciseEntity trainingExercise) =>
+      widget.args.requiresLastSetVideo &&
+      _currentRound == widget.args.rounds &&
+      !_lastSetFeedbackIds.containsKey(trainingExercise.id);
+
+  bool get _reminderOn =>
+      _reminderEnabled ??=
+          sl<LocalStorage>().getSetting<bool>(
+            'last_set_video_reminder_enabled',
+            defaultValue: true,
+          ) ??
+          true;
+
+  /// «Recordármelo»: the same preference as Ajustes (on = true), as E3b.
+  Future<void> _setReminder(bool enabled) async {
+    setState(() => _reminderEnabled = enabled);
+    try {
+      await sl<LocalStorage>().saveSetting(
+        'last_set_video_reminder_enabled',
+        enabled,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      // Same as Ajustes (M8): undo the optimistic switch and say so.
+      setState(() {
+        if (_reminderEnabled == enabled) _reminderEnabled = !enabled;
+      });
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? l10n.settingsSwitchEnableFailed
+                : l10n.settingsSwitchDisableFailed,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(AppLocalizations.of(context).attachAtEnd),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(AppLocalizations.of(context).attachNow),
-            ),
-          ],
         ),
-      ),
-    );
-    if (hideAgain) {
-      await storage.saveSetting('last_set_video_reminder_enabled', false);
+      );
     }
-    if (attach != true || !mounted) return;
-    final source = await showModalBottomSheet<ImageSource>(
+  }
+
+  /// The shared last-set video sheet (L5-D23 ii-iii, iv), opened only after
+  /// the last round of [trainingExercise] is persisted and only with
+  /// «Recordármelo» on. «Usar vídeo» queues with the same fields as before
+  /// E3c and persists the id; «Cambiar», «Cancelar», a dismissal or a router
+  /// change queue nothing: the round is already saved and its video is asked
+  /// at the end (`_collectMissingVideos`), as «Al terminar» did.
+  /// Returns true only when «Usar vídeo» was chosen and the enqueue threw
+  /// (its SnackBar is shown).
+  Future<bool> _offerLastRoundVideo(
+    TrainingExerciseEntity trainingExercise,
+    SetPerformanceResult tracking,
+    int round,
+    WeightText weightText,
+  ) async {
+    if (!_reminderOn) return false;
+    // The set sheet returns once its subtree is gone; open on the next frame.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return false;
+    final l10n = AppLocalizations.of(context);
+    final performed = tracking.skipped
+        ? null
+        : setValueLabel(
+            l10n,
+            SetPerformance(
+              setNumber: round,
+              reps: tracking.reps,
+              seconds: tracking.seconds,
+              weightKg: tracking.weight,
+            ),
+            weightText,
+          );
+    final choice = await showExomSheet<LastSetVideoChoice>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(ExomIcons.video),
-              title: Text(AppLocalizations.of(context).recordNow),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(ExomIcons.videoLibrary),
-              title: Text(AppLocalizations.of(context).chooseFromGallery),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
-            ),
-          ],
+      builder: (_) => LastSetVideoSheet(
+        kicker: l10n.lastSetVideoSheetKicker(
+          trainingExercise.exercise.name,
+          round,
         ),
+        setLabel: performed == null || performed.isEmpty
+            ? l10n.setPerformanceTitle(round)
+            : l10n.lastSetVideoChosenSet(round, performed),
+        pickVideo: _pickCircuitVideo,
       ),
     );
-    if (source == null) return;
-    final picked = await _pickCircuitVideo(source);
-    if (picked == null) return;
-    final id = await _enqueueCircuitVideo(trainingExercise, picked, null);
+    // E3c r2: as the active exercise, nothing is queued once the session is
+    // no longer the page owner's (no work of user A with B's credentials).
+    if (choice == null ||
+        !mounted ||
+        _ownerSession == null ||
+        sl<LocalStorage>().sessionStamp != _ownerSession) {
+      return false;
+    }
+    final notes = choice.notes.trim();
+    final String id;
+    try {
+      id = await _enqueueCircuitVideo(
+        trainingExercise,
+        choice.file,
+        notes.isEmpty ? null : notes,
+      );
+    } on LocalSessionChanged {
+      rethrow;
+    } on Object {
+      // E3c r3: the state stays «ready to finish»; the retry asks again.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).circuitSaveError)),
+        );
+      }
+      return true;
+    }
     if (mounted) {
       setState(() {
         _lastSetFeedbackIds[trainingExercise.id] = id;
@@ -817,6 +897,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
       });
       await _persistState();
     }
+    return false;
   }
 
   Future<File?> _pickCircuitVideo(ImageSource initialSource) async {
@@ -845,22 +926,30 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     return null;
   }
 
+  /// E3c r2: bound to the page owner's session (the queue rejects another
+  /// one), in the round and at the end alike; a page without an owner
+  /// queues nothing.
   Future<String> _enqueueCircuitVideo(
     TrainingExerciseEntity trainingExercise,
     File file,
     String? notes,
-  ) => sl<FeedbackUploadQueueService>().enqueue(
-    file: file,
-    contentType: _videoContentType(file),
-    mediaType: 'VIDEO',
-    notes: notes,
-    exerciseId: trainingExercise.exercise.id,
-    feedbackKind: 'LAST_SET',
-    trainingId: widget.trainingId,
-    trainingExerciseId: trainingExercise.id,
-    assignmentDate: widget.args.assignmentDate,
-    sessionId: widget.args.sessionId,
-  );
+  ) async {
+    final owner = _ownerSession;
+    if (owner == null) throw const LocalSessionChanged();
+    return sl<FeedbackUploadQueueService>().enqueue(
+      expectedSession: owner,
+      file: file,
+      contentType: _videoContentType(file),
+      mediaType: 'VIDEO',
+      notes: notes,
+      exerciseId: trainingExercise.exercise.id,
+      feedbackKind: 'LAST_SET',
+      trainingId: widget.trainingId,
+      trainingExerciseId: trainingExercise.id,
+      assignmentDate: widget.args.assignmentDate,
+      sessionId: widget.args.sessionId,
+    );
+  }
 
   String _videoContentType(File file) {
     return switch (file.path.split('.').last.toLowerCase()) {
@@ -1071,7 +1160,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           _restEndsAt = null;
           _restLeaving = false;
         });
+        // E3c r2: read with the state change (no await between them). With
+        // the last round's video still pending, the series completes the
+        // circuit once its sheet closes; finishing here would open the
+        // missing-videos sheet over it and ask the same video twice.
+        final videoPending = _lastRoundVideoPending;
         await _persistState();
+        if (videoPending) return;
         await _finishCircuit(cancelRestTimer: false);
         return;
       }
@@ -1715,6 +1810,17 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               ],
             ),
           ),
+        // L5-D23 (i, iv), sketch `f-circ-ult`: the reminder of the last
+        // round's video, with the circuit copy of the old dialog.
+        if (!ready && _asksLastRoundVideo(trainingExercise)) ...[
+          const SizedBox(height: 24),
+          LastSetVideoReminder(
+            enabled: _reminderOn,
+            title: l10n.lastSetReminderTitle,
+            message: l10n.lastSetReminderMessage(exercise.name),
+            onChanged: _setReminder,
+          ),
+        ],
         ..._roundSection(l10n, weightText),
         if (!ready && hasTechnique) ...[
           const SizedBox(height: 20),

@@ -22,7 +22,6 @@ import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
-import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
@@ -36,6 +35,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_reminder.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
@@ -1049,9 +1049,14 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
         )) ...[
           const SizedBox(height: 24),
-          _LastSetVideoReminder(
+          LastSetVideoReminder(
             enabled: _reminderOn,
-            isLastSet: state.currentSet == state.totalSets,
+            title: l10n.upcomingLastSetTitle,
+            // On the last set itself «the next one is the last» would be
+            // wrong (r3, D1).
+            message: state.currentSet == state.totalSets
+                ? l10n.currentLastSetMessage
+                : l10n.upcomingLastSetMessage,
             onChanged: _setReminder,
           ),
         ],
@@ -1720,92 +1725,4 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
       today: currentPerformance,
     ),
   );
-}
-
-/// L5-D23 (i), sketch frames `f-ej-ult` and `f-ej-ult-off`: before the last
-/// set, the video reminder is an informative band («Prepárate para grabar»,
-/// the same message as the old dialog) with the «Recordármelo» switch on;
-/// switched off, one flat row with the same switch to turn it back on. The
-/// switch writes `last_set_video_reminder_enabled`, as Ajustes. The switch
-/// is in the text colour, never lime.
-class _LastSetVideoReminder extends StatelessWidget {
-  const _LastSetVideoReminder({
-    required this.enabled,
-    required this.isLastSet,
-    required this.onChanged,
-  });
-
-  final bool enabled;
-
-  /// The band also shows on the last set itself: there «the next one is the
-  /// last» would be wrong (r3, D1).
-  final bool isLastSet;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-    if (!enabled) {
-      return ExomFlatRowGroup(
-        children: [
-          MergeSemantics(
-            key: const Key('last-set-video-reminder-off'),
-            child: Semantics(
-              toggled: false,
-              child: ExomFlatRow(
-                title: l10n.lastSetVideoRemindMe,
-                subtitles: [l10n.lastSetVideoReminderOption],
-                trailing: const ExcludeSemantics(
-                  child: ExomSquareSwitch(value: false),
-                ),
-                onTap: () => onChanged(true),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    return ExomBand(
-      key: const Key('last-set-video-reminder'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: ExomKicker(
-                l10n.upcomingLastSetTitle,
-                icon: ExomIcons.camera,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              isLastSet
-                  ? l10n.currentLastSetMessage
-                  : l10n.upcomingLastSetMessage,
-              style: TextStyle(
-                fontFamily: AppTheme.bodyFontFamily,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-                color: palette.textPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          ExomSwitchRow(
-            label: l10n.lastSetVideoRemindMe,
-            value: true,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
 }

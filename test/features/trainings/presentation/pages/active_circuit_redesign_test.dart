@@ -518,8 +518,11 @@ void main() {
       expect(h.storage.removedKeys, [circuitStateKey()]);
     });
 
+    // L5-E3c: the reminder is no longer a dialog before the set sheet but a
+    // band, and the video is offered once the round is saved; «Cancelar»
+    // there is the old «Al terminar». The missing-videos point is unchanged.
     testWidgets('the mandatory last-set video keeps its two points: reminder '
-        'before the last round sheet, missing videos before any completion', (
+        'in the last round, missing videos before any completion', (
       tester,
     ) async {
       final h = await pumpCircuit(
@@ -527,17 +530,19 @@ void main() {
         exercises: [circuitExercise('a', 'Burpees')],
         rounds: 1,
         requiresLastSetVideo: true,
+        lastSetVideoReminder: true,
       );
-      h.storage.settings['last_set_video_reminder_enabled'] = true;
       final l10n = circuitL10n(tester);
+      expect(find.byKey(const Key('last-set-video-reminder')), findsOneWidget);
       await tester.tap(find.byKey(_footer));
       await settleFrames(tester);
-      expect(find.text(l10n.lastSetReminderTitle), findsOneWidget);
-      expect(find.byType(SetPerformanceSheet), findsNothing);
-      await tester.tap(find.text(l10n.attachAtEnd));
-      await settleFrames(tester);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(SetPerformanceSheet), findsOneWidget);
       await _saveSheet(tester);
+      await settleFrames(tester);
+      expect(find.byKey(const Key('last-set-video-sheet')), findsOneWidget);
+      expect(h.bloc.events, isEmpty);
+      await tester.tap(find.byKey(const Key('last-set-video-cancel')));
       await settleFrames(tester);
       // Ready to finish; the missing videos sheet comes before any dispatch.
       expect(find.byType(CircuitFeedbackForm), findsOneWidget);

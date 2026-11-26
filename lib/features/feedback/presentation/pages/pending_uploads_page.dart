@@ -469,7 +469,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       title: failed
           ? l10n.pendingSyncFailedStatus
           : _statusLabel(l10n, item['status'] as String?),
-      detail: failed ? known : _errorLabel(l10n, item),
+      detail: failed ? known : _errorLabel(l10n, item) ?? _waitLabel(l10n, item),
       attempts: item['attempts'] as int? ?? 0,
       retryKey: Key('pending-retry-$id'),
       deleteKey: Key('pending-delete-$id'),
@@ -492,6 +492,15 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     final knownCode = localizedErrorCode(l10n, item['last_error'] as String?);
     if (knownCode != null) return knownCode;
     return feedback ? l10n.pendingFeedbackError : l10n.pendingSyncFailedStatus;
+  }
+
+  /// COLA (A): why a queued progress action is not sent yet, when it waits
+  /// for a video (its own, one of same-day work of its training, or one of
+  /// other same-day work).
+  String? _waitLabel(AppLocalizations l10n, Map<String, dynamic> item) {
+    if (item['status'] != 'queued') return null;
+    final wait = _offlineSync.feedbackWaitOf(item);
+    return wait == null ? null : progressFeedbackWaitLabel(l10n, wait);
   }
 
   String _statusLabel(AppLocalizations l10n, String? status) {
@@ -1127,3 +1136,14 @@ class _OutcomeStrip extends StatelessWidget {
     );
   }
 }
+
+/// COLA (A): the text of a progress [wait], shared by «Subidas pendientes»
+/// and the training detail (COLA r3).
+String progressFeedbackWaitLabel(
+  AppLocalizations l10n,
+  ProgressFeedbackWait wait,
+) => switch (wait) {
+  ProgressFeedbackWait.ownVideo => l10n.pendingSyncWaitsOwnVideo,
+  ProgressFeedbackWait.behindVideo => l10n.pendingSyncWaitsBehindVideo,
+  ProgressFeedbackWait.behindDayVideo => l10n.pendingSyncWaitsBehindDayVideo,
+};

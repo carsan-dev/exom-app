@@ -91,6 +91,15 @@ class _SyncWithFailure extends _Sync {
   }
 }
 
+/// COLA (A): a queued action that waits for a video.
+class _SyncWaitingForVideo extends _SyncWithFailure {
+  _SyncWaitingForVideo(this.wait) : super(status: 'queued', lastError: null);
+  final ProgressFeedbackWait wait;
+  @override
+  ProgressFeedbackWait? feedbackWaitOf(Map<String, dynamic> action) =>
+      action['id'] == 'sync-1' ? wait : null;
+}
+
 Future<({_Queue queue, AppLocalizations l10n})> _pump(
   WidgetTester tester, {
   required String locale,
@@ -264,6 +273,32 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(env.l10n.pendingRetryNotStarted), findsNothing);
       });
+
+      for (final wait in ProgressFeedbackWait.values) {
+        testWidgets('queued sync action explains its video wait ($wait)',
+            (tester) async {
+          final env = await _pump(tester,
+              locale: locale, sync: _SyncWaitingForVideo(wait));
+          await tester.scrollUntilVisible(
+            find.byKey(const Key('pending-delete-sync-1')),
+            200,
+          );
+          final texts = {
+            ProgressFeedbackWait.ownVideo: env.l10n.pendingSyncWaitsOwnVideo,
+            ProgressFeedbackWait.behindVideo:
+                env.l10n.pendingSyncWaitsBehindVideo,
+            ProgressFeedbackWait.behindDayVideo:
+                env.l10n.pendingSyncWaitsBehindDayVideo,
+          };
+          expect(texts.keys, ProgressFeedbackWait.values);
+          expect(texts.values.toSet(), hasLength(texts.length));
+          for (final MapEntry(:key, :value) in texts.entries) {
+            expect(find.text(value),
+                key == wait ? findsOneWidget : findsNothing);
+          }
+          expect(find.text(env.l10n.pendingSyncFailedStatus), findsNothing);
+        });
+      }
 
       testWidgets('queued sync action keeps its error line', (tester) async {
         final sync = _SyncWithFailure(

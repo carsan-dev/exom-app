@@ -27,6 +27,15 @@ class CompletionSyncBlocker {
   final String? retryActionId;
 }
 
+/// COLA: why a queued progress action is not sent yet. [ownVideo]: it waits
+/// for its own last-set video (or a video its training completion depends
+/// on). [behindVideo]: it is ordered behind an exercise of its own training
+/// that waits for its last-set video. [behindDayVideo]: it is ordered behind
+/// other same-day work waiting for a video whose training is not known to be
+/// its own (actions of earlier builds without a training, a training
+/// completion).
+enum ProgressFeedbackWait { ownVideo, behindVideo, behindDayVideo }
+
 /// FB1: the upload that currently stands for the last-set video [id]. A
 /// failed video replaced by a new recording keeps a `replaced_by` link in the
 /// (owned) upload [queue]; any reference still naming the old id, written
@@ -339,7 +348,7 @@ class OfflineSyncService {
         }
         await _acknowledgeAction(id, acknowledgedRevision);
       } on _FeedbackDependencyPending {
-        await _mutateById(id, (current) => {...current, 'status': 'queued'});
+        await _returnUnsentToQueue(id);
       } on DioException catch (error) {
         if (!_isAuthenticated()) {
           await _mutateById(id, (current) => {...current, 'status': 'queued'});
@@ -547,7 +556,7 @@ class OfflineSyncService {
           );
         }
       }
-      queue.add({
+      final queued = <String, dynamic>{
         ...action,
         'expected_revision':
             _localStorage.getCachedMap(
@@ -560,9 +569,18 @@ class OfflineSyncService {
         'status': 'queued',
         'attempts': 0,
         'queued_at': DateTime.now().toUtc().toIso8601String(),
-        if (restoredAction != null) ...restoredAction,
+        // A restored action keeps its identity and revision, but it is
+        // appended: it links to the current end of its day, never to where
+        // it stood before (COLA: only a claim writes a forward link).
+        if (restoredAction != null)
+          ...(Map<String, dynamic>.from(restoredAction)
+            ..remove('predecessor_id')),
         if (restoredAction != null) 'status': 'queued',
-      });
+      };
+      // An operation id queued again (restored completion, draft operation
+      // id) may still be named by entries now ahead of it.
+      _releaseLinksTo(queue, queued['id'] as String);
+      queue.add(queued);
       await _persistQueue(queue);
       enqueued = true;
     });
@@ -824,8 +842,17 @@ class OfflineSyncService {
           discarded['last_error'] == 'progress_conflict_review_required'
               ? 'conflict' : 'failed');
       }
+      // COLA (E): an action proven never sent (held by a video that was never
+      // confirmed) left the server revision untouched; deleting it does not
+      // turn the rest of the day into conflicts. The server still answers
+      // 409 if that proof were wrong.
+      final neverSent = _videoHeldOfDay(
+        queue,
+        discarded,
+        _localStorage.getFeedbackUploadQueue(),
+      ).contains(id);
       queue.removeAt(index);
-      for (var i = index; i < queue.length; i++) {
+      for (var i = index; i < queue.length && !neverSent; i++) {
         if (queue[i]['date'] == date &&
             !_isIndependentOfRejectedHistory(discarded, queue[i])) {
           queue[i] = {
@@ -835,6 +862,10 @@ class OfflineSyncService {
           };
         }
       }
+      // COLA: no entry keeps naming the deleted action. Its id may be queued
+      // again (restored completion), and a link to it would then read as an
+      // overtaking record.
+      _releaseLinksTo(queue, id);
       await _persistQueue(queue);
     });
     if (date != null) await _rebuildProgressCachesAfterFailure(date);
@@ -1074,8 +1105,341 @@ class OfflineSyncService {
           entry['date'] == candidate['date'] &&
           !_isIndependentOfRejectedHistory(entry, candidate));
 
-  /// Read-only diagnosis uses precisely the replay head-of-day rule. Feedback
-  /// completion proves only its dependency, never a training acknowledgement.
+  // ---------------------------------------------------------------------------
+  // COLA: same-day work held by a video does not hold independent work.
+  //
+  // The API keeps one revision per (client, date), so the actions of a day are
+  // replayed as a chain. An action waiting for an unconfirmed last-set video
+  // (or a training completion depending on one) is refused by the replay
+  // before any HTTP, and feedback confirmation is terminal, so while the
+  // reference is unconfirmed the action provably never reached the server.
+  // A later, independent action of the same day may then overtake it. The
+  // overtaking is recorded durably, in the same queue write as the claim, by
+  // pointing the `predecessor_id` of every passed action to the overtaker
+  // (an existing field; an "inverted" link names a later queue entry). Passed
+  // actions wait for the overtaker until it is acknowledged, whatever happens
+  // to their video meanwhile (lost response, crash, account switch); the
+  // acknowledgement hands the confirmed revision to them and rebuilds the
+  // day chain in queue order, in one write. No field or format is added.
+  // ---------------------------------------------------------------------------
+
+  /// Same rule as [_replayAction]: a dependency or the last-set video of an
+  /// exercise completion that is not confirmed (through its replacement).
+  bool _waitsForFeedback(
+    Map<String, dynamic> action,
+    List<Map<String, dynamic>> feedback,
+  ) {
+    bool confirmed(String id) {
+      final current = resolveFeedbackReplacement(feedback, id);
+      return feedback.any(
+        (item) => item['id'] == current && item['status'] == 'completed',
+      );
+    }
+
+    final dependencies =
+        ((action['depends_on_feedback_ids'] as List?) ?? const [])
+            .whereType<String>();
+    if (dependencies.any((id) => !confirmed(id))) return true;
+    final lastSet = action['last_set_feedback_client_upload_id'];
+    return action['type'] == _markExerciseCompleted &&
+        lastSet is String &&
+        !confirmed(lastSet);
+  }
+
+  /// Every unconfirmed reference of [action] names an upload that is still
+  /// in this owner's queue and not confirmed: it is waiting, not lost.
+  bool _waitsForPresentFeedback(
+    Map<String, dynamic> action,
+    List<Map<String, dynamic>> feedback,
+  ) {
+    if (!_waitsForFeedback(action, feedback)) return false;
+    final references = <String>[
+      ...((action['depends_on_feedback_ids'] as List?) ?? const [])
+          .whereType<String>(),
+      if (action['type'] == _markExerciseCompleted &&
+          action['last_set_feedback_client_upload_id'] is String)
+        action['last_set_feedback_client_upload_id'] as String,
+    ];
+    return references.every((reference) {
+      final current = resolveFeedbackReplacement(feedback, reference);
+      return feedback.any((item) => item['id'] == current);
+    });
+  }
+
+  bool _neverAttempted(Map<String, dynamic> action) {
+    final attempts = action['attempts'];
+    return attempts == null || attempts == 0;
+  }
+
+  /// Provably never sent because of a video of its own: queued and waiting
+  /// for an upload still pending or failed, or failed only because that
+  /// unconfirmed upload was discarded (`feedback_discarded`, written solely
+  /// by [removeActionsDependingOnFeedback] for unconfirmed uploads).
+  bool _heldByOwnVideo(
+    Map<String, dynamic> action,
+    List<Map<String, dynamic>> feedback,
+  ) {
+    if (!_neverAttempted(action)) return false;
+    if (action['status'] == 'failed') {
+      return action['last_error'] == 'feedback_discarded';
+    }
+    return action['status'] == 'queued' &&
+        _waitsForPresentFeedback(action, feedback);
+  }
+
+  static const _exerciseOrTrainingTypes = {
+    _markExerciseCompleted,
+    _unmarkExerciseCompleted,
+    _completeTraining,
+  };
+  static const _mealTypes = {_markMealCompleted, _unmarkMealCompleted};
+
+  /// Whether the server result of [candidate] cannot depend on [prior] of the
+  /// same day, so their order is free. Meals never depend on training work;
+  /// training work only when both name different trainings (and different
+  /// executions and exercises). Anything not provable (legacy actions without
+  /// a training, unknown types, the same training) keeps the strict order.
+  bool _independentOf(
+    Map<String, dynamic> candidate,
+    Map<String, dynamic> prior,
+  ) {
+    final candidateType = candidate['type'];
+    final priorType = prior['type'];
+    if (_mealTypes.contains(priorType)) {
+      return _exerciseOrTrainingTypes.contains(candidateType) ||
+          (_mealTypes.contains(candidateType) &&
+              candidate['meal_id'] is String &&
+              prior['meal_id'] is String &&
+              candidate['meal_id'] != prior['meal_id']);
+    }
+    if (!_exerciseOrTrainingTypes.contains(priorType)) return false;
+    if (_mealTypes.contains(candidateType)) return true;
+    if (!_exerciseOrTrainingTypes.contains(candidateType)) return false;
+    final priorTraining = prior['training_id'];
+    final candidateTraining = candidate['training_id'];
+    if (priorTraining is! String ||
+        priorTraining.isEmpty ||
+        candidateTraining is! String ||
+        candidateTraining.isEmpty ||
+        priorTraining == candidateTraining) {
+      return false;
+    }
+    final priorSession = prior['training_session_id'];
+    if (priorSession is String &&
+        priorSession.isNotEmpty &&
+        priorSession == candidate['training_session_id']) {
+      return false;
+    }
+    final priorExercise = prior['training_exercise_id'];
+    return !(priorExercise is String &&
+        priorExercise == candidate['training_exercise_id']);
+  }
+
+  /// Ids of the owned actions of [reference]'s day that provably never
+  /// reached the server and wait for a video: held by their own video
+  /// ([_heldByOwnVideo]), or queued, never attempted and ordered behind such
+  /// an action they depend on (so no rule ever let them be claimed).
+  ///
+  /// One pass over the queue (R4): the held actions found so far are exactly
+  /// the held [_orderedPredecessors] of the current entry (same owner and
+  /// day, earlier in the queue; a held action is never a history-ambiguous
+  /// rejection), so only they are compared.
+  Set<String> _videoHeldOfDay(
+    List<Map<String, dynamic>> queue,
+    Map<String, dynamic> reference,
+    List<Map<String, dynamic>> feedback,
+  ) {
+    final held = <String>{};
+    final heldEntries = <Map<String, dynamic>>[];
+    for (final entry in queue) {
+      final id = entry['id'];
+      if (id is! String ||
+          entry['format_version'] != 2 ||
+          entry['date'] != reference['date'] ||
+          !_localStorage.ownsEntry(entry)) {
+        continue;
+      }
+      if (_heldByOwnVideo(entry, feedback) ||
+          (entry['status'] == 'queued' &&
+              _neverAttempted(entry) &&
+              heldEntries.any((prior) => !_independentOf(entry, prior)))) {
+        held.add(id);
+        heldEntries.add(entry);
+      }
+    }
+    return held;
+  }
+
+  /// COLA r2: [passed] names the later [overtaker] because a claim recorded
+  /// an overtaking. A claim only passes actions that were never attempted,
+  /// are queued (or failed only because their video was discarded) and are
+  /// independent of it, and they stay so until the overtaker is
+  /// acknowledged. Any other link to a later entry keeps the strict order.
+  bool _recordsOvertaking(
+    Map<String, dynamic> passed,
+    Map<String, dynamic> overtaker,
+  ) =>
+      passed['predecessor_id'] == overtaker['id'] &&
+      _neverAttempted(passed) &&
+      (passed['status'] == 'queued' ||
+          (passed['status'] == 'failed' &&
+              passed['last_error'] == 'feedback_discarded')) &&
+      _independentOf(overtaker, passed);
+
+  /// COLA r2: only a claim writes a link to a later entry. Entries still
+  /// naming [id] (deleted, or about to be appended again with the same
+  /// operation id) get the link [_enqueueAction] writes: the previous entry
+  /// of their day, or none.
+  void _releaseLinksTo(List<Map<String, dynamic>> queue, String id) {
+    for (var index = 0; index < queue.length; index++) {
+      final entry = queue[index];
+      if (entry['predecessor_id'] != id) continue;
+      final previous = queue
+          .take(index)
+          .where(
+            (prior) =>
+                prior['date'] == entry['date'] && prior['format_version'] == 2,
+          )
+          .lastOrNull;
+      queue[index] = previous == null
+          ? (Map<String, dynamic>.from(entry)..remove('predecessor_id'))
+          : {...entry, 'predecessor_id': previous['id']};
+    }
+  }
+
+  /// The later entry that overtook [candidate] and is not acknowledged yet:
+  /// an inverted `predecessor_id` link (see the section comment).
+  Map<String, dynamic>? _overtakerOf(
+    List<Map<String, dynamic>> queue,
+    Map<String, dynamic> candidate,
+  ) {
+    final link = candidate['predecessor_id'];
+    if (link is! String) return null;
+    final index = queue.indexWhere((entry) => entry['id'] == candidate['id']);
+    if (index < 0) return null;
+    return queue.skip(index + 1).where((later) =>
+        later['id'] == link &&
+        later['date'] == candidate['date'] &&
+        _localStorage.ownsEntry(later) &&
+        _recordsOvertaking(candidate, later)).firstOrNull;
+  }
+
+  /// The head-of-day rule ([_orderedPredecessors]) minus the video-held
+  /// actions [candidate] may overtake, plus the overtaker [candidate] waits
+  /// for. [candidate] overtakes only when it is sendable itself, independent
+  /// of what it passes and based on the same day revision (otherwise the
+  /// strict order keeps surfacing a real conflict as a 409, as before).
+  ///
+  /// Lazy, in queue order with the overtaker last (R4): a claim only asks
+  /// whether there is any blocker and stops at the first one. [heldByDate]
+  /// lets one claim pass reuse the video-held set of a day, which depends
+  /// only on the queue, the feedback queue and the date.
+  Iterable<Map<String, dynamic>> _blockingPredecessors(
+    List<Map<String, dynamic>> queue,
+    Map<String, dynamic> candidate,
+    List<Map<String, dynamic>> feedback, [
+    Map<Object?, Set<String>>? heldByDate,
+  ]) sync* {
+    if (candidate['format_version'] != 2) return;
+    final revision = candidate['expected_revision'];
+    bool? waits;
+    Set<String>? held;
+    for (final prior in _orderedPredecessors(queue, candidate)) {
+      if (_recordsOvertaking(prior, candidate)) continue;
+      // Nothing is passed by a candidate that waits for a video itself.
+      waits ??= _waitsForFeedback(candidate, feedback);
+      if (!waits) {
+        held ??= heldByDate == null
+            ? _videoHeldOfDay(queue, candidate, feedback)
+            : heldByDate.putIfAbsent(
+                candidate['date'],
+                () => _videoHeldOfDay(queue, candidate, feedback),
+              );
+        if (held.contains(prior['id']) &&
+            revision is int &&
+            prior['expected_revision'] == revision &&
+            _independentOf(candidate, prior)) {
+          continue;
+        }
+      }
+      yield prior;
+    }
+    final overtaker = _overtakerOf(queue, candidate);
+    if (overtaker != null) yield overtaker;
+  }
+
+  /// Rebuilds the day chain of [date] in queue order: each owned entry names
+  /// the previous one, as [_enqueueAction] writes it, so an older build
+  /// replaying this queue strictly still propagates revisions coherently.
+  void _relinkDay(List<Map<String, dynamic>> queue, Object? date) {
+    String? previous;
+    for (var index = 0; index < queue.length; index++) {
+      final entry = queue[index];
+      if (entry['date'] != date ||
+          entry['format_version'] != 2 ||
+          !_localStorage.ownsEntry(entry)) {
+        continue;
+      }
+      queue[index] = previous == null
+          ? (Map<String, dynamic>.from(entry)..remove('predecessor_id'))
+          : {...entry, 'predecessor_id': previous};
+      previous = entry['id'] as String?;
+    }
+  }
+
+  bool _overtookAny(List<Map<String, dynamic>> queue, String id) {
+    final index = queue.indexWhere((entry) => entry['id'] == id);
+    return index > 0 &&
+        queue
+            .take(index)
+            .any((entry) => _recordsOvertaking(entry, queue[index]));
+  }
+
+  /// A claimed action that turned out not sendable goes back to the queue,
+  /// releasing in the same write anything recorded as passed by it.
+  Future<void> _returnUnsentToQueue(String id) async {
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      final index = queue.indexWhere((action) => action['id'] == id);
+      if (index < 0) return;
+      queue[index] = {...queue[index], 'status': 'queued'};
+      if (_overtookAny(queue, id)) _relinkDay(queue, queue[index]['date']);
+      await _persistQueue(queue);
+    });
+    _changes.add(null);
+  }
+
+  /// COLA (A): why the queued [action] is not sent yet, for the UI.
+  ProgressFeedbackWait? feedbackWaitOf(Map<String, dynamic> action) {
+    if (action['status'] != 'queued' || !_localStorage.ownsEntry(action)) {
+      return null;
+    }
+    final feedback = _localStorage.getFeedbackUploadQueue();
+    if (_waitsForPresentFeedback(action, feedback)) {
+      return ProgressFeedbackWait.ownVideo;
+    }
+    if (action['format_version'] != 2) return null;
+    final queue = pendingActions;
+    final held = _videoHeldOfDay(queue, action, feedback);
+    if (!held.contains(action['id'])) return null;
+    final training = action['training_id'];
+    final behindOwnTraining = training is String &&
+        training.isNotEmpty &&
+        _orderedPredecessors(queue, action).any(
+          (prior) =>
+              held.contains(prior['id']) &&
+              prior['type'] == _markExerciseCompleted &&
+              prior['training_id'] == training &&
+              _heldByOwnVideo(prior, feedback),
+        );
+    return behindOwnTraining
+        ? ProgressFeedbackWait.behindVideo
+        : ProgressFeedbackWait.behindDayVideo;
+  }
+
+  /// Read-only diagnosis uses precisely the replay head-of-day rule
+  /// ([_blockingPredecessors]). Feedback completion proves only its
+  /// dependency, never a training acknowledgement.
   CompletionSyncBlocker? completionBlocker(
     String trainingId, String date, String? sessionId,
   ) {
@@ -1084,7 +1448,12 @@ class OfflineSyncService {
         entry['type'] == _completeTraining && entry['training_id'] == trainingId &&
         entry['date'] == date && entry['training_session_id'] == sessionId).firstOrNull;
     if (completion == null || completion['format_version'] != 2) return null;
-    for (final action in [..._orderedPredecessors(queue, completion), completion]) {
+    final blockers = _blockingPredecessors(
+      queue,
+      completion,
+      _localStorage.getFeedbackUploadQueue(),
+    );
+    for (final action in [...blockers, completion]) {
       if (action['last_error'] == 'progress_conflict_review_required') {
         return const CompletionSyncBlocker(CompletionSyncBlockerKind.conflict);
       }
@@ -1121,11 +1490,14 @@ class OfflineSyncService {
   Future<Map<String, dynamic>?> _claimNextAction(Set<String> excludedIds) {
     return _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
+      final feedback = _localStorage.getFeedbackUploadQueue();
+      final heldByDate = <Object?, Set<String>>{};
       final index = queue.indexWhere((action) {
         if (!_localStorage.ownsEntry(action)) return false;
         if (excludedIds.contains(action['id'])) return false;
         if (action['status'] != 'queued') return false;
-        if (_orderedPredecessors(queue, action).isNotEmpty) {
+        if (_blockingPredecessors(queue, action, feedback, heldByDate)
+            .isNotEmpty) {
           return false;
         }
         final next = DateTime.tryParse(
@@ -1139,6 +1511,16 @@ class OfflineSyncService {
         'status': 'uploading',
         'claimed_at': DateTime.now().toUtc().toIso8601String(),
       };
+      // COLA: with no blocker left, every ordered predecessor is a video-held
+      // action this one overtakes (or already overtook). Record it in this
+      // same write, before anything can reach the server.
+      for (final prior in _orderedPredecessors(queue, claimed).toList()) {
+        final priorIndex = queue.indexOf(prior);
+        if (priorIndex < 0 || prior['predecessor_id'] == claimed['id']) {
+          continue;
+        }
+        queue[priorIndex] = {...prior, 'predecessor_id': claimed['id']};
+      }
       queue[index] = claimed;
       await _persistQueue(queue);
       _changes.add(null);
@@ -1169,17 +1551,43 @@ class OfflineSyncService {
         await _localStorage.completeTrainingExecution(
           acknowledged!['training_session_id'] as String);
       }
+      // COLA: actions this one overtook sit before it in the queue and name
+      // it. They were based on the same revision it was sent with; only then
+      // do they inherit the confirmed one (otherwise their 409 stays due).
+      // Every later action of the day is sent after this one, so it gets the
+      // confirmed revision now rather than when its own predecessor is
+      // confirmed: the value each one is finally sent with is the same, and
+      // a later action can compare revisions with what it overtakes.
+      final position = queue.indexWhere((entry) => entry['id'] == id);
+      final overtook = position >= 0 && _overtookAny(queue, id);
+      final sentRevision = acknowledged?['expected_revision'];
       queue.removeWhere((entry) => entry['id'] == id);
       for (var index = 0; index < queue.length; index++) {
-        if (queue[index]['predecessor_id'] != id) continue;
-        final persistedRevision = queue[index]['expected_revision'];
+        final entry = queue[index];
+        final passed = index < position && entry['predecessor_id'] == id;
+        final later = position >= 0 &&
+            index >= position &&
+            entry['date'] == acknowledged?['date'] &&
+            entry['format_version'] == 2 &&
+            _localStorage.ownsEntry(entry);
+        if (entry['predecessor_id'] != id && !later) continue;
+        final persistedRevision = entry['expected_revision'];
         queue[index] = {
-          ...queue[index],
+          ...entry,
           if (revision is int &&
-              (persistedRevision is! int || persistedRevision < revision))
+              (passed
+                  ? (persistedRevision is int &&
+                      persistedRevision == sentRevision &&
+                      persistedRevision < revision)
+                  : (persistedRevision is! int ||
+                      persistedRevision < revision)))
             'expected_revision': revision,
-        }..remove('predecessor_id');
+        };
+        if (entry['predecessor_id'] == id) {
+          queue[index].remove('predecessor_id');
+        }
       }
+      if (overtook) _relinkDay(queue, acknowledged?['date']);
       await _persistQueue(queue);
       _changes.add(null);
     });

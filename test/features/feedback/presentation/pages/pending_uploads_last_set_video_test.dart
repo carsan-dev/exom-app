@@ -86,6 +86,9 @@ class _Sync extends Fake implements OfflineSyncService {
   Stream<void> get changes => const Stream.empty();
   @override
   List<Map<String, dynamic>> get pendingActions => actions;
+  // The video wait explanation (COLA) has its own tests.
+  @override
+  ProgressFeedbackWait? feedbackWaitOf(Map<String, dynamic> action) => null;
 }
 
 Future<({_Queue queue, AppLocalizations l10n})> _pump(

@@ -1171,6 +1171,25 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     }
   }
 
+  /// COLA r3/r4: the text of the most relevant video wait among [actions]
+  /// (its own video, then behind another exercise of this training, then
+  /// behind the day), as «Subidas pendientes» says it; null when none waits.
+  static String? _mostRelevantWait(
+    AppLocalizations l10n,
+    OfflineSyncService sync,
+    Iterable<Map<String, dynamic>> actions,
+  ) {
+    final waits = {for (final action in actions) ?sync.feedbackWaitOf(action)};
+    for (final wait in const [
+      ProgressFeedbackWait.ownVideo,
+      ProgressFeedbackWait.behindVideo,
+      ProgressFeedbackWait.behindDayVideo,
+    ]) {
+      if (waits.contains(wait)) return progressFeedbackWaitLabel(l10n, wait);
+    }
+    return null;
+  }
+
   ExomSyncState? _exerciseSync(
     List<Map<String, dynamic>> actions,
     TrainingExerciseEntity ex, {
@@ -1281,8 +1300,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     List<Map<String, dynamic>> actions,
     List<Map<String, dynamic>> feedback,
     _WeightText weightText,
-    int number,
-  ) {
+    int number, {
+    String? footerWait,
+  }) {
     final l10n = AppLocalizations.of(context);
     final isCompleted = _progress.ids.contains(ex.id);
     final storage = sl<LocalStorage>();
@@ -1319,6 +1339,22 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               : null);
     }
 
+    final syncState = _exerciseSync(
+      actions, ex, hasLocalDraft: hasPartialProgress);
+    // COLA r4: under the row's «Pendiente de sincronizar», why this
+    // exercise's queued progress waits for a video; not repeated when the
+    // pending completion's footer already says the same.
+    final sync = sl.isRegistered<OfflineSyncService>()
+        ? sl<OfflineSyncService>() : null;
+    final rowWait = sync != null && syncState == ExomSyncState.pendiente
+        ? _mostRelevantWait(l10n, sync, actions.where((action) =>
+            const {'mark_exercise_completed', 'unmark_exercise_completed'}
+                .contains(action['type']) &&
+            action['training_exercise_id'] == ex.id &&
+            action['date'] == widget.state.selectedDate &&
+            action['training_session_id'] == _progressSessionId))
+        : null;
+    final waitLabel = rowWait == footerWait ? null : rowWait;
     return _ExerciseCard(
       number: number,
       trainingExercise: ex,
@@ -1333,8 +1369,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         l10n, widget.state.previousPerformances[ex.id], weightText),
       todayLabel: todayLabel,
       hasPartialProgress: hasPartialProgress,
-      syncState: _exerciseSync(
-        actions, ex, hasLocalDraft: hasPartialProgress),
+      syncState: syncState,
+      waitLabel: waitLabel,
       video: _videoLine(l10n, feedback, ex, isCompleted: isCompleted),
       onOpenActive: () => _openActiveExercise(context, training, ex),
       onToggle: (val, {double? weightUsed}) {
@@ -1453,6 +1489,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     } else {
       completionStatus = null;
     }
+    // COLA r3: under a pending completion, why this training's queued
+    // progress waits for a video, as «Subidas pendientes» says it.
+    // Read-only; refreshed by the queue's changes.
+    final waitLabel =
+        sync != null && completionStatus?.state == ExomSyncState.pendiente
+            ? _mostRelevantWait(l10n, sync, pendingActions.where((action) =>
+                action['training_id'] == training.id &&
+                action['date'] == widget.state.selectedDate &&
+                action['training_session_id'] == selectedCompletionId))
+            : null;
 
     final completeOnPressed = widget.state.isCompleting || !_sameSession
         ? null
@@ -1549,7 +1595,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 final circuit = group.blockExercises;
                 return circuit == null
                     ? _buildExerciseRow(context, training, group.leader,
-                        pendingActions, feedback, weightText, index + 1)
+                        pendingActions, feedback, weightText, index + 1,
+                        footerWait: waitLabel)
                     : _buildCircuitRow(
                         context,
                         training,
@@ -1630,6 +1677,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 children: [
                   if (completionStatus != null) ...[
                     Align(alignment: Alignment.centerLeft, child: completionStatus),
+                    if (waitLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        waitLabel,
+                        key: const Key('training-completion-wait'),
+                        style: _rowLineStyle(context),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                   ],
                   if (next != null) ...[
@@ -2655,6 +2710,9 @@ class _ExerciseCard extends StatelessWidget {
   final bool hasPartialProgress;
   final ExomSyncState? syncState;
 
+  /// COLA r4: why the row's pending progress waits for a video.
+  final String? waitLabel;
+
   /// FB1: state of the last-set video, with «Volver a grabar» when it failed.
   final Widget? video;
   final VoidCallback onOpenActive;
@@ -2676,6 +2734,7 @@ class _ExerciseCard extends StatelessWidget {
     this.todayLabel,
     this.hasPartialProgress = false,
     this.syncState,
+    this.waitLabel,
     this.video,
   });
 
@@ -2745,6 +2804,12 @@ class _ExerciseCard extends StatelessWidget {
             const SizedBox(height: 4),
             ExomSyncStatus(state: syncState!),
           ],
+          if (waitLabel case final wait?)
+            Text(
+              wait,
+              key: Key('training-exercise-wait-${trainingExercise.id}'),
+              style: _rowLineStyle(context),
+            ),
           ?video,
         ],
       ),

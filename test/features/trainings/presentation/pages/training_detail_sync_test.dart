@@ -44,6 +44,10 @@ class _Storage extends LocalStorage {
     {'type': 'complete_training', 'training_id': 'training-1', 'date': _date,
       'training_session_id': _session, 'status': actionStatus},
   ]);
+  // COLA r3: a pending completion asks the queue why it waits, which reads
+  // the video queue (empty here: nothing waits for a video).
+  @override
+  List<Map<String, dynamic>> getFeedbackUploadQueue() => const [];
   @override
   List<Map<String, dynamic>> getPendingTrainingExecutions() => executions ?? [
     {'id': _session, 'training_id': 'training-1', 'assignment_date': _date, 'status': status},

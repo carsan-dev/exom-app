@@ -7,6 +7,9 @@ import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.
 part 'home_event.dart';
 part 'home_state.dart';
 
+/// Mark and plan of one `/calendar/month` day.
+typedef _CalendarDay = ({HomeDayMark mark, HomeDayPlan plan});
+
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final GetHomeSummaryUseCase _getHomeSummaryUseCase;
 
@@ -25,10 +28,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   /// Week whose calendar marks are loaded or loading, the request in flight
   /// (shared by every day of that week) and its result. Like
-  /// [_sharedSource], owned by this per-session bloc.
+  /// [_sharedSource], owned by this per-session bloc. Each day keeps its
+  /// mark and, since L5-E1 (L5-D27), its plan (rest day or no assignment).
   DateTime? _calendarWeek;
-  Future<Map<String, HomeDayMark>?>? _calendarRequest;
-  Map<String, HomeDayMark>? _calendarDays;
+  Future<Map<String, _CalendarDay>?>? _calendarRequest;
+  Map<String, _CalendarDay>? _calendarDays;
 
   /// Marks from the summaries loaded since the last full refresh, by day.
   final Map<String, HomeDayMark> _localDays = {};
@@ -155,7 +159,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   /// Starts, or reuses, the calendar request of [weekStart]: one per visible
   /// week, shared by its days (L4b-D4). `null` without the use case.
-  Future<Map<String, HomeDayMark>?>? _calendarFor(DateTime weekStart) {
+  Future<Map<String, _CalendarDay>?>? _calendarFor(DateTime weekStart) {
     final useCase = _getMonthCalendarUseCase;
     if (useCase == null) return null;
     final sameWeek =
@@ -165,7 +169,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (sameWeek && current != null) return current;
     if (!sameWeek) _calendarDays = null;
     _calendarWeek = weekStart;
-    late final Future<Map<String, HomeDayMark>?> request;
+    late final Future<Map<String, _CalendarDay>?> request;
     request = _fetchWeek(useCase, weekStart).then((days) {
       if (identical(_calendarRequest, request)) _calendarDays = days;
       return days;
@@ -177,7 +181,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   /// Days of the week with their calendar mark, from the month(s) the week
   /// covers. `null` when a request fails (offline without cache included) or
   /// the week has no data: the strip then stays as before L4b. Never throws.
-  Future<Map<String, HomeDayMark>?> _fetchWeek(
+  Future<Map<String, _CalendarDay>?> _fetchWeek(
     GetMonthCalendarUseCase useCase,
     DateTime weekStart,
   ) async {
@@ -190,11 +194,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final results = await Future.wait(
         months.map((month) => useCase(month.$1, month.$2)),
       );
-      final days = <String, HomeDayMark>{};
+      final days = <String, _CalendarDay>{};
       for (final day in results.expand((list) => list)) {
         final key = HomeWeekMarks.dayKey(day.date);
         if (weekKeys.contains(key)) {
-          days[key] = HomeDayMark.ofCalendarDay(day);
+          days[key] = (
+            mark: HomeDayMark.ofCalendarDay(day),
+            plan: HomeDayPlan.ofCalendarDay(day),
+          );
         }
       }
       return days.isEmpty ? null : days;
@@ -204,7 +211,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   /// Marks of [weekStart]: the loaded summaries over the calendar. `null`
-  /// while the calendar of that week is unknown or unavailable.
+  /// while the calendar of that week is unknown or unavailable. The plans
+  /// (L5-D27) come from the calendar only: a summary cannot tell a rest day
+  /// from a day without assignment.
   HomeWeekMarks? _marksFor(DateTime weekStart) {
     final calendarWeek = _calendarWeek;
     final calendarDays = _calendarDays;
@@ -213,13 +222,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         HomeWeekMarks.dayKey(calendarWeek) != HomeWeekMarks.dayKey(weekStart)) {
       return null;
     }
+    final dates = HomeWeekMarks.datesOf(weekStart);
     return HomeWeekMarks(
       weekStart: weekStart,
       days: [
-        for (final day in HomeWeekMarks.datesOf(weekStart))
+        for (final day in dates)
           _localDays[HomeWeekMarks.dayKey(day)] ??
-              calendarDays[HomeWeekMarks.dayKey(day)] ??
+              calendarDays[HomeWeekMarks.dayKey(day)]?.mark ??
               HomeDayMark.none,
+      ],
+      plans: [
+        for (final day in dates)
+          calendarDays[HomeWeekMarks.dayKey(day)]?.plan ?? HomeDayPlan.unknown,
       ],
     );
   }

@@ -136,6 +136,17 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/splash/presentation/v4d/v4d_curtain.dart',
   'lib/features/splash/presentation/v4d/v4d_handoff.dart',
   'lib/features/splash/presentation/widgets/splash_update_dialog.dart',
+  // L5-E1 · Inicio. `streak_card.dart` is not on the screen (only its plural
+  // test uses it) and keeps its legacy surface.
+  'lib/features/home/presentation/pages/home_page.dart',
+  'lib/features/home/presentation/widgets/home_clock.dart',
+  'lib/features/home/presentation/widgets/home_headline.dart',
+  'lib/features/home/presentation/widgets/home_row.dart',
+  'lib/features/home/presentation/widgets/home_session_photo.dart',
+  'lib/features/home/presentation/widgets/stats_row.dart',
+  'lib/features/home/presentation/widgets/today_diet_card.dart',
+  'lib/features/home/presentation/widgets/today_training_card.dart',
+  'lib/features/home/presentation/widgets/week_day_selector.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

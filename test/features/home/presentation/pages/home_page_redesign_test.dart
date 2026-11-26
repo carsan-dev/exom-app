@@ -14,6 +14,9 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
@@ -278,15 +281,31 @@ Future<_Harness> _pumpHome(
   return harness;
 }
 
-/// Widgets painting the lime fill (the "next step" colour).
-Finder _limeFills() => find.byWidgetPredicate((widget) {
+/// L5-E1: what the figure columns of the session read, joined like the fact
+/// line they replaced («6 ejercicios · 22 series · 55 min aprox.»).
+String _facts(WidgetTester tester) => tester
+    .widget<ExomFigureColumns>(find.byType(ExomFigureColumns))
+    .items
+    .map((figure) => figure.semanticsLabel)
+    .join(' · ');
+
+/// Widgets painting the lime fill (the "next step" colour). L5-E1: the data
+/// fills of a progress rule (the diet segments) are data, not a next step.
+Finder _limeFills() => find.byElementPredicate((element) {
+  final widget = element.widget;
+  final bool lime;
   if (widget is DecoratedBox) {
     final decoration = widget.decoration;
-    return decoration is BoxDecoration && decoration.color == AppColors.primary;
+    lime = decoration is BoxDecoration && decoration.color == AppColors.primary;
+  } else if (widget is Material) {
+    lime = widget.color == AppColors.primary;
+  } else if (widget is Container) {
+    lime = widget.color == AppColors.primary;
+  } else {
+    lime = false;
   }
-  if (widget is Material) return widget.color == AppColors.primary;
-  if (widget is Container) return widget.color == AppColors.primary;
-  return false;
+  return lime &&
+      element.findAncestorWidgetOfExactType<ExomProgressRule>() == null;
 });
 
 void main() {
@@ -298,7 +317,7 @@ void main() {
 
       expect(find.text('PIERNA FUERZA'), findsOneWidget);
       expect(find.text('Miércoles 18 de noviembre'), findsOneWidget);
-      expect(find.text('3 ejercicios · 55 min aprox.'), findsOneWidget);
+      expect(_facts(tester), '3 ejercicios · 55 min aprox.');
       expect(find.byType(ExomPrimaryButton), findsOneWidget);
       expect(find.text('EMPEZAR SESIÓN'), findsOneWidget);
       expect(_limeFills(), findsOneWidget);
@@ -390,10 +409,7 @@ void main() {
       );
 
       expect(find.text('CONTINUAR SESIÓN'), findsOneWidget);
-      expect(
-        find.text('1 de 3 ejercicios · ≈ 40 min restantes'),
-        findsOneWidget,
-      );
+      expect(_facts(tester), '1 de 3 ejercicios · ≈ 40 min restantes');
       expect(_limeFills(), findsOneWidget);
     });
 
@@ -411,7 +427,7 @@ void main() {
       expect(_limeFills(), findsNothing);
       expect(find.text('Hecha'), findsOneWidget);
       expect(find.byIcon(ExomIcons.done), findsOneWidget);
-      expect(find.text('3 ejercicios'), findsOneWidget);
+      expect(_facts(tester), '3 ejercicios');
       expect(
         find.bySemanticsLabel('Miércoles 18 de noviembre, hoy, sesión hecha'),
         findsOneWidget,
@@ -451,7 +467,7 @@ void main() {
       expect(find.text('TORSO'), findsOneWidget);
       expect(find.text('Movilidad'), findsOneWidget);
       expect(find.text('Hecha'), findsOneWidget);
-      expect(find.textContaining('2 sesiones'), findsOneWidget);
+      expect(find.text('2 SESIONES'), findsOneWidget);
       // Exercise counts are aggregated over the day, so «continuar» is only
       // offered for a single session.
       expect(find.text('EMPEZAR SESIÓN'), findsOneWidget);
@@ -482,7 +498,8 @@ void main() {
       );
       expect(harness.bloc.state, isA<HomeRestDay>());
 
-      expect(find.text('DESCANSO'), findsOneWidget);
+      expect(find.text('DESCANSO.'), findsOneWidget);
+      expect(find.text('TAMBIÉN CUENTA.'), findsOneWidget);
       expect(
         find.text('Hoy no tienes entrenamiento asignado.'),
         findsOneWidget,
@@ -505,7 +522,8 @@ void main() {
       );
       expect(harness.bloc.state, isA<HomeLoaded>());
 
-      expect(find.text('DESCANSO'), findsOneWidget);
+      expect(find.text('DESCANSO.'), findsOneWidget);
+      expect(find.text('TAMBIÉN CUENTA.'), findsOneWidget);
       expect(find.byType(ExomPrimaryButton), findsNothing);
       expect(find.text('Definición'), findsOneWidget);
 
@@ -642,10 +660,14 @@ void main() {
   group('loading, error and refresh', () {
     testWidgets('loading shows the skeleton without actions', (tester) async {
       final repository = _Repository((_) => _training)..gate = Completer();
+      addTearDown(() {
+        if (!repository.gate!.isCompleted) repository.gate!.complete();
+      });
       await _pumpHome(tester, repository: repository, settle: false);
       await tester.pump();
 
-      expect(find.byType(ShimmerCard), findsWidgets);
+      // L5-E1: skeletons with the final shape.
+      expect(find.byType(ExomSkeleton), findsWidgets);
       expect(find.byType(ExomPrimaryButton), findsNothing);
 
       repository.gate!.complete();
@@ -928,7 +950,8 @@ void main() {
       testWidgets('date line carries the week, without a day', (tester) async {
         final semantics = tester.ensureSemantics();
         await _pumpHome(tester, repository: _Repository((_) => rest(week: 3)));
-        expect(find.text('DESCANSO'), findsOneWidget);
+        expect(find.text('DESCANSO.'), findsOneWidget);
+        expect(find.text('TAMBIÉN CUENTA.'), findsOneWidget);
         expect(
           find.text('Miércoles 18 de noviembre · semana 3'),
           findsOneWidget,
@@ -973,10 +996,7 @@ void main() {
           tester,
           repository: _Repository((_) => l4b(totalSets: 22)),
         );
-        expect(
-          find.text('6 ejercicios · 22 series · 55 min aprox.'),
-          findsOneWidget,
-        );
+        expect(_facts(tester), '6 ejercicios · 22 series · 55 min aprox.');
       });
 
       testWidgets('one set uses the singular', (tester) async {
@@ -984,15 +1004,12 @@ void main() {
           tester,
           repository: _Repository((_) => l4b(totalExercises: 1, totalSets: 1)),
         );
-        expect(
-          find.text('1 ejercicio · 1 serie · 55 min aprox.'),
-          findsOneWidget,
-        );
+        expect(_facts(tester), '1 ejercicio · 1 serie · 55 min aprox.');
       });
 
       testWidgets('without sets the piece is omitted', (tester) async {
         await _pumpHome(tester, repository: _Repository((_) => l4b()));
-        expect(find.text('6 ejercicios · 55 min aprox.'), findsOneWidget);
+        expect(_facts(tester), '6 ejercicios · 55 min aprox.');
       });
 
       testWidgets('English', (tester) async {
@@ -1001,10 +1018,7 @@ void main() {
           repository: _Repository((_) => l4b(totalSets: 22)),
           locale: const Locale('en'),
         );
-        expect(
-          find.text('6 exercises · 22 sets · About 55 min'),
-          findsOneWidget,
-        );
+        expect(_facts(tester), '6 exercises · 22 sets · About 55 min');
       });
 
       testWidgets('session done: exercises and sets, no minutes', (
@@ -1014,7 +1028,7 @@ void main() {
           tester,
           repository: _Repository((_) => l4b(totalSets: 22, completed: true)),
         );
-        expect(find.text('6 ejercicios · 22 series'), findsOneWidget);
+        expect(_facts(tester), '6 ejercicios · 22 series');
       });
     });
 
@@ -1041,9 +1055,8 @@ void main() {
           findsWidgets,
         );
         final dateLine = tester.getRect(find.text('Miércoles 18 de noviembre'));
-        final facts = tester.getRect(
-          find.text('6 ejercicios · 22 series · 55 min aprox.'),
-        );
+        expect(_facts(tester), '6 ejercicios · 22 series · 55 min aprox.');
+        final facts = tester.getRect(find.byType(ExomFigureColumns));
         final photoRect = tester.getRect(photo);
         expect(photoRect.top, greaterThanOrEqualTo(dateLine.bottom));
         expect(photoRect.bottom, lessThanOrEqualTo(facts.top));
@@ -1187,10 +1200,9 @@ void main() {
         );
         // The rest of the block keeps its 20 dp margin.
         expect(tester.getTopLeft(find.text('PIERNA FUERZA')).dx, 20);
-        expect(
-          tester.getTopLeft(find.text('6 ejercicios · 55 min aprox.')).dx,
-          20,
-        );
+        // L5-E1: the figure columns bleed like the photo and pad their
+        // first column by 20 themselves.
+        expect(tester.getTopLeft(find.byType(ExomFigureColumns)).dx, 0);
       });
 
       testWidgets('loaded photo is square and as wide as the screen', (
@@ -1514,16 +1526,13 @@ void main() {
             );
             expect(tester.getRect(line).right, lessThanOrEqualTo(320));
 
-            final facts = find.text(
+            expect(
+              _facts(tester),
               locale.languageCode == 'es'
                   ? '6 ejercicios · 22 series · 55 min aprox.'
                   : '6 exercises · 22 sets · About 55 min',
             );
-            expect(facts, findsOneWidget);
-            expect(
-              tester.renderObject<RenderParagraph>(facts).didExceedMaxLines,
-              isFalse,
-            );
+            expect(tester.takeException(), isNull);
 
             await tester.drag(find.byType(ListView), const Offset(0, -2000));
             await tester.pumpAndSettle();

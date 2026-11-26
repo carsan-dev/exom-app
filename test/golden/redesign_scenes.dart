@@ -29,6 +29,10 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
+import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
+import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/repositories/home_repository.dart';
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
@@ -62,6 +66,9 @@ import 'package:intl/date_symbol_data_local.dart';
 enum RedesignScene {
   inicio('inicio'),
   inicioDescanso('inicio_descanso'),
+
+  /// L5-E1 (L5-D27): a day the calendar shows without assignment.
+  inicioSinPlan('inicio_sin_plan'),
   detalle('detalle'),
   detalleEnCurso('detalle_en_curso'),
   detalleHecho('detalle_hecho'),
@@ -452,17 +459,70 @@ class _SceneTrainingRepository extends Fake implements TrainingRepository {
   ) async => {_exerciseKey: _previous, 'ex-1': _previous};
 }
 
+/// L5-E1: `/calendar/month` of the Inicio scenes. Week of 16-22 Nov 2026:
+/// Monday done, Wednesday (today) and Friday pending, Thursday a rest day;
+/// with [noPlan] nothing is assigned.
+class _SceneCalendarRepository implements CalendarRepository {
+  _SceneCalendarRepository({required this.noPlan});
+
+  final bool noPlan;
+
+  @override
+  Future<List<CalendarDayEntity>> getMonthCalendar(int year, int month) async {
+    if (year != 2026 || month != 11) return const [];
+    CalendarDayEntity day(
+      int d, {
+      bool training = false,
+      bool done = false,
+      bool rest = false,
+    }) => CalendarDayEntity(
+      date: DateTime(2026, 11, d),
+      hasTraining: training,
+      hasDiet: false,
+      isRestDay: rest,
+      trainingCompleted: done,
+      dietCompleted: false,
+    );
+    return [
+      for (var d = 16; d <= 22; d++)
+        noPlan
+            ? day(d)
+            : switch (d) {
+                16 => day(d, training: true, done: true),
+                18 || 20 => day(d, training: true),
+                19 => day(d, rest: true),
+                _ => day(d),
+              },
+    ];
+  }
+
+  @override
+  Future<WeekSummaryEntity> getWeekSummary(String weekStart) =>
+      throw UnimplementedError();
+}
+
 class _SceneHomeRepository implements HomeRepository {
-  _SceneHomeRepository({required this.restDay});
+  _SceneHomeRepository({required this.restDay, this.noPlan = false});
 
   /// Day with a diet and no training (sketch «Día sin asignación»).
   final bool restDay;
+
+  /// L5-E1: day with neither training nor diet.
+  final bool noPlan;
 
   @override
   Future<HomeSummaryEntity> getHomeSummary({
     DateTime? date,
     bool includeSharedData = true,
-  }) async => restDay
+  }) async => noPlan
+      ? const HomeSummaryEntity(
+          isRestDay: true,
+          streakDays: 0,
+          clientName: 'Lucía',
+          lastWeightKg: 62.5,
+          lastSleepHours: 7.5,
+        )
+      : restDay
       ? const HomeSummaryEntity(
           dietId: 'diet-1',
           dietName: 'Definición',
@@ -749,11 +809,21 @@ Future<SceneHandle> pumpRedesignScene(
   sl.registerSingleton<ExecutionTimerCoordinator>(ExecutionTimerCoordinator());
 
   switch (scene) {
-    case RedesignScene.inicio || RedesignScene.inicioDescanso:
+    case RedesignScene.inicio ||
+        RedesignScene.inicioDescanso ||
+        RedesignScene.inicioSinPlan:
       final preferences = AppPreferencesCubit(_ScenePreferencesStorage());
+      final noPlan = scene == RedesignScene.inicioSinPlan;
       final bloc = HomeBloc(
         getHomeSummaryUseCase: GetHomeSummaryUseCase(
-          _SceneHomeRepository(restDay: scene == RedesignScene.inicioDescanso),
+          _SceneHomeRepository(
+            restDay: scene == RedesignScene.inicioDescanso,
+            noPlan: noPlan,
+          ),
+        ),
+        // L5-E1: the week marks and the day plan (L5-D27).
+        getMonthCalendarUseCase: GetMonthCalendarUseCase(
+          _SceneCalendarRepository(noPlan: noPlan),
         ),
       )..add(HomeLoadRequested(date: inicioSceneNow));
       // Closed by the test framework teardown: awaiting close() inside the

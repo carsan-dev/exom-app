@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
@@ -28,6 +29,11 @@ import 'package:exom_app/l10n/app_localizations.dart';
 /// it (7 x 48 plus the page margins); on narrower screens the margins shrink
 /// first and the slots share the full width. Tapping a slot dispatches
 /// [HomeDateSelected], as before.
+///
+/// L5-E1 (sketch `.e-week`, D19): the day number is a 22 display figure; a
+/// done day shows its check in the data colour and a 3 dp data rule along its
+/// bottom edge (the background colour on the selected day, whose fill is the
+/// text colour). Corners of 2.
 class WeekDaySelector extends StatelessWidget {
   const WeekDaySelector({super.key});
 
@@ -138,6 +144,9 @@ class WeekDaySelector extends StatelessWidget {
                             : ValueKey(
                                 'home-week-mark-${isMissed ? 'missed' : mark.name}-${dayDate.day}',
                               ),
+                        doneRuleKey: ValueKey(
+                          'home-week-done-rule-${dayDate.day}',
+                        ),
                         onTap: select,
                       ),
                     ),
@@ -162,6 +171,7 @@ class _DaySlot extends StatelessWidget {
     required this.mark,
     required this.isMissed,
     required this.markKey,
+    required this.doneRuleKey,
     required this.onTap,
   });
 
@@ -177,11 +187,17 @@ class _DaySlot extends StatelessWidget {
   /// L4b-I7: pending mark of a day before today, drawn as a hollow ring.
   final bool isMissed;
   final Key? markKey;
+
+  /// Key of the 3 dp data rule of a done day.
+  final Key doneRuleKey;
   final VoidCallback onTap;
 
   /// L4b-D4 sizes: pending dot and done check.
   static const double _dotSize = 6;
   static const double _checkSize = 12;
+
+  /// L5-E1: rule under a done day (sketch `.e-day.done::after`).
+  static const double _doneRule = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -189,6 +205,9 @@ class _DaySlot extends StatelessWidget {
     final theme = Theme.of(context);
     final foreground = isSelected ? palette.background : palette.textPrimary;
     final secondary = isSelected ? palette.background : palette.textSecondary;
+    // D19: «hecha» is the client's data; on the selected (filled) day it
+    // takes the background colour, like the rest of its ink.
+    final doneInk = isSelected ? palette.background : palette.data;
 
     // The whole slot is tappable (L3 review F2): the 1 px visual inset sits
     // inside this detector, so the hit area equals the slot and its
@@ -202,7 +221,7 @@ class _DaySlot extends StatelessWidget {
         child: Material(
           color: isSelected ? palette.textPrimary : Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
             side: isToday
                 ? BorderSide(color: palette.textPrimary, width: 1.5)
                 : BorderSide.none,
@@ -210,74 +229,94 @@ class _DaySlot extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 64),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      letter,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: secondary,
-                        fontSize: 13,
-                        height: 1.2,
+            // Passthrough: the slot keeps the full width of its column.
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                if (isDone)
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FractionallySizedBox(
+                        key: doneRuleKey,
+                        widthFactor: 0.56,
+                        child: SizedBox(
+                          height: _doneRule,
+                          child: ColoredBox(color: doneInk),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      number,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(
-                      height: 16,
-                      child: switch (mark) {
-                        null =>
-                          isDone
-                              ? Icon(ExomIcons.check, size: 14, color: foreground)
-                              : null,
-                        HomeDayMark.none => null,
-                        HomeDayMark.pending => Center(
-                          child: SizedBox.square(
-                            key: markKey,
-                            dimension: _dotSize,
-                            child: DecoratedBox(
-                              // Missed: same footprint, outline only, in the
-                              // day-number colour (no alarm colour).
-                              decoration: isMissed
-                                  ? BoxDecoration(
-                                      border: Border.all(
-                                        color: foreground,
-                                        width: 1.5,
-                                      ),
-                                      shape: BoxShape.circle,
+                  ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 64),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          letter,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: secondary,
+                            fontSize: 13,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          number,
+                          style: ExomType.section.copyWith(color: foreground),
+                        ),
+                        SizedBox(
+                          height: 16,
+                          child: switch (mark) {
+                            null =>
+                              isDone
+                                  ? Icon(
+                                      ExomIcons.check,
+                                      size: 14,
+                                      color: doneInk,
                                     )
-                                  : BoxDecoration(
-                                      color: secondary,
-                                      shape: BoxShape.circle,
-                                    ),
+                                  : null,
+                            HomeDayMark.none => null,
+                            HomeDayMark.pending => Center(
+                              child: SizedBox.square(
+                                key: markKey,
+                                dimension: _dotSize,
+                                child: DecoratedBox(
+                                  // Missed: same footprint, outline only, in the
+                                  // day-number colour (no alarm colour).
+                                  decoration: isMissed
+                                      ? BoxDecoration(
+                                          border: Border.all(
+                                            color: foreground,
+                                            width: 1.5,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        )
+                                      : BoxDecoration(
+                                          color: secondary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                ),
+                              ),
                             ),
-                          ),
+                            HomeDayMark.done => Center(
+                              child: Icon(
+                                key: markKey,
+                                ExomIcons.check,
+                                size: _checkSize,
+                                color: doneInk,
+                              ),
+                            ),
+                          },
                         ),
-                        HomeDayMark.done => Center(
-                          child: Icon(
-                            key: markKey,
-                            ExomIcons.check,
-                            size: _checkSize,
-                            color: foreground,
-                          ),
-                        ),
-                      },
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

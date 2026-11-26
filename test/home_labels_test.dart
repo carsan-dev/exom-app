@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -30,7 +30,10 @@ void main() {
         locale: const Locale('es'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Scaffold(body: child),
+        // L5-E1: on Inicio the cards live in a scrolling list; at 2x the
+        // session block (title, status and figure columns) is taller than
+        // the test surface, so it scrolls here too instead of overflowing.
+        home: Scaffold(body: SingleChildScrollView(child: child)),
       ),
     );
   }
@@ -224,7 +227,8 @@ void main() {
     // rows below it; the fact line counts the day's sessions.
     expect(find.text('PRIMERO'), findsOneWidget);
     expect(find.text('Segundo'), findsOneWidget);
-    expect(find.textContaining('2 sesiones'), findsOneWidget);
+    // L5-E1: the count is a kicker, painted in upper case.
+    expect(find.text('2 SESIONES'), findsOneWidget);
   });
 
   testWidgets('TodayTrainingCard handles long text with large fonts', (
@@ -272,9 +276,10 @@ void main() {
       ),
     );
 
-    // L3: the diet is one row; the next meal is a secondary line of it.
-    expect(find.text('Siguiente: Almuerzo'), findsOneWidget);
-    expect(find.text('1 de 4 comidas hechas'), findsOneWidget);
+    // L3: the diet is one row; the next meal is a secondary line of it
+    // (L5-E1: the lines share the facts text of the rich row).
+    expect(find.textContaining('Siguiente: Almuerzo'), findsOneWidget);
+    expect(find.textContaining('1 de 4 comidas hechas'), findsOneWidget);
   });
 
   testWidgets('TodayDietCard hides when day only has training', (tester) async {
@@ -295,7 +300,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(HomeRow), findsOneWidget);
+    expect(find.byType(ExomRichRow), findsOneWidget);
 
     await tester.pumpWidget(
       homeCardHarness(
@@ -305,7 +310,7 @@ void main() {
 
     // L3 review B-F9: assert the diet row itself is absent (the training
     // name was never painted by this card, so finding it proved nothing).
-    expect(find.byType(HomeRow), findsNothing);
+    expect(find.byType(ExomRichRow), findsNothing);
     expect(find.text('Plan nutricional'), findsNothing);
   });
 

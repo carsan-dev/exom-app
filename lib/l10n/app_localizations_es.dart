@@ -4032,6 +4032,89 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get homeRestHeadlineFirst => 'Descanso.';
+
+  @override
+  String get homeRestHeadlineSecond => 'También cuenta.';
+
+  @override
+  String get homeNoPlanBody =>
+      'Cuando lo haga, aquí verás la sesión de cada día.';
+
+  @override
+  String get homeOfflineSavedData => 'Sin conexión · datos guardados';
+
+  @override
+  String get homeWeekTitle => 'Tu semana';
+
+  @override
+  String homeWeekSessionsDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done de $total sesiones hechas',
+      one: '$done de 1 sesión hecha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeWeekSessionsDoneFoot(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'sesiones hechas',
+      one: 'sesión hecha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeStreakRowFoot => 'Retos y logros';
+
+  @override
+  String homeStreakDaysUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'días',
+      one: 'día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ejercicios',
+      one: 'ejercicio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'series',
+      one: 'serie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeFigureMinutes => 'min aprox.';
+
+  @override
+  String get homeFigureMinutesLeft => 'min restantes';
+
+  @override
+  String get homeLoadingLabel => 'Cargando el resumen de hoy';
+
+  @override
   String trainingDetailExercises(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

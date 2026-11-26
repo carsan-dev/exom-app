@@ -8,9 +8,10 @@
 // errored completions keep today's behaviour (no milestone, the detail stays).
 // «Volver a Inicio», the close icon and the system back all do today's
 // navigation (`router.go(home, extra: HomeCompletionRefresh())`) once; a
-// session change with the milestone open closes it without navigating. No
-// animation of its own (E6b): it enters with the existing push transition (M1),
-// a 100 ms fade with reduced motion.
+// session change with the milestone open closes it without navigating. It
+// enters with the existing push transition (M1), a 100 ms fade with reduced
+// motion. L5-E6b adds its own animation (group at the end): a touch skips it,
+// the exits work from 300 ms and reduced motion is a 150 ms fade.
 import 'dart:async';
 
 import 'package:exom_app/core/api/api_client.dart';
@@ -790,7 +791,7 @@ void main() {
     }
 
     testWidgets('reduced motion: the existing reduced push fade, and the '
-        'action works at once', (tester) async {
+        'action works from 300 ms', (tester) async {
       final harness = await _mount(tester, reducedMotion: true);
       await _completeWithRpe(tester, settle: false);
       // Let the sheet close and the completion resolve, frame by frame, until
@@ -814,6 +815,12 @@ void main() {
       for (final slide in slides) {
         expect(slide.position.value, Offset.zero);
       }
+      // L5-E6b: the exits work from 300 ms after the milestone opens, with
+      // reduced motion too; a tap before only jumps to the final pose.
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(harness.homeVisits, 0);
+      await tester.pump(ExomMotion.milestoneInteractiveAfter);
       await tester.tap(_continue);
       await tester.pumpAndSettle();
       expect(harness.homeVisits, 1);
@@ -890,6 +897,223 @@ void main() {
       expect(continues.single, 0);
       expect(_milestone, findsNothing);
       expect(find.text('launcher'), findsOneWidget);
+    });
+  });
+
+  group('milestone animation (L5-E6b)', () {
+    /// The milestone as the home page (no route transition), so its own
+    /// animation starts at the first frame. Returns how many times it asked to
+    /// continue.
+    Future<List<int>> pumpAnimated(
+      WidgetTester tester, {
+      bool reducedMotion = false,
+      bool tickers = true,
+    }) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final continues = [0];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reducedMotion),
+            child: TickerMode(enabled: tickers, child: child!),
+          ),
+          home: TrainingMilestonePage(
+            trainingName: 'Pierna fuerza',
+            exercises: 2,
+            sets: 7,
+            isSameSession: () => true,
+            onContinue: () => continues[0]++,
+          ),
+        ),
+      );
+      // The frame that starts the clock of the milestone's tickers.
+      await tester.pump();
+      return continues;
+    }
+
+    Finder inMilestone(Finder matching) =>
+        find.descendant(of: _milestone, matching: matching);
+
+    /// Final pose: the figures at their value and the headline as one plain
+    /// text per line (no letter copies left).
+    void expectFinal(WidgetTester tester) {
+      expect(inMilestone(find.text('2')), findsOneWidget);
+      expect(inMilestone(find.text('7')), findsOneWidget);
+      expect(inMilestone(find.text('SESIÓN HECHA.')), findsOneWidget);
+      expect(inMilestone(find.text('PIERNA FUERZA.')), findsOneWidget);
+    }
+
+    testWidgets('the whole animation lasts at most 900 ms', (tester) async {
+      expect(
+        ExomMotionSpec.standard.milestoneTotal,
+        lessThanOrEqualTo(const Duration(milliseconds: 900)),
+      );
+      await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 450));
+      // Still moving half way: the figures are counting and the first line
+      // is drawn once per letter (12 visible letters in «SESIÓN HECHA.»).
+      expect(inMilestone(find.text('7')), findsNothing);
+      expect(inMilestone(find.text('SESIÓN HECHA.')), findsNWidgets(12));
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pump(const Duration(milliseconds: 450));
+      // Final pose at 900 ms; the ticker stops on the next frame.
+      expectFinal(tester);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a tap anywhere jumps to the final state', (tester) async {
+      final continues = await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(inMilestone(find.text('7')), findsNothing);
+      // An empty spot of the body, away from every control.
+      await tester.tapAt(const Offset(200, 600));
+      await tester.pump();
+      expectFinal(tester);
+      // It stays there: nothing resumes.
+      await tester.pump(const Duration(milliseconds: 100));
+      expectFinal(tester);
+      expect(continues.single, 0, reason: 'the skip never navigates');
+    });
+
+    testWidgets('«Volver a Inicio» works from 300 ms; before, a tap only '
+        'jumps to the end', (tester) async {
+      final continues = await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 0, reason: 'ignored before 300 ms');
+      expectFinal(tester);
+      // The close icon and the system back are exits too: also held.
+      await tester.tap(_close);
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(continues.single, 0);
+      // 300 ms after the milestone opened (the skip does not shorten it).
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 1);
+    });
+
+    testWidgets('reduced motion: a 150 ms fade to the final values', (
+      tester,
+    ) async {
+      final continues = await pumpAnimated(tester, reducedMotion: true);
+      final fade = inMilestone(
+        find.byKey(const Key('training-milestone-reduced-fade')),
+      );
+      expect(fade, findsOneWidget);
+      // Figures at their value from the first frame; no sweep, no letters.
+      expect(inMilestone(find.text('7')), findsOneWidget);
+      expect(inMilestone(find.text('SESIÓN HECHA.')), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 75));
+      final half = tester.widget<FadeTransition>(fade).opacity.value;
+      expect(half, inExclusiveRange(0, 1));
+      await tester.pump(const Duration(milliseconds: 75));
+      expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+      expectFinal(tester);
+      // The exits keep the same 300 ms guard as the full animation.
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 0);
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 1, reason: 'usable from 300 ms');
+    });
+
+    testWidgets('a tap at 350 ms navigates', (tester) async {
+      final continues = await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 1);
+    });
+
+    testWidgets('a tap at 100 ms and another at 400 ms navigate once', (
+      tester,
+    ) async {
+      final continues = await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 0, reason: 'the early tap only skips');
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 1);
+      // A repeated tap on the same exit never navigates twice.
+      await tester.tap(_continue);
+      await tester.pump();
+      expect(continues.single, 1);
+    });
+
+    group('with the platform «remove animations» setting', () {
+      // `SemanticsBinding.disableAnimations` makes Flutter scale a controller
+      // with the normal behaviour by 0.05; the gate and the fade must keep
+      // their real duration.
+      Future<List<int>> pumpPlatformReduced(WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+        return pumpAnimated(tester, reducedMotion: true);
+      }
+
+      testWidgets('the 300 ms guard holds: 100 ms no, 300 ms yes', (
+        tester,
+      ) async {
+        final continues = await pumpPlatformReduced(tester);
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(_continue);
+        await tester.pump();
+        expect(continues.single, 0, reason: 'ignored at 100 ms');
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(_continue);
+        await tester.pump();
+        expect(continues.single, 1, reason: 'usable at 300 ms');
+      });
+
+      testWidgets('the fade lasts 150 ms', (tester) async {
+        await pumpPlatformReduced(tester);
+        final fade = inMilestone(
+          find.byKey(const Key('training-milestone-reduced-fade')),
+        );
+        await tester.pump(const Duration(milliseconds: 75));
+        expect(
+          tester.widget<FadeTransition>(fade).opacity.value,
+          inExclusiveRange(0, 1),
+          reason: 'still fading half way',
+        );
+        await tester.pump(const Duration(milliseconds: 75));
+        expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+      });
+    });
+
+    testWidgets('TickerMode off holds the animation; disposing mid-way is '
+        'clean', (tester) async {
+      await pumpAnimated(tester, tickers: false);
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        inMilestone(find.text('7')),
+        findsNothing,
+        reason: 'muted ticker: nothing advances',
+      );
+      await pumpAnimated(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
     });
   });
 }

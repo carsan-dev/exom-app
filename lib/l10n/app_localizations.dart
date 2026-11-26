@@ -5810,6 +5810,12 @@ abstract class AppLocalizations {
   /// **'Cancelar'**
   String get executionPrepareCancel;
 
+  /// No description provided for @executionPrepareUnitSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'s'**
+  String get executionPrepareUnitSeconds;
+
   /// No description provided for @inputExample.
   ///
   /// In es, this message translates to:

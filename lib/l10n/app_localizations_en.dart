@@ -3327,6 +3327,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get executionPrepareCancel => 'Cancel';
 
   @override
+  String get executionPrepareUnitSeconds => 's';
+
+  @override
   String inputExample(String value) {
     return 'Eg: $value';
   }

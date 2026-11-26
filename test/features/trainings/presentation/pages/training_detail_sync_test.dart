@@ -338,8 +338,20 @@ void main() {
           'retry ack',
           'action retry ack',
         ].contains(scenario);
-        expect(homeVisits, shouldReturn ? 1 : 0);
+        // L5-E6a: a confirmed completion opens the milestone first; Inicio
+        // (with the refresh) comes from its «Volver a Inicio», once.
+        expect(homeVisits, 0);
+        expect(
+          find.byKey(const Key('training-milestone')),
+          shouldReturn ? findsOneWidget : findsNothing,
+        );
         if (shouldReturn) {
+          sync.notify();
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('training-milestone')), findsOneWidget);
+          await tester.tap(find.byKey(const Key('training-milestone-continue')));
+          await tester.pumpAndSettle();
+          expect(homeVisits, 1);
           expect(refresh, isNotNull);
           expect(find.byType(TrainingDetailPage), findsNothing);
           sync.notify();

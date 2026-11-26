@@ -4906,4 +4906,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapSentClose => 'Close';
+
+  @override
+  String get trainingMilestoneTitle => 'Session done.';
+
+  @override
+  String trainingMilestoneName(String name) {
+    return '$name.';
+  }
+
+  @override
+  String get trainingMilestoneBackHome => 'Back to Home';
 }

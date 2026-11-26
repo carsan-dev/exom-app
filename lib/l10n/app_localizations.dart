@@ -8072,6 +8072,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar'**
   String get recapSentClose;
+
+  /// No description provided for @trainingMilestoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión hecha.'**
+  String get trainingMilestoneTitle;
+
+  /// No description provided for @trainingMilestoneName.
+  ///
+  /// In es, this message translates to:
+  /// **'{name}.'**
+  String trainingMilestoneName(String name);
+
+  /// No description provided for @trainingMilestoneBackHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a Inicio'**
+  String get trainingMilestoneBackHome;
 }
 
 class _AppLocalizationsDelegate

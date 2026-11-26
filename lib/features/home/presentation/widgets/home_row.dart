@@ -53,7 +53,10 @@ class HomeRowGroup extends StatelessWidget {
   Widget build(BuildContext context) => ExomFlatRowGroup(children: children);
 }
 
-/// Quiet "done" status: text colour + check icon, never lime (plan §6).
+/// "Done" status of a session: check icon and label in the data colour
+/// (D19, L5-E1: «hecha» is the client's data). In the light theme the data
+/// colour is the dark olive, never lime ink (D13). System states (confirmed,
+/// synced, uploaded) use `ExomSyncStatus` in the text colour instead.
 class HomeDoneStatus extends StatelessWidget {
   const HomeDoneStatus({super.key, required this.label});
 
@@ -65,13 +68,13 @@ class HomeDoneStatus extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(ExomIcons.done, size: 20, color: palette.textPrimary),
+        Icon(ExomIcons.done, size: 20, color: palette.data),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: palette.textPrimary,
+              color: palette.data,
               fontWeight: FontWeight.w600,
             ),
           ),

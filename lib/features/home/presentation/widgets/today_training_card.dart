@@ -6,7 +6,14 @@ import 'package:go_router/go_router.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/utils/date_utils.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
@@ -80,9 +87,12 @@ class HomeSessionPlan {
   bool get hasTraining => heroId != null;
 }
 
-/// Session block of Inicio (sketch «A «Sesión de hoy»»): the session name as
-/// the screen title, the date line, the quiet "done" status when it applies,
-/// the fact line and, when the day has several trainings, the others as
+/// Session block of Inicio (L5-E1, sketch `e-migradas.html` «Inicio»): the
+/// session name as the screen title, the date line, the photo with the «Hoy»
+/// pill on today, the quiet «Hecha» status when it applies and the figures of
+/// the session in numbered columns (exercises, sets, minutes; «2/6» and the
+/// minutes left with a 4 dp progress rule while in progress). When the day
+/// has several trainings, a kicker counts them and the others follow as
 /// rule-separated rows. Tapping the block opens the hero session.
 ///
 /// Renders nothing when the day has no training.
@@ -96,26 +106,51 @@ class TodayTrainingCard extends StatelessWidget {
   final HomeSummaryEntity summary;
   final DateTime selectedDate;
 
-  List<String> _facts(AppLocalizations l10n, HomeSessionPlan plan) {
-    final inProgress =
-        !summary.trainingCompleted && summary.exercisesCompleted > 0;
+  bool get _inProgress =>
+      !summary.trainingCompleted && summary.exercisesCompleted > 0;
+
+  /// Figures of the session (L4b-D5 sets, circuits counted by rounds), each
+  /// read as the fact line it replaces («6 ejercicios», «22 series»…).
+  List<ExomFigure> _figures(BuildContext context, AppLocalizations l10n) {
+    String figure(int value) => formatFigure(context, value);
+    final inProgress = _inProgress;
+    final remaining = summary.remainingTrainingDurationMin;
+    final duration = summary.trainingDurationMin;
     return [
-      if (plan.others.isNotEmpty)
-        l10n.homeFactSessions(summary.trainings.length),
       if (summary.totalExercises > 0)
         inProgress
-            ? l10n.homeFactExercisesProgress(
-                summary.exercisesCompleted,
-                summary.totalExercises,
+            ? ExomFigure(
+                value: figure(summary.exercisesCompleted),
+                unit: '/${figure(summary.totalExercises)}',
+                label: l10n.homeFigureExercises(summary.totalExercises),
+                semanticsLabel: l10n.homeFactExercisesProgress(
+                  summary.exercisesCompleted,
+                  summary.totalExercises,
+                ),
               )
-            : l10n.homeFactExercises(summary.totalExercises),
-      // L4b-D5: planned sets of the day, circuits counted by rounds.
-      if (summary.totalSets > 0) l10n.homeFactSets(summary.totalSets),
-      if (inProgress && summary.remainingTrainingDurationMin != null)
-        l10n.remainingTrainingMinutes(summary.remainingTrainingDurationMin!)
-      else if (!summary.trainingCompleted &&
-          summary.trainingDurationMin != null)
-        l10n.homeFactDuration(summary.trainingDurationMin!),
+            : ExomFigure(
+                value: figure(summary.totalExercises),
+                label: l10n.homeFigureExercises(summary.totalExercises),
+                semanticsLabel: l10n.homeFactExercises(summary.totalExercises),
+              ),
+      if (summary.totalSets > 0)
+        ExomFigure(
+          value: figure(summary.totalSets),
+          label: l10n.homeFigureSets(summary.totalSets),
+          semanticsLabel: l10n.homeFactSets(summary.totalSets),
+        ),
+      if (inProgress && remaining != null)
+        ExomFigure(
+          value: '≈${figure(remaining)}',
+          label: l10n.homeFigureMinutesLeft,
+          semanticsLabel: l10n.remainingTrainingMinutes(remaining),
+        )
+      else if (!summary.trainingCompleted && duration != null)
+        ExomFigure(
+          value: figure(duration),
+          label: l10n.homeFigureMinutes,
+          semanticsLabel: l10n.homeFactDuration(duration),
+        ),
     ];
   }
 
@@ -126,11 +161,11 @@ class TodayTrainingCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final facts = _facts(l10n, plan);
+    final figures = _figures(context, l10n);
     final photoUrl = plan.heroThumbnailUrl;
+    final isToday = HomeClock.isToday(context, selectedDate);
+    final total = summary.totalExercises;
 
     final hero = MergeSemantics(
       child: Semantics(
@@ -143,9 +178,9 @@ class TodayTrainingCard extends StatelessWidget {
               trainingId: plan.heroId!,
               selectedDate: selectedDate,
             ),
-            // L4b-I9: the photo runs edge to edge, so the 20 dp margin is
-            // applied to the text blocks around it instead of the whole
-            // column.
+            // L4b-I9: the photo and the figure columns run edge to edge, so
+            // the 20 dp margin is applied to the text blocks around them
+            // instead of the whole column.
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -165,31 +200,40 @@ class TodayTrainingCard extends StatelessWidget {
                   ),
                 ),
                 if (photoUrl != null && photoUrl.isNotEmpty)
-                  HomeSessionPhoto(url: photoUrl),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (plan.heroCompleted) ...[
-                        const SizedBox(height: 12),
-                        HomeDoneStatus(label: l10n.homeSessionDone),
-                      ],
-                      if (facts.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          facts.join(' · '),
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: palette.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ],
+                  HomeSessionPhoto(
+                    url: photoUrl,
+                    pill: isToday ? l10n.todayLabel : null,
                   ),
-                ),
+                if (plan.heroCompleted || plan.others.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (plan.others.isNotEmpty)
+                          ExomKicker(
+                            l10n.homeFactSessions(summary.trainings.length),
+                          ),
+                        if (plan.heroCompleted)
+                          HomeDoneStatus(label: l10n.homeSessionDone),
+                      ],
+                    ),
+                  ),
+                if (figures.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ExomFigureColumns(items: figures),
+                ],
+                if (_inProgress && total > 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: ExomProgressRule(
+                      value: summary.exercisesCompleted / total,
+                      thickness: ExomRule.bar,
+                    ),
+                  ),
+                const SizedBox(height: 4),
               ],
             ),
           ),
@@ -226,9 +270,11 @@ class TodayTrainingCard extends StatelessWidget {
   }
 }
 
-/// Header of a day without training (sketch «Día sin asignación»): title
-/// «DESCANSO», date line, one line of copy and a secondary button to the
-/// calendar. There is no lime action: the day has no next step.
+/// Header of a day without training (L5-E1, sketch «Inicio · día de
+/// descanso»): the two-line headline «Descanso. / También cuenta.», the date
+/// line, one line of copy and a secondary button to the calendar. There is no
+/// lime action: the day has no next step. It is also the single state of a
+/// day the calendar has not described yet (Q11).
 class HomeRestDayHeader extends StatelessWidget {
   const HomeRestDayHeader({
     super.key,
@@ -253,10 +299,14 @@ class HomeRestDayHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HomeTitle(l10n.homeRestDayTitle),
+          ExomTwoLineHeadline(
+            first: l10n.homeRestHeadlineFirst,
+            second: l10n.homeRestHeadlineSecond,
+            size: ExomHeadlineSize.screen,
+          ),
           const SizedBox(height: 12),
           HomeDateLine(date: selectedDate, programWeek: programWeek),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             isToday ? l10n.homeRestDayToday : l10n.homeRestDayOther,
             style: theme.textTheme.bodyLarge?.copyWith(
@@ -265,13 +315,38 @@ class HomeRestDayHeader extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           ExomSecondaryButton(
             label: l10n.openCalendarButton,
             icon: ExomIcons.calendar,
             onPressed: () => context.go('/calendar'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Day without assignment (L5-E1, L5-D27; sketch «Inicio · sin asignación»):
+/// «Sin plan. / Todavía.», the existing «Tu entrenador aún no te ha asignado un
+/// plan», when the plan will show and a secondary button to the calendar.
+/// Shown only when the calendar of the week says the day has no training, no
+/// diet and no rest day.
+class HomeNoPlanHeader extends StatelessWidget {
+  const HomeNoPlanHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ExomEmptyState(
+      first: l10n.trainingsNoPlanFirst,
+      second: l10n.trainingsNoPlanSecond,
+      lead: l10n.noTrainingsAssignedSubtitle,
+      body: l10n.homeNoPlanBody,
+      action: ExomSecondaryButton(
+        label: l10n.openCalendarButton,
+        icon: ExomIcons.calendar,
+        onPressed: () => context.go('/calendar'),
       ),
     );
   }

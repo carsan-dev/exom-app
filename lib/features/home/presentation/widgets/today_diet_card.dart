@@ -8,11 +8,13 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/utils/date_utils.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/features/diets/presentation/widgets/meal_detail_sheet.dart';
 
-/// Diet summary of the selected day as one quiet Inicio row: plan name, meals
-/// done and remaining kcal, next meal. Tapping it opens the next meal sheet
+/// Diet summary of the selected day as one rich Inicio row (L5-E1, sketch
+/// `.x-row`): plan name with its daily kcal, meals done and remaining kcal,
+/// next meal, and one segment per meal with the done ones in data. Tapping it opens the next meal sheet
 /// when there is one, or the full diet otherwise, and reloads Home after, as
 /// the previous card did.
 ///
@@ -47,14 +49,36 @@ class TodayDietCard extends StatelessWidget {
         ),
     ];
 
-    return HomeRow(
-      icon: ExomIcons.meal,
-      title: summary.dietName ?? l10n.nutritionPlanDefault,
-      subtitles: [
-        if (progress.isNotEmpty) progress.join(' · '),
-        if (summary.nextMealName != null)
-          '${l10n.nextMealLabel}: ${summary.nextMealName}',
-      ],
+    final name = summary.dietName ?? l10n.nutritionPlanDefault;
+    final totalCalories = summary.totalCalories;
+    final facts = [
+      if (progress.isNotEmpty) progress.join(' · '),
+      if (summary.nextMealName != null)
+        '${l10n.nextMealLabel}: ${summary.nextMealName}',
+    ];
+    final totalMeals = summary.totalMeals;
+
+    return ExomRichRow(
+      leading: const ExomRowLeading.icon(ExomIcons.meal),
+      title: totalCalories == null
+          ? name
+          : '$name · ${NumberFormat.decimalPattern(locale).format(totalCalories)} kcal',
+      facts: facts.isEmpty ? null : facts.join('\n'),
+      status: totalMeals > 0
+          ? Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: ExomProgressRule(
+                    value: summary.mealsCompleted / totalMeals,
+                    segments: totalMeals,
+                  ),
+                ),
+              ),
+            )
+          : null,
       onTap: () async {
         HapticFeedback.selectionClick();
         if (hasNextMeal) {

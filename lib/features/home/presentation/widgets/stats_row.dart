@@ -4,16 +4,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
 
-/// Streak, latest weight and latest sleep as quiet Inicio rows (same data,
-/// unit handling and destinations as the previous stat cards).
+/// Streak, latest weight and latest sleep as rich Inicio rows (L5-E1,
+/// sketch `.x-row`): the streak with its days in the date box and «Retos y
+/// logros», weight and sleep with their icon. Same data, unit handling and
+/// destinations as before.
 class StatsRow extends StatelessWidget {
   const StatsRow({
     super.key,
@@ -55,25 +58,27 @@ class StatsRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        HomeRow(
-          icon: ExomIcons.streak,
+        ExomRichRow(
+          leading: ExomRowLeading.date(
+            day: formatFigure(context, summary.streakDays),
+            label: l10n.homeStreakDaysUnit(summary.streakDays),
+          ),
           title: l10n.homeStreakRow(summary.streakDays),
-          subtitles: [if (summary.streakDays > 0) l10n.keepItUpSubtitle],
+          facts: l10n.homeStreakRowFoot,
           onTap: () => context.push('/challenges'),
         ),
-        HomeRow(
-          icon: ExomIcons.weight,
+        ExomRichRow(
+          leading: const ExomRowLeading.icon(ExomIcons.weight),
           title: '${l10n.weight} · $weight ${weightUnitSymbol(unitSystem)}',
-          subtitles: [
-            if (summary.lastWeightDate != null)
-              DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!),
-          ],
+          facts: summary.lastWeightDate == null
+              ? null
+              : DateFormat('dd/MM/yyyy').format(summary.lastWeightDate!),
           onTap: openMetrics,
         ),
-        HomeRow(
-          icon: ExomIcons.sleep,
+        ExomRichRow(
+          leading: const ExomRowLeading.icon(ExomIcons.sleep),
           title: '${l10n.sleep} · $sleep ${l10n.hours}',
-          subtitles: [?sleepQuality],
+          facts: sleepQuality,
           onTap: openMetrics,
         ),
       ],

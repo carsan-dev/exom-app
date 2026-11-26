@@ -34,6 +34,7 @@ import '../core/widgets/android_nonlinear_text_scaler.dart';
 import '../features/challenges/challenges_test_support.dart';
 import '../features/diets/shopping_list_scene.dart'
     show pumpShoppingListScene, pumpShoppingSetupScene;
+import '../features/home/presentation/pages/home_e1_harness.dart' as inicio;
 import '../features/trainings/presentation/pages/last_set_video_test_support.dart';
 import '../features/profile/presentation/profile_scene.dart' as perfil;
 import '../features/progress_photos/progress_photos_redesign_scene.dart'
@@ -369,6 +370,60 @@ void main() {
       );
     });
     expect(tester.takeException(), isNull);
+  });
+
+  // L5-E1 «Inicio»: the session (figures, «Tu semana», rich rows), the rest
+  // day (featured week count) and the day without a plan at 320 dp with 1.3x
+  // and 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end (CC 3); 2.0x scrolling is in
+  // home_page_e1_test.dart.
+  group('Inicio does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final scene in const ['session', 'rest day', 'no plan']) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $scene',
+            (tester) async {
+              final calendar = inicio.InicioE1Calendar(
+                inicio.InicioE1Calendar.week({
+                  '2026-11-16': inicio.InicioE1Calendar.day(
+                    '2026-11-16',
+                    training: true,
+                    done: true,
+                  ),
+                  '2026-11-18': inicio.InicioE1Calendar.day(
+                    '2026-11-18',
+                    training: scene == 'session',
+                    rest: scene == 'rest day',
+                  ),
+                }),
+              );
+              await inicio.pumpInicioE1(
+                tester,
+                repository: inicio.InicioE1Repository(
+                  (_) => scene == 'session'
+                      ? inicio.inicioE1InProgress
+                      : inicio.inicioE1Empty,
+                ),
+                calendar: calendar,
+                width: width,
+                height: 640,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 10; i++) {
+                await tester.drag(scrollable, const Offset(0, -300));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
+      }
+    }
   });
 
   // L5-E2a «Detalle del entreno»: before starting (figures) and in progress

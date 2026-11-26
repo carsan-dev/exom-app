@@ -4072,6 +4072,89 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeRestHeadlineFirst => 'Rest.';
+
+  @override
+  String get homeRestHeadlineSecond => 'It counts too.';
+
+  @override
+  String get homeNoPlanBody =>
+      'Once they do, you will see each day\'s session here.';
+
+  @override
+  String get homeOfflineSavedData => 'Offline · saved data';
+
+  @override
+  String get homeWeekTitle => 'Your week';
+
+  @override
+  String homeWeekSessionsDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total sessions done',
+      one: '$done of 1 session done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeWeekSessionsDoneFoot(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'sessions done',
+      one: 'session done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeStreakRowFoot => 'Challenges and achievements';
+
+  @override
+  String homeStreakDaysUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'exercises',
+      one: 'exercise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'sets',
+      one: 'set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeFigureMinutes => 'min approx.';
+
+  @override
+  String get homeFigureMinutesLeft => 'min left';
+
+  @override
+  String get homeLoadingLabel => 'Loading today\'s summary';
+
+  @override
   String trainingDetailExercises(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

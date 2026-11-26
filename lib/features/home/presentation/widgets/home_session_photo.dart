@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_moment_pill.dart';
 
 /// Photo of the session under the title and date (L4b-D1): the thumbnail of
 /// the first exercise of the hero session, [height] tall, cover. L4b-I9: it
@@ -13,8 +14,12 @@ import 'package:exom_app/core/theme/spacing.dart';
 /// on a load error or with an expired signed URL the slot and the gap above
 /// it collapse to nothing: no icon, no exception. Decorative: excluded from
 /// semantics. URLs are not renewed here.
+///
+/// L5-E1: an optional [pill] («Hoy») sits on the photo, 20 from the start and
+/// 16 from the bottom (sketch `.x-photo .x-pill`). Without it (the default)
+/// the photo is unchanged.
 class HomeSessionPhoto extends StatelessWidget {
-  const HomeSessionPhoto({super.key, required this.url});
+  const HomeSessionPhoto({super.key, required this.url, this.pill});
 
   static const double height = 200;
 
@@ -26,10 +31,32 @@ class HomeSessionPhoto extends StatelessWidget {
 
   final String url;
 
-  Widget _frame(Widget child) => Padding(
-    padding: const EdgeInsets.only(top: ExomSpacing.lg),
-    child: SizedBox(height: height, width: double.infinity, child: child),
-  );
+  /// Moment pill painted on the photo, e.g. «Hoy»; none by default.
+  final String? pill;
+
+  Widget _frame(Widget child) {
+    final label = pill;
+    return Padding(
+      padding: const EdgeInsets.only(top: ExomSpacing.lg),
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: label == null
+            ? child
+            : Stack(
+                fit: StackFit.expand,
+                children: [
+                  child,
+                  PositionedDirectional(
+                    start: ExomSpacing.xl,
+                    bottom: ExomSpacing.lg,
+                    child: ExomMomentPill(label),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

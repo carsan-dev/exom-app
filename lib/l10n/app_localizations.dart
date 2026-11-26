@@ -6854,6 +6854,90 @@ abstract class AppLocalizations {
   /// **'{day}, sesión no hecha'**
   String homeWeekDayMissed(String day);
 
+  /// No description provided for @homeRestHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso.'**
+  String get homeRestHeadlineFirst;
+
+  /// No description provided for @homeRestHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'También cuenta.'**
+  String get homeRestHeadlineSecond;
+
+  /// No description provided for @homeNoPlanBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando lo haga, aquí verás la sesión de cada día.'**
+  String get homeNoPlanBody;
+
+  /// No description provided for @homeOfflineSavedData.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión · datos guardados'**
+  String get homeOfflineSavedData;
+
+  /// No description provided for @homeWeekTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu semana'**
+  String get homeWeekTitle;
+
+  /// No description provided for @homeWeekSessionsDone.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{{done} de 1 sesión hecha} other{{done} de {total} sesiones hechas}}'**
+  String homeWeekSessionsDone(int done, int total);
+
+  /// No description provided for @homeWeekSessionsDoneFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'{total, plural, =1{sesión hecha} other{sesiones hechas}}'**
+  String homeWeekSessionsDoneFoot(int total);
+
+  /// No description provided for @homeStreakRowFoot.
+  ///
+  /// In es, this message translates to:
+  /// **'Retos y logros'**
+  String get homeStreakRowFoot;
+
+  /// No description provided for @homeStreakDaysUnit.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{día} other{días}}'**
+  String homeStreakDaysUnit(int count);
+
+  /// No description provided for @homeFigureExercises.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{ejercicio} other{ejercicios}}'**
+  String homeFigureExercises(int count);
+
+  /// No description provided for @homeFigureSets.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{serie} other{series}}'**
+  String homeFigureSets(int count);
+
+  /// No description provided for @homeFigureMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'min aprox.'**
+  String get homeFigureMinutes;
+
+  /// No description provided for @homeFigureMinutesLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'min restantes'**
+  String get homeFigureMinutesLeft;
+
+  /// No description provided for @homeLoadingLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el resumen de hoy'**
+  String get homeLoadingLabel;
+
   /// No description provided for @trainingDetailExercises.
   ///
   /// In es, this message translates to:

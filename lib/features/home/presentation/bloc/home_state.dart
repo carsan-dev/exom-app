@@ -40,6 +40,13 @@ class HomeRestDay extends HomeState {
 
   /// See [HomeLoaded.weekMarks].
   final HomeWeekMarks? weekMarks;
+
+  /// L5-D27 (exception EX-Q6): what the calendar says [selectedDate] holds.
+  /// [HomeDayPlan.unknown] without the calendar of its week, so Inicio keeps
+  /// the single rest-day state (Q11) until the calendar answers.
+  HomeDayPlan get dayPlan =>
+      weekMarks?.planFor(selectedDate) ?? HomeDayPlan.unknown;
+
   const HomeRestDay(
     this.summary, {
     required this.selectedDate,

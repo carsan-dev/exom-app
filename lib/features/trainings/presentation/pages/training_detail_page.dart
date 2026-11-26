@@ -1438,11 +1438,19 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final hasFailedExecution = executions.any((entry) =>
       entry['status'] == 'failed' &&
       (_sessionId == null || entry['id'] == _sessionId));
-    final writableCompletionId = widget.selectedExecutionId ?? _sessionId ?? _locallyConfirmedSessionId;
+    // L5-D49 (O3): a reopened detail only knows the execution it displays,
+    // so that execution also says whether the session is already finished.
+    final writableCompletionId = widget.selectedExecutionId ?? _sessionId ??
+        _locallyConfirmedSessionId ?? _displaySessionId;
     final locallyCompleted = writableCompletionId != null &&
         storage.getConfirmedTrainingExecutions(training.id, widget.state.selectedDate)
             .any((entry) => entry['id'] == writableCompletionId &&
                 const ['completed', 'confirmed'].contains(entry['status']));
+    // L5-D49 (O3): a finished session offers no completion; the footer shows
+    // «Terminada» instead. A blocker, a conflict or a pending completion keeps
+    // its own treatment. Repeating it starts another execution from the rows.
+    final sessionFinished = locallyCompleted && blocker == null &&
+        !needsConflictReview && !pendingSync;
     final activeWorkouts = sl<LocalStorage>().watchActiveWorkouts();
     final groups = _exerciseGroups(training);
     final next = _firstUnfinished(groups);
@@ -1484,6 +1492,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       completionStatus = ExomSyncStatus(
         state: ExomSyncState.pendiente,
         label: l10n.trainingDetailCompletionSavedPending,
+      );
+    } else if (sessionFinished) {
+      completionStatus = ExomSyncStatus(
+        state: ExomSyncState.confirmada,
+        label: l10n.trainingDetailSessionFinished,
       );
     } else {
       completionStatus = null;
@@ -1684,7 +1697,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                         style: _rowLineStyle(context),
                       ),
                     ],
-                    const SizedBox(height: 8),
+                    if (!sessionFinished || next != null)
+                      const SizedBox(height: 8),
                   ],
                   if (next != null) ...[
                     ExomPrimaryButton(
@@ -1702,14 +1716,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                               : _startCircuit(context, training, next.leader,
                                   next.blockExercises!)),
                     ),
-                    const SizedBox(height: 8),
+                    if (!sessionFinished) const SizedBox(height: 8),
                   ],
-                  _CompleteTrainingButton(
-                    primary: completeIsPrimary,
-                    label: completeLabel,
-                    done: allDone,
-                    onPressed: completeOnPressed,
-                  ),
+                  if (!sessionFinished)
+                    _CompleteTrainingButton(
+                      primary: completeIsPrimary,
+                      label: completeLabel,
+                      done: allDone,
+                      onPressed: completeOnPressed,
+                    ),
                 ],
               ),
           ),

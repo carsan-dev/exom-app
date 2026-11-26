@@ -4392,6 +4392,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guardada en este móvil · pendiente de sincronizar';
 
   @override
+  String get trainingDetailSessionFinished => 'Terminada';
+
+  @override
   String trainingDetailExercisesDone(int done, int total) {
     String _temp0 = intl.Intl.pluralLogic(
       total,

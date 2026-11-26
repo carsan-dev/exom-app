@@ -7172,6 +7172,12 @@ abstract class AppLocalizations {
   /// **'Guardada en este móvil · pendiente de sincronizar'**
   String get trainingDetailCompletionSavedPending;
 
+  /// No description provided for @trainingDetailSessionFinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminada'**
+  String get trainingDetailSessionFinished;
+
   /// No description provided for @trainingDetailExercisesDone.
   ///
   /// In es, this message translates to:

@@ -4351,6 +4351,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Saved on this phone · waiting to sync';
 
   @override
+  String get trainingDetailSessionFinished => 'Finished';
+
+  @override
   String trainingDetailExercisesDone(int done, int total) {
     String _temp0 = intl.Intl.pluralLogic(
       total,

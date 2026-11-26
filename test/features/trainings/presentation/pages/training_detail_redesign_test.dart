@@ -17,6 +17,7 @@ import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
@@ -766,7 +767,7 @@ void main() {
     expect(find.text(l10n.syncStatusConfirmed), findsNWidgets(2));
   });
 
-  testWidgets('footer: all done and open says Terminar sesión, closed says completed', (
+  testWidgets('footer: all done and open says Terminar sesión, closed says Terminada', (
     tester,
   ) async {
     final all = {for (var i = 1; i <= 5; i++) 'te-$i'};
@@ -790,14 +791,17 @@ void main() {
         {'id': _execution, 'status': 'completed'},
       ],
     );
+    // L5-D49 (O3): a finished execution shows «Terminada» as its sync
+    // status and no completion button.
     expect(
       find.descendant(
-        of: completeButton,
-        matching: find.text(l10n.workoutCompletedMessage),
+        of: find.byType(ExomSyncStatus),
+        matching: find.text(l10n.trainingDetailSessionFinished),
       ),
       findsOneWidget,
     );
-    expect(tester.widget<ElevatedButton>(completeButton).onPressed, isNull);
+    expect(completeButton, findsNothing);
+    expect(find.text(l10n.completeTrainingConfirmAction), findsNothing);
   });
 
   testWidgets('rows completed by "Completar todo" follow complete_training', (

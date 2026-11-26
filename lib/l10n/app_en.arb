@@ -1417,6 +1417,7 @@
   "trainingDetailNextAction": "Next: {name}",
   "@trainingDetailNextAction": {"placeholders": {"name": {"type": "String"}}},
   "trainingDetailCompletionSavedPending": "Saved on this phone · waiting to sync",
+  "trainingDetailSessionFinished": "Finished",
   "trainingDetailExercisesDone": "{total, plural, =1{{done} of 1 done} other{{done} of {total} done}}",
   "@trainingDetailExercisesDone": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
   "trainingDetailProgressKicker": "Session progress",

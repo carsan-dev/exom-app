@@ -1526,6 +1526,7 @@
   "trainingDetailNextAction": "Siguiente: {name}",
   "@trainingDetailNextAction": {"placeholders": {"name": {"type": "String"}}},
   "trainingDetailCompletionSavedPending": "Guardada en este móvil · pendiente de sincronizar",
+  "trainingDetailSessionFinished": "Terminada",
   "trainingDetailExercisesDone": "{total, plural, =1{{done} de 1 hecho} other{{done} de {total} hechos}}",
   "@trainingDetailExercisesDone": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
   "trainingDetailProgressKicker": "Progreso de la sesión",

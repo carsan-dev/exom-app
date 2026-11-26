@@ -7,8 +7,21 @@ import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.
 part 'home_event.dart';
 part 'home_state.dart';
 
-/// Mark and plan of one `/calendar/month` day.
-typedef _CalendarDay = ({HomeDayMark mark, HomeDayPlan plan});
+/// Mark, plan and sessions of one `/calendar/month` day; [anyOf] when the
+/// day completes with any one of its trainings (E1 O1).
+typedef _CalendarDay = ({
+  HomeDayMark mark,
+  HomeDayPlan plan,
+  HomeDaySessions sessions,
+  bool anyOf,
+});
+
+/// Mark and sessions of a loaded Inicio summary.
+typedef _LocalDay = ({HomeDayMark mark, HomeDaySessions sessions});
+
+/// E6a: a completion the server confirmed (training and `yyyy-mm-dd`
+/// assignment date) patched over the content until the next full reload.
+typedef _Confirmed = ({String trainingId, String date});
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final GetHomeSummaryUseCase _getHomeSummaryUseCase;
@@ -34,18 +47,112 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Future<Map<String, _CalendarDay>?>? _calendarRequest;
   Map<String, _CalendarDay>? _calendarDays;
 
-  /// Marks from the summaries loaded since the last full refresh, by day.
-  final Map<String, HomeDayMark> _localDays = {};
+  /// Marks and sessions from the summaries loaded since the last full
+  /// refresh, by day.
+  final Map<String, _LocalDay> _localDays = {};
+
+  /// Session (account and sign-in generation) in force now, and the one this
+  /// bloc was created for. Without the clock (older wiring, tests) the bloc
+  /// cannot tell who confirmed a completion, so it never patches one.
+  final String? Function()? _sessionStamp;
+  final String? _ownerSession;
+
+  /// E6a: content patched by [applyConfirmedCompletion], served by [state]
+  /// until the bloc emits again (first of all, this same patch).
+  HomeState? _patched;
+
+  /// The patched completion, for the reload that follows it.
+  _Confirmed? _confirmed;
 
   HomeBloc({
     required GetHomeSummaryUseCase getHomeSummaryUseCase,
     GetMonthCalendarUseCase? getMonthCalendarUseCase,
+    String? Function()? sessionStamp,
   }) : _getHomeSummaryUseCase = getHomeSummaryUseCase,
        _getMonthCalendarUseCase = getMonthCalendarUseCase,
+       _sessionStamp = sessionStamp,
+       _ownerSession = sessionStamp?.call(),
        super(const HomeInitial()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeDateSelected>(_onDateSelected);
+    on<_HomeCompletionPatched>(_onCompletionPatched);
   }
+
+  /// The patched content while its emission is on its way, so a widget
+  /// built right now (Inicio's first frame back from «Sesión hecha») already
+  /// reads it. Bloc emissions are asynchronous; this is not.
+  @override
+  HomeState get state => _patched ?? super.state;
+
+  @override
+  void onChange(Change<HomeState> change) {
+    super.onChange(change);
+    _patched = null;
+  }
+
+  /// E6a, owner decision 2026-11-26: back from «Sesión hecha», marks the
+  /// training [trainingId] of [date] (`yyyy-mm-dd`) done on the content in
+  /// memory, and its day in «Tu semana», at once, so Inicio never paints it
+  /// pending. Returns whether it patched. The caller reloads right after;
+  /// that reload replaces the patch, and only if it fails or answers from
+  /// the saved copy does the patch stay over it.
+  ///
+  /// Nothing is written (Hive, cache) or requested. Does nothing unless
+  /// [sessionStamp] (the session that confirmed) is the session in force and
+  /// the one of this bloc, and the content on screen is [date] holding that
+  /// training. Only completion flags change: progress figures, minutes left
+  /// and the streak are not deducible and wait for the reload.
+  bool applyConfirmedCompletion({
+    required String trainingId,
+    required String date,
+    required String? sessionStamp,
+  }) {
+    if (isClosed) return false;
+    final current = _sessionStamp?.call();
+    if (sessionStamp == null ||
+        current == null ||
+        current != sessionStamp ||
+        current != _ownerSession) {
+      return false;
+    }
+    final content = state;
+    if (content is! HomeLoaded ||
+        HomeWeekMarks.dayKey(content.selectedDate) != date) {
+      return false;
+    }
+    final summary = content.summary.withTrainingCompleted(trainingId);
+    if (summary == null) return false;
+    // Loads still in flight started before the completion.
+    _requestEpoch++;
+    _confirmed = (trainingId: trainingId, date: date);
+    _localDays[date] = _localDayOf(summary);
+    _patched = HomeLoaded(
+      summary,
+      selectedDate: content.selectedDate,
+      weekMarks:
+          _marksFor(HomeWeekMarks.weekStartOf(content.selectedDate)) ??
+          content.weekMarks,
+    );
+    add(const _HomeCompletionPatched());
+    return true;
+  }
+
+  /// Emits the patch for the listeners, unless the bloc emitted since.
+  void _onCompletionPatched(
+    _HomeCompletionPatched event,
+    Emitter<HomeState> emit,
+  ) {
+    final patched = _patched;
+    if (patched == null) return;
+    // Cleared first: the emitter skips a state equal to [state].
+    _patched = null;
+    emit(patched);
+  }
+
+  static _LocalDay _localDayOf(HomeSummaryEntity summary) => (
+    mark: HomeDayMark.ofSummary(summary),
+    sessions: HomeDaySessions.ofSummary(summary),
+  );
 
   Future<void> _onLoadRequested(
     HomeLoadRequested event,
@@ -77,6 +184,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     bool reportFailureOverContent = false,
   }) async {
     final epoch = ++_requestEpoch;
+    // E6a: a full reload replaces the patched completion; it only keeps it
+    // when it cannot answer (failure or saved copy).
+    final confirmed = reuseShared ? null : _confirmed;
+    if (!reuseShared) _confirmed = null;
     // A full refresh invalidates the cache so later date requests fetch it
     // again instead of reusing data older than the refresh.
     if (!reuseShared) {
@@ -109,21 +220,45 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       } else {
         _sharedSource = summary;
       }
-      _localDays[HomeWeekMarks.dayKey(normalizedDate)] = HomeDayMark.ofSummary(
-        summary,
-      );
+      // The saved copy may predate the confirmed completion.
+      if (confirmed != null &&
+          summary.staleReason != null &&
+          HomeWeekMarks.dayKey(normalizedDate) == confirmed.date) {
+        summary =
+            summary.withTrainingCompleted(confirmed.trainingId) ?? summary;
+      }
+      _localDays[HomeWeekMarks.dayKey(normalizedDate)] = _localDayOf(summary);
       final marks = _marksFor(weekStart);
+      // E1 D1: content served from the saved copy because a request failed
+      // carries that failure, so Inicio reports it inline over the content.
+      final staleReason = summary.staleReason;
       if (summary.isRestDay) {
         emit(
-          HomeRestDay(summary, selectedDate: normalizedDate, weekMarks: marks),
+          HomeRestDay(
+            summary,
+            selectedDate: normalizedDate,
+            refreshError: staleReason,
+            weekMarks: marks,
+          ),
         );
       } else {
         emit(
-          HomeLoaded(summary, selectedDate: normalizedDate, weekMarks: marks),
+          HomeLoaded(
+            summary,
+            selectedDate: normalizedDate,
+            refreshError: staleReason,
+            weekMarks: marks,
+          ),
         );
       }
     } catch (e) {
       if (epoch != _requestEpoch) return;
+      // The patched day stays over the (older) calendar that follows.
+      if (confirmed != null &&
+          previousState is HomeLoaded &&
+          HomeWeekMarks.dayKey(previousState.selectedDate) == confirmed.date) {
+        _localDays[confirmed.date] = _localDayOf(previousState.summary);
+      }
       if (!hasContent) {
         emit(HomeError(e.toString()));
       } else if (reportFailureOverContent) {
@@ -201,6 +336,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           days[key] = (
             mark: HomeDayMark.ofCalendarDay(day),
             plan: HomeDayPlan.ofCalendarDay(day),
+            sessions: HomeDaySessions.ofCalendarDay(day),
+            anyOf: day.trainingCompletionMode == 'ANY',
           );
         }
       }
@@ -223,17 +360,35 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return null;
     }
     final dates = HomeWeekMarks.datesOf(weekStart);
+    HomeDaySessions sessionsOf(String key) {
+      final calendar = calendarDays[key];
+      final local = _localDays[key]?.sessions;
+      if (local == null) return calendar?.sessions ?? HomeDaySessions.none;
+      // The summary does not know the completion mode; the calendar does.
+      return calendar?.anyOf == true ? local.asAnyOf() : local;
+    }
+
+    HomeDayMark markOf(String key) {
+      final local = _localDays[key];
+      if (local == null) return calendarDays[key]?.mark ?? HomeDayMark.none;
+      // In ANY mode one done session completes the day, as its count says.
+      if (local.mark == HomeDayMark.pending &&
+          calendarDays[key]?.anyOf == true &&
+          local.sessions.done > 0) {
+        return HomeDayMark.done;
+      }
+      return local.mark;
+    }
+
     return HomeWeekMarks(
       weekStart: weekStart,
-      days: [
-        for (final day in dates)
-          _localDays[HomeWeekMarks.dayKey(day)] ??
-              calendarDays[HomeWeekMarks.dayKey(day)]?.mark ??
-              HomeDayMark.none,
-      ],
+      days: [for (final day in dates) markOf(HomeWeekMarks.dayKey(day))],
       plans: [
         for (final day in dates)
           calendarDays[HomeWeekMarks.dayKey(day)]?.plan ?? HomeDayPlan.unknown,
+      ],
+      sessions: [
+        for (final day in dates) sessionsOf(HomeWeekMarks.dayKey(day)),
       ],
     );
   }

@@ -930,8 +930,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           ).total,
           isSameSession: () =>
               stamp != null && sl<LocalStorage>().sessionStamp == stamp,
-          onContinue: () =>
-              router.go(AppRoutes.home, extra: HomeCompletionRefresh()),
+          // E6a: what the server confirmed, so Inicio paints it at once.
+          onContinue: () => router.go(
+            AppRoutes.home,
+            extra: HomeCompletionRefresh(
+              trainingId: training.id,
+              date: widget.state.selectedDate,
+              sessionStamp: stamp,
+            ),
+          ),
         ),
       ),
     );

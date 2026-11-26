@@ -14,3 +14,8 @@ class HomeDateSelected extends HomeEvent {
   final DateTime date;
   const HomeDateSelected(this.date);
 }
+
+/// Emits the content patched by [HomeBloc.applyConfirmedCompletion].
+class _HomeCompletionPatched extends HomeEvent {
+  const _HomeCompletionPatched();
+}

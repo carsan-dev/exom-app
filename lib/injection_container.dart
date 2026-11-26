@@ -299,6 +299,8 @@ Future<void> initDependencies() async {
       getHomeSummaryUseCase: sl<GetHomeSummaryUseCase>(),
       // L4b-D4: week strip marks from the Calendar use case and its cache.
       getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
+      // E6a: patches a confirmed completion only for its own session.
+      sessionStamp: () => sl<LocalStorage>().sessionStamp,
     ),
   );
 

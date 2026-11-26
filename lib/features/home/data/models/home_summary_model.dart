@@ -40,6 +40,12 @@ class HomeSummaryModel {
   /// L4b-D1: photo of the primary training (first exercise with a thumbnail).
   final String? trainingThumbnailUrl;
 
+  /// E1 D1: why part of this summary is the saved copy (or nothing) instead
+  /// of a fresh answer: the error of a request that failed, as
+  /// `ApiException(status): message` (status 0 = no network or timeout).
+  /// `null` when every request answered.
+  final String? staleReason;
+
   const HomeSummaryModel({
     this.trainings = const [],
     this.trainingName,
@@ -70,6 +76,7 @@ class HomeSummaryModel {
     this.programDay,
     this.totalSets = 0,
     this.trainingThumbnailUrl,
+    this.staleReason,
   });
 
   factory HomeSummaryModel.fromParts({
@@ -79,6 +86,7 @@ class HomeSummaryModel {
     required Map<String, dynamic>? profile,
     required Map<String, dynamic>? latestMetric,
     required Map<String, dynamic>? progress,
+    String? staleReason,
   }) {
     final programWeek = _positiveInt(training?['program_week']);
     final programDay = _positiveInt(training?['program_day']);
@@ -321,6 +329,7 @@ class HomeSummaryModel {
       trainingThumbnailUrl: training == null
           ? null
           : _firstThumbnail(exercisesFor(training)),
+      staleReason: staleReason,
     );
   }
 

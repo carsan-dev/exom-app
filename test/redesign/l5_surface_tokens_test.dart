@@ -138,6 +138,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/splash/presentation/widgets/splash_update_dialog.dart',
   // L5-F4 · Hoja de técnica.
   'lib/features/trainings/presentation/widgets/exercise_technique_sheet.dart',
+  // L5-F5 · Cuenta atrás de inicio.
+  'lib/features/trainings/presentation/widgets/execution_start_countdown.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on

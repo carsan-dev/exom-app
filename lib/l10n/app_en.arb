@@ -1144,6 +1144,7 @@
   "executionPrepareBody": "Your exercise timer starts after the countdown.",
   "executionPrepareCountdown": "Starting in {seconds} seconds",
   "executionPrepareCancel": "Cancel",
+  "executionPrepareUnitSeconds": "s",
   "@executionPrepareCountdown": {
     "placeholders": {
       "seconds": {

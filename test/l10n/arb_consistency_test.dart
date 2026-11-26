@@ -33,6 +33,8 @@ const Map<String, String> identicalValueAllowlist = {
   'activeExerciseUnitSeconds': 'Unit symbol "s".',
   'activeExerciseUnitMinutes': 'Unit symbol "min".',
   'activeExerciseRir': 'Acronym "RIR" with a number, same in both languages.',
+  // L5-F5 (start countdown): unit symbol beside the figure.
+  'executionPrepareUnitSeconds': 'Unit symbol "s".',
   'activeExerciseRestExtend': 'Symbol "+{seconds} s", same in both languages.',
   'setSheetRirLabel': 'Acronym "RIR", same in both languages.',
   'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',

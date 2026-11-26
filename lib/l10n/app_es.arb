@@ -1183,6 +1183,7 @@
   "executionPrepareBody": "El tiempo del ejercicio empieza al terminar la cuenta atrás.",
   "executionPrepareCountdown": "Empieza en {seconds} segundos",
   "executionPrepareCancel": "Cancelar",
+  "executionPrepareUnitSeconds": "s",
   "@executionPrepareCountdown": {
     "placeholders": {
       "seconds": {

@@ -3414,6 +3414,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get executionPrepareCancel => 'Cancelar';
 
   @override
+  String get executionPrepareUnitSeconds => 's';
+
+  @override
   String inputExample(String value) {
     return 'P. ej.: $value';
   }

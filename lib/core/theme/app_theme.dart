@@ -792,6 +792,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: palette.surfaceElevated,
         contentTextStyle: TextStyle(color: palette.textPrimary),
+        // Default actions fell back to inversePrimary (1.10:1 / 1.22:1).
+        actionTextColor: palette.primary,
         behavior: SnackBarBehavior.floating,
       ),
       bottomSheetTheme: BottomSheetThemeData(

@@ -491,7 +491,6 @@ class _ExomAppViewState extends State<_ExomAppView> {
       action: isFailure
           ? SnackBarAction(
               label: l10n.retry,
-              textColor: Theme.of(context).colorScheme.inversePrimary,
               onPressed: () =>
                   unawaited(sl<FeedbackUploadQueueService>().retry(notice.id)),
             )

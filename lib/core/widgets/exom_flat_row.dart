@@ -23,12 +23,17 @@ class ExomRowSurface extends StatefulWidget {
     this.onTap,
     this.minHeight = 56,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    this.topRule = true,
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final double minHeight;
   final EdgeInsetsGeometry padding;
+
+  /// Whether the row paints its top hairline. False when the row sits inside
+  /// a band (`.x-swrow`) or directly under another rule it shares.
+  final bool topRule;
 
   /// Duration of the press fill in standard motion (zero when reduced).
   static const Duration pressFade = Duration(milliseconds: 90);
@@ -85,10 +90,12 @@ class _ExomRowSurfaceState extends State<ExomRowSurface> {
               decoration: BoxDecoration(
                 color: visible ? fill : null,
                 border: Border(
-                  top: BorderSide(
-                    color: palette.borderSoft,
-                    width: ExomRule.hairline,
-                  ),
+                  top: widget.topRule
+                      ? BorderSide(
+                          color: palette.borderSoft,
+                          width: ExomRule.hairline,
+                        )
+                      : BorderSide.none,
                 ),
               ),
               child: child,
@@ -119,6 +126,7 @@ class ExomFlatRow extends StatelessWidget {
     this.subtitles = const [],
     this.trailing,
     this.onTap,
+    this.topRule = true,
   });
 
   final Widget? leading;
@@ -128,6 +136,9 @@ class ExomFlatRow extends StatelessWidget {
   /// Replaces the chevron (e.g. a "done" status).
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// See [ExomRowSurface.topRule].
+  final bool topRule;
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +160,7 @@ class ExomFlatRow extends StatelessWidget {
         button: onTap != null,
         child: ExomRowSurface(
           onTap: onTap,
+          topRule: topRule,
           child: Row(
             children: [
               if (leadingWidget != null) ...[
@@ -295,10 +307,14 @@ class ExomSwitchRow extends StatelessWidget {
     required this.value,
     this.onChanged,
     this.errorText,
+    this.topRule = true,
   });
 
   final String label;
   final bool value;
+
+  /// See [ExomRowSurface.topRule].
+  final bool topRule;
 
   /// Null while busy (the switch shows an indicator and ignores taps).
   final ValueChanged<bool>? onChanged;
@@ -318,6 +334,7 @@ class ExomSwitchRow extends StatelessWidget {
         enabled: change != null,
         child: ExomRowSurface(
           onTap: change == null ? null : () => change(!value),
+          topRule: topRule,
           child: Row(
             children: [
               Expanded(

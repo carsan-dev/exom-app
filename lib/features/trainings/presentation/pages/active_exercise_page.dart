@@ -1047,9 +1047,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           completedSets: state.completedSets,
           feedbackId:
               _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
-        )) ...[
-          const SizedBox(height: 24),
+        ))
+          // Directly under the columns, sharing their bottom rule (an empty
+          // 24 strip between two rules read as an empty section).
           LastSetVideoReminder(
+            joinsPrevious: true,
             enabled: _reminderOn,
             title: l10n.upcomingLastSetTitle,
             // On the last set itself «the next one is the last» would be
@@ -1059,8 +1061,10 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                 : l10n.upcomingLastSetMessage,
             onChanged: _setReminder,
           ),
-        ],
-        if (state.isExecuting && state.timedTotalSeconds != null)
+        if (state.isExecuting && state.timedTotalSeconds != null) ...[
+          // A section of its own: mt24 as every section of the page (it sat
+          // flush under the columns or the last-set band).
+          const SizedBox(height: 24),
           pad(
             ExecutionTimer(
               state: state,
@@ -1073,6 +1077,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                   widget.args.assignmentDate, widget.args.sessionId),
             ),
           ),
+        ],
         const SizedBox(height: 24),
         pad(
           Align(

@@ -1551,7 +1551,8 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   List<Widget> _roundSection(AppLocalizations l10n, WeightText weightText) {
     final saved = _lastSaved;
     return [
-      const SizedBox(height: 28),
+      // `.pad.mt24.x-sh-row` (circuit frames of the sketch, `e-migradas`).
+      const SizedBox(height: 24),
       _roundList(l10n, weightText),
       if (saved != null) ...[
         const SizedBox(height: 12),
@@ -1689,6 +1690,16 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     final showsColumns =
         !_showsExecutionTimer && !ready && targetNumeral != null;
     final showsPreviousLine = !showsColumns || lastTime == null;
+    final showsReminder = !ready && _asksLastRoundVideo(trainingExercise);
+    // With no line under the columns the reminder sits directly under them
+    // and shares their bottom rule (an empty strip between two rules read as
+    // an empty section).
+    final reminderJoinsColumns =
+        showsReminder &&
+        showsColumns &&
+        weightKg == null &&
+        !showsPreviousLine &&
+        after == null;
 
     // The heading changes inside the screen (next exercise, next round):
     // announced as a live region.
@@ -1780,7 +1791,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
             ),
           ),
         ],
-        if (!ready)
+        if (!ready && !reminderJoinsColumns)
           Padding(
             padding: _sidePadding,
             child: Column(
@@ -1816,9 +1827,10 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           ),
         // L5-D23 (i, iv), sketch `f-circ-ult`: the reminder of the last
         // round's video, with the circuit copy of the old dialog.
-        if (!ready && _asksLastRoundVideo(trainingExercise)) ...[
-          const SizedBox(height: 24),
+        if (showsReminder) ...[
+          if (!reminderJoinsColumns) const SizedBox(height: 24),
           LastSetVideoReminder(
+            joinsPrevious: reminderJoinsColumns,
             enabled: _reminderOn,
             title: l10n.lastSetReminderTitle,
             message: l10n.lastSetReminderMessage(exercise.name),

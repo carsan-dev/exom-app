@@ -53,6 +53,11 @@ void main() {
       'UPLOAD_OPERATION_CONFLICT',
       'upload_operation_conflict_exhausted',
       'ApiException(409): PROGRESS_VERSION_CONFLICT',
+      // FB1: a lost video file and the last-set video domain codes.
+      'file_missing',
+      'LAST_SET_VIDEO_REQUIRED',
+      'LAST_SET_FEEDBACK_PENDING',
+      'LAST_SET_FEEDBACK_INVALID',
     ];
     for (final code in codes) {
       for (final l10n in [es, en]) {

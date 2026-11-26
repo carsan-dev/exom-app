@@ -27,6 +27,59 @@ class CompletionSyncBlocker {
   final String? retryActionId;
 }
 
+/// FB1: the upload that currently stands for the last-set video [id]. A
+/// failed video replaced by a new recording keeps a `replaced_by` link in the
+/// (owned) upload [queue]; any reference still naming the old id, written
+/// before the replacement or restored afterwards, resolves to the new one.
+/// The link is written in the same queue write that adds the replacement, so
+/// it holds before the queued actions are rewritten.
+String resolveFeedbackReplacement(
+  Iterable<Map<String, dynamic>> queue,
+  String id,
+) {
+  final byId = <String, Map<String, dynamic>>{
+    for (final row in queue)
+      if (row['id'] is String) row['id'] as String: row,
+  };
+  final seen = <String>{id};
+  var current = id;
+  while (true) {
+    final next = byId[current]?['replaced_by'];
+    if (next is! String || !seen.add(next)) return current;
+    current = next;
+  }
+}
+
+/// FB1: whether a queued [reference] to an upload stands for [feedbackId]:
+/// it names it, or names a video that [feedbackId] replaced (resolved
+/// through the owned upload [queue], see [resolveFeedbackReplacement]).
+bool feedbackReferenceIs(
+  Iterable<Map<String, dynamic>> queue,
+  Object? reference,
+  String feedbackId,
+) =>
+    reference is String &&
+    (reference == feedbackId ||
+        resolveFeedbackReplacement(queue, reference) == feedbackId);
+
+/// FB1: whether the queued [action] waits for the upload [feedbackId]: the
+/// exercise completion sent with it (`last_set_feedback_client_upload_id`)
+/// or a completion depending on it (`depends_on_feedback_ids`), directly or
+/// through a video [feedbackId] replaced ([feedbackReferenceIs]).
+bool actionWaitsForFeedback(
+  Map<String, dynamic> action,
+  String feedbackId,
+  Iterable<Map<String, dynamic>> queue,
+) =>
+    feedbackReferenceIs(
+      queue,
+      action['last_set_feedback_client_upload_id'],
+      feedbackId,
+    ) ||
+    ((action['depends_on_feedback_ids'] as List?) ?? const []).any(
+      (id) => feedbackReferenceIs(queue, id, feedbackId),
+    );
+
 class OfflineSyncService {
   static const _markExerciseCompleted = 'mark_exercise_completed';
   static const _unmarkExerciseCompleted = 'unmark_exercise_completed';
@@ -136,10 +189,17 @@ class OfflineSyncService {
       completed: completed,
       exerciseId: exerciseId,
     );
-    if (lastSetFeedbackClientUploadId != null &&
-        _localStorage.getFeedbackUploadQueue().any(
+    final feedbackQueue = lastSetFeedbackClientUploadId == null
+        ? const <Map<String, dynamic>>[]
+        : _localStorage.getFeedbackUploadQueue();
+    final currentFeedbackId = lastSetFeedbackClientUploadId == null
+        ? null
+        : resolveFeedbackReplacement(
+            feedbackQueue, lastSetFeedbackClientUploadId);
+    if (currentFeedbackId != null &&
+        feedbackQueue.any(
           (item) =>
-              item['id'] == lastSetFeedbackClientUploadId &&
+              item['id'] == currentFeedbackId &&
               item['status'] == 'completed',
         )) {
       unawaited(syncPendingActions());
@@ -160,7 +220,8 @@ class OfflineSyncService {
               item['training_id'] == trainingId &&
               item['assignment_date'] == date &&
               item['training_session_id'] == sessionId &&
-              item['status'] != 'completed',
+              item['status'] != 'completed' &&
+              item['replaced_by'] == null,
         )
         .map((item) => item['id'])
         .whereType<String>()
@@ -547,6 +608,11 @@ class OfflineSyncService {
   Future<void> removeActionsDependingOnFeedback(String feedbackId) async {
     await _queueMutex.protect(() async {
       final queue = _localStorage.getPendingSyncActions();
+      // FB1: an action that still names a video [feedbackId] replaced waits
+      // for it too, and is released with it.
+      final uploads = _localStorage.getFeedbackUploadQueue();
+      bool isDiscarded(Object? id) =>
+          feedbackReferenceIs(uploads, id, feedbackId);
       for (var index = 0; index < queue.length; index++) {
         final action = Map<String, dynamic>.from(queue[index]);
         final dependencies =
@@ -554,8 +620,10 @@ class OfflineSyncService {
                 .whereType<String>()
                 .toList(growable: true);
         final directlyDepends =
-            action['last_set_feedback_client_upload_id'] == feedbackId;
-        final transitivelyDepends = dependencies.remove(feedbackId);
+            isDiscarded(action['last_set_feedback_client_upload_id']);
+        final before = dependencies.length;
+        dependencies.removeWhere(isDiscarded);
+        final transitivelyDepends = dependencies.length != before;
         if (!directlyDepends && !transitivelyDepends) continue;
         action.remove('last_set_feedback_client_upload_id');
         action['depends_on_feedback_ids'] = dependencies;
@@ -567,6 +635,42 @@ class OfflineSyncService {
     });
     _changes.add(null);
   }
+
+  /// FB1: hands every queued reference to the replaced last-set video [from]
+  /// over to its replacement [to]: the exercise completion
+  /// (`last_set_feedback_client_upload_id`), the training completion
+  /// (`depends_on_feedback_ids`) and the drafts of this owner. Status, ids,
+  /// order and revision of the actions are untouched; none of them was sent
+  /// while it depended on [from]. Idempotent; other owners' records are not
+  /// visible here and stay as they are.
+  Future<void> redirectFeedbackDependency(String from, String to) =>
+      _localStorage.sessionTask(() async {
+    var changed = false;
+    await _queueMutex.protect(() async {
+      final queue = _localStorage.getPendingSyncActions();
+      for (var index = 0; index < queue.length; index++) {
+        final action = queue[index];
+        final dependencies =
+            ((action['depends_on_feedback_ids'] as List?) ?? const [])
+                .whereType<String>()
+                .toList(growable: false);
+        final direct = action['last_set_feedback_client_upload_id'] == from;
+        if (!direct && !dependencies.contains(from)) continue;
+        queue[index] = {
+          ...action,
+          if (direct) 'last_set_feedback_client_upload_id': to,
+          if (dependencies.contains(from))
+            'depends_on_feedback_ids': {
+              for (final id in dependencies) id == from ? to : id,
+            }.toList(growable: false),
+        };
+        changed = true;
+      }
+      if (changed) await _persistQueue(queue);
+    });
+    await _localStorage.replaceDraftLastSetFeedback(from, to);
+    if (changed) _changes.add(null);
+  });
 
   bool _receiptMissing(Map<String, dynamic> action) =>
       const ['progress_receipt_missing', 'Bad state: progress_receipt_missing']
@@ -771,10 +875,15 @@ class OfflineSyncService {
         ((action['depends_on_feedback_ids'] as List?) ?? const [])
             .whereType<String>();
     final feedbackQueue = _localStorage.getFeedbackUploadQueue();
-    if (dependencies.any((id) {
-      final matches = feedbackQueue.where((item) => item['id'] == id);
-      return matches.isEmpty || matches.first['status'] != 'completed';
-    })) {
+    // A replaced video counts through its replacement (FB1).
+    bool confirmed(String id) {
+      final current = resolveFeedbackReplacement(feedbackQueue, id);
+      return feedbackQueue.any(
+        (item) => item['id'] == current && item['status'] == 'completed',
+      );
+    }
+
+    if (dependencies.any((id) => !confirmed(id))) {
       throw const _FeedbackDependencyPending();
     }
 
@@ -786,13 +895,12 @@ class OfflineSyncService {
         if (trainingExerciseId == null || exerciseId == null) {
           throw StateError('Pending sync action is missing exercise ids');
         }
-        final feedbackId =
+        final queuedFeedbackId =
             action['last_set_feedback_client_upload_id'] as String?;
-        if (feedbackId != null &&
-            !_localStorage.getFeedbackUploadQueue().any(
-              (item) =>
-                  item['id'] == feedbackId && item['status'] == 'completed',
-            )) {
+        final feedbackId = queuedFeedbackId == null
+            ? null
+            : resolveFeedbackReplacement(feedbackQueue, queuedFeedbackId);
+        if (feedbackId != null && !confirmed(feedbackId)) {
           throw const _FeedbackDependencyPending();
         }
         final sets = _setPerformancesForReplay(action['sets']);
@@ -937,7 +1045,8 @@ class OfflineSyncService {
       (item) =>
           item['training_id'] == trainingId &&
           item['assignment_date'] == date &&
-          item['status'] != 'completed',
+          item['status'] != 'completed' &&
+          item['replaced_by'] == null,
     );
   }
 
@@ -992,7 +1101,8 @@ class OfflineSyncService {
       };
       if (dependencies.isEmpty) continue;
       final feedback = _localStorage.getFeedbackUploadQueue();
-      for (final id in dependencies) {
+      for (final queuedId in dependencies) {
+        final id = resolveFeedbackReplacement(feedback, queuedId);
         final row = feedback.where((item) => item['id'] == id).firstOrNull;
         if (row == null) {
           return const CompletionSyncBlocker(CompletionSyncBlockerKind.feedbackMissing);

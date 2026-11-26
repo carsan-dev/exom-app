@@ -20,6 +20,7 @@ import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/features/feedback/presentation/feedback_notice_snack_bars.dart';
 import 'package:exom_app/features/feedback/presentation/inline_upload_status_scope.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rerecord_last_set_video.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -214,6 +215,71 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     }
   }
 
+  bool _rerecording = false;
+
+  /// «Volver a grabar» (FB1): replaces the failed last-set video [id]; the
+  /// row then shows the new upload.
+  Future<void> _rerecord(String id, String exerciseName) async {
+    if (_rerecording || !_sameSession) return;
+    setState(() {
+      _clearOutcome();
+      _rerecording = true;
+    });
+    _sheetsOpen++;
+    try {
+      await rerecordLastSetVideo(
+        context,
+        feedbackId: id,
+        exerciseName: exerciseName,
+        expectedSession: _sessionStamp,
+      );
+    } finally {
+      _sheetsOpen--;
+      if (mounted) setState(() => _rerecording = false);
+    }
+  }
+
+  /// Queued progress that waits for the upload [id]: an exercise completion
+  /// sent with it or a training completion depending on it, also when the
+  /// action still names a video [id] replaced (a restored circuit snapshot,
+  /// or a crash before the redirect), see [actionWaitsForFeedback].
+  bool _hasDependants(String id) {
+    final actions = _offlineSync.pendingActions;
+    if (actions.isEmpty) return false;
+    final uploads = sl<LocalStorage>().getFeedbackUploadQueue();
+    return actions.any(
+      (action) => actionWaitsForFeedback(action, id, uploads),
+    );
+  }
+
+  /// Display name of the exercise of [item] (FB1): the names the caller
+  /// passed, the one saved with the upload, the cached training of its day
+  /// (rows saved by earlier builds) or null.
+  String? _exerciseName(Map<String, dynamic> item) {
+    final trainingExercise = item['training_exercise_id'];
+    final passed = widget.exerciseNames[trainingExercise];
+    if (passed != null) return passed;
+    final saved = item['exercise_name'];
+    if (saved is String && saved.isNotEmpty) return saved;
+    final trainingId = item['training_id'];
+    final date = item['assignment_date'];
+    if (trainingExercise is! String || trainingId is! String || date is! String) {
+      return null;
+    }
+    final exercises = sl<LocalStorage>().getCachedMap(
+      'training_detail_${trainingId}_$date',
+    )?['exercises'];
+    if (exercises is! List) return null;
+    for (final entry in exercises.whereType<Map>()) {
+      final exercise = entry['exercise'];
+      if (entry['id'] == trainingExercise && exercise is Map) {
+        final name = exercise['name'];
+        if (name is String && name.isNotEmpty) return name;
+      }
+    }
+    return null;
+  }
+
   Future<void> _retrySync(String id) async {
     if (!_sameSession) return;
     setState(_clearOutcome);
@@ -341,15 +407,33 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     final id = item['id'] as String;
     final status = item['status'] as String? ?? 'queued';
     final isVideo = item['media_type'] == 'VIDEO';
+    final name = _exerciseName(item);
     final description = [
+      // A training exercise is never shown by its identifier (FB1); a plain
+      // exercise feedback saved by an earlier build keeps today's fallback.
       if (item['training_exercise_id'] != null || item['exercise_id'] != null)
-        l10n.pendingEvidenceExercise(
-          widget.exerciseNames[item['training_exercise_id']] ??
-              item['exercise_name'] as String? ??
-              (item['training_exercise_id'] ?? item['exercise_id']).toString(),
-        ),
+        if (name != null)
+          l10n.pendingEvidenceExercise(name)
+        else if (item['training_exercise_id'] != null)
+          l10n.pendingEvidenceExerciseUnnamed
+        else
+          l10n.pendingEvidenceExercise(item['exercise_id'].toString()),
       if (item['assignment_date'] is String) item['assignment_date'] as String,
     ].join(' · ');
+    // FB1: a last-set video that queued progress waits for cannot be
+    // deleted here (the completion would be left failed with no way back);
+    // a failed one can be recorded again instead.
+    final lastSetVideo =
+        isVideo &&
+        item['feedback_kind'] == 'LAST_SET' &&
+        item['training_exercise_id'] != null;
+    final canRerecord =
+        lastSetVideo &&
+        status == 'failed' &&
+        item['discard_requested'] != true &&
+        item['replaced_by'] == null;
+    final keepForProgress = lastSetVideo && _hasDependants(id);
+    final displayName = name ?? l10n.pendingEvidenceExerciseUnnamed;
     return _EvidenceRow(
       key: ValueKey('pending-row-$id'),
       icon: isVideo ? ExomIcons.video : ExomIcons.image,
@@ -360,10 +444,15 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       attempts: item['attempts'] as int? ?? 0,
       retryKey: Key('pending-retry-$id'),
       deleteKey: Key('pending-delete-$id'),
+      rerecordKey: Key('pending-rerecord-$id'),
+      rerecordLabel: l10n.lastSetVideoRerecordFor(displayName),
       onRetry: FeedbackUploadQueueService.canRetry(item)
           ? () => _retry(id)
           : null,
-      onDelete: () => _discard(id),
+      onRerecord: canRerecord && !_rerecording
+          ? () => _rerecord(id, displayName)
+          : null,
+      onDelete: keepForProgress ? null : () => _discard(id),
     );
   }
 
@@ -682,6 +771,9 @@ class _EvidenceRow extends StatelessWidget {
     required this.deleteKey,
     required this.onRetry,
     required this.onDelete,
+    required this.rerecordKey,
+    required this.rerecordLabel,
+    required this.onRerecord,
   });
 
   final IconData icon;
@@ -692,8 +784,11 @@ class _EvidenceRow extends StatelessWidget {
   final int attempts;
   final Key retryKey;
   final Key deleteKey;
+  final Key rerecordKey;
+  final String rerecordLabel;
   final VoidCallback? onRetry;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onRerecord;
 
   static const double thumb = 56;
 
@@ -771,6 +866,9 @@ class _EvidenceRow extends StatelessWidget {
                   deleteKey: deleteKey,
                   onRetry: onRetry,
                   onDelete: onDelete,
+                  rerecordKey: rerecordKey,
+                  rerecordLabel: rerecordLabel,
+                  onRerecord: onRerecord,
                 ),
               ],
             ),
@@ -879,20 +977,26 @@ class _SyncRow extends StatelessWidget {
   }
 }
 
-/// «Reintentar» and «Eliminar» as discreet in-line actions (sketch `.c-act`),
-/// never lime: there is no single next step.
+/// «Reintentar», «Volver a grabar» (FB1) and «Eliminar» as discreet in-line
+/// actions (sketch `.c-act`), never lime: there is no single next step.
 class _Actions extends StatelessWidget {
   const _Actions({
     required this.retryKey,
     required this.deleteKey,
     required this.onRetry,
     required this.onDelete,
+    this.rerecordKey,
+    this.rerecordLabel,
+    this.onRerecord,
   });
 
   final Key retryKey;
   final Key deleteKey;
+  final Key? rerecordKey;
+  final String? rerecordLabel;
   final VoidCallback? onRetry;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onRerecord;
 
   @override
   Widget build(BuildContext context) {
@@ -907,11 +1011,20 @@ class _Actions extends StatelessWidget {
             icon: ExomIcons.retry,
             onTap: onRetry!,
           ),
-        _RowAction(
-          key: deleteKey,
-          label: l10n.pendingUploadDelete,
-          onTap: onDelete,
-        ),
+        if (onRerecord != null)
+          _RowAction(
+            key: rerecordKey,
+            label: l10n.lastSetVideoRerecord,
+            semanticsLabel: rerecordLabel,
+            icon: ExomIcons.video,
+            onTap: onRerecord!,
+          ),
+        if (onDelete != null)
+          _RowAction(
+            key: deleteKey,
+            label: l10n.pendingUploadDelete,
+            onTap: onDelete!,
+          ),
       ],
     );
   }
@@ -923,11 +1036,15 @@ class _RowAction extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.icon,
+    this.semanticsLabel,
   });
 
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
+
+  /// Spoken label when [label] alone does not say what it acts on.
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -935,7 +1052,7 @@ class _RowAction extends StatelessWidget {
     final iconSize = MediaQuery.textScalerOf(context).scale(16);
     return Semantics(
       button: true,
-      label: label,
+      label: semanticsLabel ?? label,
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
@@ -953,14 +1070,18 @@ class _RowAction extends StatelessWidget {
                   Icon(icon, size: iconSize, color: palette.textPrimary),
                   const SizedBox(width: 6),
                 ],
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: AppTheme.bodyFontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                    color: palette.textPrimary,
+                // Wraps instead of overflowing when a long label meets a
+                // large text size on a narrow screen (FB1 r2).
+                Flexible(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                      color: palette.textPrimary,
+                    ),
                   ),
                 ),
               ],

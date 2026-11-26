@@ -537,6 +537,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       trainingExerciseId: widget.args.trainingExercise.id,
       assignmentDate: widget.args.assignmentDate,
       sessionId: context.read<ActiveExerciseBloc>().state.sessionId,
+      exerciseName: exercise.name,
     );
   }
 

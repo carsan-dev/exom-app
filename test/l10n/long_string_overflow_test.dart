@@ -74,6 +74,10 @@ const _codes = [
   'UPLOAD_OBJECT_MISSING',
   'upload_session_changed',
   'UPLOAD_OPERATION_CONFLICT',
+  'file_missing',
+  'LAST_SET_VIDEO_REQUIRED',
+  'LAST_SET_FEEDBACK_PENDING',
+  'LAST_SET_FEEDBACK_INVALID',
 ];
 
 Future<void> _pump(WidgetTester tester, Widget Function(BuildContext) child) async {

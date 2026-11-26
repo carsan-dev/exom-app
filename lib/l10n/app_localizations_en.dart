@@ -2973,6 +2973,77 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete each exercise and attach a video of its last set.';
 
   @override
+  String trainingLastSetVideoMissingFor(String exercises) {
+    return 'The last-set video is missing for: $exercises.';
+  }
+
+  @override
+  String get trainingLastSetVideoOpenExercise => 'Go to exercise';
+
+  @override
+  String trainingFeedbackFailedFor(String exercises) {
+    return 'The video could not be sent for: $exercises';
+  }
+
+  @override
+  String trainingFeedbackWaitingFor(String exercises) {
+    return 'Waiting for the video of: $exercises';
+  }
+
+  @override
+  String get lastSetVideoPending => 'Video waiting to be sent';
+
+  @override
+  String get lastSetVideoSending => 'Sending the video';
+
+  @override
+  String get lastSetVideoSent => 'Video sent';
+
+  @override
+  String get lastSetVideoMissing => 'The last-set video is missing';
+
+  @override
+  String lastSetVideoFailed(String reason) {
+    return 'The video could not be sent: $reason';
+  }
+
+  @override
+  String lastSetVideoMemberFailed(String exercise, String reason) {
+    return '$exercise: the video could not be sent ($reason)';
+  }
+
+  @override
+  String get lastSetVideoReasonFileMissing =>
+      'the file is no longer on this phone';
+
+  @override
+  String get lastSetVideoReasonTooLarge => 'the file is too large';
+
+  @override
+  String get lastSetVideoReasonUnsupported => 'the format is not supported';
+
+  @override
+  String get lastSetVideoReasonPreparation => 'the video could not be prepared';
+
+  @override
+  String get lastSetVideoReasonRejected => 'the server did not accept it';
+
+  @override
+  String get lastSetVideoRerecord => 'Record again';
+
+  @override
+  String lastSetVideoRerecordFor(String exercise) {
+    return 'Record the video of $exercise again';
+  }
+
+  @override
+  String get lastSetVideoRerecordFailed =>
+      'The new video could not be saved. The previous one is still on this phone.';
+
+  @override
+  String get pendingEvidenceExerciseUnnamed => 'Exercise from a workout';
+
+  @override
   String get pendingFeedbackError =>
       'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
 
@@ -3557,6 +3628,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorUploadObjectMissing =>
       'The file did not reach the server. Upload it again.';
+
+  @override
+  String get errorFileMissing =>
+      'The file is no longer on this phone. Record it again or choose another one.';
+
+  @override
+  String get errorLastSetVideoRequired => 'The last-set video is missing.';
+
+  @override
+  String get errorLastSetFeedbackPending =>
+      'The last-set video has not been confirmed yet.';
+
+  @override
+  String get errorLastSetFeedbackInvalid =>
+      'The last-set video does not match this session. Record it again.';
 
   @override
   String get errorUploadSessionChanged =>

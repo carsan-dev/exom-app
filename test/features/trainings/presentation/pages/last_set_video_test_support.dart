@@ -37,6 +37,7 @@ class RecordingVideoQueue extends Fake implements FeedbackUploadQueueService {
     String? trainingExerciseId,
     String? assignmentDate,
     String? sessionId,
+    String? exerciseName,
   }) async {
     calls.add((
       path: file.path,

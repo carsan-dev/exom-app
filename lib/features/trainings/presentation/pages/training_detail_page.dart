@@ -50,6 +50,8 @@ import 'package:exom_app/features/trainings/presentation/pages/training_mileston
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_status.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rerecord_last_set_video.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/features/home/presentation/pages/home_page.dart';
@@ -540,6 +542,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   String? _completionReturnSessionId;
   bool _completionAccepted = false;
   bool _milestoneOpen = false;
+  bool _rerecording = false;
+  _DetailSnackBar? _missingVideoNotice;
   StreamSubscription<void>? _syncChanges;
   StreamSubscription<FeedbackUploadNotice>? _feedbackChanges;
 
@@ -721,10 +725,19 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // FB1 r4 (D2): the missing-video message goes once a route covers this
+    // detail or it is popped (depends on the route's `isCurrent`).
+    if (ModalRoute.isCurrentOf(context) == false) _missingVideoNotice?.dismiss();
+  }
+
+  @override
   void didUpdateWidget(covariant _DetailScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.state.training.id != oldWidget.state.training.id ||
         widget.state.selectedDate != oldWidget.state.selectedDate) {
+      _missingVideoNotice?.dismiss();
       _sessionId = null;
       _displaySessionId = null;
       _locallyConfirmedSessionId = null;
@@ -757,21 +770,64 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         SnackBar(content: Text(l10n.completeTrainingTrackingRequired)));
       return;
     }
-    if (training.requiresLastSetVideo && training.exercises.any((exercise) =>
-        !storage.getFeedbackUploadQueue().any((item) =>
-          item['training_id'] == training.id &&
-          item['assignment_date'] == widget.state.selectedDate &&
-          item['training_session_id'] == sessionId &&
-          item['training_exercise_id'] == exercise.id &&
-          item['feedback_kind'] == 'LAST_SET' &&
-          item['media_type'] == 'VIDEO' &&
-          item['discard_requested'] != true &&
-          const ['queued', 'uploading', 'processing', 'completed']
-              .contains(item['status'])))) {
-      setState(() => _completeConfirmationOpen = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.trainingLastSetVideoRequired)));
-      return;
+    // FB1: only a video never attached blocks here. A failed one is kept on
+    // the phone like one still uploading: the completion is queued and waits
+    // for it (`depends_on_feedback_ids`), and its row offers to record it
+    // again.
+    if (training.requiresLastSetVideo) {
+      final feedback = storage.getFeedbackUploadQueue();
+      final missing = training.exercises
+          .where((exercise) =>
+              _videoOf(feedback, exercise, sessionId).state ==
+              LastSetVideoState.missing)
+          .toList(growable: false);
+      if (missing.isNotEmpty) {
+        setState(() => _completeConfirmationOpen = false);
+        final message = Text(l10n.trainingLastSetVideoMissingFor(
+          missing.map((exercise) => exercise.exercise.name).join(', ')));
+        void openExercise() {
+          if (_sameSession) _openForVideo(training, missing.first);
+        }
+        // FB1 r4 (D1): the theme's SnackBar is the raised surface and sets no
+        // action colour, so Material's inverse default is unreadable on it.
+        // The palette's accent text reads on that surface in both themes.
+        final actionColor = context.exomPalette.primary;
+        // FB1 r4 (D2): a fresh message replaces this detail's previous one.
+        _missingVideoNotice?.dismiss();
+        final notice = _missingVideoNotice =
+            _DetailSnackBar(ScaffoldMessenger.of(context));
+        // FB1 r3 (FB1-R2-O2): Material does not wrap an action label, so with
+        // large text the action goes under the message, at its start, and
+        // wraps like it. It persists until tapped, as a SnackBarAction does.
+        notice.show(_isLargeText(context)
+            ? SnackBar(
+                persist: true,
+                onVisible: notice.visible,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    message,
+                    const SizedBox(height: 4),
+                    _StackedSnackBarAction(
+                      label: l10n.trainingLastSetVideoOpenExercise,
+                      color: actionColor,
+                      onPressed: openExercise,
+                    ),
+                  ],
+                ),
+              )
+            : SnackBar(
+                onVisible: notice.visible,
+                content: message,
+                action: SnackBarAction(
+                  label: l10n.trainingLastSetVideoOpenExercise,
+                  textColor: actionColor,
+                  onPressed: openExercise,
+                ),
+              ));
+        return;
+      }
     }
     final saved = storage.getTrainingCompletionDraft(
       training.id, widget.state.selectedDate, sessionId);
@@ -884,6 +940,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
   @override
   void dispose() {
+    _missingVideoNotice?.dismiss();
     _syncChanges?.cancel();
     _feedbackChanges?.cancel();
     _notesController.dispose();
@@ -1024,6 +1081,77 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     );
   }
 
+  /// FB1: the last-set video of [exercise] in execution [sessionId].
+  LastSetVideoStatus _videoOf(
+    List<Map<String, dynamic>> feedback,
+    TrainingExerciseEntity exercise,
+    String? sessionId,
+  ) => lastSetVideoStatus(
+    queue: feedback,
+    trainingId: widget.state.training.id,
+    date: widget.state.selectedDate,
+    sessionId: sessionId,
+    trainingExerciseId: exercise.id,
+  );
+
+  /// Opens the exercise (or its circuit) whose last-set video is missing.
+  void _openForVideo(TrainingEntity training, TrainingExerciseEntity exercise) {
+    final group = _exerciseGroups(training)
+        .where((group) => (group.blockExercises ?? [group.leader])
+            .any((member) => member.id == exercise.id))
+        .firstOrNull;
+    if (group == null) return;
+    final members = group.blockExercises;
+    unawaited(_runNext(() => members == null
+        ? _openActiveExercise(context, training, group.leader)
+        : _startCircuit(context, training, group.leader, members)));
+  }
+
+  /// «Volver a grabar» for the failed upload [feedbackId]; one at a time.
+  Future<void> _rerecord(String feedbackId, String exerciseName) async {
+    if (_rerecording || !_sameSession) return;
+    setState(() => _rerecording = true);
+    try {
+      await rerecordLastSetVideo(
+        context,
+        feedbackId: feedbackId,
+        exerciseName: exerciseName,
+        expectedSession: widget.sessionStamp,
+      );
+    } finally {
+      if (mounted) setState(() => _rerecording = false);
+    }
+  }
+
+  /// Row line of the last-set video of [exercise] (FB1), null when there is
+  /// nothing to show.
+  Widget? _videoLine(
+    AppLocalizations l10n,
+    List<Map<String, dynamic>> feedback,
+    TrainingExerciseEntity exercise, {
+    required bool isCompleted,
+  }) {
+    final sessionId = _progressSessionId;
+    if (sessionId == null) return null;
+    final video = _videoOf(feedback, exercise, sessionId);
+    if (!widget.state.training.requiresLastSetVideo &&
+        video.state == LastSetVideoState.missing) {
+      return null;
+    }
+    final line = lastSetVideoLine(l10n, video, exerciseCompleted: isCompleted);
+    if (line == null) return null;
+    return _LastSetVideoLine(
+      state: line.$1,
+      text: line.$2,
+      rerecordKey: Key('rerecord-video-${exercise.id}'),
+      rerecordLabel: l10n.lastSetVideoRerecordFor(exercise.exercise.name),
+      enabled: !_rerecording && _sameSession,
+      onRerecord: video.state == LastSetVideoState.failed
+          ? () => _rerecord(video.feedbackId!, exercise.exercise.name)
+          : null,
+    );
+  }
+
   /// Runs the pinned "next" action once: repeated taps while the execution is
   /// being selected, or while the opened route is on top, are ignored.
   Future<void> _runNext(Future<void> Function() action) async {
@@ -1058,12 +1186,35 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     TrainingExerciseEntity ex,
     List<TrainingExerciseEntity> blockExercises,
     List<Map<String, dynamic>> actions,
+    List<Map<String, dynamic>> feedback,
     int number,
   ) {
     final completedCount = blockExercises
         .where((blockExercise) => _progress.ids.contains(blockExercise.id))
         .length;
+    final l10n = AppLocalizations.of(context);
+    // FB1: the members whose last-set video failed, each with «Volver a
+    // grabar»; the circuit's own line keeps the aggregated sync state.
+    final memberVideos = <Widget>[
+      if (_progressSessionId != null)
+        for (final member in blockExercises)
+          if (_videoOf(feedback, member, _progressSessionId)
+              case final video when video.state == LastSetVideoState.failed)
+            _LastSetVideoLine(
+              state: ExomSyncState.fallida,
+              text: l10n.lastSetVideoMemberFailed(
+                member.exercise.name,
+                lastSetVideoReason(l10n, video.row!),
+              ),
+              rerecordKey: Key('rerecord-video-${member.id}'),
+              rerecordLabel: l10n.lastSetVideoRerecordFor(member.exercise.name),
+              enabled: !_rerecording && _sameSession,
+              onRerecord: () =>
+                  _rerecord(video.feedbackId!, member.exercise.name),
+            ),
+    ];
     return _CircuitCard(
+      memberVideos: memberVideos,
       number: number,
       name: ex.blockName ?? 'Circuito',
       rounds: ex.blockRounds ?? 1,
@@ -1121,6 +1272,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     TrainingEntity training,
     TrainingExerciseEntity ex,
     List<Map<String, dynamic>> actions,
+    List<Map<String, dynamic>> feedback,
     _WeightText weightText,
     int number,
   ) {
@@ -1176,6 +1328,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       hasPartialProgress: hasPartialProgress,
       syncState: _exerciseSync(
         actions, ex, hasLocalDraft: hasPartialProgress),
+      video: _videoLine(l10n, feedback, ex, isCompleted: isCompleted),
       onOpenActive: () => _openActiveExercise(context, training, ex),
       onToggle: (val, {double? weightUsed}) {
         if (val && training.requiresLastSetVideo) {
@@ -1205,6 +1358,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final allDone = total > 0 && completed == total;
     final storage = sl<LocalStorage>();
     final pendingActions = storage.getPendingSyncActions();
+    // FB1: last-set videos are read only where the plan asks for them.
+    final feedback = training.requiresLastSetVideo
+        ? storage.getFeedbackUploadQueue()
+        : const <Map<String, dynamic>>[];
     final completionActions = pendingActions.where((action) =>
       action['type'] == 'complete_training' &&
       action['training_id'] == training.id &&
@@ -1251,12 +1408,33 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     // Status of the session completion next to its button (plan §6: pending
     // is amber + clock, failure is error colour + icon). A conflict keeps
     // today's treatment: only the button label.
+    // FB1: a completion waiting on videos names their exercises.
+    String? videoNames(Set<LastSetVideoState> states) {
+      final names = [
+        for (final exercise in training.exercises)
+          if (states.contains(
+              _videoOf(feedback, exercise, selectedCompletionId).state))
+            exercise.exercise.name,
+      ];
+      return names.isEmpty ? null : names.join(', ');
+    }
     final ExomSyncStatus? completionStatus;
     if (needsConflictReview ||
         blocker?.kind == CompletionSyncBlockerKind.conflict) {
       completionStatus = null;
     } else if (blocker?.kind == CompletionSyncBlockerKind.feedbackWaiting) {
-      completionStatus = const ExomSyncStatus(state: ExomSyncState.pendiente);
+      final waiting = videoNames(
+          const {LastSetVideoState.pending, LastSetVideoState.sending});
+      completionStatus = ExomSyncStatus(
+        state: ExomSyncState.pendiente,
+        label: waiting == null ? null : l10n.trainingFeedbackWaitingFor(waiting),
+      );
+    } else if (blocker?.kind == CompletionSyncBlockerKind.feedbackFailed) {
+      final failed = videoNames(const {LastSetVideoState.failed});
+      completionStatus = ExomSyncStatus(
+        state: ExomSyncState.fallida,
+        label: failed == null ? null : l10n.trainingFeedbackFailedFor(failed),
+      );
     } else if (blocker != null ||
         hasFailedExecution && !pendingSync && !locallyCompleted) {
       completionStatus = const ExomSyncStatus(state: ExomSyncState.fallida);
@@ -1364,13 +1542,14 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                 final circuit = group.blockExercises;
                 return circuit == null
                     ? _buildExerciseRow(context, training, group.leader,
-                        pendingActions, weightText, index + 1)
+                        pendingActions, feedback, weightText, index + 1)
                     : _buildCircuitRow(
                         context,
                         training,
                         group.leader,
                         circuit,
                         pendingActions,
+                        feedback,
                         index + 1,
                       );
               },
@@ -1428,43 +1607,52 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
       // Pinned thumb-zone actions: the next exercise (lime) and the session
       // completion, which becomes the lime action once every exercise is done.
-      bottomNavigationBar: ExomPinnedFooter(
-        padding: EdgeInsets.fromLTRB(
-          20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (completionStatus != null) ...[
-                Align(alignment: Alignment.centerLeft, child: completionStatus),
-                const SizedBox(height: 8),
-              ],
-              if (next != null) ...[
-                ExomPrimaryButton(
-                  key: const Key('training-next-button'),
-                  label: l10n.trainingDetailNextAction(
-                    next.blockExercises == null
-                        ? next.leader.exercise.name
-                        : next.leader.blockName ?? 'Circuito'),
-                  trailingIcon: ExomIcons.forward,
-                  busy: _openingNext,
-                  onPressed: !_sameSession
-                      ? null
-                      : () => _runNext(() => next.blockExercises == null
-                          ? _openActiveExercise(context, training, next.leader)
-                          : _startCircuit(context, training, next.leader,
-                              next.blockExercises!)),
-                ),
-                const SizedBox(height: 8),
-              ],
-              _CompleteTrainingButton(
-                primary: completeIsPrimary,
-                label: completeLabel,
-                done: allDone,
-                onPressed: completeOnPressed,
+      // FB1 r4 (D3): the bottom inset stays outside the footer's scroll view:
+      // when large text makes the footer reach its height cap and scroll, the
+      // inset no longer scrolls with it and the button stays above the
+      // gesture bar. Same paint as before (the inset takes the footer's fill).
+      bottomNavigationBar: ColoredBox(
+        color: palette.background,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+          child: ExomPinnedFooter(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (completionStatus != null) ...[
+                    Align(alignment: Alignment.centerLeft, child: completionStatus),
+                    const SizedBox(height: 8),
+                  ],
+                  if (next != null) ...[
+                    ExomPrimaryButton(
+                      key: const Key('training-next-button'),
+                      label: l10n.trainingDetailNextAction(
+                        next.blockExercises == null
+                            ? next.leader.exercise.name
+                            : next.leader.blockName ?? 'Circuito'),
+                      trailingIcon: ExomIcons.forward,
+                      busy: _openingNext,
+                      onPressed: !_sameSession
+                          ? null
+                          : () => _runNext(() => next.blockExercises == null
+                              ? _openActiveExercise(context, training, next.leader)
+                              : _startCircuit(context, training, next.leader,
+                                  next.blockExercises!)),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  _CompleteTrainingButton(
+                    primary: completeIsPrimary,
+                    label: completeLabel,
+                    done: allDone,
+                    onPressed: completeOnPressed,
+                  ),
+                ],
               ),
-            ],
           ),
+        ),
       ),
     );
   }
@@ -2055,16 +2243,46 @@ class _NumberedRow extends StatelessWidget {
     required this.body,
     required this.trailing,
     required this.onTap,
+    this.footer,
   });
 
   final int number;
   final Widget thumb;
   final Widget body;
-  final Widget trailing;
+
+  /// Mark at the row's end; null leaves the whole width to [body].
+  final Widget? trailing;
   final VoidCallback onTap;
+
+  /// FB1 r3: lines under the header, across the row's full width.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
+    final trailing = this.trailing;
+    final footer = this.footer;
+    final header = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: AlignmentDirectional.topStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 30),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: ExomIndexNumber(number),
+              ),
+            ),
+          ),
+          const SizedBox(width: ExomSpacing.md),
+          Align(alignment: AlignmentDirectional.topStart, child: thumb),
+          const SizedBox(width: 14),
+          Expanded(child: body),
+          if (trailing != null) Center(child: trailing),
+        ],
+      ),
+    );
     return MergeSemantics(
       child: Semantics(
         button: true,
@@ -2072,30 +2290,108 @@ class _NumberedRow extends StatelessWidget {
           onTap: onTap,
           minHeight: 72,
           padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 12, 12),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: AlignmentDirectional.topStart,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 30),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: ExomIndexNumber(number),
-                    ),
-                  ),
+          child: footer == null
+              ? header
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [header, footer],
                 ),
-                const SizedBox(width: ExomSpacing.md),
-                Align(alignment: AlignmentDirectional.topStart, child: thumb),
-                const SizedBox(width: 14),
-                Expanded(child: body),
-                Center(child: trailing),
-              ],
-            ),
-          ),
         ),
       ),
+    );
+  }
+}
+
+/// FB1 r3: text at Android's 1.5x setting or above (the 14 sp body size grows
+/// by half or more). There, at 320 dp, the circuit row's counter and a
+/// SnackBar action no longer fit beside their text, so those layouts stack.
+bool _isLargeText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) >= 14 * 1.5;
+
+/// FB1 r4 (D2): a SnackBar of the detail page, shown on the app's messenger
+/// but closed when the page asks ([dismiss]): when another route covers the
+/// detail, when it is popped or when it shows a fresh one. Without that, a
+/// persistent SnackBar followed the user to other screens and held every
+/// later SnackBar of the app in the messenger's queue.
+///
+/// The messenger can only close the SnackBar it is showing, so a dismiss
+/// asked while this one still waits in the queue takes effect as soon as it
+/// becomes visible ([visible], its `onVisible`). It does not depend on the
+/// page's State, which may be disposed by then.
+class _DetailSnackBar {
+  _DetailSnackBar(this._messenger);
+
+  final ScaffoldMessengerState _messenger;
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _controller;
+  bool _visible = false;
+  bool _closed = false;
+  bool _dismissed = false;
+
+  void show(SnackBar snackBar) {
+    final controller = _controller = _messenger.showSnackBar(snackBar);
+    controller.closed.whenComplete(() => _closed = true);
+  }
+
+  void visible() {
+    _visible = true;
+    if (_dismissed) _close();
+  }
+
+  void dismiss() {
+    if (_dismissed) return;
+    _dismissed = true;
+    if (_visible) _close();
+  }
+
+  void _close() {
+    if (_closed) return;
+    _closed = true;
+    // After the frame: dismiss can come from a build or a dispose, where the
+    // messenger cannot change its state.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_messenger.mounted) _controller?.close();
+    });
+  }
+}
+
+/// FB1 r3: a SnackBar action laid under its message (large text): the label
+/// wraps, the target stays at least 48 dp and, like [SnackBarAction], it
+/// closes the SnackBar and only acts once.
+class _StackedSnackBarAction extends StatefulWidget {
+  const _StackedSnackBarAction({required this.label, required this.color,
+    required this.onPressed});
+
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  State<_StackedSnackBarAction> createState() => _StackedSnackBarActionState();
+}
+
+class _StackedSnackBarActionState extends State<_StackedSnackBarAction> {
+  bool _triggered = false;
+
+  void _handlePressed() {
+    if (_triggered) return;
+    setState(() => _triggered = true);
+    widget.onPressed();
+    ScaffoldMessenger.of(context)
+        .hideCurrentSnackBar(reason: SnackBarClosedReason.action);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: _triggered ? null : _handlePressed,
+      style: TextButton.styleFrom(
+        foregroundColor: widget.color,
+        minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
+        padding: EdgeInsets.zero,
+        alignment: AlignmentDirectional.centerStart,
+      ),
+      child: Text(widget.label),
     );
   }
 }
@@ -2193,7 +2489,11 @@ class _CircuitCard extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback? onMarkPending;
 
+  /// FB1: one line per member whose last-set video failed.
+  final List<Widget> memberVideos;
+
   const _CircuitCard({
+    this.memberVideos = const [],
     required this.number,
     required this.name,
     required this.rounds,
@@ -2211,6 +2511,22 @@ class _CircuitCard extends StatelessWidget {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final isCompleted = exerciseCount > 0 && completedCount == exerciseCount;
+    // FB1 r3 (FB1-R2-O1): with large text the counter and its mark leave the
+    // header's end, so the body takes all the width left by the numeral and
+    // the thumbnail, and the members' video lines go under the header at
+    // full width.
+    final largeText = _isLargeText(context);
+    final progress = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!largeText) const SizedBox(width: 8),
+        Text(
+          '$completedCount/$exerciseCount',
+          style: _rowLineStyle(context, color: palette.textPrimary),
+        ),
+        _RowTrailing(done: isCompleted),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2234,19 +2550,17 @@ class _CircuitCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 ExomSyncStatus(state: syncState!),
               ],
+              if (largeText) progress else ...memberVideos,
             ],
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(width: 8),
-              Text(
-                '$completedCount/$exerciseCount',
-                style: _rowLineStyle(context, color: palette.textPrimary),
-              ),
-              _RowTrailing(done: isCompleted),
-            ],
-          ),
+          trailing: largeText ? null : progress,
+          footer: largeText && memberVideos.isNotEmpty
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: memberVideos,
+                )
+              : null,
         ),
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(62, 0, 12, 8),
@@ -2301,6 +2615,9 @@ class _ExerciseCard extends StatelessWidget {
   final String? todayLabel;
   final bool hasPartialProgress;
   final ExomSyncState? syncState;
+
+  /// FB1: state of the last-set video, with «Volver a grabar» when it failed.
+  final Widget? video;
   final VoidCallback onOpenActive;
   final void Function(bool completed, {double? weightUsed}) onToggle;
 
@@ -2320,6 +2637,7 @@ class _ExerciseCard extends StatelessWidget {
     this.todayLabel,
     this.hasPartialProgress = false,
     this.syncState,
+    this.video,
   });
 
   /// «Anterior 8 × 60 kg» with the value in the text colour, 600 (sketch
@@ -2388,6 +2706,7 @@ class _ExerciseCard extends StatelessWidget {
             const SizedBox(height: 4),
             ExomSyncStatus(state: syncState!),
           ],
+          ?video,
         ],
       ),
       trailing: _RowTrailing(done: isCompleted),
@@ -2447,6 +2766,65 @@ class _ExerciseCard extends StatelessWidget {
     if (result.openActiveExercise) {
       onOpenActive();
     }
+  }
+}
+
+/// FB1: state of one last-set video on a row (pending, sending, sent, failed
+/// with its reason) and, for a failed one, «Volver a grabar» as a discreet
+/// text action (≥48 dp, never lime: the row's next step stays the pinned
+/// action).
+class _LastSetVideoLine extends StatelessWidget {
+  const _LastSetVideoLine({
+    required this.state,
+    required this.text,
+    required this.rerecordKey,
+    required this.rerecordLabel,
+    required this.enabled,
+    this.onRerecord,
+  });
+
+  final ExomSyncState state;
+  final String text;
+  final Key rerecordKey;
+
+  /// Spoken label of the action, naming the exercise.
+  final String rerecordLabel;
+  final bool enabled;
+  final VoidCallback? onRerecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final rerecord = onRerecord;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 4),
+        ExomSyncStatus(state: state, label: text),
+        if (rerecord != null)
+          TextButton.icon(
+            key: rerecordKey,
+            onPressed: enabled ? rerecord : null,
+            style: TextButton.styleFrom(
+              foregroundColor: palette.textPrimary,
+              minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              textStyle: const TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            icon: const Icon(ExomIcons.video, size: 20),
+            label: Text(
+              l10n.lastSetVideoRerecord,
+              semanticsLabel: rerecordLabel,
+            ),
+          ),
+      ],
+    );
   }
 }
 

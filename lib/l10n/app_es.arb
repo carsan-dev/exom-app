@@ -230,7 +230,7 @@
   "sets": "Series",
   "repsOrTime": "Reps/Dur.",
   "restLabel": "Descanso",
-  "exerciseMetadata": "{sets} series x {reps} · Descanso {rest}s",
+  "exerciseMetadata": "{sets, plural, =1{1 serie} other{{sets} series}} x {reps} · Descanso {rest}s",
   "@exerciseMetadata": {
     "placeholders": {
       "sets": { "type": "int" },
@@ -715,7 +715,7 @@
     }
   },
   "activeExerciseCloseTitle": "Salir del ejercicio",
-  "activeExerciseCloseMessage": "Has completado {completed} de {total} series. Podrás retomarlo después.",
+  "activeExerciseCloseMessage": "Has completado {completed} de {total, plural, =1{1 serie} other{{total} series}}. Podrás retomarlo después.",
   "@activeExerciseCloseMessage": {
     "placeholders": {
       "completed": { "type": "int" },
@@ -1531,8 +1531,9 @@
   "trainingDetailProgressKicker": "Progreso de la sesión",
   "trainingDetailSetsDoneOf": "{done} de {total}",
   "@trainingDetailSetsDoneOf": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
-  "trainingDetailSetsDoneLabel": "series hechas",
-  "trainingDetailProgressSemantics": "{done} de {total} ejercicios hechos, {setsDone} de {setsTotal} series hechas",
+  "trainingDetailSetsDoneLabel": "{total, plural, =1{serie hecha} other{series hechas}}",
+  "@trainingDetailSetsDoneLabel": {"placeholders": {"total": {"type": "int"}}},
+  "trainingDetailProgressSemantics": "{done} de {total, plural, =1{1 ejercicio hecho} other{{total} ejercicios hechos}}, {setsDone} de {setsTotal, plural, =1{1 serie hecha} other{{setsTotal} series hechas}}",
   "@trainingDetailProgressSemantics": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}, "setsDone": {"type": "int"}, "setsTotal": {"type": "int"}}},
   "activeExerciseCloseA11y": "Cerrar ejercicio",
   "activeExercisePosition": "Ejercicio {current} de {total}",

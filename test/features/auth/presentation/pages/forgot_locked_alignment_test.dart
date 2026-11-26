@@ -25,8 +25,6 @@ List<String> _edges(
   final failures = <String>[];
   for (final (label, finder, right) in blocks) {
     final rect = tester.getRect(finder.first);
-    // ignore: avoid_print
-    print('MEASURE $screen $label left = ${rect.left}, right = ${rect.right}');
     if (rect.left != _start) failures.add('$label.left = ${rect.left}');
     if (right && rect.right != _end) {
       failures.add('$label.right = ${rect.right}');

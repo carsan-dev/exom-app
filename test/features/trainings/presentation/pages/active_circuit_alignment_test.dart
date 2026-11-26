@@ -29,8 +29,6 @@ Finder get _scroll => find
 final _failures = <String>[];
 
 void _check(double value, Matcher matcher, String label) {
-  // ignore: avoid_print
-  print('MEASURE $label = ${value.toStringAsFixed(1)}');
   if (!matcher.matches(value, <Object?, Object?>{})) {
     _failures.add(
       '$label = ${value.toStringAsFixed(1)}, expected '
@@ -40,10 +38,6 @@ void _check(double value, Matcher matcher, String label) {
 }
 
 void _expectRulesAndFailures(WidgetTester tester) {
-  for (final rule in probeFullWidthRules(tester, _scroll, _width)) {
-    // ignore: avoid_print
-    print('MEASURE $rule');
-  }
   _failures.addAll(probeRuleProblems(tester, _scroll, _width));
   final failures = [..._failures];
   _failures.clear();

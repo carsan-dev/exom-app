@@ -16,6 +16,7 @@ import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/local_video_thumbnail.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ import '../../../../core/widgets/android_nonlinear_text_scaler.dart';
 import '../../../../core/widgets/expect_no_lime_ink.dart';
 import 'circuit_test_harness.dart';
 import 'last_set_video_test_support.dart' show mockVideoPicker;
+import '../widgets/local_video_preview_fake.dart' show FakePreviewFactory;
 
 const _footer = ValueKey('circuit-executing-footer');
 const _reminderBand = Key('last-set-video-reminder');
@@ -405,6 +407,35 @@ void main() {
       expect(find.byKey(_videoSheet), findsNothing);
       expect(_missingAtEnd(tester), ['a', 'b']);
       expect(h.queue.calls, isEmpty);
+    });
+
+    testWidgets('«Vídeo preparado» in the circuit shows the first frame and '
+        'the duration (L5-E3d, same sheet)', (tester) async {
+      final factory = FakePreviewFactory(duration: const Duration(seconds: 7));
+      debugLocalVideoPreviewFactoryOverride = factory.call;
+      addTearDown(() => debugLocalVideoPreviewFactoryOverride = null);
+      debugResetLocalVideoDisposals();
+      mockVideoPicker(tester, (_) async => '/tmp/ronda.mov');
+      await _pumpLastRound(tester);
+      final l10n = _l10n(tester);
+      await _saveRound(tester);
+      await tester.tap(find.byKey(_gallery));
+      await settleFrames(tester, 6);
+      expect(find.text(l10n.videoReadyTitle.toUpperCase()), findsOneWidget);
+      expect(factory.created.single.file.path, '/tmp/ronda.mov');
+      expect(find.byType(LocalVideoThumbnail), findsOneWidget);
+      expect(find.byKey(const Key('fake-video-frame')), findsOneWidget);
+      final line = find.byWidgetPredicate(
+        (w) => w is RichText && w.text.toPlainText().endsWith(' · 0:07'),
+      );
+      expect(line, findsOneWidget);
+      expect(
+        tester.widget<RichText>(line).text.toPlainText(),
+        isNot(contains('. ·')),
+      );
+      await tester.tap(find.byKey(_cancel));
+      await settleFrames(tester, 6);
+      expect(factory.alive, 0);
     });
 
     testWidgets('«Cambiar» goes back to the source and queues nothing', (

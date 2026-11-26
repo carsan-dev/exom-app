@@ -55,6 +55,8 @@ import '../features/trainings/presentation/pages/training_detail_redesign_test.d
     show pumpTrainingDetail;
 import '../features/trainings/presentation/pages/training_milestone_test.dart'
     show pumpMilestone;
+import '../features/trainings/presentation/widgets/local_video_preview_fake.dart'
+    show FakePreviewFactory, pumpLastSetVideoSheet;
 import '../features/trainings/presentation/widgets/exercise_technique_sheet_test.dart'
     show pumpTechniqueSheet;
 
@@ -1057,6 +1059,57 @@ void main() {
             },
           );
         }
+      }
+    }
+  });
+
+  // L5-E3d: «Vídeo preparado» with the first frame and the longest duration
+  // format (h:mm:ss) after a long set label.
+  group('Vídeo preparado con miniatura y duración does not overflow', () {
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in const [
+        (320.0, 1.3),
+        (320.0, 1.6),
+        (360.0, 1.6),
+      ]) {
+        testWidgets(
+          'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}',
+          (tester) async {
+            final factory = FakePreviewFactory(
+              duration: const Duration(hours: 1, minutes: 2, seconds: 3),
+            );
+            await pumpLastSetVideoSheet(
+              tester,
+              factory: factory,
+              locale: locale,
+              size: Size(width, 640),
+              textScaler: AndroidNonlinearTextScaler(scale),
+              setLabel: locale.languageCode == 'es'
+                  ? 'Serie 12 · 12 × 102,5 kg · RIR 2 · 45 s'
+                  : 'Set 12 · 12 × 102.5 kg · RIR 2 · 45 s',
+            );
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('fake-video-frame')), findsOneWidget);
+            expect(
+              find.textContaining('1:02:03', findRichText: true),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+            final scrollable = find.descendant(
+              of: find.byKey(const Key('last-set-video-sheet')),
+              matching: find.byType(Scrollable),
+            );
+            for (var i = 0; i < 4; i++) {
+              await tester.drag(
+                scrollable.first,
+                const Offset(0, -300),
+                warnIfMissed: false,
+              );
+              await tester.pump();
+              expect(tester.takeException(), isNull);
+            }
+          },
+        );
       }
     }
   });

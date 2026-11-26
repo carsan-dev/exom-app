@@ -4471,6 +4471,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get changeVideoA11y => 'Cambiar vídeo';
 
   @override
+  String videoReadyWithDurationA11y(String duration) {
+    return 'Vídeo preparado, duración $duration';
+  }
+
+  @override
   String setSheetObjective(String objective) {
     return 'Objetivo $objective';
   }

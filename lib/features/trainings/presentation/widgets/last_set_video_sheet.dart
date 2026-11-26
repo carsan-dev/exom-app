@@ -7,6 +7,7 @@ import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/local_video_thumbnail.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,7 +23,10 @@ typedef LastSetVideoChoice = ({File file, String notes});
 /// * **Source**: «Adjunta el vídeo de tu última serie», «Grabar ahora» as the
 ///   only lime action and «Elegir de la galería» as a text link.
 /// * **Chosen**: «Vídeo preparado» with the set, «Cambiar» (back to the
-///   source, nothing queued), the optional comment and «Usar vídeo».
+///   source, nothing queued), the optional comment and «Usar vídeo». The
+///   box shows the clip's first frame and the set line its duration
+///   (L5-E3d, [LocalVideoThumbnail]); while the clip opens, or if it cannot
+///   be read, the box keeps the video icon and the line has no duration.
 ///
 /// «Cancelar» (L5-D43) closes it with null in both states, like the scrim,
 /// drag or back. The sheet never queues anything: it only returns the
@@ -35,6 +39,7 @@ class LastSetVideoSheet extends StatefulWidget {
     required this.kicker,
     required this.pickVideo,
     this.setLabel,
+    this.previewFactory = createPlayerLocalVideoPreview,
   });
 
   /// «Sentadilla búlgara · serie 4».
@@ -46,6 +51,10 @@ class LastSetVideoSheet extends StatefulWidget {
   /// «Serie 4 · 8 × 62,5 kg» under «Vídeo preparado»; null hides it.
   final String? setLabel;
 
+  /// Opens the chosen file for its first frame and duration; the default
+  /// uses `video_player`. Tests pass a fake.
+  final LocalVideoPreviewFactory previewFactory;
+
   @override
   State<LastSetVideoSheet> createState() => _LastSetVideoSheetState();
 }
@@ -53,6 +62,9 @@ class LastSetVideoSheet extends StatefulWidget {
 class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
   final _notes = TextEditingController();
   File? _file;
+
+  /// Duration of [_file] once its preview knows it; null hides it.
+  Duration? _duration;
   bool _picking = false;
   bool _done = false;
 
@@ -72,7 +84,10 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
       if (mounted) {
         setState(() {
           _picking = false;
-          if (picked != null) _file = picked;
+          if (picked != null) {
+            _file = picked;
+            _duration = null;
+          }
         });
       }
     }
@@ -80,7 +95,10 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
 
   void _change() {
     if (_picking || _done) return;
-    setState(() => _file = null);
+    setState(() {
+      _file = null;
+      _duration = null;
+    });
   }
 
   void _use() {
@@ -114,7 +132,8 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
           bottomSafe -
           1,
     );
-    final chosen = _file != null;
+    final file = _file;
+    final chosen = file != null;
     final busy = _picking || _done;
     final mutedStyle = TextStyle(
       fontFamily: AppTheme.bodyFontFamily,
@@ -130,7 +149,19 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
       color: palette.textPrimary,
     );
     final title = chosen ? l10n.videoReadyTitle : l10n.attachLastSetVideo;
-    final setLabel = widget.setLabel;
+    final duration = _duration;
+    final durationText = duration == null
+        ? null
+        : formatClipDuration(duration);
+    // «10 reps.» ends in a period; before « · 0:07» it reads «10 reps · 0:07».
+    final rawSetLabel = widget.setLabel;
+    final setLabel =
+        rawSetLabel != null && durationText != null && rawSetLabel.endsWith('.')
+        ?rawSetLabel.substring(0, rawSetLabel.length - 1)
+        : rawSetLabel;
+    final titleLabel = chosen && durationText != null
+        ? l10n.videoReadyWithDurationA11y(durationText)
+        : title;
 
     final content = Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
@@ -144,7 +175,7 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
           const SizedBox(height: 8),
           Semantics(
             header: true,
-            label: title,
+            label: titleLabel,
             excludeSemantics: true,
             child: Text(
               title.toUpperCase(),
@@ -162,27 +193,39 @@ class _LastSetVideoSheetState extends State<LastSetVideoSheet> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // No thumbnail nor duration: the app has neither (D15).
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: palette.borderSoft),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    ExomIcons.video,
-                    size: 24,
-                    color: palette.textPrimary,
-                  ),
+                LocalVideoThumbnail(
+                  key: const Key('last-set-video-thumbnail'),
+                  file: file,
+                  previewFactory: widget.previewFactory,
+                  onDuration: (value) {
+                    if (mounted) setState(() => _duration = value);
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (setLabel != null) Text(setLabel, style: labelStyle),
+                      if (setLabel != null || durationText != null)
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              if (setLabel != null) TextSpan(text: setLabel),
+                              if (setLabel != null && durationText != null)
+                                const TextSpan(text: ' · '),
+                              if (durationText != null)
+                                TextSpan(
+                                  text: durationText,
+                                  style: const TextStyle(
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          style: labelStyle,
+                        ),
                       Semantics(
                         label: l10n.changeVideoA11y,
                         button: true,

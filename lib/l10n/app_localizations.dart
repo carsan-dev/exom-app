@@ -5786,6 +5786,54 @@ abstract class AppLocalizations {
   /// **'Descartar'**
   String get progressPhotosDiscardConfirm;
 
+  /// No description provided for @progressPhotosHeadlineFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Mira atrás.'**
+  String get progressPhotosHeadlineFirst;
+
+  /// No description provided for @progressPhotosHeadlineSecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue adelante.'**
+  String get progressPhotosHeadlineSecond;
+
+  /// Line under the progress photos title with the date of the newest session, formatted with the active locale.
+  ///
+  /// In es, this message translates to:
+  /// **'Última sesión: {date}'**
+  String progressPhotosLastSession(String date);
+
+  /// No description provided for @progressPhotosEmptyFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fotos.'**
+  String get progressPhotosEmptyFirst;
+
+  /// No description provided for @progressPhotosEmptySecond.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía.'**
+  String get progressPhotosEmptySecond;
+
+  /// Accessible label of the short «Retry» link of a failed progress photo upload; view is the lowercase view name.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar foto {view}'**
+  String progressPhotosRetryView(String view);
+
+  /// Accessible label of the short «Discard» link of a failed progress photo upload; view is the lowercase view name.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar foto {view}'**
+  String progressPhotosDiscardView(String view);
+
+  /// Kicker of the image source sheet: the progress photo view and the session date.
+  ///
+  /// In es, this message translates to:
+  /// **'{view} · {date}'**
+  String progressPhotosSourceKicker(String view, String date);
+
   /// No description provided for @executionPrepareTitle.
   ///
   /// In es, this message translates to:

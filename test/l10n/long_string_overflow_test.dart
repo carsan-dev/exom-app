@@ -27,6 +27,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../core/widgets/android_nonlinear_text_scaler.dart';
 import '../features/challenges/challenges_test_support.dart';
 import '../features/profile/presentation/profile_scene.dart' as perfil;
+import '../features/progress_photos/progress_photos_redesign_scene.dart'
+    show pumpPhotosScene;
 import '../features/recap/presentation/pages/recap_detail_redesign_test.dart'
     show pumpDetail, recapDetailRich;
 import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
@@ -553,6 +555,47 @@ void main() {
             },
           );
         }
+      }
+    }
+  });
+
+  // L5-F1 «Fotos de progreso»: the list (two sessions, upload states,
+  // «Cargar más») at 320 dp with 1.3x and 1.6x and at 360 dp with 1.6x
+  // (Android non-linear scaler), in both languages, scrolled to the end with
+  // the pinned «Nueva sesión» footer (CC 3); 2.0x scrolling is in
+  // progress_photos_redesign_test.dart.
+  group('Fotos de progreso does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        testWidgets(
+          'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}',
+          (tester) async {
+            await pumpPhotosScene(
+              tester,
+              locale: locale,
+              width: width,
+              height: 640,
+              textScaler: AndroidNonlinearTextScaler(scale),
+            );
+            expect(tester.takeException(), isNull);
+            final scrollable = find
+                .descendant(
+                  of: find.byKey(const Key('progress-photos-scroll')),
+                  matching: find.byType(Scrollable),
+                )
+                .first;
+            for (var i = 0; i < 30; i++) {
+              await tester.drag(scrollable, const Offset(0, -250));
+              await tester.pump();
+              expect(tester.takeException(), isNull);
+            }
+            expect(
+              find.byKey(const Key('progress-photos-new-session')),
+              findsOneWidget,
+            );
+          },
+        );
       }
     }
   });

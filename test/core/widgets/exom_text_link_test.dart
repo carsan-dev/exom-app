@@ -94,6 +94,64 @@ void main() {
     });
   }
 
+  // L5-F1 (sketch `.x-link.f-ic`): optional leading icon and accessible
+  // label; without them the link is exactly as before.
+  testWidgets('default: no icon and the visible label is the spoken one', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pumpComponent(tester, _link());
+    expect(
+      find.descendant(
+        of: find.byType(ExomTextLink),
+        matching: find.byType(Icon),
+      ),
+      findsNothing,
+    );
+    expect(
+      tester.getSemantics(find.byType(ExomTextLink)).getSemanticsData().label,
+      'Ver todo',
+    );
+    handle.dispose();
+  });
+
+  for (final brightness in Brightness.values) {
+    final palette = themeFor(brightness).extension<ExomThemePalette>()!;
+    testWidgets('icon in the label colour, semantics label '
+        'overrides the visible one (${brightness.name})', (tester) async {
+      final handle = tester.ensureSemantics();
+      var taps = 0;
+      await pumpComponent(
+        tester,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ExomTextLink(
+            label: 'Añadir',
+            semanticsLabel: 'Añadir Espalda',
+            icon: ExomIcons.add,
+            onTap: () => taps++,
+          ),
+        ),
+        brightness: brightness,
+      );
+      final icon = tester.widget<Icon>(find.byIcon(ExomIcons.add));
+      expect(icon.color, palette.textPrimary);
+      final iconLeft = tester.getTopLeft(find.byIcon(ExomIcons.add)).dx;
+      final textLeft = tester.getTopLeft(find.text('Añadir')).dx;
+      expect(iconLeft, lessThan(textLeft));
+      final data = tester
+          .getSemantics(find.byType(ExomTextLink))
+          .getSemanticsData();
+      expect(data.label, 'Añadir Espalda');
+      expect(data.flagsCollection.isLink, isTrue);
+      final size = tester.getSize(find.byType(InkWell));
+      expect(size.height, greaterThanOrEqualTo(48));
+      await tester.tap(find.byIcon(ExomIcons.add));
+      expect(taps, 1);
+      handle.dispose();
+    });
+  }
+
   testWidgets('danger has no lime ink in the light theme', (tester) async {
     await pumpComponent(
       tester,
@@ -149,6 +207,44 @@ void main() {
             .getSemanticsData();
         expect(data.label, 'Ver técnica');
         handle.dispose();
+      });
+    }
+  });
+
+  // L5-F1 r2 (decisión recomendada tomada en autonomía, 2026-11-26): the icon
+  // and its gap scale with the label (accessibility). At 1.0x they keep the
+  // E5 18 px icon and 6 px gap, so no 1.0x golden changes.
+  group('icon scales with the text (L5-F1 r2)', () {
+    for (final (scale, iconSize, gap) in const [
+      (1.0, 18.0, 6.0),
+      (1.6, 28.8, 9.6),
+    ]) {
+      testWidgets('at ${scale}x the icon is $iconSize and the gap $gap', (
+        tester,
+      ) async {
+        await pumpComponent(
+          tester,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomTextLink(
+              label: 'Ver técnica',
+              icon: ExomIcons.play,
+              onTap: () {},
+            ),
+          ),
+          textScale: scale,
+        );
+        final icon = find.byIcon(ExomIcons.play);
+        expect(tester.getSize(icon).width, closeTo(iconSize, 0.01));
+        expect(tester.getSize(icon).height, closeTo(iconSize, 0.01));
+        final gapPx =
+            tester.getTopLeft(find.text('Ver técnica')).dx -
+            tester.getTopRight(icon).dx;
+        expect(gapPx, closeTo(gap, 0.01));
+        expect(
+          tester.getSize(find.byType(InkWell)).height,
+          greaterThanOrEqualTo(48),
+        );
       });
     }
   });

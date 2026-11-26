@@ -3351,6 +3351,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get progressPhotosDiscardConfirm => 'Descartar';
 
   @override
+  String get progressPhotosHeadlineFirst => 'Mira atrás.';
+
+  @override
+  String get progressPhotosHeadlineSecond => 'Sigue adelante.';
+
+  @override
+  String progressPhotosLastSession(String date) {
+    return 'Última sesión: $date';
+  }
+
+  @override
+  String get progressPhotosEmptyFirst => 'Sin fotos.';
+
+  @override
+  String get progressPhotosEmptySecond => 'Todavía.';
+
+  @override
+  String progressPhotosRetryView(String view) {
+    return 'Reintentar foto $view';
+  }
+
+  @override
+  String progressPhotosDiscardView(String view) {
+    return 'Descartar foto $view';
+  }
+
+  @override
+  String progressPhotosSourceKicker(String view, String date) {
+    return '$view · $date';
+  }
+
+  @override
   String get executionPrepareTitle => 'Prepárate';
 
   @override

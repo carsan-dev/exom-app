@@ -850,6 +850,113 @@ void main() {
     }
   });
 
+  // L5-E3c (CC 3): the circuit's last-round reminder band (on) and its
+  // minimal line (off), and the shared video sheet in both states (source;
+  // video chosen with a comment), with long names, at 320 dp with 1.3x and
+  // 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end. 2.0x: active_circuit_l5_e3c_test.dart.
+  group('Última ronda y vídeo del circuito does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    final exercises = [
+      circuitExercise(
+        'a',
+        'Press militar con mancuernas sentado en banco inclinado',
+        targetRir: 2,
+      ),
+      circuitExercise('b', 'Zancada alterna con salto y giro'),
+    ];
+    Future<void> frames(WidgetTester tester, [int count = 4]) async {
+      for (var i = 0; i < count; i++) {
+        await tester.pump(const Duration(milliseconds: 150));
+      }
+    }
+
+    Future<void> sweep(WidgetTester tester) async {
+      expect(tester.takeException(), isNull);
+      for (final scrollable in find.byType(Scrollable).evaluate().toList()) {
+        if (!scrollable.mounted) continue;
+        for (var i = 0; i < 8; i++) {
+          await tester.drag(
+            find.byWidget(scrollable.widget),
+            const Offset(0, -300),
+            warnIfMissed: false,
+          );
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final scene in const [
+          'band on',
+          'band off',
+          'video sheet',
+          'video chosen',
+        ]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $scene',
+            (tester) async {
+              mockVideoPicker(tester, (_) async => '/tmp/ronda.mp4');
+              final sheet = scene.startsWith('video');
+              await pumpCircuit(
+                tester,
+                exercises: exercises,
+                rounds: 1,
+                requiresLastSetVideo: true,
+                lastSetVideoReminder: scene != 'band off',
+                width: width,
+                height: 640,
+                textScaler: AndroidNonlinearTextScaler(scale),
+                locale: locale,
+                blockName: 'Circuito metabólico de tren inferior y core',
+              );
+              await frames(tester);
+              if (!sheet) {
+                expect(
+                  find.byKey(
+                    Key(
+                      scene == 'band on'
+                          ? 'last-set-video-reminder'
+                          : 'last-set-video-reminder-off',
+                    ),
+                  ),
+                  findsOneWidget,
+                );
+              }
+              if (sheet) {
+                await tester.tap(
+                  find.byKey(const ValueKey('circuit-executing-footer')),
+                );
+                await frames(tester, 3);
+                await tester.ensureVisible(
+                  find.byKey(const Key('set-sheet-save')),
+                );
+                await tester.tap(find.byKey(const Key('set-sheet-save')));
+                await frames(tester, 6);
+                expect(
+                  find.byKey(const Key('last-set-video-sheet')),
+                  findsOneWidget,
+                );
+              }
+              if (scene == 'video chosen') {
+                await tester.tap(find.byKey(const Key('last-set-video-gallery')));
+                await frames(tester);
+                await tester.enterText(
+                  find.byKey(const Key('last-set-video-comment')),
+                  'Me ha costado la última repetición, la espalda se arquea',
+                );
+                await frames(tester);
+              }
+              await sweep(tester);
+            },
+          );
+        }
+      }
+    }
+  });
+
   group('MetricsFormPage does not overflow', () {
     // Real DM Sans face: the default test font (Ahem) fakes widths.
     setUpAll(() async {

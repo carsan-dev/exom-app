@@ -91,6 +91,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/trainings/presentation/widgets/execution_timer.dart',
   // L5-E3b · Última serie y vídeo (the page is already swept above).
   'lib/features/trainings/presentation/widgets/last_set_video_sheet.dart',
+  // L5-E3c · the band shared with the circuit (extracted from the E3b page).
+  'lib/features/trainings/presentation/widgets/last_set_video_reminder.dart',
   // L5-B2 · Retos.
   'lib/features/challenges/presentation/pages/challenges_page.dart',
   'lib/features/challenges/presentation/widgets/achievement_tiles.dart',

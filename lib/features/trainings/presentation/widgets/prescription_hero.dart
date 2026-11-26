@@ -1,14 +1,18 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-// Same rules and visuals as the private `_PrescriptionTarget` and
-// `_PrescriptionHero` of `active_exercise_page.dart` (L3 unit 3), made public
-// for the active circuit (L3 unit 4). The exercise page keeps its private
-// copies because its file was outside the circuit unit's scope; a later
-// change can point it here (deviation DV-L3-U4-2).
+// Same rules as the private `_PrescriptionTarget` of
+// `active_exercise_page.dart` (L3 unit 3), made public for the active circuit
+// (L3 unit 4). Since L5-E3a the exercise page paints its hero with
+// [PrescriptionHero] and [PrescriptionHeroSkin.l5]; it keeps its private
+// target because that one also reads the saved total of a timed set
+// (deviation DV-L3-U4-2, narrowed).
 
 /// Target of a prescription for the hero numeral, the round list and the
 /// sheet prefill: a fixed value or a range, in reps or in time.
@@ -113,8 +117,22 @@ class PrescriptionTarget {
   }
 }
 
+/// Look of a [PrescriptionHero].
+enum PrescriptionHeroSkin {
+  /// L3: the target in the text colour up to 96 px, the unit in capitals and
+  /// the RIR in body text beside it (the active circuit until it is
+  /// repainted).
+  l3,
+
+  /// L5 (`e-migradas.html`, «Ejercicio activo»; `.x-hero-140`): the target
+  /// at 140 in the data colour with its unit small beside the figure
+  /// (`.x-u`), and at its side the RIR in the display face (`.x-hero-d`)
+  /// over «objetivo de la serie» (`.x-hero-f`).
+  l5,
+}
+
 /// Hero of an executing state (sketch «A · Ejercicio activo»): the target in
-/// the display face up to 96 px, its unit and the target RIR beside it. Free
+/// the display face, its unit and the target RIR beside it ([skin]). Free
 /// text prescriptions are shown as they are.
 class PrescriptionHero extends StatelessWidget {
   const PrescriptionHero({
@@ -123,6 +141,7 @@ class PrescriptionHero extends StatelessWidget {
     required this.targetRir,
     required this.prescription,
     this.numeralKey,
+    this.skin = PrescriptionHeroSkin.l3,
   });
 
   final PrescriptionTarget target;
@@ -132,11 +151,17 @@ class PrescriptionHero extends StatelessWidget {
   /// Key of the numeral text (tests).
   final Key? numeralKey;
 
+  /// Look of the hero; the L3 one by default.
+  final PrescriptionHeroSkin skin;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
     final numeral = target.numeral;
+    if (skin == PrescriptionHeroSkin.l5 && numeral != null) {
+      return _l5(context, l10n, numeral);
+    }
     final display = TextStyle(
       fontFamily: AppTheme.displayFontFamily,
       fontWeight: FontWeight.w800,
@@ -199,6 +224,77 @@ class PrescriptionHero extends StatelessWidget {
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _l5(BuildContext context, AppLocalizations l10n, String numeral) {
+    final palette = context.exomPalette;
+    final fontSize = ExomType.hero140.fontSize!;
+    final spoken = [
+      ?target.shortLabel(l10n),
+      if (targetRir != null) l10n.activeExerciseRir(targetRir!),
+    ].join(' · ');
+    return Semantics(
+      container: true,
+      label: l10n.activeExerciseTargetA11y(spoken),
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: 18,
+        runSpacing: 10,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.bottomStart,
+            child: Padding(
+              // Room for the ink of round digits below the tight line box
+              // (same allowance as ExomNumeral).
+              padding: EdgeInsets.only(bottom: fontSize * 0.025),
+              child: Text.rich(
+                TextSpan(
+                  children: exomFigureSpans(
+                    value: numeral,
+                    unit: target.unitLabel(l10n),
+                    fontSize: fontSize,
+                  ),
+                ),
+                key: numeralKey,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                style: ExomType.hero140.copyWith(color: palette.data),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: ExomSpacing.xs),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (targetRir != null) ...[
+                  Text(
+                    l10n.activeExerciseRir(targetRir!).toUpperCase(),
+                    style: ExomType.headline2Section.copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                Text(
+                  l10n.activeExerciseTargetCaption,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 14,
+                    height: 1.4,
+                    color: palette.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),

@@ -22,6 +22,7 @@ import 'package:exom_app/features/trainings/presentation/pages/active_circuit_pa
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -294,6 +295,8 @@ Future<CircuitHarness> pumpCircuit(
   String blockName = 'Circuito metabólico',
   bool Function(MarkExerciseCompleted event)? failWhen,
   Map<String, String> queueStatuses = const {},
+  // L5-E3b (E4-O4): with [themeMode] the app follows it between both themes.
+  ValueListenable<ThemeMode>? themeMode,
 }) async {
   await sl.reset();
   final storage = CircuitStorage(restored: restored, unitSystem: unitSystem);
@@ -354,12 +357,20 @@ Future<CircuitHarness> pumpCircuit(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(() => GlassDecoration.brightness = Brightness.dark);
+  final fixedMode = ValueNotifier(ThemeMode.system);
+  addTearDown(fixedMode.dispose);
   await tester.pumpWidget(
     BlocProvider<AppPreferencesCubit>.value(
       value: preferences,
-      child: MaterialApp.router(
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeMode ?? fixedMode,
+        builder: (context, mode, _) => MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        theme: circuitTheme(brightness),
+        theme: themeMode == null
+            ? circuitTheme(brightness)
+            : circuitTheme(Brightness.light),
+        darkTheme: themeMode == null ? null : circuitTheme(Brightness.dark),
+        themeMode: mode,
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -373,6 +384,7 @@ Future<CircuitHarness> pumpCircuit(
             child: child!,
           );
         },
+      ),
       ),
     ),
   );

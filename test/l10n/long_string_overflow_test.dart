@@ -6,6 +6,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -13,7 +14,12 @@ import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart'
-    show SetPerformance;
+    show
+        ExerciseEntity,
+        ExerciseMeasureType,
+        SetPerformance,
+        TrainingExerciseEntity;
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:exom_app/injection_container.dart';
@@ -26,6 +32,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import '../core/widgets/android_nonlinear_text_scaler.dart';
 import '../features/challenges/challenges_test_support.dart';
+import '../features/trainings/presentation/pages/last_set_video_test_support.dart';
 import '../features/profile/presentation/profile_scene.dart' as perfil;
 import '../features/progress_photos/progress_photos_redesign_scene.dart'
     show pumpPhotosScene;
@@ -35,6 +42,8 @@ import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
     show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
+import '../features/trainings/presentation/pages/active_exercise_redesign_test.dart'
+    show activeExerciseDraftKey, activeExerciseTrainingId, pumpActiveExercise;
 import '../features/trainings/presentation/pages/circuit_test_harness.dart'
     show circuitExercise, preL3State, pumpCircuit;
 import '../features/trainings/presentation/pages/training_completion_sheet_test.dart'
@@ -559,6 +568,101 @@ void main() {
     }
   });
 
+  // L5-E3a «Ejercicio activo y descanso» (v2): executing (headline, target,
+  // load columns, chips, «Ver técnica»), the rest between sets (countdown and
+  // «Siguiente» band) and the rest after the last set (new «Después, <next
+  // exercise>.» headline and band), with long exercise names, at 320 dp with
+  // 1.3x and 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end (CC 3); 2.0x scrolling is in
+  // active_exercise_l5_e3a_test.dart.
+  group('Ejercicio activo does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    const current = TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 3,
+      repsOrDuration: '8',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 8,
+      targetRir: 2,
+      restSeconds: 90,
+      requestSetTracking: true,
+      exercise: ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla búlgara con mancuernas y pausa isométrica abajo',
+        muscleGroups: [],
+        techniqueText: 'Pie trasero apoyado en el banco.',
+      ),
+    );
+    const next = TrainingExerciseEntity(
+      id: 'te-0',
+      order: 0,
+      sets: 4,
+      repsOrDuration: '10-12',
+      measureType: ExerciseMeasureType.reps,
+      targetValueMin: 10,
+      targetValueMax: 12,
+      restSeconds: 60,
+      exercise: ExerciseEntity(
+        id: 'ex-0',
+        name: 'Peso muerto rumano a una pierna con mancuerna contralateral',
+        muscleGroups: [],
+      ),
+    );
+    const done = [
+      {'set_number': 1, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      {'set_number': 2, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      {'set_number': 3, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+    ];
+    ActiveWorkoutHiveModel seed(String scene) => ActiveWorkoutHiveModel(
+      trainingId: activeExerciseTrainingId,
+      exerciseId: activeExerciseDraftKey,
+      currentSet: scene == 'final rest' ? 3 : 2,
+      completedSets: scene == 'final rest' ? 3 : 1,
+      restEndsAt: scene == 'executing'
+          ? null
+          : DateTime.now().add(const Duration(seconds: 90)),
+      lastWeightKg: 62.5,
+      completedSetData: scene == 'final rest' ? done : done.sublist(0, 1),
+    );
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final scene in const ['executing', 'rest', 'final rest']) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $scene',
+            (tester) async {
+              await pumpActiveExercise(
+                tester,
+                initialWeightKg: 62.5,
+                previous: const [
+                  SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+                  SetPerformance(setNumber: 2, reps: 8, weightKg: 60, rir: 2),
+                ],
+                seed: seed(scene),
+                exercise: current,
+                trainingExercises: const [next, current],
+                width: width,
+                height: 640,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              for (var i = 0; i < 4; i++) {
+                await tester.pump(const Duration(milliseconds: 150));
+              }
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 10; i++) {
+                await tester.drag(scrollable, const Offset(0, -300));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
+      }
+    }
+  });
+
   // L5-F1 «Fotos de progreso»: the list (two sessions, upload states,
   // «Cargar más») at 320 dp with 1.3x and 1.6x and at 360 dp with 1.6x
   // (Android non-linear scaler), in both languages, scrolled to the end with
@@ -596,6 +700,152 @@ void main() {
             );
           },
         );
+      }
+    }
+  });
+
+  // L5-E3b (CC 3): the last-set reminder band (on) and its minimal line
+  // (off) on the set before the last one, and the video sheet in both states
+  // (source; video chosen with a comment), with a long exercise name, at
+  // 320 dp with 1.3x and 1.6x and at 360 dp with 1.6x (Android non-linear
+  // scaler), in both languages, scrolled to the end.
+  group('Última serie y vídeo does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    const current = TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 3,
+      repsOrDuration: '8',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 8,
+      targetRir: 2,
+      restSeconds: 90,
+      requestSetTracking: true,
+      exercise: ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla búlgara con mancuernas y pausa isométrica abajo',
+        muscleGroups: [],
+      ),
+    );
+    ActiveWorkoutHiveModel seed(int set) => ActiveWorkoutHiveModel(
+      trainingId: activeExerciseTrainingId,
+      exerciseId: activeExerciseDraftKey,
+      currentSet: set,
+      completedSets: set - 1,
+      lastWeightKg: 62.5,
+      completedSetData: [
+        for (var n = 1; n < set; n++)
+          {'set_number': n, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      ],
+    );
+    Future<void> frames(WidgetTester tester, [int count = 4]) async {
+      for (var i = 0; i < count; i++) {
+        await tester.pump(const Duration(milliseconds: 150));
+      }
+    }
+
+    Future<void> sweep(WidgetTester tester) async {
+      expect(tester.takeException(), isNull);
+      for (final scrollable in find.byType(Scrollable).evaluate().toList()) {
+        if (!scrollable.mounted) continue;
+        for (var i = 0; i < 8; i++) {
+          await tester.drag(
+            find.byWidget(scrollable.widget),
+            const Offset(0, -300),
+            warnIfMissed: false,
+          );
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final scene in const [
+          'band on',
+          'band last',
+          'band off',
+          'video sheet',
+          'video chosen',
+        ]) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $scene',
+            (tester) async {
+              mockVideoPicker(tester, (_) async => '/tmp/serie.mp4');
+              final sheet = scene.startsWith('video');
+              await pumpActiveExercise(
+                tester,
+                initialWeightKg: 62.5,
+                previous: const [
+                  SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+                  SetPerformance(setNumber: 2, reps: 8, weightKg: 60, rir: 2),
+                  SetPerformance(setNumber: 3, reps: 8, weightKg: 60, rir: 2),
+                ],
+                // «band last»: the band on the last set itself (r3, D1).
+                seed: seed(sheet || scene == 'band last' ? 3 : 2),
+                exercise: current,
+                trainingExercises: const [current],
+                requiresLastSetVideo: true,
+                lastSetVideoReminder: scene != 'band off',
+                registerExtra: () =>
+                    sl.registerSingleton<FeedbackUploadQueueService>(
+                      RecordingVideoQueue(),
+                    ),
+                width: width,
+                height: 640,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              await frames(tester);
+              if (!sheet) {
+                expect(
+                  find.byKey(
+                    Key(
+                      scene != 'band off'
+                          ? 'last-set-video-reminder'
+                          : 'last-set-video-reminder-off',
+                    ),
+                  ),
+                  findsOneWidget,
+                );
+              }
+              if (scene == 'band last') {
+                final band = find.byKey(const Key('last-set-video-reminder'));
+                final l10n = AppLocalizations.of(tester.element(band));
+                expect(
+                  find.descendant(
+                    of: band,
+                    matching: find.text(l10n.currentLastSetMessage),
+                  ),
+                  findsOneWidget,
+                );
+              }
+              if (sheet) {
+                await tester.tap(
+                  find.byKey(const ValueKey('footer-executing')),
+                );
+                await frames(tester, 3);
+                await tester.tap(find.byKey(const Key('set-sheet-save')));
+                await frames(tester, 6);
+                expect(
+                  find.byKey(const Key('last-set-video-sheet')),
+                  findsOneWidget,
+                );
+              }
+              if (scene == 'video chosen') {
+                await tester.tap(find.byKey(const Key('last-set-video-gallery')));
+                await frames(tester);
+                await tester.enterText(
+                  find.byKey(const Key('last-set-video-comment')),
+                  'Me ha costado la última repetición, la rodilla se va hacia dentro',
+                );
+                await frames(tester);
+              }
+              await sweep(tester);
+            },
+          );
+        }
       }
     }
   });

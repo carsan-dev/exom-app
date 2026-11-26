@@ -5294,6 +5294,12 @@ abstract class AppLocalizations {
   /// **'La siguiente es la última serie. Necesitarás adjuntar su vídeo para completar el ejercicio.'**
   String get upcomingLastSetMessage;
 
+  /// No description provided for @currentLastSetMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta es la última serie. Al guardarla podrás grabar el vídeo.'**
+  String get currentLastSetMessage;
+
   /// No description provided for @understood.
   ///
   /// In es, this message translates to:
@@ -7001,6 +7007,96 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descanso terminado'**
   String get activeExerciseRestFinishedA11y;
+
+  /// No description provided for @activeExerciseSetOfLine.
+  ///
+  /// In es, this message translates to:
+  /// **'de {total}.'**
+  String activeExerciseSetOfLine(int total);
+
+  /// No description provided for @activeExerciseTargetCaption.
+  ///
+  /// In es, this message translates to:
+  /// **'objetivo de la serie'**
+  String get activeExerciseTargetCaption;
+
+  /// No description provided for @activeExerciseYourWeightLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu peso'**
+  String get activeExerciseYourWeightLabel;
+
+  /// No description provided for @activeExerciseLastTimeA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Última vez: {performance}'**
+  String activeExerciseLastTimeA11y(String performance);
+
+  /// No description provided for @activeExerciseRestHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso.'**
+  String get activeExerciseRestHeadline;
+
+  /// No description provided for @activeExerciseRestThenSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Después, serie {setNumber}.'**
+  String activeExerciseRestThenSet(int setNumber);
+
+  /// No description provided for @activeExerciseRestThenExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Después, {exercise}.'**
+  String activeExerciseRestThenExercise(String exercise);
+
+  /// No description provided for @activeExerciseRestExerciseDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio completado.'**
+  String get activeExerciseRestExerciseDone;
+
+  /// No description provided for @activeExerciseNextLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get activeExerciseNextLabel;
+
+  /// No description provided for @activeExerciseRestNextWeightLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'tu peso'**
+  String get activeExerciseRestNextWeightLabel;
+
+  /// No description provided for @setSheetExerciseKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercise} · registrar'**
+  String setSheetExerciseKicker(String exercise);
+
+  /// No description provided for @lastSetVideoRemindMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordármelo'**
+  String get lastSetVideoRemindMe;
+
+  /// No description provided for @lastSetVideoSheetKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercise} · serie {setNumber}'**
+  String lastSetVideoSheetKicker(String exercise, int setNumber);
+
+  /// No description provided for @lastSetVideoChosenSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber} · {performance}'**
+  String lastSetVideoChosenSet(int setNumber, String performance);
+
+  /// No description provided for @changeVideoA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar vídeo'**
+  String get changeVideoA11y;
 
   /// No description provided for @setSheetObjective.
   ///

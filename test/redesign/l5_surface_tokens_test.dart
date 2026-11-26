@@ -79,6 +79,18 @@ const List<String> kRepaintedFiles = <String>[
   // vocabulary, so the whole file is swept.
   'lib/features/trainings/presentation/pages/active_circuit_page.dart',
   'lib/features/trainings/presentation/widgets/circuit_round_list.dart',
+  // L5-E3a · Ejercicio activo y descanso (piel). The last-set video flow of
+  // the page (E3b) carries no legacy vocabulary, so the whole file is swept.
+  'lib/features/trainings/presentation/pages/active_exercise_page.dart',
+  'lib/features/trainings/presentation/widgets/prescription_hero.dart',
+  'lib/features/trainings/presentation/widgets/active_exercise_set_chips.dart',
+  'lib/features/trainings/presentation/widgets/exercise_sync_state.dart',
+  'lib/features/trainings/presentation/widgets/rest_countdown.dart',
+  'lib/features/trainings/presentation/widgets/rest_timer_inline.dart',
+  'lib/features/trainings/presentation/widgets/rest_timer_overlay.dart',
+  'lib/features/trainings/presentation/widgets/execution_timer.dart',
+  // L5-E3b · Última serie y vídeo (the page is already swept above).
+  'lib/features/trainings/presentation/widgets/last_set_video_sheet.dart',
   // L5-B2 · Retos.
   'lib/features/challenges/presentation/pages/challenges_page.dart',
   'lib/features/challenges/presentation/widgets/achievement_tiles.dart',

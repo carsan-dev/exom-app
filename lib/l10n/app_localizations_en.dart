@@ -3013,6 +3013,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The next set is the final one. You will need to attach its video to complete the exercise.';
 
   @override
+  String get currentLastSetMessage =>
+      'This is your last set. Once you save it, you can record the video.';
+
+  @override
   String get understood => 'Got it';
 
   @override
@@ -4193,6 +4197,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activeExerciseRestFinishedA11y => 'Rest finished';
+
+  @override
+  String activeExerciseSetOfLine(int total) {
+    return 'of $total.';
+  }
+
+  @override
+  String get activeExerciseTargetCaption => 'set target';
+
+  @override
+  String get activeExerciseYourWeightLabel => 'Your weight';
+
+  @override
+  String activeExerciseLastTimeA11y(String performance) {
+    return 'Last time: $performance';
+  }
+
+  @override
+  String get activeExerciseRestHeadline => 'Rest.';
+
+  @override
+  String activeExerciseRestThenSet(int setNumber) {
+    return 'Then, set $setNumber.';
+  }
+
+  @override
+  String activeExerciseRestThenExercise(String exercise) {
+    return 'Then, $exercise.';
+  }
+
+  @override
+  String get activeExerciseRestExerciseDone => 'Exercise completed.';
+
+  @override
+  String get activeExerciseNextLabel => 'Next';
+
+  @override
+  String get activeExerciseRestNextWeightLabel => 'your weight';
+
+  @override
+  String setSheetExerciseKicker(String exercise) {
+    return '$exercise · log';
+  }
+
+  @override
+  String get lastSetVideoRemindMe => 'Remind me';
+
+  @override
+  String lastSetVideoSheetKicker(String exercise, int setNumber) {
+    return '$exercise · set $setNumber';
+  }
+
+  @override
+  String lastSetVideoChosenSet(int setNumber, String performance) {
+    return 'Set $setNumber · $performance';
+  }
+
+  @override
+  String get changeVideoA11y => 'Change video';
 
   @override
   String setSheetObjective(String objective) {

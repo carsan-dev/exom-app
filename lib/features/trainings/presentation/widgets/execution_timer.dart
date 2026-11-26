@@ -1,5 +1,7 @@
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:async';
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'execution_start_countdown.dart';
 import 'package:flutter/material.dart';
@@ -220,15 +222,30 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
     final phase = config.phase(total, state.elapsedAt(_now));
     final done = phase.totalRemainingMilliseconds == 0;
     final running = state.timedStartedAt != null && !done;
+    final palette = context.exomPalette;
+    final body = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 16,
+      height: 1.4,
+      color: palette.textPrimary,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final secondary = body.copyWith(
+      fontSize: 14,
+      color: palette.textSecondary,
+    );
+    // L5-E3a: the timer is a secondary action of the executing state; the
+    // only lime action stays «Registrar serie» in the footer (principle 15).
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             done ? l10n.timerFinished : l10n.timerNowAction(phase.action),
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: body.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
           ),
+          const SizedBox(height: 4),
           Text(
             done
                 ? l10n.timerLogSetWhenDone
@@ -236,8 +253,10 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
                     clock(phase.remainingMilliseconds),
                     clock(phase.totalRemainingMilliseconds),
                   ),
+            style: body,
           ),
-          if (phase.nextAction != null) Text(l10n.timerNextAction(phase.nextAction!)),
+          if (phase.nextAction != null)
+            Text(l10n.timerNextAction(phase.nextAction!), style: secondary),
           if (!done)
             Text(
               running
@@ -245,28 +264,25 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
                   : state.timedElapsedMs > 0
                   ? l10n.timerPaused
                   : l10n.timerReady,
+              style: secondary,
             ),
-          Wrap(
-            spacing: 8,
-            children: [
-              if (!done)
-                FilledButton(
-                  onPressed: _toggle,
-                  child: Text(
-                    running
-                        ? l10n.timerPause
-                        : state.timedElapsedMs > 0
-                        ? l10n.timerResume
-                        : l10n.timerStart,
-                  ),
-                ),
-              TextButton(
-                onPressed: () => context.read<ActiveExerciseBloc>().add(
-                  const ResetExecutionTimer(),
-                ),
-                child: Text(l10n.timerReset),
+          const SizedBox(height: 12),
+          if (!done)
+            ExomSecondaryButton(
+              label: running
+                  ? l10n.timerPause
+                  : state.timedElapsedMs > 0
+                  ? l10n.timerResume
+                  : l10n.timerStart,
+              onPressed: _toggle,
+            ),
+          Center(
+            child: ExomQuietButton(
+              label: l10n.timerReset,
+              onPressed: () => context.read<ActiveExerciseBloc>().add(
+                const ResetExecutionTimer(),
               ),
-            ],
+            ),
           ),
         ],
       ),

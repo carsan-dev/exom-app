@@ -14,11 +14,17 @@ import 'package:exom_app/core/formatters/weight_input.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -29,6 +35,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_value_text.dart';
@@ -664,6 +671,34 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     return l10n.activeExercisePosition(index + 1, exercises.length);
   }
 
+  /// What comes after this exercise, for the rest after its last set: the
+  /// first other exercise of the training, in list order, that is not
+  /// completed yet in this execution (what the training detail offers next),
+  /// read from the detail state that opened this page, as [_positionLabel].
+  /// Null when every
+  /// other exercise is done or the detail is not the loaded state.
+  TrainingExerciseEntity? _nextExercise() {
+    final trainingState = widget.args.trainingBloc.state;
+    if (trainingState is! TrainingDetailLoaded ||
+        trainingState.training.id != widget.trainingId) {
+      return null;
+    }
+    final currentId = widget.args.trainingExercise.id;
+    // The progress of this execution, as the detail paints it; a missing
+    // session means nothing done. The day aggregate (every execution) would
+    // skip exercises still pending after a «Nueva ejecución».
+    final done =
+        trainingState.sessionProgress[widget.args.sessionId]?.ids ??
+        const <String>{};
+    for (final exercise in trainingState.training.exercises) {
+      if (exercise.id == currentId) continue;
+      if (!done.contains(exercise.id)) {
+        return exercise;
+      }
+    }
+    return null;
+  }
+
   _PrescriptionTarget _target(ActiveExerciseState state) =>
       _PrescriptionTarget.of(
         widget.args.trainingExercise,
@@ -752,7 +787,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                       ),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
                           child: _body(
                             context,
                             l10n,
@@ -861,25 +896,17 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     WeightText weightText,
   ) {
     final palette = context.exomPalette;
-    final sectionStyle = TextStyle(
-      fontFamily: AppTheme.displayFontFamily,
-      fontSize: 22,
-      fontWeight: FontWeight.w800,
-      height: 1.0,
-      letterSpacing: -0.44,
-      color: palette.textPrimary,
-    );
-    final bigStyle = TextStyle(
-      fontFamily: AppTheme.bodyFontFamily,
-      fontSize: 18,
-      height: 1.4,
-      color: palette.textPrimary,
-    );
     final mutedStyle = TextStyle(
       fontFamily: AppTheme.bodyFontFamily,
       fontSize: 14,
       height: 1.4,
       color: palette.textSecondary,
+    );
+    // Rows pad themselves 20 from the edges; the load columns and the band of
+    // the next set run edge to edge (`.pad`, `.x-cols`, `.x-band`).
+    Widget pad(Widget child) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: child,
     );
 
     final weightKg = _weightForSet(state);
@@ -910,45 +937,69 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
             ),
           )
         : null;
-    final sets = <Widget>[
-      const SizedBox(height: 28),
-      chips,
-      if (savedStatus != null) ...[const SizedBox(height: 10), savedStatus],
+    final status = <Widget>[
+      if (savedStatus != null) ...[
+        const SizedBox(height: 8),
+        pad(savedStatus),
+      ],
     ];
 
     if (state.isResting) {
       final restEndsAt = state.restEndsAt!;
-      final next = state.isFinalResting
-          ? l10n.exerciseCompleted
-          : targetLabel == null
+      final nextSet = state.isFinalResting ? null : state.currentSet;
+      // After the last set the rest leads to the next exercise of the
+      // training (a circuit is named by its block); after the last exercise,
+      // to nothing, without a band.
+      final nextExercise = nextSet == null ? _nextExercise() : null;
+      final nextExerciseName = nextExercise == null
           ? null
-          : weightKg == null
-          ? l10n.activeExerciseRestNext(state.currentSet, targetLabel)
-          : l10n.activeExerciseRestNextWithWeight(
-              state.currentSet,
-              targetLabel,
-              weightText(weightKg),
-            );
+          : nextExercise.blockId != null
+          ? nextExercise.blockName ?? 'Circuito'
+          : nextExercise.exercise.name;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            header: true,
-            child: Text(l10n.restTimerTitle.toUpperCase(), style: sectionStyle),
+          pad(
+            ExomTwoLineHeadline(
+              first: l10n.activeExerciseRestHeadline,
+              second: nextSet != null
+                  ? l10n.activeExerciseRestThenSet(nextSet)
+                  : nextExerciseName != null
+                  ? l10n.activeExerciseRestThenExercise(nextExerciseName)
+                  : l10n.activeExerciseRestExerciseDone,
+            ),
           ),
           const SizedBox(height: 16),
-          RestCountdown(
-            key: ValueKey(
-              'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+          pad(
+            RestCountdown(
+              key: ValueKey(
+                'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+              ),
+              restEndsAt: restEndsAt,
+              totalSeconds: state.restSeconds,
             ),
-            restEndsAt: restEndsAt,
-            totalSeconds: state.restSeconds,
           ),
-          if (next != null) ...[
-            const SizedBox(height: 16),
-            Text(next, style: bigStyle),
+          if (nextSet != null && targetLabel != null) ...[
+            const SizedBox(height: 24),
+            _NextSetBand(
+              setNumber: nextSet,
+              targetLabel: targetLabel,
+              weight: weightKg == null ? null : weightText(weightKg),
+            ),
           ],
-          ...sets,
+          if (nextExercise != null && nextExerciseName != null) ...[
+            const SizedBox(height: 24),
+            _NextExerciseBand(
+              name: nextExerciseName,
+              // A circuit tells its members' prescriptions inside it.
+              target: nextExercise.blockId != null
+                  ? null
+                  : formatExercisePrescription(nextExercise),
+            ),
+          ],
+          const SizedBox(height: 24),
+          pad(chips),
+          ...status,
         ],
       );
     }
@@ -957,14 +1008,18 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            header: true,
-            child: Text(
-              l10n.exerciseCompleted.toUpperCase(),
-              style: sectionStyle,
+          pad(
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.exerciseCompleted.toUpperCase(),
+                style: ExomType.section.copyWith(color: palette.textPrimary),
+              ),
             ),
           ),
-          ...sets,
+          const SizedBox(height: 24),
+          pad(chips),
+          ...status,
         ],
       );
     }
@@ -973,9 +1028,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       widget.args.previousPerformances,
       state.currentSet,
     );
-    final previousLabel = previous == null
-        ? null
-        : setValueLabel(l10n, previous, weightText, withRir: true);
     final targetRir = widget.args.trainingExercise.targetRir;
     final sections = _techniqueSections(l10n);
     final hasTechnique = _hasVideo || sections.isNotEmpty;
@@ -983,68 +1035,309 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: Text(
-            l10n
-                .activeExerciseSetOf(state.currentSet, state.totalSets)
-                .toUpperCase(),
-            style: sectionStyle,
+        pad(
+          ExomTwoLineHeadline(
+            first: l10n.setPerformanceTitle(state.currentSet),
+            second: l10n.activeExerciseSetOfLine(state.totalSets),
+            semanticsLabel: l10n.activeExerciseSetOf(
+              state.currentSet,
+              state.totalSets,
+            ),
           ),
         ),
         const SizedBox(height: 16),
-        _PrescriptionHero(
-          target: target,
-          targetRir: targetRir,
-          prescription: formatExercisePrescription(
-            widget.args.trainingExercise,
-            savedTotalSeconds: state.timedTotalSeconds,
-            savedTimedPrescription: state.timedPrescription,
+        pad(
+          PrescriptionHero(
+            target: PrescriptionTarget(
+              timeUnit: target.timeUnit,
+              value: target.value,
+              max: target.max,
+              seconds: target.seconds,
+            ),
+            targetRir: targetRir,
+            prescription: formatExercisePrescription(
+              widget.args.trainingExercise,
+              savedTotalSeconds: state.timedTotalSeconds,
+              savedTimedPrescription: state.timedPrescription,
+            ),
+            numeralKey: const Key('active-exercise-target'),
+            skin: PrescriptionHeroSkin.l5,
           ),
         ),
-        if (weightKg != null) ...[
-          const SizedBox(height: 24),
-          Text(
-            l10n.activeExerciseYourWeight(weightText(weightKg)),
-            key: const Key('active-exercise-your-weight'),
-            style: bigStyle,
+        const SizedBox(height: 24),
+        _loadColumns(
+          l10n: l10n,
+          weightKg: weightKg,
+          previous: previous,
+          weightText: weightText,
+        ),
+        if (state.isExecuting && state.timedTotalSeconds != null)
+          pad(
+            ExecutionTimer(
+              state: state,
+              coordinator: sl<ExecutionTimerCoordinator>(),
+              isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                _ownerSession,
+                _timerSessionRevision,
+              ),
+              runKey: (widget.trainingId, widget.exerciseId,
+                  widget.args.assignmentDate, widget.args.sessionId),
+            ),
+          ),
+        const SizedBox(height: 24),
+        pad(
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomKicker(l10n.sets),
+          ),
+        ),
+        const SizedBox(height: 8),
+        pad(chips),
+        ...status,
+        if (state.restSeconds > 0) ...[
+          const SizedBox(height: 8),
+          pad(
+            Text(
+              l10n.activeExerciseRestAfter(state.restSeconds),
+              style: mutedStyle,
+            ),
           ),
         ],
-        SizedBox(height: weightKg == null ? 24 : 4),
-        Text(
-          previousLabel == null || previousLabel.isEmpty
-              ? l10n.activeExerciseNoPrevious
-              : l10n.setPerformancePrevious(previousLabel),
-          key: const Key('active-exercise-previous'),
-          style: mutedStyle,
-        ),
-        if (state.restSeconds > 0)
-          Text(
-            l10n.activeExerciseRestAfter(state.restSeconds),
-            style: mutedStyle,
-          ),
-        if (state.isExecuting && state.timedTotalSeconds != null)
-          ExecutionTimer(
-            state: state,
-            coordinator: sl<ExecutionTimerCoordinator>(),
-            isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
-              _ownerSession,
-              _timerSessionRevision,
-            ),
-            runKey: (widget.trainingId, widget.exerciseId,
-                widget.args.assignmentDate, widget.args.sessionId),
-          ),
-        ...sets,
         if (hasTechnique) ...[
-          const SizedBox(height: 20),
-          ExomSecondaryButton(
-            key: const Key('active-exercise-technique'),
-            label: l10n.activeExerciseTechniqueButton,
-            icon: _hasVideo ? ExomIcons.play : null,
-            onPressed: () => _openTechnique(l10n),
+          const SizedBox(height: 8),
+          pad(
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomTextLink(
+                key: const Key('active-exercise-technique'),
+                label: l10n.activeExerciseTechniqueButton,
+                // Play with a video; a plain link with only texts (as the
+                // circuit, L5-E5).
+                icon: _hasVideo ? ExomIcons.play : null,
+                onTap: () => _openTechnique(l10n),
+              ),
+            ),
           ),
         ],
       ],
+    );
+  }
+}
+
+/// «Tu peso» and «Última vez» in two columns between hairlines (`.x-cols`,
+/// `e-load`, `e-ref`) with the shared [ExomFigureColumns] and its labels
+/// above, as the circuit (L5-E5): today's weight is the protagonist load at 64
+/// in the data colour; the last session's same set is a reference in the text
+/// colour at 56 with its reps and RIR below. Without today's weight only the
+/// reference column is shown; without a previous set it says so. The component
+/// stacks the columns when they do not fit.
+ExomFigureColumns _loadColumns({
+  required AppLocalizations l10n,
+  required double? weightKg,
+  required SetPerformance? previous,
+  required WeightText weightText,
+}) {
+  final kg = weightKg;
+  return ExomFigureColumns(
+    numbered: false,
+    labelsAbove: true,
+    items: [
+      if (kg != null)
+        ExomFigure(
+          itemKey: const Key('active-exercise-your-weight'),
+          value: weightText.number(kg),
+          unit: weightText.symbol,
+          label: l10n.activeExerciseYourWeightLabel,
+          size: ExomFigureSize.s64,
+          semanticsLabel: l10n.activeExerciseYourWeight(weightText(kg)),
+        ),
+      _previousFigure(l10n, previous, weightText),
+    ],
+  );
+}
+
+/// «Última vez»: the figure is the weight when there was one, else the reps or
+/// seconds; what is left (reps, seconds, RIR) goes below it. Without a
+/// previous set, no figure and «Sin datos anteriores» below the label.
+ExomFigure _previousFigure(
+  AppLocalizations l10n,
+  SetPerformance? previous,
+  WeightText weightText,
+) {
+  const key = Key('active-exercise-previous');
+  final set = previous;
+  final label = set == null
+      ? null
+      : setValueLabel(l10n, set, weightText, withRir: true);
+  if (set == null || label == null || label.isEmpty) {
+    return ExomFigure(
+      itemKey: key,
+      value: '',
+      label: l10n.exerciseLastTimeLabel,
+      tone: ExomFigureTone.text,
+      detail: l10n.activeExerciseNoPrevious,
+      semanticsLabel:
+          '${l10n.exerciseLastTimeLabel}: ${l10n.activeExerciseNoPrevious}',
+    );
+  }
+  final kg = set.weightKg;
+  final (String value, String unit) = kg != null
+      ? (weightText.number(kg), weightText.symbol)
+      : set.reps != null
+      ? ('${set.reps}', l10n.activeExerciseUnitReps)
+      : set.seconds != null
+      ? ('${set.seconds}', l10n.activeExerciseUnitSeconds)
+      : ('', '');
+  final rest = [
+    if (kg != null && set.reps != null)
+      '${set.reps} ${l10n.activeExerciseUnitReps}',
+    if (kg != null && set.seconds != null)
+      '${set.seconds} ${l10n.activeExerciseUnitSeconds}',
+    if (set.rir != null) l10n.activeExerciseRir(set.rir!),
+  ].join(' · ');
+  return ExomFigure(
+    itemKey: key,
+    value: value,
+    unit: value.isEmpty ? null : unit,
+    label: l10n.exerciseLastTimeLabel,
+    tone: ExomFigureTone.text,
+    detail: value.isEmpty ? label : (rest.isEmpty ? null : rest),
+    semanticsLabel: l10n.activeExerciseLastTimeA11y(label),
+  );
+}
+
+/// Band of the next set during a rest (`.x-band`, «Siguiente»): the set in
+/// the display face and its target with today's weight in the data colour.
+/// Assistive technology reads the same sentence as before L5.
+class _NextSetBand extends StatelessWidget {
+  const _NextSetBand({
+    required this.setNumber,
+    required this.targetLabel,
+    required this.weight,
+  });
+
+  final int setNumber;
+  final String targetLabel;
+  final String? weight;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final load = weight;
+    final bigStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 18,
+      height: 1.4,
+      color: palette.textPrimary,
+    );
+    return Semantics(
+      container: true,
+      label: load == null
+          ? l10n.activeExerciseRestNext(setNumber, targetLabel)
+          : l10n.activeExerciseRestNextWithWeight(
+              setNumber,
+              targetLabel,
+              load,
+            ),
+      excludeSemantics: true,
+      child: ExomBand(
+        kicker: l10n.activeExerciseNextLabel,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.setPerformanceTitle(setNumber).toUpperCase(),
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: targetLabel),
+                    if (load != null) ...[
+                      TextSpan(
+                        text:
+                            ' · ${l10n.activeExerciseRestNextWeightLabel} ',
+                      ),
+                      TextSpan(
+                        text: load,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: palette.data,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                key: const Key('active-exercise-rest-next'),
+                style: bigStyle,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Band of the next exercise during the rest after the last set (`.x-band`,
+/// «Siguiente»): its name in the display face and its prescription below, as
+/// [_NextSetBand] does for the next set. Read as one sentence.
+class _NextExerciseBand extends StatelessWidget {
+  const _NextExerciseBand({required this.name, required this.target});
+
+  final String name;
+  final String? target;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final prescription = target?.trim();
+    final hasTarget = prescription != null && prescription.isNotEmpty;
+    return Semantics(
+      container: true,
+      label: hasTarget
+          ? l10n.circuitNextExercise(name, prescription)
+          : l10n.restTimerNextExercise(name),
+      excludeSemantics: true,
+      child: ExomBand(
+        key: const Key('active-exercise-rest-next-exercise'),
+        kicker: l10n.activeExerciseNextLabel,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                name.toUpperCase(),
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              if (hasTarget) ...[
+                const SizedBox(height: 8),
+                Text(
+                  prescription,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 18,
+                    height: 1.4,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1187,96 +1480,6 @@ class _PrescriptionTarget {
   String? shortLabel(AppLocalizations l10n) {
     final n = numeral;
     return n == null ? null : '$n ${unitLabel(l10n)}';
-  }
-}
-
-/// Hero of the executing state (sketch «A · Ejercicio activo»): the target in
-/// the display face up to 96 px, its unit and the target RIR beside it. Free
-/// text prescriptions are shown as they are.
-class _PrescriptionHero extends StatelessWidget {
-  const _PrescriptionHero({
-    required this.target,
-    required this.targetRir,
-    required this.prescription,
-  });
-
-  final _PrescriptionTarget target;
-  final int? targetRir;
-  final String prescription;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-    final numeral = target.numeral;
-    final display = TextStyle(
-      fontFamily: AppTheme.displayFontFamily,
-      fontWeight: FontWeight.w800,
-      color: palette.textPrimary,
-      letterSpacing: -0.44,
-      height: 1.0,
-    );
-    if (numeral == null) {
-      return Text(
-        prescription,
-        style: display.copyWith(fontSize: 44, height: 0.95),
-      );
-    }
-    final spoken = [
-      ?target.shortLabel(l10n),
-      if (targetRir != null) l10n.activeExerciseRir(targetRir!),
-    ].join(' · ');
-    return Semantics(
-      container: true,
-      label: l10n.activeExerciseTargetA11y(spoken),
-      excludeSemantics: true,
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.end,
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.bottomLeft,
-            child: Text(
-              numeral,
-              key: const Key('active-exercise-target'),
-              maxLines: 1,
-              style: display.copyWith(
-                fontSize: 96,
-                height: 0.9,
-                letterSpacing: -1.92,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  target.unitLabel(l10n).toUpperCase(),
-                  style: display.copyWith(fontSize: 22),
-                ),
-                if (targetRir != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.activeExerciseRir(targetRir!),
-                    style: TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

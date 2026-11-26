@@ -6,6 +6,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -13,7 +14,11 @@ import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart'
-    show SetPerformance;
+    show
+        ExerciseEntity,
+        ExerciseMeasureType,
+        SetPerformance,
+        TrainingExerciseEntity;
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
 import 'package:exom_app/injection_container.dart';
@@ -33,6 +38,8 @@ import '../features/recap/presentation/pages/recap_form_redesign_test.dart'
     show pumpRecapForm;
 import '../features/recap/presentation/pages/recap_list_redesign_test.dart'
     show pumpRecapList, recapListRich;
+import '../features/trainings/presentation/pages/active_exercise_redesign_test.dart'
+    show activeExerciseDraftKey, activeExerciseTrainingId, pumpActiveExercise;
 import '../features/trainings/presentation/pages/circuit_test_harness.dart'
     show circuitExercise, preL3State, pumpCircuit;
 import '../features/trainings/presentation/pages/training_completion_sheet_test.dart'
@@ -501,6 +508,101 @@ void main() {
                         performances: logged,
                       ),
               );
+              expect(tester.takeException(), isNull);
+              final scrollable = find.byType(Scrollable).first;
+              for (var i = 0; i < 10; i++) {
+                await tester.drag(scrollable, const Offset(0, -300));
+                await tester.pump();
+                expect(tester.takeException(), isNull);
+              }
+            },
+          );
+        }
+      }
+    }
+  });
+
+  // L5-E3a «Ejercicio activo y descanso» (v2): executing (headline, target,
+  // load columns, chips, «Ver técnica»), the rest between sets (countdown and
+  // «Siguiente» band) and the rest after the last set (new «Después, <next
+  // exercise>.» headline and band), with long exercise names, at 320 dp with
+  // 1.3x and 1.6x and at 360 dp with 1.6x (Android non-linear scaler), in both
+  // languages, scrolled to the end (CC 3); 2.0x scrolling is in
+  // active_exercise_l5_e3a_test.dart.
+  group('Ejercicio activo does not overflow', () {
+    const sizes = [(320.0, 1.3), (320.0, 1.6), (360.0, 1.6)];
+    const current = TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 3,
+      repsOrDuration: '8',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 8,
+      targetRir: 2,
+      restSeconds: 90,
+      requestSetTracking: true,
+      exercise: ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla búlgara con mancuernas y pausa isométrica abajo',
+        muscleGroups: [],
+        techniqueText: 'Pie trasero apoyado en el banco.',
+      ),
+    );
+    const next = TrainingExerciseEntity(
+      id: 'te-0',
+      order: 0,
+      sets: 4,
+      repsOrDuration: '10-12',
+      measureType: ExerciseMeasureType.reps,
+      targetValueMin: 10,
+      targetValueMax: 12,
+      restSeconds: 60,
+      exercise: ExerciseEntity(
+        id: 'ex-0',
+        name: 'Peso muerto rumano a una pierna con mancuerna contralateral',
+        muscleGroups: [],
+      ),
+    );
+    const done = [
+      {'set_number': 1, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      {'set_number': 2, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      {'set_number': 3, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+    ];
+    ActiveWorkoutHiveModel seed(String scene) => ActiveWorkoutHiveModel(
+      trainingId: activeExerciseTrainingId,
+      exerciseId: activeExerciseDraftKey,
+      currentSet: scene == 'final rest' ? 3 : 2,
+      completedSets: scene == 'final rest' ? 3 : 1,
+      restEndsAt: scene == 'executing'
+          ? null
+          : DateTime.now().add(const Duration(seconds: 90)),
+      lastWeightKg: 62.5,
+      completedSetData: scene == 'final rest' ? done : done.sublist(0, 1),
+    );
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      for (final (width, scale) in sizes) {
+        for (final scene in const ['executing', 'rest', 'final rest']) {
+          testWidgets(
+            'at ${width.toInt()}dp, ${scale}x, ${locale.languageCode}, $scene',
+            (tester) async {
+              await pumpActiveExercise(
+                tester,
+                initialWeightKg: 62.5,
+                previous: const [
+                  SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+                  SetPerformance(setNumber: 2, reps: 8, weightKg: 60, rir: 2),
+                ],
+                seed: seed(scene),
+                exercise: current,
+                trainingExercises: const [next, current],
+                width: width,
+                height: 640,
+                locale: locale,
+                textScaler: AndroidNonlinearTextScaler(scale),
+              );
+              for (var i = 0; i < 4; i++) {
+                await tester.pump(const Duration(milliseconds: 150));
+              }
               expect(tester.takeException(), isNull);
               final scrollable = find.byType(Scrollable).first;
               for (var i = 0; i < 10; i++) {

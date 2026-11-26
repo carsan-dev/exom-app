@@ -1,11 +1,12 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_timer_inline.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+/// Rest timer in a sheet (L5-E3a): a straight [showExomSheet] (D12) that
+/// cannot be dismissed by tapping outside or dragging, like before; it closes
+/// when the rest ends or is skipped, and, like every `showExomSheet`, when
+/// the router location changes (CC 11).
 class RestTimerOverlay extends StatelessWidget {
   final int restSeconds;
   final String? nextExerciseName;
@@ -23,12 +24,10 @@ class RestTimerOverlay extends StatelessWidget {
     required int restSeconds,
     String? nextExerciseName,
   }) {
-    return showModalBottomSheet(
+    return showExomSheet<void>(
       context: context,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (_) => RestTimerOverlay(
         restSeconds: restSeconds,
         nextExerciseName: nextExerciseName,
@@ -39,41 +38,17 @@ class RestTimerOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-        child: Container(
-          decoration: GlassDecoration.elevated(borderRadius: 28),
-          padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomInset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              RestTimerInline(
-                totalSeconds: restSeconds,
-                restEndsAt: DateTime.now().add(Duration(seconds: restSeconds)),
-                subtitle: nextExerciseName != null
-                    ? l10n.restTimerNextExercise(nextExerciseName!)
-                    : null,
-                onSkip: onDone,
-                onFinished: onDone,
-              ),
-            ],
-          ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      child: RestTimerInline(
+        totalSeconds: restSeconds,
+        restEndsAt: DateTime.now().add(Duration(seconds: restSeconds)),
+        subtitle: nextExerciseName != null
+            ? l10n.restTimerNextExercise(nextExerciseName!)
+            : null,
+        onSkip: onDone,
+        onFinished: onDone,
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -115,8 +116,10 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pump();
       final start = tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Iniciar tiempo'),
+          .widget<ExomSecondaryButton>(
+            // L5-E3a: the start action is a secondary button (one lime
+            // action per state); same callback.
+            find.widgetWithText(ExomSecondaryButton, 'Iniciar tiempo'),
           )
           .onPressed!;
       start();

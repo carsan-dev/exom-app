@@ -4151,6 +4151,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeExerciseRestFinishedA11y => 'Rest finished';
 
   @override
+  String activeExerciseSetOfLine(int total) {
+    return 'of $total.';
+  }
+
+  @override
+  String get activeExerciseTargetCaption => 'set target';
+
+  @override
+  String get activeExerciseYourWeightLabel => 'Your weight';
+
+  @override
+  String activeExerciseLastTimeA11y(String performance) {
+    return 'Last time: $performance';
+  }
+
+  @override
+  String get activeExerciseRestHeadline => 'Rest.';
+
+  @override
+  String activeExerciseRestThenSet(int setNumber) {
+    return 'Then, set $setNumber.';
+  }
+
+  @override
+  String activeExerciseRestThenExercise(String exercise) {
+    return 'Then, $exercise.';
+  }
+
+  @override
+  String get activeExerciseRestExerciseDone => 'Exercise completed.';
+
+  @override
+  String get activeExerciseNextLabel => 'Next';
+
+  @override
+  String get activeExerciseRestNextWeightLabel => 'your weight';
+
+  @override
   String setSheetObjective(String objective) {
     return 'Target $objective';
   }

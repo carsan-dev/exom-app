@@ -3,9 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
+/// Compact rest timer (L5-E3a skin of the sketch «Descanso»): the title, the
+/// remaining seconds at 96 in the data colour over the 50-mark rule
+/// ([RestTickRule]), an optional subtitle and «Saltar» as a quiet action. Flat
+/// on the page: no card, no ring. Same ticker and callbacks as before.
 class RestTimerInline extends StatefulWidget {
   final int totalSeconds;
   final DateTime restEndsAt;
@@ -93,66 +99,50 @@ class _RestTimerInlineState extends State<RestTimerInline> {
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final secondary = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 14,
+      height: 1.4,
+      color: palette.textSecondary,
+    );
 
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      decoration: GlassDecoration.card(borderRadius: 24),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             widget.title ?? l10n.restTimerTitle,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+            style: secondary.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: ExomType.hero96.fontSize! * 0.025),
+              child: Text(
+                '$_remainingSeconds',
+                maxLines: 1,
+                softWrap: false,
+                style: ExomType.hero96.copyWith(
+                  color: palette.data,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: 136,
-            height: 136,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: _progressValue,
-                    strokeWidth: 8,
-                    backgroundColor: palette.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
-                  ),
-                ),
-                Text(
-                  '$_remainingSeconds',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 42,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          RestTickRule(value: _progressValue),
           if (widget.subtitle != null && widget.subtitle!.trim().isNotEmpty) ...[
             const SizedBox(height: 14),
-            Text(
-              widget.subtitle!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: palette.textSecondary,
-                fontSize: 13,
-                height: 1.35,
-              ),
-            ),
+            Text(widget.subtitle!, style: secondary),
           ],
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
+          const SizedBox(height: 12),
+          Center(
+            child: ExomQuietButton(
+              label: l10n.restTimerSkip,
               onPressed: widget.onSkip,
-              child: Text(l10n.restTimerSkip),
             ),
           ),
         ],

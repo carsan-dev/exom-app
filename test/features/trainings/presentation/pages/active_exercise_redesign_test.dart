@@ -10,6 +10,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -117,18 +118,29 @@ class _Native implements RestTimerCoordinator {
 }
 
 class _TrainingBloc extends Fake implements TrainingBloc {
+  _TrainingBloc({
+    this.completedExerciseIds = const {},
+    this.sessionProgress = const {},
+    this.exercises = const [_squat, _bulgarian],
+  });
+
   final events = <TrainingEvent>[];
+  final Set<String> completedExerciseIds;
+  final Map<String, TrainingDayProgress> sessionProgress;
+  final List<TrainingExerciseEntity> exercises;
 
   @override
   TrainingState get state => TrainingDetailLoaded(
-    const TrainingEntity(
+    TrainingEntity(
       id: _trainingId,
       name: 'Pierna fuerza',
-      types: ['FUERZA'],
+      types: const ['FUERZA'],
       level: 'INTERMEDIATE',
-      tags: [],
-      exercises: [_squat, _bulgarian],
+      tags: const [],
+      exercises: exercises,
     ),
+    completedExerciseIds: completedExerciseIds,
+    sessionProgress: sessionProgress,
     selectedDate: _date,
   );
 
@@ -187,14 +199,24 @@ Future<_Harness> _pumpPage(
   double width = 390,
   double height = 844,
   double textScale = 1.0,
+  TextScaler? textScaler,
+  Locale locale = const Locale('es'),
   Brightness brightness = Brightness.dark,
+  Set<String> completedExerciseIds = const {},
+  Map<String, TrainingDayProgress> sessionProgress = const {},
+  String? sessionId,
+  List<TrainingExerciseEntity>? trainingExercises,
 }) async {
   await sl.reset();
   final store = _Store();
   if (seed != null) store.data[seed.exerciseId] = seed;
   final storage = _Storage(store, unitSystem: unitSystem);
   final native = _Native();
-  final trainingBloc = _TrainingBloc();
+  final trainingBloc = _TrainingBloc(
+    completedExerciseIds: completedExerciseIds,
+    sessionProgress: sessionProgress,
+    exercises: trainingExercises ?? const [_squat, _bulgarian],
+  );
   sl.registerSingleton<LocalStorage>(storage);
   sl.registerSingleton<RestTimerCoordinator>(native);
   sl.registerSingleton<ExecutionTimerCoordinator>(ExecutionTimerCoordinator());
@@ -218,6 +240,7 @@ Future<_Harness> _pumpPage(
               args: ActiveExercisePageArgs(
                 trainingBloc: trainingBloc,
                 trainingExercise: exercise,
+                sessionId: sessionId,
                 trainingName: 'Pierna fuerza',
                 trainingTypes: const ['FUERZA'],
                 accentColorHex: null,
@@ -246,14 +269,14 @@ Future<_Harness> _pumpPage(
       value: preferences,
       child: MaterialApp.router(
         theme: themeFor(brightness),
-        locale: const Locale('es'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
           child: child!,
         ),
       ),
@@ -264,6 +287,65 @@ Future<_Harness> _pumpPage(
   await tester.pump(const Duration(milliseconds: 400));
   return _Harness(store, native, trainingBloc);
 }
+
+/// Public entry for the L5-E3a tests (structure, colour, overflow): the same
+/// page and fakes as [_pumpPage] with the Bulgarian split squat of this file.
+Future<void> pumpActiveExercise(
+  WidgetTester tester, {
+  double? initialWeightKg,
+  List<SetPerformance>? previous,
+  ActiveWorkoutHiveModel? seed,
+  double width = 390,
+  double height = 844,
+  TextScaler? textScaler,
+  Locale locale = const Locale('es'),
+  Brightness brightness = Brightness.dark,
+  TrainingExerciseEntity? exercise,
+  Set<String> completedExerciseIds = const {},
+  Map<String, TrainingDayProgress> sessionProgress = const {},
+  String? sessionId,
+  List<TrainingExerciseEntity>? trainingExercises,
+}) async {
+  await _pumpPage(
+    tester,
+    exercise: exercise ?? _bulgarian,
+    completedExerciseIds: completedExerciseIds,
+    sessionProgress: sessionProgress,
+    sessionId: sessionId,
+    trainingExercises: trainingExercises,
+    initialWeightKg: initialWeightKg,
+    previous: previous,
+    seed: seed,
+    width: width,
+    height: height,
+    textScaler: textScaler,
+    locale: locale,
+    brightness: brightness,
+  );
+}
+
+/// Draft key of the exercise pumped by [pumpActiveExercise].
+const activeExerciseDraftKey = _draftKey;
+
+/// Training id of the exercise pumped by [pumpActiveExercise].
+const activeExerciseTrainingId = _trainingId;
+
+// L5-E3a: the set headline is two lines («SERIE 1» / «DE 3.») read as one
+// header, «Tu peso», «Última vez» and the next set of a rest are figures and
+// bands read as one node each, and the target figure carries its unit. The
+// assertions below check the same values through those nodes.
+Finder _setHeadline(String spoken) => find.byWidgetPredicate(
+  (w) => w is ExomTwoLineHeadline && w.semanticsLabel == spoken,
+);
+
+Finder _labelled(String label) => find.byWidgetPredicate(
+  (w) => w is Semantics && w.properties.label == label,
+);
+
+String? _targetText(WidgetTester tester) => tester
+    .widget<Text>(find.byKey(const Key('active-exercise-target')))
+    .textSpan
+    ?.toPlainText();
 
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(ActiveExercisePage)));
@@ -308,10 +390,10 @@ void main() {
     final l10n = _l10n(tester);
     expect(find.text('SENTADILLA BÚLGARA'), findsOneWidget);
     expect(find.text(l10n.activeExercisePosition(2, 2)), findsOneWidget);
-    expect(find.text('SERIE 1 DE 3'), findsOneWidget);
-    expect(find.text('8'), findsWidgets);
-    expect(find.text('Tu peso: 62,5 kg'), findsOneWidget);
-    expect(find.text('Anterior: 8 × 60 kg · RIR 2'), findsOneWidget);
+    expect(_setHeadline('Serie 1 de 3'), findsOneWidget);
+    expect(_targetText(tester), '8reps');
+    expect(_labelled('Tu peso: 62,5 kg'), findsOneWidget);
+    expect(_labelled('Última vez: 8 × 60 kg · RIR 2'), findsOneWidget);
     expect(find.text(l10n.activeExerciseSetNow), findsOneWidget);
 
     await _openSheet(tester);
@@ -355,7 +437,7 @@ void main() {
     );
     expect(find.text(l10n.syncStatusConfirmed), findsNothing);
     expect(
-      find.text(l10n.activeExerciseRestNextWithWeight(2, '8 reps', '62,5 kg')),
+      _labelled(l10n.activeExerciseRestNextWithWeight(2, '8 reps', '62,5 kg')),
       findsOneWidget,
     );
     expect(h.native.starts, hasLength(1));
@@ -379,7 +461,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(_state(tester).status, ActiveExerciseStatus.executing);
     expect(find.byKey(const ValueKey('footer-executing')), findsOneWidget);
-    expect(find.text('SERIE 2 DE 3'), findsOneWidget);
+    expect(_setHeadline('Serie 2 de 3'), findsOneWidget);
     expect(h.draft!.restEndsAt, isNull);
   });
 
@@ -491,7 +573,7 @@ void main() {
       initialWeightKg: 62.5,
       unitSystem: UnitSystem.imperial,
     );
-    expect(find.text('Tu peso: 137,79 lb'), findsOneWidget);
+    expect(_labelled('Tu peso: 137,79 lb'), findsOneWidget);
     await _openSheet(tester);
     final weight = find.byKey(const Key('set-sheet-weight-field'));
     expect(tester.widget<TextField>(weight).controller!.text, '137,79');
@@ -512,7 +594,7 @@ void main() {
         SetPerformance(setNumber: 2, reps: 8, weightKg: 60),
       ],
     );
-    expect(find.text('Tu peso: 57,5 kg'), findsOneWidget);
+    expect(_labelled('Tu peso: 57,5 kg'), findsOneWidget);
   });
 
   testWidgets('no previous data: neutral copy, no «same as last time»', (
@@ -543,8 +625,7 @@ void main() {
         exercise: ExerciseEntity(id: 'ex-1', name: 'Plancha', muscleGroups: []),
       ),
     );
-    expect(find.text('45'), findsWidgets);
-    expect(find.text('S'), findsOneWidget);
+    expect(_targetText(tester), '45s');
     expect(find.byType(ExecutionTimer), findsOneWidget);
     await _openSheet(tester);
     await _saveSheet(tester);
@@ -589,15 +670,16 @@ void main() {
         ),
       );
       final l10n = _l10n(tester);
-      expect(find.text('SERIE 1 DE 4'), findsOneWidget);
+      expect(_setHeadline('Serie 1 de 4'), findsOneWidget);
       expect(find.text(l10n.activeExerciseSetNow), findsOneWidget);
       expect(find.text('RIR 2'), findsWidgets);
       expect(find.text('8 × 60'), findsOneWidget);
-      expect(find.text('Tu peso: 60 kg'), findsOneWidget);
+      expect(_labelled('Tu peso: 60 kg'), findsOneWidget);
 
       expect(
-        find.text(l10n.activeExerciseSetSavedStatus(
-          1, l10n.syncStatusSavedOnDevice)),
+        find.text(
+          l10n.activeExerciseSetSavedStatus(1, l10n.syncStatusSavedOnDevice),
+        ),
         findsOneWidget,
       );
       final restored = h.draft!;
@@ -607,7 +689,8 @@ void main() {
 
       await _openSheet(tester);
       expect(
-        tester.widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
+        tester
+            .widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
             .initialRir,
         2,
       );
@@ -622,29 +705,32 @@ void main() {
     },
   );
 
-  testWidgets('the sheet of a restored RIR-only set preselects its stored RIR',
-      (tester) async {
-    await _pumpPage(
-      tester,
-      seed: ActiveWorkoutHiveModel(
-        trainingId: _trainingId,
-        exerciseId: _draftKey,
-        currentSet: 2,
-        completedSets: 1,
-        lastWeightKg: 60.0,
-        completedSetData: const [
-          {'set_number': 1, 'rir': 4},
-        ],
-      ),
-    );
-    expect(find.text('SERIE 1 DE 3'), findsOneWidget);
-    await _openSheet(tester);
-    expect(
-      tester.widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
-          .initialRir,
-      4,
-    );
-  });
+  testWidgets(
+    'the sheet of a restored RIR-only set preselects its stored RIR',
+    (tester) async {
+      await _pumpPage(
+        tester,
+        seed: ActiveWorkoutHiveModel(
+          trainingId: _trainingId,
+          exerciseId: _draftKey,
+          currentSet: 2,
+          completedSets: 1,
+          lastWeightKg: 60.0,
+          completedSetData: const [
+            {'set_number': 1, 'rir': 4},
+          ],
+        ),
+      );
+      expect(_setHeadline('Serie 1 de 3'), findsOneWidget);
+      await _openSheet(tester);
+      expect(
+        tester
+            .widget<SetPerformanceSheet>(find.byType(SetPerformanceSheet))
+            .initialRir,
+        4,
+      );
+    },
+  );
 
   testWidgets('restores a rest extended beyond the prescription', (
     tester,
@@ -882,8 +968,10 @@ void main() {
     expect(tester.getRect(executing).top, greaterThanOrEqualTo(568 * 0.6));
     expect(executing.hitTestable(), findsOneWidget);
     // The content above the footer still scrolls to its end.
-    await tester.drag(find.byType(SingleChildScrollView).first,
-        const Offset(0, -3000));
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -3000),
+    );
     await tester.pump();
     expect(tester.takeException(), isNull);
 

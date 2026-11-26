@@ -367,9 +367,13 @@ class _ProfileContent extends StatelessWidget {
             latestMetric: latestMetric,
             editable: editable,
           ),
-          const SizedBox(height: ExomSpacing.xxl),
-          const ProgressPhotosEntry(),
-          const SizedBox(height: ExomSpacing.xxl),
+          // The index starts on the bottom rule of the columns and shares it
+          // (owner decision, alignment r3: no empty strip between two rules,
+          // as in the active exercise and Entrenar; the sketch had
+          // `.x-ixs.mt32`).
+          const ProgressPhotosEntry(joinsPrevious: true),
+          // «Datos corporales» shares the index's bottom rule too (owner
+          // decision, alignment r4).
           _BodyData(
             profile: profile,
             weightHistory: weightHistory,
@@ -1168,12 +1172,16 @@ Future<void> _editMuscleGoal(
 /// 02 progress photos, 03 weekly recap. Keeps the public name of the former
 /// progress photos button, whose route test drives it.
 class ProgressPhotosEntry extends StatelessWidget {
-  const ProgressPhotosEntry({super.key});
+  const ProgressPhotosEntry({super.key, this.joinsPrevious = false});
+
+  /// See [ExomIndexList.joinsPrevious].
+  final bool joinsPrevious;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return ExomIndexList(
+      joinsPrevious: joinsPrevious,
       items: [
         ExomIndexItem(
           title: l10n.profileIndexMetrics,
@@ -1245,6 +1253,8 @@ class _BodyData extends StatelessWidget {
 
     return ExomBand(
       key: const Key('profile-body-data'),
+      // Always right under the index of the profile (see _ProfileContent).
+      joinsPrevious: true,
       kicker: l10n.bodyDataTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

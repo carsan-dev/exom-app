@@ -411,6 +411,14 @@ class _TrainingsViewState extends State<_TrainingsView> {
         ),
     ];
 
+    // The day closes with a rule when it ends with the session's figure
+    // columns or with the group of the other trainings: «Historial» then
+    // shares that rule instead of opening an empty strip between two rules.
+    final today = state.todayTrainings;
+    final dayEndsWithRule =
+        today.length > 1 ||
+        (today.length == 1 && _TodaySession.closesWithRule(today.first));
+
     return RefreshIndicator(
       color: palette.data,
       backgroundColor: palette.surface,
@@ -430,10 +438,11 @@ class _TrainingsViewState extends State<_TrainingsView> {
         children: [
           for (final (index, dayBlock) in dayBlocks.indexed)
             ExomArrivalItem(index: index, child: dayBlock),
-          const SizedBox(height: 24),
+          if (!dayEndsWithRule) const SizedBox(height: 24),
           ExomArrivalItem(
             index: dayBlocks.length,
             child: ExomBand(
+              joinsPrevious: dayEndsWithRule,
               kicker: l10n.history,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -688,6 +697,10 @@ class _TodaySession extends StatelessWidget {
   final String selectedDate;
   final String historyDate;
   final bool isToday;
+
+  /// Whether the block ends with its figure columns (and so with a rule).
+  static bool closesWithRule(TrainingEntity training) =>
+      training.exercises.isNotEmpty || training.estimatedDurationMin != null;
 
   Future<void> _open(BuildContext context) async {
     await context.push('/trainings/${training.id}?date=$selectedDate');

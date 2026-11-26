@@ -135,7 +135,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   child: SingleChildScrollView(
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    // `.pad`: 20 from each edge, as «Inicio de sesión».
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -277,7 +278,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget _buildFooter(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return ExomPinnedFooter(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,

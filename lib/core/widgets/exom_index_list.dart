@@ -52,10 +52,21 @@ class ExomIndexItem {
 /// Entries are at least 60 tall, padded 10/20, with a 1 px `rule` on top; the
 /// list closes with a bottom rule. Each entry is one merged node, a button when
 /// tappable; pressed and disabled behave as [ExomRowSurface].
+///
+/// A list placed right under a block that already closes with a rule sets
+/// [joinsPrevious] to drop the top rule of its first entry and share that
+/// rule instead of opening an empty strip between two rules.
 class ExomIndexList extends StatelessWidget {
-  const ExomIndexList({super.key, required this.items});
+  const ExomIndexList({
+    super.key,
+    required this.items,
+    this.joinsPrevious = false,
+  });
 
   final List<ExomIndexItem> items;
+
+  /// True when the list directly follows a block that ends with a rule.
+  final bool joinsPrevious;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +84,11 @@ class ExomIndexList extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < items.length; i++)
-            _IndexEntry(n: i + 1, item: items[i]),
+            _IndexEntry(
+              n: i + 1,
+              item: items[i],
+              topRule: i > 0 || !joinsPrevious,
+            ),
         ],
       ),
     );
@@ -81,10 +96,15 @@ class ExomIndexList extends StatelessWidget {
 }
 
 class _IndexEntry extends StatelessWidget {
-  const _IndexEntry({required this.n, required this.item});
+  const _IndexEntry({
+    required this.n,
+    required this.item,
+    required this.topRule,
+  });
 
   final int n;
   final ExomIndexItem item;
+  final bool topRule;
 
   // `.x-ix .x-no`: .75em of the 22 px title, 0.2em down, 1.6em wide.
   static const double _numberSize = 22 * 0.75;
@@ -137,6 +157,7 @@ class _IndexEntry extends StatelessWidget {
           key: const Key('exom-index-entry'),
           onTap: item.onTap,
           minHeight: 60,
+          topRule: topRule,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final titleText = item.title.toUpperCase();

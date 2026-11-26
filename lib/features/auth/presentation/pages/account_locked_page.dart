@@ -36,7 +36,8 @@ class AccountLockedPage extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                  // `.pad`: 20 from each edge, as «Inicio de sesión».
+                  padding: const EdgeInsets.fromLTRB(20, 48, 20, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -60,7 +61,7 @@ class AccountLockedPage extends StatelessWidget {
                 ),
               ),
               ExomPinnedFooter(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                 child: ExomSecondaryButton(
                   label: l10n.backToLoginButton,
                   onPressed: () {

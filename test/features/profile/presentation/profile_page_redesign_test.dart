@@ -720,7 +720,10 @@ void main() {
     ) async {
       await pumpProfileScene(tester);
       expect(_textCi('Ana Ruiz'), findsOneWidget);
-      expect(find.text('Intermedio · Ganar músculo · 168\u00A0cm'), findsOneWidget);
+      expect(
+        find.text('Intermedio · Ganar músculo · 168\u00A0cm'),
+        findsOneWidget,
+      );
       expect(find.text('Racha de 12 días'), findsOneWidget);
       final hero = tester.widget<ExomNumeral>(
         find.byKey(const Key('profile-weight-hero')),
@@ -869,10 +872,17 @@ void main() {
         textScaler: const AndroidNonlinearTextScaler(2.0),
       );
       final list = find.byType(Scrollable).first;
-      await tester.drag(list, const Offset(0, -8000));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
       final position = tester.state<ScrollableState>(list).position;
+      // The list lays its children out lazily: a single drag stops at the
+      // extent estimated before the last block was laid out, so keep
+      // dragging (bounded) until the scroll no longer moves.
+      for (var i = 0; i < 4; i++) {
+        final before = position.pixels;
+        await tester.drag(list, const Offset(0, -8000));
+        await tester.pumpAndSettle();
+        if (position.pixels == before) break;
+      }
+      expect(tester.takeException(), isNull);
       expect(position.pixels, position.maxScrollExtent);
       expect(
         find.byKey(const Key('profile-body-data')).hitTestable(),

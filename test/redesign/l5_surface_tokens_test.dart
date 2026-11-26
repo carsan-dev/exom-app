@@ -136,6 +136,8 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/splash/presentation/v4d/v4d_curtain.dart',
   'lib/features/splash/presentation/v4d/v4d_handoff.dart',
   'lib/features/splash/presentation/widgets/splash_update_dialog.dart',
+  // L5-F3 · Tutorial: the tour bubble (its prompt is in kPartlyRepaintedFiles).
+  'lib/core/widgets/tutorial_overlay.dart',
 ];
 
 /// Files repainted only up to a marker line: the code from the marker on
@@ -144,7 +146,12 @@ const List<String> kRepaintedFiles = <String>[
 /// dialog; L5-A4b replaced that dialog and moved the file to
 /// [kRepaintedFiles]. L5-C4 repainted the recap list (and its pinned action)
 /// up to the step form, which L5-C5 repaints.
-const Map<String, String> kPartlyRepaintedFiles = <String, String>{};
+/// L5-F3: the tour prompt is repainted; the legacy card under the marker is
+/// the Sunday recap reminder's (C5b), unchanged.
+const Map<String, String> kPartlyRepaintedFiles = <String, String>{
+  'lib/core/widgets/tutorial_prompt_dialog.dart':
+      '// L5-F3 r2 legacy: the C5b card below',
+};
 
 const String _allowMarker = 'l5-allow:';
 

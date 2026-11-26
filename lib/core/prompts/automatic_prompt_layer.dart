@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:exom_app/core/widgets/recap_sunday_prompt_dialog.dart';
 import 'package:exom_app/core/widgets/tutorial_prompt_dialog.dart';
+import 'package:exom_app/features/splash/presentation/v4d/v4d_handoff.dart';
 import 'package:flutter/material.dart';
 
 /// Reads the current session; `null` while there is none or the onboarding
@@ -11,6 +12,10 @@ typedef AutomaticPromptSessionReader = AutomaticPromptSession? Function();
 
 /// Stack layer of the shell that opens at most one automatic prompt (quick
 /// tour or Sunday recap reminder) after the first frame on /home.
+///
+/// L5-F3 with L5-D3: while the launch opening plays over Inicio
+/// ([V4dHandoff.active]) nothing is asked or shown; the check runs once the
+/// curtain clears the hand-off, which is when Inicio becomes usable.
 class AutomaticPromptLayer extends StatefulWidget {
   const AutomaticPromptLayer({
     super.key,
@@ -39,8 +44,25 @@ class _AutomaticPromptLayerState extends State<AutomaticPromptLayer> {
   AutomaticPromptSession? _session;
   bool _dontShowAgain = false;
 
+  @override
+  void initState() {
+    super.initState();
+    V4dHandoff.current.addListener(_onOpening);
+  }
+
+  @override
+  void dispose() {
+    V4dHandoff.current.removeListener(_onOpening);
+    super.dispose();
+  }
+
+  /// The opening ended: build again so the check is scheduled.
+  void _onOpening() {
+    if (mounted && !V4dHandoff.active && !_checked) setState(() {});
+  }
+
   Future<void> _check() async {
-    if (!mounted || _checked || !widget.active) return;
+    if (!mounted || _checked || !widget.active || V4dHandoff.active) return;
     final session = widget.readSession();
     if (session == null) return;
     _checked = true;
@@ -134,12 +156,16 @@ class _AutomaticPromptLayerState extends State<AutomaticPromptLayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.active && !_checked) {
+    if (widget.active && !_checked && !V4dHandoff.active) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _check());
     }
     return switch (_visible) {
       AutomaticPrompt.none => const SizedBox.shrink(),
       AutomaticPrompt.tutorial => TutorialPromptDialog(
+        // L5-F3: only the tour prompt takes the flat card, with no icon; the
+        // Sunday reminder (below) keeps the C5b look.
+        redesigned: true,
+        icon: null,
         onStart: _startTutorial,
         onSkip: _skipTutorial,
         dontShowAgain: _dontShowAgain,

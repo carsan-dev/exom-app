@@ -4556,6 +4556,12 @@ abstract class AppLocalizations {
   /// **'Listo'**
   String get tutorialDoneButton;
 
+  /// No description provided for @tutorialStepProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {current} de {total}'**
+  String tutorialStepProgress(int current, int total);
+
   /// No description provided for @deleteAccountOption.
   ///
   /// In es, this message translates to:

@@ -905,6 +905,13 @@
   "tutorialFeedbackDesc": "Also in the menu. Send questions, issues, or feedback directly to your coach.",
   "tutorialNextButton": "Next",
   "tutorialDoneButton": "Done",
+  "tutorialStepProgress": "Step {current} of {total}",
+  "@tutorialStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "deleteAccountOption": "Delete account",
   "deleteAccountDescription": "Permanently delete your account and all your data",
   "deleteAccountDialogTitle": "Delete your account?",

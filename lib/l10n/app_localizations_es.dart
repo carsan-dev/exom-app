@@ -2088,6 +2088,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedbackSendFromExercise => 'Enviar feedback';
 
   @override
+  String feedbackChosenFileA11y(String kind, String duration) {
+    return '$kind, $duration';
+  }
+
+  @override
   String get circuitFeedbackAction => 'Enviar vídeos';
 
   @override

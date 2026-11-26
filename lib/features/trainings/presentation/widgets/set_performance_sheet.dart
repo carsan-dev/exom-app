@@ -8,6 +8,7 @@ import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/services/set_input_parser.dart';
@@ -71,10 +72,16 @@ class SetPerformanceSheet extends StatefulWidget {
     this.initialRir,
     this.previous,
     this.today,
+    this.kicker,
   });
 
   /// «Serie 2».
   final String title;
+
+  /// «Sentadilla búlgara · registrar» above the title (L5-E3b, sketch
+  /// `.x-k`); null, the default, shows nothing (the circuit, whose title
+  /// already names the exercise).
+  final String? kicker;
 
   /// Prescription text («8 reps · RIR 2»); empty hides it.
   final String objective;
@@ -556,6 +563,13 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.kicker case final kicker?) ...[
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomKicker(kicker),
+            ),
+            const SizedBox(height: 4),
+          ],
           Semantics(
             header: true,
             child: Text(

@@ -3001,6 +3001,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The next set is the final one. You will need to attach its video to complete the exercise.';
 
   @override
+  String get currentLastSetMessage =>
+      'This is your last set. Once you save it, you can record the video.';
+
+  @override
   String get understood => 'Got it';
 
   @override
@@ -4187,6 +4191,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activeExerciseRestNextWeightLabel => 'your weight';
+
+  @override
+  String setSheetExerciseKicker(String exercise) {
+    return '$exercise · log';
+  }
+
+  @override
+  String get lastSetVideoRemindMe => 'Remind me';
+
+  @override
+  String lastSetVideoSheetKicker(String exercise, int setNumber) {
+    return '$exercise · set $setNumber';
+  }
+
+  @override
+  String lastSetVideoChosenSet(int setNumber, String performance) {
+    return 'Set $setNumber · $performance';
+  }
+
+  @override
+  String get changeVideoA11y => 'Change video';
 
   @override
   String setSheetObjective(String objective) {

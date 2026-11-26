@@ -3036,6 +3036,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'La siguiente es la última serie. Necesitarás adjuntar su vídeo para completar el ejercicio.';
 
   @override
+  String get currentLastSetMessage =>
+      'Esta es la última serie. Al guardarla podrás grabar el vídeo.';
+
+  @override
   String get understood => 'Entendido';
 
   @override
@@ -4229,6 +4233,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get activeExerciseRestNextWeightLabel => 'tu peso';
+
+  @override
+  String setSheetExerciseKicker(String exercise) {
+    return '$exercise · registrar';
+  }
+
+  @override
+  String get lastSetVideoRemindMe => 'Recordármelo';
+
+  @override
+  String lastSetVideoSheetKicker(String exercise, int setNumber) {
+    return '$exercise · serie $setNumber';
+  }
+
+  @override
+  String lastSetVideoChosenSet(int setNumber, String performance) {
+    return 'Serie $setNumber · $performance';
+  }
+
+  @override
+  String get changeVideoA11y => 'Cambiar vídeo';
 
   @override
   String setSheetObjective(String objective) {

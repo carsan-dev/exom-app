@@ -5270,6 +5270,12 @@ abstract class AppLocalizations {
   /// **'La siguiente es la última serie. Necesitarás adjuntar su vídeo para completar el ejercicio.'**
   String get upcomingLastSetMessage;
 
+  /// No description provided for @currentLastSetMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta es la última serie. Al guardarla podrás grabar el vídeo.'**
+  String get currentLastSetMessage;
+
   /// No description provided for @understood.
   ///
   /// In es, this message translates to:
@@ -6989,6 +6995,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'tu peso'**
   String get activeExerciseRestNextWeightLabel;
+
+  /// No description provided for @setSheetExerciseKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercise} · registrar'**
+  String setSheetExerciseKicker(String exercise);
+
+  /// No description provided for @lastSetVideoRemindMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordármelo'**
+  String get lastSetVideoRemindMe;
+
+  /// No description provided for @lastSetVideoSheetKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercise} · serie {setNumber}'**
+  String lastSetVideoSheetKicker(String exercise, int setNumber);
+
+  /// No description provided for @lastSetVideoChosenSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {setNumber} · {performance}'**
+  String lastSetVideoChosenSet(int setNumber, String performance);
+
+  /// No description provided for @changeVideoA11y.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar vídeo'**
+  String get changeVideoA11y;
 
   /// No description provided for @setSheetObjective.
   ///

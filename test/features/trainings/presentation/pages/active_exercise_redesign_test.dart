@@ -21,6 +21,7 @@ import 'package:exom_app/features/trainings/presentation/widgets/execution_timer
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,9 +59,11 @@ class _Storage extends LocalStorage {
   final _Store store;
   final UnitSystem unitSystem;
   final settings = <String, Object?>{'last_set_video_reminder_enabled': false};
+  bool failSettingSaves = false;
+  String? stamp = 'owner:1:test';
 
   @override
-  String? get sessionStamp => 'owner:1:test';
+  String? get sessionStamp => stamp;
   @override
   List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
       [];
@@ -79,8 +82,10 @@ class _Storage extends LocalStorage {
   }
 
   @override
-  Future<void> saveSetting(String key, dynamic value) async =>
-      settings[key] = value;
+  Future<void> saveSetting(String key, dynamic value) async {
+    if (failSettingSaves) throw StateError('disk full');
+    settings[key] = value;
+  }
   @override
   bool getRestTimerSoundEnabled() => false;
   @override
@@ -179,10 +184,11 @@ const _bulgarian = TrainingExerciseEntity(
 );
 
 class _Harness {
-  _Harness(this.store, this.native, this.trainingBloc);
+  _Harness(this.store, this.native, this.trainingBloc, [this.storage]);
   final _Store store;
   final _Native native;
   final _TrainingBloc trainingBloc;
+  final _Storage? storage;
 
   ActiveWorkoutHiveModel? get draft => store.data[_draftKey];
 }
@@ -206,11 +212,17 @@ Future<_Harness> _pumpPage(
   Map<String, TrainingDayProgress> sessionProgress = const {},
   String? sessionId,
   List<TrainingExerciseEntity>? trainingExercises,
+  ValueListenable<ThemeMode>? themeMode,
+  bool? lastSetVideoReminder,
+  void Function()? registerExtra,
 }) async {
   await sl.reset();
   final store = _Store();
   if (seed != null) store.data[seed.exerciseId] = seed;
   final storage = _Storage(store, unitSystem: unitSystem);
+  if (lastSetVideoReminder != null) {
+    storage.settings['last_set_video_reminder_enabled'] = lastSetVideoReminder;
+  }
   final native = _Native();
   final trainingBloc = _TrainingBloc(
     completedExerciseIds: completedExerciseIds,
@@ -221,6 +233,7 @@ Future<_Harness> _pumpPage(
   sl.registerSingleton<RestTimerCoordinator>(native);
   sl.registerSingleton<ExecutionTimerCoordinator>(ExecutionTimerCoordinator());
   sl.registerSingleton<ValidatedSessionGate>(ValidatedSessionGate(() => null));
+  registerExtra?.call();
   addTearDown(sl.reset);
   final preferences = AppPreferencesCubit(storage);
   addTearDown(preferences.close);
@@ -264,20 +277,28 @@ Future<_Harness> _pumpPage(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  // With [themeMode] the app follows it between both themes (L5-E3b, E4-O4).
+  final fixedMode = ValueNotifier(ThemeMode.light);
+  addTearDown(fixedMode.dispose);
   await tester.pumpWidget(
     BlocProvider<AppPreferencesCubit>.value(
       value: preferences,
-      child: MaterialApp.router(
-        theme: themeFor(brightness),
-        locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: router,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
-          child: child!,
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeMode ?? fixedMode,
+        builder: (context, mode, _) => MaterialApp.router(
+          theme: themeMode == null ? themeFor(brightness) : themeFor(Brightness.light),
+          darkTheme: themeMode == null ? null : themeFor(Brightness.dark),
+          themeMode: themeMode == null ? ThemeMode.system : mode,
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
+            child: child!,
+          ),
         ),
       ),
     ),
@@ -285,12 +306,28 @@ Future<_Harness> _pumpPage(
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 400));
-  return _Harness(store, native, trainingBloc);
+  return _Harness(store, native, trainingBloc, storage);
+}
+
+/// What the L5-E3b tests read back from [pumpActiveExercise]: the stored
+/// settings, the draft and the events sent to the training bloc.
+class ActiveExerciseHandle {
+  ActiveExerciseHandle._(this._harness);
+  final _Harness _harness;
+
+  Map<String, Object?> get settings => _harness.storage!.settings;
+  set failSettingSaves(bool value) =>
+      _harness.storage!.failSettingSaves = value;
+
+  /// Simulates a user switch: the session stamp the page compares against.
+  set sessionStamp(String? value) => _harness.storage!.stamp = value;
+  ActiveWorkoutHiveModel? get draft => _harness.draft;
+  List<TrainingEvent> get trainingEvents => _harness.trainingBloc.events;
 }
 
 /// Public entry for the L5-E3a tests (structure, colour, overflow): the same
 /// page and fakes as [_pumpPage] with the Bulgarian split squat of this file.
-Future<void> pumpActiveExercise(
+Future<ActiveExerciseHandle> pumpActiveExercise(
   WidgetTester tester, {
   double? initialWeightKg,
   List<SetPerformance>? previous,
@@ -305,9 +342,17 @@ Future<void> pumpActiveExercise(
   Map<String, TrainingDayProgress> sessionProgress = const {},
   String? sessionId,
   List<TrainingExerciseEntity>? trainingExercises,
+  bool requiresLastSetVideo = false,
+  ValueListenable<ThemeMode>? themeMode,
+  bool? lastSetVideoReminder,
+  void Function()? registerExtra,
 }) async {
-  await _pumpPage(
+  final harness = await _pumpPage(
     tester,
+    requiresLastSetVideo: requiresLastSetVideo,
+    themeMode: themeMode,
+    lastSetVideoReminder: lastSetVideoReminder,
+    registerExtra: registerExtra,
     exercise: exercise ?? _bulgarian,
     completedExerciseIds: completedExerciseIds,
     sessionProgress: sessionProgress,
@@ -322,6 +367,7 @@ Future<void> pumpActiveExercise(
     locale: locale,
     brightness: brightness,
   );
+  return ActiveExerciseHandle._(harness);
 }
 
 /// Draft key of the exercise pumped by [pumpActiveExercise].
@@ -881,19 +927,19 @@ void main() {
         exercise: ExerciseEntity(id: 'ex-1', name: 'Remo', muscleGroups: []),
       ),
     );
-    final l10n = _l10n(tester);
-    // Bootstrap prompts for the video of the last set; dismiss it.
+    // L5-E3b (L5-D23 ii): the video is asked when the last set is saved, in
+    // its own sheet; nothing opens by itself when the last set starts (before
+    // E3b the source sheet opened here and was dismissed).
     await _settleFrames(tester);
-    expect(find.text(l10n.recordNow), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
-    await _settleFrames(tester);
+    expect(find.byKey(const Key('last-set-video-record')), findsNothing);
+    expect(find.byKey(const Key('exom-sheet-panel')), findsNothing);
 
     await _openSheet(tester);
     await _saveSheet(tester);
     await _settleFrames(tester);
-    // The video source sheet opens after the set sheet is gone; no set yet.
+    // The video sheet opens after the set sheet is gone; no set yet.
     expect(find.byKey(const Key('set-sheet-save')), findsNothing);
-    expect(find.text(l10n.recordNow), findsOneWidget);
+    expect(find.byKey(const Key('last-set-video-record')), findsOneWidget);
     expect(h.draft!.completedSets, 0);
     await tester.tapAt(const Offset(10, 10));
     await _settleFrames(tester);
@@ -904,7 +950,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('footer-executing')));
     await _settleFrames(tester);
     expect(find.byKey(const Key('set-sheet-save')), findsNothing);
-    expect(find.text(l10n.recordNow), findsOneWidget);
+    expect(find.byKey(const Key('last-set-video-record')), findsOneWidget);
   });
 
   for (final brightness in Brightness.values) {

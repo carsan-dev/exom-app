@@ -22,6 +22,7 @@ import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
@@ -35,6 +36,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
@@ -149,8 +151,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _handledCompletion = false;
   bool _allowPop = false;
   bool _popScheduled = false;
-  bool _reminderShown = false;
   bool _lastSetVideoPromptOpen = false;
+
+  /// `last_set_video_reminder_enabled` as shown by the band (L5-D23 i): read
+  /// once, then what the user last switched.
+  bool? _reminderEnabled;
   String? _preparedLastSetFeedbackId;
   SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
@@ -230,7 +235,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       _bootstrapped = true;
     });
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
-    _scheduleLastSetVideoPreparation(activeState);
     if (activeState.isDone) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _beginCompletion(activeState);
@@ -307,6 +311,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         await showSetPerformanceSheet(
           context,
           l10n,
+          exerciseName: widget.args.trainingExercise.exercise.name,
           setNumber: state.currentSet,
           prescribedReps: formatExercisePrescription(
             widget.args.trainingExercise,
@@ -341,7 +346,11 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     if (state.currentSet == state.totalSets &&
         widget.args.requiresLastSetVideo &&
         feedbackId == null) {
-      feedbackId = await _prepareLastSetVideo();
+      feedbackId = await _prepareLastSetVideo(
+        performance,
+        state.currentSet,
+        weightText,
+      );
       if (!mounted || feedbackId == null) {
         _pendingLastSetPerformance = performance;
         _pendingLastSetNumber = state.currentSet;
@@ -362,23 +371,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               lastSetFeedbackClientUploadId: feedbackId,
             ),
     );
-  }
-
-  void _scheduleLastSetVideoPreparation(ActiveExerciseState state) {
-    if (!shouldPrepareLastSetVideo(
-      requiresLastSetVideo: widget.args.requiresLastSetVideo,
-      isExecuting: state.isExecuting,
-      currentSet: state.currentSet,
-      totalSets: state.totalSets,
-      completedSets: state.completedSets,
-      feedbackId:
-          _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
-    )) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_prepareLastSetVideo());
-    });
   }
 
   void _beginCompletion(ActiveExerciseState state) {
@@ -426,7 +418,14 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     }
   }
 
-  Future<String?> _prepareLastSetVideo() async {
+  /// Asks for the last set's video once [performance] (set [setNumber]) is
+  /// saved (L5-D23 ii): its own sheet, never on its own when the last set
+  /// starts. Null when nothing was queued; the caller keeps the set pending.
+  Future<String?> _prepareLastSetVideo(
+    SetPerformanceResult performance,
+    int setNumber,
+    WeightText weightText,
+  ) async {
     final bloc = context.read<ActiveExerciseBloc>();
     final existingId =
         _preparedLastSetFeedbackId ?? bloc.state.lastSetFeedbackClientUploadId;
@@ -436,11 +435,13 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     _lastSetVideoPromptOpen = true;
     try {
-      await _showUpcomingLastSetReminder();
-      if (!mounted) return null;
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return null;
-      final feedbackId = await _enqueueLastSetVideo();
+      final feedbackId = await _enqueueLastSetVideo(
+        performance,
+        setNumber,
+        weightText,
+      );
       if (!mounted || feedbackId == null) return null;
       _preparedLastSetFeedbackId = feedbackId;
       bloc.add(AttachLastSetFeedback(feedbackId));
@@ -450,110 +451,80 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     }
   }
 
-  Future<void> _showUpcomingLastSetReminder() async {
-    if (_reminderShown || !mounted) return;
-    _reminderShown = true;
-    final storage = sl<LocalStorage>();
-    final enabled =
-        storage.getSetting<bool>(
-          'last_set_video_reminder_enabled',
-          defaultValue: true,
-        ) ??
-        true;
-    if (!enabled) return;
-    var hideAgain = false;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(AppLocalizations.of(context).upcomingLastSetTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(AppLocalizations.of(context).upcomingLastSetMessage),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: hideAgain,
-                onChanged: (value) =>
-                    setDialogState(() => hideAgain = value ?? false),
-                title: Text(AppLocalizations.of(context).doNotShowAgain),
-              ),
-            ],
+  bool get _reminderOn =>
+      _reminderEnabled ??=
+          sl<LocalStorage>().getSetting<bool>(
+            'last_set_video_reminder_enabled',
+            defaultValue: true,
+          ) ??
+          true;
+
+  /// «Recordármelo»: the same preference as Ajustes (on = true).
+  Future<void> _setReminder(bool enabled) async {
+    setState(() => _reminderEnabled = enabled);
+    try {
+      await sl<LocalStorage>().saveSetting(
+        'last_set_video_reminder_enabled',
+        enabled,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      // Same as Ajustes (M8): undo the optimistic switch and say so.
+      setState(() {
+        if (_reminderEnabled == enabled) _reminderEnabled = !enabled;
+      });
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? l10n.settingsSwitchEnableFailed
+                : l10n.settingsSwitchDisableFailed,
           ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(AppLocalizations.of(context).understood),
-            ),
-          ],
         ),
-      ),
-    );
-    if (hideAgain) {
-      await storage.saveSetting('last_set_video_reminder_enabled', false);
+      );
     }
   }
 
-  Future<String?> _enqueueLastSetVideo() async {
-    final source = await showModalBottomSheet<ImageSource>(
+  /// The last-set video sheet (L5-D23 ii-iii); «Usar vídeo» queues with the
+  /// same fields and the same session check as before E3b. «Cambiar»,
+  /// «Cancelar», a dismissal or a router change queue nothing.
+  Future<String?> _enqueueLastSetVideo(
+    SetPerformanceResult performance,
+    int setNumber,
+    WeightText weightText,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final exercise = widget.args.trainingExercise.exercise;
+    final performed = performance.skipped
+        ? null
+        : setValueLabel(
+            l10n,
+            SetPerformance(
+              setNumber: setNumber,
+              reps: performance.reps,
+              seconds: performance.seconds,
+              weightKg: performance.weight,
+            ),
+            weightText,
+          );
+    final choice = await showExomSheet<LastSetVideoChoice>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(ExomIcons.info),
-              title: Text(AppLocalizations.of(context).attachLastSetVideo),
-              subtitle: Text(
-                AppLocalizations.of(context).lastSetVideoRequiredDescription,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(ExomIcons.video),
-              title: Text(AppLocalizations.of(context).recordNow),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(ExomIcons.videoLibrary),
-              title: Text(AppLocalizations.of(context).chooseFromGallery),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
-            ),
-          ],
-        ),
+      builder: (_) => LastSetVideoSheet(
+        kicker: l10n.lastSetVideoSheetKicker(exercise.name, setNumber),
+        setLabel: performed == null || performed.isEmpty
+            ? l10n.setPerformanceTitle(setNumber)
+            : l10n.lastSetVideoChosenSet(setNumber, performed),
+        pickVideo: _pickLastSetVideo,
       ),
     );
-    if (source == null || !mounted) return null;
-    final picked = await _pickLastSetVideo(source);
-    if (picked == null || !mounted) return null;
-    var notes = '';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(AppLocalizations.of(context).videoReadyTitle),
-        content: TextField(
-          maxLines: 3,
-          onChanged: (value) => notes = value,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context).optionalComment,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(AppLocalizations.of(context).changeVideo),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(AppLocalizations.of(context).useVideo),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted || !context.mounted || _ownerSession == null ||
+    if (choice == null || !mounted || !context.mounted ||
+        _ownerSession == null ||
         sl<LocalStorage>().sessionStamp != _ownerSession) {
       return null;
     }
-    notes = notes.trim();
+    final picked = choice.file;
+    final notes = choice.notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
       expectedSession: _ownerSession,
       file: picked,
@@ -740,7 +711,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           previous.currentSet != current.currentSet ||
           previous.errorMessage != current.errorMessage,
       listener: (context, state) {
-        _scheduleLastSetVideoPreparation(state);
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(
             context,
@@ -1071,6 +1041,22 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           previous: previous,
           weightText: weightText,
         ),
+        if (showsLastSetVideoReminder(
+          requiresLastSetVideo: widget.args.requiresLastSetVideo,
+          isExecuting: state.isExecuting,
+          currentSet: state.currentSet,
+          totalSets: state.totalSets,
+          completedSets: state.completedSets,
+          feedbackId:
+              _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
+        )) ...[
+          const SizedBox(height: 24),
+          _LastSetVideoReminder(
+            enabled: _reminderOn,
+            isLastSet: state.currentSet == state.totalSets,
+            onChanged: _setReminder,
+          ),
+        ],
         if (state.isExecuting && state.timedTotalSeconds != null)
           pad(
             ExecutionTimer(
@@ -1356,6 +1342,30 @@ bool shouldPrepareLastSetVideo({
       currentSet == totalSets &&
       completedSets < totalSets &&
       (feedbackId == null || feedbackId.isEmpty);
+}
+
+/// L5-D23 (i): the reminder band (or its minimal line when switched off) is
+/// shown while the set before the last one, or the last one, is executing
+/// and the last set still needs its video. Informative only: when the video
+/// is mandatory does not change.
+@visibleForTesting
+bool showsLastSetVideoReminder({
+  required bool requiresLastSetVideo,
+  required bool isExecuting,
+  required int currentSet,
+  required int totalSets,
+  required int completedSets,
+  required String? feedbackId,
+}) {
+  bool lastSetAt(int set) => shouldPrepareLastSetVideo(
+    requiresLastSetVideo: requiresLastSetVideo,
+    isExecuting: isExecuting,
+    currentSet: set,
+    totalSets: totalSets,
+    completedSets: completedSets,
+    feedbackId: feedbackId,
+  );
+  return lastSetAt(currentSet) || lastSetAt(currentSet + 1);
 }
 
 @visibleForTesting
@@ -1673,6 +1683,7 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
   int? targetRir,
   UnitSystem unitSystem = UnitSystem.metric,
   String? decimalSeparator,
+  String? exerciseName,
 }) {
   final timed = timeUnit != null;
   final separator =
@@ -1696,6 +1707,9 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
     context: context,
     builder: (_) => SetPerformanceSheet(
       title: l10n.setPerformanceTitle(setNumber),
+      kicker: exerciseName == null
+          ? null
+          : l10n.setSheetExerciseKicker(exerciseName),
       objective: prescribedReps,
       timeUnit: timeUnit,
       countRequired: repsRequired,
@@ -1708,4 +1722,92 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
       today: currentPerformance,
     ),
   );
+}
+
+/// L5-D23 (i), sketch frames `f-ej-ult` and `f-ej-ult-off`: before the last
+/// set, the video reminder is an informative band («Prepárate para grabar»,
+/// the same message as the old dialog) with the «Recordármelo» switch on;
+/// switched off, one flat row with the same switch to turn it back on. The
+/// switch writes `last_set_video_reminder_enabled`, as Ajustes. The switch
+/// is in the text colour, never lime.
+class _LastSetVideoReminder extends StatelessWidget {
+  const _LastSetVideoReminder({
+    required this.enabled,
+    required this.isLastSet,
+    required this.onChanged,
+  });
+
+  final bool enabled;
+
+  /// The band also shows on the last set itself: there «the next one is the
+  /// last» would be wrong (r3, D1).
+  final bool isLastSet;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    if (!enabled) {
+      return ExomFlatRowGroup(
+        children: [
+          MergeSemantics(
+            key: const Key('last-set-video-reminder-off'),
+            child: Semantics(
+              toggled: false,
+              child: ExomFlatRow(
+                title: l10n.lastSetVideoRemindMe,
+                subtitles: [l10n.lastSetVideoReminderOption],
+                trailing: const ExcludeSemantics(
+                  child: ExomSquareSwitch(value: false),
+                ),
+                onTap: () => onChanged(true),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ExomBand(
+      key: const Key('last-set-video-reminder'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomKicker(
+                l10n.upcomingLastSetTitle,
+                icon: ExomIcons.camera,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              isLastSet
+                  ? l10n.currentLastSetMessage
+                  : l10n.upcomingLastSetMessage,
+              style: TextStyle(
+                fontFamily: AppTheme.bodyFontFamily,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+                color: palette.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          ExomSwitchRow(
+            label: l10n.lastSetVideoRemindMe,
+            value: true,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1096,6 +1096,7 @@
   "understood": "Got it",
   "attachLastSetVideo": "Attach your final-set video",
   "lastSetVideoRequiredDescription": "It is required to complete this exercise.",
+  "lastSetVideoRecoveryError": "We could not recover your last set's video. Record or choose it again.",
   "videoReadyTitle": "Video ready",
   "optionalComment": "Optional comment",
   "changeVideo": "Change",

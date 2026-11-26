@@ -1133,6 +1133,7 @@
   "understood": "Entendido",
   "attachLastSetVideo": "Adjunta el vídeo de tu última serie",
   "lastSetVideoRequiredDescription": "Es obligatorio para completar este ejercicio.",
+  "lastSetVideoRecoveryError": "No se pudo recuperar el vídeo de tu última serie. Grábalo o elígelo de nuevo.",
   "videoReadyTitle": "Vídeo preparado",
   "optionalComment": "Comentario opcional",
   "changeVideo": "Cambiar",

@@ -64,6 +64,10 @@ class _Storage extends LocalStorage {
 
   @override
   String? get sessionStamp => stamp;
+  // The account of [stamp] (`uid:generation:env`), as the real store derives
+  // both from the same Firebase session.
+  @override
+  String? get ownerId => stamp?.split(':').first;
   @override
   List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
       [];
@@ -215,6 +219,7 @@ Future<_Harness> _pumpPage(
   ValueListenable<ThemeMode>? themeMode,
   bool? lastSetVideoReminder,
   void Function()? registerExtra,
+  Widget Function(Widget app)? wrapApp,
 }) async {
   await sl.reset();
   final store = _Store();
@@ -280,29 +285,28 @@ Future<_Harness> _pumpPage(
   // With [themeMode] the app follows it between both themes (L5-E3b, E4-O4).
   final fixedMode = ValueNotifier(ThemeMode.light);
   addTearDown(fixedMode.dispose);
-  await tester.pumpWidget(
-    BlocProvider<AppPreferencesCubit>.value(
-      value: preferences,
-      child: ValueListenableBuilder<ThemeMode>(
-        valueListenable: themeMode ?? fixedMode,
-        builder: (context, mode, _) => MaterialApp.router(
-          theme: themeMode == null ? themeFor(brightness) : themeFor(Brightness.light),
-          darkTheme: themeMode == null ? null : themeFor(Brightness.dark),
-          themeMode: themeMode == null ? ThemeMode.system : mode,
-          locale: locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: router,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
-            child: child!,
-          ),
+  final Widget app = BlocProvider<AppPreferencesCubit>.value(
+    value: preferences,
+    child: ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeMode ?? fixedMode,
+      builder: (context, mode, _) => MaterialApp.router(
+        theme: themeMode == null ? themeFor(brightness) : themeFor(Brightness.light),
+        darkTheme: themeMode == null ? null : themeFor(Brightness.dark),
+        themeMode: themeMode == null ? ThemeMode.system : mode,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
+          child: child!,
         ),
       ),
     ),
   );
+  await tester.pumpWidget(wrapApp == null ? app : wrapApp(app));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 400));
@@ -322,6 +326,16 @@ class ActiveExerciseHandle {
   /// Simulates a user switch: the session stamp the page compares against.
   set sessionStamp(String? value) => _harness.storage!.stamp = value;
   ActiveWorkoutHiveModel? get draft => _harness.draft;
+
+  /// Overwrites the stored draft (what Hive would hold after a crash).
+  set draft(ActiveWorkoutHiveModel? value) {
+    if (value == null) {
+      _harness.store.data.remove(_draftKey);
+    } else {
+      _harness.store.data[_draftKey] = value;
+    }
+  }
+
   List<TrainingEvent> get trainingEvents => _harness.trainingBloc.events;
 }
 
@@ -346,9 +360,11 @@ Future<ActiveExerciseHandle> pumpActiveExercise(
   ValueListenable<ThemeMode>? themeMode,
   bool? lastSetVideoReminder,
   void Function()? registerExtra,
+  Widget Function(Widget app)? wrapApp,
 }) async {
   final harness = await _pumpPage(
     tester,
+    wrapApp: wrapApp,
     requiresLastSetVideo: requiresLastSetVideo,
     themeMode: themeMode,
     lastSetVideoReminder: lastSetVideoReminder,

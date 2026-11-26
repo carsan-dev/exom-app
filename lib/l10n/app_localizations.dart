@@ -5534,6 +5534,12 @@ abstract class AppLocalizations {
   /// **'Es obligatorio para completar este ejercicio.'**
   String get lastSetVideoRequiredDescription;
 
+  /// No description provided for @lastSetVideoRecoveryError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo recuperar el vídeo de tu última serie. Grábalo o elígelo de nuevo.'**
+  String get lastSetVideoRecoveryError;
+
   /// No description provided for @videoReadyTitle.
   ///
   /// In es, this message translates to:

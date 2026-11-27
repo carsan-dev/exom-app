@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -64,18 +66,122 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   /// The patched completion, for the reload that follows it.
   _Confirmed? _confirmed;
 
+  /// INICIO-RED (A1): summary requests not answered yet. While one is in
+  /// flight a reconnection does not start another reload.
+  int _summariesInFlight = 0;
+
+  /// INICIO-RED (A1): whether the network is up, as last reported (`null`
+  /// until the first report), the reconnection waiting out its debounce and
+  /// the subscription to the network changes.
+  final Duration _reconnectDebounce;
+  bool? _online;
+  Timer? _reconnectTimer;
+
+  /// INICIO-RED r2: the debounce ended while a request was in flight; once
+  /// the last one settles, Inicio is checked again (one reload at most).
+  bool _pendingReconnect = false;
+  StreamSubscription<bool>? _connectivitySubscription;
+
+  /// [connectivityChanges] reports whether the device has network (`true`)
+  /// or not. Without it (older wiring, tests) Inicio never reloads by itself
+  /// when the network comes back.
   HomeBloc({
     required GetHomeSummaryUseCase getHomeSummaryUseCase,
     GetMonthCalendarUseCase? getMonthCalendarUseCase,
     String? Function()? sessionStamp,
+    Stream<bool>? connectivityChanges,
+    Duration reconnectDebounce = const Duration(seconds: 2),
   }) : _getHomeSummaryUseCase = getHomeSummaryUseCase,
        _getMonthCalendarUseCase = getMonthCalendarUseCase,
        _sessionStamp = sessionStamp,
        _ownerSession = sessionStamp?.call(),
+       _reconnectDebounce = reconnectDebounce,
        super(const HomeInitial()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeDateSelected>(_onDateSelected);
     on<_HomeCompletionPatched>(_onCompletionPatched);
+    _connectivitySubscription = connectivityChanges?.listen(
+      _onConnectivityChanged,
+    );
+  }
+
+  /// INICIO-RED (A1): the network coming back (a report of "online" that
+  /// does not follow another one) waits [_reconnectDebounce]; going offline
+  /// in the meantime cancels it, so a flicker reloads at most once.
+  void _onConnectivityChanged(bool online) {
+    final wasOnline = _online;
+    _online = online;
+    if (!online) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      _pendingReconnect = false;
+      return;
+    }
+    if (wasOnline == true) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectDebounce, _reloadAfterReconnect);
+  }
+
+  /// Reloads as «Reintentar» does, only when Inicio shows stale data or an
+  /// error. With a request in flight it waits for it to settle instead.
+  void _reloadAfterReconnect() {
+    _reconnectTimer = null;
+    if (isClosed) return;
+    if (_summariesInFlight > 0) {
+      _pendingReconnect = true;
+      return;
+    }
+    _reloadIfUnavailable();
+  }
+
+  /// INICIO-RED r2: runs after the last request in flight settled and its
+  /// state was emitted. Still online, it reloads once if Inicio is stale or
+  /// an error; the reload it starts never sets the mark again.
+  void _resumePendingReconnect() {
+    if (isClosed || !_pendingReconnect || _summariesInFlight > 0) return;
+    _pendingReconnect = false;
+    if (_online != true) return;
+    _reloadIfUnavailable();
+  }
+
+  /// The «Reintentar» of what Inicio shows: the error, or the stale content
+  /// of its day. Nothing when Inicio is fresh.
+  void _reloadIfUnavailable() {
+    switch (state) {
+      case HomeError():
+        add(const HomeLoadRequested());
+      case HomeLoaded(refreshError: _?, :final selectedDate) ||
+          HomeRestDay(refreshError: _?, :final selectedDate):
+        add(HomeLoadRequested(date: selectedDate));
+      default:
+        break;
+    }
+  }
+
+  /// Runs [request] counted in [_summariesInFlight].
+  Future<HomeSummaryEntity> _countedInFlight(
+    Future<HomeSummaryEntity> Function() request,
+  ) async {
+    _summariesInFlight++;
+    try {
+      return await request();
+    } finally {
+      _summariesInFlight--;
+      // The handler emits the resulting state after this await returns (in
+      // microtasks); a zero timer runs once all of them are done.
+      if (_summariesInFlight == 0 && _pendingReconnect) {
+        Timer.run(_resumePendingReconnect);
+      }
+    }
+  }
+
+  @override
+  Future<void> close() async {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _pendingReconnect = false;
+    await _connectivitySubscription?.cancel();
+    return super.close();
   }
 
   /// The patched content while its emission is on its way, so a widget
@@ -210,9 +316,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final calendar = _calendarFor(weekStart);
 
     try {
-      var summary = await _getHomeSummaryUseCase(
-        date: date,
-        includeSharedData: shared == null,
+      var summary = await _countedInFlight(
+        () => _getHomeSummaryUseCase(
+          date: date,
+          includeSharedData: shared == null,
+        ),
       );
       if (epoch != _requestEpoch) return;
       if (shared != null) {

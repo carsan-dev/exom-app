@@ -831,6 +831,10 @@ void main() {
       ('en', '33.25', '33.25', 'L 33.25 · R 33.5 cm', 33.25),
       // A third decimal is rounded on input to the two the app shows.
       ('es', '33,256', '33,26', 'I 33,26 · D 33,5 cm', 33.26),
+      // A typed half rounds up despite binary floating point: 1.005 * 100
+      // is 100.4999…, which used to show and send 1,00.
+      ('es', '1,005', '1,01', 'I 1,01 · D 33,5 cm', 1.01),
+      ('es', '2,675', '2,68', 'I 2,68 · D 33,5 cm', 2.68),
     ]) {
       testWidgets('$locale typed «$typed» shows «$shown» and sends $sent', (
         tester,
@@ -902,6 +906,79 @@ void main() {
       await _save(tester);
       expect(repository.saved.single['forearm_right_cm'], 27.5);
       expect(repository.saved.single.containsKey('forearm_left_cm'), isFalse);
+    });
+
+    // A zone with no data at all showed its starting value («95,0») as if
+    // it were measured. Every side without a value shows «—»; ± starts from
+    // the seed of the zone.
+    testWidgets('a single zone without data shows «—», ± starts at the seed', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.hips);
+      expect(numeral(tester, 'hips_cm'), '—');
+      expect(
+        find.descendant(
+          of: measureStepper('hips_cm'),
+          matching: find.textContaining('95', findRichText: true),
+        ),
+        findsNothing,
+      );
+      await stepMeasure(tester, 'hips_cm');
+      expect(numeral(tester, 'hips_cm'), '95,5');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.hips), '95,5 cm');
+      await _save(tester);
+      expect(repository.saved.single, {..._untouchedPayload(), 'hips_cm': 95.5});
+    });
+
+    testWidgets('a pair without data: both sides «—», ± from the seed', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.calf);
+      expect(numeral(tester, 'calf_left_cm'), '—');
+      expect(numeral(tester, 'calf_right_cm'), '—');
+      await stepMeasure(tester, 'calf_left_cm', up: false);
+      expect(numeral(tester, 'calf_left_cm'), '36,5');
+      expect(numeral(tester, 'calf_right_cm'), '—');
+      await tapMeasureDone(tester);
+      // «Hecho» only returns the changed side.
+      expect(measureValueText(tester, BodyZone.calf), 'I 36,5 · D —');
+      await _save(tester);
+      expect(repository.saved.single, {
+        ..._untouchedPayload(),
+        'calf_left_cm': 36.5,
+      });
+    });
+
+    testWidgets('a zone without data: «Hecho» untouched changes nothing', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.shoulders);
+      expect(numeral(tester, 'shoulders_cm'), '—');
+      await tapMeasureDone(tester);
+      expect(measureEdited(BodyZone.shoulders), findsNothing);
+      await _save(tester);
+      expect(repository.saved.single, _untouchedPayload());
+    });
+
+    testWidgets('the empty side of a measured pair steps from the other', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.thigh);
+      expect(numeral(tester, 'thigh_right_cm'), '—');
+      await stepMeasure(tester, 'thigh_right_cm');
+      expect(numeral(tester, 'thigh_right_cm'), '55,5');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.thigh), 'I 55,0 · D 55,5 cm');
+      await _save(tester);
+      expect(repository.saved.single, {
+        ..._untouchedPayload(),
+        'thigh_right_cm': 55.5,
+      });
     });
 
     // Issue 3: the plates of a pair name their side.

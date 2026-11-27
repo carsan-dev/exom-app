@@ -12,7 +12,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/formatters/weight_input.dart'
-    show decimalSeparatorFor, formatDisplayDecimal;
+    show decimalSeparatorFor, formatDisplayDecimal, roundToHundredths;
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -30,7 +30,7 @@ import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -601,9 +601,10 @@ class _MetricsViewState extends State<_MetricsView> {
                   ? l10n.leftSideLabel
                   : l10n.rightSideLabel,
               initial: drafts[i] ?? seed,
-              // The unmeasured side of a measured pair starts from the other
-              // side but shows «—» until the client changes it.
-              empty: drafts[i] == null && drafts.any((d) => d != null),
+              // A side without a value shows «—» until the client changes
+              // it. Its ± starts from the other side when that one has a
+              // value (owner decision) and from the zone seed otherwise.
+              empty: drafts[i] == null,
             ),
         ],
         zoneLabel: label,
@@ -1269,11 +1270,16 @@ class _MetricsViewState extends State<_MetricsView> {
         if (state is MetricsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              // On the error colour the theme's textPrimary falls to 2.3:1 in
+              // dark (L4-I9): the text takes onError.
               content: Text(
                 localizedErrorTextOf(
                   context,
                   state.message,
                   fallback: (l10n) => l10n.metricsSaveError,
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onError,
                 ),
               ),
               backgroundColor: palette.error,
@@ -1288,7 +1294,7 @@ class _MetricsViewState extends State<_MetricsView> {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: GlassAppBar(
+          appBar: ExomAppBar(
             leading: IconButton(
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               icon: Icon(ExomIcons.back, color: palette.textPrimary),
@@ -1906,10 +1912,10 @@ class _MeasureSheet extends StatefulWidget {
 }
 
 class _MeasureSheetState extends State<_MeasureSheet> {
-  /// A value as the sheet shows it: at most two decimals («33,256» becomes
-  /// 33.26), so the draft and the save carry exactly the number shown.
-  static double _measurePrecision(double value) =>
-      value.isFinite ? (value * 100).round() / 100 : value;
+  /// A value as the sheet shows it: at most two decimals, half up on the
+  /// typed digits («33,256» becomes 33.26, «1,005» 1.01), so the draft and
+  /// the save carry exactly the number shown.
+  static double _measurePrecision(double value) => roundToHundredths(value);
 
   late final List<double> _values = [
     for (final side in widget.sides) side.initial,

@@ -134,6 +134,76 @@ void main() {
     });
   });
 
+  // L6 Medidas: (value * 100).round() turned 1.005 into 1.00 because
+  // 1.005 * 100 == 100.49999999999999 in binary floating point.
+  group('half-up rounding to hundredths resists binary floating point', () {
+    test('a typed half rounds up, not down', () {
+      expect(formatDisplayDecimal(1.005, decimalSeparator: ','), '1,01');
+      expect(formatDisplayDecimal(2.675, decimalSeparator: ','), '2,68');
+      expect(formatDisplayDecimal(1.015, decimalSeparator: '.'), '1.02');
+      expect(formatDisplayDecimal(162.555, decimalSeparator: ','), '162,56');
+      expect(formatWeightDisplay(0.125, UnitSystem.metric, decimalSeparator: ','),
+          '0,13');
+      expect(roundToHundredths(1.005), 1.01);
+      expect(roundToHundredths(2.675), 2.68);
+    });
+
+    test('just below a half still rounds down', () {
+      expect(formatDisplayDecimal(1.0049, decimalSeparator: '.'), '1');
+      expect(formatDisplayDecimal(2.67499, decimalSeparator: '.'), '2.67');
+      expect(roundToHundredths(1.0049), 1.0);
+    });
+
+    test('usual weights and already exact values do not change', () {
+      for (final (value, text) in const [
+        (62.5, '62,5'),
+        (162.55, '162,55'),
+        (0.125, '0,13'),
+        (0.01, '0,01'),
+        (60.0, '60'),
+        (499.99, '499,99'),
+        (1102.31, '1102,31'),
+        (38.0, '38'),
+      ]) {
+        expect(
+          formatWeightDisplay(value, UnitSystem.metric, decimalSeparator: ','),
+          text,
+          reason: '$value',
+        );
+      }
+      for (final value in const [62.5, 162.55, 0.01, 60.0, 499.99, 38.0]) {
+        expect(roundToHundredths(value), value, reason: '$value');
+      }
+    });
+
+    test('negatives round half away from zero', () {
+      expect(formatDisplayDecimal(-1.005, decimalSeparator: ','), '-1,01');
+      expect(formatDisplayDecimal(-62.5, decimalSeparator: ','), '-62,5');
+      expect(formatDisplayDecimal(-0.004, decimalSeparator: ','), '0');
+      expect(roundToHundredths(-2.675), -2.68);
+    });
+
+    test('every hundredth 0.00..1102.31 formats back to itself', () {
+      for (var hundredths = 0; hundredths <= 110231; hundredths++) {
+        final value = hundredths / 100;
+        final whole = hundredths ~/ 100;
+        final fraction = (hundredths % 100)
+            .toString()
+            .padLeft(2, '0')
+            .replaceFirst(RegExp(r'0+$'), '');
+        final expected = fraction.isEmpty ? '$whole' : '$whole.$fraction';
+        final actual = formatDisplayDecimal(value, decimalSeparator: '.');
+        if (actual != expected) fail('$value -> $actual, expected $expected');
+        if (roundToHundredths(value) != value) fail('round($value) changed');
+      }
+    });
+
+    test('non-finite values pass through roundToHundredths', () {
+      expect(roundToHundredths(double.nan).isNaN, isTrue);
+      expect(roundToHundredths(double.infinity), double.infinity);
+    });
+  });
+
   // L3 unit 3: ± of the set sheet work in the display unit.
   group('formatDisplayDecimal', () {
     test('formats without converting', () {

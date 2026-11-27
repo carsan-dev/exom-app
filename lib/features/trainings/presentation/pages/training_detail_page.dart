@@ -1823,26 +1823,30 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       appBar: GlassAppBar(
         leading: _DetailBackButton(onPressed: () => context.pop()),
       ),
-      body: scrollAway
-          ? NotificationListener<ScrollMetricsNotification>(
-              onNotification: _footerVisibility.handleMetricsNotification,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _footerVisibility.handleScrollNotification,
-                child: Builder(
-                  builder: (context) => ListView(
-                    // The extended body's bottom padding is the footer slot.
-                    padding: EdgeInsets.only(
-                      bottom: 24 + MediaQuery.paddingOf(context).bottom,
-                    ),
-                    children: listChildren,
-                  ),
-                ),
+      // One tree for both footers: changing it would rebuild the list and
+      // send it back to the top when the text scale crosses 1.3 or the
+      // screen reader turns on or off.
+      body: NotificationListener<ScrollMetricsNotification>(
+        onNotification: scrollAway
+            ? _footerVisibility.handleMetricsNotification
+            : null,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: scrollAway
+              ? _footerVisibility.handleScrollNotification
+              : null,
+          child: Builder(
+            builder: (context) => ListView(
+              // The extended body's bottom padding is the footer slot.
+              padding: EdgeInsets.only(
+                bottom: scrollAway
+                    ? 24 + MediaQuery.paddingOf(context).bottom
+                    : 24,
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.only(bottom: 24),
               children: listChildren,
             ),
+          ),
+        ),
+      ),
       bottomNavigationBar: scrollAway
           ? ExomScrollAwayFooter(
               key: const Key('training-detail-scroll-away-footer'),

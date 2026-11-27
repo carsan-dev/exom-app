@@ -13,6 +13,7 @@ import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_large_text.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart' show kExomSheetRadius;
@@ -46,21 +47,69 @@ Future<void> showMealDetailSheet(
           ),
           side: BorderSide(color: palette.borderSoft, width: 1),
         ),
-        child: DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.95,
-          builder: (_, scrollController) => MealDetailSheet(
-            mealId: mealId,
-            selectedDate: selectedDate,
-            scrollController: scrollController,
-          ),
-        ),
+        child: _MealSheetHost(mealId: mealId, selectedDate: selectedDate),
       );
     },
   );
   onDismissed?.call();
+}
+
+/// Draggable container of the meal sheet: opens at 70 %. With large text it
+/// opens tall enough to show the name, calories and macros above the pinned
+/// foot, both measured, up to its maximum (L5-D63).
+class _MealSheetHost extends StatefulWidget {
+  const _MealSheetHost({required this.mealId, required this.selectedDate});
+
+  final String mealId;
+  final String? selectedDate;
+
+  @override
+  State<_MealSheetHost> createState() => _MealSheetHostState();
+}
+
+class _MealSheetHostState extends State<_MealSheetHost> {
+  static const double _initialFraction = 0.7;
+  static const double _minFraction = 0.4;
+  static const double _maxFraction = 0.95;
+
+  double _footHeight = 0;
+  double _leadBottom = 0;
+
+  void _onFootHeight(double height) {
+    if ((height - _footHeight).abs() < 0.5 || !mounted) return;
+    setState(() => _footHeight = height);
+  }
+
+  void _onLeadBottom(double bottom) {
+    if ((bottom - _leadBottom).abs() < 0.5 || !mounted) return;
+    setState(() => _leadBottom = bottom);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: exomSheetInitialSize(
+          context,
+          initialSize: _initialFraction,
+          maxSize: _maxFraction,
+          available: constraints.maxHeight,
+          leadBottom: _leadBottom,
+          footHeight: _footHeight,
+        ),
+        minChildSize: _minFraction,
+        maxChildSize: _maxFraction,
+        builder: (_, scrollController) => MealDetailSheet(
+          mealId: widget.mealId,
+          selectedDate: widget.selectedDate,
+          scrollController: scrollController,
+          onLeadBottom: _onLeadBottom,
+          onFootHeight: _onFootHeight,
+        ),
+      ),
+    );
+  }
 }
 
 class MealDetailSheet extends StatelessWidget {
@@ -69,11 +118,19 @@ class MealDetailSheet extends StatelessWidget {
     required this.mealId,
     required this.scrollController,
     this.selectedDate,
+    this.onLeadBottom,
+    this.onFootHeight,
   });
 
   final String mealId;
   final String? selectedDate;
   final ScrollController scrollController;
+
+  /// Where the name, calories and macros block ends in the content (L5-D63).
+  final ValueChanged<double>? onLeadBottom;
+
+  /// Height of the pinned foot (L5-D63).
+  final ValueChanged<double>? onFootHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +142,8 @@ class MealDetailSheet extends StatelessWidget {
         mealId: mealId,
         selectedDate: selectedDate,
         scrollController: scrollController,
+        onLeadBottom: onLeadBottom,
+        onFootHeight: onFootHeight,
       ),
     );
   }
@@ -95,11 +154,15 @@ class _MealDetailSheetContent extends StatelessWidget {
     required this.mealId,
     required this.selectedDate,
     required this.scrollController,
+    required this.onLeadBottom,
+    required this.onFootHeight,
   });
 
   final String mealId;
   final String? selectedDate;
   final ScrollController scrollController;
+  final ValueChanged<double>? onLeadBottom;
+  final ValueChanged<double>? onFootHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +191,8 @@ class _MealDetailSheetContent extends StatelessWidget {
             meal: state.meal,
             isCompleted: state.isCompleted,
             scrollController: scrollController,
+            onLeadBottom: onLeadBottom,
+            onFootHeight: onFootHeight,
           );
         }
 
@@ -199,11 +264,15 @@ class _MealSheetBody extends StatefulWidget {
     required this.meal,
     required this.isCompleted,
     required this.scrollController,
+    this.onLeadBottom,
+    this.onFootHeight,
   });
 
   final MealEntity meal;
   final bool isCompleted;
   final ScrollController scrollController;
+  final ValueChanged<double>? onLeadBottom;
+  final ValueChanged<double>? onFootHeight;
 
   @override
   State<_MealSheetBody> createState() => _MealSheetBodyState();
@@ -308,6 +377,18 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
     final calories = _selectedMeal.calories;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
+    // The last part of the name, calories and macros block reports where it
+    // ends (L5-D63); without a listener nothing is wrapped.
+    final onLeadBottom = widget.onLeadBottom;
+    Widget lead(Widget child, {required bool isLast}) =>
+        isLast && onLeadBottom != null
+        ? ExomScrollContentBottomReporter(onBottom: onLeadBottom, child: child)
+        : child;
+    final onFootHeight = widget.onFootHeight;
+    Widget measuredFoot(Widget foot) => onFootHeight == null
+        ? foot
+        : ExomHeightReporter(onHeight: onFootHeight, child: foot);
+
     void toggleCompleted() {
       context.read<DietBloc>().add(
         MarkMealCompleted(
@@ -324,77 +405,89 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
             controller: widget.scrollController,
             padding: const EdgeInsets.only(bottom: 16),
             children: [
-              const _SheetTopBar(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _MealPhoto(meal: _selectedMeal),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ExomKicker(_mealTypeLabel(l10n, _selectedMeal.type)),
-                    const SizedBox(height: 8),
-                    Hero(
-                      tag: 'meal-${widget.meal.id}-title',
-                      flightShuttleBuilder:
-                          (flightCtx, anim, dir, fromCtx, toCtx) {
-                            return Material(
-                              color: Colors.transparent,
-                              child: Text(
-                                _selectedMeal.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(
-                                      color: palette.textPrimary,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.374,
-                                    ),
+              // One list child, so the lazy list always lays it out and the
+              // block can be measured however tall it gets (L5-D63).
+              // Stretched, each part gets the full width, as when they were
+              // separate children.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _SheetTopBar(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _MealPhoto(meal: _selectedMeal),
+                  ),
+                  lead(Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ExomKicker(_mealTypeLabel(l10n, _selectedMeal.type)),
+                        const SizedBox(height: 8),
+                        Hero(
+                          tag: 'meal-${widget.meal.id}-title',
+                          flightShuttleBuilder:
+                              (flightCtx, anim, dir, fromCtx, toCtx) {
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: Text(
+                                    _selectedMeal.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.titleLarge
+                                        ?.copyWith(
+                                          color: palette.textPrimary,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.374,
+                                        ),
+                                  ),
+                                );
+                              },
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Text(
+                              _selectedMeal.name,
+                              style: ExomType.section.copyWith(
+                                color: palette.textPrimary,
+                                fontSize: 30,
+                                height: 1.05,
                               ),
-                            );
-                          },
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Text(
-                          _selectedMeal.name,
-                          style: ExomType.section.copyWith(
-                            color: palette.textPrimary,
-                            fontSize: 30,
-                            height: 1.05,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ), isLast: calories == null && figures.isEmpty),
+                  if (calories != null)
+                    lead(Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: ExomNumeral(
+                        value: '$calories',
+                        unit: 'kcal',
+                        size: ExomNumeralSize.hero96,
+                        side: mealOptions.length > 1
+                            ? Text(
+                                l10n.optionsCount(mealOptions.length),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: palette.textSecondary,
+                                      fontSize: 14,
+                                      height: 1.35,
+                                    ),
+                              )
+                            : null,
                       ),
+                    ), isLast: figures.isEmpty),
+                  if (figures.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    lead(
+                      ExomFigureColumns(items: figures, numbered: false),
+                      isLast: true,
                     ),
                   ],
-                ),
+                ],
               ),
-              if (calories != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: ExomNumeral(
-                    value: '$calories',
-                    unit: 'kcal',
-                    size: ExomNumeralSize.hero96,
-                    side: mealOptions.length > 1
-                        ? Text(
-                            l10n.optionsCount(mealOptions.length),
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: palette.textSecondary,
-                                  fontSize: 14,
-                                  height: 1.35,
-                                ),
-                          )
-                        : null,
-                  ),
-                ),
-              if (figures.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                ExomFigureColumns(items: figures, numbered: false),
-              ],
               if (mealOptions.length > 1)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -432,7 +525,8 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
             ],
           ),
         ),
-        DecoratedBox(
+        measuredFoot(DecoratedBox(
+          key: const Key('meal-detail-foot'),
           decoration: BoxDecoration(
             color: palette.surface,
             border: Border(
@@ -467,7 +561,7 @@ class _MealSheetBodyState extends State<_MealSheetBody> {
               ],
             ),
           ),
-        ),
+        )),
       ],
     );
   }

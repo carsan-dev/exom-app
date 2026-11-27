@@ -301,6 +301,8 @@ Future<_Harness> _mount(
   Locale locale = const Locale('es'),
   ValueListenable<ThemeMode>? themeMode,
   Map<String, List<SetPerformance>> performances = const {},
+  bool accessibleNavigation = false,
+  bool disableAnimations = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -390,7 +392,11 @@ Future<_Harness> _mount(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(
               context,
-            ).copyWith(textScaler: textScaler ?? TextScaler.linear(textScale)),
+            ).copyWith(
+              textScaler: textScaler ?? TextScaler.linear(textScale),
+              accessibleNavigation: accessibleNavigation,
+              disableAnimations: disableAnimations,
+            ),
             child: child!,
           ),
         ),
@@ -1904,6 +1910,78 @@ void main() {
       expect(find.text('active-exercise-route'), findsOneWidget);
     });
 
+    // L5-D63 (OBS-4): with large text the sheet opens tall enough to show
+    // the name and the level above the foot; at 1,0 it opens as before.
+    for (final (label, scaler) in [
+      ('1.3', const AndroidNonlinearTextScaler(1.3)),
+      ('1.6', const AndroidNonlinearTextScaler(1.6)),
+      ('1.6 linear', const TextScaler.linear(1.6)),
+    ]) {
+      for (final scene in ExerciseSheetScene.values) {
+        testWidgets('L5-D63 ($label, ${scene.name}): opens showing the level '
+            'above the foot', (tester) async {
+          // Without media the name and level fit under the sheet's maximum
+          // even with the test font, so they must be shown in full.
+          await _openExerciseSheet(
+            tester,
+            scene: scene,
+            textScaler: scaler,
+            videoUrl: null,
+          );
+          final level = inSheet(find.text('Intermedio'));
+          expect(level, findsOneWidget);
+          expect(
+            tester.getBottomLeft(level).dy,
+            lessThanOrEqualTo(tester.getTopLeft(footer).dy),
+          );
+          expect(
+            tester.getTopLeft(inSheet(find.text('SENTADILLA BÚLGARA'))).dy,
+            greaterThanOrEqualTo(tester.getTopLeft(sheet).dy),
+          );
+          expect(
+            tester.state<ScrollableState>(sheetList).position.pixels,
+            0,
+          );
+          // Still draggable down and back up from the foot.
+          final top = tester.getTopLeft(sheet).dy;
+          await tester.drag(sheetList, const Offset(0, 80));
+          await tester.pumpAndSettle();
+          expect(tester.getTopLeft(sheet).dy, greaterThan(top + 20));
+          await tester.drag(footer, const Offset(0, -120),
+              warnIfMissed: false);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets('L5-D63 (1.6, with media): taller, up to its maximum', (
+      tester,
+    ) async {
+      await _openExerciseSheet(
+        tester,
+        textScaler: const AndroidNonlinearTextScaler(1.6),
+      );
+      final draggable = tester.widget<DraggableScrollableSheet>(
+        find.byType(DraggableScrollableSheet),
+      );
+      final level = inSheet(find.text('Intermedio', skipOffstage: false));
+      final shown = level.evaluate().isNotEmpty &&
+          tester.getBottomLeft(level).dy <= tester.getTopLeft(footer).dy;
+      // Either the level is shown or the sheet already opens at its maximum.
+      expect(shown || draggable.initialChildSize == 0.95, isTrue);
+      expect(draggable.initialChildSize, greaterThan(0.7));
+    });
+
+    testWidgets('L5-D63 (1.0): opens at 70 % as before', (tester) async {
+      await _openExerciseSheet(tester);
+      final draggable = tester.widget<DraggableScrollableSheet>(
+        find.byType(DraggableScrollableSheet),
+      );
+      expect(draggable.initialChildSize, 0.7);
+      expect(tester.getTopLeft(sheet).dy, moreOrLessEquals(844 * 0.3));
+    });
+
     for (final brightness in Brightness.values) {
       testWidgets('${brightness.name}: contrast and tap targets', (
         tester,
@@ -1941,6 +2019,133 @@ void main() {
         }
       });
     }
+  });
+
+  group('L5-D63 footer that scrolls away with large text', () {
+    final list = find.byType(Scrollable).first;
+    final footer = find.byKey(const Key('training-detail-scroll-away-footer'));
+
+    Future<void> dragList(WidgetTester tester, double dy) async {
+      await tester.drag(list, Offset(0, dy));
+      await tester.pumpAndSettle();
+    }
+
+    bool footerShown(WidgetTester tester) =>
+        nextButton.hitTestable().evaluate().isNotEmpty;
+
+    testWidgets('1.6: hides when scrolling down, returns when scrolling up', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await _mount(tester, textScale: 1.6);
+      expect(footer, findsOneWidget);
+      expect(footerShown(tester), isTrue);
+      final nextLabel = RegExp(
+        RegExp.escape(
+          _l10n(tester)
+              .trainingDetailNextAction('Sentadilla búlgara')
+              .toUpperCase(),
+        ),
+      );
+      expect(find.semantics.byLabel(nextLabel), findsWidgets);
+
+      await dragList(tester, -120);
+      expect(tester.state<ScrollableState>(list).position.pixels,
+          greaterThan(0));
+      expect(footerShown(tester), isFalse);
+      expect(completeButton.hitTestable(), findsNothing);
+      // Hidden: out of the semantics tree too.
+      expect(find.semantics.byLabel(nextLabel), findsNothing);
+
+      await dragList(tester, 60);
+      expect(footerShown(tester), isTrue);
+      expect(find.semantics.byLabel(nextLabel), findsWidgets);
+      semantics.dispose();
+    });
+
+    testWidgets('1.6: returns at the end of the list, which stays reachable', (
+      tester,
+    ) async {
+      await _mount(tester, textScale: 1.6);
+      await dragList(tester, -120);
+      expect(footerShown(tester), isFalse);
+      for (var i = 0; i < 20; i++) {
+        await tester.drag(list, const Offset(0, -400));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      final position = tester.state<ScrollableState>(list).position;
+      expect(position.extentAfter, 0);
+      expect(footerShown(tester), isTrue);
+      // The list still ends above the footer: its last field is not covered.
+      final field = tester.getRect(find.byType(TextField));
+      final footerTop = tester.getTopLeft(footer).dy;
+      expect(field.bottom, lessThanOrEqualTo(footerTop));
+    });
+
+    testWidgets('1.6: a programmatic scroll never hides it', (tester) async {
+      await _mount(tester, textScale: 1.6);
+      final position = tester.state<ScrollableState>(list).position;
+      position.jumpTo(200);
+      await tester.pumpAndSettle();
+      expect(position.pixels, 200);
+      expect(footerShown(tester), isTrue);
+      unawaited(position.animateTo(
+        position.maxScrollExtent / 2,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.linear,
+      ));
+      await tester.pumpAndSettle();
+      expect(footerShown(tester), isTrue);
+    });
+
+    testWidgets('1.6 with TalkBack/VoiceOver: never hides', (tester) async {
+      await _mount(tester, textScale: 1.6, accessibleNavigation: true);
+      expect(footer, findsNothing);
+      await dragList(tester, -120);
+      expect(tester.state<ScrollableState>(list).position.pixels,
+          greaterThan(0));
+      expect(footerShown(tester), isTrue);
+    });
+
+    testWidgets('1.6 with animations off: hides at once', (tester) async {
+      await _mount(tester, textScale: 1.6, disableAnimations: true);
+      await tester.drag(list, const Offset(0, -120));
+      await tester.pump();
+      final fade = tester.widget<FadeTransition>(
+        find
+            .descendant(of: footer, matching: find.byType(FadeTransition))
+            .first,
+      );
+      expect(fade.opacity.value, 0);
+    });
+
+    testWidgets('1.3 is large text too', (tester) async {
+      await _mount(tester, textScale: 1.3);
+      await dragList(tester, -120);
+      expect(footerShown(tester), isFalse);
+    });
+
+    testWidgets('1.0 and 1.29: the footer stays as it was', (tester) async {
+      for (final scale in [1.0, 1.29]) {
+        await _mount(tester, textScale: scale);
+        expect(footer, findsNothing);
+        await dragList(tester, -120);
+        expect(tester.state<ScrollableState>(list).position.pixels,
+            greaterThan(0));
+        expect(footerShown(tester), isTrue);
+      }
+    });
+
+    testWidgets('1.6: the double-tap guard (D51) still holds', (tester) async {
+      final harness = await _mount(tester, textScale: 1.6);
+      await tester.tap(nextButton);
+      await tester.tap(nextButton, warnIfMissed: false);
+      await tester.pump();
+      await tester.tap(nextButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(harness.pushedRoutes, 1);
+    });
   });
 
   group('L5-D64 «Descartar progreso anterior» over the detail', () {

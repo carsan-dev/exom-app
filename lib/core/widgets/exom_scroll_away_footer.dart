@@ -91,6 +91,51 @@ class ExomScrollAwayFooterController extends ChangeNotifier
           metrics.extentAfter < 0.5);
 }
 
+/// Scroll controller of a body whose footer scrolls away (L5-D63).
+///
+/// A programmatic [ScrollPosition.animateTo] (also through
+/// [ScrollPosition.ensureVisible], focus or semantics) can take over the
+/// user's fling, and the framework keeps reporting the fling's user direction
+/// while it runs: [ExomScrollAwayFooterController] would count that movement
+/// as the user's. Its positions end the user's direction first, so only the
+/// user's own drags and flings move the footer.
+class ExomScrollAwayFooterScrollController extends ScrollController {
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _ScrollAwayFooterPosition(
+    physics: physics,
+    context: context,
+    initialPixels: initialScrollOffset,
+    keepScrollOffset: keepScrollOffset,
+    oldPosition: oldPosition,
+    debugLabel: debugLabel,
+  );
+}
+
+class _ScrollAwayFooterPosition extends ScrollPositionWithSingleContext {
+  _ScrollAwayFooterPosition({
+    required super.physics,
+    required super.context,
+    super.initialPixels,
+    super.keepScrollOffset,
+    super.oldPosition,
+    super.debugLabel,
+  });
+
+  @override
+  Future<void> animateTo(
+    double to, {
+    required Duration duration,
+    required Curve curve,
+  }) {
+    updateUserScrollDirection(ScrollDirection.idle);
+    return super.animateTo(to, duration: duration, curve: curve);
+  }
+}
+
 /// Pinned footer that slides down and fades out when [controller] hides it
 /// (L5-D63): shows in [kExomScrollAwayFooterShow] (ease out cubic), hides in
 /// [kExomScrollAwayFooterHide] (ease in cubic), instantly when the platform

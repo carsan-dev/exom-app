@@ -2209,6 +2209,51 @@ void main() {
       expect(footer, findsOneWidget);
     });
 
+    testWidgets('1.6: an animateTo during a fling does not hide it', (
+      tester,
+    ) async {
+      final media = ValueNotifier<_LiveMedia>((
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: false,
+      ));
+      addTearDown(media.dispose);
+      await _mount(tester, liveMedia: media);
+      ScrollPosition position() => tester.state<ScrollableState>(list).position;
+      // The user's fling toward the end hides the footer.
+      await tester.fling(list, const Offset(0, -60), 1500);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(position().isScrollingNotifier.value, isTrue);
+      expect(footerShown(tester), isFalse);
+      // TalkBack on and off while it flings brings the footer back...
+      media.value = (
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: true,
+      );
+      await tester.pump();
+      media.value = (
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: false,
+      );
+      await tester.pump();
+      expect(position().isScrollingNotifier.value, isTrue);
+      expect(footerShown(tester), isTrue);
+      // ...and a programmatic scroll toward the end that takes over the
+      // fling is not the user's: the footer stays.
+      final target = position().pixels + 100;
+      unawaited(position().animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.linear,
+      ));
+      await tester.pumpAndSettle();
+      expect(position().pixels, target);
+      expect(footerShown(tester), isTrue);
+
+      // The user's own scroll still hides it.
+      await dragList(tester, -60);
+      expect(footerShown(tester), isFalse);
+    });
+
     testWidgets('1.6: the double-tap guard (D51) still holds', (tester) async {
       final harness = await _mount(tester, textScale: 1.6);
       await tester.tap(nextButton);

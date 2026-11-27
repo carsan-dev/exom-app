@@ -1015,11 +1015,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     _feedbackChanges?.cancel();
     _notesController.dispose();
     _footerVisibility.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   /// Footer visibility while it scrolls away with large text (L5-D63).
   final _footerVisibility = ExomScrollAwayFooterController();
+
+  /// The list's primary scroll controller: its programmatic scrolls never
+  /// count as the user's for [_footerVisibility] (L5-D63).
+  final _scrollController = ExomScrollAwayFooterScrollController();
 
   TrainingEntity? _groupedTraining;
   List<_ExerciseRowGroup> _groups = const [];
@@ -1817,7 +1822,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         ),
       );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: palette.background,
       extendBody: scrollAway,
       appBar: GlassAppBar(
@@ -1854,6 +1859,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               child: footer,
             )
           : footer,
+    );
+    // Above the Scaffold so its status-bar tap still scrolls the list up.
+    return PrimaryScrollController(
+      controller: _scrollController,
+      child: scaffold,
     );
   }
 }

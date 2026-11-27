@@ -252,24 +252,47 @@ void main() {
     await h.finish(tester);
   });
 
-  testWidgets('closing the bloc with a load in flight cancels its bound: no '
-      'timer outlives the bloc', (tester) async {
-    // Signing out or switching account disposes the shell while the summary
-    // is still in flight. The bound of that wait belongs to the bloc: once it
-    // is closed nothing may keep a timer running (the test binding fails the
-    // test on any timer still pending at its end).
-    final repo = _HomeRepository();
-    final bloc = HomeBloc(
-      getHomeSummaryUseCase: GetHomeSummaryUseCase(repo),
-      summaryTimeout: _timeout,
-    )..add(const HomeLoadRequested());
-    await tester.pump();
-    expect(repo.calls, 1);
-    expect(bloc.state, isA<HomeLoading>());
+  // Signing out or switching account disposes the shell while a summary is
+  // still in flight, possibly one that never answers. Closing the bloc ends
+  // that wait: close() completes, nothing more is emitted and no timer
+  // outlives the bloc (the test binding fails the test on any timer still
+  // pending at its end).
+  for (final withContent in [false, true]) {
+    testWidgets('closing the bloc with a load that never answers completes, '
+        'emits nothing and leaves no timer (content on screen: '
+        '$withContent)', (tester) async {
+      final repo = _HomeRepository();
+      if (withContent) repo.answer(0, _fresh);
+      final bloc = HomeBloc(
+        getHomeSummaryUseCase: GetHomeSummaryUseCase(repo),
+        summaryTimeout: _timeout,
+      )..add(const HomeLoadRequested());
+      await tester.pump();
+      if (withContent) {
+        expect(bloc.state, isA<HomeLoaded>());
+        // A reload that never answers: on failure it would flag the content.
+        bloc.add(const HomeLoadRequested());
+        await tester.pump();
+        expect(repo.calls, 2);
+      } else {
+        expect(repo.calls, 1);
+        expect(bloc.state, isA<HomeLoading>());
+      }
+      final before = bloc.state;
+      final emitted = <HomeState>[];
+      final subscription = bloc.stream.listen(emitted.add);
+      addTearDown(subscription.cancel);
 
-    // Not awaited, as the shell does not await it: close() waits for the
-    // handler, which stays on the load that never answers.
-    unawaited(bloc.close());
-    await tester.pump();
-  });
+      // Awaited on the real clock (the bloc's streams finish closing there),
+      // with a guard: a close stuck on the load fails with a
+      // TimeoutException instead of hanging the test.
+      await tester.runAsync(
+        () => bloc.close().timeout(const Duration(seconds: 5)),
+      );
+      expect(bloc.isClosed, isTrue);
+      await tester.pump(_timeout * 2);
+      expect(emitted, isEmpty);
+      expect(bloc.state, before);
+    });
+  }
 }

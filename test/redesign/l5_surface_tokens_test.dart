@@ -154,7 +154,7 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/home/presentation/widgets/home_clock.dart',
   'lib/features/home/presentation/widgets/home_headline.dart',
   'lib/features/home/presentation/widgets/home_row.dart',
-  'lib/features/home/presentation/widgets/home_session_photo.dart',
+  'lib/core/widgets/home_session_photo.dart',
   'lib/features/home/presentation/widgets/stats_row.dart',
   'lib/features/home/presentation/widgets/today_diet_card.dart',
   'lib/features/home/presentation/widgets/today_training_card.dart',

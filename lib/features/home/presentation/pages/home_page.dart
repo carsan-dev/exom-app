@@ -17,7 +17,7 @@ import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/home/presentation/widgets/stats_row.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';

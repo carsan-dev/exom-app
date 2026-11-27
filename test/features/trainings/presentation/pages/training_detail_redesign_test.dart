@@ -21,7 +21,7 @@ import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
     show FeedbackPageArgs;
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';

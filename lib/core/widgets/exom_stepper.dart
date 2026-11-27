@@ -1,7 +1,7 @@
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/exom_icons.dart';
 import 'dart:math' as math;
 
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -369,7 +369,18 @@ class _RenderRevealErrorBelow extends RenderProxyBox {
         local.right,
         math.max(local.bottom, size.height),
       );
-      final viewport = RenderAbstractViewport.maybeOf(this);
+      // Nearest enclosing viewport that scrolls vertically; horizontal ones
+      // are skipped. If none is found, the nearest one is used as before.
+      var viewport = RenderAbstractViewport.maybeOf(this);
+      final nearest = viewport;
+      while (viewport is RenderViewportBase &&
+          viewport.axis != Axis.vertical) {
+        final parent = viewport.parent;
+        viewport = parent is RenderObject
+            ? RenderAbstractViewport.maybeOf(parent)
+            : null;
+      }
+      viewport ??= nearest;
       final fits =
           viewport is RenderBox &&
           (viewport as RenderBox).hasSize &&

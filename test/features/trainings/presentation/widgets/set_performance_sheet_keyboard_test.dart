@@ -170,7 +170,8 @@ void main() {
     _expectWeightErrorAboveFooter(tester);
   });
 
-  testWidgets('INT-D1 (es): when the weight error appears with the field '
+  // Regression guard for the Save path; it also passes without the INT-D1 fix.
+  testWidgets('guard (es): when the weight error appears with the field '
       'focused and the keyboard up, the whole error is above the footer', (
     tester,
   ) async {

@@ -2210,6 +2210,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measureCalf => 'Calf';
 
   @override
+  String get metricsMeasureSheetKicker => '06 · Measurements';
+
+  @override
+  String metricsMeasureLast(String value, String date) {
+    return 'Last: $value · $date';
+  }
+
+  @override
+  String get metricsMeasureEdited => 'Edited';
+
+  @override
+  String get metricsMeasureTapZone => 'Tap an area to measure it';
+
+  @override
+  String get metricsMeasureDone => 'Done';
+
+  @override
+  String get metricsMeasureLeftInitial => 'L';
+
+  @override
+  String get metricsMeasureRightInitial => 'R';
+
+  @override
   String get noTrainingsAssigned => 'No trainings assigned';
 
   @override

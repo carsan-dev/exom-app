@@ -62,6 +62,10 @@ class _Storage extends LocalStorage {
   bool failSettingSaves = false;
   String? stamp = 'owner:1:test';
 
+  /// Active exercises saved by another training (L5-D64).
+  List<ActiveWorkoutHiveModel> foreign = [];
+  int foreignClears = 0;
+
   @override
   String? get sessionStamp => stamp;
   // The account of [stamp] (`uid:generation:env`), as the real store derives
@@ -69,8 +73,14 @@ class _Storage extends LocalStorage {
   @override
   String? get ownerId => stamp?.split(':').first;
   @override
-  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
-      [];
+  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) => [
+    ...foreign.where((entry) => entry.trainingId != trainingId),
+  ];
+  @override
+  Future<void> clearForeignActiveWorkouts(String trainingId) async {
+    foreignClears++;
+    foreign = [...foreign.where((entry) => entry.trainingId == trainingId)];
+  }
   @override
   ActiveWorkoutLocalStore bindActiveWorkoutStore() => store;
   @override
@@ -220,11 +230,13 @@ Future<_Harness> _pumpPage(
   bool? lastSetVideoReminder,
   void Function()? registerExtra,
   Widget Function(Widget app)? wrapApp,
+  List<ActiveWorkoutHiveModel> foreign = const [],
 }) async {
   await sl.reset();
   final store = _Store();
   if (seed != null) store.data[seed.exerciseId] = seed;
-  final storage = _Storage(store, unitSystem: unitSystem);
+  final storage = _Storage(store, unitSystem: unitSystem)
+    ..foreign = [...foreign];
   if (lastSetVideoReminder != null) {
     storage.settings['last_set_video_reminder_enabled'] = lastSetVideoReminder;
   }
@@ -1102,5 +1114,80 @@ void main() {
     final skip = find.byKey(const Key('active-exercise-rest-skip'));
     expect(tester.getRect(skip).top, greaterThanOrEqualTo(568 * 0.6));
     expect(skip.hitTestable(), findsOneWidget);
+  });
+
+  // L5-D64: the detail asks before opening the exercise; any other way in
+  // (deep link, restored route) gets the same question from the page itself.
+  group('L5-D64 fallback: the page asks to discard other progress', () {
+    final otherTraining = ActiveWorkoutHiveModel(
+      trainingId: 'other-training',
+      exerciseId: 'te-9:$_date:other-execution',
+      currentSet: 2,
+      completedSets: 1,
+    );
+    final dialog = find.byKey(const Key('discard-foreign-progress-dialog'));
+
+    testWidgets('cancelling leaves the page and keeps the other progress', (
+      tester,
+    ) async {
+      final harness = await _pumpPage(tester, foreign: [otherTraining]);
+      final l10n = AppLocalizations.of(tester.element(dialog));
+      expect(dialog, findsOneWidget);
+      expect(find.text(l10n.activeExerciseDiscardTitle), findsOneWidget);
+
+      await tester.tap(find.text(l10n.cancel));
+      await tester.pumpAndSettle();
+      expect(dialog, findsNothing);
+      expect(find.byType(ActiveExercisePage), findsNothing);
+      expect(find.text('home'), findsOneWidget);
+      expect(harness.storage!.foreignClears, 0);
+      expect(harness.storage!.foreign, [otherTraining]);
+      // The exercise never started: no draft was written.
+      expect(harness.store.writes, isEmpty);
+    });
+
+    testWidgets('discarding clears the other progress, then starts', (
+      tester,
+    ) async {
+      final harness = await _pumpPage(tester, foreign: [otherTraining]);
+      final l10n = AppLocalizations.of(tester.element(dialog));
+      expect(harness.store.writes, isEmpty);
+
+      await tester.tap(find.text(l10n.activeExerciseDiscardAction));
+      await tester.pumpAndSettle();
+      expect(dialog, findsNothing);
+      expect(harness.storage!.foreignClears, 1);
+      expect(harness.storage!.foreign, isEmpty);
+      expect(find.byType(ActiveExercisePage), findsOneWidget);
+      expect(find.text('home'), findsNothing);
+      expect(harness.draft, isNotNull);
+      expect(harness.draft!.trainingId, _trainingId);
+    });
+
+    testWidgets('without other progress it starts without asking', (
+      tester,
+    ) async {
+      final harness = await _pumpPage(tester);
+      expect(dialog, findsNothing);
+      expect(harness.storage!.foreignClears, 0);
+      expect(harness.draft, isNotNull);
+    });
+
+    testWidgets('a session change while it asks discards nothing', (
+      tester,
+    ) async {
+      final harness = await _pumpPage(tester, foreign: [otherTraining]);
+      final l10n = AppLocalizations.of(tester.element(dialog));
+      harness.storage!.stamp = 'other:1:test';
+
+      await tester.tap(find.text(l10n.activeExerciseDiscardAction));
+      // The page never starts, so it keeps its loading state: no settling.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(dialog, findsNothing);
+      expect(harness.storage!.foreignClears, 0);
+      expect(harness.storage!.foreign, [otherTraining]);
+      expect(harness.store.writes, isEmpty);
+    });
   });
 }

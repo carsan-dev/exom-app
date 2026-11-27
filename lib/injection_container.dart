@@ -2,6 +2,7 @@ import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:get_it/get_it.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -330,6 +331,13 @@ Future<void> initDependencies() async {
       getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
       // E6a: patches a confirmed completion only for its own session.
       sessionStamp: () => sl<LocalStorage>().sessionStamp,
+      // INICIO-RED (A1): reloads stale Inicio when the network comes back.
+      connectivityChanges: Connectivity().onConnectivityChanged
+          .map(
+            (results) =>
+                results.any((result) => result != ConnectivityResult.none),
+          )
+          .distinct(),
     ),
   );
 

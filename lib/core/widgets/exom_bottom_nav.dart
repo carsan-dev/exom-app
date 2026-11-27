@@ -362,52 +362,48 @@ class _NavTab extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  glyph,
-                  if (label != null) ...[
-                    const SizedBox(height: 4),
-                    ExcludeSemantics(
-                      child: Padding(
-                        // Keeps the two edge labels off the screen edge.
-                        padding: EdgeInsetsDirectional.only(
-                          start: index == 0 ? ExomBottomNav.labelEdgeInset : 0,
-                          end: index == 4 ? ExomBottomNav.labelEdgeInset : 0,
-                        ),
-                        child: OverflowBox(
-                          fit: OverflowBoxFit.deferToChild,
-                          // A label wider than its slot spills inwards at the
-                          // two edge slots so it never leaves the screen.
-                          alignment: index == 0
-                              ? Alignment.centerLeft
-                              : index == 4
-                              ? Alignment.centerRight
-                              : Alignment.center,
-                          maxWidth: slotWidth + ExomBottomNav.labelSpill * 2,
-                          child: Text(
-                            label!,
-                            key: ValueKey('exom-bottom-nav-label-$index'),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            textScaler: labelScaler,
-                            style: ExomBottomNav._labelStyle(
-                              selected,
-                            ).copyWith(color: color),
-                          ),
-                        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              glyph,
+              if (label != null) ...[
+                const SizedBox(height: 4),
+                ExcludeSemantics(
+                  child: Padding(
+                    // Keeps the two edge labels off the screen edge.
+                    padding: EdgeInsetsDirectional.only(
+                      start: index == 0 ? ExomBottomNav.labelEdgeInset : 0,
+                      end: index == 4 ? ExomBottomNav.labelEdgeInset : 0,
+                    ),
+                    child: OverflowBox(
+                      fit: OverflowBoxFit.deferToChild,
+                      // A label wider than its slot spills inwards at the
+                      // two edge slots so it never leaves the screen.
+                      alignment: index == 0
+                          ? Alignment.centerLeft
+                          : index == 4
+                          ? Alignment.centerRight
+                          : Alignment.center,
+                      maxWidth: slotWidth + ExomBottomNav.labelSpill * 2,
+                      child: Text(
+                        label!,
+                        key: ValueKey('exom-bottom-nav-label-$index'),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        textScaler: labelScaler,
+                        style: ExomBottomNav._labelStyle(
+                          selected,
+                        ).copyWith(color: color),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

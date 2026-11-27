@@ -7643,6 +7643,12 @@ abstract class AppLocalizations {
   /// **'pasos de {step} · toca la cifra para escribir'**
   String setSheetWeightHint(String step);
 
+  /// No description provided for @setSheetWeightStep.
+  ///
+  /// In es, this message translates to:
+  /// **'± {step}'**
+  String setSheetWeightStep(String step);
+
   /// No description provided for @setSheetRirLabel.
   ///
   /// In es, this message translates to:

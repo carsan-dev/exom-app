@@ -1528,6 +1528,8 @@
   "setSheetWeightLbA11y": "Weight in pounds",
   "setSheetWeightHint": "steps of {step} · tap the number to type",
   "@setSheetWeightHint": {"placeholders": {"step": {"type": "String"}}},
+  "setSheetWeightStep": "± {step}",
+  "@setSheetWeightStep": {"placeholders": {"step": {"type": "String"}}},
   "setSheetRirLabel": "RIR",
   "setSheetRirChipA11y": "RIR {value}",
   "@setSheetRirChipA11y": {"placeholders": {"value": {"type": "int"}}},

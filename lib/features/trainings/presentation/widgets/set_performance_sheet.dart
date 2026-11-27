@@ -36,6 +36,15 @@ const double _numeralMinSize = 36;
 /// Room kept for the caret and the suffix gap when fitting the numeral.
 const double _numeralFitSlack = 8;
 
+/// Size of the value numeral in the footer rows at text scale 1.0 (L6 A-O1,
+/// sketch `l6-hoja-tercio-inferior.html` `.t-n`: 44 instead of 64).
+const double _numeralSize = 44;
+
+/// Height left to the scrolling upper zone (header, «Igual que la anterior»,
+/// RIR) without the keyboard when the footer does not fit: past it, the
+/// footer rows scroll inside the footer instead of hiding the upper zone.
+const double _minFieldsHeight = 96;
+
 /// Style of the unit after a typed value (`ExomStepper`'s suffix).
 const TextStyle _unitStyle = TextStyle(
   fontFamily: AppTheme.bodyFontFamily,
@@ -444,11 +453,11 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     ));
   }
 
-  /// [style] (Barlow 64) shrunk so that [text] and its [unit] fit between the
-  /// ± buttons of a stepper [width] wide, instead of scrolling inside the
-  /// field at large text sizes: the numeral scales down like `ExomNumeral`
-  /// (sketch `.numstep-v .num64{font-size:min(4em,18cqw)}`). Never below 36,
-  /// the size before L5-E4; the text itself is never touched.
+  /// [style] (Barlow 44) shrunk so that [text] and its [unit] fit between the
+  /// ± buttons of a compact stepper [width] wide, instead of scrolling inside
+  /// the field at large text sizes: the numeral scales down like
+  /// `ExomNumeral`. Never below 36, the size before L5-E4; the text itself is
+  /// never touched.
   TextStyle _fitNumeral(
     BuildContext context,
     TextStyle style,
@@ -478,7 +487,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     final room =
         width -
         2 * ExomStepper.buttonSize -
-        2 * 8 -
+        2 * ExomStepper.compactGap -
         unitWidth -
         _numeralFitSlack;
     final needed = measure(text.isEmpty ? '0' : text, style);
@@ -495,11 +504,12 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     final palette = context.exomPalette;
     final media = MediaQuery.of(context);
     // The ExomSheet frame scrolls its whole content and caps it at 90 % of
-    // the space above the keyboard. To keep the actions pinned, this content
+    // the space above the keyboard. To keep the footer pinned, this content
     // takes at most that height (minus the handle and the bottom safe area,
     // which the frame's SafeArea hides from this MediaQuery), scrolls its
-    // fields itself and leaves the actions outside the scroll view.
+    // upper zone itself and leaves the footer outside that scroll view.
     final bottomSafe = MediaQueryData.fromView(View.of(context)).padding.bottom;
+    final fieldsReserve = media.viewInsets.bottom > 0 ? 0.0 : _minFieldsHeight;
     final maxHeight = math.max(
       0.0,
       (media.size.height - media.padding.top - media.viewInsets.bottom) * 0.9 -
@@ -545,9 +555,10 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
     final weightUp = weightValid ? _stepWeightValue(1) : null;
     final stepText = '${_formatDisplay(_step)} $_unitSymbol';
 
-    // L5-E4: the values are Barlow 64 numerals in the data colour (sketch
-    // `.numstep`, `.num64.x-d`), typed or not, as in `ExomNumeralStepper`.
+    // L5-E4: the values are Barlow numerals in the data colour, typed or
+    // not; L6 A-O1 (variant B): 44 in the compact footer rows.
     final numeralStyle = ExomType.hero64.copyWith(
+      fontSize: _numeralSize,
       height: 1,
       color: palette.data,
     );
@@ -596,102 +607,6 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
               onPressed: _applyPrevious,
             ),
           ],
-          const SizedBox(height: 18),
-          Text(countLabel, style: labelStyle),
-          const SizedBox(height: 6),
-          LayoutBuilder(
-            builder: (context, constraints) => ExomStepper<String>(
-              key: _countKey,
-              value: _countController.text,
-              formatValue: (text) => text,
-              label: countLabel,
-              decrementLabel: !_timed
-                  ? l10n.setSheetRepsDecrement
-                  : _minutes
-                  ? l10n.setSheetMinutesDecrement
-                  : l10n.setSheetSecondsDecrement(_countStep),
-              incrementLabel: !_timed
-                  ? l10n.setSheetRepsIncrement
-                  : _minutes
-                  ? l10n.setSheetMinutesIncrement
-                  : l10n.setSheetSecondsIncrement(_countStep),
-              onDecrement: countDown == null ? null : () => _stepCount(-1),
-              onIncrement: countUp == null ? null : () => _stepCount(1),
-              decreasedValue: countDown == null ? null : '$countDown',
-              increasedValue: countUp == null ? null : '$countUp',
-              unit: _countUnitSymbol,
-              textController: _countController,
-              textFieldKey: const Key('set-sheet-count-field'),
-              focusNode: _countFocus,
-              textInputAction: TextInputAction.next,
-              keyboardType: TextInputType.number,
-              inputFormatters: [LengthLimitingTextInputFormatter(10)],
-              onTextChanged: _onCountChanged,
-              onTextSubmitted: (_) => _weightFocus.requestFocus(),
-              errorText: _countError,
-              errorBelowRow: true,
-              errorIcon: ExomIcons.error,
-              valueStyle: _fitNumeral(
-                context,
-                numeralStyle,
-                _countController.text,
-                _countUnitSymbol,
-                constraints.maxWidth,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 2,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            children: [
-              Text(l10n.setSheetWeightLabel, style: labelStyle),
-              Text(l10n.setSheetWeightHint(stepText), style: mutedStyle),
-            ],
-          ),
-          const SizedBox(height: 6),
-          LayoutBuilder(
-            builder: (context, constraints) => ExomStepper<String>(
-              key: _weightKey,
-              value: _weightController.text,
-              formatValue: (text) => text.isEmpty ? text : '$text $_unitSymbol',
-              label: widget.unitSystem == UnitSystem.imperial
-                  ? l10n.setSheetWeightLbA11y
-                  : l10n.setSheetWeightKgA11y,
-              decrementLabel: l10n.setSheetWeightDecrement(stepText),
-              incrementLabel: l10n.setSheetWeightIncrement(stepText),
-              onDecrement: weightDown == null ? null : () => _stepWeight(-1),
-              onIncrement: weightUp == null ? null : () => _stepWeight(1),
-              decreasedValue: weightDown == null
-                  ? null
-                  : _formatDisplay(weightDown),
-              increasedValue: weightUp == null
-                  ? null
-                  : _formatDisplay(weightUp),
-              unit: _unitSymbol,
-              textController: _weightController,
-              textFieldKey: const Key('set-sheet-weight-field'),
-              focusNode: _weightFocus,
-              textInputAction: TextInputAction.done,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              // No filtering formatter: invalid text must stay as typed (D3).
-              inputFormatters: [LengthLimitingTextInputFormatter(10)],
-              onTextChanged: _onWeightChanged,
-              errorText: _weightError,
-              errorBelowRow: true,
-              errorIcon: ExomIcons.error,
-              valueStyle: _fitNumeral(
-                context,
-                numeralStyle,
-                _weightController.text,
-                _unitSymbol,
-                constraints.maxWidth,
-              ),
-            ),
-          ),
           ...[
             const SizedBox(height: 18),
             Text(l10n.setSheetRirLabel, style: labelStyle),
@@ -715,39 +630,181 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
       ),
     );
 
-    final actions = DecoratedBox(
+    final footer = DecoratedBox(
+      key: const Key('set-sheet-footer'),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: palette.borderSoft)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+      // L6 A-O1 (variant B): the Reps and Peso rows are part of the pinned
+      // footer, so their ± stay in the bottom third and never move when the
+      // upper zone scrolls; an error under a row makes the footer grow. When
+      // the footer does not fit (large text, errors, the keyboard), Guardar
+      // and the quiet actions stay pinned and only the rows scroll inside
+      // the footer; the focused field then scrolls itself and its error into
+      // view (`ExomStepper` with `errorBelowRow`). Without the keyboard the
+      // upper zone always keeps [_minFieldsHeight]; with it, the footer may
+      // take the whole sheet while typing.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: math.max(0.0, maxHeight - fieldsReserve),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            ExomPrimaryButton(
-              key: const Key('set-sheet-save'),
-              label: l10n.setSheetSave,
-              trailingIcon: ExomIcons.check,
-              busy: _saving,
-              onPressed: _save,
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: ExomQuietButton(
-                key: const Key('set-sheet-cancel'),
-                label: l10n.cancel,
-                onPressed: _saving ? null : () => Navigator.of(context).pop(),
-              ),
-            ),
-            if (!widget.countRequired)
-              Center(
-                child: ExomQuietButton(
-                  key: const Key('set-sheet-skip-tracking'),
-                  label: l10n.completeWithoutTracking,
-                  onPressed: _saving ? null : _completeWithoutTracking,
+            Flexible(
+              child: SingleChildScrollView(
+                key: const Key('set-sheet-footer-rows'),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _FooterRow(
+                      label: countLabel,
+                      detail: null,
+                      labelStyle: labelStyle,
+                      detailStyle: mutedStyle,
+                      stepper: (context, width) => ExomStepper<String>(
+                        key: _countKey,
+                        compact: true,
+                        value: _countController.text,
+                        formatValue: (text) => text,
+                        label: countLabel,
+                        decrementLabel: !_timed
+                            ? l10n.setSheetRepsDecrement
+                            : _minutes
+                            ? l10n.setSheetMinutesDecrement
+                            : l10n.setSheetSecondsDecrement(_countStep),
+                        incrementLabel: !_timed
+                            ? l10n.setSheetRepsIncrement
+                            : _minutes
+                            ? l10n.setSheetMinutesIncrement
+                            : l10n.setSheetSecondsIncrement(_countStep),
+                        onDecrement: countDown == null
+                            ? null
+                            : () => _stepCount(-1),
+                        onIncrement: countUp == null
+                            ? null
+                            : () => _stepCount(1),
+                        decreasedValue: countDown == null ? null : '$countDown',
+                        increasedValue: countUp == null ? null : '$countUp',
+                        unit: _countUnitSymbol,
+                        textController: _countController,
+                        textFieldKey: const Key('set-sheet-count-field'),
+                        focusNode: _countFocus,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                        onTextChanged: _onCountChanged,
+                        onTextSubmitted: (_) => _weightFocus.requestFocus(),
+                        errorText: _countError,
+                        errorBelowRow: true,
+                        errorIcon: ExomIcons.error,
+                        valueStyle: _fitNumeral(
+                          context,
+                          numeralStyle,
+                          _countController.text,
+                          _countUnitSymbol,
+                          width,
+                        ),
+                      ),
+                    ),
+                    // No spacer: the 56 dp tap areas of the two rows touch, which
+                    // leaves 8 dp between the visible 48 dp ± (sketch `.t-steps`).
+                    _FooterRow(
+                      label: l10n.setSheetWeightLabel,
+                      detail: l10n.setSheetWeightStep(stepText),
+                      labelStyle: labelStyle,
+                      detailStyle: mutedStyle,
+                      stepper: (context, width) => ExomStepper<String>(
+                        key: _weightKey,
+                        compact: true,
+                        value: _weightController.text,
+                        formatValue: (text) =>
+                            text.isEmpty ? text : '$text $_unitSymbol',
+                        label: widget.unitSystem == UnitSystem.imperial
+                            ? l10n.setSheetWeightLbA11y
+                            : l10n.setSheetWeightKgA11y,
+                        decrementLabel: l10n.setSheetWeightDecrement(stepText),
+                        incrementLabel: l10n.setSheetWeightIncrement(stepText),
+                        onDecrement: weightDown == null
+                            ? null
+                            : () => _stepWeight(-1),
+                        onIncrement: weightUp == null
+                            ? null
+                            : () => _stepWeight(1),
+                        decreasedValue: weightDown == null
+                            ? null
+                            : _formatDisplay(weightDown),
+                        increasedValue: weightUp == null
+                            ? null
+                            : _formatDisplay(weightUp),
+                        unit: _unitSymbol,
+                        textController: _weightController,
+                        textFieldKey: const Key('set-sheet-weight-field'),
+                        focusNode: _weightFocus,
+                        textInputAction: TextInputAction.done,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        // No filtering formatter: invalid text must stay as typed (D3).
+                        inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                        onTextChanged: _onWeightChanged,
+                        errorText: _weightError,
+                        errorBelowRow: true,
+                        errorIcon: ExomIcons.error,
+                        valueStyle: _fitNumeral(
+                          context,
+                          numeralStyle,
+                          _weightController.text,
+                          _unitSymbol,
+                          width,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ExomPrimaryButton(
+                    key: const Key('set-sheet-save'),
+                    label: l10n.setSheetSave,
+                    trailingIcon: ExomIcons.check,
+                    busy: _saving,
+                    onPressed: _save,
+                  ),
+                  const SizedBox(height: 4),
+                  // «Cancelar» and «Completar sin registrar» share a line and
+                  // stack when they do not fit (sketch `.t-links`).
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    children: [
+                      ExomQuietButton(
+                        key: const Key('set-sheet-cancel'),
+                        label: l10n.cancel,
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                      ),
+                      if (!widget.countRequired)
+                        ExomQuietButton(
+                          key: const Key('set-sheet-skip-tracking'),
+                          label: l10n.completeWithoutTracking,
+                          onPressed: _saving ? null : _completeWithoutTracking,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -759,10 +816,118 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Flexible(child: SingleChildScrollView(child: fields)),
-          actions,
+          Flexible(
+            child: SingleChildScrollView(
+              key: const Key('set-sheet-fields-scroll'),
+              child: fields,
+            ),
+          ),
+          footer,
         ],
       ),
+    );
+  }
+}
+
+/// Compact footer row «label | − value +» (L6 A-O1, sketch `.t-row`): the
+/// label (and its [detail], e.g. the weight step) on the left and the
+/// stepper filling the rest; when they do not fit side by side (narrow
+/// screens, large text) the label goes above the stepper.
+class _FooterRow extends StatelessWidget {
+  const _FooterRow({
+    required this.label,
+    required this.detail,
+    required this.labelStyle,
+    required this.detailStyle,
+    required this.stepper,
+  });
+
+  final String label;
+  final String? detail;
+  final TextStyle labelStyle;
+  final TextStyle detailStyle;
+  final Widget Function(BuildContext context, double width) stepper;
+
+  static const double _labelGap = 12;
+
+  /// Room for the value between the ± beside the label (sketch `.t-step`,
+  /// `100px + 4.5em`), scaled with the text.
+  static const double _minValueWidth = 72;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    double measure(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: direction,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    final detail = this.detail;
+    final caption = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: labelStyle),
+        if (detail != null) Text(detail, style: detailStyle),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final labelWidth = math
+            .max(
+              measure(label, labelStyle),
+              detail == null ? 0.0 : measure(detail, detailStyle),
+            )
+            .ceilToDouble();
+        final minStepper =
+            2 * ExomStepper.buttonSize +
+            2 * ExomStepper.compactGap +
+            scaler.scale(_minValueWidth);
+        if (labelWidth + _labelGap + minStepper > constraints.maxWidth) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              caption,
+              const SizedBox(height: 2),
+              stepper(context, constraints.maxWidth),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: labelWidth,
+              // Centred on the ± row, not on the row plus an error below.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: ExomStepper.buttonSize,
+                ),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: caption,
+                ),
+              ),
+            ),
+            const SizedBox(width: _labelGap),
+            Expanded(
+              child: stepper(
+                context,
+                constraints.maxWidth - labelWidth - _labelGap,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

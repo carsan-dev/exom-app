@@ -2979,8 +2979,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trainingRetryCompletion => 'Reintentar finalización';
 
   @override
-  String get trainingPendingFinalizeNotice =>
-      'Tienes un entrenamiento pendiente de finalizar';
+  String trainingPendingFinalizeNotice(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tienes $count entrenamientos pendientes de finalizar',
+      one: 'Tienes un entrenamiento pendiente de finalizar',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get trainingPendingFinalize => 'Pendiente de finalizar';

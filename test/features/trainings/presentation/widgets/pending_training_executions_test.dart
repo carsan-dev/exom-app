@@ -156,7 +156,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('full-session-123456789'), findsNothing);
     expect(find.textContaining('other-session'), findsNothing);
-    expect(find.textContaining('Fuerza · 2026-09-05'), findsNWidgets(2));
+    expect(find.textContaining('Fuerza · 5 de septiembre de 2026'), findsNWidgets(2));
     expect(find.byKey(const Key('pending-discard-full-session-123456789')), findsOneWidget);
     await openDialog(tester);
     expect(find.textContaining('full-session-123456789'), findsOneWidget);

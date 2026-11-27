@@ -176,6 +176,7 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
   double height = 844,
   double textScale = 1.0,
   TextScaler? textScaler,
+  ValueNotifier<TextScaler>? textScalerNotifier,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
 }) async {
@@ -220,11 +221,21 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
         GlassDecoration.brightness = Theme.of(context).brightness;
+        MediaQueryData scaled(TextScaler scaler) =>
+            MediaQuery.of(context).copyWith(
+              textScaler: scaler,
+              disableAnimations: disableAnimations,
+            );
+        // [textScalerNotifier] changes the text scale while the page is open.
+        if (textScalerNotifier != null) {
+          return ValueListenableBuilder<TextScaler>(
+            valueListenable: textScalerNotifier,
+            builder: (_, scaler, _) =>
+                MediaQuery(data: scaled(scaler), child: app!),
+          );
+        }
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: textScaler ?? TextScaler.linear(textScale),
-            disableAnimations: disableAnimations,
-          ),
+          data: scaled(textScaler ?? TextScaler.linear(textScale)),
           child: app!,
         );
       },

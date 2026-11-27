@@ -732,7 +732,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             children: [
               for (final (index, entry) in pending.indexed)
                 ListTile(
-                  title: Text('${training.name} · ${_sessionDateLabel(dialogContext, date)}'),
+                  title: Text('${training.name} · ${sessionDateLabel(dialogContext, date)}'),
                   subtitle: Text(l10n.trainingExecutionLabel(index + 1)),
                   onTap: () => Navigator.of(dialogContext).pop(entry['id'] as String),
                 ),
@@ -2481,9 +2481,10 @@ class _NumberedRow extends StatelessWidget {
   }
 }
 
-/// Long date of [isoDate] in the active locale (TEXTOS-2 O6); an
+/// Long date of [isoDate] in the active locale (TEXTOS-2 O6, L5-D52); shared
+/// with the pending-sessions box of Entrenar. An
 /// unparseable value is shown as it came.
-String _sessionDateLabel(BuildContext context, String isoDate) {
+String sessionDateLabel(BuildContext context, String isoDate) {
   final day = DateTime.tryParse(isoDate);
   if (day == null) return isoDate;
   final locale = Localizations.localeOf(context).toString();

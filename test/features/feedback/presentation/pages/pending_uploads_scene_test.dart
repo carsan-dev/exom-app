@@ -35,8 +35,9 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text('1'), findsOneWidget, reason: 'hero count at 96');
-        expect(find.text(l10n.pendingUploadsHeroLabel(1)), findsOneWidget);
+        // L5-D66: the hero counts pending + failed (1 sending + 1 failed).
+        expect(find.text('2'), findsOneWidget, reason: 'hero count at 96');
+        expect(find.text(l10n.pendingUploadsHeroLabel(2)), findsOneWidget);
         expect(
           find.text(l10n.pendingUploadsSectionEvidence.toUpperCase()),
           findsOneWidget,

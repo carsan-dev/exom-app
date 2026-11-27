@@ -357,7 +357,9 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       body: l10n.pendingUploadsEmptyBody,
                     )
                   else ...[
-                    _Summary(count: pendingCount, failed: failedCount),
+                    // L5-D66: the numeral counts everything not yet sent (pending +
+                    // failed), as Ajustes does; the failed line stays under it.
+                    _Summary(count: openItems.length, failed: failedCount),
                     if (openItems.isNotEmpty) ...[
                       _SectionHeader(
                         n: 1,

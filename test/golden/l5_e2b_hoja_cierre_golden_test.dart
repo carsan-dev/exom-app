@@ -11,6 +11,9 @@
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_e2b_hoja_cierre_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';

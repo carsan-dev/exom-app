@@ -12,6 +12,9 @@
 // chrome. Same platform rules as
 // redesign_baseline_golden_test.dart (generated on Windows); regenerate with:
 //   flutter test --update-goldens test/golden/l5_a2_reproductor_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

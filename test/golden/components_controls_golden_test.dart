@@ -17,6 +17,9 @@
 //
 // Fixed data and a fixed injected «today»; nothing reads the clock. Every
 // animation is at rest in the first frame (the operation bar is determinate).
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_line_chart.dart';
 import 'package:exom_app/core/widgets/exom_month_grid.dart';

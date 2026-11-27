@@ -10,6 +10,9 @@
 // Scenes: componentes_texto (T0.2): ExomKicker, ExomTwoLineHeadline,
 // ExomMomentPill, ExomNumeral, ExomNumberedSectionHeader, ExomFigureColumns and
 // ExomIndexNumber.
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';

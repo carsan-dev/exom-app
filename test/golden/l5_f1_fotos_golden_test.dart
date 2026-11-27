@@ -9,6 +9,9 @@
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_f1_fotos_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

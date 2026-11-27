@@ -242,7 +242,7 @@ void main() {
           ),
         );
         await tester.pumpWidget(const SizedBox());
-      });
+      }, tags: ['golden']);
     }
   });
 

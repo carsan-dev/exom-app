@@ -5,6 +5,9 @@
 // Generated on Windows with the bundled fonts (loadRedesignFonts); regenerate
 // on the same OS with:
 //   flutter test --update-goldens test/golden/l5_f2_menu_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'dart:math' as math;
 
 import 'package:exom_app/core/navigation/app_router.dart';

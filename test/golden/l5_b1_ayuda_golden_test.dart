@@ -7,6 +7,9 @@
 // Windows with the bundled fonts (loadRedesignFonts), so regenerate on the same
 // OS with:
 //   flutter test --update-goldens test/golden/l5_b1_ayuda_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/features/help/presentation/pages/help_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

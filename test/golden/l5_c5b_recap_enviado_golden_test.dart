@@ -7,6 +7,9 @@
 // Same platform rules as components_golden_test.dart: generated on Windows with
 // the bundled fonts (loadRedesignFonts), so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_c5b_recap_enviado_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart'
     show kRecapCoachAvatar;

@@ -72,7 +72,8 @@ Future<void> showMealDetailSheet(
 /// the geometry of the loaded header; that happens on the first frame, while
 /// the sheet is still below the screen. If the loaded header still needs more
 /// room (the skeleton could not know it), the sheet grows once, animated, and
-/// only if the user has not dragged it. Nothing resizes it afterwards, so
+/// only if the user has not dragged it. Afterwards only a change of screen
+/// size or text scale resizes it (again only if it was not dragged), so
 /// picking an option never moves it.
 class _MealSheetHost extends StatefulWidget {
   const _MealSheetHost({

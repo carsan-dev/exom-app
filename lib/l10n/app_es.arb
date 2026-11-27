@@ -1168,6 +1168,7 @@
   "pendingUploadsHeroLabel": "{count, plural, =1{subida pendiente} other{subidas pendientes}}",
   "@pendingUploadsHeroLabel": {"placeholders": {"count": {"type": "int"}}},
   "pendingUploadsSectionEvidence": "Evidencias",
+  "pendingUploadsSectionSent": "Enviadas",
   "pendingUploadsEmptyFirst": "Todo al día.",
   "pendingUploadsEmptySecond": "Sin subidas.",
   "pendingUploadsEmptyBody": "Cada archivo sigue en este móvil hasta que EXOM confirma que lo ha recibido.",

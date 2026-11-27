@@ -3334,6 +3334,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingUploadsSectionEvidence => 'Evidence';
 
   @override
+  String get pendingUploadsSectionSent => 'Sent';
+
+  @override
   String get pendingUploadsEmptyFirst => 'All clear.';
 
   @override

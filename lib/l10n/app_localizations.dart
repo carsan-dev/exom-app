@@ -5720,6 +5720,12 @@ abstract class AppLocalizations {
   /// **'Evidencias'**
   String get pendingUploadsSectionEvidence;
 
+  /// No description provided for @pendingUploadsSectionSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviadas'**
+  String get pendingUploadsSectionSent;
+
   /// No description provided for @pendingUploadsEmptyFirst.
   ///
   /// In es, this message translates to:

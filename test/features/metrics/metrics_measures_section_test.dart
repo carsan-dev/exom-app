@@ -856,5 +856,52 @@ void main() {
         expect(repository.saved.single['arm_left_cm'], sent);
       });
     }
+
+    // Issue 2 (and the missing test of issue 4): a pair with only one side
+    // measured. The empty side shows «—», never the other side's value, and
+    // nothing is saved for it.
+    testWidgets('a pair with one side: the empty side shows «—»', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.thigh);
+      expect(numeral(tester, 'thigh_left_cm'), '55,0');
+      expect(numeral(tester, 'thigh_right_cm'), '—');
+      expect(
+        find.descendant(
+          of: measureStepper('thigh_right_cm'),
+          matching: find.textContaining('55', findRichText: true),
+        ),
+        findsNothing,
+      );
+      // Changing the measured side leaves the other one empty.
+      await stepMeasure(tester, 'thigh_left_cm');
+      expect(numeral(tester, 'thigh_right_cm'), '—');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.thigh), 'I 55,5 · D —');
+      await _save(tester);
+      expect(repository.saved.single, {
+        ..._untouchedPayload(),
+        'thigh_left_cm': 55.5,
+      });
+      expect(repository.saved.single.containsKey('thigh_right_cm'), isFalse);
+    });
+
+    testWidgets('a pair with one side drafted: the other side stays «—»', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.forearm);
+      await typeMeasure(tester, 'forearm_right_cm', '27,5');
+      await tapMeasureDone(tester);
+      await openMeasureSheet(tester, BodyZone.forearm);
+      expect(numeral(tester, 'forearm_right_cm'), '27,5');
+      expect(numeral(tester, 'forearm_left_cm'), '—');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.forearm), 'I — · D 27,5 cm');
+      await _save(tester);
+      expect(repository.saved.single['forearm_right_cm'], 27.5);
+      expect(repository.saved.single.containsKey('forearm_left_cm'), isFalse);
+    });
   });
 }

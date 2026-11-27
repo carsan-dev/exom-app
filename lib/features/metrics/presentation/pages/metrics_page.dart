@@ -601,6 +601,9 @@ class _MetricsViewState extends State<_MetricsView> {
                   ? l10n.leftSideLabel
                   : l10n.rightSideLabel,
               initial: drafts[i] ?? seed,
+              // The unmeasured side of a measured pair starts from the other
+              // side but shows «—» until the client changes it.
+              empty: drafts[i] == null && drafts.any((d) => d != null),
             ),
         ],
         zoneLabel: label,
@@ -611,6 +614,7 @@ class _MetricsViewState extends State<_MetricsView> {
         decrementLabel: l10n.metricsWeightDecrease(stepText),
         incrementLabel: l10n.metricsWeightIncrease(stepText),
         doneLabel: l10n.metricsMeasureDone,
+        noDataLabel: l10n.optionalRatingNoData,
         reviewMessage: l10n.measurementReviewTemplate(label.toLowerCase()),
       ),
     );
@@ -1827,17 +1831,20 @@ class _MeasureRow extends StatelessWidget {
 
 /// One stepper of the measure sheet: [fieldKey] of the draft, its side
 /// label (null for a single zone) and the value it starts from, in the
-/// display unit.
+/// display unit. An [empty] side shows «—» until it is changed; [initial] is
+/// then only the base of its ±.
 class _MeasureSide {
   const _MeasureSide({
     required this.fieldKey,
     required this.label,
     required this.initial,
+    this.empty = false,
   });
 
   final String fieldKey;
   final String? label;
   final double initial;
+  final bool empty;
 }
 
 /// Sheet of a measure (sketch «Hoja»): kicker «06 · Medidas», the zone name,
@@ -1863,6 +1870,7 @@ class _MeasureSheet extends StatefulWidget {
     required this.decrementLabel,
     required this.incrementLabel,
     required this.doneLabel,
+    required this.noDataLabel,
     required this.reviewMessage,
   });
 
@@ -1878,6 +1886,7 @@ class _MeasureSheet extends StatefulWidget {
   final String decrementLabel;
   final String incrementLabel;
   final String doneLabel;
+  final String noDataLabel;
   final String reviewMessage;
 
   @override
@@ -1983,6 +1992,8 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               max: widget.max,
               step: widget.step,
               minFractionDigits: 1,
+              empty: widget.sides[i].empty && !_changed[i],
+              emptySemanticsValue: widget.noDataLabel,
               unit: widget.unit,
               label: widget.sides[i].label ?? widget.zoneLabel,
               decrementLabel: widget.decrementLabel,

@@ -1015,11 +1015,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     _feedbackChanges?.cancel();
     _notesController.dispose();
     _footerVisibility.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   /// Footer visibility while it scrolls away with large text (L5-D63).
   final _footerVisibility = ExomScrollAwayFooterController();
+
+  /// The list's primary scroll controller: its programmatic scrolls never
+  /// count as the user's for [_footerVisibility] (L5-D63).
+  final _scrollController = ExomScrollAwayFooterScrollController();
 
   TrainingEntity? _groupedTraining;
   List<_ExerciseRowGroup> _groups = const [];
@@ -1817,32 +1822,36 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
         ),
       );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: palette.background,
       extendBody: scrollAway,
       appBar: GlassAppBar(
         leading: _DetailBackButton(onPressed: () => context.pop()),
       ),
-      body: scrollAway
-          ? NotificationListener<ScrollMetricsNotification>(
-              onNotification: _footerVisibility.handleMetricsNotification,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _footerVisibility.handleScrollNotification,
-                child: Builder(
-                  builder: (context) => ListView(
-                    // The extended body's bottom padding is the footer slot.
-                    padding: EdgeInsets.only(
-                      bottom: 24 + MediaQuery.paddingOf(context).bottom,
-                    ),
-                    children: listChildren,
-                  ),
-                ),
+      // One tree for both footers: changing it would rebuild the list and
+      // send it back to the top when the text scale crosses 1.3 or the
+      // screen reader turns on or off.
+      body: NotificationListener<ScrollMetricsNotification>(
+        onNotification: scrollAway
+            ? _footerVisibility.handleMetricsNotification
+            : null,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: scrollAway
+              ? _footerVisibility.handleScrollNotification
+              : null,
+          child: Builder(
+            builder: (context) => ListView(
+              // The extended body's bottom padding is the footer slot.
+              padding: EdgeInsets.only(
+                bottom: scrollAway
+                    ? 24 + MediaQuery.paddingOf(context).bottom
+                    : 24,
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.only(bottom: 24),
               children: listChildren,
             ),
+          ),
+        ),
+      ),
       bottomNavigationBar: scrollAway
           ? ExomScrollAwayFooter(
               key: const Key('training-detail-scroll-away-footer'),
@@ -1850,6 +1859,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               child: footer,
             )
           : footer,
+    );
+    // Above the Scaffold so its status-bar tap still scrolls the list up.
+    return PrimaryScrollController(
+      controller: _scrollController,
+      child: scaffold,
     );
   }
 }

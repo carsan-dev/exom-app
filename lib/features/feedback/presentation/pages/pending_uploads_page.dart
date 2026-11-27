@@ -509,7 +509,20 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     if (item['status'] != 'failed' && item['last_error'] == null) return null;
     final knownCode = localizedErrorCode(l10n, item['last_error'] as String?);
     if (knownCode != null) return knownCode;
-    return feedback ? l10n.pendingFeedbackError : l10n.pendingSyncFailedStatus;
+    if (feedback) {
+      // A queued upload is waiting for its next automatic attempt (network or
+      // server hiccup), not failed: the error text is for the failed state.
+      if (item['status'] == 'queued') {
+        final code = item['last_error'];
+        return code is String &&
+                code.startsWith('network_') &&
+                code.endsWith('_0')
+            ? l10n.feedbackUploadOfflineBody
+            : l10n.pendingFeedbackQueuedRetry;
+      }
+      return l10n.pendingFeedbackError;
+    }
+    return l10n.pendingSyncFailedStatus;
   }
 
   /// COLA (A): why a queued progress action is not sent yet, when it waits

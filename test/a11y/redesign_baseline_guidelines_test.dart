@@ -19,11 +19,15 @@
 // strokes the antialiased edge shades can outnumber the pure text pixels, so it
 // may measure an edge shade instead of the text. So textContrast is asserted
 // per violation, not per exact label set: every label the sampler reports is
-// resolved deterministically (see [_resolvedTextContrast]: text colour from the
-// effective style, background from the dominant colour behind it) and must reach
-// WCAG AA (4.5, or 3.0 for large text). A real low-contrast text fails; an
-// edge-shade artefact passes on whichever label it lands on. If a reported
-// label cannot be resolved the test fails, it is never skipped. An exact label
+// resolved deterministically (see [resolvedTextContrast] in
+// resolved_text_contrast.dart: text colour from the effective style, background
+// from the dominant colour behind it) and must reach WCAG AA (4.5, or 3.0 for
+// large text). A real low-contrast text fails; an edge-shade artefact passes on
+// whichever label it lands on. If a reported label cannot be resolved the test
+// fails, it is never skipped. The label is the text the guideline looked up for
+// the node (see [guidelineTextOfNode]): a merging node such as «Saltar
+// descanso» (ExomQuietButton) prints no label of its own in the reason, which
+// on Linux CI, where the sampler flags it, resolved to "null". An exact label
 // set was dropped because it is brittle: the D11 tracking change (bodyMedium
 // -0.22) moved it («0/3 ejercicios completados» and «En ejecución» stopped being
 // reported; «Pie trasero…» is newly reported in ejercicio_activo dark and
@@ -31,14 +35,12 @@
 // lines.
 // Inicio: since L3 (decision D10) the scenes fix HomePage's clock to Wednesday
 // 18 Nov 2026, so every Inicio cell is asserted like the other scenes.
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../core/theme/wcag_contrast.dart';
 import '../golden/redesign_scenes.dart';
+import 'resolved_text_contrast.dart';
 
 const _guidelines = <String, AccessibilityGuideline>{
   'androidTapTarget': androidTapTargetGuideline,
@@ -50,8 +52,13 @@ const _guidelines = <String, AccessibilityGuideline>{
 String? _trim(String? value) => value?.replaceFirst(RegExp(r'\.$'), '');
 
 /// Normalises an [Evaluation.reason] into a sorted, date- and id-independent
-/// list of violations.
-List<String> violationSignature(String? reason) {
+/// list of violations. A contrast violation is labelled with [textOfNode] (the
+/// text the guideline looked up for the node) when given, else with the label
+/// printed in the reason.
+List<String> violationSignature(
+  String? reason, {
+  String? Function(int id)? textOfNode,
+}) {
   if (reason == null || reason.trim().isEmpty) return const [];
   final chunks = reason
       .split(RegExp(r'(?=SemanticsNode#\d+\()'))
@@ -70,7 +77,12 @@ List<String> violationSignature(String? reason) {
     } else if (chunk.contains('expected tappable node to have semantic label')) {
       signature.add('missing-label rect=($rect)');
     } else if (contrast != null) {
-      final label = RegExp(r'label: "([^"]*)"').firstMatch(chunk)?.group(1);
+      final id = int.parse(
+        RegExp(r'^\s*SemanticsNode#(\d+)\(').firstMatch(chunk)!.group(1)!,
+      );
+      final label = textOfNode != null
+          ? textOfNode(id)
+          : RegExp(r'label: "([^"]*)"').firstMatch(chunk)?.group(1);
       signature.add(
         'contrast label="$label" min=${_trim(contrast.group(1))} found=${_trim(contrast.group(2))} size=${_trim(contrast.group(3))}',
       );
@@ -106,117 +118,6 @@ const knownBaselineFailures = <String, List<String>>{};
 // 60 kg»; ejercicio_activo and descanso «Pie trasero…» and «Último peso: 60 kg».
 // True pairs there are all >= 4.5 (see the resolved values printed by the test).
 
-/// RGBA capture of the whole scene at 1 logical px per pixel, taken the way
-/// textContrastGuideline takes it (render view layer -> toImage).
-class _SceneCapture {
-  _SceneCapture(this.bytes, this.width, this.height);
-  final ByteData bytes;
-  final int width;
-  final int height;
-
-  static Future<_SceneCapture> take(WidgetTester tester) async {
-    final view = tester.binding.renderViews.first;
-    final layer = view.debugLayer! as OffsetLayer;
-    late int width;
-    late int height;
-    final bytes = await tester.binding.runAsync<ByteData?>(() async {
-      final image = await layer.toImage(
-        view.paintBounds,
-        pixelRatio: 1 / view.flutterView.devicePixelRatio,
-      );
-      width = image.width;
-      height = image.height;
-      final data = await image.toByteData();
-      image.dispose();
-      return data;
-    });
-    return _SceneCapture(bytes!, width, height);
-  }
-
-  /// ARGB32 -> pixel count inside [rect] (global logical coordinates).
-  Map<int, int> histogram(Rect rect) {
-    final counts = <int, int>{};
-    final left = rect.left.floor().clamp(0, width);
-    final top = rect.top.floor().clamp(0, height);
-    final right = rect.right.ceil().clamp(0, width);
-    final bottom = rect.bottom.ceil().clamp(0, height);
-    for (var y = top; y < bottom; y++) {
-      for (var x = left; x < right; x++) {
-        final o = (y * width + x) * 4;
-        final argb = bytes.getUint8(o + 3) << 24 |
-            bytes.getUint8(o) << 16 |
-            bytes.getUint8(o + 1) << 8 |
-            bytes.getUint8(o + 2);
-        counts[argb] = (counts[argb] ?? 0) + 1;
-      }
-    }
-    return counts;
-  }
-}
-
-typedef _Resolved = ({
-  Color text,
-  Color background,
-  double ratio,
-  double minimum,
-});
-
-/// Resolves the real contrast of every visible `Text(label)`: the text colour
-/// comes from the effective style (DefaultTextStyle merged with the widget
-/// style); the background is the most frequent colour inside the text's paint
-/// bounds (uncropped) in [capture]. The text colour must itself appear among
-/// those pixels, which guards against resolving the wrong widget.
-List<_Resolved> _resolvedTextContrast(
-  WidgetTester tester,
-  String label,
-  _SceneCapture capture,
-) {
-  final elements = find.text(label).hitTestable().evaluate().toList();
-  expect(elements, isNotEmpty, reason: 'no visible Text "$label"');
-  final resolved = <_Resolved>[];
-  for (final element in elements) {
-    final widget = element.widget;
-    expect(widget, isA<Text>(), reason: '"$label" is not a Text widget');
-    final style =
-        DefaultTextStyle.of(element).style.merge((widget as Text).style);
-    expect(
-      style.foreground,
-      isNull,
-      reason: '"$label" paints with a foreground Paint',
-    );
-    final text = style.color;
-    expect(text, isNotNull, reason: '"$label" has no resolved text colour');
-    expect(text!.a, 1.0, reason: '"$label" text colour is translucent');
-    final box = element.renderObject! as RenderBox;
-    final rect = MatrixUtils.transformRect(
-      box.getTransformTo(null),
-      box.paintBounds,
-    );
-    final counts = capture.histogram(rect);
-    expect(
-      counts[text.toARGB32()] ?? 0,
-      greaterThan(0),
-      reason:
-          'text colour ${hexRgb(text)} of "$label" not found in its paint bounds',
-    );
-    final background = Color(
-      counts.entries.reduce((a, b) => b.value > a.value ? b : a).key,
-    );
-    expect(
-      background,
-      isNot(text),
-      reason: '"$label": the text colour dominates its own box',
-    );
-    resolved.add((
-      text: text,
-      background: background,
-      ratio: contrastRatio(text, background),
-      minimum: wcagAaMinimum(style.fontSize!, style.fontWeight),
-    ));
-  }
-  return resolved;
-}
-
 final _contrastEntry = RegExp(r'^contrast label="(.*)" min=\S+ found=(\S+) size=');
 
 /// Cells printed but NOT asserted. Empty since L3: the Inicio cells were
@@ -229,7 +130,7 @@ void main() {
     for (final brightness in Brightness.values) {
       testWidgets('guidelines ${scene.slug} ${brightness.name}', (tester) async {
         final semantics = tester.ensureSemantics();
-        _SceneCapture? capture;
+        SceneCapture? capture;
         final handle = await pumpRedesignScene(
           tester,
           scene,
@@ -238,7 +139,10 @@ void main() {
         for (final entry in _guidelines.entries) {
           final key = '${scene.slug}/${brightness.name}/${entry.key}';
           final result = await entry.value.evaluate(tester);
-          final signature = violationSignature(result.reason);
+          final signature = violationSignature(
+            result.reason,
+            textOfNode: (id) => guidelineTextOfNode(tester, id),
+          );
           // Inventory line collected by the evidence log.
           // ignore: avoid_print
           print('GUIDELINE $key passed=${result.passed} violations=${signature.length}');
@@ -256,8 +160,8 @@ void main() {
                 reason: '$key: unexpected violation $violation',
               );
               final label = match!.group(1)!;
-              capture ??= await _SceneCapture.take(tester);
-              final resolved = _resolvedTextContrast(tester, label, capture);
+              capture ??= await SceneCapture.take(tester);
+              final resolved = resolvedTextContrast(tester, label, capture);
               for (final r in resolved) {
                 // Informational: the sampled value may be an edge-shade artefact.
                 // ignore: avoid_print

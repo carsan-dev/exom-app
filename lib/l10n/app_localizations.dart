@@ -5354,6 +5354,12 @@ abstract class AppLocalizations {
   /// **'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.'**
   String get pendingFeedbackError;
 
+  /// No description provided for @pendingFeedbackQueuedRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Se reintentará solo. Tu evidencia se conserva.'**
+  String get pendingFeedbackQueuedRetry;
+
   /// No description provided for @pendingEvidenceExercise.
   ///
   /// In es, this message translates to:

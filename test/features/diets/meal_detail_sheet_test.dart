@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
@@ -714,6 +715,215 @@ void main() {
         tester.getSize(draggable).height,
         moreOrLessEquals(height * 0.7, epsilon: 0.01),
       );
+    });
+  });
+
+  // The size is settled when the sheet opens; with it open, turning the phone
+  // or changing the text scale must settle it again for the new values.
+  group('the open sheet follows screen and text scale changes', () {
+    final scale = ValueNotifier<TextScaler>(TextScaler.noScaling);
+    final draggable = find.byType(DraggableScrollableSheet);
+    final loadedFoot = find.byKey(const Key('meal-detail-foot'));
+
+    Future<void> open(
+      WidgetTester tester,
+      Size size,
+      TextScaler scaler, {
+      MealEntity? meal,
+    }) async {
+      meal ??= _withOptions;
+      await loadRedesignFonts();
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _Repository(meal);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      final mealId = meal.id;
+      scale.value = scaler;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showMealDetailSheet(
+                    context,
+                    mealId: mealId,
+                    selectedDate: _date,
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          theme: AppTheme.light,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => ValueListenableBuilder<TextScaler>(
+            valueListenable: scale,
+            builder: (context, scaler, _) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: scaler),
+              child: child!,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(loadedFoot, findsOneWidget);
+    }
+
+    Future<double> freshHeight(
+      WidgetTester tester,
+      Size size,
+      TextScaler scaler,
+    ) async {
+      await open(tester, size, scaler);
+      return tester.getSize(draggable).height;
+    }
+
+    const portrait = Size(390, 844);
+    const landscape = Size(844, 390);
+    const large = AndroidNonlinearTextScaler(1.6);
+
+    testWidgets('text scale 1.0 to 1.6 with the sheet open', (tester) async {
+      final expected = await freshHeight(tester, portrait, large);
+      await open(tester, portrait, TextScaler.noScaling);
+      expect(tester.getSize(draggable).height, lessThan(expected - 1));
+      scale.value = large;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('text scale 1.6 to 1.0 with the sheet open', (tester) async {
+      final expected = await freshHeight(tester, portrait, TextScaler.noScaling);
+      await open(tester, portrait, large);
+      expect(tester.getSize(draggable).height, greaterThan(expected + 1));
+      scale.value = TextScaler.noScaling;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+    });
+
+    testWidgets('turning the phone with the sheet open at 1.6', (tester) async {
+      final expected = await freshHeight(tester, landscape, large);
+      await open(tester, portrait, large);
+      tester.view.physicalSize = landscape;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a sheet the user dragged keeps its size', (tester) async {
+      await open(tester, portrait, TextScaler.noScaling);
+      await tester.drag(
+        find.descendant(of: draggable, matching: find.byType(Scrollable)).first,
+        const Offset(0, 120),
+      );
+      await tester.pumpAndSettle();
+      final dragged = tester.getSize(draggable).height;
+      scale.value = large;
+      await tester.pumpAndSettle();
+      expect(tester.getSize(draggable).height, moreOrLessEquals(dragged));
+    });
+  });
+
+  // OBS-1 changed the loading skeleton only where it was needed: from text
+  // scale 1.3. Below it, it is the plain skeleton of before.
+  group('loading skeleton by text scale', () {
+    Future<void> load(WidgetTester tester, TextScaler scaler) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _GatedRepository(_meal);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: scaler),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: MealDetailSheet(
+              mealId: 'm-1',
+              selectedDate: _date,
+              scrollController: scroll,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      addTearDown(() => repository.gate.complete());
+    }
+
+    List<double> shimmerHeights(WidgetTester tester) => [
+      for (final card in tester.widgetList<ShimmerCard>(
+        find.byType(ShimmerCard),
+      ))
+        card.height,
+    ];
+
+    testWidgets('1.0 and 1.29: the plain skeleton of before', (tester) async {
+      for (final scaler in [
+        TextScaler.noScaling,
+        const TextScaler.linear(1.29),
+      ]) {
+        await load(tester, scaler);
+        expect(shimmerHeights(tester), [168, 28, 72, 64, 120]);
+      }
+    });
+
+    testWidgets('1.3: the skeleton that repeats the loaded header', (
+      tester,
+    ) async {
+      await load(tester, const TextScaler.linear(1.3));
+      // Header and foot are the loaded widgets under a mask, not placeholders
+      // of their own sizes.
+      expect(shimmerHeights(tester), isNot([168, 28, 72, 64, 120]));
+      expect(shimmerHeights(tester), contains(120));
     });
   });
 }

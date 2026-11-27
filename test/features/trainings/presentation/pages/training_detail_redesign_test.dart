@@ -287,6 +287,9 @@ class _Harness {
       router.routerDelegate.currentConfiguration.matches.length - 1;
 }
 
+/// System text scale and screen reader that a test changes at run time.
+typedef _LiveMedia = ({TextScaler textScaler, bool accessibleNavigation});
+
 Future<_Harness> _mount(
   WidgetTester tester, {
   TrainingEntity? training,
@@ -303,6 +306,7 @@ Future<_Harness> _mount(
   Map<String, List<SetPerformance>> performances = const {},
   bool accessibleNavigation = false,
   bool disableAnimations = false,
+  ValueListenable<_LiveMedia>? liveMedia,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -389,16 +393,30 @@ Future<_Harness> _mount(
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(
-              textScaler: textScaler ?? TextScaler.linear(textScale),
-              accessibleNavigation: accessibleNavigation,
-              disableAnimations: disableAnimations,
-            ),
-            child: child!,
-          ),
+          builder: (context, child) {
+            Widget scoped(TextScaler scaler, bool screenReader) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: scaler,
+                accessibleNavigation: screenReader,
+                disableAnimations: disableAnimations,
+              ),
+              child: child!,
+            );
+            // [liveMedia] changes the text scale and the screen reader while
+            // the app runs, as the system settings do.
+            final live = liveMedia;
+            if (live == null) {
+              return scoped(
+                textScaler ?? TextScaler.linear(textScale),
+                accessibleNavigation,
+              );
+            }
+            return ValueListenableBuilder<_LiveMedia>(
+              valueListenable: live,
+              builder: (_, media, _) =>
+                  scoped(media.textScaler, media.accessibleNavigation),
+            );
+          },
         ),
       ),
     ),
@@ -2135,6 +2153,105 @@ void main() {
             greaterThan(0));
         expect(footerShown(tester), isTrue);
       }
+    });
+
+    testWidgets('crossing 1.3 or toggling the screen reader keeps the offset', (
+      tester,
+    ) async {
+      final media = ValueNotifier<_LiveMedia>((
+        textScaler: const TextScaler.linear(1.3),
+        accessibleNavigation: false,
+      ));
+      addTearDown(media.dispose);
+      await _mount(tester, size: const Size(320, 640), liveMedia: media);
+      expect(footer, findsOneWidget);
+      await dragList(tester, -150);
+      final before = tester.state<ScrollableState>(list).position.pixels;
+      expect(before, greaterThan(0));
+
+      Future<void> expectKept(_LiveMedia next) async {
+        media.value = next;
+        await tester.pumpAndSettle();
+        final position = tester.state<ScrollableState>(list).position;
+        expect(position.maxScrollExtent, greaterThan(0));
+        expect(
+          position.pixels,
+          moreOrLessEquals(
+            before < position.maxScrollExtent
+                ? before
+                : position.maxScrollExtent,
+          ),
+          reason: '$next',
+        );
+      }
+
+      // Below 1.3 the footer stays fixed: another layout branch.
+      await expectKept((
+        textScaler: const TextScaler.linear(1.29),
+        accessibleNavigation: false,
+      ));
+      expect(footer, findsNothing);
+      await expectKept((
+        textScaler: const TextScaler.linear(1.3),
+        accessibleNavigation: false,
+      ));
+      expect(footer, findsOneWidget);
+      // TalkBack/VoiceOver on and off: the same branch change.
+      await expectKept((
+        textScaler: const TextScaler.linear(1.3),
+        accessibleNavigation: true,
+      ));
+      expect(footer, findsNothing);
+      await expectKept((
+        textScaler: const TextScaler.linear(1.3),
+        accessibleNavigation: false,
+      ));
+      expect(footer, findsOneWidget);
+    });
+
+    testWidgets('1.6: an animateTo during a fling does not hide it', (
+      tester,
+    ) async {
+      final media = ValueNotifier<_LiveMedia>((
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: false,
+      ));
+      addTearDown(media.dispose);
+      await _mount(tester, liveMedia: media);
+      ScrollPosition position() => tester.state<ScrollableState>(list).position;
+      // The user's fling toward the end hides the footer.
+      await tester.fling(list, const Offset(0, -60), 1500);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(position().isScrollingNotifier.value, isTrue);
+      expect(footerShown(tester), isFalse);
+      // TalkBack on and off while it flings brings the footer back...
+      media.value = (
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: true,
+      );
+      await tester.pump();
+      media.value = (
+        textScaler: const TextScaler.linear(1.6),
+        accessibleNavigation: false,
+      );
+      await tester.pump();
+      expect(position().isScrollingNotifier.value, isTrue);
+      expect(footerShown(tester), isTrue);
+      // ...and a programmatic scroll toward the end that takes over the
+      // fling is not the user's: the footer stays.
+      final target = position().pixels + 100;
+      unawaited(position().animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.linear,
+      ));
+      await tester.pumpAndSettle();
+      expect(position().pixels, target);
+      expect(footerShown(tester), isTrue);
+
+      // The user's own scroll still hides it.
+      await dragList(tester, -60);
+      expect(footerShown(tester), isFalse);
     });
 
     testWidgets('1.6: the double-tap guard (D51) still holds', (tester) async {

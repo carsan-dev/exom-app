@@ -4670,6 +4670,12 @@ abstract class AppLocalizations {
   /// **'Notificaciones'**
   String get notificationsTitle;
 
+  /// No description provided for @notificationsBellLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Notificaciones} other{Notificaciones, {count} sin leer}}'**
+  String notificationsBellLabel(int count);
+
   /// No description provided for @notificationsEmpty.
   ///
   /// In es, this message translates to:

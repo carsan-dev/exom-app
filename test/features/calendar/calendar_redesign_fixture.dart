@@ -4,7 +4,6 @@
 // theme, fonts, locale and text scale.
 // Not a test file: it has no `main` and is only imported.
 import 'package:exom_app/core/api/api_client.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
 import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
@@ -202,7 +201,6 @@ Future<void> pumpCalendarWithBloc(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   Widget stub(GoRouterState routeState) {
     openedRoutes.add(routeState.uri.toString());
     return const Scaffold(body: SizedBox.shrink());
@@ -232,7 +230,6 @@ Future<void> pumpCalendarWithBloc(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler ?? TextScaler.linear(textScale),

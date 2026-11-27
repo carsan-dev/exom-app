@@ -5,7 +5,6 @@
 // Not a test file: it has no `main` and is only imported.
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
 import 'package:exom_app/features/trainings/domain/usecases/complete_training_usecase.dart';
@@ -191,7 +190,6 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/trainings',
     routes: [
@@ -220,7 +218,6 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         MediaQueryData scaled(TextScaler scaler) =>
             MediaQuery.of(context).copyWith(
               textScaler: scaler,

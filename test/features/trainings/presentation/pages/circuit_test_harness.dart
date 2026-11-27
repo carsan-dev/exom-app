@@ -13,7 +13,6 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
@@ -408,7 +407,6 @@ Future<CircuitHarness> pumpCircuit(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final fixedMode = ValueNotifier(ThemeMode.system);
   addTearDown(fixedMode.dispose);
   await tester.pumpWidget(
@@ -428,7 +426,6 @@ Future<CircuitHarness> pumpCircuit(
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
         builder: (context, child) {
-          GlassDecoration.brightness = Theme.of(context).brightness;
           return MediaQuery(
             data: MediaQuery.of(
               context,

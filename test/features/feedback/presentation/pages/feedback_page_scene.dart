@@ -8,7 +8,6 @@ import 'dart:io';
 
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
@@ -182,7 +181,6 @@ Future<GoRouter> pumpFeedbackScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -206,7 +204,6 @@ Future<GoRouter> pumpFeedbackScene(
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       builder: (context, child) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler,

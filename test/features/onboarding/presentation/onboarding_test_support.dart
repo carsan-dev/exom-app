@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:exom_app/features/onboarding/presentation/pages/onboarding_page.dart';
@@ -40,7 +39,6 @@ Widget onboardingHarness(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     builder: (context, app) {
-      GlassDecoration.brightness = Theme.of(context).brightness;
       final media = MediaQuery.of(context);
       return MediaQuery(
         data: media.copyWith(
@@ -67,7 +65,6 @@ void setOnboardingSurface(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
 }
 
 /// Pumps a single onboarding step inside a scaffold body.

@@ -28,7 +28,6 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -598,10 +597,6 @@ Widget _app(ThemeData theme, double textScale, Widget home) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     builder: (context, child) {
-      // Mirrors lib/main.dart: static GlassDecoration factories read the
-      // active brightness. Without this the light scenes painted the dark
-      // tokens (hidden while they were translucent; opaque since L1).
-      GlassDecoration.brightness = Theme.of(context).brightness;
       return MediaQuery(
         data: MediaQuery.of(
           context,
@@ -733,7 +728,6 @@ Future<SceneHandle> pumpRedesignScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   await loadRedesignFonts();
   await initializeDateFormatting('es');
   await sl.reset();

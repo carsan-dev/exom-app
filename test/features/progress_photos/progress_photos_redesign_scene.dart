@@ -8,7 +8,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/progress_photos/presentation/pages/progress_photos_page.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -107,7 +106,6 @@ Future<GoRouter> pumpPhotosScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final page = ProgressPhotosPage(
     repository: repository ?? listRepository(),
     queue: queue ?? listQueue(),
@@ -136,7 +134,6 @@ Future<GoRouter> pumpPhotosScene(
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler ?? TextScaler.linear(textScale),

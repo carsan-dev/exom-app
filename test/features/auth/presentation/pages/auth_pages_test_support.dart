@@ -4,7 +4,6 @@
 import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
@@ -94,7 +93,6 @@ Future<GoRouter> pumpAuthPage(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -118,7 +116,6 @@ Future<GoRouter> pumpAuthPage(
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       builder: (context, child) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         final scaled = MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(textScale),

@@ -11,7 +11,6 @@ import 'package:exom_app/core/services/app_update_service.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
@@ -162,7 +161,6 @@ Future<SettingsScene> pumpSettingsScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -190,7 +188,6 @@ Future<SettingsScene> pumpSettingsScene(
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
         builder: (context, child) {
-          GlassDecoration.brightness = Theme.of(context).brightness;
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: textScaler,

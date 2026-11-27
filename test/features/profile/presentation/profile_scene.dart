@@ -12,7 +12,6 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
@@ -222,7 +221,6 @@ Future<ProfileScene> pumpProfileScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   Widget stub(String text) => Scaffold(body: Center(child: Text(text)));
   final router = GoRouter(
     initialLocation: '/start',
@@ -259,7 +257,6 @@ Future<ProfileScene> pumpProfileScene(
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
         builder: (context, child) {
-          GlassDecoration.brightness = Theme.of(context).brightness;
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: textScaler,

@@ -2,7 +2,6 @@
 // bundled fonts, localizations, configurable width/text scale/theme and
 // reduced motion.
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +31,6 @@ Future<void> pumpComponent(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final theme = themeFor(brightness);
   await tester.pumpWidget(
     MaterialApp(
@@ -42,7 +40,6 @@ Future<void> pumpComponent(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler ?? TextScaler.linear(textScale),

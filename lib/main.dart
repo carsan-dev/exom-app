@@ -23,7 +23,6 @@ import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/exom_launch_symbol.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -571,9 +570,6 @@ class _ExomAppViewState extends State<_ExomAppView> {
             supportedLocales: AppPreferencesDefaults.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             builder: (context, child) {
-              // Sync glass decoration brightness with the active theme so
-              // static GlassDecoration.* factories pick the right tokens.
-              GlassDecoration.brightness = Theme.of(context).brightness;
               return GestureDetector(
                 onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                 child: child ?? const SizedBox.shrink(),

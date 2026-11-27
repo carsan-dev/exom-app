@@ -21,7 +21,7 @@ import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 
 /// Opens a training of the selected day and reloads Home on return, exactly
 /// as the previous card did: `/trainings/<id>?date=<assignmentDate>`.

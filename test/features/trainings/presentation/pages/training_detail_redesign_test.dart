@@ -21,7 +21,7 @@ import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
     show FeedbackPageArgs;
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -740,6 +740,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
   });
+
+  for (final (name, theme) in [
+    ('dark', AppTheme.dark),
+    ('light', AppTheme.light),
+  ]) {
+    testWidgets('error SnackBar text uses onError over error ($name)', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        theme: theme,
+        completed: {for (var i = 1; i <= 5; i++) 'te-$i'},
+      );
+      await tester.tap(completeButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('completion-rpe-8')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('confirm-complete-training')));
+      await tester.pumpAndSettle();
+      final snack = find.byType(SnackBar);
+      expect(snack, findsOneWidget);
+      final colors = Theme.of(tester.element(snack)).colorScheme;
+      expect(tester.widget<SnackBar>(snack).backgroundColor, colors.error);
+      final text = tester.widget<Text>(
+        find.descendant(of: snack, matching: find.byType(Text)).first,
+      );
+      expect(text.style?.color, colors.onError);
+    });
+  }
 
   testWidgets('a draft set with only RIR is not counted as done in the row', (
     tester,

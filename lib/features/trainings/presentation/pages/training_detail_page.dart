@@ -44,7 +44,7 @@ import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -476,10 +476,14 @@ class _TrainingDetailView extends StatelessWidget {
     return BlocConsumer<TrainingBloc, TrainingState>(
       listener: (context, state) {
         if (state is TrainingDetailLoaded && state.errorMessage != null) {
+          final colors = Theme.of(context).colorScheme;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError)),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text(
+                localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError),
+                style: TextStyle(color: colors.onError),
+              ),
+              backgroundColor: colors.error,
             ),
           );
         }

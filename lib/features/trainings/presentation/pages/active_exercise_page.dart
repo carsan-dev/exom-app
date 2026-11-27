@@ -211,7 +211,16 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     _popScheduled = true;
     setState(() => _allowPop = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.pop();
+      if (!mounted) return;
+      // E-D2: a route opened over the page («Salir del ejercicio» while the
+      // final rest ends, a sheet, the player) is closed first; otherwise
+      // context.pop() would pop it instead of the page and the latch above
+      // would swallow every later close.
+      final route = ModalRoute.of(context);
+      if (route != null && !route.isCurrent) {
+        route.navigator?.popUntil((candidate) => candidate == route);
+      }
+      context.pop();
     });
   }
 

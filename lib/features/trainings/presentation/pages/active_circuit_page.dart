@@ -1335,6 +1335,13 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
     });
     await sl<LocalStorage>().removeCachedData(_stateKey);
     if (!mounted) return;
+    // E-D2: a route opened over the page («Salir del ejercicio» while the
+    // final rest ends, a sheet) is closed first; otherwise context.pop()
+    // would pop it instead of the page and leave it on «done».
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      route.navigator?.popUntil((candidate) => candidate == route);
+    }
     context.pop();
   }
 

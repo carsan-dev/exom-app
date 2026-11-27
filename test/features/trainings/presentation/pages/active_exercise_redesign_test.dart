@@ -141,9 +141,14 @@ class _TrainingBloc extends Fake implements TrainingBloc {
     this.completedExerciseIds = const {},
     this.sessionProgress = const {},
     this.exercises = const [_squat, _bulgarian],
+    this.completionDelay,
   });
 
   final events = <TrainingEvent>[];
+
+  /// When set, the API answers (201) this long after the dispatch, as on a
+  /// device; otherwise the completion resolves synchronously.
+  final Duration? completionDelay;
   final Set<String> completedExerciseIds;
   final Map<String, TrainingDayProgress> sessionProgress;
   final List<TrainingExerciseEntity> exercises;
@@ -164,9 +169,18 @@ class _TrainingBloc extends Fake implements TrainingBloc {
   );
 
   @override
+  Stream<TrainingState> get stream => const Stream<TrainingState>.empty();
+
+  @override
   void add(TrainingEvent event) {
     events.add(event);
-    if (event is MarkExerciseCompleted) event.completion?.complete();
+    if (event is! MarkExerciseCompleted) return;
+    final delay = completionDelay;
+    if (delay == null) {
+      event.completion?.complete();
+    } else {
+      Future<void>.delayed(delay, () => event.completion?.complete());
+    }
   }
 }
 
@@ -231,6 +245,7 @@ Future<_Harness> _pumpPage(
   void Function()? registerExtra,
   Widget Function(Widget app)? wrapApp,
   List<ActiveWorkoutHiveModel> foreign = const [],
+  Duration? completionDelay,
 }) async {
   await sl.reset();
   final store = _Store();
@@ -245,6 +260,7 @@ Future<_Harness> _pumpPage(
     completedExerciseIds: completedExerciseIds,
     sessionProgress: sessionProgress,
     exercises: trainingExercises ?? const [_squat, _bulgarian],
+    completionDelay: completionDelay,
   );
   sl.registerSingleton<LocalStorage>(storage);
   sl.registerSingleton<RestTimerCoordinator>(native);
@@ -1188,6 +1204,83 @@ void main() {
       expect(harness.storage!.foreignClears, 0);
       expect(harness.storage!.foreign, [otherTraining]);
       expect(harness.store.writes, isEmpty);
+    });
+  });
+
+  group('E-D2: the final rest ends under «Salir del ejercicio»', () {
+    const oneSet = TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 1,
+      repsOrDuration: '10',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 10,
+      restSeconds: 10,
+      exercise: ExerciseEntity(id: 'ex-1', name: 'Hoja', muscleGroups: []),
+    );
+
+    int completions(_Harness h) =>
+        h.trainingBloc.events.whereType<MarkExerciseCompleted>().length;
+
+    /// Logs the only set and presses system back during the final rest.
+    Future<void> toFinalRestWithDialog(WidgetTester tester) async {
+      await _openSheet(tester);
+      await _saveSheet(tester);
+      expect(_state(tester).status, ActiveExerciseStatus.finalResting);
+      await tester.binding.handlePopRoute();
+      await _settleFrames(tester);
+      expect(
+        find.text(_l10n(tester).activeExerciseCloseTitle),
+        findsOneWidget,
+      );
+    }
+
+    void finishRest(WidgetTester tester) => BlocProvider.of<ActiveExerciseBloc>(
+      tester.element(find.byKey(const Key('active-exercise-close'))),
+    ).add(const FinishRest());
+
+    testWidgets('the dialog closes and the page leaves once, with one '
+        'completion', (tester) async {
+      final h = await _pumpPage(
+        tester,
+        exercise: oneSet,
+        trainingExercises: const [oneSet],
+        completionDelay: const Duration(milliseconds: 300),
+      );
+      await toFinalRestWithDialog(tester);
+
+      finishRest(tester);
+      await _settleFrames(tester);
+      await _settleFrames(tester);
+
+      expect(completions(h), 1);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(ActiveExercisePage), findsNothing);
+      expect(find.text('home'), findsOneWidget);
+    });
+
+    testWidgets('Cancelar before the rest ends keeps the page, then it leaves '
+        'once at the end', (tester) async {
+      final h = await _pumpPage(
+        tester,
+        exercise: oneSet,
+        trainingExercises: const [oneSet],
+        completionDelay: const Duration(milliseconds: 300),
+      );
+      await toFinalRestWithDialog(tester);
+      await tester.tap(find.text(_l10n(tester).cancel));
+      await _settleFrames(tester);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(ActiveExercisePage), findsOneWidget);
+      expect(completions(h), 0);
+
+      finishRest(tester);
+      await _settleFrames(tester);
+      await _settleFrames(tester);
+
+      expect(completions(h), 1);
+      expect(find.byType(ActiveExercisePage), findsNothing);
+      expect(find.text('home'), findsOneWidget);
     });
   });
 }

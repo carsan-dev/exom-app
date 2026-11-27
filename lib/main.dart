@@ -12,6 +12,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
+import 'package:exom_app/core/licenses/font_licenses.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
 import 'package:exom_app/core/navigation/notification_route_utils.dart';
@@ -44,6 +45,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   // P-E3b-1 r2: asked now, while the splash and the bootstrap run, so that
   // the app's restoration scope gets the data synchronously at runApp.
   final restorationData = RestorationDataPreload.start();

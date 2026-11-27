@@ -124,6 +124,8 @@ flutter:
     - assets/images/
     - assets/images/coach/
     - assets/branding/
+    - assets/fonts/dm-sans-OFL.txt
+    - assets/fonts/barlow-OFL.txt
 
   fonts:
     - family: CabinetGrotesk

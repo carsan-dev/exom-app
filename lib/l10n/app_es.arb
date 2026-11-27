@@ -973,6 +973,8 @@
   "deleteAccountErrorMessage": "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
   "dangerZoneTitle": "Zona peligrosa",
   "notificationsTitle": "Notificaciones",
+  "@notificationsBellLabel": {"placeholders": {"count": {"type": "int"}}},
+  "notificationsBellLabel": "{count, plural, =0{Notificaciones} other{Notificaciones, {count} sin leer}}",
   "notificationsEmpty": "No tienes notificaciones",
   "notificationsMarkAllRead": "Marcar todas",
   "notificationsDeleteRead": "Eliminar leídas",

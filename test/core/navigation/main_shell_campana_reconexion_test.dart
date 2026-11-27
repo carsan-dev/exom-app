@@ -9,6 +9,7 @@ import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:exom_app/core/services/fcm_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/get_me_usecase.dart';
 import 'package:exom_app/features/auth/domain/usecases/login_usecase.dart';
@@ -90,6 +91,7 @@ Future<_Mounted> _mountShell(
   WidgetTester tester, {
   required HomeSummaryEntity first,
   int countOfA = 0,
+  Locale locale = const Locale('es'),
 }) async {
   final home = _HomeRepository()..answerNext(first);
   final accounts = {
@@ -159,7 +161,7 @@ Future<_Mounted> _mountShell(
       child: MaterialApp.router(
         routerConfig: router,
         theme: AppTheme.dark,
-        locale: const Locale('es'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
@@ -172,9 +174,10 @@ Future<_Mounted> _mountShell(
 
 Future<void> _reload(WidgetTester tester, _Mounted m, HomeSummaryEntity next) {
   m.home.answerNext(next);
-  tester.element(find.text('home-route')).read<HomeBloc>().add(
-    const HomeLoadRequested(),
-  );
+  tester
+      .element(find.text('home-route'))
+      .read<HomeBloc>()
+      .add(const HomeLoadRequested());
   return _settle(tester);
 }
 
@@ -231,5 +234,47 @@ void main() {
     await _reload(tester, m, _fresh);
     expect(m.accounts['a']!.requests, 1);
     expect(m.accounts['b']!.requests, 1);
+  });
+
+  // A11Y: the bell announces its purpose and the unread count, not only the
+  // badge digit.
+  const bellCases = <(Locale, int, String)>[
+    (Locale('es'), 0, 'Notificaciones'),
+    (Locale('es'), 1, 'Notificaciones, 1 sin leer'),
+    (Locale('es'), 5, 'Notificaciones, 5 sin leer'),
+    (Locale('en'), 0, 'Notifications'),
+    (Locale('en'), 1, 'Notifications, 1 unread'),
+    (Locale('en'), 5, 'Notifications, 5 unread'),
+  ];
+  for (final (locale, count, label) in bellCases) {
+    testWidgets('bell semantics ${locale.languageCode} unread=$count: '
+        '"$label"', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _mountShell(tester, first: _fresh, countOfA: count, locale: locale);
+      final bell = find.ancestor(
+        of: find.byIcon(ExomIcons.notifications),
+        matching: find.byType(IconButton),
+      );
+      final node = tester.getSemantics(bell);
+      expect(node.label, label);
+      expect(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
+    });
+  }
+
+  testWidgets('header icon buttons expose a label (profile, menu)', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _mountShell(tester, first: _fresh);
+    for (final icon in [ExomIcons.profile, ExomIcons.menu]) {
+      final button = find.ancestor(
+        of: find.byIcon(icon),
+        matching: find.byType(IconButton),
+      );
+      final node = tester.getSemantics(button);
+      expect(node.label.isNotEmpty || node.tooltip.isNotEmpty, isTrue);
+    }
+    handle.dispose();
   });
 }

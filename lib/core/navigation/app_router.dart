@@ -720,21 +720,27 @@ class _MainShellState extends State<MainShell> {
                           const NotificationsUnreadCountRefreshRequested(),
                         );
                       },
-                      icon: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Icon(
-                            ExomIcons.notifications,
-                            color: palette.textPrimary,
-                            size: 24,
-                          ),
-                          if (unread > 0)
-                            Positioned(
-                              right: -8,
-                              top: -7,
-                              child: ShellUnreadBadge(count: unread),
+                      // The badge digit alone would be the node's label: it is
+                      // replaced by one that names the bell and its count.
+                      icon: Semantics(
+                        label: l10n.notificationsBellLabel(unread),
+                        excludeSemantics: true,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Icon(
+                              ExomIcons.notifications,
+                              color: palette.textPrimary,
+                              size: 24,
                             ),
-                        ],
+                            if (unread > 0)
+                              Positioned(
+                                right: -8,
+                                top: -7,
+                                child: ShellUnreadBadge(count: unread),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   },

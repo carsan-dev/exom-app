@@ -2568,6 +2568,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsTitle => 'Notifications';
 
   @override
+  String notificationsBellLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Notifications, $count unread',
+      zero: 'Notifications',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get notificationsEmpty => 'No notifications yet';
 
   @override

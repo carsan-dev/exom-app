@@ -936,6 +936,8 @@
   "deleteAccountErrorMessage": "Could not delete account. Please try again.",
   "dangerZoneTitle": "Danger zone",
   "notificationsTitle": "Notifications",
+  "@notificationsBellLabel": {"placeholders": {"count": {"type": "int"}}},
+  "notificationsBellLabel": "{count, plural, =0{Notifications} other{Notifications, {count} unread}}",
   "notificationsEmpty": "No notifications yet",
   "notificationsMarkAllRead": "Mark all",
   "notificationsDeleteRead": "Delete read",

@@ -191,12 +191,42 @@ void main() {
       expect(auth.events.single, isA<AuthLogoutRequested>());
     });
 
-    testWidgets('active circuit alone asks too', (tester) async {
-      await storage.cacheData('active_circuit:uid-a:2026-11-27:training:block', {
-        'status': 'executing',
+    const circuitKey = 'active_circuit:uid-a:2026-11-27:training-1:block-1:exec-1';
+    Map<String, Object> circuitState() => {
+      'training_session_id': 'exec-1',
+      'status': 'executing',
+    };
+
+    for (final status in ['pending', 'pending-finalize']) {
+      testWidgets('circuit of a $status execution: sheet', (tester) async {
+        await storage.cacheData('training_executions', [_execution(status)]);
+        await storage.cacheData(circuitKey, circuitState());
+        await tapSettingsLogout(tester);
+        expect(sheet, findsOneWidget);
       });
+    }
+
+    for (final status in ['pending-sync', 'confirmed']) {
+      testWidgets('leftover circuit of a $status execution: no sheet', (
+        tester,
+      ) async {
+        await storage.cacheData('training_executions', [_execution(status)]);
+        await storage.cacheData(circuitKey, circuitState());
+        await tapSettingsLogout(tester);
+        expect(sheet, findsNothing);
+        expect(auth.events.single, isA<AuthLogoutRequested>());
+      });
+    }
+
+    testWidgets('circuit with no session id is not unfinished work', (
+      tester,
+    ) async {
+      await storage.cacheData(
+        'active_circuit:uid-a:2026-11-27:training-1:block-1',
+        {'training_session_id': null, 'status': 'executing'},
+      );
       await tapSettingsLogout(tester);
-      expect(sheet, findsOneWidget);
+      expect(sheet, findsNothing);
     });
 
     testWidgets('session changed while the sheet is open: does nothing', (

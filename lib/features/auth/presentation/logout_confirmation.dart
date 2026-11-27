@@ -11,7 +11,7 @@ import 'package:flutter/widgets.dart';
 const _unfinishedExecutionStatuses = ['pending', 'pending-finalize'];
 
 /// Whether the current owner has a workout in progress on this device: an
-/// unfinished execution or an active circuit.
+/// unfinished execution (its circuits and drafts included).
 ///
 /// It mirrors the «pending» box of Entrenar: the same
 /// `getPendingTrainingExecutions()` list, keeping only effective statuses
@@ -22,16 +22,18 @@ const _unfinishedExecutionStatuses = ['pending', 'pending-finalize'];
 /// date/session suffix is verifiable; drafts without a session id are not
 /// listed. So `getActiveWorkouts()` is deliberately not read on its own.
 ///
+/// An `active_circuit:*` key outlives an abandoned circuit (it is removed
+/// only when the circuit itself finishes), so its mere presence says nothing
+/// and `hasActiveCircuitState` is deliberately not read. A circuit is work in
+/// progress only through its execution, and that execution is already in the
+/// list above when it is unfinished; a circuit with no execution (legacy) is
+/// ignored, as Entrenar ignores drafts without a session id.
+///
 /// Read-only over the owner's namespace (L5-D67).
-bool hasUnfinishedLocalWorkout(LocalStorage storage) {
-  final executions = storage.getPendingTrainingExecutions();
-  if (executions.any(
-    (entry) => _unfinishedExecutionStatuses.contains(entry['status']),
-  )) {
-    return true;
-  }
-  return storage.hasActiveCircuitState;
-}
+bool hasUnfinishedLocalWorkout(LocalStorage storage) =>
+    storage.getPendingTrainingExecutions().any(
+      (entry) => _unfinishedExecutionStatuses.contains(entry['status']),
+    );
 
 /// Decides whether the user's «Cerrar sesión» may go on (L5-D67).
 ///

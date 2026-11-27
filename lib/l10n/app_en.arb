@@ -1055,6 +1055,7 @@
   "@lastSetVideoRerecordFor": {"placeholders": {"exercise": {"type": "String"}}},
   "lastSetVideoRerecordFailed": "The new video could not be saved. The previous one is still on this phone.",
   "pendingEvidenceExerciseUnnamed": "Exercise from a workout",
+  "pendingEvidenceExerciseGeneric": "Exercise",
   "pendingFeedbackError": "The feedback could not be sent. Your evidence is kept; retry or review the upload.",
   "pendingEvidenceExercise": "Exercise: {exercise}",
   "@pendingEvidenceExercise": {"placeholders": {"exercise": {"type": "String"}}},

@@ -388,10 +388,12 @@ void main() {
       home: const PendingUploadsPage(),
     ));
     await tester.pumpAndSettle();
-    expect(find.textContaining('squat'), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.byType(PendingUploadsPage)));
+    // TEXTOS-2 O2: a row without a saved name never shows the identifier.
+    expect(find.textContaining('squat'), findsNothing);
+    expect(find.textContaining(l10n.pendingEvidenceExerciseGeneric), findsOneWidget);
     expect(find.textContaining('2026-09-05'), findsOneWidget);
     expect(find.textContaining('private technical diagnostic'), findsNothing);
-    final l10n = AppLocalizations.of(tester.element(find.byType(PendingUploadsPage)));
     storage.stamp = 'other:2:test';
     await tester.tap(find.byKey(_retryKey));
     await tester.pumpAndSettle();
@@ -500,6 +502,81 @@ void main() {
         });
         expect(find.text(l10n.pendingUploadUploadingStatus), findsOneWidget);
       });
+    });
+  }
+  for (final locale in ['es', 'en']) {
+    group('TEXTOS-2 O2 $locale', () {
+      testWidgets('a plain exercise upload shows the saved name, not the id', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {
+            ..._row('named', 'queued'),
+            'media_type': 'VIDEO',
+            'exercise_id': '2a6cef58-3aeb-4b1a-8414-3f5154da8406',
+            'exercise_name': 'Sentadilla',
+          },
+        ]);
+        expect(
+          find.textContaining(l10n.pendingEvidenceExercise('Sentadilla')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('2a6cef58'), findsNothing);
+      });
+
+      testWidgets('without a name it shows a generic label and no id', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {
+            ..._row('anon', 'queued'),
+            'media_type': 'VIDEO',
+            'exercise_id': '2a6cef58-3aeb-4b1a-8414-3f5154da8406',
+          },
+        ]);
+        expect(
+          find.textContaining(l10n.pendingEvidenceExerciseGeneric),
+          findsOneWidget,
+        );
+        expect(find.textContaining('2a6cef58'), findsNothing);
+      });
+    });
+  }
+
+  for (final locale in ['es', 'en']) {
+    testWidgets('TEXTOS-2 O4 $locale: the result strip never covers the last row actions', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(540, 960);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final l10n = await _pumpList(tester, locale: locale, items: [
+        for (var i = 0; i < 6; i++)
+          {..._row('r$i', 'failed'), 'media_type': 'VIDEO'},
+      ]);
+      await tester.dragUntilVisible(
+        find.byKey(const Key('pending-retry-r5')),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pending-retry-r5')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      final strip = find.text(l10n.pendingRetryFailed);
+      expect(strip, findsOneWidget);
+      await tester.dragUntilVisible(
+        find.byKey(const Key('pending-delete-r5')),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      final stripTop = tester.getTopLeft(strip).dy;
+      for (final key in ['pending-retry-r5', 'pending-delete-r5']) {
+        final rect = tester.getRect(find.byKey(Key(key)));
+        expect(rect.bottom, lessThanOrEqualTo(stripTop), reason: key);
+        expect(rect.height, greaterThanOrEqualTo(48), reason: key);
+      }
     });
   }
 }

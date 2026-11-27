@@ -128,6 +128,12 @@ void main() {
         brightness: brightness,
       );
       _expectRaisedPanel(tester, palette);
+      await pumpComponent(
+        tester,
+        const ServerErrorWidget(),
+        brightness: brightness,
+      );
+      _expectRaisedPanel(tester, palette);
     });
   }
 

@@ -1885,6 +1885,11 @@ class _MeasureSheet extends StatefulWidget {
 }
 
 class _MeasureSheetState extends State<_MeasureSheet> {
+  /// A value as the sheet shows it: at most two decimals («33,256» becomes
+  /// 33.26), so the draft and the save carry exactly the number shown.
+  static double _measurePrecision(double value) =>
+      value.isFinite ? (value * 100).round() / 100 : value;
+
   late final List<double> _values = [
     for (final side in widget.sides) side.initial,
   ];
@@ -1977,7 +1982,7 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               min: 0,
               max: widget.max,
               step: widget.step,
-              fractionDigits: 1,
+              minFractionDigits: 1,
               unit: widget.unit,
               label: widget.sides[i].label ?? widget.zoneLabel,
               decrementLabel: widget.decrementLabel,
@@ -1985,7 +1990,7 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               // The old fields took any typed number.
               acceptsTypedOutOfRange: true,
               onChanged: (value) => setState(() {
-                _values[i] = value;
+                _values[i] = _measurePrecision(value);
                 _changed[i] = true;
                 _invalid[i] = false;
               }),

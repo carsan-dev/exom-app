@@ -146,7 +146,7 @@ void main() {
     expect(tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value, '68.4');
   });
 
-  group('fractionDigits', () {
+  group('minFractionDigits', () {
     Widget fixed(double value, {int? digits, _Probe? probe}) =>
         ExomNumeralStepper(
           value: value,
@@ -158,7 +158,7 @@ void main() {
           decrementLabel: 'Restar',
           incrementLabel: 'Sumar',
           acceptsTypedOutOfRange: true,
-          fractionDigits: digits,
+          minFractionDigits: digits,
           onChanged: (v) => probe?.values.add(v),
         );
 
@@ -188,6 +188,18 @@ void main() {
         locale: const Locale('en'),
       );
       expect(shown(tester), '33.0');
+    });
+
+    // L6 medidas: «33,25» typed was shown «33,3» while 33.25 was saved.
+    testWidgets('1 keeps a second decimal the value has', (tester) async {
+      await pumpComponent(tester, fixed(33.25, digits: 1));
+      expect(shown(tester), '33,25');
+      await pumpComponent(
+        tester,
+        fixed(33.25, digits: 1),
+        locale: const Locale('en'),
+      );
+      expect(shown(tester), '33.25');
     });
 
     testWidgets('typing and emitted values are unchanged', (tester) async {

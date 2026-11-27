@@ -813,4 +813,48 @@ void main() {
       expect(measureValueText(tester, BodyZone.upperArm), 'I 34,0 · D 33,5 cm');
     });
   });
+
+  group('L6 medidas menores', () {
+    String numeral(WidgetTester tester, String key) => tester
+        .widget<ExomNumeral>(
+          find.descendant(
+            of: measureStepper(key),
+            matching: find.byType(ExomNumeral),
+          ),
+        )
+        .value;
+
+    // Issue 1: POST /metrics stores the measures as Float, so «33,25» is
+    // saved as 33.25; the numeral must show that, not «33,3».
+    for (final (locale, typed, shown, row, sent) in const [
+      ('es', '33,25', '33,25', 'I 33,25 · D 33,5 cm', 33.25),
+      ('en', '33.25', '33.25', 'L 33.25 · R 33.5 cm', 33.25),
+      // A third decimal is rounded on input to the two the app shows.
+      ('es', '33,256', '33,26', 'I 33,26 · D 33,5 cm', 33.26),
+    ]) {
+      testWidgets('$locale typed «$typed» shows «$shown» and sends $sent', (
+        tester,
+      ) async {
+        final repository = await _mount(
+          tester,
+          latest: _metric,
+          locale: Locale(locale),
+        );
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        await typeMeasure(tester, 'arm_left_cm', typed);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump();
+        expect(numeral(tester, 'arm_left_cm'), shown);
+        await tapMeasureDone(tester);
+        expect(measureValueText(tester, BodyZone.upperArm), row);
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        expect(numeral(tester, 'arm_left_cm'), shown, reason: 'reopened');
+        Navigator.of(tester.element(measureSheet())).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await _save(tester);
+        expect(repository.saved.single['arm_left_cm'], sent);
+      });
+    }
+  });
 }

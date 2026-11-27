@@ -47,7 +47,7 @@ class ExomNumeralStepper extends StatefulWidget {
     this.errorText,
     this.rejectsSignedInput = false,
     this.onSubmittedInvalid,
-    this.fractionDigits,
+    this.minFractionDigits,
   }) : assert(min <= max, 'min must not exceed max'),
        assert(step > 0, 'step must be positive');
 
@@ -77,11 +77,12 @@ class ExomNumeralStepper extends StatefulWidget {
   /// the focus; by default nothing else happens.
   final ValueChanged<String>? onSubmittedInvalid;
 
-  /// Fixed number of decimals shown (e.g. 1 gives «33,0»), with the locale
-  /// separator. Presentation only: typing, parsing and the emitted values are
-  /// unchanged. Null keeps the default format (2 decimals, trailing zeros
+  /// Minimum number of decimals shown (e.g. 1 gives «33,0» and keeps
+  /// «33,25»), with the locale separator; at most 2 are shown, as in the
+  /// default format. Presentation only: typing, parsing and the emitted values
+  /// are unchanged. Null keeps the default format (2 decimals, trailing zeros
   /// trimmed).
-  final int? fractionDigits;
+  final int? minFractionDigits;
 
   /// Key of the tappable numeral, for tests.
   static const Key valueKey = ValueKey('exom-numeral-stepper-value');
@@ -129,11 +130,13 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
     final separator = decimalSeparatorFor(
       Localizations.localeOf(context).languageCode,
     );
-    final digits = widget.fractionDigits;
-    if (digits == null || !value.isFinite) {
-      return formatDisplayDecimal(value, decimalSeparator: separator);
-    }
-    return value.toStringAsFixed(digits).replaceFirst('.', separator);
+    final text = formatDisplayDecimal(value, decimalSeparator: separator);
+    final digits = widget.minFractionDigits;
+    if (digits == null || digits <= 0 || !value.isFinite) return text;
+    final cut = text.indexOf(separator);
+    final shown = cut < 0 ? 0 : text.length - cut - 1;
+    if (shown >= digits) return text;
+    return '${cut < 0 ? '$text$separator' : text}${'0' * (digits - shown)}';
   }
 
   /// Removes floating point noise (0.1 + 0.2) from a stepped value.

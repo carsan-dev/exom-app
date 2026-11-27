@@ -8,8 +8,7 @@ import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
-import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart'
-    show sessionDateLabel;
+import 'package:exom_app/features/trainings/presentation/utils/session_date_label.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// Global, owner-scoped recovery list independent of the visible calendar month.

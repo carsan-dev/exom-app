@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/utils/session_date_label.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
@@ -2479,16 +2480,6 @@ class _NumberedRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Long date of [isoDate] in the active locale (TEXTOS-2 O6, L5-D52); shared
-/// with the pending-sessions box of Entrenar. An
-/// unparseable value is shown as it came.
-String sessionDateLabel(BuildContext context, String isoDate) {
-  final day = DateTime.tryParse(isoDate);
-  if (day == null) return isoDate;
-  final locale = Localizations.localeOf(context).toString();
-  return DateFormat.yMMMMd(locale).format(day);
 }
 
 /// FB1 r3: text at Android's 1.5x setting or above (the 14 sp body size grows

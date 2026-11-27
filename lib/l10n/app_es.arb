@@ -619,6 +619,9 @@
   "clearCacheActiveWorkTitle": "¿Borrar la caché local?",
   "clearCacheActiveWorkMessage": "Tienes un circuito sin terminar en este dispositivo. Si borras la caché, se perderá su progreso y no podrás retomarlo.",
   "clearCacheConfirmButton": "Borrar caché",
+  "logoutUnfinishedWorkoutTitle": "Tienes un entrenamiento sin terminar",
+  "logoutUnfinishedWorkoutBody": "Se conserva en este dispositivo y lo verás al volver a entrar con esta cuenta.",
+  "logoutUnfinishedWorkoutConfirm": "Cerrar sesión",
 
   "retry": "Reintentar",
   "cancel": "Cancelar",

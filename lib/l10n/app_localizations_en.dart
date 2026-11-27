@@ -1729,6 +1729,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearCacheConfirmButton => 'Clear cache';
 
   @override
+  String get logoutUnfinishedWorkoutTitle => 'You have an unfinished workout';
+
+  @override
+  String get logoutUnfinishedWorkoutBody =>
+      'It stays on this device and you\'ll see it when you sign back in with this account.';
+
+  @override
+  String get logoutUnfinishedWorkoutConfirm => 'Sign out';
+
+  @override
   String get retry => 'Retry';
 
   @override

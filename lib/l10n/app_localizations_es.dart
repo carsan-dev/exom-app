@@ -1753,6 +1753,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get clearCacheConfirmButton => 'Borrar caché';
 
   @override
+  String get logoutUnfinishedWorkoutTitle =>
+      'Tienes un entrenamiento sin terminar';
+
+  @override
+  String get logoutUnfinishedWorkoutBody =>
+      'Se conserva en este dispositivo y lo verás al volver a entrar con esta cuenta.';
+
+  @override
+  String get logoutUnfinishedWorkoutConfirm => 'Cerrar sesión';
+
+  @override
   String get retry => 'Reintentar';
 
   @override

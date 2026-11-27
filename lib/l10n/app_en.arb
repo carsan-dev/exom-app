@@ -582,6 +582,9 @@
   "clearCacheActiveWorkTitle": "Clear local cache?",
   "clearCacheActiveWorkMessage": "You have an unfinished circuit on this device. Clearing the cache will discard its progress and you will not be able to resume it.",
   "clearCacheConfirmButton": "Clear cache",
+  "logoutUnfinishedWorkoutTitle": "You have an unfinished workout",
+  "logoutUnfinishedWorkoutBody": "It stays on this device and you'll see it when you sign back in with this account.",
+  "logoutUnfinishedWorkoutConfirm": "Sign out",
 
   "retry": "Retry",
   "cancel": "Cancel",

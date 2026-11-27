@@ -126,6 +126,10 @@ class _Storage extends LocalStorage {
   final Map<String, ActiveWorkoutHiveModel> drafts = {};
   List<Map<String, dynamic>> confirmed = [];
 
+  /// Active exercises saved by other trainings (L5-D64).
+  List<ActiveWorkoutHiveModel> foreign = [];
+  int foreignClears = 0;
+
   @override
   String? get sessionStamp => 'owner:1:test';
   @override
@@ -178,6 +182,14 @@ class _Storage extends LocalStorage {
     String exerciseId,
     String date,
   ) => null;
+  @override
+  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
+      [...foreign.where((entry) => entry.trainingId != trainingId)];
+  @override
+  Future<void> clearForeignActiveWorkouts(String trainingId) async {
+    foreignClears++;
+    foreign = [...foreign.where((entry) => entry.trainingId == trainingId)];
+  }
   @override
   ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
       ValueNotifier<Box<ActiveWorkoutHiveModel>>(_EmptyBox());
@@ -1929,5 +1941,76 @@ void main() {
         }
       });
     }
+  });
+
+  group('L5-D64 «Descartar progreso anterior» over the detail', () {
+    void seedForeign(_Storage storage) => storage.foreign = [
+      ActiveWorkoutHiveModel(
+        trainingId: 'other-training',
+        exerciseId: 'te-9:$_date:other-execution',
+        currentSet: 2,
+        completedSets: 1,
+      ),
+    ];
+
+    testWidgets('opens over the detail and cancelling opens nothing', (
+      tester,
+    ) async {
+      final harness = await _mount(
+        tester,
+        completed: {'te-1', 'te-2'},
+        seed: seedForeign,
+      );
+      await tester.tap(nextButton);
+      // «Siguiente» shows its busy spinner while the dialog is open.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.activeExerciseDiscardTitle), findsOneWidget);
+      // The backdrop is the real detail, not a new empty route.
+      expect(harness.pushedRoutes, 0);
+      expect(find.byType(TrainingDetailPage), findsOneWidget);
+      expect(find.text('PIERNA FUERZA'), findsOneWidget);
+      expect(nextButton, findsOneWidget);
+
+      await tester.tap(find.text(l10n.cancel));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.activeExerciseDiscardTitle), findsNothing);
+      expect(harness.pushedRoutes, 0);
+      expect(harness.storage.foreignClears, 0);
+      expect(harness.storage.foreign, hasLength(1));
+    });
+
+    testWidgets('discarding clears the other progress, then opens once', (
+      tester,
+    ) async {
+      final harness = await _mount(
+        tester,
+        completed: {'te-1', 'te-2'},
+        seed: seedForeign,
+      );
+      await tester.tap(nextButton);
+      // «Siguiente» shows its busy spinner while the dialog is open.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text(_l10n(tester).activeExerciseDiscardAction));
+      await tester.pumpAndSettle();
+      expect(harness.storage.foreignClears, 1);
+      expect(harness.storage.foreign, isEmpty);
+      expect(harness.pushedRoutes, 1);
+      expect(find.text('active-exercise-route'), findsOneWidget);
+      final args = harness.pushed.last! as ActiveExercisePageArgs;
+      expect(args.trainingExercise.id, 'te-3');
+    });
+
+    testWidgets('without other progress there is no dialog', (tester) async {
+      final harness = await _mount(tester, completed: {'te-1', 'te-2'});
+      final title = _l10n(tester).activeExerciseDiscardTitle;
+      await tester.tap(nextButton);
+      await tester.pumpAndSettle();
+      expect(find.text(title), findsNothing);
+      expect(harness.storage.foreignClears, 0);
+      expect(harness.pushedRoutes, 1);
+    });
   });
 }

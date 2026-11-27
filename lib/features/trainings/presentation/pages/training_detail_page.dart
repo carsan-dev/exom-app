@@ -54,6 +54,7 @@ import 'package:exom_app/features/trainings/presentation/pages/training_mileston
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/utils/exercise_text_bullets.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/discard_foreign_progress_dialog.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_bullet_list.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_status.dart';
@@ -1074,6 +1075,18 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       training, widget.state.selectedDate,
       legacyExerciseId: ex.id);
     if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+    // L5-D64: the active exercise saved by another training is asked about
+    // here, over this detail, before the exercise route exists. Asked from
+    // that route's first frame (as before) the dialog covered a page with
+    // nothing built yet. Same answers as there: cancel opens nothing and
+    // keeps that progress; confirm discards it and opens the exercise.
+    final storage = sl<LocalStorage>();
+    if (storage.getForeignActiveWorkouts(training.id).isNotEmpty) {
+      final discard = await confirmDiscardForeignProgress(context);
+      if (!discard || !mounted || !context.mounted || !_sameSession) return;
+      await storage.clearForeignActiveWorkouts(training.id);
+      if (!mounted || !context.mounted || !_sameSession) return;
+    }
     final selectedProgress = widget.state.sessionProgress[sessionId]
         ?? const TrainingDayProgress();
     await context.push<void>(

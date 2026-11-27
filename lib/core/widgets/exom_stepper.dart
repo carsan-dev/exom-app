@@ -1,7 +1,9 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 /// − value + stepper of the set sheet (sketch «A · Hoja de registro»).
@@ -271,45 +273,122 @@ class ExomStepper<T> extends StatelessWidget {
     }
 
     final icon = errorIcon;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        control,
-        if (error != null) ...[
-          const SizedBox(height: 8),
-          Semantics(
-            container: true,
-            liveRegion: true,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (icon != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: ExcludeSemantics(
-                      child: Icon(icon, size: 18, color: palette.error),
+    // The focused field reveals its caret when it gains focus or the keyboard
+    // moves; with a message below the row, that reveal also takes in the
+    // message (INT-D1), always wrapped so the TextField is never remounted.
+    return _RevealErrorBelow(
+      enabled: error != null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          control,
+          if (error != null) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              container: true,
+              liveRegion: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (icon != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: ExcludeSemantics(
+                        child: Icon(icon, size: 18, color: palette.error),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                        color: palette.error,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
                 ],
-                Expanded(
-                  child: Text(
-                    error,
-                    style: TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                      color: palette.error,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
+    );
+  }
+}
+
+/// Extends a descendant's request to be shown on screen (the focused field
+/// revealing its caret) down to this box's bottom, so the error message
+/// painted under the field is revealed with it. When the field and the
+/// message do not both fit in the enclosing viewport, the original request
+/// is kept: the field and its caret take priority.
+class _RevealErrorBelow extends SingleChildRenderObjectWidget {
+  const _RevealErrorBelow({required this.enabled, required super.child});
+
+  final bool enabled;
+
+  @override
+  _RenderRevealErrorBelow createRenderObject(BuildContext context) =>
+      _RenderRevealErrorBelow(enabled: enabled);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderRevealErrorBelow renderObject,
+  ) {
+    renderObject.enabled = enabled;
+  }
+}
+
+class _RenderRevealErrorBelow extends RenderProxyBox {
+  _RenderRevealErrorBelow({required this.enabled});
+
+  bool enabled;
+
+  @override
+  void showOnScreen({
+    RenderObject? descendant,
+    Rect? rect,
+    Duration duration = Duration.zero,
+    Curve curve = Curves.ease,
+  }) {
+    if (enabled && descendant != null && descendant != this && hasSize) {
+      final requested = rect ?? descendant.paintBounds;
+      final local = MatrixUtils.transformRect(
+        descendant.getTransformTo(this),
+        requested,
+      );
+      final widened = Rect.fromLTRB(
+        local.left,
+        local.top,
+        local.right,
+        math.max(local.bottom, size.height),
+      );
+      final viewport = RenderAbstractViewport.maybeOf(this);
+      final fits =
+          viewport is RenderBox &&
+          (viewport as RenderBox).hasSize &&
+          widened.height <= (viewport as RenderBox).size.height;
+      if (fits) {
+        super.showOnScreen(
+          descendant: this,
+          rect: widened,
+          duration: duration,
+          curve: curve,
+        );
+        return;
+      }
+    }
+    super.showOnScreen(
+      descendant: descendant,
+      rect: rect,
+      duration: duration,
+      curve: curve,
     );
   }
 }

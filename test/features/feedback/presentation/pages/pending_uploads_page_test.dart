@@ -456,8 +456,18 @@ void main() {
         expect(find.text(l10n.feedbackUploadOfflineBody), findsOneWidget);
         expect(find.text(l10n.pendingFeedbackQueuedRetry), findsOneWidget);
         expect(find.text(l10n.pendingFeedbackError), findsNothing);
-        // The attempt counter stays (existing behaviour, reported).
-        expect(find.text(l10n.pendingUploadAttempts(1)), findsOneWidget);
+        // A queued item hides the attempt counter.
+        expect(find.text(l10n.pendingUploadAttempts(1)), findsNothing);
+        expect(find.text(l10n.pendingUploadAttempts(2)), findsNothing);
+      });
+
+      testWidgets('a failed item keeps the attempt counter', (tester) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {..._row('bad', 'failed'), 'attempts': 3},
+          {..._row('wait', 'queued'), 'attempts': 2},
+        ]);
+        expect(find.text(l10n.pendingUploadAttempts(3)), findsOneWidget);
+        expect(find.text(l10n.pendingUploadAttempts(2)), findsNothing);
       });
 
       testWidgets('OBS-4: a really failed item keeps the error message', (

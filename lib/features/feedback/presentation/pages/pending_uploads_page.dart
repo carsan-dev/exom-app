@@ -460,6 +460,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       status: _statusOf(l10n, status, _queue.progressOf(id)),
       detail: _errorLabel(l10n, item, feedback: true),
       attempts: item['attempts'] as int? ?? 0,
+      showAttempts: status != 'queued',
       retryKey: Key('pending-retry-$id'),
       deleteKey: Key('pending-delete-$id'),
       rerecordKey: Key('pending-rerecord-$id'),
@@ -489,6 +490,7 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
           : _statusLabel(l10n, item['status'] as String?),
       detail: failed ? known : _errorLabel(l10n, item) ?? _waitLabel(l10n, item),
       attempts: item['attempts'] as int? ?? 0,
+      showAttempts: item['status'] != 'queued',
       retryKey: Key('pending-retry-$id'),
       deleteKey: Key('pending-delete-$id'),
       onRetry: failed && !conflict && item['discard_requested'] != true
@@ -807,6 +809,7 @@ class _EvidenceRow extends StatelessWidget {
     required this.status,
     required this.detail,
     required this.attempts,
+    required this.showAttempts,
     required this.retryKey,
     required this.deleteKey,
     required this.onRetry,
@@ -822,6 +825,7 @@ class _EvidenceRow extends StatelessWidget {
   final _Status status;
   final String? detail;
   final int attempts;
+  final bool showAttempts;
   final Key retryKey;
   final Key deleteKey;
   final Key rerecordKey;
@@ -896,11 +900,13 @@ class _EvidenceRow extends StatelessWidget {
                   const SizedBox(height: ExomSpacing.xs),
                   Text(detailText, style: _secondaryStyle(context)),
                 ],
-                const SizedBox(height: ExomSpacing.xs),
-                Text(
-                  l10n.pendingUploadAttempts(attempts),
-                  style: _secondaryStyle(context),
-                ),
+                if (showAttempts) ...[
+                  const SizedBox(height: ExomSpacing.xs),
+                  Text(
+                    l10n.pendingUploadAttempts(attempts),
+                    style: _secondaryStyle(context),
+                  ),
+                ],
                 _Actions(
                   retryKey: retryKey,
                   deleteKey: deleteKey,
@@ -967,6 +973,7 @@ class _SyncRow extends StatelessWidget {
     required this.title,
     required this.detail,
     required this.attempts,
+    required this.showAttempts,
     required this.retryKey,
     required this.deleteKey,
     required this.onRetry,
@@ -977,6 +984,7 @@ class _SyncRow extends StatelessWidget {
   final String title;
   final String? detail;
   final int attempts;
+  final bool showAttempts;
   final Key retryKey;
   final Key deleteKey;
   final VoidCallback? onRetry;
@@ -994,14 +1002,16 @@ class _SyncRow extends StatelessWidget {
             title: title,
             body: detail,
           ),
-          const SizedBox(height: ExomSpacing.xs),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 14),
-            child: Text(
-              l10n.pendingUploadAttempts(attempts),
-              style: _secondaryStyle(context),
+          if (showAttempts) ...[
+            const SizedBox(height: ExomSpacing.xs),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 14),
+              child: Text(
+                l10n.pendingUploadAttempts(attempts),
+                style: _secondaryStyle(context),
+              ),
             ),
-          ),
+          ],
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 14),
             child: _Actions(

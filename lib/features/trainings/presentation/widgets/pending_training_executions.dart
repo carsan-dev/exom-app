@@ -20,6 +20,7 @@ class PendingTrainingExecutions extends StatefulWidget {
     this.inspectDiscard,
     this.discard,
     this.onBusyChanged,
+    this.firstActionsKey,
   });
 
   final LocalStorage storage;
@@ -34,6 +35,10 @@ class PendingTrainingExecutions extends StatefulWidget {
   /// action on the same sessions (the «Continuar sesión» footer) can follow
   /// the same busy state and re-read the list.
   final ValueChanged<bool>? onBusyChanged;
+
+  /// Key set on the action row of the first session, so the parent can measure
+  /// how tall the box must be for those actions to show in full.
+  final Key? firstActionsKey;
 
   @override
   State<PendingTrainingExecutions> createState() => _PendingTrainingExecutionsState();
@@ -206,7 +211,7 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
           ),
         ExomFlatRowGroup(
           children: [
-            for (final entry in entries)
+            for (final (index, entry) in entries.indexed)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
@@ -224,9 +229,10 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
                       _actionsInset,
                       0,
                       12,
-                      8,
+                      pendingActionsBottomPadding,
                     ),
                     child: Wrap(
+                      key: index == 0 ? widget.firstActionsKey : null,
                       spacing: 16,
                       children: [
                         if (entry['status'] != 'pending-sync' &&
@@ -284,6 +290,10 @@ const EdgeInsetsGeometry _messagePadding = EdgeInsetsDirectional.fromSTEB(
   20,
   12,
 );
+
+/// Padding under the row actions of a session; the pending box of the
+/// Entrenar page adds it to the height it measures.
+const double pendingActionsBottomPadding = 8;
 
 /// Start inset of the row actions: under the title, past the 56 dp date box
 /// (20 row padding + 56 + 14 gap of `ExomRichRow`).

@@ -175,6 +175,7 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
   double width = 390,
   double height = 844,
   double textScale = 1.0,
+  TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
 }) async {
@@ -221,7 +222,7 @@ Future<SeededTrainingBloc> pumpTrainingsScene(
         GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
+            textScaler: textScaler ?? TextScaler.linear(textScale),
             disableAnimations: disableAnimations,
           ),
           child: app!,

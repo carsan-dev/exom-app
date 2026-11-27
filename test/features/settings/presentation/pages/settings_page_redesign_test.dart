@@ -23,6 +23,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../core/widgets/android_nonlinear_text_scaler.dart';
+import '../../../../core/theme/wcag_contrast.dart';
 import '../../../../core/widgets/expect_no_lime_ink.dart';
 import '../../../challenges/challenges_test_support.dart'
     show expectNoBrokenWords, expectParagraphContrast, findTextCi;
@@ -403,6 +404,26 @@ void main() {
       );
       expect(message.kind, ExomMessageKind.error);
       expect(message.title, 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
+    });
+
+    testWidgets('the account-deleted SnackBar text is onError on the error '
+        'background, not textPrimary', (tester) async {
+      final scene = await pumpSettingsScene(tester);
+      await revealInSettings(tester, find.byKey(_deleteLink));
+      scene.auth.emitState(const AuthAccountDeleted());
+      await tester.pumpAndSettle();
+
+      final snackBar = find.byType(SnackBar);
+      expect(snackBar, findsOneWidget);
+      final context = tester.element(snackBar);
+      final onError = Theme.of(context).colorScheme.onError;
+      final background = context.exomPalette.error;
+      final text = tester.widget<Text>(
+        find.descendant(of: snackBar, matching: find.byType(Text)),
+      );
+      expect(text.style?.color, onError);
+      expect(text.style?.color, isNot(context.exomPalette.textPrimary));
+      expect(contrastRatio(onError, background), greaterThanOrEqualTo(4.5));
     });
   });
 

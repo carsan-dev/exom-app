@@ -196,6 +196,17 @@ class _ProgressViewState extends State<_ProgressView> {
             onRetry: retry,
             refreshing: refreshing,
             announce: !latestUnavailable,
+          )
+        else if (refreshing && !latestUnavailable)
+          // No retry on screen to carry the mark (e.g. the reload after
+          // saving a measure, L4-I26c): the mark alone, in the slot of the
+          // cached banner, only while the reload is in flight.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _RefreshMark(key: Key('progress-refresh-mark')),
+            ),
           ),
         const _Intro(),
         Padding(
@@ -536,7 +547,7 @@ class _MutedText extends StatelessWidget {
 /// Small spinner with an accessible label, shown next to a disabled retry
 /// while the reload is in flight.
 class _RefreshMark extends StatelessWidget {
-  const _RefreshMark();
+  const _RefreshMark({super.key});
 
   @override
   Widget build(BuildContext context) {

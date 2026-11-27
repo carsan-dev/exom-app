@@ -537,6 +537,60 @@ void main() {
     });
   });
 
+  // L4-I26c: the reload after saving a measure (network data, no retry on
+  // screen) had no progress mark at all.
+  group('reload after saving a measure (L4-I26c)', () {
+    testWidgets('the mark shows while reloading, alone, and then goes', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final repository = _Repository(history: _weekly, latest: _latest);
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      await tester.tap(_addMeasure(l10n));
+      await tester.pumpAndSettle();
+      final gate = Completer<void>();
+      repository.historyGate = gate;
+      await tester.tap(_saveButton(l10n));
+      // The form saves, pops itself and the summary reloads.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(MetricsFormPage), findsNothing);
+      expect(repository.historyCalls, 2);
+      final mark = find.byKey(const Key('progress-refresh-mark'));
+      expect(mark, findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.getSize(mark).height, 18);
+      // The loaded content stays; there is no retry button.
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+      expect(find.text(l10n.retry), findsNothing);
+      final live = <SemanticsNode>[];
+      bool visit(SemanticsNode node) {
+        if (node.flagsCollection.isLiveRegion) live.add(node);
+        node.visitChildren(visit);
+        return true;
+      }
+
+      for (final view in tester.binding.renderViews) {
+        final root = view.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      // The form's «saved» snack bar is its own live region, outside the
+      // page; within the page the mark is the only one.
+      final saved = l10n.metricsSuccessMessage;
+      final page = live.where((node) => node.label != saved).toList();
+      expect(page, hasLength(1));
+      expect(page.single.label, l10n.progressLoading);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(mark, findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      handle.dispose();
+    });
+  });
+
   group('history states', () {
     testWidgets('error shows a retry and keeps "Añadir medida"', (
       tester,

@@ -1270,11 +1270,16 @@ class _MetricsViewState extends State<_MetricsView> {
         if (state is MetricsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              // On the error colour the theme's textPrimary falls to 2.3:1 in
+              // dark (L4-I9): the text takes onError.
               content: Text(
                 localizedErrorTextOf(
                   context,
                   state.message,
                   fallback: (l10n) => l10n.metricsSaveError,
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onError,
                 ),
               ),
               backgroundColor: palette.error,

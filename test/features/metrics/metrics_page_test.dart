@@ -42,9 +42,12 @@ final _metric = BodyMetricEntity(
 );
 
 class _Repository extends Fake implements MetricsRepository {
-  _Repository(this.latest, {this.gate});
+  _Repository(this.latest, {this.gate, this.saveError});
 
   final BodyMetricEntity? latest;
+
+  /// When set, every save throws it.
+  final Object? saveError;
 
   /// When set, the latest metric does not arrive until it completes.
   final Completer<void>? gate;
@@ -59,6 +62,7 @@ class _Repository extends Fake implements MetricsRepository {
   @override
   Future<BodyMetricEntity> saveMetric(Map<String, dynamic> data) async {
     saved.add({...data});
+    if (saveError case final error?) throw error;
     return latest ?? _metric;
   }
 }
@@ -110,6 +114,7 @@ Future<_Harness> _mount(
   Locale locale = const Locale('es'),
   Map<String, dynamic>? profileCache,
   Completer<void>? latestGate,
+  Object? saveError,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -117,7 +122,11 @@ Future<_Harness> _mount(
   addTearDown(tester.view.resetDevicePixelRatio);
   await sl.reset();
   final storage = _Storage(profileCache);
-  final repository = _Repository(latest, gate: latestGate);
+  final repository = _Repository(
+    latest,
+    gate: latestGate,
+    saveError: saveError,
+  );
   final profile = _ProfileRepository();
   sl.registerSingleton<LocalStorage>(storage);
   sl.registerFactory<MetricsBloc>(
@@ -442,6 +451,45 @@ void main() {
       expect(h.repository.saved, hasLength(1));
       expect(h.repository.saved.single.keys, ['date']);
     });
+  });
+
+  // L4-I9: the error snack bar painted textPrimary on the error colour
+  // (2.3:1 in dark); its text and action now use colorScheme.onError.
+  group('L4-I9 save error snack bar', () {
+    for (final (name, theme) in [
+      ('dark', AppTheme.dark),
+      ('light', AppTheme.light),
+    ]) {
+      testWidgets('$name: text on the error colour uses onError', (
+        tester,
+      ) async {
+        await _mount(
+          tester,
+          latest: _metric,
+          theme: theme,
+          saveError: Exception('boom'),
+        );
+        final l10n = _l10n(tester);
+        await tester.tap(_saveButton(l10n));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        final notice = find.byType(SnackBar);
+        expect(notice, findsOneWidget);
+        final snackBar = tester.widget<SnackBar>(notice);
+        expect(snackBar.backgroundColor, theme.colorScheme.error);
+        final runs = tester.widgetList<RichText>(
+          find.descendant(of: notice, matching: find.byType(RichText)),
+        );
+        expect(runs, isNotEmpty);
+        for (final run in runs) {
+          expect(
+            run.text.style?.color,
+            theme.colorScheme.onError,
+            reason: run.text.toPlainText(),
+          );
+        }
+      });
+    }
   });
 
   group('L4-I4 decimal separator', () {

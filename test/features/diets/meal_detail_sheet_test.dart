@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
@@ -851,6 +852,78 @@ void main() {
       scale.value = large;
       await tester.pumpAndSettle();
       expect(tester.getSize(draggable).height, moreOrLessEquals(dragged));
+    });
+  });
+
+  // OBS-1 changed the loading skeleton only where it was needed: from text
+  // scale 1.3. Below it, it is the plain skeleton of before.
+  group('loading skeleton by text scale', () {
+    Future<void> load(WidgetTester tester, TextScaler scaler) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _GatedRepository(_meal);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: scaler),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: MealDetailSheet(
+              mealId: 'm-1',
+              selectedDate: _date,
+              scrollController: scroll,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      addTearDown(() => repository.gate.complete());
+    }
+
+    List<double> shimmerHeights(WidgetTester tester) => [
+      for (final card in tester.widgetList<ShimmerCard>(
+        find.byType(ShimmerCard),
+      ))
+        card.height,
+    ];
+
+    testWidgets('1.0 and 1.29: the plain skeleton of before', (tester) async {
+      for (final scaler in [
+        TextScaler.noScaling,
+        const TextScaler.linear(1.29),
+      ]) {
+        await load(tester, scaler);
+        expect(shimmerHeights(tester), [168, 28, 72, 64, 120]);
+      }
+    });
+
+    testWidgets('1.3: the skeleton that repeats the loaded header', (
+      tester,
+    ) async {
+      await load(tester, const TextScaler.linear(1.3));
+      // Header and foot are the loaded widgets under a mask, not placeholders
+      // of their own sizes.
+      expect(shimmerHeights(tester), isNot([168, 28, 72, 64, 120]));
+      expect(shimmerHeights(tester), contains(120));
     });
   });
 }

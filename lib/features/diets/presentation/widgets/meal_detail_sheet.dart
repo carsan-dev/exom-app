@@ -404,6 +404,10 @@ class _MealDetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below large text the sheet never needed the final geometry: the plain
+    // skeleton of before OBS-1.
+    if (!exomIsLargeText(context)) return _plainSkeleton(context);
+
     final preview = this.preview;
     final standIn =
         preview ??
@@ -449,6 +453,27 @@ class _MealDetailLoading extends StatelessWidget {
         onFootHeight == null
             ? foot
             : ExomHeightReporter(onHeight: onFootHeight, child: foot),
+      ],
+    );
+  }
+
+  Widget _plainSkeleton(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return ListView(
+      controller: scrollController,
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + bottomInset),
+      children: const [
+        _SheetTopBar(),
+        ShimmerCard(height: 168, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 28, width: 220, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 72, width: 160, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 64, borderRadius: _skeletonRadius),
+        SizedBox(height: 24),
+        ShimmerCard(height: 120, borderRadius: _skeletonRadius),
       ],
     );
   }

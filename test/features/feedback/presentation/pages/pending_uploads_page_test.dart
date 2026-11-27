@@ -437,6 +437,43 @@ void main() {
         expect(find.byKey(const ValueKey('pending-row-b')), findsOneWidget);
       });
 
+      testWidgets('OBS-4: queued item after a network failure is not an error', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {
+            ..._row('offline', 'queued'),
+            'attempts': 1,
+            'last_error': 'network_connectionError_0',
+          },
+          {
+            ..._row('server', 'queued'),
+            'attempts': 2,
+            'last_error': 'network_badResponse_503',
+          },
+        ]);
+        expect(find.text(l10n.pendingUploadQueuedStatus), findsNWidgets(2));
+        expect(find.text(l10n.feedbackUploadOfflineBody), findsOneWidget);
+        expect(find.text(l10n.pendingFeedbackQueuedRetry), findsOneWidget);
+        expect(find.text(l10n.pendingFeedbackError), findsNothing);
+        // The attempt counter stays (existing behaviour, reported).
+        expect(find.text(l10n.pendingUploadAttempts(1)), findsOneWidget);
+      });
+
+      testWidgets('OBS-4: a really failed item keeps the error message', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {
+            ..._row('bad', 'failed'),
+            'attempts': 1,
+            'last_error': 'upload_request_failed',
+          },
+        ]);
+        expect(find.text(l10n.pendingFeedbackError), findsOneWidget);
+        expect(find.text(l10n.feedbackUploadOfflineBody), findsNothing);
+      });
+
       testWidgets('L5-D66: hero counts failed uploads when none is pending', (
         tester,
       ) async {

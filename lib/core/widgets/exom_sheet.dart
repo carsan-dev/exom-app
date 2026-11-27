@@ -36,7 +36,8 @@ const double kExomSheetRadius = 0;
 ///   `isDismissible: false` none of them does (the content must pop it).
 /// * **Layout**: `panel` surface, square corners ([kExomSheetRadius], 0), 1 px `rule` outline, no
 ///   shadow, a 40x4 handle; content in a scroll view capped at 90 % of the
-///   screen height, above the keyboard and the bottom safe area. Builders
+///   space left between the top inset (status bar) and the keyboard, above
+///   the keyboard and the bottom safe area. Builders
 ///   return plain (non-scrolling) content.
 /// * **Semantics**: modal barrier labelled `sheetBarrierA11y`; the panel
 ///   scopes and names the route.
@@ -44,7 +45,10 @@ const double kExomSheetRadius = 0;
 ///   still open or closing (until its subtree is disposed), another call
 ///   opens nothing: a repeated trigger is ignored and resolves to null. Only
 ///   the original caller receives the sheet's result. Callers should still
-///   disable their trigger while awaiting.
+///   disable their trigger while awaiting. Exception: with
+///   `waitForDisposal: false` the guard is released as soon as the result is
+///   received, before the subtree is disposed, so a new sheet may open while
+///   the previous one is still closing (`calendar_page.dart` relies on it).
 ///
 /// The returned future completes only after the sheet has been fully removed
 /// and its subtree disposed (the "wait until destroyed" contract of

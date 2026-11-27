@@ -1,6 +1,5 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -75,7 +74,6 @@ Future<GoRouter> _pump(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -217,7 +215,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('layout: top radius 20, panel colour, no shadow, handle', (
+  testWidgets('layout: square top corners (kExomSheetRadius), panel colour, no shadow, handle', (
     tester,
   ) async {
     final events = <String>[];

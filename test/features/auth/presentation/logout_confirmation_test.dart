@@ -19,6 +19,7 @@ import 'package:exom_app/features/trainings/data/models/active_workout_hive_mode
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -424,5 +425,64 @@ void main() {
       expect(sheet, findsNothing);
       expect(auth.events.single, isA<AuthLogoutRequested>());
     });
+  });
+
+  // The sheet's two stacked actions share one alignment: each label is
+  // centred in a button of the same width and left edge.
+  group('Sheet actions alignment', () {
+    for (final scale in [1.0, 1.3, 1.6, 2.0]) {
+      testWidgets('text scale $scale: both labels centred in same-width '
+          'buttons', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await storage.cacheData('training_executions', [_execution('pending')]);
+        await tapSettingsLogout(tester);
+        expect(sheet, findsOneWidget);
+
+        // Worst distance of a painted line (not of the Text box, which can
+        // span the whole button) from the button's centre.
+        double labelOffset(Finder button) {
+          final text = find.descendant(
+            of: button,
+            matching: find.byType(RichText),
+          );
+          final paragraph = tester.renderObject<RenderParagraph>(text.first);
+          final origin = paragraph.localToGlobal(Offset.zero);
+          final centre = tester.getCenter(button).dx;
+          // Words (no trailing blanks) grouped into their painted lines.
+          final label = paragraph.text.toPlainText();
+          final lines = <double, Rect>{};
+          for (final word in RegExp(r'\S+').allMatches(label)) {
+            for (final box in paragraph.getBoxesForSelection(
+              TextSelection(baseOffset: word.start, extentOffset: word.end),
+            )) {
+              final rect = box.toRect();
+              lines.update(
+                rect.top.roundToDouble(),
+                (line) => line.expandToInclude(rect),
+                ifAbsent: () => rect,
+              );
+            }
+          }
+          var worst = 0.0;
+          for (final rect in lines.values) {
+            final delta = origin.dx + rect.center.dx - centre;
+            if (delta.abs() > worst.abs()) worst = delta;
+          }
+          return worst;
+        }
+
+        expect(labelOffset(confirm), closeTo(0, 0.5));
+        expect(labelOffset(cancel), closeTo(0, 0.5));
+        expect(
+          tester.getTopLeft(confirm).dx,
+          closeTo(tester.getTopLeft(cancel).dx, 0.5),
+        );
+        expect(
+          tester.getSize(confirm).width,
+          closeTo(tester.getSize(cancel).width, 0.5),
+        );
+      });
+    }
   });
 }

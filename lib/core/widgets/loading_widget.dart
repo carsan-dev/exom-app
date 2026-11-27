@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../theme/app_theme.dart';
-import '../theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'exom_panel.dart';
 
@@ -258,9 +257,14 @@ class ShimmerCard extends StatelessWidget {
       child: Container(
         height: height,
         width: width ?? double.infinity,
-        decoration: GlassDecoration.card(
-          borderRadius: (borderRadius ?? BorderRadius.circular(16)).topLeft.x,
-          borderColor: palette.glassBorder.withValues(alpha: 0.12),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(
+            (borderRadius ?? BorderRadius.circular(16)).topLeft.x,
+          ),
+          border: Border.all(
+            color: palette.glassBorder.withValues(alpha: 0.12),
+          ),
         ),
       ),
     );
@@ -275,10 +279,15 @@ class _StateIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Container(
       width: 72,
       height: 72,
-      decoration: GlassDecoration.accentCard(color, borderRadius: 999),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: palette.borderSoft),
+      ),
       child: Icon(icon, color: color, size: 36),
     );
   }

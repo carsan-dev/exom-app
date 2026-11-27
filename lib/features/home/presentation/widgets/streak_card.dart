@@ -1,7 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 
 class StreakCard extends StatelessWidget {
@@ -21,11 +20,16 @@ class StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final days = summary.streakDays;
+    final palette = context.exomPalette;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
-      decoration: GlassDecoration.accentCard(AppColors.calorieAccent),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.borderSoft),
+      ),
       child: Row(
         children: [
           // Flame icon with circle and glow
@@ -94,4 +98,3 @@ class StreakCard extends StatelessWidget {
     );
   }
 }
-

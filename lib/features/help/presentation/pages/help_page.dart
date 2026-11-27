@@ -573,7 +573,9 @@ class _HelpLinkRow extends StatelessWidget {
                   ),
                   if (tagWidget != null && !stacked) ...[
                     const SizedBox(width: _gap),
-                    Flexible(child: tagWidget),
+                    // Takes the half the title leaves (see `inlineTitle`), so
+                    // the chevron stays on the right edge.
+                    Expanded(child: tagWidget),
                   ],
                   const SizedBox(width: _gap),
                   // Decorative: the row already says where it goes.

@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:exom_app/core/config/external_links.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_accordion.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
@@ -419,6 +420,37 @@ void main() {
           );
         }
       }
+    }
+
+    for (final scale in const [1.0, 1.3, 1.6]) {
+      testWidgets('chevrons of the rows sit on the right edge, like the '
+          'accordion one, at $scale x (OBS-10)', (tester) async {
+        await _pumpHelp(tester, textScale: scale);
+        final rights = <String, double>{};
+        for (final key in const ['help-feedback-row', 'help-settings-row']) {
+          final chevron = find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byIcon(ExomIcons.next),
+          );
+          await _reveal(tester, chevron);
+          final rect = tester.getRect(chevron);
+          expect(rect.width, greaterThanOrEqualTo(22));
+          rights[key] = rect.right;
+        }
+        final accordion = find.descendant(
+          of: find.byType(ExomAccordion).first,
+          matching: find.byIcon(ExomIcons.expand),
+        );
+        await tester.dragUntilVisible(
+          find.text('01'),
+          find.byType(Scrollable).first,
+          const Offset(0, -200),
+        );
+        final edge = tester.getRect(accordion).right;
+        rights.forEach((key, right) {
+          expect(right, closeTo(edge, 1), reason: '$key at $scale x');
+        });
+      });
     }
 
     testWidgets('at 2.0 x the whole content is reachable by scrolling', (

@@ -5,6 +5,8 @@ import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/utils/exercise_text_bullets.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/exercise_bullet_list.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -247,6 +249,7 @@ class _TechniqueText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final bullets = extractExerciseBulletItems(section.text);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -278,15 +281,19 @@ class _TechniqueText extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          section.text,
-          style: TextStyle(
-            fontFamily: AppTheme.bodyFontFamily,
-            fontSize: 16,
-            height: 1.45,
-            color: palette.textSecondary,
-          ),
-        ),
+        if (bullets.isEmpty)
+          Text(
+            section.text,
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              fontSize: 16,
+              height: 1.45,
+              color: palette.textSecondary,
+            ),
+          )
+        else
+          // Same bullets as the exercise detail sheet.
+          ExerciseBulletList(items: bullets, fontSize: 16, height: 1.45),
       ],
     );
   }

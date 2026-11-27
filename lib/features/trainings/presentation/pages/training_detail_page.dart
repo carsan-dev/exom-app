@@ -53,6 +53,8 @@ import 'package:exom_app/features/trainings/presentation/pages/exercise_video_pl
 import 'package:exom_app/features/trainings/presentation/pages/training_milestone_page.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
+import 'package:exom_app/features/trainings/presentation/utils/exercise_text_bullets.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/exercise_bullet_list.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_status.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/rerecord_last_set_video.dart';
@@ -3142,54 +3144,6 @@ class _ExerciseDetailSheet extends StatelessWidget {
     return value != null && value.trim().isNotEmpty;
   }
 
-  List<String> _extractBulletItems(String text) {
-    final normalized = text.replaceAll('\r\n', '\n').trim();
-    if (normalized.isEmpty) return const [];
-
-    final lines = normalized
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
-
-    if (lines.length > 1) {
-      return lines.map(_stripBulletPrefix).toList();
-    }
-
-    // A list of one bullet (a lone "- item") is still a list.
-    // "-5 kg" or "*bold*" are text: a dash or star needs a space after it.
-    if (RegExp(r'^(?:[-*]\s+|\u2022\s*)\S').hasMatch(normalized) &&
-        !normalized.substring(1).contains('\u2022')) {
-      final item = _stripMarker(normalized);
-      return item.isEmpty ? const [] : [item];
-    }
-
-    if (normalized.contains('\u2022')) {
-      final inlineItems = normalized
-          .split('\u2022')
-          .map((line) => line.trim())
-          .where((line) => line.isNotEmpty)
-          .map(_stripBulletPrefix)
-          .toList();
-      if (inlineItems.length > 1) {
-        return inlineItems;
-      }
-    }
-
-    return const [];
-  }
-
-  String _stripMarker(String value) =>
-      value.replaceFirst(RegExp(r'^[-*\u2022]+\s*'), '').trim();
-
-  /// Drops the marker; a numbered line without marker ("1. Pie") also loses
-  /// its number, but the numbers after a marker ("- 90 grados") are content.
-  String _stripBulletPrefix(String value) {
-    final withoutMarker = _stripMarker(value);
-    if (withoutMarker != value.trim()) return withoutMarker;
-    return value.replaceFirst(RegExp(r'^\d+[.)-]?\s*'), '').trim();
-  }
-
   Future<void> _openVideo(BuildContext context) async {
     final videoUrl = exercise.videoUrl?.trim();
     if (videoUrl == null || videoUrl.isEmpty) return;
@@ -3302,7 +3256,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
         for (final (index, (title, text)) in sections.indexed) ...[
           const SizedBox(height: 24),
           ExomNumberedSectionHeader(n: index + 1, title: title),
-          _ExerciseSheetText(text: text, bulletItems: _extractBulletItems(text)),
+          _ExerciseSheetText(text: text, bulletItems: extractExerciseBulletItems(text)),
         ],
       ],
     );
@@ -3664,39 +3618,11 @@ class _ExerciseSheetText extends StatelessWidget {
       fontSize: _fontSize,
       height: height,
     );
-    // The dash sits on the first line's x-height (`top: .62em`), at the
-    // scaled size.
-    final dashTop = MediaQuery.textScalerOf(context).scale(_fontSize) * 0.62;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
       child: bulletItems.isEmpty
           ? Text(text.trim(), style: style(1.6))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final (index, item) in bulletItems.indexed)
-                  Padding(
-                    padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: dashTop),
-                          child: ExcludeSemantics(
-                            child: Container(
-                              width: 6,
-                              height: 2,
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(child: Text(item, style: style(1.5))),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+          : ExerciseBulletList(items: bulletItems, fontSize: _fontSize),
     );
   }
 }

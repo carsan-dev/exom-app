@@ -30,7 +30,7 @@ import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
@@ -1289,7 +1289,7 @@ class _MetricsViewState extends State<_MetricsView> {
       child: ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: GlassAppBar(
+          appBar: ExomAppBar(
             leading: IconButton(
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               icon: Icon(ExomIcons.back, color: palette.textPrimary),

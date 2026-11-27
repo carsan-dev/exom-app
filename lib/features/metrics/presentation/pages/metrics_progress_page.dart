@@ -17,7 +17,7 @@ import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
@@ -93,7 +93,7 @@ class _ProgressViewState extends State<_ProgressView> {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        appBar: ExomAppBar(
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             icon: Icon(ExomIcons.back, color: palette.textPrimary),

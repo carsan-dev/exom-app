@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
@@ -82,6 +83,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   bool _pendingReconnect = false;
   StreamSubscription<bool>? _connectivitySubscription;
 
+  /// L6 C-D1: longest wait for one summary. Above the HTTP client's own
+  /// bounds (10 s to connect plus 30 s to answer), so it only ends a load
+  /// stuck below it (opened without network, a platform call that never
+  /// returns). Past it the load is a connectivity failure.
+  static const defaultSummaryTimeout = Duration(seconds: 45);
+  final Duration summaryTimeout;
+
   /// [connectivityChanges] reports whether the device has network (`true`)
   /// or not. Without it (older wiring, tests) Inicio never reloads by itself
   /// when the network comes back.
@@ -91,6 +99,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     String? Function()? sessionStamp,
     Stream<bool>? connectivityChanges,
     Duration reconnectDebounce = const Duration(seconds: 2),
+    this.summaryTimeout = defaultSummaryTimeout,
   }) : _getHomeSummaryUseCase = getHomeSummaryUseCase,
        _getMonthCalendarUseCase = getMonthCalendarUseCase,
        _sessionStamp = sessionStamp,
@@ -158,13 +167,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  /// Runs [request] counted in [_summariesInFlight].
+  /// Runs [request] counted in [_summariesInFlight], for [summaryTimeout] at
+  /// most (L6 C-D1): a request that never answers would otherwise hold the
+  /// reconnection reload, which waits for it, forever. Past the bound it is
+  /// a connectivity failure; its late answer goes nowhere.
   Future<HomeSummaryEntity> _countedInFlight(
     Future<HomeSummaryEntity> Function() request,
   ) async {
     _summariesInFlight++;
     try {
-      return await request();
+      return await request().timeout(
+        summaryTimeout,
+        onTimeout: () => throw ApiException(
+          statusCode: 0,
+          message: 'Home summary timed out after $summaryTimeout',
+        ),
+      );
     } finally {
       _summariesInFlight--;
       // The handler emits the resulting state after this await returns (in

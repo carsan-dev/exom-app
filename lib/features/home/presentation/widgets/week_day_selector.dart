@@ -1,159 +1,323 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/spacing.dart';
-import 'package:exom_app/core/widgets/tappable_scale.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
+import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
+/// Current week (Monday to Sunday of the clock's today) as seven equal slots.
+///
+/// Today is outlined; the selected day is filled with the `text` colour (no
+/// lime); the selected day shows a check when its summary reports every
+/// training done (HomeBloc only loads the selected day, so other days carry no
+/// completion data).
+///
+/// L4b-D4: when HomeBloc has the calendar marks of this week, every day shows
+/// them under its number instead: a 6 dp dot for a pending session, a 12 dp
+/// check for a done one (a different shape, not only a colour) and nothing
+/// for a day without session; the day label adds «sesión pendiente» or
+/// «sesión hecha». L4b-I7: a pending session on a day before
+/// today is a hollow ring of the same size, labelled «sesión no hecha». Without marks the strip is exactly the pre-L4b one. Each
+/// slot is at least 48x48 when the strip has room for
+/// it (7 x 48 plus the page margins); on narrower screens the margins shrink
+/// first and the slots share the full width. Tapping a slot dispatches
+/// [HomeDateSelected], as before.
+///
+/// L5-E1 (sketch `.e-week`, D19): the day number is a 22 display figure; a
+/// done day shows its check in the data colour and a 3 dp data rule along its
+/// bottom edge (the background colour on the selected day, whose fill is the
+/// text colour). Corners of 2.
 class WeekDaySelector extends StatelessWidget {
   const WeekDaySelector({super.key});
 
+  static const double _pageMargin = 20;
+
+  /// Local midnight of the Monday of [today]'s week. Calendar arithmetic, not
+  /// a `Duration` subtracted from a local `DateTime`: around a clock change
+  /// that can shift the result by an hour.
+  static DateTime weekStartOf(DateTime today) =>
+      HomeWeekMarks.weekStartOf(today);
+
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final todayIndex = now.weekday - 1;
-    final weekStart = now.subtract(Duration(days: todayIndex));
+    final today = HomeClock.todayOf(context);
+    final weekStart = weekStartOf(today);
+    final l10n = AppLocalizations.of(context);
+    final languageCode = Localizations.localeOf(context).languageCode;
 
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
         DateTime? selectedDate;
-        if (state is HomeLoaded) selectedDate = state.selectedDate;
-        if (state is HomeRestDay) selectedDate = state.selectedDate;
+        var selectedDone = false;
+        HomeWeekMarks? marks;
+        if (state is HomeLoaded) {
+          selectedDate = state.selectedDate;
+          selectedDone =
+              state.summary.trainingCompleted &&
+              HomeSessionPlan.of(state.summary).hasTraining;
+          marks = state.weekMarks;
+        }
+        if (state is HomeRestDay) {
+          selectedDate = state.selectedDate;
+          marks = state.weekMarks;
+        }
+        // Marks of another week (the clock moved on) are not shown.
+        if (marks != null &&
+            HomeWeekMarks.dayKey(marks.weekStart) !=
+                HomeWeekMarks.dayKey(weekStart)) {
+          marks = null;
+        }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.lg),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (i) {
-              final dayDate = weekStart.add(Duration(days: i));
-              final isToday = i == todayIndex;
-              final isPast = i < todayIndex;
-              final isSelected =
-                  selectedDate != null &&
-                  dayDate.year == selectedDate.year &&
-                  dayDate.month == selectedDate.month &&
-                  dayDate.day == selectedDate.day;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            const needed = 7 * kExomMinTapTarget + 2 * _pageMargin;
+            final margin = constraints.maxWidth >= needed
+                ? _pageMargin
+                : ((constraints.maxWidth - 7 * kExomMinTapTarget) / 2).clamp(
+                    0.0,
+                    _pageMargin,
+                  );
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: margin),
+              child: Row(
+                children: List.generate(7, (i) {
+                  final dayDate = DateTime(
+                    weekStart.year,
+                    weekStart.month,
+                    weekStart.day + i,
+                  );
+                  final isToday = isSameDay(dayDate, today);
+                  final isSelected =
+                      selectedDate != null && isSameDay(dayDate, selectedDate);
+                  final mark = marks?.markFor(dayDate);
+                  final isDone = mark == null
+                      ? isSelected && selectedDone
+                      : mark == HomeDayMark.done;
 
-              final fullDayName = _fullDayName(context, dayDate);
+                  var label = homeLongDate(context, dayDate);
+                  if (isToday) label = l10n.homeWeekDayToday(label);
+                  if (isDone) label = l10n.homeWeekDayDone(label);
+                  // L4b-I7: a session not done on a day before today.
+                  final isMissed =
+                      mark == HomeDayMark.pending && dayDate.isBefore(today);
+                  if (isMissed) {
+                    label = l10n.homeWeekDayMissed(label);
+                  } else if (mark == HomeDayMark.pending) {
+                    label = l10n.homeWeekDayPending(label);
+                  }
 
-              return Semantics(
-                button: true,
-                selected: isSelected,
-                label: isToday ? '$fullDayName, hoy' : fullDayName,
-                child: TappableScale(
-                  onTap: () {
+                  void select() {
                     context.read<HomeBloc>().add(HomeDateSelected(dayDate));
-                  },
-                  scale: 0.92,
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Center(
-                      child: _DayCircle(
-                        label: _labelForDay(context, dayDate),
+                  }
+
+                  // One node per day: the visible letter and number are
+                  // replaced by the full date label, and the tap action is
+                  // declared here because excludeSemantics drops the
+                  // InkWell's own action.
+                  return Expanded(
+                    child: Semantics(
+                      button: true,
+                      selected: isSelected,
+                      label: label,
+                      onTap: select,
+                      excludeSemantics: true,
+                      child: _DaySlot(
+                        letter: DateFormat(
+                          'EEEEE',
+                          languageCode,
+                        ).format(dayDate).toUpperCase(),
+                        number: '${dayDate.day}',
                         isToday: isToday,
-                        isPast: isPast,
                         isSelected: isSelected,
+                        isDone: isDone,
+                        mark: mark,
+                        isMissed: isMissed,
+                        markKey: mark == null || mark == HomeDayMark.none
+                            ? null
+                            : ValueKey(
+                                'home-week-mark-${isMissed ? 'missed' : mark.name}-${dayDate.day}',
+                              ),
+                        doneRuleKey: ValueKey(
+                          'home-week-done-rule-${dayDate.day}',
+                        ),
+                        onTap: select,
                       ),
                     ),
-                  ),
-                ),
-              );
-            }),
-          ),
+                  );
+                }),
+              ),
+            );
+          },
         );
       },
     );
   }
-
-  String _labelForDay(BuildContext context, DateTime dayDate) {
-    final languageCode = Localizations.localeOf(context).languageCode;
-    return DateFormat('E', languageCode).format(dayDate).substring(0, 1).toUpperCase();
-  }
-
-  String _fullDayName(BuildContext context, DateTime dayDate) {
-    final languageCode = Localizations.localeOf(context).languageCode;
-    final name = DateFormat('EEEE d', languageCode).format(dayDate);
-    return name[0].toUpperCase() + name.substring(1);
-  }
 }
 
-class _DayCircle extends StatelessWidget {
-  const _DayCircle({
-    required this.label,
+class _DaySlot extends StatelessWidget {
+  const _DaySlot({
+    required this.letter,
+    required this.number,
     required this.isToday,
-    required this.isPast,
     required this.isSelected,
+    required this.isDone,
+    required this.mark,
+    required this.isMissed,
+    required this.markKey,
+    required this.doneRuleKey,
+    required this.onTap,
   });
 
-  final String label;
+  final String letter;
+  final String number;
   final bool isToday;
-  final bool isPast;
   final bool isSelected;
+  final bool isDone;
+
+  /// L4b calendar mark; `null` keeps the pre-L4b check on [isDone].
+  final HomeDayMark? mark;
+
+  /// L4b-I7: pending mark of a day before today, drawn as a hollow ring.
+  final bool isMissed;
+  final Key? markKey;
+
+  /// Key of the 3 dp data rule of a done day.
+  final Key doneRuleKey;
+  final VoidCallback onTap;
+
+  /// L4b-D4 sizes: pending dot and done check.
+  static const double _dotSize = 6;
+  static const double _checkSize = 12;
+
+  /// L5-E1: rule under a done day (sketch `.e-day.done::after`).
+  static const double _doneRule = 3;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final theme = Theme.of(context);
+    final foreground = isSelected ? palette.background : palette.textPrimary;
+    final secondary = isSelected ? palette.background : palette.textSecondary;
+    // D19: «hecha» is the client's data; on the selected (filled) day it
+    // takes the background colour, like the rest of its ink.
+    final doneInk = isSelected ? palette.background : palette.data;
 
-    Color bgColor;
-    Color textColor;
-    Border? border;
-
-    List<BoxShadow>? shadows;
-
-    if (isToday) {
-      bgColor = palette.primary;
-      textColor = palette.onPrimary;
-      shadows = [
-        BoxShadow(
-          color: palette.primary.withValues(alpha: 0.30),
-          blurRadius: 10,
-          spreadRadius: -1,
-        ),
-      ];
-    } else if (isSelected) {
-      bgColor = palette.glassBackground;
-      textColor = palette.primary;
-      border = Border.all(color: palette.primary, width: 2);
-      shadows = [
-        BoxShadow(
-          color: palette.primary.withValues(alpha: 0.15),
-          blurRadius: 8,
-          spreadRadius: -2,
-        ),
-      ];
-    } else if (isPast) {
-      bgColor = palette.glassBackground;
-      textColor = palette.textPrimary;
-      border = Border.all(
-        color: palette.glassBorder.withValues(alpha: 0.15),
-        width: 0.5,
-      );
-    } else {
-      bgColor = Colors.transparent;
-      textColor = palette.textDisabled;
-      border = Border.all(color: palette.borderSoft);
-    }
-
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-        border: border,
-        boxShadow: shadows,
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 13,
-            fontWeight: (isToday || isSelected)
-                ? FontWeight.w700
-                : FontWeight.w500,
+    // The whole slot is tappable (L3 review F2): the 1 px visual inset sits
+    // inside this detector, so the hit area equals the slot and its
+    // semantics node instead of being 2 px narrower. Taps on the painted
+    // area still reach the InkWell (ripple); only one of the two fires.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: Material(
+          color: isSelected ? palette.textPrimary : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(2),
+            side: isToday
+                ? BorderSide(color: palette.textPrimary, width: 1.5)
+                : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            // Passthrough: the slot keeps the full width of its column.
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                if (isDone)
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FractionallySizedBox(
+                        key: doneRuleKey,
+                        widthFactor: 0.56,
+                        child: SizedBox(
+                          height: _doneRule,
+                          child: ColoredBox(color: doneInk),
+                        ),
+                      ),
+                    ),
+                  ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 64),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          letter,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: secondary,
+                            fontSize: 13,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          number,
+                          style: ExomType.section.copyWith(color: foreground),
+                        ),
+                        SizedBox(
+                          height: 16,
+                          child: switch (mark) {
+                            null =>
+                              isDone
+                                  ? Icon(
+                                      ExomIcons.check,
+                                      size: 14,
+                                      color: doneInk,
+                                    )
+                                  : null,
+                            HomeDayMark.none => null,
+                            HomeDayMark.pending => Center(
+                              child: SizedBox.square(
+                                key: markKey,
+                                dimension: _dotSize,
+                                child: DecoratedBox(
+                                  // Missed: same footprint, outline only, in the
+                                  // day-number colour (no alarm colour).
+                                  decoration: isMissed
+                                      ? BoxDecoration(
+                                          border: Border.all(
+                                            color: foreground,
+                                            width: 1.5,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        )
+                                      : BoxDecoration(
+                                          color: secondary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                ),
+                              ),
+                            ),
+                            HomeDayMark.done => Center(
+                              child: Icon(
+                                key: markKey,
+                                ExomIcons.check,
+                                size: _checkSize,
+                                color: doneInk,
+                              ),
+                            ),
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

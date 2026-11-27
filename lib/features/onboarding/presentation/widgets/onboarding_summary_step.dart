@@ -1,9 +1,30 @@
+import 'package:exom_app/core/formatters/figure_format.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/formatters/weight_input.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 
+import 'onboarding_progress_indicator.dart';
+import 'onboarding_step_layout.dart';
+
+/// Summary of the onboarding (sketch «Paso 4 · Resumen»): the profile
+/// completion, then the three groups numbered 01-03 with «Editar», keeping
+/// every field of before (R20: also the muscle mass goal and the calories).
+/// Numbers use the separator of the language with the rules of the steppers
+/// (at most 2 decimals, trailing zeros trimmed, no grouping), so the summary
+/// shows what the steps showed.
+///
+/// While [busy] the content is dimmed, «Editar» does not respond and the
+/// lime button says «Guardando tu perfil...». [errorTitle] and [errorBody]
+/// are the save error, kept above «Confirmar» until the next attempt.
 class OnboardingSummaryStep extends StatelessWidget {
   const OnboardingSummaryStep({
     super.key,
@@ -13,6 +34,9 @@ class OnboardingSummaryStep extends StatelessWidget {
     required this.onEditBasics,
     required this.onEditBody,
     required this.onEditGoals,
+    this.busy = false,
+    this.errorTitle,
+    this.errorBody,
   });
 
   final Map<String, dynamic> accumulatedData;
@@ -21,6 +45,9 @@ class OnboardingSummaryStep extends StatelessWidget {
   final VoidCallback onEditBasics;
   final VoidCallback onEditBody;
   final VoidCallback onEditGoals;
+  final bool busy;
+  final String? errorTitle;
+  final String? errorBody;
 
   int _completionPercent() {
     const fields = [
@@ -47,121 +74,147 @@ class OnboardingSummaryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final percent = _completionPercent();
+    final cm = lengthUnitSymbol(UnitSystem.metric);
+    final kg = weightUnitSymbol(UnitSystem.metric);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          Text(
-            l10n.onboardingSummaryTitle,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+    ExomFigure figure(String key, String label, String unit) {
+      final value = accumulatedData[key];
+      return value is num
+          ? ExomFigure(
+              value: _decimal(context, value),
+              unit: unit,
+              label: label,
+            )
+          : ExomFigure(value: '-', label: label);
+    }
+
+    final calories = accumulatedData['target_calories'];
+    final sections = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExomNumberedSectionHeader(
+          n: 1,
+          title: l10n.onboardingBasicsTitle,
+          trailing: ExomTextLink(
+            label: l10n.onboardingEditButton,
+            onTap: busy ? null : onEditBasics,
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _CompletionCard(
-                  accumulatedData: accumulatedData,
-                  avatarUrl: avatarUrl,
-                  percent: percent,
-                ),
-                const SizedBox(height: 16),
-                _SummarySection(
-                  title: l10n.onboardingBasicsTitle,
-                  onEdit: onEditBasics,
-                  rows: [
-                    _SummaryRow(
-                      label: l10n.onboardingFirstNameLabel,
-                      value: _stringValue(accumulatedData['first_name']),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingLastNameLabel,
-                      value: _stringValue(accumulatedData['last_name']),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingBirthDateLabel,
-                      value: _birthDateLabel(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _SummarySection(
-                  title: l10n.onboardingBodyTitle,
-                  onEdit: onEditBody,
-                  rows: [
-                    _SummaryRow(
-                      label: l10n.onboardingHeightLabel,
-                      value: _formattedNumber(accumulatedData['height'], 'cm'),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingWeightLabel,
-                      value: _formattedNumber(
-                        accumulatedData['current_weight'],
-                        'kg',
-                        decimals: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _SummarySection(
-                  title: l10n.onboardingGoalsTitle,
-                  onEdit: onEditGoals,
-                  rows: [
-                    _SummaryRow(
-                      label: l10n.onboardingLevelLabel,
-                      value: _localizedLevel(
-                        context,
-                        accumulatedData['level'] as String?,
-                      ),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingMainGoalLabel,
-                      value: _stringValue(accumulatedData['main_goal']),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingMuscleMassGoalLabel,
-                      value: _formattedNumber(
-                        accumulatedData['muscle_mass_goal'],
-                        'kg',
-                        decimals: 1,
-                      ),
-                    ),
-                    _SummaryRow(
-                      label: l10n.onboardingTargetCaloriesLabel,
-                      value: _formattedNumber(
-                        accumulatedData['target_calories'],
-                        'kcal',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        ),
+        _TextColumns(
+          items: [
+            (
+              l10n.onboardingFirstNameLabel,
+              _stringValue(accumulatedData['first_name']),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onConfirm,
-              child: Text(l10n.onboardingConfirmButton),
+            (
+              l10n.onboardingLastNameLabel,
+              _stringValue(accumulatedData['last_name']),
             ),
+            (l10n.onboardingBirthDateLabel, _birthDateLabel(context)),
+          ],
+        ),
+        ExomNumberedSectionHeader(
+          n: 2,
+          title: l10n.onboardingBodyTitle,
+          trailing: ExomTextLink(
+            label: l10n.onboardingEditButton,
+            onTap: busy ? null : onEditBody,
           ),
-          const SizedBox(height: 16),
-        ],
+        ),
+        ExomFigureColumns(
+          numbered: false,
+          alignLabels: true,
+          items: [
+            figure('height', l10n.height, cm),
+            figure('current_weight', l10n.weight, kg),
+          ],
+        ),
+        ExomNumberedSectionHeader(
+          n: 3,
+          title: l10n.onboardingGoalsTitle,
+          trailing: ExomTextLink(
+            label: l10n.onboardingEditButton,
+            onTap: busy ? null : onEditGoals,
+          ),
+        ),
+        _TextColumns(
+          items: [
+            (
+              l10n.onboardingLevelLabel,
+              _localizedLevel(context, accumulatedData['level'] as String?),
+            ),
+            (
+              l10n.onboardingMainGoalLabel,
+              _stringValue(accumulatedData['main_goal']),
+            ),
+          ],
+        ),
+        ExomFigureColumns(
+          numbered: false,
+          alignLabels: true,
+          items: [
+            figure('muscle_mass_goal', l10n.onboardingMuscleMassGoalLabel, kg),
+            calories is num
+                ? ExomFigure(
+                    value: formatFigure(context, calories),
+                    unit: 'kcal',
+                    label: l10n.onboardingTargetCaloriesLabel,
+                  )
+                : ExomFigure(
+                    value: '-',
+                    label: l10n.onboardingTargetCaloriesLabel,
+                  ),
+          ],
+        ),
+      ],
+    );
+
+    return OnboardingStepLayout(
+      footer: OnboardingStepActions(
+        primaryKey: const Key('onboarding-summary-confirm'),
+        primaryLabel: busy
+            ? l10n.onboardingSubmittingMessage
+            : l10n.onboardingConfirmButton,
+        onPrimary: onConfirm,
+        busy: busy,
+        errorKey: const Key('onboarding-save-error'),
+        errorTitle: busy ? null : errorTitle,
+        errorBody: errorBody,
       ),
+      children: [
+        OnboardingStepHeading(
+          step: 4,
+          total: 4,
+          first: l10n.onboardingSummaryHeadlineFirst,
+          second: l10n.onboardingSummaryHeadlineSecond,
+        ),
+        const SizedBox(height: ExomSpacing.xxl),
+        Opacity(
+          opacity: busy ? 0.6 : 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Completion(percent: percent),
+              const SizedBox(height: ExomSpacing.xxl),
+              sections,
+            ],
+          ),
+        ),
+      ],
     );
   }
+
+  /// [value] with the separator of the language: at most 2 decimals, trailing
+  /// zeros trimmed, no grouping (the stepper's own format).
+  static String _decimal(BuildContext context, num value) =>
+      formatDisplayDecimal(
+        value.toDouble(),
+        decimalSeparator: decimalSeparatorFor(
+          Localizations.localeOf(context).languageCode,
+        ),
+      );
 
   String _birthDateLabel(BuildContext context) {
     final rawValue = accumulatedData['birth_date'] as String?;
@@ -203,191 +256,157 @@ class OnboardingSummaryStep extends StatelessWidget {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? '-' : text;
   }
-
-  String _formattedNumber(Object? value, String suffix, {int decimals = 0}) {
-    if (value is! num) {
-      return '-';
-    }
-
-    final number = decimals == 0
-        ? value.toStringAsFixed(0)
-        : value.toStringAsFixed(decimals);
-    return '$number $suffix';
-  }
 }
 
-class _CompletionCard extends StatelessWidget {
-  const _CompletionCard({
-    required this.accumulatedData,
-    required this.avatarUrl,
-    required this.percent,
-  });
+/// Label of the profile completion for [percent], by tiers: 0-39 incomplete,
+/// 40-69 half done, 70-99 almost complete, 100 complete.
+/// `onboardingProgressComplete` («Perfil N% completo») is no longer used here;
+/// it stays in the ARB files.
+String onboardingCompletionLabel(AppLocalizations l10n, int percent) {
+  if (percent >= 100) return l10n.onboardingProfileComplete;
+  if (percent >= 70) return l10n.onboardingProfileAlmostComplete;
+  if (percent >= 40) return l10n.onboardingProfileHalfDone;
+  return l10n.onboardingProfileIncomplete;
+}
 
-  final Map<String, dynamic> accumulatedData;
-  final String? avatarUrl;
+/// Profile completion (sketch `.x-feat` + `.x-meter`): the tier label
+/// («Perfil casi completo»), the percentage in the data colour and a 4 dp
+/// rule. The block is a `panel` fill with the thin neutral line that separates
+/// the sections of the summary on top (not the thick data bar of
+/// `ExomFeatureBlock`, round 4).
+class _Completion extends StatelessWidget {
+  const _Completion({required this.percent});
+
   final int percent;
 
+  static const double _size = 36;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final fullName =
-        [accumulatedData['first_name'], accumulatedData['last_name']]
-            .whereType<String>()
-            .map((value) => value.trim())
-            .where((value) => value.isNotEmpty)
-            .join(' ');
-
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(20),
-      borderRadius: 24,
-      elevated: true,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: palette.glassBackground,
-                backgroundImage: avatarUrl != null
-                    ? NetworkImage(avatarUrl!)
-                    : null,
-                child: avatarUrl == null
-                    ? Icon(Icons.person, color: palette.textDisabled, size: 28)
-                    : null,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      fullName.isEmpty ? l10n.userDefaultName : fullName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.onboardingProgressComplete(percent),
-                      style: TextStyle(
-                        color: palette.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: percent / 100,
-              backgroundColor: palette.glassBackground,
-              color: palette.primary,
-              minHeight: 8,
-            ),
-          ),
-        ],
+    final palette = context.exomPalette;
+    final label = onboardingCompletionLabel(l10n, percent);
+    return Container(
+      padding: const EdgeInsets.only(top: 16, bottom: 20),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        border: Border(
+          top: BorderSide(color: palette.borderSoft, width: ExomRule.hairline),
+        ),
       ),
-    );
-  }
-}
-
-class _SummarySection extends StatelessWidget {
-  const _SummarySection({
-    required this.title,
-    required this.onEdit,
-    required this.rows,
-  });
-
-  final String title;
-  final VoidCallback onEdit;
-  final List<_SummaryRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(16),
-      borderRadius: 20,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: kOnboardingSidePadding),
+        child: Semantics(
+          container: true,
+          label: l10n.onboardingProfileCompletionA11y(label, percent),
+          excludeSemantics: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: onEdit,
-                style: TextButton.styleFrom(
-                  foregroundColor: palette.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                child: Text(l10n.onboardingEditButton),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...rows.map(
-            (row) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: Text(
-                      row.label,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
+                    child: Text(label, style: onboardingStrongStyle(context)),
                   ),
-                  const SizedBox(width: 16),
-                  Flexible(
-                    child: Text(
-                      row.value,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  const SizedBox(width: ExomSpacing.md),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: formatFigure(context, percent)),
+                        const TextSpan(
+                          text: '%',
+                          style: TextStyle(fontSize: _size / 2),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontFamily: AppTheme.displayFontFamily,
+                      fontSize: _size,
+                      fontWeight: FontWeight.w800,
+                      height: 0.85,
+                      color: context.exomPalette.data,
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
+              ExomProgressRule(value: percent / 100, thickness: ExomRule.bar),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _SummaryRow {
-  const _SummaryRow({required this.label, required this.value});
+/// Text values in columns separated by hairlines (sketch `.x-cols` with
+/// `.sec` labels and `.strong` values), two per row; the last one alone when
+/// the count is odd. Each value wraps, never clips.
+class _TextColumns extends StatelessWidget {
+  const _TextColumns({required this.items});
 
-  final String label;
-  final String value;
+  final List<(String, String)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final rule = BorderSide(
+      color: palette.borderSoft,
+      width: ExomRule.hairline,
+    );
+    Widget cell((String, String) item, {required bool first}) => Padding(
+      padding: EdgeInsetsDirectional.fromSTEB(
+        first ? kOnboardingSidePadding : 14,
+        14,
+        ExomSpacing.md,
+        ExomSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.$1, style: onboardingSecondaryStyle(context)),
+          const SizedBox(height: 6),
+          Text(item.$2, style: onboardingStrongStyle(context)),
+        ],
+      ),
+    );
+
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final second = i + 1 < items.length ? items[i + 1] : null;
+      rows.add(
+        DecoratedBox(
+          decoration: BoxDecoration(border: Border(top: rule)),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: cell(items[i], first: true)),
+                Expanded(
+                  child: second == null
+                      ? const SizedBox.shrink()
+                      : DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: BorderDirectional(start: rule),
+                          ),
+                          child: cell(second, first: false),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(border: Border(bottom: rule)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
+    );
+  }
 }

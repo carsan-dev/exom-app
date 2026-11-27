@@ -1,0 +1,44 @@
+--- upstream/Pipeline.kt
++++ source/Pipeline.kt
+@@ -1,6 +1,7 @@
+ package com.otaliastudios.transcoder.internal.pipeline
+ 
+ import com.otaliastudios.transcoder.internal.utils.Logger
++import com.otaliastudios.transcoder.internal.video.VideoPublisher
+ 
+ 
+ private typealias AnyStep = Step<Any, Channel, Any, Channel>
+@@ -25,6 +26,7 @@
+         chain.forEachIndexed { index, step ->
+             if (index < head) return@forEachIndexed
+             val fresh = head == 0 || index != head
++            if (fresh && state !is State.Eos && (step as Any) is VideoPublisher) drainBeforePublish(index + 1)
+             state = executeStep(state, step, fresh) ?: run {
+                 log.v("execute(): step ${step.name} (#$index/${chain.size}) is waiting. headState=$headState headIndex=$headIndex")
+                 return State.Wait
+@@ -56,6 +58,25 @@
+         }
+     }
+ 
++    // EXOM local patch: VideoPublisher can block in eglSwapBuffers until the encoder releases an input
++    // surface buffer. execute() drains at most one encoder output per call and none when an upstream step
++    // waits, so first deliver every encoder output that is already available through the rest of the chain.
++    private fun drainBeforePublish(from: Int) {
++        val encoder = chain.getOrNull(from)?.takeIf { it is QueuedStep<*, *, *, *> } ?: return
++        var drained = 0
++        while (true) {
++            var state = executeStep(State.Ok(Unit), encoder, fresh = false) ?: break
++            for (index in from + 1 until chain.size) {
++                check(state !is State.Eos) { "Unexpected EOS while draining before publish" }
++                state = executeStep(state, chain[index], fresh = true)
++                    ?: error("Step ${chain[index].name} waited while draining before publish")
++            }
++            check(state !is State.Eos) { "Unexpected EOS while draining before publish" }
++            drained++
++        }
++        if (drained > 0) log.v("execute(): drained $drained ${encoder.name} output(s) before publishing")
++    }
++
+     companion object {
+         @Suppress("UNCHECKED_CAST")
+         internal fun build(name: String, builder: () -> Builder<*, Channel> = { Builder<Unit, Channel>() }): Pipeline {

@@ -28,6 +28,9 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
   final GetPreviousExercisePerformancesUseCase
   _getPreviousExercisePerformancesUseCase;
 
+  int _loadEpoch = 0;
+  String? _trainingsStamp;
+
   TrainingBloc({
     required GetTodayTrainingUseCase getTodayTrainingUseCase,
     required GetTrainingsUseCase getTrainingsUseCase,
@@ -70,16 +73,24 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     TodayTrainingLoadRequested event,
     Emitter<TrainingState> emit,
   ) async {
+    final epoch = ++_loadEpoch;
+    final storage = sl<LocalStorage>();
+    final stamp = storage.sessionStamp;
+    if (!_isCurrentLoad(epoch, stamp, emit)) return;
     emit(const TrainingLoading());
     try {
-      final targetDate = _resolvedDate(event.date);
-      final trainings = await _getTodayTrainingUseCase(targetDate);
-      if (trainings.isEmpty) {
-        emit(TrainingNoContent(selectedDate: targetDate));
-      } else {
-        emit(TodayTrainingLoaded(trainings, selectedDate: targetDate));
-      }
+      await storage.sessionTask(() async {
+        final targetDate = _resolvedDate(event.date);
+        final trainings = await _getTodayTrainingUseCase(targetDate);
+        if (!_isCurrentLoad(epoch, stamp, emit)) return;
+        if (trainings.isEmpty) {
+          emit(TrainingNoContent(selectedDate: targetDate));
+        } else {
+          emit(TodayTrainingLoaded(trainings, selectedDate: targetDate));
+        }
+      });
     } catch (e) {
+      if (!_isCurrentLoad(epoch, stamp, emit)) return;
       emit(TrainingError.from(e));
     }
   }
@@ -88,33 +99,93 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     TrainingsLoadRequested event,
     Emitter<TrainingState> emit,
   ) async {
-    emit(const TrainingLoading());
+    final epoch = ++_loadEpoch;
+    final storage = sl<LocalStorage>();
+    final stamp = storage.sessionStamp;
+    if (!_isCurrentLoad(epoch, stamp, emit)) return;
+    final targetDate = _resolvedDate(event.date);
+    final historyDate = _resolvedDate(event.historyDate ?? event.date);
+
+    // A month change for the already loaded day only needs the history.
+    final previous = state;
+    final reusableDay =
+        previous is TrainingsLoaded &&
+            _trainingsStamp == stamp &&
+            previous.selectedDate == targetDate &&
+            previous.historyDate != historyDate
+        ? previous.todayTrainings
+        : null;
+
+    if (reusableDay == null) emit(const TrainingLoading());
     try {
-      final targetDate = _resolvedDate(event.date);
-      final historyDate = _resolvedDate(event.historyDate ?? event.date);
-      final results = await Future.wait([
-        _getTrainingsUseCase(date: historyDate),
-        _getTodayTrainingUseCase(targetDate),
-      ]);
-      final history = (results[0] as List<TrainingHistoryEntity>)
-          .where((entry) => _dateKey(entry.date) != targetDate)
-          .toList(growable: false);
+      await storage.sessionTask(() async {
+        final historyResult = _settle(_getTrainingsUseCase(date: historyDate));
+        List<TrainingEntity> day;
+        if (reusableDay != null) {
+          day = reusableDay;
+          _trainingsStamp = stamp;
+          emit(
+            TrainingsLoaded(
+              history: const [],
+              todayTrainings: day,
+              selectedDate: targetDate,
+              historyDate: historyDate,
+              isHistoryLoading: true,
+            ),
+          );
+        } else {
+          try {
+            day = await _getTodayTrainingUseCase(targetDate);
+          } catch (_) {
+            // `historyResult` never throws, so it cannot leak an error.
+            rethrow;
+          }
+          if (!_isCurrentLoad(epoch, stamp, emit)) return;
+          _trainingsStamp = stamp;
+          emit(
+            TrainingsLoaded(
+              history: const [],
+              todayTrainings: day,
+              selectedDate: targetDate,
+              historyDate: historyDate,
+              isHistoryLoading: true,
+            ),
+          );
+        }
+
+        final result = await historyResult;
+        if (!_isCurrentLoad(epoch, stamp, emit)) return;
+        emit(
+          TrainingsLoaded(
+            history: result.error == null
+                ? result.value!
+                      .where((entry) => _dateKey(entry.date) != targetDate)
+                      .toList(growable: false)
+                : const [],
+            todayTrainings: day,
+            selectedDate: targetDate,
+            historyDate: historyDate,
+            historyFailed: result.error != null,
+          ),
+        );
+      });
+    } catch (e) {
+      if (!_isCurrentLoad(epoch, stamp, emit)) return;
       emit(
-        TrainingsLoaded(
-          history: history,
-          todayTrainings: results[1] as List<TrainingEntity>,
+        TrainingError.from(
+          e,
           selectedDate: targetDate,
           historyDate: historyDate,
         ),
       );
-    } catch (e) {
-      emit(
-        TrainingError.from(
-          e,
-          selectedDate: _resolvedDate(event.date),
-          historyDate: _resolvedDate(event.historyDate ?? event.date),
-        ),
-      );
+    }
+  }
+
+  Future<({T? value, Object? error})> _settle<T>(Future<T> future) async {
+    try {
+      return (value: await future, error: null);
+    } catch (error) {
+      return (value: null, error: error);
     }
   }
 
@@ -122,70 +193,93 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
     TrainingDetailLoadRequested event,
     Emitter<TrainingState> emit,
   ) async {
+    final epoch = ++_loadEpoch;
+    final storage = sl<LocalStorage>();
+    final stamp = storage.sessionStamp;
+    if (!_isCurrentLoad(epoch, stamp, emit)) return;
     emit(const TrainingLoading());
     try {
-      final targetDate = _resolvedDate(event.date);
-      final training = await _getTrainingUseCase(event.id, date: targetDate);
-      var progress = const TrainingDayProgress();
-      try {
-        progress = await _getCompletedExercisesUseCase(targetDate);
-      } catch (_) {}
-      final normalizedProgress = normalizeTrainingProgress(
-        training: training,
-        rawIds: progress.ids,
-        rawWeights: progress.weights,
-        rawPerformances: progress.performances,
-      );
-      var previousPerformances = <String, List<SetPerformance>>{};
-      try {
-        final previousByExerciseId =
-            await _getPreviousExercisePerformancesUseCase(
-              training.exercises
-                  .map((trainingExercise) => trainingExercise.exercise.id)
-                  .toList(growable: false),
-              targetDate,
-            );
-        previousPerformances = {
-          for (final trainingExercise in training.exercises)
-            if (previousByExerciseId[trainingExercise.exercise.id] != null)
-              trainingExercise.id:
-                  previousByExerciseId[trainingExercise.exercise.id]!,
-        };
-      } catch (_) {}
-      emit(
-        TrainingDetailLoaded(
-          training,
-          completedExerciseIds: normalizedProgress.ids,
-          exerciseWeights: normalizedProgress.weights,
-          currentPerformances: normalizedProgress.performances,
-          sessionProgress: {
-            for (final sessionId in progress.sessions.keys)
-              sessionId: () {
-                final scoped = progress.forSession(sessionId, training.id);
-                final normalized = normalizeTrainingProgress(
-                  training: training,
-                  rawIds: scoped.ids,
-                  rawWeights: scoped.weights,
-                  rawPerformances: scoped.performances,
-                );
-                return TrainingDayProgress(
-                  ids: normalized.ids,
-                  weights: normalized.weights,
-                  performances: normalized.performances,
-                );
-              }(),
-          },
-          previousPerformances: previousPerformances,
-          selectedDate: targetDate,
-          clientNote: progress.note,
-          adminReplyText: progress.adminReplyText,
-          adminReplySentAt: progress.adminReplySentAt,
-        ),
-      );
+      await storage.sessionTask(() async {
+        final targetDate = _resolvedDate(event.date);
+        final training = await _getTrainingUseCase(event.id, date: targetDate);
+        if (!_isCurrentLoad(epoch, stamp, emit)) return;
+        var progress = const TrainingDayProgress();
+        var previousPerformances = <String, List<SetPerformance>>{};
+        await Future.wait<void>([
+          () async {
+            if (!_isCurrentLoad(epoch, stamp, emit)) return;
+            try {
+              progress = await _getCompletedExercisesUseCase(targetDate);
+            } catch (_) {}
+          }(),
+          () async {
+            if (!_isCurrentLoad(epoch, stamp, emit)) return;
+            try {
+              final previousByExerciseId =
+                  await _getPreviousExercisePerformancesUseCase(
+                    training.exercises
+                        .map((trainingExercise) => trainingExercise.exercise.id)
+                        .toList(growable: false),
+                    targetDate,
+                  );
+              previousPerformances = {
+                for (final trainingExercise in training.exercises)
+                  if (previousByExerciseId[trainingExercise.exercise.id] != null)
+                    trainingExercise.id:
+                        previousByExerciseId[trainingExercise.exercise.id]!,
+              };
+            } catch (_) {}
+          }(),
+        ]);
+        if (!_isCurrentLoad(epoch, stamp, emit)) return;
+        final normalizedProgress = normalizeTrainingProgress(
+          training: training,
+          rawIds: progress.ids,
+          rawWeights: progress.weights,
+          rawPerformances: progress.performances,
+        );
+        emit(
+          TrainingDetailLoaded(
+            training,
+            completedExerciseIds: normalizedProgress.ids,
+            exerciseWeights: normalizedProgress.weights,
+            currentPerformances: normalizedProgress.performances,
+            sessionProgress: {
+              for (final sessionId in progress.sessions.keys)
+                sessionId: () {
+                  final scoped = progress.forSession(sessionId, training.id);
+                  final normalized = normalizeTrainingProgress(
+                    training: training,
+                    rawIds: scoped.ids,
+                    rawWeights: scoped.weights,
+                    rawPerformances: scoped.performances,
+                  );
+                  return TrainingDayProgress(
+                    ids: normalized.ids,
+                    weights: normalized.weights,
+                    performances: normalized.performances,
+                  );
+                }(),
+            },
+            previousPerformances: previousPerformances,
+            selectedDate: targetDate,
+            clientNote: progress.note,
+            adminReplyText: progress.adminReplyText,
+            adminReplySentAt: progress.adminReplySentAt,
+          ),
+        );
+      });
     } catch (e) {
+      if (!_isCurrentLoad(epoch, stamp, emit)) return;
       emit(TrainingError.from(e));
     }
   }
+
+  bool _isCurrentLoad(int epoch, String? stamp, Emitter<TrainingState> emit) =>
+      !emit.isDone &&
+      epoch == _loadEpoch &&
+      stamp != null &&
+      sl<LocalStorage>().sessionStamp == stamp;
 
   bool _matchesSession(String? stamp) =>
       stamp == null || sl<LocalStorage>().sessionStamp == stamp;

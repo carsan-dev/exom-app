@@ -18,11 +18,20 @@ class TrainingsLoaded extends TrainingState {
   final String selectedDate;
   final String historyDate;
 
+  /// True while the month history is still being requested; the day content is
+  /// already usable.
+  final bool isHistoryLoading;
+
+  /// True when the month history request failed; day content stays visible.
+  final bool historyFailed;
+
   const TrainingsLoaded({
     required this.history,
     this.todayTrainings = const [],
     required this.selectedDate,
     required this.historyDate,
+    this.isHistoryLoading = false,
+    this.historyFailed = false,
   });
 }
 

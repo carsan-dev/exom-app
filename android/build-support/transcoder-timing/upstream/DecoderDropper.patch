@@ -1,0 +1,23 @@
+diff --git a/DecoderDropper.kt b/DecoderDropper.kt
+index f184310..60e34d6 100644
+--- a/DecoderDropper.kt
++++ b/DecoderDropper.kt
+@@ -1,3 +1,5 @@
++// Derived from Transcoder 0.10.5, Apache-2.0; see LICENSE and PROVENANCE.txt.
++// Modified 2026-11-04: retain maximum renderable input PTS without widening the initial sentinel.
+ package com.otaliastudios.transcoder.internal.codec
+ 
+ import com.otaliastudios.transcoder.internal.utils.Logger
+@@ -43,7 +45,11 @@ internal class DecoderDropper(private val continuous: Boolean) {
+             debug("INPUT: inputUs=$timeUs")
+             // log.v("TDBG inputUs=$timeUs")
+             if (pendingRange == null) pendingRange = timeUs..Long.MAX_VALUE
+-            else pendingRange = pendingRange!!.first..timeUs
++            else {
++                val range = pendingRange!!
++                val previousEnd = if (range.last == Long.MAX_VALUE) range.first else range.last
++                pendingRange = range.first..maxOf(previousEnd, timeUs)
++            }
+         } else {
+             debug("INPUT: Got SKIPPING input! inputUs=$timeUs")
+             if (pendingRange != null && pendingRange!!.last != Long.MAX_VALUE) {

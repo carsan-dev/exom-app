@@ -1,9 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/formatters/unit_formatters.dart';
+import 'package:exom_app/core/formatters/weight_input.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_choice_chips.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 
+import 'onboarding_progress_indicator.dart';
+import 'onboarding_step_layout.dart';
+
+/// Goals of the onboarding: level, main goal and the optional targets.
+///
+/// The muscle mass goal accepts the decimal separator of the language
+/// (L4-I19; [ExomNumeralStepper.parse]: digits with at most one «,» or «.»,
+/// no grouping). Its loaded value is shown with that separator and, while the
+/// text is left as shown, the loaded number is sent unchanged. Text that does
+/// not parse shows an inline error and «Siguiente» does not advance; an empty
+/// field sends nothing, as before. The calories keep their whole-number rule.
 class OnboardingGoalsStep extends StatefulWidget {
   const OnboardingGoalsStep({
     super.key,
@@ -21,11 +36,16 @@ class OnboardingGoalsStep extends StatefulWidget {
 }
 
 class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
+  final _formKey = GlobalKey<FormState>();
   String? _level;
   late final TextEditingController _goalController;
   late final TextEditingController _muscleMassController;
   late final TextEditingController _caloriesController;
-  var _goalInitialized = false;
+  var _localeInitialized = false;
+
+  /// Loaded muscle mass goal and the text it was shown as.
+  double? _loadedMuscle;
+  String? _loadedMuscleText;
 
   static const _levels = ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO'];
 
@@ -35,9 +55,8 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
     _level = widget.initialData['level'] as String?;
     _goalController = TextEditingController();
     final muscleGoal = widget.initialData['muscle_mass_goal'];
-    _muscleMassController = TextEditingController(
-      text: muscleGoal != null ? muscleGoal.toString() : '',
-    );
+    _loadedMuscle = muscleGoal is num ? muscleGoal.toDouble() : null;
+    _muscleMassController = TextEditingController();
     final calories = widget.initialData['target_calories'];
     _caloriesController = TextEditingController(
       text: calories != null ? calories.toString() : '',
@@ -47,13 +66,24 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_goalInitialized) {
+    if (_localeInitialized) {
       return;
     }
 
     final initialGoal = widget.initialData['main_goal'] as String?;
     _goalController.text = _normalizedGoalText(context, initialGoal);
-    _goalInitialized = true;
+    final loaded = _loadedMuscle;
+    if (loaded != null) {
+      final text = formatDisplayDecimal(
+        loaded,
+        decimalSeparator: decimalSeparatorFor(
+          Localizations.localeOf(context).languageCode,
+        ),
+      );
+      _loadedMuscleText = text;
+      _muscleMassController.text = text;
+    }
+    _localeInitialized = true;
   }
 
   @override
@@ -64,14 +94,30 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
     super.dispose();
   }
 
+  String? _validateMuscle(String? value) {
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty || raw == _loadedMuscleText) return null;
+    return ExomNumeralStepper.parse(raw) == null
+        ? AppLocalizations.of(context).onboardingNumberInvalid
+        : null;
+  }
+
   void _submit() {
+    if (!_formKey.currentState!.validate()) return;
     final data = <String, dynamic>{};
     if (_level != null) data['level'] = _level;
     if (_goalController.text.trim().isNotEmpty) {
       data['main_goal'] = _goalController.text.trim();
     }
-    final muscle = double.tryParse(_muscleMassController.text);
-    if (muscle != null) data['muscle_mass_goal'] = muscle;
+    final muscleText = _muscleMassController.text.trim();
+    final loaded = _loadedMuscle;
+    if (muscleText.isNotEmpty) {
+      // Left as shown: the loaded number, not its rounded text.
+      final muscle = loaded != null && muscleText == _loadedMuscleText
+          ? loaded
+          : ExomNumeralStepper.parse(muscleText);
+      if (muscle != null) data['muscle_mass_goal'] = muscle;
+    }
     final calories = int.tryParse(_caloriesController.text);
     if (calories != null) data['target_calories'] = calories;
     widget.onNext(data);
@@ -110,154 +156,114 @@ class _OnboardingGoalsStepState extends State<OnboardingGoalsStep> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final fieldStyle = TextStyle(color: palette.textPrimary);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          Expanded(
-            child: SingleChildScrollView(
-              child: GlassCard(
-                margin: EdgeInsets.zero,
-                padding: const EdgeInsets.all(24),
-                borderRadius: 28,
-                elevated: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.onboardingGoalsTitle,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    Text(
-                      l10n.onboardingLevelLabel,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: _levels.map((level) {
-                        final isSelected = _level == level;
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _level = level),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                decoration: isSelected
-                                    ? GlassDecoration.accentCard(
-                                        palette.primary,
-                                        borderRadius: 14,
-                                      )
-                                    : GlassDecoration.card(borderRadius: 14),
-                                child: Text(
-                                  _levelLabel(context, level),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? palette.primary
-                                        : palette.textSecondary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-
-                    TextFormField(
-                      controller: _goalController,
-                      decoration: InputDecoration(
-                        labelText: l10n.onboardingMainGoalLabel,
-                      ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _muscleMassController,
-                      decoration: InputDecoration(
-                        labelText: l10n.onboardingMuscleMassGoalLabel,
-                        suffixText: 'kg',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _caloriesController,
-                      decoration: InputDecoration(
-                        labelText: l10n.onboardingTargetCaloriesLabel,
-                        suffixText: 'kcal',
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _CompleteButtons(onComplete: _submit, onSkip: widget.onSkip),
-          const SizedBox(height: 16),
-        ],
+    // The labels are painted above the fields so they wrap (O3).
+    final muscleField = OnboardingLabeledField(
+      label: l10n.onboardingMuscleMassGoalLabel,
+      field: TextFormField(
+        key: const Key('onboarding-muscle-goal'),
+        controller: _muscleMassController,
+        style: fieldStyle,
+        decoration: InputDecoration(
+          suffixText: weightUnitSymbol(UnitSystem.metric),
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        validator: _validateMuscle,
+        autovalidateMode: AutovalidateMode.onUserInteractionIfError,
+        errorBuilder: onboardingFieldError,
       ),
     );
-  }
-}
+    final caloriesField = OnboardingLabeledField(
+      label: l10n.onboardingTargetCaloriesLabel,
+      field: TextFormField(
+        key: const Key('onboarding-target-calories'),
+        controller: _caloriesController,
+        style: fieldStyle,
+        decoration: const InputDecoration(suffixText: 'kcal'),
+        keyboardType: TextInputType.number,
+      ),
+    );
 
-class _CompleteButtons extends StatelessWidget {
-  const _CompleteButtons({required this.onComplete, required this.onSkip});
-
-  final VoidCallback onComplete;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final palette = context.exomPalette;
-
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: onComplete,
-            child: Text(l10n.onboardingCompleteProfileButton),
-          ),
+    return Form(
+      key: _formKey,
+      child: OnboardingStepLayout(
+        footer: OnboardingStepActions(
+          primaryKey: const Key('onboarding-goals-next'),
+          primaryLabel: l10n.onboardingNextButton,
+          onPrimary: _submit,
+          quietLabel: l10n.onboardingSkipButton,
+          onQuiet: widget.onSkip,
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: onSkip,
-            child: Text(
-              l10n.onboardingSkipButton,
-              style: TextStyle(color: palette.textMuted),
+        children: [
+          OnboardingStepHeading(
+            step: 3,
+            total: 4,
+            first: l10n.onboardingGoalsHeadlineFirst,
+            second: l10n.onboardingGoalsHeadlineSecond,
+          ),
+          const SizedBox(height: ExomSpacing.xxl),
+          OnboardingQuestion(
+            n: 1,
+            label: l10n.onboardingLevelLabel,
+            child: ExomChoiceChips<String>(
+              key: const Key('onboarding-level'),
+              options: _levels,
+              selected: _level,
+              labelOf: (level) => _levelLabel(context, level),
+              onSelected: (level) => setState(() => _level = level),
             ),
           ),
-        ),
-      ],
+          OnboardingQuestion(
+            n: 2,
+            label: l10n.onboardingMainGoalLabel,
+            labelInControl: true,
+            child: TextFormField(
+              key: const Key('onboarding-main-goal'),
+              controller: _goalController,
+              style: fieldStyle,
+              decoration: InputDecoration(
+                labelText: l10n.onboardingMainGoalLabel,
+              ),
+              maxLines: 2,
+            ),
+          ),
+          OnboardingQuestion(
+            n: 3,
+            label: l10n.onboardingTargetsLabel,
+            bottomRule: true,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Side by side while each field keeps 10 em (sketch `.d-two`);
+                // stacked otherwise.
+                final em = MediaQuery.textScalerOf(context).scale(16);
+                final sideBySide =
+                    constraints.maxWidth >= 2 * 10 * em + ExomSpacing.md;
+                if (!sideBySide) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      muscleField,
+                      const SizedBox(height: ExomSpacing.lg),
+                      caloriesField,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: muscleField),
+                    const SizedBox(width: ExomSpacing.md),
+                    Expanded(child: caloriesField),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

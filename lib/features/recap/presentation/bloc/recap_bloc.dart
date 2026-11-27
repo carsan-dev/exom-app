@@ -183,7 +183,7 @@ class RecapBloc extends Bloc<RecapEvent, RecapState> {
     _detailSessionStamp = stamp;
     emit(const RecapDetailLoading());
     if (stamp == null) {
-      emit(const RecapDetailError('Inicia sesión para ver el recap.'));
+      emit(const RecapDetailError(RecapDetailError.signInRequiredMessage));
       return;
     }
     try {

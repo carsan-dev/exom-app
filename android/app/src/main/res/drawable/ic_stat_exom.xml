@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon: exom-balance symbol silhouette (two interlocked commas),
+     white on transparent. Viewport 144 = 24 dp, symbol (120x112) centred with
+     2 dp Material safe margin (content 20 dp wide). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="144"
+    android:viewportHeight="144">
+    <group
+        android:translateX="12"
+        android:translateY="16">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M46,110C20,106 0,84 0,56C0,33 14,12 35,3C48,-2 60,4 62,16C66,29 57,39 44,39C36,39 28,35 23,28C11,38 5,51 7,65C9,86 24,103 46,109Z" />
+        <group
+            android:pivotX="60"
+            android:pivotY="56"
+            android:rotation="180">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M46,110C20,106 0,84 0,56C0,33 14,12 35,3C48,-2 60,4 62,16C66,29 57,39 44,39C36,39 28,35 23,28C11,38 5,51 7,65C9,86 24,103 46,109Z" />
+        </group>
+    </group>
+</vector>

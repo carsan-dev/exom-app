@@ -1,7 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 
 // Where the arrow points
 enum _PointsAt {
@@ -17,7 +25,6 @@ class _TutorialStep {
   final int
   drawerItemIndex; // drawer item index (0-based), only for drawer steps
   final bool openDrawer; // whether to open drawer for this step
-  final IconData icon;
   final String Function(AppLocalizations l10n) title;
   final String Function(AppLocalizations l10n) description;
 
@@ -27,7 +34,6 @@ class _TutorialStep {
     this.navIndex = 0,
     this.drawerItemIndex = 0,
     this.openDrawer = false,
-    required this.icon,
     required this.title,
     required this.description,
   });
@@ -38,7 +44,6 @@ final _steps = [
     route: '/',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 2,
-    icon: Icons.home_outlined,
     title: (l10n) => l10n.tutorialHomeTitle,
     description: (l10n) => l10n.tutorialHomeDesc,
   ),
@@ -46,7 +51,6 @@ final _steps = [
     route: '/trainings',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 1,
-    icon: Icons.fitness_center,
     title: (l10n) => l10n.tutorialTrainingsTitle,
     description: (l10n) => l10n.tutorialTrainingsDesc,
   ),
@@ -54,7 +58,6 @@ final _steps = [
     route: '/diets',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 3,
-    icon: Icons.restaurant,
     title: (l10n) => l10n.tutorialDietsTitle,
     description: (l10n) => l10n.tutorialDietsDesc,
   ),
@@ -62,7 +65,6 @@ final _steps = [
     route: '/calendar',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 4,
-    icon: Icons.calendar_month,
     title: (l10n) => l10n.tutorialCalendarTitle,
     description: (l10n) => l10n.tutorialCalendarDesc,
   ),
@@ -70,13 +72,11 @@ final _steps = [
     route: '/challenges',
     pointsAt: _PointsAt.bottomNav,
     navIndex: 0,
-    icon: Icons.emoji_events_outlined,
     title: (l10n) => l10n.tutorialChallengesTitle,
     description: (l10n) => l10n.tutorialChallengesDesc,
   ),
   _TutorialStep(
     pointsAt: _PointsAt.headerProfile,
-    icon: Icons.person_outline,
     title: (l10n) => l10n.tutorialProfileTitle,
     description: (l10n) => l10n.tutorialProfileDesc,
   ),
@@ -85,7 +85,6 @@ final _steps = [
     drawerItemIndex:
         2, // Weekly Recap is 3rd item (0: Profile, 1: Challenges, 2: Recap)
     openDrawer: true,
-    icon: Icons.bar_chart_outlined,
     title: (l10n) => l10n.tutorialRecapTitle,
     description: (l10n) => l10n.tutorialRecapDesc,
   ),
@@ -93,7 +92,6 @@ final _steps = [
     pointsAt: _PointsAt.drawerItem,
     drawerItemIndex: 3, // Feedback is 4th item
     openDrawer: true,
-    icon: Icons.feedback_outlined,
     title: (l10n) => l10n.tutorialFeedbackTitle,
     description: (l10n) => l10n.tutorialFeedbackDesc,
   ),
@@ -224,17 +222,21 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     final bottomPadding = mediaQuery.padding.bottom;
     final topPadding = mediaQuery.padding.top;
     final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
     final step = _steps[_currentStep];
     final isLast = _currentStep == _steps.length - 1;
 
+    // f-resto.html `.f-tip`: min(280, screen - 40), 20 from the edges.
     const bubbleMaxWidth = 280.0;
     const horizontalMargin = 20.0;
+    // Room kept free beyond the bubble when it has to scroll.
+    const edgeMargin = 12.0;
 
     // Build arrow + bubble based on step type
     final List<Widget> children = [];
 
     if (step.pointsAt == _PointsAt.bottomNav) {
-      // ── Arrow down at nav bar ──
+      // ── Arrow down at nav bar, in the panel colour ──
       final arrowCenterX = _navSlotCenterX(context, step.navIndex);
       final bubbleWidth = (screenWidth - horizontalMargin * 2).clamp(
         0.0,
@@ -245,30 +247,36 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       if (bubbleLeft + bubbleWidth > screenWidth - horizontalMargin) {
         bubbleLeft = screenWidth - horizontalMargin - bubbleWidth;
       }
-      final bubbleBottom =
-          GlassBottomNav.totalHeight + bottomPadding + _arrowSize + 4;
+      final arrowBottom = GlassBottomNav.totalHeight + bottomPadding + 4;
+      final bubbleBottom = arrowBottom + _arrowHeight;
 
       children.addAll([
         Positioned(
           left: bubbleLeft,
           bottom: bubbleBottom,
           width: bubbleWidth,
-          child: _buildBubble(palette, l10n, step, isLast),
+          child: _buildBubble(
+            context,
+            palette,
+            l10n,
+            step,
+            isLast,
+            maxHeight:
+                screenHeight -
+                bubbleBottom -
+                topPadding -
+                kToolbarHeight -
+                edgeMargin,
+          ),
         ),
         Positioned(
-          left: arrowCenterX - _arrowSize / 2,
-          bottom: GlassBottomNav.totalHeight + bottomPadding + 4,
-          child: CustomPaint(
-            size: const Size(_arrowSize, _arrowSize),
-            painter: _TrianglePainter(
-              color: palette.surfaceElevated,
-              direction: _ArrowDirection.down,
-            ),
-          ),
+          left: arrowCenterX - _arrowWidth / 2,
+          bottom: arrowBottom,
+          child: _arrow(palette.surface, _ArrowDirection.down),
         ),
       ]);
     } else if (step.pointsAt == _PointsAt.headerProfile) {
-      // ── Arrow up at header profile button ──
+      // ── Arrow up at header profile button, in the top bar colour ──
       final arrowCenterX = _headerProfileX(context);
       final bubbleWidth = (screenWidth - horizontalMargin * 2).clamp(
         0.0,
@@ -279,64 +287,69 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       if (bubbleLeft + bubbleWidth > screenWidth - horizontalMargin) {
         bubbleLeft = screenWidth - horizontalMargin - bubbleWidth;
       }
-      final bubbleTop = topPadding + kToolbarHeight + _arrowSize + 4;
+      final arrowTop = topPadding + kToolbarHeight + 4;
+      final bubbleTop = arrowTop + _arrowHeight;
 
       children.addAll([
         Positioned(
           left: bubbleLeft,
           top: bubbleTop,
           width: bubbleWidth,
-          child: _buildBubble(palette, l10n, step, isLast),
+          child: _buildBubble(
+            context,
+            palette,
+            l10n,
+            step,
+            isLast,
+            maxHeight:
+                screenHeight -
+                bubbleTop -
+                GlassBottomNav.totalHeight -
+                bottomPadding -
+                edgeMargin,
+          ),
         ),
         Positioned(
-          left: arrowCenterX - _arrowSize / 2,
-          top: topPadding + kToolbarHeight + 4,
-          child: CustomPaint(
-            size: const Size(_arrowSize, _arrowSize),
-            painter: _TrianglePainter(
-              color: palette.surfaceElevated,
-              direction: _ArrowDirection.up,
-            ),
-          ),
+          left: arrowCenterX - _arrowWidth / 2,
+          top: arrowTop,
+          child: _arrow(palette.data, _ArrowDirection.up),
         ),
       ]);
     } else if (step.pointsAt == _PointsAt.drawerItem) {
-      // ── Compact bubble inside the drawer ──
+      // ── Bubble anchored under the drawer row, inside the panel ──
+      // (`.f-tip-in`: 12 from the panel edges, same shape as the others).
       final drawerLeftEdge = _drawerLeftEdge(context);
       final targetRect = _drawerItemTargetRect(context, step.drawerItemIndex);
-      const drawerMargin = 16.0;
-      const drawerBubbleMaxWidth = 220.0;
+      const drawerMargin = 12.0;
       final bubbleWidth = (screenWidth - drawerLeftEdge - drawerMargin * 2)
-          .clamp(0.0, drawerBubbleMaxWidth)
+          .clamp(0.0, bubbleMaxWidth)
           .toDouble();
-      final minBubbleLeft = drawerLeftEdge + drawerMargin;
-      final maxBubbleLeft = screenWidth - drawerMargin - bubbleWidth;
-      final bubbleLeft = (targetRect.center.dx - bubbleWidth / 2)
-          .clamp(minBubbleLeft, maxBubbleLeft)
-          .toDouble();
-      final arrowCenterX = targetRect.center.dx
-          .clamp(bubbleLeft + 20, bubbleLeft + bubbleWidth - 20)
+      final bubbleLeft = drawerLeftEdge + drawerMargin;
+      // The arrow points at the start of the row label.
+      final arrowCenterX = (targetRect.left + 16)
+          .clamp(bubbleLeft + 16, bubbleLeft + bubbleWidth - 16)
           .toDouble();
       final arrowTop = targetRect.bottom + 4;
-      final bubbleTop = targetRect.bottom + _arrowSize + 4;
+      final bubbleTop = arrowTop + _arrowHeight;
 
       children.addAll([
         Positioned(
           left: bubbleLeft,
           top: bubbleTop,
           width: bubbleWidth,
-          child: _buildBubble(palette, l10n, step, isLast, compact: true),
+          child: _buildBubble(
+            context,
+            palette,
+            l10n,
+            step,
+            isLast,
+            maxHeight: screenHeight - bubbleTop - bottomPadding - edgeMargin,
+          ),
         ),
         Positioned(
-          left: arrowCenterX - _arrowSize / 2,
+          left: arrowCenterX - _arrowWidth / 2,
           top: arrowTop,
-          child: CustomPaint(
-            size: const Size(_arrowSize, _arrowSize),
-            painter: _TrianglePainter(
-              color: palette.surfaceElevated,
-              direction: _ArrowDirection.up,
-            ),
-          ),
+          child: _arrow(palette.data, _ArrowDirection.up),
         ),
       ]);
     }
@@ -345,7 +358,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       color: step.pointsAt == _PointsAt.drawerItem
           ? Colors
                 .transparent // drawer already has scrim
-          : Colors.black.withValues(alpha: 0.5),
+          : ExomSheetRoute.scrimColor,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {}, // block taps
@@ -354,136 +367,126 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     );
   }
 
+  Widget _arrow(Color color, _ArrowDirection direction) => CustomPaint(
+    size: const Size(_arrowWidth, _arrowHeight),
+    painter: _TrianglePainter(color: color, direction: direction),
+  );
+
+  /// f-resto.html `.f-tip`: flat panel of radius 4 with a 1 px rule and a
+  /// 3 px data bar on top; «02 / 08», the title in Barlow painted upper case,
+  /// the description at 16 and the step's single lime action. It scrolls when
+  /// it is taller than [maxHeight] (large text, short screens), so the action
+  /// stays reachable.
   Widget _buildBubble(
+    BuildContext context,
     ExomThemePalette palette,
     AppLocalizations l10n,
     _TutorialStep step,
     bool isLast, {
-    bool compact = false,
+    required double maxHeight,
   }) {
-    final bubblePadding = compact ? 16.0 : 20.0;
-    final iconSize = compact ? 36.0 : 40.0;
-    final iconGlyphSize = compact ? 20.0 : 22.0;
-    final titleFontSize = compact ? 16.0 : 18.0;
-    final descriptionFontSize = compact ? 12.0 : 13.0;
-    final buttonHeight = compact ? 34.0 : 36.0;
-    final buttonHorizontalPadding = compact ? 16.0 : 18.0;
+    final reduced = PerformanceProfile.prefersReducedMotion(context);
+    final number = _currentStep + 1;
+    final total = _steps.length;
+    final title = step.title(l10n);
+    final rule = BorderSide(
+      color: palette.borderSoft,
+      width: ExomRule.hairline,
+    );
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: Container(
+      duration: reduced ? ExomMotion.reducedFade : ExomMotion.inPlaceSwitch,
+      switchInCurve: ExomMotion.inPlaceCurve,
+      switchOutCurve: ExomMotion.inPlaceCurve,
+      child: ConstrainedBox(
         key: ValueKey(_currentStep),
-        padding: EdgeInsets.all(bubblePadding),
-        decoration: BoxDecoration(
-          color: palette.surfaceElevated,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: palette.borderSoft, width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 24,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon + title row
-            Row(
-              children: [
-                Container(
-                  width: iconSize,
-                  height: iconSize,
-                  decoration: BoxDecoration(
-                    color: palette.primarySoft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    step.icon,
-                    color: palette.primary,
-                    size: iconGlyphSize,
-                  ),
-                ),
-                SizedBox(width: compact ? 10 : 12),
-                Expanded(
-                  child: Text(
-                    step.title(l10n),
-                    style: TextStyle(
-                      color: palette.textPrimary,
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: compact ? 8 : 10),
-
-            // Description
-            Text(
-              step.description(l10n),
-              style: TextStyle(
-                color: palette.textSecondary,
-                fontSize: descriptionFontSize,
-                height: 1.4,
+        constraints: BoxConstraints(maxHeight: maxHeight < 0 ? 0 : maxHeight),
+        // Radius 4 by clipping: a border radius needs one colour on every
+        // side, and the top bar is in the data colour.
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(ExomRadius.control),
+          child: DecoratedBox(
+            key: const Key('tutorial-bubble'),
+            decoration: BoxDecoration(
+              color: palette.surface,
+              border: Border(
+                top: BorderSide(color: palette.data, width: 3),
+                left: rule,
+                right: rule,
+                bottom: rule,
               ),
             ),
-            SizedBox(height: compact ? 14 : 16),
-
-            // Dots + button row
-            Row(
-              children: [
-                ...List.generate(_steps.length, (i) {
-                  final isActive = i == _currentStep;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 5),
-                    width: isActive ? 18 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isActive ? palette.primary : palette.textDisabled,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  );
-                }),
-                const Spacer(),
-                SizedBox(
-                  height: buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: _next,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette.primary,
-                      foregroundColor: palette.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Semantics(
+                    label: l10n.tutorialStepProgress(number, total),
+                    excludeSemantics: true,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: ExomIndexNumber.format(number),
+                            style: ExomIndexNumber.style(
+                              palette.data,
+                            ).copyWith(fontSize: 16),
+                          ),
+                          TextSpan(text: ' / ${ExomIndexNumber.format(total)}'),
+                        ],
                       ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: buttonHorizontalPadding,
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      isLast
-                          ? l10n.tutorialDoneButton
-                          : l10n.tutorialNextButton,
-                      style: TextStyle(
-                        fontSize: compact ? 13 : 14,
-                        fontWeight: FontWeight.w600,
+                      style: ExomType.kicker.copyWith(
+                        color: palette.textSecondary,
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Semantics(
+                    header: true,
+                    label: title,
+                    excludeSemantics: true,
+                    child: Text(
+                      title.toUpperCase(),
+                      style: ExomType.section.copyWith(
+                        color: palette.textPrimary,
+                        height: 0.95,
+                        letterSpacing: -0.44, // -.02em
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    step.description(l10n),
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      color: palette.textSecondary,
+                      fontSize: 16,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ExomPrimaryButton(
+                    label: isLast
+                        ? l10n.tutorialDoneButton
+                        : l10n.tutorialNextButton,
+                    trailingIcon: isLast ? ExomIcons.check : ExomIcons.forward,
+                    onPressed: _next,
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-const _arrowSize = 12.0;
+/// `.f-tip::after`: 14 x 9.
+const _arrowWidth = 14.0;
+const _arrowHeight = 9.0;
 
 enum _ArrowDirection { up, down, right }
 

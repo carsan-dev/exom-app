@@ -3,44 +3,37 @@ import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/services/ingredient_unit_formatter.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
-class DietHistoryButton extends StatelessWidget {
-  final Future<DietHistory> Function() load;
-
-  const DietHistoryButton({super.key, required this.load});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return TextButton.icon(
-      icon: const Icon(Icons.history),
-      label: Text(l10n.dietHistoryTitle),
-      onPressed: () {
-        // One read per opening; rebuilds do not repeat requests or any command.
-        final future = load();
-        showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.dietHistoryTitle),
-            content: SizedBox(
-              width: 500,
-              height: 440,
-              child: FutureBuilder<DietHistory>(
-                future: future,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) return Text(l10n.dietHistoryLoadError);
-                  final history = snapshot.data;
-                  if (history == null) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  return _DietHistoryContent(history: history);
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+/// Opens the read-only diet history (entry «02» of the Nutrición index).
+///
+/// One read per opening ([load] runs once here); rebuilds of the dialog repeat
+/// no request and no command.
+Future<void> showDietHistory(
+  BuildContext context, {
+  required Future<DietHistory> Function() load,
+}) {
+  final l10n = AppLocalizations.of(context);
+  final future = load();
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.dietHistoryTitle),
+      content: SizedBox(
+        width: 500,
+        height: 440,
+        child: FutureBuilder<DietHistory>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return Text(l10n.dietHistoryLoadError);
+            final history = snapshot.data;
+            if (history == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return _DietHistoryContent(history: history);
+          },
+        ),
+      ),
+    ),
+  );
 }
 
 class _DietHistoryContent extends StatelessWidget {

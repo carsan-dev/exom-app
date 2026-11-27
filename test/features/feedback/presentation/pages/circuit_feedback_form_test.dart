@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/feedback/presentation/widgets/feedback_media_picker.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -56,7 +58,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final disabledButton = tester.widget<ElevatedButton>(
+    // L5-C2: the send action is the base primary button (pinned footer).
+    final disabledButton = tester.widget<ExomPrimaryButton>(
       find.byKey(const ValueKey('send-circuit-feedback')),
     );
     expect(disabledButton.onPressed, isNull);
@@ -119,6 +122,12 @@ void main() {
     expect(uploads, hasLength(2));
     expect(updatedPickers[0].selectedFile, isNull);
     expect(updatedPickers[1].selectedFile?.path, 'remo.mp4');
-    expect(find.text('No se pudo subir el feedback.'), findsOneWidget);
+    // L5-C2 (D14-3): the failure is this screen's event, so it is an inline
+    // message, not a SnackBar.
+    expect(
+      find.widgetWithText(ExomInlineMessage, 'No se pudo subir el feedback.'),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
   });
 }

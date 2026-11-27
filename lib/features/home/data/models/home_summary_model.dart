@@ -1,4 +1,5 @@
 import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/features/trainings/domain/planned_sets.dart';
 
 class HomeSummaryModel {
   final List<HomeTrainingItemModel> trainings;
@@ -27,6 +28,24 @@ class HomeSummaryModel {
   final DateTime? lastWeightDate;
   final double? lastSleepHours;
 
+  /// L4b: week and training day of the program for the selected date, from
+  /// `/trainings/day` (`program_week`, `program_day`); `null` when absent
+  /// (older API), `null` or of an unexpected type.
+  final int? programWeek;
+  final int? programDay;
+
+  /// L4b-D5: planned sets of every training of the day ([plannedSetsOf]).
+  final int totalSets;
+
+  /// L4b-D1: photo of the primary training (first exercise with a thumbnail).
+  final String? trainingThumbnailUrl;
+
+  /// E1 D1: why part of this summary is the saved copy (or nothing) instead
+  /// of a fresh answer: the error of a request that failed, as
+  /// `ApiException(status): message` (status 0 = no network or timeout).
+  /// `null` when every request answered.
+  final String? staleReason;
+
   const HomeSummaryModel({
     this.trainings = const [],
     this.trainingName,
@@ -53,6 +72,11 @@ class HomeSummaryModel {
     this.lastWeightKg,
     this.lastWeightDate,
     this.lastSleepHours,
+    this.programWeek,
+    this.programDay,
+    this.totalSets = 0,
+    this.trainingThumbnailUrl,
+    this.staleReason,
   });
 
   factory HomeSummaryModel.fromParts({
@@ -62,7 +86,10 @@ class HomeSummaryModel {
     required Map<String, dynamic>? profile,
     required Map<String, dynamic>? latestMetric,
     required Map<String, dynamic>? progress,
+    String? staleReason,
   }) {
+    final programWeek = _positiveInt(training?['program_week']);
+    final programDay = _positiveInt(training?['program_day']);
     final dayTrainings = training?['trainings'] is List
         ? (training!['trainings'] as List)
               .whereType<Map<String, dynamic>>()
@@ -147,24 +174,35 @@ class HomeSummaryModel {
         (progress?['trainings_completed'] as List? ?? const [])
             .map((id) => id.toString())
             .toSet();
+    // L5-D49 O5 r2: the API rule (`legacySingleCompletion` in
+    // training-completion.ts): one training, the day flag set and no stored
+    // ids is done, whatever exercise entries the day holds.
     final legacyDayCompletion =
         dayTrainings.length == 1 &&
         progress?['training_completed'] == true &&
-        completedEntries.isEmpty &&
         completedTrainingIds.isEmpty;
+    // L5-D49 O5: a training is done only once it is finished («Terminar
+    // sesión»): the server lists it in `trainings_completed` (the pending
+    // `complete_training` actions are overlaid there too) or flags the
+    // legacy single-training day. Marked exercises alone, on the server or
+    // only on this phone, never finish it.
     bool isTrainingCompleted(Map<String, dynamic> item) {
       final trainingId = item['id']?.toString();
       if (trainingId != null && completedTrainingIds.contains(trainingId)) {
         return true;
       }
+      return legacyDayCompletion;
+    }
+
+    bool isTrainingUnfinished(Map<String, dynamic> item) {
+      if (isTrainingCompleted(item)) return false;
       final exercises = exercisesFor(item);
-      return (exercises.isNotEmpty &&
-              exercises.every(
-                (exercise) => completedCurrentOccurrenceIds.contains(
-                  exercise['id']?.toString(),
-                ),
-              )) ||
-          legacyDayCompletion;
+      return exercises.isNotEmpty &&
+          exercises.every(
+            (exercise) => completedCurrentOccurrenceIds.contains(
+              exercise['id']?.toString(),
+            ),
+          );
     }
 
     final trainingCompleted =
@@ -180,35 +218,27 @@ class HomeSummaryModel {
             (sum, duration) => sum + duration,
           )
         : null;
+    // L4b-D5: the same rule as TrainingEntity.remainingProgress.
+    PlannedSetsTally setsOf(Map<String, dynamic> item) => tallyPlannedSets(
+      exercisesFor(item),
+      plannedSets: _plannedSetsOfJson,
+      isCompleted: (exercise) =>
+          completedCurrentOccurrenceIds.contains(exercise['id']?.toString()),
+    );
+    final totalSets = dayTrainings.fold<int>(
+      0,
+      (sum, item) => sum + setsOf(item).total,
+    );
     final remainingTrainingDuration = trainingDuration == null
         ? null
         : dayTrainings.fold<int>(0, (sum, item) {
-            if (isTrainingCompleted(item)) return sum;
+            // «Sin terminar» has no exercise left: it adds no minutes.
+            if (isTrainingCompleted(item) || isTrainingUnfinished(item)) {
+              return sum;
+            }
             final duration = (item['estimated_duration_min'] as num?)!.toInt();
-            final exercises = exercisesFor(item);
-            final totalSets = exercises.fold<int>(
-              0,
-              (sets, exercise) =>
-                  sets + ((exercise['sets'] as num?)?.toInt() ?? 0),
-            );
-            if (totalSets <= 0) return sum + duration;
-            final completedSets = exercises
-                .where(
-                  (exercise) => completedCurrentOccurrenceIds.contains(
-                    exercise['id']?.toString(),
-                  ),
-                )
-                .fold<int>(
-                  0,
-                  (sets, exercise) =>
-                      sets + ((exercise['sets'] as num?)?.toInt() ?? 0),
-                );
-            return sum +
-                (duration *
-                        (totalSets - completedSets).clamp(0, totalSets) /
-                        totalSets)
-                    .round()
-                    .clamp(0, duration);
+            final remaining = setsOf(item).remainingMinutes(duration);
+            return sum + (remaining ?? duration);
           });
 
     final dietMeals = diet?['meals'] as List? ?? [];
@@ -274,6 +304,8 @@ class HomeSummaryModel {
               id: item['id'] as String? ?? '',
               name: item['name'] as String? ?? '',
               completed: isTrainingCompleted(item),
+              unfinished: isTrainingUnfinished(item),
+              thumbnailUrl: _firstThumbnail(exercisesFor(item)),
             ),
           )
           .where((item) => item.id.isNotEmpty)
@@ -306,7 +338,68 @@ class HomeSummaryModel {
       lastWeightKg: (profile?['current_weight'] as num?)?.toDouble(),
       lastWeightDate: weightDate,
       lastSleepHours: (latestMetric?['sleep_hours'] as num?)?.toDouble(),
+      programWeek: programWeek,
+      programDay: programDay,
+      totalSets: totalSets,
+      trainingThumbnailUrl: training == null
+          ? null
+          : _firstThumbnail(exercisesFor(training)),
+      staleReason: staleReason,
     );
+  }
+
+  /// A whole number >= 1, or `null` for anything else (absent, `null`, a
+  /// fraction, a string...). Never throws: an unexpected type must not turn
+  /// Inicio into an error.
+  static int? _positiveInt(Object? value) {
+    if (value is int) return value >= 1 ? value : null;
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble() &&
+        value >= 1) {
+      return value.toInt();
+    }
+    return null;
+  }
+
+  /// Planned sets of a raw exercise of `/trainings/day` with the shared rule.
+  static int _plannedSetsOfJson(Map<String, dynamic> exercise) {
+    final blockId = exercise['block_id'] ?? exercise['blockId'];
+    final block = exercise['block'];
+    final rounds = block is Map ? block['rounds'] : null;
+    return plannedSetsOf(
+      sets: (exercise['sets'] as num?)?.toInt() ?? 0,
+      inBlock: blockId != null,
+      blockRounds: rounds is num ? rounds.toInt() : null,
+    );
+  }
+
+  /// `exercise.thumbnail_url` of the first exercise, by `order`, that has a
+  /// non-empty http(s) one.
+  static String? _firstThumbnail(List<Map<String, dynamic>> exercises) {
+    final indexed = exercises.indexed.toList()
+      ..sort((a, b) {
+        final orderA = a.$2['order'];
+        final orderB = b.$2['order'];
+        final byOrder = (orderA is num ? orderA : a.$1).compareTo(
+          orderB is num ? orderB : b.$1,
+        );
+        return byOrder != 0 ? byOrder : a.$1.compareTo(b.$1);
+      });
+    for (final (_, exercise) in indexed) {
+      final nested = exercise['exercise'];
+      final url = nested is Map ? nested['thumbnail_url'] : null;
+      if (url is String && _isHttpUrl(url.trim())) return url.trim();
+    }
+    return null;
+  }
+
+  /// A photo URL is usable only as `http`/`https` with a host.
+  static bool _isHttpUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
   }
 }
 
@@ -315,9 +408,15 @@ class HomeTrainingItemModel {
   final String name;
   final bool completed;
 
+  /// L5-D49 O5: every exercise marked, session not finished.
+  final bool unfinished;
+  final String? thumbnailUrl;
+
   const HomeTrainingItemModel({
     required this.id,
     required this.name,
     required this.completed,
+    this.unfinished = false,
+    this.thumbnailUrl,
   });
 }

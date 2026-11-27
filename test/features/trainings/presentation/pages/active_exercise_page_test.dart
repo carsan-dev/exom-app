@@ -78,22 +78,32 @@ void main() {
       );
       await tester.tap(find.text('Open set form'));
       await tester.pumpAndSettle();
-      final fields = find.byType(TextField);
-      final field = tester.widget<TextField>(fields.first);
-      final l10n = AppLocalizations.of(tester.element(fields.first));
-      expect(
-        field.decoration?.labelText,
-        scenario == 'repetitions'
-            ? l10n.setPerformanceReps
-            : timed && savedSeconds != 90
-            ? l10n.setPerformanceMinutes
-            : l10n.setPerformanceSeconds,
-      );
+      // L3 sheet migration (approved sketch «A · Hoja de registro», brief
+      // DD5): the reps/seconds/minutes field is an ExomStepper whose label is
+      // painted above it instead of InputDecoration.labelText, and the sheet
+      // labels follow the sketch («Repeticiones», «Segundos», «Minutos»).
+      // Same coverage: the unit shown for each scenario and the value kept.
+      final fields = find.byKey(const Key('set-sheet-count-field'));
+      final field = tester.widget<TextField>(fields);
+      final l10n = AppLocalizations.of(tester.element(fields));
+      final expectedLabel = scenario == 'repetitions'
+          ? l10n.setSheetRepsLabel
+          : timed && savedSeconds != 90
+          ? l10n.setPerformanceMinutes
+          : l10n.setSheetSecondsLabel;
+      expect(find.text(expectedLabel), findsOneWidget);
+      for (final other in {
+        l10n.setSheetRepsLabel,
+        l10n.setPerformanceMinutes,
+        l10n.setSheetSecondsLabel,
+      }.difference({expectedLabel})) {
+        expect(find.text(other), findsNothing);
+      }
       if (savedSeconds != null) {
         expect(field.controller?.text, savedSeconds == 600 ? '10' : '90');
       } else {
         await tester.enterText(
-          fields.first,
+          fields,
           timed
               ? '10'
               : scenario == 'seconds'
@@ -101,7 +111,9 @@ void main() {
               : '12',
         );
       }
-      await tester.tap(find.text(l10n.weightInputSave));
+      // L3: «Guardar serie» (ExomPrimaryButton, uppercase label) replaces the
+      // ElevatedButton «Guardar»; found by its key.
+      await tester.tap(find.byKey(const Key('set-sheet-save')));
       await tester.pumpAndSettle();
       expect(results, hasLength(1));
       expect(

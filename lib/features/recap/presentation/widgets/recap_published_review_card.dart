@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
+import 'package:flutter/material.dart';
 
 /// Read-only publication, independent of the legacy feedback read marker.
+///
+/// Flat (no card): each published section is a header and its text behind the
+/// 2 px data edge of the trainer reply (`ExomReplyBlock`'s edge).
 class RecapPublishedReviewCard extends StatelessWidget {
   const RecapPublishedReviewCard({super.key, required this.recap});
 
@@ -20,9 +23,8 @@ class RecapPublishedReviewCard extends StatelessWidget {
       ('Objetivos próxima semana', recap.publishedNextWeekGoals),
     ].where((section) => section.$2?.trim().isNotEmpty ?? false).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: GlassDecoration.card(borderRadius: 22),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -39,12 +41,25 @@ class RecapPublishedReviewCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              sections[index].$2!.trim(),
-              softWrap: true,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.textPrimary,
-                height: 1.5,
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: BorderDirectional(
+                  start: BorderSide(
+                    color: palette.data,
+                    width: ExomRule.replyEdge,
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: 14),
+                child: Text(
+                  sections[index].$2!.trim(),
+                  softWrap: true,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textPrimary,
+                    height: 1.5,
+                  ),
+                ),
               ),
             ),
           ],

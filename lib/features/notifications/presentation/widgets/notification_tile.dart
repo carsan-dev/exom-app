@@ -1,144 +1,89 @@
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_notice_row.dart';
+import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/features/notifications/domain/entities/notification_entity.dart';
-
+/// One notification as an [ExomNoticeRow] (L5-A1): flat row, an unread dot and
+/// weight 600 for the unread ones (distinguishable without colour), the icon
+/// of its type in a 56 square (`.x-thumb`, sketch A4) and a compact relative
+/// time in the active locale.
 class NotificationTile extends StatelessWidget {
   final NotificationEntity notification;
   final VoidCallback onTap;
+
+  /// Clock of the screen; [DateTime.now] when null.
+  final DateTime Function()? now;
 
   const NotificationTile({
     super.key,
     required this.notification,
     required this.onTap,
+    this.now,
   });
 
+  static const double thumbSize = 56;
+
+  /// Icon by `data.type`, the same mapping as the tile before L5-A1.
   IconData _iconForType() {
-    final type = (notification.data?['type'] as String?)?.toLowerCase();
+    final raw = notification.data?['type'];
+    final type = raw is String ? raw.toLowerCase() : null;
     switch (type) {
       case 'training':
       case 'training_reminder':
       case 'training_note_reply':
-        return Icons.fitness_center;
+        return ExomIcons.train;
       case 'diet':
       case 'diet_reminder':
       case 'meal':
-        return Icons.restaurant;
+        return ExomIcons.diet;
       case 'challenge':
       case 'challenge_update':
-        return Icons.emoji_events;
+        return ExomIcons.trophy;
       case 'recap':
       case 'recap_reminder':
       case 'recap_feedback':
-        return Icons.bar_chart;
+        return ExomIcons.barChart;
       case 'profile':
-        return Icons.person_outline;
+        return ExomIcons.profile;
       case 'calendar':
-        return Icons.calendar_today;
+        return ExomIcons.calendar;
       default:
-        return Icons.notifications_outlined;
+        return ExomIcons.notifications;
     }
   }
 
   String _relativeTime(BuildContext context) {
-    final now = DateTime.now();
-    final diff = now.difference(notification.createdAt);
-    if (diff.inMinutes < 1) return 'ahora';
-    if (diff.inHours < 1) return '${diff.inMinutes}m';
-    if (diff.inDays < 1) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return DateFormat('dd/MM/yy').format(notification.createdAt);
+    final l10n = AppLocalizations.of(context);
+    final diff = (now ?? DateTime.now)().difference(notification.createdAt);
+    if (diff.inMinutes < 1) return l10n.noticeTimeNow;
+    if (diff.inHours < 1) return l10n.noticeTimeMinutes(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.noticeTimeHours(diff.inHours);
+    if (diff.inDays < 7) return l10n.noticeTimeDays(diff.inDays);
+    // The sketch draws no date for older notices: keep the dd/MM/yy the tile
+    // showed before L5-A1, with the active locale for its digits.
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('dd/MM/yy', locale).format(notification.createdAt);
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final unread = notification.isUnread;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          padding: const EdgeInsets.all(14),
-          decoration: GlassDecoration.elevated(borderRadius: 16).copyWith(
-            color: unread
-                ? palette.primary.withValues(alpha: 0.08)
-                : palette.glassBackground,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: palette.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(_iconForType(), color: palette.primary, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              color: palette.textPrimary,
-                              fontSize: 14,
-                              fontWeight: unread
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _relativeTime(context),
-                          style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.body,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 13,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (unread)
-                Container(
-                  margin: const EdgeInsets.only(left: 8, top: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: palette.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-        ),
+    return ExomNoticeRow(
+      title: notification.title,
+      body: notification.body,
+      time: _relativeTime(context),
+      unread: notification.isUnread,
+      onTap: onTap,
+      leading: Container(
+        key: ValueKey('notice-thumb-${notification.id}'),
+        width: thumbSize,
+        height: thumbSize,
+        color: palette.surfaceElevated,
+        alignment: Alignment.center,
+        child: Icon(_iconForType(), size: 24, color: palette.textSecondary),
       ),
     );
   }

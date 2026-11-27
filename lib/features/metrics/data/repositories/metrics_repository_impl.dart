@@ -3,10 +3,31 @@ import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 
-class MetricsRepositoryImpl implements MetricsRepository {
+class MetricsRepositoryImpl
+    implements MetricsRepository, MetricsHistorySource {
   final MetricsRemoteDataSource _remoteDataSource;
 
   const MetricsRepositoryImpl(this._remoteDataSource);
+
+  @override
+  Future<MetricsRead<BodyMetricEntity?>> getLatestMetricWithSource() async {
+    final read = await _remoteDataSource.getLatestMetricWithSource();
+    final model = read.value;
+    return MetricsRead(
+      model == null ? null : _mapToEntity(model),
+      fromCache: read.fromCache,
+    );
+  }
+
+  @override
+  Future<MetricsRead<List<BodyMetricEntity>>>
+  getWeightHistoryWithSource() async {
+    final read = await _remoteDataSource.getWeightHistoryWithSource();
+    return MetricsRead(
+      read.value.map(_mapToEntity).toList(),
+      fromCache: read.fromCache,
+    );
+  }
 
   @override
   Future<BodyMetricEntity> saveMetric(Map<String, dynamic> data) async {

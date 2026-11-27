@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.2.4+1
+version: 1.2.6+1
 
 environment:
   sdk: ^3.11.3
@@ -68,6 +68,7 @@ dependencies:
   video_compress: ^3.1.4
   pdf: ^3.12.0
   printing: ^5.14.3
+  lucide_icons_flutter: 4.0.3
 
 dev_dependencies:
   flutter_test:
@@ -88,16 +89,22 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/branding/app_icon.png"
   min_sdk_android: 23
-  adaptive_icon_background: "#241209"
+  adaptive_icon_background: "#101111"
   adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
   remove_alpha_ios: true
 
 flutter_native_splash:
-  color: "#241209"
-  image: assets/branding/splash_logo.png
+  # Follows the system theme (L5-D3, D3-Q2): paper (light theme background)
+  # with the light symbol, carbon with the dark symbol.
+  color: "#F2F1E9"
+  image: assets/branding/splash_logo_light.png
+  color_dark: "#101111"
+  image_dark: assets/branding/splash_logo.png
   android_12:
-    color: "#241209"
-    image: assets/branding/splash_logo.png
+    color: "#F2F1E9"
+    image: assets/branding/splash_android12_light.png
+    color_dark: "#101111"
+    image_dark: assets/branding/splash_android12.png
   android: true
   ios: true
 
@@ -115,6 +122,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/coach/
     - assets/branding/
 
   fonts:
@@ -136,3 +144,13 @@ flutter:
           weight: 800
         - asset: assets/fonts/CabinetGrotesk-Black.ttf
           weight: 900
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/dm-sans-400.ttf
+          weight: 400
+        - asset: assets/fonts/dm-sans-600.ttf
+          weight: 600
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/barlow-condensed-800.ttf
+          weight: 800

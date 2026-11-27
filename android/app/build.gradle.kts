@@ -66,6 +66,8 @@ android {
 }
 
 dependencies {
+    implementation("com.otaliastudios:transcoder:0.10.5")
+    testImplementation("junit:junit:4.13.2")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 

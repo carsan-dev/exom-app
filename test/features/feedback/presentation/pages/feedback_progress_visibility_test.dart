@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_operation_bar.dart';
 import 'package:exom_app/features/feedback/domain/entities/feedback_entity.dart';
 import 'package:exom_app/features/feedback/domain/usecases/get_my_feedback_usecase.dart';
 import 'package:exom_app/features/feedback/domain/usecases/create_feedback_usecase.dart';
@@ -51,6 +52,8 @@ void main() {
             getMyFeedbackUseCase: GetMyFeedbackUseCase(repo),
             createFeedbackUseCase: CreateFeedbackUseCase(repo),
             uploadFeedbackMediaUseCase: UploadFeedbackMediaUseCase(repo),
+            uploadNotices: queue.notices,
+            localStorage: storage,
           ),
         );
         addTearDown(() async {
@@ -76,11 +79,20 @@ void main() {
           top.dy,
           lessThan(
             tester
-                .getTopLeft(
-                  find.widgetWithText(ElevatedButton, 'Enviar feedback'),
-                )
+                // L5-C2: the send button is the pinned footer's primary
+                // button (key), no longer an ElevatedButton in the form.
+                .getTopLeft(find.byKey(const Key('send-feedback')))
                 .dy,
           ),
+        );
+        // The footer button still reads «Enviar feedback» (the primary button
+        // renders its label in capitals).
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('send-feedback')),
+            matching: find.text('Enviar feedback'.toUpperCase()),
+          ),
+          findsOneWidget,
         );
         // Drag the page margin so the notes field does not consume the gesture.
         await tester.dragFrom(
@@ -103,10 +115,8 @@ void main() {
           greaterThan(0),
         );
         expect(tester.getTopLeft(find.byType(FeedbackUploadStatus)), top);
-        expect(
-          find.byType(LinearProgressIndicator).hitTestable(),
-          findsOneWidget,
-        );
+        // L5-C2: the transfer bar is the base ExomOperationBar (T0.4).
+        expect(find.byType(ExomOperationBar).hitTestable(), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

@@ -21,78 +21,53 @@ class RecapStepTraining extends StatelessWidget {
         (formData['training_sessions'] as num?)?.toInt() ?? 2;
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Column(
-        children: [
-          RecapSectionCard(
-            title: l10n.loadAndFeelings,
-            subtitle: l10n.tellUsHowYouFeltTrainingThisWeek,
-            icon: Icons.fitness_center,
-            child: Column(
-              children: [
-                RecapEmojiRatingField(
-                  label: l10n.overallEffort,
-                  helperText: l10n.howDidYouFeelWithTheTrainingLoad,
-                  value: trainingEffort.round().clamp(0, 4),
-                  onChanged: (value) => onChanged('training_effort', value),
-                ),
-                const SizedBox(height: 20),
-                RecapEmojiRatingField(
-                  label: l10n.completedSessions,
-                  helperText: l10n.howDoYouRateTheNumberOfSessions,
-                  value: trainingSessions.round().clamp(0, 4),
-                  onChanged: (value) => onChanged('training_sessions', value),
-                ),
-              ],
-            ),
-          ),
-          RecapSectionCard(
-            title: l10n.perceivedProgress,
-            subtitle: l10n.chooseTheProgressThatBestReflectsYourWeek,
-            icon: Icons.trending_up,
-            child: RecapChoiceChipsField(
-              label: l10n.progressPerception,
-              helperText: l10n.yourOverallFeelingAboutThePlanProgress,
-              value: formData['training_progress'] as String?,
-              options: const [
-                'NADA',
-                'POCO',
-                'ESTABLE',
-                'MEJORANDO',
-                'EXCELENTE',
-              ],
-              onSelected: (value) => onChanged('training_progress', value),
-            ),
-          ),
-          RecapSectionCard(
-            title: l10n.dailyActivity,
-            subtitle: l10n.dailyActivityRecapDescription,
-            icon: Icons.directions_walk,
-            child: RecapIntegerField(
-              label: l10n.averageDailySteps,
-              helperText: l10n.averageDailyStepsHelper,
-              hintText: l10n.averageDailyStepsHint,
-              suffixText: l10n.stepsPerDay,
-              maxErrorText: l10n.averageDailyStepsRangeError,
-              value: (formData['average_daily_steps'] as num?)?.toInt(),
-              max: recapAverageDailyStepsMax,
-              onChanged: (value) => onChanged('average_daily_steps', value),
-            ),
-          ),
-          RecapSectionCard(
-            title: l10n.trainingNotes,
-            subtitle: l10n.addContextSoYourCoachCanReviewYourWeekBetter,
-            icon: Icons.notes,
-            child: RecapTextAreaField(
-              label: l10n.recapTrainingObservations,
-              hintText: l10n.egItWasHardToKeepThePaceOnThursday,
-              initialValue: formData['training_notes'] as String? ?? '',
-              onChanged: (value) => onChanged('training_notes', value),
-            ),
-          ),
-        ],
-      ),
+    return RecapStepFrame(
+      step: 1,
+      first: l10n.recapStepTrainingFirst,
+      second: l10n.recapStepTrainingSecond,
+      coach: l10n.recapStepTrainingCoach,
+      questions: [
+        RecapEmojiRatingField(
+          number: 1,
+          label: l10n.overallEffort,
+          helperText: l10n.howDidYouFeelWithTheTrainingLoad,
+          value: trainingEffort.round().clamp(0, 4),
+          onChanged: (value) => onChanged('training_effort', value),
+        ),
+        RecapEmojiRatingField(
+          number: 2,
+          label: l10n.completedSessions,
+          helperText: l10n.howDoYouRateTheNumberOfSessions,
+          value: trainingSessions.round().clamp(0, 4),
+          onChanged: (value) => onChanged('training_sessions', value),
+        ),
+        RecapChoiceChipsField(
+          number: 3,
+          label: l10n.progressPerception,
+          helperText: l10n.yourOverallFeelingAboutThePlanProgress,
+          value: formData['training_progress'] as String?,
+          options: const ['NADA', 'POCO', 'ESTABLE', 'MEJORANDO', 'EXCELENTE'],
+          onSelected: (value) => onChanged('training_progress', value),
+        ),
+        RecapIntegerField(
+          number: 4,
+          label: l10n.averageDailySteps,
+          helperText: l10n.averageDailyStepsHelper,
+          hintText: l10n.averageDailyStepsHint,
+          suffixText: l10n.stepsPerDay,
+          maxErrorText: l10n.averageDailyStepsRangeError,
+          value: (formData['average_daily_steps'] as num?)?.toInt(),
+          max: recapAverageDailyStepsMax,
+          onChanged: (value) => onChanged('average_daily_steps', value),
+        ),
+        RecapTextAreaField(
+          number: 5,
+          label: l10n.trainingNotes,
+          hintText: l10n.egItWasHardToKeepThePaceOnThursday,
+          initialValue: formData['training_notes'] as String? ?? '',
+          onChanged: (value) => onChanged('training_notes', value),
+        ),
+      ],
     );
   }
 }

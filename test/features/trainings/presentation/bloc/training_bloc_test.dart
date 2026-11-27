@@ -117,7 +117,7 @@ void main() {
     expect(find.textContaining('12 reps'), findsNothing);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('execution-b'));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     expect(find.textContaining('12 reps'), findsWidgets);
     expect(find.textContaining('8 reps'), findsNothing);
@@ -161,7 +161,7 @@ void main() {
     ];
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('execution-b'));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     storage.feedback = [
@@ -383,8 +383,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('Entrenamiento 1 · 2026-09-05'), findsNWidgets(2));
-    await tester.tap(find.text('execution-b'));
+    expect(find.text('Entrenamiento 1 · 5 de septiembre de 2026'), findsNWidgets(2));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('completion-rpe-10')));
     await tester.pump();
@@ -428,9 +428,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('draft-a'), findsOneWidget);
+    expect(find.text('Sesión 1'), findsOneWidget);
     storage.stamp = 'B:2:test';
-    await tester.tap(find.text('draft-a'));
+    await tester.tap(find.text('Sesión 1'));
     await tester.pumpAndSettle();
     expect(repository.calls, 0);
     expect(storage.completed, isNull);

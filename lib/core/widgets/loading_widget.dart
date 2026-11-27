@@ -1,3 +1,4 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -58,8 +59,8 @@ class ErrorWidget2 extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: Icons.error_outline,
-                color: AppColors.error,
+                icon: ExomIcons.error,
+                color: palette.error,
               ),
               const SizedBox(height: 16),
               Text(
@@ -116,7 +117,7 @@ class EmptyWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: icon ?? Icons.inbox_outlined,
+                icon: icon ?? ExomIcons.inbox,
                 color: palette.textDisabled,
               ),
               const SizedBox(height: 16),
@@ -179,8 +180,8 @@ class ServerErrorWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: Icons.cloud_off_outlined,
-                color: AppColors.error,
+                icon: ExomIcons.offline,
+                color: palette.error,
               ),
               const SizedBox(height: 20),
               Text(
@@ -209,7 +210,7 @@ class ServerErrorWidget extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh, size: 18),
+                    icon: const Icon(ExomIcons.retry, size: 18),
                     label: Text(l10n.retryButton),
                   ),
                 ),
@@ -219,7 +220,7 @@ class ServerErrorWidget extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onContactSupport,
-                    icon: const Icon(Icons.feedback_outlined, size: 18),
+                    icon: const Icon(ExomIcons.feedback, size: 18),
                     label: Text(l10n.contactSupportButton),
                   ),
                 ),
@@ -256,8 +257,8 @@ class NoConnectionWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: Icons.wifi_off_outlined,
-                color: AppColors.warning,
+                icon: ExomIcons.wifiOff,
+                color: context.exomSemantic.warning,
               ),
               const SizedBox(height: 20),
               Text(
@@ -284,7 +285,7 @@ class NoConnectionWidget extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh, size: 18),
+                    icon: const Icon(ExomIcons.retry, size: 18),
                     label: Text(l10n.retryButton),
                   ),
                 ),
@@ -294,7 +295,7 @@ class NoConnectionWidget extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onViewOffline,
-                    icon: const Icon(Icons.offline_pin_outlined, size: 18),
+                    icon: const Icon(ExomIcons.offlineSaved, size: 18),
                     label: Text(l10n.viewOfflineButton),
                   ),
                 ),
@@ -331,7 +332,7 @@ class NotFoundWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: Icons.search_off_outlined,
+                icon: ExomIcons.searchOff,
                 color: palette.textMuted,
               ),
               const SizedBox(height: 20),
@@ -359,7 +360,7 @@ class NotFoundWidget extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onGoToCalendar,
-                    icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                    icon: const Icon(ExomIcons.calendarMonth, size: 18),
                     label: Text(l10n.goToCalendarButton),
                   ),
                 ),
@@ -369,7 +370,7 @@ class NotFoundWidget extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onGoHome,
-                    icon: const Icon(Icons.home_outlined, size: 18),
+                    icon: const Icon(ExomIcons.home, size: 18),
                     label: Text(l10n.goHomeButton),
                   ),
                 ),
@@ -397,14 +398,9 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final baseColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.05),
-      AppColors.glassBackgroundElevated,
-    );
-    final highlightColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.12),
-      const Color(0x33FFF7DB),
-    );
+    // V4 tokens: raised panel with a panel-coloured sweep, in both themes.
+    final baseColor = palette.surfaceElevated;
+    final highlightColor = palette.surface;
 
     return Shimmer.fromColors(
       baseColor: baseColor,

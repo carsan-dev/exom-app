@@ -8,8 +8,14 @@ class HomeRepositoryImpl implements HomeRepository {
   const HomeRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<HomeSummaryEntity> getHomeSummary({DateTime? date}) async {
-    final model = await _remoteDataSource.getHomeSummary(date: date);
+  Future<HomeSummaryEntity> getHomeSummary({
+    DateTime? date,
+    bool includeSharedData = true,
+  }) async {
+    final model = await _remoteDataSource.getHomeSummary(
+      date: date,
+      includeSharedData: includeSharedData,
+    );
     return HomeSummaryEntity(
       trainingId: model.trainingId,
       trainingName: model.trainingName,
@@ -24,6 +30,8 @@ class HomeRepositoryImpl implements HomeRepository {
               id: training.id,
               name: training.name,
               completed: training.completed,
+              unfinished: training.unfinished,
+              thumbnailUrl: training.thumbnailUrl,
             ),
           )
           .toList(growable: false),
@@ -44,6 +52,11 @@ class HomeRepositoryImpl implements HomeRepository {
       lastWeightKg: model.lastWeightKg,
       lastWeightDate: model.lastWeightDate,
       lastSleepHours: model.lastSleepHours,
+      programWeek: model.programWeek,
+      programDay: model.programDay,
+      totalSets: model.totalSets,
+      trainingThumbnailUrl: model.trainingThumbnailUrl,
+      staleReason: model.staleReason,
     );
   }
 }

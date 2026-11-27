@@ -1,6 +1,8 @@
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
+import 'package:exom_app/core/prompts/automatic_prompt_coordinator.dart';
 import 'package:get_it/get_it.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:exom_app/features/auth/presentation/validated_session_gate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:exom_app/core/api/api_client.dart';
@@ -12,6 +14,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
+import 'package:exom_app/core/services/rest_timer_session_guard.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -133,18 +136,37 @@ import 'package:exom_app/features/notifications/domain/usecases/get_unread_count
 import 'package:exom_app/features/notifications/domain/usecases/mark_all_notifications_as_read_usecase.dart';
 import 'package:exom_app/features/notifications/domain/usecases/mark_notification_as_read_usecase.dart';
 import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc.dart';
+import 'package:exom_app/features/notifications/presentation/bloc/notifications_bloc_session_scope.dart';
 
 // Onboarding
+import 'package:exom_app/core/onboarding/onboarding_sync_coordinator.dart';
+import 'package:exom_app/features/onboarding/data/onboarding_remote_datasource.dart';
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 final sl = GetIt.instance;
 
 void handleExecutionTimerSessionState(AuthState state) {
   final gate = sl<ValidatedSessionGate>();
   gate.handle(state);
-  sl<ExecutionTimerCoordinator>().updateOwner(
-    gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null,
-  );
+  final owner = gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null;
+  sl<ExecutionTimerCoordinator>().updateOwner(owner);
+  // The native rest timer has no owner of its own (DESCANSO-AVISO).
+  if (sl.isRegistered<RestTimerSessionGuard>()) {
+    sl<RestTimerSessionGuard>().handle(state, owner);
+  }
+}
+
+/// Every [AuthBloc] state change: session gate, execution timer owner and
+/// onboarding sync (OP-D17: on each change, not once per process).
+void handleAuthSessionState(AuthState state) {
+  handleExecutionTimerSessionState(state);
+  // The sync must never prevent AuthBloc from emitting.
+  try {
+    sl<OnboardingSyncCoordinator>().handle(state);
+  } catch (error) {
+    if (kDebugMode) debugPrint('[ONBOARDING_SYNC] handle failed (${error.runtimeType})');
+  }
 }
 
 bool isExecutionTimerOwnerCurrent(
@@ -155,6 +177,49 @@ bool isExecutionTimerOwnerCurrent(
     sl<ValidatedSessionGate>().isAuthenticated &&
     sl<ExecutionTimerCoordinator>().sessionRevision == sessionRevision &&
     sl<LocalStorage>().sessionStamp == ownerSession;
+
+/// In-app automatic prompts (quick tour, Sunday recap reminder): one
+/// coordinator per process, its memory is the app session. Needs
+/// [LocalStorage] and [GetMyRecapsUseCase] registered.
+void registerAutomaticPromptCoordinator({
+  DateTime Function() clock = DateTime.now,
+}) {
+  sl.registerLazySingleton(
+    () => AutomaticPromptCoordinator(
+      store: LocalStorageAutomaticPromptStore(sl<LocalStorage>()),
+      loadRecaps: () => sl<GetMyRecapsUseCase>()(),
+      clock: clock,
+    ),
+  );
+}
+
+/// Owner of the signed-in session: account and sign-in generation, null when
+/// signed out. Changes on every sign-in and sign-out.
+String? currentSessionOwnerKey() {
+  final session = sl<FirebaseAuthService>().currentSession;
+  return session == null ? null : '${session.uid}:${session.generation}';
+}
+
+/// The [NotificationsBloc] shared by the shell bell and the notifications
+/// page, one per signed-in session (see [NotificationsBlocSessionScope]).
+/// Needs the notification use cases and [FirebaseAuthService].
+void registerAppNotificationsBloc() {
+  sl.registerLazySingleton(
+    () => NotificationsBlocSessionScope(
+      create: () => NotificationsBloc(
+        getMyNotifications: sl<GetMyNotificationsUseCase>(),
+        getUnreadCount: sl<GetUnreadCountUseCase>(),
+        markAsRead: sl<MarkNotificationAsReadUseCase>(),
+        markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
+        deleteRead: sl<DeleteReadNotificationsUseCase>(),
+      ),
+      sessionKey: currentSessionOwnerKey,
+    ),
+  );
+  sl.registerFactory<NotificationsBloc>(
+    () => sl<NotificationsBlocSessionScope>().current,
+  );
+}
 
 Future<void> initDependencies() async {
   final packageInfo = await PackageInfo.fromPlatform();
@@ -208,6 +273,9 @@ Future<void> initDependencies() async {
       notificationSoundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
     ),
   );
+  sl.registerLazySingleton<RestTimerSessionGuard>(
+    () => RestTimerSessionGuard(() => sl<RestTimerCoordinator>()),
+  );
 
   sl.registerLazySingleton<OfflineSyncService>(
     () => OfflineSyncService(
@@ -242,7 +310,7 @@ Future<void> initDependencies() async {
 
   sl.registerFactory(
     () => AuthBloc(
-      onSessionStateChanged: handleExecutionTimerSessionState,
+      onSessionStateChanged: handleAuthSessionState,
       loginUseCase: sl<LoginUseCase>(),
       socialLoginUseCase: sl<SocialLoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
@@ -264,7 +332,20 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetHomeSummaryUseCase(sl<HomeRepository>()));
 
   sl.registerFactory(
-    () => HomeBloc(getHomeSummaryUseCase: sl<GetHomeSummaryUseCase>()),
+    () => HomeBloc(
+      getHomeSummaryUseCase: sl<GetHomeSummaryUseCase>(),
+      // L4b-D4: week strip marks from the Calendar use case and its cache.
+      getMonthCalendarUseCase: sl<GetMonthCalendarUseCase>(),
+      // E6a: patches a confirmed completion only for its own session.
+      sessionStamp: () => sl<LocalStorage>().sessionStamp,
+      // INICIO-RED (A1): reloads stale Inicio when the network comes back.
+      connectivityChanges: Connectivity().onConnectivityChanged
+          .map(
+            (results) =>
+                results.any((result) => result != ConnectivityResult.none),
+          )
+          .distinct(),
+    ),
   );
 
   // ── Trainings ─────────────────────────────────────────────────────────────
@@ -430,6 +511,8 @@ Future<void> initDependencies() async {
     () => MarkRecapFeedbackReadUseCase(sl<RecapRepository>()),
   );
 
+  registerAutomaticPromptCoordinator();
+
   sl.registerFactory(
     () => RecapBloc(
       getMyRecapsUseCase: sl<GetMyRecapsUseCase>(),
@@ -474,6 +557,8 @@ Future<void> initDependencies() async {
       getMyFeedbackUseCase: sl<GetMyFeedbackUseCase>(),
       createFeedbackUseCase: sl<CreateFeedbackUseCase>(),
       uploadFeedbackMediaUseCase: sl<UploadFeedbackMediaUseCase>(),
+      uploadNotices: sl<FeedbackUploadQueueService>().notices,
+      localStorage: sl<LocalStorage>(),
     ),
   );
 
@@ -558,23 +643,27 @@ Future<void> initDependencies() async {
     () => DeleteReadNotificationsUseCase(sl<NotificationsRepository>()),
   );
 
-  sl.registerLazySingleton(
-    () => NotificationsBloc(
-      getMyNotifications: sl<GetMyNotificationsUseCase>(),
-      getUnreadCount: sl<GetUnreadCountUseCase>(),
-      markAsRead: sl<MarkNotificationAsReadUseCase>(),
-      markAllAsRead: sl<MarkAllNotificationsAsReadUseCase>(),
-      deleteRead: sl<DeleteReadNotificationsUseCase>(),
-    ),
-  );
+  registerAppNotificationsBloc();
 
   // ── Onboarding ────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<OnboardingRemoteDataSource>(
+    () => OnboardingRemoteDataSourceImpl(sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<OnboardingSyncCoordinator>(
+    () => OnboardingSyncCoordinator(
+      storage: sl<LocalStorage>(),
+      currentSession: () => sl<FirebaseAuthService>().currentSession,
+      remote: sl<OnboardingRemoteDataSource>(),
+    ),
+  );
   sl.registerFactory(
     () => OnboardingBloc(
       getProfile: sl<GetProfileUseCase>(),
       updateProfile: sl<UpdateProfileUseCase>(),
       uploadAvatar: sl<UploadAvatarUseCase>(),
       localStorage: sl<LocalStorage>(),
+      currentSession: () => sl<FirebaseAuthService>().currentSession,
+      syncCoordinator: sl<OnboardingSyncCoordinator>(),
     ),
   );
 }

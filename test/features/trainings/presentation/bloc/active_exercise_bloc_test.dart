@@ -634,4 +634,264 @@ void main() {
       expect(saved.lastWeightKg, 80);
     });
   });
+
+  // Decision D7 (owner, 2026-11-18): «+30 s» during the rest. ExtendRest goes
+  // through the same serialized handler, persists the new end in Hive (the
+  // single source of truth) and re-syncs the native timer by starting it again
+  // with the SAME session id (no cancel, so no native stop/start churn).
+  group('ExtendRest (D7)', () {
+    late DateTime clock;
+    late _FakeStore store;
+    late _FakeRestTimerCoordinator native;
+
+    ActiveExerciseBloc newBloc({int sets = 3}) => ActiveExerciseBloc(
+      localStorage: store,
+      trainingExercise: _trainingExercise(sets: sets),
+      restTimerCoordinator: native,
+      now: () => clock,
+    );
+
+    Future<ActiveExerciseBloc> resting({int sets = 3, int completed = 1})
+        async {
+      final bloc = newBloc(sets: sets);
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      for (var i = 0; i < completed; i++) {
+        if (i > 0) {
+          bloc.add(const SkipRest());
+          await pumpEventQueue();
+        }
+        bloc.add(const CompleteSet(reps: 8, weightKg: 62.5, rir: 2));
+        await pumpEventQueue();
+      }
+      return bloc;
+    }
+
+    setUp(() {
+      clock = DateTime.utc(2026, 11, 18, 10);
+      store = _FakeStore();
+      native = _FakeRestTimerCoordinator();
+    });
+
+    test('adds 30 s, persists it and restarts native with the same id',
+        () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      final firstEnd = bloc.state.restEndsAt!;
+      final firstId = native.startedSessions.single.id;
+      clock = clock.add(const Duration(seconds: 20));
+
+      bloc.add(const ExtendRest());
+      await pumpEventQueue();
+
+      final extended = firstEnd.add(const Duration(seconds: 30));
+      expect(bloc.state.status, ActiveExerciseStatus.resting);
+      expect(bloc.state.restEndsAt, extended);
+      expect(store.getActiveWorkout('ex-1')!.restEndsAt, extended);
+      expect(native.startedSessions, hasLength(2));
+      expect(native.startedSessions.last.id, firstId);
+      expect(native.startedSessions.last.endsAt, extended);
+      expect(native.cancelCalls, 0);
+      expect(native.finishCalls, 0);
+      // Nothing else in the draft changes.
+      final saved = store.getActiveWorkout('ex-1')!;
+      expect(saved.completedSets, 1);
+      expect(saved.currentSet, 2);
+      expect(saved.completedSetData, [
+        {'set_number': 1, 'reps': 8, 'weight_kg': 62.5, 'rir': 2},
+      ]);
+    });
+
+    test('repeated taps add up, one native start each, same id', () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      final firstEnd = bloc.state.restEndsAt!;
+      final firstId = native.startedSessions.single.id;
+
+      bloc
+        ..add(const ExtendRest())
+        ..add(const ExtendRest())
+        ..add(const ExtendRest());
+      await pumpEventQueue();
+
+      expect(bloc.state.restEndsAt, firstEnd.add(const Duration(seconds: 90)));
+      expect(native.startedSessions, hasLength(4));
+      expect(native.startedSessions.map((s) => s.id).toSet(), {firstId});
+      expect(native.cancelCalls, 0);
+    });
+
+    test('caps the end at now + 30 minutes', () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      for (var i = 0; i < 70; i++) {
+        bloc.add(const ExtendRest());
+      }
+      await pumpEventQueue();
+
+      expect(bloc.state.restEndsAt, clock.add(const Duration(minutes: 30)));
+      expect(
+        store.getActiveWorkout('ex-1')!.restEndsAt,
+        clock.add(const Duration(minutes: 30)),
+      );
+    });
+
+    test('is ignored while executing, after the rest ended and when done',
+        () async {
+      final bloc = newBloc(sets: 1);
+      addTearDown(bloc.close);
+      bloc.add(const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'));
+      await pumpEventQueue();
+      final executingDraft = store.getActiveWorkout('ex-1');
+      bloc.add(const ExtendRest());
+      await pumpEventQueue();
+      expect(bloc.state.isExecuting, isTrue);
+      expect(bloc.state.restEndsAt, isNull);
+      expect(identical(store.getActiveWorkout('ex-1'), executingDraft), isTrue);
+      expect(native.startedSessions, isEmpty);
+
+      // Expired but not yet processed: the pending FinishRest wins.
+      final other = await resting();
+      addTearDown(other.close);
+      final end = other.state.restEndsAt!;
+      final starts = native.startedSessions.length;
+      clock = end;
+      other.add(const ExtendRest());
+      await pumpEventQueue();
+      expect(other.state.restEndsAt, end);
+      expect(native.startedSessions, hasLength(starts));
+
+      // Done (last set, no rest left).
+      clock = end.add(const Duration(seconds: 1));
+      other.add(const FinishRest());
+      await pumpEventQueue();
+      expect(other.state.isExecuting, isTrue);
+      other.add(const ExtendRest());
+      await pumpEventQueue();
+      expect(other.state.isExecuting, isTrue);
+      expect(other.state.restEndsAt, isNull);
+    });
+
+    test('final rest can be extended and still ends in done', () async {
+      final bloc = await resting(sets: 1);
+      addTearDown(bloc.close);
+      expect(bloc.state.status, ActiveExerciseStatus.finalResting);
+      final firstEnd = bloc.state.restEndsAt!;
+
+      bloc.add(const ExtendRest());
+      await pumpEventQueue();
+      expect(bloc.state.status, ActiveExerciseStatus.finalResting);
+      expect(bloc.state.restEndsAt, firstEnd.add(const Duration(seconds: 30)));
+      expect(bloc.state.completionOperationId, isNull);
+
+      bloc.add(FinishRest(restEndsAt: bloc.state.restEndsAt));
+      await pumpEventQueue();
+      expect(bloc.state.status, ActiveExerciseStatus.done);
+      expect(bloc.state.completionOperationId, isNotNull);
+      expect(
+        store.getActiveWorkout('ex-1')!.completionOperationId,
+        bloc.state.completionOperationId,
+      );
+      expect(native.finishCalls, 1);
+    });
+
+    test('a stale FinishRest from the previous end is ignored', () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      final oldEnd = bloc.state.restEndsAt!;
+
+      // The tick of the outgoing footer can be queued behind the extension.
+      bloc
+        ..add(const ExtendRest())
+        ..add(FinishRest(restEndsAt: oldEnd));
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.resting);
+      expect(bloc.state.restEndsAt, oldEnd.add(const Duration(seconds: 30)));
+      expect(native.finishCalls, 0);
+      expect(native.cancelCalls, 0);
+
+      bloc.add(FinishRest(restEndsAt: bloc.state.restEndsAt));
+      await pumpEventQueue();
+      expect(bloc.state.status, ActiveExerciseStatus.executing);
+      expect(native.finishCalls, 1);
+    });
+
+    test('a FinishRest queued before the extension wins (tap too late)',
+        () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      final oldEnd = bloc.state.restEndsAt!;
+
+      bloc
+        ..add(FinishRest(restEndsAt: oldEnd))
+        ..add(const ExtendRest());
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.executing);
+      expect(bloc.state.restEndsAt, isNull);
+      expect(native.finishCalls, 1);
+      expect(native.startedSessions, hasLength(1));
+    });
+
+    test('restore after an extension resumes the extended rest', () async {
+      final first = await resting();
+      first.add(const ExtendRest());
+      await pumpEventQueue();
+      final extended = first.state.restEndsAt!;
+      await first.close();
+
+      final restarted = newBloc();
+      addTearDown(restarted.close);
+      restarted.add(
+        const StartExercise(trainingId: 't-1', exerciseId: 'ex-1'),
+      );
+      await pumpEventQueue();
+
+      expect(restarted.state.status, ActiveExerciseStatus.resting);
+      expect(restarted.state.restEndsAt, extended);
+      expect(native.startedSessions.last.endsAt, extended);
+
+      // The restored rest can be extended again.
+      restarted.add(const ExtendRest());
+      await pumpEventQueue();
+      expect(
+        store.getActiveWorkout('ex-1')!.restEndsAt,
+        extended.add(const Duration(seconds: 30)),
+      );
+      expect(
+        native.startedSessions.last.id,
+        native.startedSessions[native.startedSessions.length - 2].id,
+      );
+    });
+
+    test('SkipRest after an extension cancels the native timer once',
+        () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      bloc.add(const ExtendRest());
+      await pumpEventQueue();
+
+      bloc.add(const SkipRest());
+      await pumpEventQueue();
+
+      expect(bloc.state.status, ActiveExerciseStatus.executing);
+      expect(store.getActiveWorkout('ex-1')!.restEndsAt, isNull);
+      expect(native.cancelCalls, 1);
+      expect(native.finishCalls, 0);
+    });
+
+    test('the next rest gets a new native id after an extended one', () async {
+      final bloc = await resting();
+      addTearDown(bloc.close);
+      bloc.add(const ExtendRest());
+      await pumpEventQueue();
+      final extendedId = native.startedSessions.last.id;
+      bloc.add(const SkipRest());
+      await pumpEventQueue();
+      bloc.add(const CompleteSet(reps: 8));
+      await pumpEventQueue();
+
+      expect(native.startedSessions.last.id, isNot(extendedId));
+    });
+  });
 }

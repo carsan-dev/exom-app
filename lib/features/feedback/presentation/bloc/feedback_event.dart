@@ -5,7 +5,9 @@ abstract class FeedbackEvent {
 }
 
 class FeedbackLoadRequested extends FeedbackEvent {
-  const FeedbackLoadRequested();
+  final bool silent;
+
+  const FeedbackLoadRequested({this.silent = false});
 }
 
 class FeedbackSubmitRequested extends FeedbackEvent {

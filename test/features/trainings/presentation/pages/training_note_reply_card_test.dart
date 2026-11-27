@@ -1,4 +1,6 @@
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
+import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -25,5 +27,10 @@ void main() {
     expect(find.text('Me molestó la rodilla'), findsOneWidget);
     expect(find.text('Respuesta de tu entrenador'), findsOneWidget);
     expect(find.text('Reduce el peso'), findsOneWidget);
+    // L5-E2a: the reply is the shared ExomReplyBlock, not a glass card.
+    final reply = tester.widget<ExomReplyBlock>(find.byType(ExomReplyBlock));
+    expect(reply.text, 'Reduce el peso');
+    expect(reply.author, 'Respuesta de tu entrenador');
+    expect(find.byType(GlassCard), findsNothing);
   });
 }

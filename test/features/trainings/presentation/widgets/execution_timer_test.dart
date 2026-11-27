@@ -3,6 +3,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -95,6 +96,7 @@ void main() {
       );
       await tester.pump();
       Widget app() => MaterialApp(
+        locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(
@@ -114,8 +116,10 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pump();
       final start = tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Iniciar tiempo'),
+          .widget<ExomSecondaryButton>(
+            // L5-E3a: the start action is a secondary button (one lime
+            // action per state); same callback.
+            find.widgetWithText(ExomSecondaryButton, 'Iniciar tiempo'),
           )
           .onPressed!;
       start();
@@ -124,7 +128,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(Dialog), findsOneWidget);
       expect(bloc.state.timedStartedAt, isNull);
-      if (scenario == 'cancel') await tester.tap(find.text('Cancel'));
+      if (scenario == 'cancel') await tester.tap(find.text('Cancelar'));
       if (scenario == 'back') await tester.binding.handlePopRoute();
       if (scenario == 'background') {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -172,6 +176,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: BlocProvider.value(
@@ -236,6 +241,7 @@ void main() {
     (tester) async {
       final store = _Store();
       Widget app(int round) => MaterialApp(
+        locale: const Locale('es'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -303,6 +309,7 @@ void main() {
         await tester.pump();
         await tester.pumpWidget(
           MaterialApp(
+        locale: const Locale('es'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: BlocProvider.value(
@@ -363,6 +370,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           theme: AppTheme.dark,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -441,6 +449,7 @@ void main() {
       await tester.pump();
       await tester.pumpWidget(
         MaterialApp(
+        locale: const Locale('es'),
           theme: AppTheme.dark,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

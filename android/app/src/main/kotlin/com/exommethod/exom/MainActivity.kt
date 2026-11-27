@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -16,8 +17,24 @@ class MainActivity : FlutterActivity() {
     private val channelName = "com.exommethod.exom/rest_timer"
     private val appSettingsChannelName = "com.exommethod.exom/app_settings"
 
+    /**
+     * Removes the system splash at once on Android 12+ instead of running its default
+     * exit animation. The default one dims the symbol and leaves a few blank carbon
+     * frames before Flutter's bootstrap symbol shows; Dart already paints that symbol
+     * at the same size and position, so the handoff must be a straight cut.
+     */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            splashScreen.setOnExitAnimationListener { splashScreenView -> splashScreenView.remove() }
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if (!flutterEngine.plugins.has(VideoCompressionPlugin::class.java)) {
+            flutterEngine.plugins.add(VideoCompressionPlugin())
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

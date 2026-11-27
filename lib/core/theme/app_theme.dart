@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -23,6 +23,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     required this.glassBorder,
     required this.gradientStart,
     required this.gradientEnd,
+    required this.data,
+    required this.limeFill,
+    required this.onLimeFill,
+    this.limeFillOutline,
+    required this.selectionFill,
+    required this.onSelectionFill,
   });
 
   final Color background;
@@ -45,6 +51,28 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
   final Color gradientStart;
   final Color gradientEnd;
 
+  /// Colour of data (figures, numbering, progress rules, "done" by the
+  /// client; L5 D8/D13/D19). Same value as [primary] in each theme: lime in
+  /// dark, `#4F6B00` in light.
+  final Color data;
+
+  /// Lime as a fill only (button, done calendar cells, "today" pill). Never
+  /// ink in the light theme (D13).
+  final Color limeFill;
+
+  /// Ink on top of [limeFill].
+  final Color onLimeFill;
+
+  /// Outline of the lime fill: none in dark, `#101111` in light (drawn at
+  /// `ExomRule.outline`).
+  final Color? limeFillOutline;
+
+  /// Selection fill in bone or charcoal, never lime.
+  final Color selectionFill;
+
+  /// Ink on top of [selectionFill].
+  final Color onSelectionFill;
+
   @override
   ExomThemePalette copyWith({
     Color? background,
@@ -66,6 +94,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
     Color? glassBorder,
     Color? gradientStart,
     Color? gradientEnd,
+    Color? data,
+    Color? limeFill,
+    Color? onLimeFill,
+    Color? limeFillOutline,
+    Color? selectionFill,
+    Color? onSelectionFill,
   }) {
     return ExomThemePalette(
       background: background ?? this.background,
@@ -87,6 +121,12 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       glassBorder: glassBorder ?? this.glassBorder,
       gradientStart: gradientStart ?? this.gradientStart,
       gradientEnd: gradientEnd ?? this.gradientEnd,
+      data: data ?? this.data,
+      limeFill: limeFill ?? this.limeFill,
+      onLimeFill: onLimeFill ?? this.onLimeFill,
+      limeFillOutline: limeFillOutline ?? this.limeFillOutline,
+      selectionFill: selectionFill ?? this.selectionFill,
+      onSelectionFill: onSelectionFill ?? this.onSelectionFill,
     );
   }
 
@@ -124,6 +164,15 @@ class ExomThemePalette extends ThemeExtension<ExomThemePalette> {
       gradientStart:
           Color.lerp(gradientStart, other.gradientStart, t) ?? gradientStart,
       gradientEnd: Color.lerp(gradientEnd, other.gradientEnd, t) ?? gradientEnd,
+      data: Color.lerp(data, other.data, t) ?? data,
+      limeFill: Color.lerp(limeFill, other.limeFill, t) ?? limeFill,
+      onLimeFill: Color.lerp(onLimeFill, other.onLimeFill, t) ?? onLimeFill,
+      limeFillOutline: Color.lerp(limeFillOutline, other.limeFillOutline, t),
+      selectionFill:
+          Color.lerp(selectionFill, other.selectionFill, t) ?? selectionFill,
+      onSelectionFill:
+          Color.lerp(onSelectionFill, other.onSelectionFill, t) ??
+          onSelectionFill,
     );
   }
 }
@@ -203,92 +252,97 @@ extension ExomThemeContext on BuildContext {
   Color get dietAccent => exomPalette.primary;
 }
 
+/// Brand tokens of the dark theme (V4 brand, decision D2 of the redesign).
+///
+/// The palette is flat: the former glass/gradient tokens keep their names so
+/// existing callers compile, but they now hold opaque panel/rule values.
 class AppColors {
   AppColors._();
 
   // ── Marca ─────────────────────────────────────────────────────────────────
-  static const primary = Color(0xFFC5E384);
-  static const primaryHover = Color(0xFFD2EB99);
-  static const primaryPressed = Color(0xFFA9C85D);
-  static const primarySoft = Color(0xFFEAF4CC);
-  static const primaryDark = Color(0xFFA9C85D); // alias de pressed
+  /// Lima V4. En tema claro solo como relleno (nunca texto ni icono).
+  static const primary = Color(0xFFBAF23A);
+  static const primaryHover = Color(0xFFC8F562);
+  static const primaryPressed = Color(0xFFA4DA2A);
+  static const primarySoft = Color(0xFF232B14);
+  static const primaryDark = primaryPressed; // alias de pressed
 
   // ── Fondos ────────────────────────────────────────────────────────────────
-  static const background = Color(0xFF200F07);
-  static const backgroundSecondary = Color(0xFF261209);
-  static const backgroundTertiary = Color(0xFF2E170B);
+  static const background = Color(0xFF101111);
+  static const backgroundSecondary = Color(0xFF191B19);
+  static const backgroundTertiary = Color(0xFF222522);
 
   // ── Navegación ────────────────────────────────────────────────────────────
-  static const header = Color(0xFF26140B);
-  static const bottomNav = Color(0xFF241209);
-  static const tabActive = Color(0x29C5E384); // #C5E384 16%
+  static const header = Color(0xFF101111);
+  static const bottomNav = Color(0xFF191B19);
+  static const tabActive = primarySoft;
 
   // ── Superficies ───────────────────────────────────────────────────────────
-  static const surface = Color(0xFF241209);
-  static const surfaceElevated = Color(0xFF33190C);
-  static const surfaceVariant = Color(0xFF33190C);
-  static const card = Color(0xFF2B150A);
+  static const surface = Color(0xFF191B19);
+  static const surfaceElevated = Color(0xFF222522);
+  static const surfaceVariant = Color(0xFF222522);
+  static const card = Color(0xFF191B19);
 
-  // Glass surfaces
-  static const surfaceGlass = Color(0x332B150A); // #2B150A 20%
-  static const surfaceGlassLight = Color(0x33C5E384); // #C5E384 20%
+  // Antiguas superficies de cristal: ahora opacas y planas.
+  static const surfaceGlass = surface;
+  static const surfaceGlassLight = primarySoft;
 
-  // ── Bordes (derivados de #C5E384) ─────────────────────────────────────────
-  static const borderSoft = Color(0x1AC5E384); // 10%
-  static const borderMedium = Color(0x29C5E384); // 16%
-  static const borderStrong = Color(0x3DC5E384); // 24%
-  static const focusRing = Color(0x52C5E384); // 32%
-  static const divider = Color(0x1AC5E384); // 10%
+  // ── Bordes (filete V4) ────────────────────────────────────────────────────
+  static const borderSoft = Color(0xFF363B32);
+  static const borderMedium = Color(0xFF363B32);
+  static const borderStrong = Color(0xFF363B32);
+  static const focusRing = textPrimary;
+  static const divider = Color(0xFF363B32);
 
   // ── Texto ─────────────────────────────────────────────────────────────────
-  static const textPrimary = Color(0xFFF7F9EF);
-  static const textSecondary = Color(0xFFE1E8C9);
-  static const textMuted = Color(0xFFB8BEA6);
-  static const textDisabled = Color(0xFF8F947F);
-  static const textOnPrimary = Color(0xFF231208);
+  static const textPrimary = Color(0xFFF2F1E9);
+  static const textSecondary = Color(0xFFB7BCB3);
+  static const textMuted = Color(0xFFB7BCB3);
+  // Terciario: 7,00:1 sobre fondo, 5,73:1 sobre raised.
+  static const textDisabled = Color(0xFF9A9F96);
+  static const textOnPrimary = Color(0xFF101111);
 
   // ── Iconos ────────────────────────────────────────────────────────────────
-  static const iconDefault = Color(0xFFE1E8C9);
+  static const iconDefault = textSecondary;
 
   // ── Estados ───────────────────────────────────────────────────────────────
   static const success = Color(0xFF8CCB68);
   static const warning = Color(0xFFE5BE58);
-  static const error = Color(0xFFD76C5E);
+  static const error = Color(0xFFFF8A73);
   static const info = Color(0xFF7FB5D8);
 
   // ── Botones ───────────────────────────────────────────────────────────────
-  static const buttonDisabled = Color(0xFF6D7558);
+  static const buttonDisabled = Color(0xFF363B32);
   static const buttonDanger = Color(0xFFD76C5E);
   static const buttonDangerHover = Color(0xFFE17B6E);
   static const buttonDangerPressed = Color(0xFFC95C4E);
   static const buttonDangerDisabled = Color(0xFF6A4742);
 
   // ── Feature-specific ──────────────────────────────────────────────────────
-  static const dietCardStart = Color(0xFF1B4822);
-  static const dietCardEnd = Color(0xFF2A6A35);
-  static const trainingCardStart = Color(0xFF552015);
-  static const trainingCardEnd = Color(0xFF7A2E1E);
+  // Los degradados marrón/verde de tarjeta pasan a panel plano.
+  static const dietCardStart = surface;
+  static const dietCardEnd = surface;
+  static const trainingCardStart = surface;
+  static const trainingCardEnd = surface;
   static const calorieAccent = Color(0xFFE8943A);
   static const sleepAccent = Color(0xFF9B7FCC);
 
-  // ── Glass & Gradients (DARK theme) ────────────────────────────────────────
-  static const glassBackground = Color(0x1A2B150A);
-  static const glassBackgroundElevated = Color(0x332B150A);
-  static const glassBorderLight = Color(0x33C5E384);
-  static const glassBorderTop = Color(0x26FFFFFF);
-  static const gradientStart = Color(0xFF1A0D05);
-  static const gradientEnd = Color(0xFF2E170B);
-  static const navBarGlass = Color(0xCC200F07);
-  static const headerGlass = Color(0xB326140B);
+  // ── Antiguo cristal y degradados (tema OSCURO): ahora opacos ─────────────
+  static const glassBackground = surface;
+  static const glassBackgroundElevated = surfaceElevated;
+  static const glassBorderLight = borderSoft;
+  static const glassBorderTop = borderSoft;
+  static const gradientStart = background;
+  static const gradientEnd = background;
+  static const navBarGlass = surface;
+  static const headerGlass = background;
 
-  // ── Glass & Gradients (LIGHT theme) ───────────────────────────────────────
-  // Apple Fitness style: near-white warm cards with soft warm shadow.
-  // No muddy brown overlay — contrast comes from shadow + thin border.
-  static const glassBackgroundLightTheme = Color(0xF2FFFBF5);
-  static const glassBackgroundElevatedLightTheme = Color(0xFAFFFBF5);
-  static const glassBorderLightTheme = Color(0x1F2B150A);
-  static const navBarGlassLightTheme = Color(0xF2FFFBF5);
-  static const headerGlassLightTheme = Color(0xE6FFFBF5);
+  // ── Antiguo cristal (tema CLARO): ahora opaco ────────────────────────────
+  static const glassBackgroundLightTheme = Color(0xFFFBFAF4);
+  static const glassBackgroundElevatedLightTheme = Color(0xFFE8E7DD);
+  static const glassBorderLightTheme = Color(0xFFCFCEC2);
+  static const navBarGlassLightTheme = Color(0xFFFBFAF4);
+  static const headerGlassLightTheme = Color(0xFFF2F1E9);
 
   // ── Alias legacy ──────────────────────────────────────────────────────────
   static const secondary = primary;
@@ -300,18 +354,17 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
-  // Typography family: on Apple platforms, null defers to the system font
-  // (SF Pro Display/Text, with optical sizing). On Android/others we ship
-  // Cabinet Grotesk as the display/body face — see pubspec.yaml for weights.
-  static String? get fontFamily {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-        return null;
-      default:
-        return 'CabinetGrotesk';
-    }
-  }
+  /// Interface face (V4 brand): DM Sans on every platform, iOS included
+  /// (approved in D2). Only the 400 and 600 files are bundled; other weights
+  /// resolve to the nearest available file.
+  static const String bodyFontFamily = 'DMSans';
+
+  /// Display face for titles and numerals: Barlow Condensed 800.
+  static const String displayFontFamily = 'BarlowCondensed';
+
+  /// Default family of the theme. Kept as a nullable getter for API
+  /// compatibility with callers of the previous platform-dependent value.
+  static String? get fontFamily => bodyFontFamily;
 
   static const ExomThemePalette _darkPalette = ExomThemePalette(
     background: AppColors.background,
@@ -333,30 +386,42 @@ class AppTheme {
     glassBorder: AppColors.glassBorderLight,
     gradientStart: AppColors.gradientStart,
     gradientEnd: AppColors.gradientEnd,
+    data: AppColors.primary,
+    limeFill: Color(0xFFBAF23A),
+    onLimeFill: Color(0xFF101111),
+    selectionFill: AppColors.textPrimary,
+    onSelectionFill: AppColors.background,
   );
 
   static const ExomThemePalette _lightPalette = ExomThemePalette(
-    background: Color(0xFFF7F1E6),
-    surface: Color(0xFFFFFBF5),
-    surfaceElevated: Color(0xFFF4EBDE),
-    surfaceVariant: Color(0xFFF0E6D8),
-    borderSoft: Color(0xFFD2C3AE),
-    divider: Color(0xFFC7B7A1),
-    textPrimary: Color(0xFF2B1A10),
-    // Raised contrast for AA compliance on warm cream backgrounds:
-    // body12 at secondary was borderline over #FFFBF5 glass surfaces.
-    textSecondary: Color(0xFF4A3828),
-    textMuted: Color(0xFF6A5648),
-    textDisabled: Color(0xFF8A7768),
-    primary: Color(0xFF5A7125),
-    primarySoft: Color(0xFFE2EACB),
-    onPrimary: Color(0xFFFFFBF5),
-    error: Color(0xFFA33F33),
+    background: Color(0xFFF2F1E9),
+    surface: Color(0xFFFBFAF4),
+    surfaceElevated: Color(0xFFE8E7DD),
+    surfaceVariant: Color(0xFFE8E7DD),
+    borderSoft: Color(0xFFCFCEC2),
+    divider: Color(0xFFCFCEC2),
+    textPrimary: Color(0xFF101111),
+    textSecondary: Color(0xFF55594F),
+    textMuted: Color(0xFF55594F),
+    // Terciario: 5,11:1 sobre hueso, 4,66:1 sobre raised.
+    textDisabled: Color(0xFF63675D),
+    // Acento como texto/icono en claro (5,39:1 sobre hueso). La lima nunca
+    // es texto en claro: solo relleno del botón primario.
+    primary: Color(0xFF4F6B00),
+    primarySoft: Color(0xFFE3EDC2),
+    onPrimary: Color(0xFFF2F1E9),
+    error: Color(0xFFA3321F),
     shadow: Color(0x18000000),
     glassBackground: AppColors.glassBackgroundLightTheme,
     glassBorder: AppColors.glassBorderLightTheme,
-    gradientStart: Color(0xFFF7F1E6),
-    gradientEnd: Color(0xFFE6D9C2),
+    gradientStart: Color(0xFFF2F1E9),
+    gradientEnd: Color(0xFFF2F1E9),
+    data: Color(0xFF4F6B00),
+    limeFill: Color(0xFFBAF23A),
+    onLimeFill: Color(0xFF101111),
+    limeFillOutline: Color(0xFF101111),
+    selectionFill: Color(0xFF101111),
+    onSelectionFill: Color(0xFFF2F1E9),
   );
 
   static const ExomSemanticPalette _darkSemanticPalette = ExomSemanticPalette(
@@ -370,8 +435,8 @@ class AppTheme {
 
   static const ExomSemanticPalette _lightSemanticPalette = ExomSemanticPalette(
     success: Color(0xFF3D6931),
-    warning: Color(0xFF745600),
-    accent: Color(0xFFA33F33),
+    warning: Color(0xFF7A5200),
+    accent: Color(0xFFA3321F),
     calorie: Color(0xFF7A4A12),
     sleep: Color(0xFF5B478F),
     info: Color(0xFF2D6C89),
@@ -397,6 +462,81 @@ class AppTheme {
     );
   }
 
+  static TextStyle _display(double size, Color color) => TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: size,
+    fontWeight: FontWeight.w800,
+    height: 1.0,
+    letterSpacing: -0.02 * size,
+    color: color,
+  );
+
+  static TextStyle _body({
+    required double size,
+    required FontWeight weight,
+    required double height,
+    required double letterSpacing,
+    required Color color,
+  }) => TextStyle(
+    fontFamily: bodyFontFamily,
+    fontSize: size,
+    fontWeight: weight,
+    height: height,
+    letterSpacing: letterSpacing,
+    color: color,
+  );
+
+  static const TextStyle _buttonLabel = TextStyle(
+    fontFamily: bodyFontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.19,
+    letterSpacing: -0.32,
+  );
+
+  static final OutlinedBorder _buttonShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(4),
+  );
+
+  /// Primary filled button: lime fill and charcoal label in both themes; in the
+  /// light theme it also carries a 1.5 px charcoal border.
+  static ButtonStyle _primaryButtonStyle(bool isDark) {
+    final foreground = WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return isDark ? AppColors.textDisabled : const Color(0xFF55594F);
+      }
+      return AppColors.textOnPrimary;
+    });
+    return ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return isDark ? AppColors.borderSoft : const Color(0xFFCFCEC2);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.primaryPressed;
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return AppColors.primaryHover;
+        }
+        return AppColors.primary;
+      }),
+      foregroundColor: foreground,
+      iconColor: foreground,
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+      elevation: WidgetStateProperty.all(0),
+      shadowColor: WidgetStateProperty.all(Colors.transparent),
+      surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
+      minimumSize: WidgetStateProperty.all(const Size(0, 56)),
+      shape: WidgetStateProperty.all(_buttonShape),
+      side: isDark
+          ? null
+          : WidgetStateProperty.all(
+              const BorderSide(color: AppColors.textOnPrimary, width: 1.5),
+            ),
+      textStyle: WidgetStateProperty.all(_buttonLabel),
+    );
+  }
+
   static ThemeData _buildTheme({
     required Brightness brightness,
     required ExomThemePalette palette,
@@ -405,25 +545,33 @@ class AppTheme {
     required Color bottomNavIndicator,
   }) {
     final isDark = brightness == Brightness.dark;
-    final colorScheme = isDark
-        ? ColorScheme.dark(
-            primary: palette.primary,
-            secondary: palette.primary,
-            surface: palette.surface,
-            error: palette.error,
-            onPrimary: palette.onPrimary,
-            onSecondary: palette.onPrimary,
-            onSurface: palette.textPrimary,
-          )
-        : ColorScheme.light(
-            primary: palette.primary,
-            secondary: palette.primary,
-            surface: palette.surface,
-            error: palette.error,
-            onPrimary: palette.onPrimary,
-            onSecondary: palette.onPrimary,
-            onSurface: palette.textPrimary,
-          );
+    final colorScheme = ColorScheme(
+      brightness: brightness,
+      primary: palette.primary,
+      onPrimary: palette.onPrimary,
+      primaryContainer: palette.primarySoft,
+      onPrimaryContainer: palette.textPrimary,
+      secondary: palette.primary,
+      onSecondary: palette.onPrimary,
+      secondaryContainer: palette.primarySoft,
+      onSecondaryContainer: palette.textPrimary,
+      error: palette.error,
+      onError: isDark ? AppColors.textOnPrimary : palette.background,
+      surface: palette.surface,
+      onSurface: palette.textPrimary,
+      onSurfaceVariant: palette.textSecondary,
+      surfaceContainerLowest: palette.background,
+      surfaceContainerLow: palette.surface,
+      surfaceContainer: palette.surface,
+      surfaceContainerHigh: palette.surfaceElevated,
+      surfaceContainerHighest: palette.surfaceElevated,
+      outline: palette.borderSoft,
+      outlineVariant: palette.divider,
+      surfaceTint: Colors.transparent,
+    );
+    final textButtonColor = isDark
+        ? palette.textPrimary
+        : _lightPalette.primary;
 
     return ThemeData(
       useMaterial3: true,
@@ -434,116 +582,101 @@ class AppTheme {
       dividerColor: palette.divider,
       shadowColor: palette.shadow,
       fontFamily: fontFamily,
+      // M1 (L5 T0.5): EXOM push on Android; iOS and macOS keep Cupertino and
+      // its back swipe (risk R3); the rest keep Flutter's default.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: ExomPushPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+        },
+      ),
       extensions: <ThemeExtension<dynamic>>[
         palette,
         isDark ? _darkSemanticPalette : _lightSemanticPalette,
       ],
-      // Typography follows Apple's optical-sizing philosophy: headlines
-      // compress (1.07–1.19 line-height) with negative tracking, body text
-      // opens up (1.43–1.47) but still tracks slightly tight. See DESIGN.md.
+      // V4 typography: Barlow Condensed 800 for display and large headlines
+      // (tight 1.0 line height, -0.02em tracking); DM Sans for the rest
+      // (600 titles/labels, 400 body). Slot sizes are kept from the previous
+      // scale except that no slot is below the plan's 13 minimum.
       textTheme: TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          height: 1.07,
-          letterSpacing: -0.8,
-          color: palette.textPrimary,
-        ),
-        displayMedium: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w700,
-          height: 1.10,
-          letterSpacing: -0.6,
-          color: palette.textPrimary,
-        ),
-        displaySmall: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-          height: 1.14,
-          letterSpacing: -0.5,
-          color: palette.textPrimary,
-        ),
-        headlineLarge: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-          height: 1.14,
-          letterSpacing: -0.5,
-          color: palette.textPrimary,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          height: 1.19,
-          letterSpacing: -0.4,
-          color: palette.textPrimary,
-        ),
-        headlineSmall: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+        displayLarge: _display(32, palette.textPrimary),
+        displayMedium: _display(28, palette.textPrimary),
+        displaySmall: _display(24, palette.textPrimary),
+        headlineLarge: _display(24, palette.textPrimary),
+        headlineMedium: _display(20, palette.textPrimary),
+        headlineSmall: _body(
+          size: 18,
+          weight: FontWeight.w600,
           height: 1.24,
           letterSpacing: -0.37,
           color: palette.textPrimary,
         ),
-        titleLarge: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+        titleLarge: _body(
+          size: 16,
+          weight: FontWeight.w600,
           height: 1.30,
           letterSpacing: -0.32,
           color: palette.textPrimary,
         ),
-        titleMedium: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
+        titleMedium: _body(
+          size: 14,
+          weight: FontWeight.w600,
           height: 1.29,
           letterSpacing: -0.22,
           color: palette.textPrimary,
         ),
-        titleSmall: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+        titleSmall: _body(
+          size: 13,
+          weight: FontWeight.w600,
           height: 1.33,
           letterSpacing: -0.12,
           color: palette.textPrimary,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
+        bodyLarge: _body(
+          size: 16,
+          weight: FontWeight.w400,
           height: 1.47,
           letterSpacing: -0.32,
           color: palette.textPrimary,
         ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
+        // bodyMedium is the inherited DefaultTextStyle: screens that only set
+        // fontSize/weight take this tracking.
+        // DV-L1-1 resuelta por D11 (Flexible + elipsis en _Badge).
+        bodyMedium: _body(
+          size: 14,
+          weight: FontWeight.w400,
           height: 1.43,
           letterSpacing: -0.22,
           color: palette.textSecondary,
         ),
-        bodySmall: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w400,
+        bodySmall: _body(
+          size: 13,
+          weight: FontWeight.w400,
           height: 1.33,
           letterSpacing: -0.12,
           color: palette.textSecondary,
         ),
-        labelLarge: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
+        labelLarge: _body(
+          size: 14,
+          weight: FontWeight.w600,
           height: 1.29,
           letterSpacing: -0.22,
           color: palette.textPrimary,
         ),
-        labelMedium: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+        labelMedium: _body(
+          size: 13,
+          weight: FontWeight.w600,
           height: 1.33,
           letterSpacing: -0.12,
           color: palette.textPrimary,
         ),
-        labelSmall: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          height: 1.40,
+        labelSmall: _body(
+          size: 13,
+          weight: FontWeight.w600,
+          height: 1.33,
           letterSpacing: -0.08,
           color: palette.textSecondary,
         ),
@@ -554,72 +687,65 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontFamily: fontFamily,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+        titleTextStyle: _body(
+          size: 20,
+          weight: FontWeight.w600,
           height: 1.19,
           letterSpacing: -0.4,
           color: palette.textPrimary,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: palette.primary,
-          foregroundColor: palette.onPrimary,
-          minimumSize: const Size(0, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          textStyle: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            height: 1.19,
-            letterSpacing: -0.32,
-          ),
-          elevation: 0,
-        ),
+        style: _primaryButtonStyle(isDark),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: _primaryButtonStyle(isDark),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: palette.primary,
-          minimumSize: const Size(0, 52),
-          side: BorderSide(color: palette.primary, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          textStyle: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            height: 1.19,
-            letterSpacing: -0.32,
-          ),
+          foregroundColor: palette.textPrimary,
+          minimumSize: const Size(0, 56),
+          side: BorderSide(color: palette.textPrimary, width: 1.5),
+          shape: _buttonShape,
+          textStyle: _buttonLabel,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: textButtonColor,
+          shape: _buttonShape,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: palette.surfaceVariant,
+        fillColor: palette.surfaceElevated,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.borderSoft),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.borderSoft, width: 1),
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.borderSoft),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.borderSoft),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.primary, width: 2),
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.textPrimary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.error, width: 1),
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: palette.error, width: 1.5),
         ),
         hintStyle: TextStyle(color: palette.textDisabled),
         labelStyle: TextStyle(color: palette.textSecondary),
@@ -629,9 +755,11 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: palette.surface,
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: palette.borderSoft, width: 1),
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: palette.borderSoft),
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -644,6 +772,7 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: bottomNavBackground,
         indicatorColor: bottomNavIndicator,
+        surfaceTintColor: Colors.transparent,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: palette.primary);
@@ -663,14 +792,20 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: palette.surfaceElevated,
         contentTextStyle: TextStyle(color: palette.textPrimary),
+        // Default actions fell back to inversePrimary (1.10:1 / 1.22:1).
+        actionTextColor: palette.primary,
         behavior: SnackBarBehavior.floating,
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: palette.surface,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
+        // L5 D12: sheets have square corners.
+        shape: const RoundedRectangleBorder(),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
     );
   }

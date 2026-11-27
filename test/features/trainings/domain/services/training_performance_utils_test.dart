@@ -142,4 +142,31 @@ void main() {
     expect(performanceForSet(performances, 1)?.reps, 12);
     expect(performanceForSet(performances, 3)?.reps, 10);
   });
+
+  test('a single repetition reads «1 rep», several keep «reps»', () {
+    TrainingExerciseEntity exercise(int? value, {int? min, int? max}) =>
+        TrainingExerciseEntity(
+          id: 'te-single',
+          order: 0,
+          sets: 1,
+          repsOrDuration: 'legacy',
+          measureType: ExerciseMeasureType.reps,
+          targetValue: value,
+          targetValueMin: min,
+          targetValueMax: max,
+          targetRir: 2,
+          restSeconds: 30,
+          exercise: const ExerciseEntity(
+            id: 'ex-1',
+            name: 'Dominada',
+            muscleGroups: ['espalda'],
+          ),
+        );
+
+    expect(formatExercisePrescription(exercise(1)), '1 rep · RIR 2');
+    expect(formatExercisePrescription(exercise(8)), '8 reps · RIR 2');
+    expect(formatExercisePrescription(exercise(null, min: 8, max: 10)), '8-10 reps · RIR 2');
+    expect(formatSetPerformance(const SetPerformance(setNumber: 1, reps: 1)), '1 rep');
+    expect(formatSetPerformance(const SetPerformance(setNumber: 1, reps: 12)), '12 reps');
+  });
 }

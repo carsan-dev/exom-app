@@ -1,4 +1,6 @@
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/execution_timer.dart';
 import 'dart:async';
 import 'dart:io';
@@ -8,22 +10,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:exom_app/core/formatters/weight_input.dart';
+import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/utils/training_type_utils.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
+import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/domain/services/set_prefill.dart';
 import 'package:exom_app/features/trainings/domain/services/training_performance_utils.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
-import 'package:exom_app/features/trainings/presentation/widgets/exercise_video_preview.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_reminder.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/pending_last_set_restoration.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/prescription_hero.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_value_text.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+
+export 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart'
+    show SetPerformanceResult;
 
 class ActiveExercisePageArgs {
   final TrainingBloc trainingBloc;
@@ -74,9 +98,9 @@ class ActiveExercisePage extends StatelessWidget {
       return ExomStaticBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: const Center(
+          body: Center(
             child: ErrorWidget2(
-              message: 'Missing active exercise context',
+              message: AppLocalizations.of(context).activeExerciseContextMissing,
               onRetry: null,
             ),
           ),
@@ -128,11 +152,31 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   bool _handledCompletion = false;
   bool _allowPop = false;
   bool _popScheduled = false;
-  bool _reminderShown = false;
   bool _lastSetVideoPromptOpen = false;
+
+  /// `last_set_video_reminder_enabled` as shown by the band (L5-D23 i): read
+  /// once, then what the user last switched.
+  bool? _reminderEnabled;
   String? _preparedLastSetFeedbackId;
   SetPerformanceResult? _pendingLastSetPerformance;
   int? _pendingLastSetNumber;
+
+  /// Saved instance state for the pending last set (P-E3b-1); null when the
+  /// app has no restoration scope (tests, other hosts).
+  PendingLastSetStore? _restoration;
+
+  /// The entry this page wrote or applied, cleared again when the set is
+  /// dispatched or the page goes away.
+  PendingLastSetEntry? _ownEntry;
+
+  /// [_ownEntry] came back after Android recreated the activity: it is kept
+  /// until it is applied or explicitly discarded, also when the page goes
+  /// away (P-E3b-1 r2).
+  bool _recovered = false;
+
+  /// True from the tap on «Registrar serie» until the set is dispatched or
+  /// abandoned: repeated taps are ignored (motion card 8a).
+  bool _logging = false;
 
   @override
   void initState() {
@@ -140,12 +184,24 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
-  Color _typeColor(BuildContext context) {
-    return trainingAccentColor(
-      context,
-      accentColor: widget.args.accentColorHex,
-      types: widget.args.trainingTypes,
-    );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _restoration ??= PendingLastSetRestoration.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    // What was recovered after a recreation stays in the saved state until
+    // it is applied or explicitly discarded, so leaving the page keeps it
+    // (r2). A set typed on this page and never recovered is dropped, as
+    // before P-E3b-1. A destroyed activity never gets here and keeps both.
+    if (_recovered) {
+      _ownEntry = null;
+    } else {
+      _forgetPendingLastSet();
+    }
+    super.dispose();
   }
 
   void _popOnce() {
@@ -208,17 +264,175 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     final activeState = await startedState;
     if (!mounted) return;
+    final recoveryFailed = await _restorePendingLastSet(activeState);
+    if (!mounted) return;
 
     setState(() {
       _bootstrapped = true;
     });
+    if (recoveryFailed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).lastSetVideoRecoveryError,
+            ),
+          ),
+        );
+      });
+    }
     _preparedLastSetFeedbackId = activeState.lastSetFeedbackClientUploadId;
-    _scheduleLastSetVideoPreparation(activeState);
     if (activeState.isDone) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _beginCompletion(activeState);
       });
     }
+  }
+
+  bool get _sameSessionNow =>
+      _ownerSession != null &&
+      sl<LocalStorage>().sessionStamp == _ownerSession;
+
+  /// [entry] is this account's entry for this exercise and execution.
+  bool _isOwnEntry(PendingLastSetEntry entry, String? sessionId) {
+    final storage = sl<LocalStorage>();
+    return entry.belongsTo(storage.ownerId, storage.environment) &&
+        entry.isFor(
+          trainingId: widget.trainingId,
+          trainingExerciseId: widget.args.trainingExercise.id,
+          assignmentDate: widget.args.assignmentDate,
+          sessionId: sessionId,
+        );
+  }
+
+  /// After Android recreated the activity (P-E3b-1): takes back the last set
+  /// that was waiting for its video, and the video the picker recovered, if
+  /// they belong to this account, exercise, execution and set and Hive has
+  /// not moved on. Anything else is left untouched and never queued. True
+  /// when the picker could not recover the video (the page says so).
+  Future<bool> _restorePendingLastSet(ActiveExerciseState state) async {
+    final store = _restoration;
+    if (store == null || !widget.args.requiresLastSetVideo) return false;
+    await store.settled;
+    if (!mounted || !_sameSessionNow) return false;
+    final storage = sl<LocalStorage>();
+    final entry = store.entryFor(storage.ownerId, storage.environment);
+    if (entry == null || !_isOwnEntry(entry, state.sessionId)) return false;
+    if (state.isDone ||
+        state.currentSet != entry.setNumber ||
+        state.currentSet != state.totalSets) {
+      store.remove(entry);
+      return false;
+    }
+    _ownEntry = entry;
+    _recovered = true;
+    _pendingLastSetPerformance = entry.performance;
+    _pendingLastSetNumber = entry.setNumber;
+    // A feedback already attached in Hive is reused: never a second one.
+    if (state.lastSetFeedbackClientUploadId != null) return false;
+    final path = entry.videoPath;
+    // The video sheet opens with it in «Vídeo preparado» ([_keptVideo]).
+    if (path != null && File(path).existsSync()) return false;
+    if (!entry.videoLost && path == null) return false;
+    // Said once; the set stays pending and the video is asked again.
+    final acknowledged = entry.copyWith(videoLost: false, clearVideoPath: true);
+    store.replace(entry, acknowledged);
+    _ownEntry = acknowledged;
+    return true;
+  }
+
+  /// Keeps the last set waiting for its video in the saved instance state,
+  /// for this account only.
+  void _rememberPendingLastSet(
+    SetPerformanceResult performance,
+    ActiveExerciseState state,
+  ) {
+    final store = _restoration;
+    final storage = sl<LocalStorage>();
+    final ownerId = storage.ownerId;
+    if (store == null || ownerId == null || !_sameSessionNow) return;
+    final existing = store.entryFor(ownerId, storage.environment);
+    if (existing != null &&
+        existing.setNumber == state.currentSet &&
+        _isOwnEntry(existing, state.sessionId)) {
+      _ownEntry = existing;
+      return;
+    }
+    final entry = PendingLastSetEntry(
+      ownerId: ownerId,
+      environment: storage.environment,
+      trainingId: widget.trainingId,
+      trainingExerciseId: widget.args.trainingExercise.id,
+      assignmentDate: widget.args.assignmentDate,
+      sessionId: state.sessionId,
+      setNumber: state.currentSet,
+      reps: performance.reps,
+      seconds: performance.seconds,
+      weightKg: performance.weight,
+      rir: performance.rir,
+      skipped: performance.skipped,
+    );
+    store.write(entry);
+    _ownEntry = entry;
+  }
+
+  /// Clears this page's entry (if it is still the stored one for the same
+  /// set).
+  void _forgetPendingLastSet() {
+    final own = _ownEntry;
+    _ownEntry = null;
+    _recovered = false;
+    if (own != null) _restoration?.remove(own);
+  }
+
+  /// This page's entry as stored now, if it is still for the same set.
+  PendingLastSetEntry? get _storedOwnEntry {
+    final own = _ownEntry;
+    if (own == null) return null;
+    final current = _restoration?.entryFor(own.ownerId, own.environment);
+    return current != null && current.isSameSet(own) ? current : null;
+  }
+
+  /// Applies [change] to this page's entry if it is still the stored one.
+  void _updateOwnEntry(
+    PendingLastSetEntry Function(PendingLastSetEntry entry) change,
+  ) {
+    final current = _storedOwnEntry;
+    if (current == null) return;
+    final next = change(current);
+    if (next != current) _restoration?.replace(current, next);
+    _ownEntry = next;
+  }
+
+  /// Marks this page's entry as having the picker open (or not).
+  void _markPicking(bool picking) =>
+      _updateOwnEntry((entry) => entry.copyWith(picking: picking));
+
+  /// The video kept in this page's entry (recovered by the picker, or chosen
+  /// before Android recreated the activity), if the file is still there.
+  File? get _keptVideo {
+    final path = _storedOwnEntry?.videoPath;
+    if (path == null) return null;
+    final file = File(path);
+    return file.existsSync() ? file : null;
+  }
+
+  /// The video sheet closed without «Usar vídeo». «Cancelar» is an explicit
+  /// discard: the kept video is forgotten and, if the sheet offered the
+  /// recovered one, the set becomes an ordinary pending set again (dropped
+  /// when leaving the page, as before P-E3b-1). Any other dismissal (scrim,
+  /// drag, back) keeps what was recovered; a video chosen on this page is
+  /// dropped, as the sheet itself does.
+  void _videoSheetClosed({
+    required bool cancelled,
+    required bool offeredKeptVideo,
+  }) {
+    if (!cancelled && _recovered) return;
+    _updateOwnEntry(
+      (entry) => entry.copyWith(clearVideoPath: true, videoLost: false),
+    );
+    if (cancelled && offeredKeptVideo) _recovered = false;
   }
 
   Future<bool> _confirmExit() async {
@@ -236,7 +450,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.activeExerciseCloseTitle),
         content: Text(
-          l10n.activeExerciseCloseMessage(state.completedSets, state.totalSets),
+          l10n.activeExerciseCloseMessage(state.registeredSets, state.totalSets),
         ),
         actions: [
           TextButton(
@@ -263,6 +477,21 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   Future<void> _onCompleteSetPressed(
     ActiveExerciseState state,
     AppLocalizations l10n,
+    WeightText weightText,
+  ) async {
+    if (_logging) return;
+    setState(() => _logging = true);
+    try {
+      await _logSet(state, l10n, weightText);
+    } finally {
+      if (mounted) setState(() => _logging = false);
+    }
+  }
+
+  Future<void> _logSet(
+    ActiveExerciseState state,
+    AppLocalizations l10n,
+    WeightText weightText,
   ) async {
     final timeUnit = timePerformanceUnitForExercise(
       widget.args.trainingExercise,
@@ -275,6 +504,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         await showSetPerformanceSheet(
           context,
           l10n,
+          exerciseName: widget.args.trainingExercise.exercise.name,
           setNumber: state.currentSet,
           prescribedReps: formatExercisePrescription(
             widget.args.trainingExercise,
@@ -288,9 +518,20 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
             widget.args.previousPerformances,
             state.currentSet,
           ),
+          previousSession: widget.args.previousPerformances,
+          lastSetThisExecution: state.setPerformances.isEmpty
+              ? null
+              : state.setPerformances.last,
+          targetCount: _target(state).count,
+          // A restored RIR-only set (P3) keeps its stored RIR preselected.
+          targetRir: state.currentUnregisteredRir ??
+              widget.args.trainingExercise.targetRir,
           timeUnit: timeUnit,
           repsRequired: widget.args.trainingExercise.requestSetTracking,
+          unitSystem: weightText.unitSystem,
+          decimalSeparator: weightText.decimalSeparator,
         );
+    // Null: dismissed, cancelled or a duplicate trigger. Nothing happened.
     if (!mounted || performance == null) return;
 
     String? feedbackId =
@@ -298,7 +539,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     if (state.currentSet == state.totalSets &&
         widget.args.requiresLastSetVideo &&
         feedbackId == null) {
-      feedbackId = await _prepareLastSetVideo();
+      _rememberPendingLastSet(performance, state);
+      feedbackId = await _prepareLastSetVideo(
+        performance,
+        state.currentSet,
+        weightText,
+      );
       if (!mounted || feedbackId == null) {
         _pendingLastSetPerformance = performance;
         _pendingLastSetNumber = state.currentSet;
@@ -308,6 +554,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     _pendingLastSetPerformance = null;
     _pendingLastSetNumber = null;
+    _forgetPendingLastSet();
     context.read<ActiveExerciseBloc>().add(
       performance.skipped
           ? CompleteSet(lastSetFeedbackClientUploadId: feedbackId)
@@ -319,23 +566,6 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
               lastSetFeedbackClientUploadId: feedbackId,
             ),
     );
-  }
-
-  void _scheduleLastSetVideoPreparation(ActiveExerciseState state) {
-    if (!shouldPrepareLastSetVideo(
-      requiresLastSetVideo: widget.args.requiresLastSetVideo,
-      isExecuting: state.isExecuting,
-      currentSet: state.currentSet,
-      totalSets: state.totalSets,
-      completedSets: state.completedSets,
-      feedbackId:
-          _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
-    )) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_prepareLastSetVideo());
-    });
   }
 
   void _beginCompletion(ActiveExerciseState state) {
@@ -383,7 +613,14 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     }
   }
 
-  Future<String?> _prepareLastSetVideo() async {
+  /// Asks for the last set's video once [performance] (set [setNumber]) is
+  /// saved (L5-D23 ii): its own sheet, never on its own when the last set
+  /// starts. Null when nothing was queued; the caller keeps the set pending.
+  Future<String?> _prepareLastSetVideo(
+    SetPerformanceResult performance,
+    int setNumber,
+    WeightText weightText,
+  ) async {
     final bloc = context.read<ActiveExerciseBloc>();
     final existingId =
         _preparedLastSetFeedbackId ?? bloc.state.lastSetFeedbackClientUploadId;
@@ -393,11 +630,13 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
 
     _lastSetVideoPromptOpen = true;
     try {
-      await _showUpcomingLastSetReminder();
-      if (!mounted) return null;
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return null;
-      final feedbackId = await _enqueueLastSetVideo();
+      final feedbackId = await _enqueueLastSetVideo(
+        performance,
+        setNumber,
+        weightText,
+      );
       if (!mounted || feedbackId == null) return null;
       _preparedLastSetFeedbackId = feedbackId;
       bloc.add(AttachLastSetFeedback(feedbackId));
@@ -407,110 +646,90 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     }
   }
 
-  Future<void> _showUpcomingLastSetReminder() async {
-    if (_reminderShown || !mounted) return;
-    _reminderShown = true;
-    final storage = sl<LocalStorage>();
-    final enabled =
-        storage.getSetting<bool>(
-          'last_set_video_reminder_enabled',
-          defaultValue: true,
-        ) ??
-        true;
-    if (!enabled) return;
-    var hideAgain = false;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(AppLocalizations.of(context).upcomingLastSetTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(AppLocalizations.of(context).upcomingLastSetMessage),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: hideAgain,
-                onChanged: (value) =>
-                    setDialogState(() => hideAgain = value ?? false),
-                title: Text(AppLocalizations.of(context).doNotShowAgain),
-              ),
-            ],
+  bool get _reminderOn =>
+      _reminderEnabled ??=
+          sl<LocalStorage>().getSetting<bool>(
+            'last_set_video_reminder_enabled',
+            defaultValue: true,
+          ) ??
+          true;
+
+  /// «Recordármelo»: the same preference as Ajustes (on = true).
+  Future<void> _setReminder(bool enabled) async {
+    setState(() => _reminderEnabled = enabled);
+    try {
+      await sl<LocalStorage>().saveSetting(
+        'last_set_video_reminder_enabled',
+        enabled,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      // Same as Ajustes (M8): undo the optimistic switch and say so.
+      setState(() {
+        if (_reminderEnabled == enabled) _reminderEnabled = !enabled;
+      });
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? l10n.settingsSwitchEnableFailed
+                : l10n.settingsSwitchDisableFailed,
           ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(AppLocalizations.of(context).understood),
-            ),
-          ],
         ),
-      ),
-    );
-    if (hideAgain) {
-      await storage.saveSetting('last_set_video_reminder_enabled', false);
+      );
     }
   }
 
-  Future<String?> _enqueueLastSetVideo() async {
-    final source = await showModalBottomSheet<ImageSource>(
+  /// The last-set video sheet (L5-D23 ii-iii); «Usar vídeo» queues with the
+  /// same fields and the same session check as before E3b. «Cambiar»,
+  /// «Cancelar», a dismissal or a router change queue nothing.
+  Future<String?> _enqueueLastSetVideo(
+    SetPerformanceResult performance,
+    int setNumber,
+    WeightText weightText,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final exercise = widget.args.trainingExercise.exercise;
+    final performed = performance.skipped
+        ? null
+        : setValueLabel(
+            l10n,
+            SetPerformance(
+              setNumber: setNumber,
+              reps: performance.reps,
+              seconds: performance.seconds,
+              weightKg: performance.weight,
+            ),
+            weightText,
+          );
+    final keptVideo = _keptVideo;
+    var cancelled = false;
+    final choice = await showExomSheet<LastSetVideoChoice>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: Text(AppLocalizations.of(context).attachLastSetVideo),
-              subtitle: Text(
-                AppLocalizations.of(context).lastSetVideoRequiredDescription,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: Text(AppLocalizations.of(context).recordNow),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.video_library_outlined),
-              title: Text(AppLocalizations.of(context).chooseFromGallery),
-              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
-            ),
-          ],
-        ),
+      builder: (_) => LastSetVideoSheet(
+        kicker: l10n.lastSetVideoSheetKicker(exercise.name, setNumber),
+        setLabel: performed == null || performed.isEmpty
+            ? l10n.setPerformanceTitle(setNumber)
+            : l10n.lastSetVideoChosenSet(setNumber, performed),
+        pickVideo: _pickLastSetVideo,
+        initialVideo: keptVideo,
+        onCancel: () => cancelled = true,
       ),
     );
-    if (source == null || !mounted) return null;
-    final picked = await _pickLastSetVideo(source);
-    if (picked == null || !mounted) return null;
-    var notes = '';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(AppLocalizations.of(context).videoReadyTitle),
-        content: TextField(
-          maxLines: 3,
-          onChanged: (value) => notes = value,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context).optionalComment,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(AppLocalizations.of(context).changeVideo),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(AppLocalizations.of(context).useVideo),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted || !context.mounted || _ownerSession == null ||
+    if (choice == null && mounted) {
+      _videoSheetClosed(
+        cancelled: cancelled,
+        offeredKeptVideo: keptVideo != null,
+      );
+    }
+    if (choice == null || !mounted || !context.mounted ||
+        _ownerSession == null ||
         sl<LocalStorage>().sessionStamp != _ownerSession) {
       return null;
     }
-    notes = notes.trim();
+    final picked = choice.file;
+    final notes = choice.notes.trim();
     return sl<FeedbackUploadQueueService>().enqueue(
       expectedSession: _ownerSession,
       file: picked,
@@ -523,6 +742,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       trainingExerciseId: widget.args.trainingExercise.id,
       assignmentDate: widget.args.assignmentDate,
       sessionId: context.read<ActiveExerciseBloc>().state.sessionId,
+      exerciseName: exercise.name,
     );
   }
 
@@ -538,13 +758,30 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
   Future<File?> _pickLastSetVideo(ImageSource initialSource) async {
     var source = initialSource;
     while (mounted) {
+      if (_ownEntry != null) {
+        // Into the saved state before the picker can stop the activity.
+        _markPicking(true);
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return null;
+      }
       try {
         final picked = await ImagePicker().pickVideo(
           source: source,
           maxDuration: const Duration(minutes: 2),
         );
-        return picked == null ? null : File(picked.path);
+        if (picked == null) return null;
+        // Kept until «Usar vídeo», in case Android recreates the activity
+        // with the sheet still open (r2).
+        _updateOwnEntry(
+          (entry) => entry.copyWith(
+            picking: false,
+            videoPath: picked.path,
+            videoLost: false,
+          ),
+        );
+        return File(picked.path);
       } on Object catch (error) {
+        _markPicking(false);
         if (!mounted) return null;
         final action = await showMediaPickerErrorDialog(
           context,
@@ -556,6 +793,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         } else if (action != MediaPickerRecoveryAction.retry) {
           return null;
         }
+      } finally {
+        _markPicking(false);
       }
     }
     return null;
@@ -578,18 +817,107 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     );
   }
 
-  String _formatWeight(double weight) {
-    return weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1);
+  bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
+
+  bool get _hasVideo {
+    final url = widget.args.trainingExercise.exercise.videoUrl?.trim();
+    return url != null && url.isNotEmpty;
   }
 
-  bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
+  List<TechniqueSection> _techniqueSections(AppLocalizations l10n) {
+    final exercise = widget.args.trainingExercise.exercise;
+    return [
+      if (_hasContent(exercise.techniqueText))
+        (title: l10n.technique, text: exercise.techniqueText!.trim()),
+      if (_hasContent(exercise.commonErrorsText))
+        (title: l10n.commonMistakes, text: exercise.commonErrorsText!.trim()),
+      if (_hasContent(exercise.explanationText))
+        (title: l10n.explanation, text: exercise.explanationText!.trim()),
+    ];
+  }
+
+  Future<void> _openTechnique(AppLocalizations l10n) async {
+    final exercise = widget.args.trainingExercise.exercise;
+    await showExerciseTechniqueSheet(
+      context,
+      exerciseName: exercise.name,
+      hasVideo: _hasVideo,
+      videoUrl: exercise.videoUrl,
+      thumbnailUrl: exercise.thumbnailUrl,
+      onOpenVideo: _openVideoPlayer,
+      sections: _techniqueSections(l10n),
+    );
+  }
+
+  /// «Ejercicio 2 de 6» from the training detail that opened this page, when
+  /// it is still the loaded state of the shared TrainingBloc.
+  String? _positionLabel(AppLocalizations l10n) {
+    final trainingState = widget.args.trainingBloc.state;
+    if (trainingState is! TrainingDetailLoaded ||
+        trainingState.training.id != widget.trainingId) {
+      return null;
+    }
+    final exercises = trainingState.training.exercises;
+    final index = exercises.indexWhere(
+      (item) => item.id == widget.args.trainingExercise.id,
+    );
+    if (index < 0) return null;
+    return l10n.activeExercisePosition(index + 1, exercises.length);
+  }
+
+  /// What comes after this exercise, for the rest after its last set: the
+  /// first other exercise of the training, in list order, that is not
+  /// completed yet in this execution (what the training detail offers next),
+  /// read from the detail state that opened this page, as [_positionLabel].
+  /// Null when every
+  /// other exercise is done or the detail is not the loaded state.
+  TrainingExerciseEntity? _nextExercise() {
+    final trainingState = widget.args.trainingBloc.state;
+    if (trainingState is! TrainingDetailLoaded ||
+        trainingState.training.id != widget.trainingId) {
+      return null;
+    }
+    final currentId = widget.args.trainingExercise.id;
+    // The progress of this execution, as the detail paints it; a missing
+    // session means nothing done. The day aggregate (every execution) would
+    // skip exercises still pending after a «Nueva ejecución».
+    final done =
+        trainingState.sessionProgress[widget.args.sessionId]?.ids ??
+        const <String>{};
+    for (final exercise in trainingState.training.exercises) {
+      if (exercise.id == currentId) continue;
+      if (!done.contains(exercise.id)) {
+        return exercise;
+      }
+    }
+    return null;
+  }
+
+  _PrescriptionTarget _target(ActiveExerciseState state) =>
+      _PrescriptionTarget.of(
+        widget.args.trainingExercise,
+        savedTotalSeconds: state.timedTotalSeconds,
+      );
+
+  double? _weightForSet(ActiveExerciseState state) => prefillWeightKg(
+    today: performanceForSet(widget.args.currentPerformances, state.currentSet),
+    sessionWeightKg: state.weightKg,
+    previous: widget.args.previousPerformances,
+    setNumber: state.currentSet,
+  );
+
+  Future<void> _close() async {
+    final shouldClose = await _confirmExit();
+    if (!mounted || !shouldClose) return;
+    _popOnce();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final exercise = widget.args.trainingExercise.exercise;
-    final typeColor = _typeColor(context);
-    final solidTypeStyle = trainingColorStyle(context, typeColor);
+    // Read here (this widget's build), not inside the BlocBuilder callback.
+    final weightText = WeightText.of(context);
 
     if (!_bootstrapped) {
       return ExomStaticBackground(
@@ -606,11 +934,18 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
           previous.currentSet != current.currentSet ||
           previous.errorMessage != current.errorMessage,
       listener: (context, state) {
-        _scheduleLastSetVideoPreparation(state);
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          ).showSnackBar(SnackBar(content: Text(
+              state.errorMessage == ActiveExerciseState.otherExecutionMessage
+                  ? AppLocalizations.of(context).activeExerciseOtherExecution
+                  : localizedErrorTextOf(
+                      context,
+                      state.errorMessage,
+                      fallback: (l10n) => l10n.activeExerciseSaveError,
+                    ),
+            )));
         }
 
         if (state.isDone) _beginCompletion(state);
@@ -618,22 +953,8 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
       child: BlocBuilder<ActiveExerciseBloc, ActiveExerciseState>(
         builder: (context, state) {
           final palette = context.exomPalette;
-          final semantic = context.exomSemantic;
-          final targetPrescription = formatExercisePrescription(
-            widget.args.trainingExercise,
-            savedTotalSeconds: state.timedTotalSeconds,
-            savedTimedPrescription: state.timedPrescription,
-          );
-          final prescriptionLabel = state.weightKg == null
-              ? targetPrescription
-              : '$targetPrescription x ${_formatWeight(state.weightKg!)} kg';
-          final previousPerformance = performanceForSet(
-            widget.args.previousPerformances,
-            state.currentSet,
-          );
-          final previousPerformanceLabel = previousPerformance == null
-              ? null
-              : formatSetPerformance(previousPerformance);
+          final target = _target(state);
+          final position = _positionLabel(l10n);
 
           return PopScope<void>(
             canPop: _allowPop,
@@ -649,249 +970,44 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                 body: SafeArea(
                   bottom: false,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                        child: Row(
-                          children: [
-                            _CircleIconButton(
-                              icon: Icons.close_rounded,
-                              onTap: () async {
-                                final shouldClose = await _confirmExit();
-                                if (!context.mounted || !shouldClose) return;
-                                _popOnce();
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    widget.args.trainingName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: palette.textSecondary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    exercise.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: palette.textPrimary,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 56),
-                          ],
-                        ),
+                      _Header(
+                        exerciseName: exercise.name,
+                        position: position,
+                        closeTooltip: l10n.activeExerciseCloseA11y,
+                        onClose: _close,
                       ),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: 200,
-                                child: ExerciseVideoPreview(
-                                  title: exercise.name,
-                                  videoUrl: exercise.videoUrl,
-                                  thumbnailUrl: exercise.thumbnailUrl,
-                                  onTap: _openVideoPlayer,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Container(
-                                decoration: GlassDecoration.card(
-                                  borderRadius: 24,
-                                ),
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: typeColor.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              999,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            state.isResting
-                                                ? l10n.activeExerciseResting
-                                                : l10n.activeExerciseExecuting,
-                                            style: TextStyle(
-                                              color: typeColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          widget.args.trainingLevel,
-                                          style: TextStyle(
-                                            color: palette.textDisabled,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 18),
-                                    Text(
-                                      state.isFinalResting
-                                          ? l10n.exerciseCompleted
-                                          : l10n.exerciseSetProgress(
-                                              state.currentSet,
-                                              state.totalSets,
-                                            ),
-                                      style: TextStyle(
-                                        color: palette.textPrimary,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      prescriptionLabel,
-                                      style: TextStyle(
-                                        color: palette.textSecondary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (state.isExecuting &&
-                                        state.timedTotalSeconds != null)
-                                      ExecutionTimer(
-                                        state: state,
-                                        coordinator: sl<ExecutionTimerCoordinator>(),
-                                        isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
-                                          _ownerSession,
-                                          _timerSessionRevision,
-                                        ),
-                                        runKey: (widget.trainingId, widget.exerciseId,
-                                            widget.args.assignmentDate, widget.args.sessionId),
-                                      ),
-                                    if (previousPerformanceLabel != null &&
-                                        previousPerformanceLabel
-                                            .isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        l10n.setPerformancePrevious(
-                                          previousPerformanceLabel,
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textSecondary,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                    if (state.weightKg != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        l10n.activeExerciseLastWeight(
-                                          _formatWeight(state.weightKg!),
-                                        ),
-                                        style: TextStyle(
-                                          color: palette.textDisabled,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 16),
-                                    LinearProgressIndicator(
-                                      value: state.totalSets == 0
-                                          ? 0
-                                          : state.completedSets /
-                                                state.totalSets,
-                                      minHeight: 8,
-                                      backgroundColor: palette.surfaceVariant,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        state.isDone
-                                            ? semantic.success
-                                            : typeColor,
-                                      ),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      l10n.exerciseSeriesProgress(
-                                        state.completedSets,
-                                        state.totalSets,
-                                      ),
-                                      style: TextStyle(
-                                        color: palette.textSecondary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_hasContent(exercise.techniqueText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.technique,
-                                  text: exercise.techniqueText!,
-                                ),
-                              ],
-                              if (_hasContent(exercise.commonErrorsText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.commonMistakes,
-                                  text: exercise.commonErrorsText!,
-                                ),
-                              ],
-                              if (_hasContent(exercise.explanationText)) ...[
-                                const SizedBox(height: 14),
-                                _DetailSection(
-                                  title: l10n.explanation,
-                                  text: exercise.explanationText!,
-                                ),
-                              ],
-                            ],
+                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
+                          child: _body(
+                            context,
+                            l10n,
+                            state,
+                            target,
+                            weightText,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                bottomNavigationBar: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    8,
-                    16,
-                    trainingFooterBottomPadding(
-                      platform: defaultTargetPlatform,
-                      navigationInset: MediaQuery.viewPaddingOf(context).bottom,
-                      systemGestureInset: MediaQuery.systemGestureInsetsOf(
-                        context,
-                      ).bottom,
+                bottomNavigationBar: ExomPinnedFooter(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      12,
+                      20,
+                      trainingFooterBottomPadding(
+                        platform: defaultTargetPlatform,
+                        navigationInset: MediaQuery.viewPaddingOf(
+                          context,
+                        ).bottom,
+                        systemGestureInset: MediaQuery.systemGestureInsetsOf(
+                          context,
+                        ).bottom,
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.zero,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
                       switchInCurve: Curves.easeOutCubic,
@@ -900,80 +1016,559 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
                         ActiveExerciseStatus.executing => SizedBox(
                           key: const ValueKey('footer-executing'),
                           width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _onCompleteSetPressed(state, l10n),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  state.currentSet == state.totalSets
-                                  ? semantic.success
-                                  : typeColor,
-                              foregroundColor:
-                                  state.currentSet == state.totalSets
-                                  ? palette.onPrimary
-                                  : solidTypeStyle.foreground,
-                              side: state.currentSet == state.totalSets
-                                  ? null
-                                  : BorderSide(color: solidTypeStyle.border),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            child: Text(l10n.completeSetButton.toUpperCase()),
+                          child: ExomPrimaryButton(
+                            label: l10n.activeExerciseLogSetButton,
+                            trailingIcon: ExomIcons.forward,
+                            busy: _logging,
+                            onPressed: () =>
+                                _onCompleteSetPressed(state, l10n, weightText),
                           ),
                         ),
                         ActiveExerciseStatus.resting => _RestingFooter(
                           key: ValueKey(
                             'footer-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
                           ),
-                          totalSeconds: state.restSeconds,
                           restEndsAt: state.restEndsAt!,
                           onSkip: () => context.read<ActiveExerciseBloc>().add(
                             const SkipRest(),
                           ),
-                          onFinished: () => context
+                          onExtend: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const FinishRest()),
+                              .add(const ExtendRest()),
+                          onFinished: (endsAt) => context
+                              .read<ActiveExerciseBloc>()
+                              .add(FinishRest(restEndsAt: endsAt)),
                         ),
                         ActiveExerciseStatus.finalResting => _RestingFooter(
                           key: ValueKey(
                             'footer-final-resting-${state.restEndsAt?.millisecondsSinceEpoch}',
                           ),
-                          totalSeconds: state.restSeconds,
                           restEndsAt: state.restEndsAt!,
                           onSkip: () => context.read<ActiveExerciseBloc>().add(
                             const SkipRest(),
                           ),
-                          onFinished: () => context
+                          onExtend: () => context
                               .read<ActiveExerciseBloc>()
-                              .add(const FinishRest()),
+                              .add(const ExtendRest()),
+                          onFinished: (endsAt) => context
+                              .read<ActiveExerciseBloc>()
+                              .add(FinishRest(restEndsAt: endsAt)),
                         ),
-                        ActiveExerciseStatus.done => Container(
+                        ActiveExerciseStatus.done => SizedBox(
                           key: const ValueKey('footer-done'),
-                          decoration: GlassDecoration.card(borderRadius: 22),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.6,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                palette.primary,
+                          height: kExomButtonMinHeight,
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.6,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  palette.textPrimary,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       },
                     ),
-                  ),
                 ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    AppLocalizations l10n,
+    ActiveExerciseState state,
+    _PrescriptionTarget target,
+    WeightText weightText,
+  ) {
+    final palette = context.exomPalette;
+    final mutedStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 14,
+      height: 1.4,
+      color: palette.textSecondary,
+    );
+    // Rows pad themselves 20 from the edges; the load columns and the band of
+    // the next set run edge to edge (`.pad`, `.x-cols`, `.x-band`).
+    Widget pad(Widget child) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: child,
+    );
+
+    final weightKg = _weightForSet(state);
+    final targetLabel = target.shortLabel(l10n);
+    final chips = ActiveExerciseSetChips(
+      totalSets: state.totalSets,
+      completedSets: state.completedSets,
+      currentSet: state.isExecuting ? state.currentSet : null,
+      performances: state.setPerformances,
+      targetLabel: targetLabel,
+      weightText: weightText,
+      unregisteredSets: state.unregisteredSets,
+    );
+    // The bloc emits before the Hive write; a failed write emits an error
+    // message, so «saved on this phone» is shown only without one. Never
+    // «synced»: sets travel in the exercise completion, not one by one.
+    final savedStatus = state.registeredSets > 0 && state.errorMessage == null
+        ? Semantics(
+            container: true,
+            liveRegion: true,
+            child: ExomSyncStatus(
+              key: const Key('active-exercise-set-status'),
+              state: ExomSyncState.guardadaEnMovil,
+              label: l10n.activeExerciseSetSavedStatus(
+                state.registeredSets,
+                l10n.syncStatusSavedOnDevice,
+              ),
+            ),
+          )
+        : null;
+    final status = <Widget>[
+      if (savedStatus != null) ...[
+        const SizedBox(height: 8),
+        pad(savedStatus),
+      ],
+    ];
+
+    if (state.isResting) {
+      final restEndsAt = state.restEndsAt!;
+      final nextSet = state.isFinalResting ? null : state.currentSet;
+      // After the last set the rest leads to the next exercise of the
+      // training (a circuit is named by its block); after the last exercise,
+      // to nothing, without a band.
+      final nextExercise = nextSet == null ? _nextExercise() : null;
+      final nextExerciseName = nextExercise == null
+          ? null
+          : nextExercise.blockId != null
+          ? nextExercise.blockName ?? 'Circuito'
+          : nextExercise.exercise.name;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          pad(
+            ExomTwoLineHeadline(
+              first: l10n.activeExerciseRestHeadline,
+              second: nextSet != null
+                  ? l10n.activeExerciseRestThenSet(nextSet)
+                  : nextExerciseName != null
+                  ? l10n.activeExerciseRestThenExercise(nextExerciseName)
+                  : l10n.activeExerciseRestExerciseDone,
+            ),
+          ),
+          const SizedBox(height: 16),
+          pad(
+            // L5-D48: «+30 s» re-keys the countdown; the scope keeps the bar
+            // growing to the new total instead of starting over.
+            RestCountdownScope(
+              // Same rest while the exercise, its session and the set that
+              // started it are the same; «+30 s» only moves the deadline.
+              restId: (
+                widget.exerciseId,
+                state.sessionId,
+                state.completedSets,
+                state.currentSet,
+                state.status,
+              ),
+              child: RestCountdown(
+                key: ValueKey(
+                  'rest-countdown-${restEndsAt.millisecondsSinceEpoch}',
+                ),
+                restEndsAt: restEndsAt,
+                totalSeconds: state.restSeconds,
+              ),
+            ),
+          ),
+          if (nextSet != null && targetLabel != null) ...[
+            const SizedBox(height: 24),
+            _NextSetBand(
+              setNumber: nextSet,
+              targetLabel: targetLabel,
+              weight: weightKg == null ? null : weightText(weightKg),
+            ),
+          ],
+          if (nextExercise != null && nextExerciseName != null) ...[
+            const SizedBox(height: 24),
+            _NextExerciseBand(
+              name: nextExerciseName,
+              // A circuit tells its members' prescriptions inside it.
+              target: nextExercise.blockId != null
+                  ? null
+                  : formatExercisePrescription(nextExercise),
+            ),
+          ],
+          const SizedBox(height: 24),
+          pad(chips),
+          ...status,
+        ],
+      );
+    }
+
+    if (state.isDone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          pad(
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.exerciseCompleted.toUpperCase(),
+                style: ExomType.section.copyWith(color: palette.textPrimary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          pad(chips),
+          ...status,
+        ],
+      );
+    }
+
+    final previous = performanceForSet(
+      widget.args.previousPerformances,
+      state.currentSet,
+    );
+    final targetRir = widget.args.trainingExercise.targetRir;
+    final sections = _techniqueSections(l10n);
+    final hasTechnique = _hasVideo || sections.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        pad(
+          ExomTwoLineHeadline(
+            first: l10n.setPerformanceTitle(state.currentSet),
+            second: l10n.activeExerciseSetOfLine(state.totalSets),
+            semanticsLabel: l10n.activeExerciseSetOf(
+              state.currentSet,
+              state.totalSets,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        pad(
+          PrescriptionHero(
+            target: PrescriptionTarget(
+              timeUnit: target.timeUnit,
+              value: target.value,
+              max: target.max,
+              seconds: target.seconds,
+            ),
+            targetRir: targetRir,
+            prescription: formatExercisePrescription(
+              widget.args.trainingExercise,
+              savedTotalSeconds: state.timedTotalSeconds,
+              savedTimedPrescription: state.timedPrescription,
+            ),
+            numeralKey: const Key('active-exercise-target'),
+            skin: PrescriptionHeroSkin.l5,
+          ),
+        ),
+        const SizedBox(height: 24),
+        _loadColumns(
+          l10n: l10n,
+          weightKg: weightKg,
+          previous: previous,
+          weightText: weightText,
+        ),
+        if (showsLastSetVideoReminder(
+          requiresLastSetVideo: widget.args.requiresLastSetVideo,
+          isExecuting: state.isExecuting,
+          currentSet: state.currentSet,
+          totalSets: state.totalSets,
+          completedSets: state.completedSets,
+          feedbackId:
+              _preparedLastSetFeedbackId ?? state.lastSetFeedbackClientUploadId,
+        ))
+          // Directly under the columns, sharing their bottom rule (an empty
+          // 24 strip between two rules read as an empty section).
+          LastSetVideoReminder(
+            joinsPrevious: true,
+            enabled: _reminderOn,
+            title: l10n.upcomingLastSetTitle,
+            // On the last set itself «the next one is the last» would be
+            // wrong (r3, D1).
+            message: state.currentSet == state.totalSets
+                ? l10n.currentLastSetMessage
+                : l10n.upcomingLastSetMessage,
+            onChanged: _setReminder,
+          ),
+        if (state.isExecuting && state.timedTotalSeconds != null) ...[
+          // A section of its own: mt24 as every section of the page (it sat
+          // flush under the columns or the last-set band).
+          const SizedBox(height: 24),
+          pad(
+            ExecutionTimer(
+              state: state,
+              coordinator: sl<ExecutionTimerCoordinator>(),
+              isOwnerCurrent: () => isExecutionTimerOwnerCurrent(
+                _ownerSession,
+                _timerSessionRevision,
+              ),
+              runKey: (widget.trainingId, widget.exerciseId,
+                  widget.args.assignmentDate, widget.args.sessionId),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        pad(
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomKicker(l10n.sets),
+          ),
+        ),
+        const SizedBox(height: 8),
+        pad(chips),
+        ...status,
+        if (state.restSeconds > 0) ...[
+          const SizedBox(height: 8),
+          pad(
+            Text(
+              l10n.activeExerciseRestAfter(state.restSeconds),
+              style: mutedStyle,
+            ),
+          ),
+        ],
+        if (hasTechnique) ...[
+          const SizedBox(height: 8),
+          pad(
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExomTextLink(
+                key: const Key('active-exercise-technique'),
+                label: l10n.activeExerciseTechniqueButton,
+                // Play with a video; a plain link with only texts (as the
+                // circuit, L5-E5).
+                icon: _hasVideo ? ExomIcons.play : null,
+                onTap: () => _openTechnique(l10n),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// «Tu peso» and «Última vez» in two columns between hairlines (`.x-cols`,
+/// `e-load`, `e-ref`) with the shared [ExomFigureColumns] and its labels
+/// above, as the circuit (L5-E5): today's weight is the protagonist load at 64
+/// in the data colour; the last session's same set is a reference in the text
+/// colour at 56 with its reps and RIR below. Without today's weight only the
+/// reference column is shown; without a previous set it says so. The component
+/// stacks the columns when they do not fit.
+ExomFigureColumns _loadColumns({
+  required AppLocalizations l10n,
+  required double? weightKg,
+  required SetPerformance? previous,
+  required WeightText weightText,
+}) {
+  final kg = weightKg;
+  return ExomFigureColumns(
+    numbered: false,
+    labelsAbove: true,
+    items: [
+      if (kg != null)
+        ExomFigure(
+          itemKey: const Key('active-exercise-your-weight'),
+          value: weightText.number(kg),
+          unit: weightText.symbol,
+          label: l10n.activeExerciseYourWeightLabel,
+          size: ExomFigureSize.s64,
+          semanticsLabel: l10n.activeExerciseYourWeight(weightText(kg)),
+        ),
+      _previousFigure(l10n, previous, weightText),
+    ],
+  );
+}
+
+/// «Última vez»: the figure is the weight when there was one, else the reps or
+/// seconds; what is left (reps, seconds, RIR) goes below it. Without a
+/// previous set, no figure and «Sin datos anteriores» below the label.
+ExomFigure _previousFigure(
+  AppLocalizations l10n,
+  SetPerformance? previous,
+  WeightText weightText,
+) {
+  const key = Key('active-exercise-previous');
+  final set = previous;
+  final label = set == null
+      ? null
+      : setValueLabel(l10n, set, weightText, withRir: true);
+  if (set == null || label == null || label.isEmpty) {
+    return ExomFigure(
+      itemKey: key,
+      value: '',
+      label: l10n.exerciseLastTimeLabel,
+      tone: ExomFigureTone.text,
+      detail: l10n.activeExerciseNoPrevious,
+      semanticsLabel:
+          '${l10n.exerciseLastTimeLabel}: ${l10n.activeExerciseNoPrevious}',
+    );
+  }
+  final kg = set.weightKg;
+  final (String value, String unit) = kg != null
+      ? (weightText.number(kg), weightText.symbol)
+      : set.reps != null
+      ? ('${set.reps}', l10n.activeExerciseUnitReps)
+      : set.seconds != null
+      ? ('${set.seconds}', l10n.activeExerciseUnitSeconds)
+      : ('', '');
+  final rest = [
+    if (kg != null && set.reps != null)
+      '${set.reps} ${l10n.activeExerciseUnitReps}',
+    if (kg != null && set.seconds != null)
+      '${set.seconds} ${l10n.activeExerciseUnitSeconds}',
+    if (set.rir != null) l10n.activeExerciseRir(set.rir!),
+  ].join(' · ');
+  return ExomFigure(
+    itemKey: key,
+    value: value,
+    unit: value.isEmpty ? null : unit,
+    label: l10n.exerciseLastTimeLabel,
+    tone: ExomFigureTone.text,
+    detail: value.isEmpty ? label : (rest.isEmpty ? null : rest),
+    semanticsLabel: l10n.activeExerciseLastTimeA11y(label),
+  );
+}
+
+/// Band of the next set during a rest (`.x-band`, «Siguiente»): the set in
+/// the display face and its target with today's weight in the data colour.
+/// Assistive technology reads the same sentence as before L5.
+class _NextSetBand extends StatelessWidget {
+  const _NextSetBand({
+    required this.setNumber,
+    required this.targetLabel,
+    required this.weight,
+  });
+
+  final int setNumber;
+  final String targetLabel;
+  final String? weight;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final load = weight;
+    final bigStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 18,
+      height: 1.4,
+      color: palette.textPrimary,
+    );
+    return Semantics(
+      container: true,
+      label: load == null
+          ? l10n.activeExerciseRestNext(setNumber, targetLabel)
+          : l10n.activeExerciseRestNextWithWeight(
+              setNumber,
+              targetLabel,
+              load,
+            ),
+      excludeSemantics: true,
+      child: ExomBand(
+        kicker: l10n.activeExerciseNextLabel,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.setPerformanceTitle(setNumber).toUpperCase(),
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: targetLabel),
+                    if (load != null) ...[
+                      TextSpan(
+                        text:
+                            ' · ${l10n.activeExerciseRestNextWeightLabel} ',
+                      ),
+                      TextSpan(
+                        text: load,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: palette.data,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                key: const Key('active-exercise-rest-next'),
+                style: bigStyle,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Band of the next exercise during the rest after the last set (`.x-band`,
+/// «Siguiente»): its name in the display face and its prescription below, as
+/// [_NextSetBand] does for the next set. Read as one sentence.
+class _NextExerciseBand extends StatelessWidget {
+  const _NextExerciseBand({required this.name, required this.target});
+
+  final String name;
+  final String? target;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final prescription = target?.trim();
+    final hasTarget = prescription != null && prescription.isNotEmpty;
+    return Semantics(
+      container: true,
+      label: hasTarget
+          ? l10n.circuitNextExercise(name, prescription)
+          : l10n.restTimerNextExercise(name),
+      excludeSemantics: true,
+      child: ExomBand(
+        key: const Key('active-exercise-rest-next-exercise'),
+        kicker: l10n.activeExerciseNextLabel,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                name.toUpperCase(),
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              if (hasTarget) ...[
+                const SizedBox(height: 8),
+                Text(
+                  prescription,
+                  style: TextStyle(
+                    fontFamily: AppTheme.bodyFontFamily,
+                    fontSize: 18,
+                    height: 1.4,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -995,6 +1590,30 @@ bool shouldPrepareLastSetVideo({
       (feedbackId == null || feedbackId.isEmpty);
 }
 
+/// L5-D23 (i): the reminder band (or its minimal line when switched off) is
+/// shown while the set before the last one, or the last one, is executing
+/// and the last set still needs its video. Informative only: when the video
+/// is mandatory does not change.
+@visibleForTesting
+bool showsLastSetVideoReminder({
+  required bool requiresLastSetVideo,
+  required bool isExecuting,
+  required int currentSet,
+  required int totalSets,
+  required int completedSets,
+  required String? feedbackId,
+}) {
+  bool lastSetAt(int set) => shouldPrepareLastSetVideo(
+    requiresLastSetVideo: requiresLastSetVideo,
+    isExecuting: isExecuting,
+    currentSet: set,
+    totalSets: totalSets,
+    completedSets: completedSets,
+    feedbackId: feedbackId,
+  );
+  return lastSetAt(currentSet) || lastSetAt(currentSet + 1);
+}
+
 @visibleForTesting
 double trainingFooterBottomPadding({
   required TargetPlatform platform,
@@ -1013,64 +1632,178 @@ double trainingFooterBottomPadding({
       : navigationInset.clamp(margin, double.infinity);
 }
 
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+/// Target of the prescription for the hero numeral, the set chips and the
+/// sheet prefill: a fixed value or a range, in reps or in time.
+class _PrescriptionTarget {
+  const _PrescriptionTarget({
+    required this.timeUnit,
+    this.value,
+    this.max,
+    this.seconds,
+  });
 
-  const _CircleIconButton({required this.icon, required this.onTap});
+  /// Null for reps.
+  final TimePerformanceUnit? timeUnit;
 
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
+  /// Number shown (reps, seconds or minutes); null when the prescription is
+  /// free text.
+  final int? value;
 
-    return Material(
-      color: palette.surfaceVariant.withValues(alpha: 0.92),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: palette.textPrimary, size: 20),
-        ),
-      ),
+  /// Upper end of a range («8–10»).
+  final int? max;
+
+  /// Timed prescriptions: total seconds (sheet prefill).
+  final int? seconds;
+
+  static final RegExp _leading = RegExp(r'^\s*(\d+)(?:\s*[-–]\s*(\d+))?');
+
+  factory _PrescriptionTarget.of(
+    TrainingExerciseEntity exercise, {
+    int? savedTotalSeconds,
+  }) {
+    final timeUnit = timePerformanceUnitForExercise(exercise);
+    final match = _leading.firstMatch(exercise.repsOrDuration);
+    final textValue = int.tryParse(match?.group(1) ?? '');
+    final textMax = int.tryParse(match?.group(2) ?? '');
+    if (timeUnit == null) {
+      if (exercise.targetValue != null) {
+        return _PrescriptionTarget(timeUnit: null, value: exercise.targetValue);
+      }
+      if (exercise.targetValueMin != null && exercise.targetValueMax != null) {
+        return _PrescriptionTarget(
+          timeUnit: null,
+          value: exercise.targetValueMin,
+          max: exercise.targetValueMax,
+        );
+      }
+      return _PrescriptionTarget(timeUnit: null, value: textValue, max: textMax);
+    }
+    final minutesText =
+        exercise.measureType == null && timeUnit == TimePerformanceUnit.minutes;
+    final total =
+        savedTotalSeconds ??
+        exercise.targetValue ??
+        (textValue == null ? null : textValue * (minutesText ? 60 : 1));
+    if (total == null) {
+      if (exercise.targetValueMin != null && exercise.targetValueMax != null) {
+        final inMinutes =
+            timeUnit == TimePerformanceUnit.minutes &&
+            exercise.targetValueMin! % 60 == 0 &&
+            exercise.targetValueMax! % 60 == 0;
+        return _PrescriptionTarget(
+          timeUnit: inMinutes
+              ? TimePerformanceUnit.minutes
+              : TimePerformanceUnit.seconds,
+          value: inMinutes
+              ? exercise.targetValueMin! ~/ 60
+              : exercise.targetValueMin,
+          max: inMinutes
+              ? exercise.targetValueMax! ~/ 60
+              : exercise.targetValueMax,
+          seconds: exercise.targetValueMin,
+        );
+      }
+      return _PrescriptionTarget(timeUnit: timeUnit);
+    }
+    final inMinutes = timeUnit == TimePerformanceUnit.minutes && total % 60 == 0;
+    return _PrescriptionTarget(
+      timeUnit: inMinutes
+          ? TimePerformanceUnit.minutes
+          : TimePerformanceUnit.seconds,
+      value: inMinutes ? total ~/ 60 : total,
+      seconds: total,
     );
+  }
+
+  /// Reps or seconds the sheet starts from when nothing else applies.
+  int? get count => timeUnit == null ? value : seconds;
+
+  /// «8», «8–10».
+  String? get numeral {
+    final v = value;
+    if (v == null) return null;
+    final m = max;
+    return m == null ? '$v' : '$v–$m';
+  }
+
+  String unitLabel(AppLocalizations l10n) => switch (timeUnit) {
+    null => l10n.activeExerciseUnitReps,
+    TimePerformanceUnit.seconds => l10n.activeExerciseUnitSeconds,
+    TimePerformanceUnit.minutes => l10n.activeExerciseUnitMinutes,
+  };
+
+  /// «8 reps», «45 s», «10 min»; null for free-text prescriptions.
+  String? shortLabel(AppLocalizations l10n) {
+    final n = numeral;
+    return n == null ? null : '$n ${unitLabel(l10n)}';
   }
 }
 
-class _DetailSection extends StatelessWidget {
-  final String title;
-  final String text;
+/// Header of the active exercise: close (48x48, labelled; it goes through
+/// `_confirmExit` like system back), exercise name in the display face (wraps,
+/// never ellipsized) and «Ejercicio 2 de 6».
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.exerciseName,
+    required this.position,
+    required this.closeTooltip,
+    required this.onClose,
+  });
 
-  const _DetailSection({required this.title, required this.text});
+  final String exerciseName;
+  final String? position;
+  final String closeTooltip;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-
-    return Container(
-      width: double.infinity,
-      decoration: GlassDecoration.card(borderRadius: 20),
-      padding: const EdgeInsets.all(18),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 20, 4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-            ),
+          IconButton(
+            key: const Key('active-exercise-close'),
+            icon: Icon(ExomIcons.close, color: palette.textPrimary),
+            tooltip: closeTooltip,
+            onPressed: onClose,
           ),
-          const SizedBox(height: 10),
-          Text(
-            text,
-            style: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              height: 1.45,
+          const SizedBox(width: 6),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      exerciseName.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: AppTheme.displayFontFamily,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.0,
+                        letterSpacing: -0.44,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (position != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      position!,
+                      style: TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        height: 1.4,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1079,17 +1812,23 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
+/// Footer of a rest: «+30 s» (secondary) and «Saltar descanso» (quiet),
+/// separated. It owns the timer that dispatches `FinishRest` when the rest
+/// reaches zero while mounted; callers key it by `restEndsAt` so each rest
+/// (and each extension) gets fresh state. [onFinished] receives the end it
+/// was built for, so a tick of an outgoing footer (after «+30 s») is stale
+/// for the bloc and ignored.
 class _RestingFooter extends StatefulWidget {
-  final int totalSeconds;
   final DateTime restEndsAt;
   final VoidCallback onSkip;
-  final VoidCallback onFinished;
+  final VoidCallback onExtend;
+  final ValueChanged<DateTime> onFinished;
 
   const _RestingFooter({
     super.key,
-    required this.totalSeconds,
     required this.restEndsAt,
     required this.onSkip,
+    required this.onExtend,
     required this.onFinished,
   });
 
@@ -1109,16 +1848,14 @@ class _RestingFooterState extends State<_RestingFooter> {
       if (_remainingSeconds <= 0 && !_didFinish) {
         _didFinish = true;
         _ticker?.cancel();
-        widget.onFinished();
-        return;
+        widget.onFinished(widget.restEndsAt);
       }
-      setState(() {});
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _remainingSeconds <= 0 && !_didFinish) {
         _didFinish = true;
         _ticker?.cancel();
-        widget.onFinished();
+        widget.onFinished(widget.restEndsAt);
       }
     });
   }
@@ -1137,113 +1874,44 @@ class _RestingFooterState extends State<_RestingFooter> {
     return (remainingMs / 1000).ceil();
   }
 
-  double get _progressValue {
-    if (widget.totalSeconds <= 0) return 0;
-    return _remainingSeconds.clamp(0, widget.totalSeconds) /
-        widget.totalSeconds;
-  }
-
-  String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (minutes == 0) {
-      return '${seconds}s';
-    }
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final remaining = _remainingSeconds;
-
-    return Container(
-      decoration: GlassDecoration.card(borderRadius: 22),
-      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 46,
-            height: 46,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: _progressValue,
-                    strokeWidth: 4,
-                    backgroundColor: palette.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
-                  ),
-                ),
-                Text(
-                  '$remaining',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.restTimerTitle,
-                  style: TextStyle(
-                    color: palette.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _formatTime(remaining),
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExomSecondaryButton(
+          key: const Key('active-exercise-rest-extend'),
+          label: l10n.activeExerciseRestExtend(30),
+          onPressed: widget.onExtend,
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: ExomQuietButton(
+            key: const Key('active-exercise-rest-skip'),
+            label: l10n.activeExerciseRestSkip,
             onPressed: widget.onSkip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: palette.primary,
-              foregroundColor: palette.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
-            child: Text(l10n.restTimerSkip.toUpperCase()),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-typedef SetPerformanceResult = ({
-  int? reps,
-  int? seconds,
-  double? weight,
-  int? rir,
-  bool skipped,
-});
-
+/// Opens the set sheet and returns its result only after the sheet subtree
+/// has been disposed (contract kept from the pre-L3 sheet: the caller cannot
+/// replace or pop the page while the sheet still owns inherited dependencies
+/// and text inputs). Null means nothing happened: dismissed, «Cancelar», or a
+/// repeated trigger while a sheet opened from [context] is still open
+/// (`showExomSheet`).
+///
+/// Prefill (D4) is resolved here with the pure functions of
+/// `set_prefill.dart`: weight = today's set → [previousWeight] (last weight of
+/// this execution, or the exercise's initial weight) → previous session's
+/// same set → its last weighted set; reps/seconds = today's set →
+/// [lastSetThisExecution] → [previousPerformance] → [targetCount]; RIR =
+/// today's set, or [targetRir] for a new set.
 @visibleForTesting
 Future<SetPerformanceResult?> showSetPerformanceSheet(
   BuildContext context,
@@ -1255,325 +1923,49 @@ Future<SetPerformanceResult?> showSetPerformanceSheet(
   double? previousWeight,
   SetPerformance? currentPerformance,
   SetPerformance? previousPerformance,
-}) async {
-  final palette = context.exomPalette;
-  final sheetDisposed = Completer<void>();
-  final result = await showModalBottomSheet<SetPerformanceResult>(
+  List<SetPerformance>? previousSession,
+  SetPerformance? lastSetThisExecution,
+  int? targetCount,
+  int? targetRir,
+  UnitSystem unitSystem = UnitSystem.metric,
+  String? decimalSeparator,
+  String? exerciseName,
+}) {
+  final timed = timeUnit != null;
+  final separator =
+      decimalSeparator ??
+      decimalSeparatorFor(Localizations.localeOf(context).languageCode);
+  final initialCount = prefillCount(
+    today: currentPerformance,
+    lastThisExecution: lastSetThisExecution,
+    previousSameSet: previousPerformance,
+    target: targetCount,
+    timed: timed,
+  );
+  final initialWeightKg = prefillWeightKg(
+    today: currentPerformance,
+    sessionWeightKg: previousWeight,
+    previous: previousSession ??
+        (previousPerformance == null ? null : [previousPerformance]),
+    setNumber: setNumber,
+  );
+  return showExomSheet<SetPerformanceResult>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: palette.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => _SetPerformanceSheet(
-      l10n: l10n,
-      setNumber: setNumber,
-      prescribedReps: prescribedReps,
-      repsRequired: repsRequired,
+    builder: (_) => SetPerformanceSheet(
+      title: l10n.setPerformanceTitle(setNumber),
+      kicker: exerciseName == null
+          ? null
+          : l10n.setSheetExerciseKicker(exerciseName),
+      objective: prescribedReps,
       timeUnit: timeUnit,
-      previousWeight: previousWeight,
-      currentPerformance: currentPerformance,
-      previousPerformance: previousPerformance,
-      onDisposed: () {
-        if (!sheetDisposed.isCompleted) sheetDisposed.complete();
-      },
+      countRequired: repsRequired,
+      unitSystem: unitSystem,
+      decimalSeparator: separator,
+      initialCount: initialCount,
+      initialWeightKg: initialWeightKg,
+      initialRir: prefillRir(today: currentPerformance, targetRir: targetRir),
+      previous: previousPerformance,
+      today: currentPerformance,
     ),
   );
-
-  // Navigator completes the route result before its reverse transition and
-  // subtree disposal finish. Wait so the parent BLoC cannot replace/pop this
-  // page while the sheet still owns inherited dependencies and text inputs.
-  if (!sheetDisposed.isCompleted) await sheetDisposed.future;
-  return result;
-}
-
-class _SetPerformanceSheet extends StatefulWidget {
-  final AppLocalizations l10n;
-  final int setNumber;
-  final String prescribedReps;
-  final bool repsRequired;
-  final TimePerformanceUnit? timeUnit;
-  final double? previousWeight;
-  final SetPerformance? currentPerformance;
-  final SetPerformance? previousPerformance;
-  final VoidCallback onDisposed;
-
-  const _SetPerformanceSheet({
-    required this.l10n,
-    required this.setNumber,
-    required this.prescribedReps,
-    required this.repsRequired,
-    required this.timeUnit,
-    required this.previousWeight,
-    required this.currentPerformance,
-    required this.previousPerformance,
-    required this.onDisposed,
-  });
-
-  @override
-  State<_SetPerformanceSheet> createState() => _SetPerformanceSheetState();
-}
-
-class _SetPerformanceSheetState extends State<_SetPerformanceSheet> {
-  late final TextEditingController _valueController;
-  late final TextEditingController _weightController;
-  late final TextEditingController _rirController;
-  String? _error;
-
-  bool get _timeBased => widget.timeUnit != null;
-  TimePerformanceUnit? get _timeUnit => timePerformanceUnitForInput(
-    widget.timeUnit,
-    widget.currentPerformance?.seconds,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    final currentValue = _timeBased
-        ? timeInputFromSeconds(
-            widget.currentPerformance?.seconds,
-            _timeUnit,
-          )
-        : widget.currentPerformance?.reps;
-    final weight = widget.currentPerformance?.weightKg ?? widget.previousWeight;
-    _valueController = TextEditingController(
-      text: currentValue?.toString() ?? '',
-    );
-    _weightController = TextEditingController(
-      text: weight == null
-          ? ''
-          : weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1),
-    );
-    _rirController = TextEditingController(
-      text: widget.currentPerformance?.rir?.toString() ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _valueController.dispose();
-    _weightController.dispose();
-    _rirController.dispose();
-    widget.onDisposed();
-    super.dispose();
-  }
-
-  void _completeWithoutTracking() {
-    Navigator.of(
-      context,
-    ).pop((reps: null, seconds: null, weight: null, rir: null, skipped: true));
-  }
-
-  void _save() {
-    final l10n = widget.l10n;
-    final value = int.tryParse(_valueController.text.trim());
-    if (widget.repsRequired && (value == null || value < 1)) {
-      setState(
-        () => _error = _timeBased
-            ? l10n.setPerformanceSecondsError
-            : l10n.setPerformanceRepsError,
-      );
-      return;
-    }
-    if (value != null && value < 1) {
-      setState(
-        () => _error = _timeBased
-            ? l10n.setPerformanceSecondsError
-            : l10n.setPerformanceRepsError,
-      );
-      return;
-    }
-
-    final reps = _timeBased ? null : value;
-    final seconds = _timeBased
-        ? secondsFromTimeInput(value, _timeUnit)
-        : null;
-    final weightText = _weightController.text.trim();
-    final weight = weightText.isEmpty
-        ? null
-        : double.tryParse(weightText.replaceAll(',', '.'));
-    if (weight != null && weight < 0) {
-      setState(() => _error = l10n.setPerformanceWeightError);
-      return;
-    }
-    final rirText = _rirController.text.trim();
-    final rir = rirText.isEmpty ? null : int.tryParse(rirText);
-    if (rirText.isNotEmpty && (rir == null || rir < 0 || rir > 10)) {
-      setState(() => _error = l10n.setPerformanceRirError);
-      return;
-    }
-    if (reps == null && seconds == null && weight == null && rir == null) {
-      setState(() => _error = l10n.setPerformanceDataError);
-      return;
-    }
-
-    Navigator.of(context).pop((
-      reps: reps,
-      seconds: seconds,
-      weight: weight,
-      rir: rir,
-      skipped: false,
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final l10n = widget.l10n;
-    final currentLabel = widget.currentPerformance == null
-        ? null
-        : formatSetPerformance(widget.currentPerformance!);
-    final previousLabel = widget.previousPerformance == null
-        ? null
-        : formatSetPerformance(widget.previousPerformance!);
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: palette.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.setPerformanceTitle(widget.setNumber),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.setPerformancePrescription(widget.prescribedReps),
-                style: TextStyle(color: palette.textSecondary, fontSize: 13),
-              ),
-              if (currentLabel != null && currentLabel.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Hoy: $currentLabel',
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-              ],
-              if (previousLabel != null && previousLabel.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l10n.setPerformancePrevious(previousLabel),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 12),
-              TextField(
-                controller: _valueController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: _timeBased
-                      ? _timeUnit == TimePerformanceUnit.minutes
-                            ? l10n.setPerformanceMinutes
-                            : l10n.setPerformanceSeconds
-                      : l10n.setPerformanceReps,
-                  errorText: _error,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _weightController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: l10n.setPerformanceWeightOptional,
-                  hintStyle: TextStyle(color: palette.textDisabled),
-                  suffixText: 'kg',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _rirController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: palette.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: l10n.setPerformanceRirOptional,
-                  hintText: widget.currentPerformance?.rir?.toString(),
-                  hintStyle: TextStyle(color: palette.textDisabled),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Column(
-                children: [
-                  if (!widget.repsRequired) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: _completeWithoutTracking,
-                        child: Text(
-                          l10n.completeWithoutTracking,
-                          maxLines: 1,
-                          softWrap: false,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stackActions =
-                          constraints.maxWidth < 280 ||
-                          MediaQuery.textScalerOf(context).scale(1) > 1.3;
-                      final cancelButton = OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(l10n.cancel, maxLines: 1, softWrap: false),
-                      );
-                      final saveButton = ElevatedButton(
-                        onPressed: _save,
-                        child: Text(
-                          l10n.weightInputSave,
-                          maxLines: 1,
-                          softWrap: false,
-                        ),
-                      );
-
-                      if (stackActions) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            cancelButton,
-                            const SizedBox(height: 8),
-                            saveButton,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: cancelButton),
-                          const SizedBox(width: 12),
-                          Expanded(child: saveButton),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -1,3 +1,7 @@
+plugins {
+    id("com.exom.transcoder-timing")
+}
+
 allprojects {
     repositories {
         google()

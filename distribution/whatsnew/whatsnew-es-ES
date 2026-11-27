@@ -1,5 +1,2 @@
-- Vuelve automáticamente al inicio actualizado cuando se confirme que has completado tu entrenamiento.
-- Registra directamente en minutos los ejercicios prescritos en minutos.
-- Prepárate con una cuenta atrás animada de cinco segundos antes de iniciar un ejercicio por tiempo.
-- Escucha un único tono cuando se agote el tiempo de un ejercicio, también en segundo plano si el sistema lo permite.
-- Cancela, vuelve atrás o interrumpe la preparación sin iniciar el ejercicio por accidente.
+- Vuelve la animación completa de apertura de la app.
+- Las fotos de progreso se ven completas en sus tarjetas, sin aplastarse.

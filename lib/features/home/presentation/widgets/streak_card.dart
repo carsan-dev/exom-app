@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
@@ -8,13 +9,13 @@ class StreakCard extends StatelessWidget {
 
   const StreakCard({super.key, required this.summary});
 
-  String _motivationalMessage(int days) {
-    if (days == 0) return '¡Empieza tu racha hoy!';
-    if (days == 1) return '¡Primer dí­a completado! Sigue así';
-    if (days < 7) return '¡Vas muy bien! No lo detengas';
-    if (days < 14) return '¡Una semana seguida! Increí­ble';
-    if (days < 30) return '¡Eres una máquina! Más de $days dí­as';
-    return '¡Leyenda viva! $days dí­as de racha';
+  String _motivationalMessage(AppLocalizations l10n, int days) {
+    if (days == 0) return l10n.streakMsgStart;
+    if (days == 1) return l10n.streakMsgFirstDay;
+    if (days < 7) return l10n.streakMsgGoingWell;
+    if (days < 14) return l10n.streakMsgWeek;
+    if (days < 30) return l10n.streakMsgMachine(days);
+    return l10n.streakMsgLegend(days);
   }
 
   @override
@@ -64,11 +65,11 @@ class StreakCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        'dí­as de racha',
-                        style: TextStyle(
+                        AppLocalizations.of(context).streakDaysLabel(days),
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -79,7 +80,7 @@ class StreakCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _motivationalMessage(days),
+                  _motivationalMessage(AppLocalizations.of(context), days),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,

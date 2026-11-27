@@ -1,0 +1,31 @@
+Reviewed local source patch of com.otaliastudios:transcoder:0.10.5; Android runtime acceptance remains a separate gate.
+Upstream source: https://raw.githubusercontent.com/deepmedia/Transcoder/v0.10.5/lib/src/main/java/com/otaliastudios/transcoder/internal/codec/DecoderDropper.kt
+License: Apache-2.0, https://raw.githubusercontent.com/deepmedia/Transcoder/v0.10.5/LICENSE
+Original source equals all87 official web-tool source lines, normalized LF SHA256 D939B8D59D361BC97126DC20AC20AF3CFA2E27A8C0BF484869BA32220BDBC84C. Not claimed equal to unseen raw HTTP byte stream.
+Modification 2026-11-04: preserve maximum renderable input PTS while retaining initial Long.MAX_VALUE sentinel semantics. All remaining logic unchanged.
+Original installed classes.jar SHA256: 091F2FF1B7E4524FD63BB7B9AD6418CA164377CDEC8B8528FBD36490510A2C7C
+Full official LICENSE retained from all180 web-tool lines; see LICENSE. NOTICE records local modification and upstream attribution. Upstream repository NOTICE was unavailable; validate before release.
+
+Original installed AAR SHA256: AC93F7B7E91E0D53FE3C423756D664CEF8487DB9C8A6208A75A7082899CC307C
+Patched source SHA256: 79125DA002850D09F3F6C2C20AE57F478F189515E8C43AC0E720A4232451BD3C
+Patched class SHA256: 4449ECE581B59D0E50839C915C03FA2F62FF5EE19BFF719FA947AADC5D924404
+Deterministic patched AAR SHA256: 409F73E0EC334D7D355933CA5617A6C57CE4B4A09F079BB972066AAB0886083C
+Compiler: Kotlin compiler-embeddable/stdlib 1.8.22, reflect 1.6.10, trove4j 1.0.20200330, annotations 13.0, JDK 17.
+Flags: -no-stdlib -no-reflect -jvm-target 1.8 -language-version 1.5 -api-version 1.5 -module-name lib_release
+Original full source is upstream/DecoderDropper.kt; local source is source/DecoderDropper.kt.
+This supersedes the earlier no-fork constraint only for DecoderDropper's proven renderable-range PTS regression.
+
+Pipeline.kt (2026-11-04, EGL stall): upstream/Pipeline.kt is a RECONSTRUCTION from the installed 0.10.5 bytecode,
+not a fetched upstream file (no network in that session). Compiled with the pinned compiler it reproduces the original
+code; normalized javap differs only in compiler codegen (nop placement, inline markers, one extra non-null check on an
+unchecked cast). Compare with https://raw.githubusercontent.com/deepmedia/Transcoder/v0.10.5/lib/src/main/java/com/otaliastudios/transcoder/internal/pipeline/Pipeline.kt
+before release. Reconstructed upstream SHA256: E1FFFD8D0F91321512A2DC89BB4A9D90F860882996DCC3E42E18600FBCE7D139
+Modification: before a fresh frame reaches VideoPublisher (eglSwapBuffers), deliver every encoder output that is already
+available through the rest of the chain. Original execute() drains at most one encoder output per call and none when an
+upstream step waits; a startup backlog then blocked eglSwapBuffers forever on the emulator (controlled native test).
+Patched source SHA256: F131785F920808F1CDCC07ABACC9795D3E11FA8ADD546CCEE8D8A20F0D3A0E1E
+Generated Pipeline.class 648D078E140DE75F7BE0940B2D05F96C9ED9A8845F36BFC4F277F2B7399C7769; Pipeline$Builder EEDE4B59BA41873EAEFECC65BD7C7A2DE6F1D34791B5E301A838F0C7C97EC750;
+Pipeline$Companion 0F7A155F98BEBB89D15BA9D99A3D7E23C6D00327E09035BB873A6755A383AABD; Pipeline$Companion$build$1 C5E756B7DD14B46BE680573CF154709BA8ECFC0189601F0BE0E3FCFFBD9FCCD6;
+PipelineKt 4353433D74DBC8C872276BB9F3F895A5AB6A1BC27AF89B2DE9561969502E9FD1. DecoderDropper class unchanged (4449ECE5...).
+Extra compiler flag at build time: -Xfriend-paths=<pinned original classes.jar>. Combined deterministic patched AAR SHA256:
+FFC8927D649D53CCEE62C7D323A39A8E6EC6450E254D91B8BFEA6498B77AFDCA (supersedes 409F73E0... single-class AAR).

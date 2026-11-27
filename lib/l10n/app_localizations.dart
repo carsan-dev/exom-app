@@ -6668,12 +6668,6 @@ abstract class AppLocalizations {
   /// **'Elige una opción'**
   String get chooseAnOption;
 
-  /// No description provided for @streakDaysLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, =0{días de racha} =1{día de racha} other{días de racha}}'**
-  String streakDaysLabel(int count);
-
   /// No description provided for @recapDetailTitle.
   ///
   /// In es, this message translates to:
@@ -6841,42 +6835,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reiniciar tiempo'**
   String get timerReset;
-
-  /// No description provided for @streakMsgStart.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Empieza tu racha hoy!'**
-  String get streakMsgStart;
-
-  /// No description provided for @streakMsgFirstDay.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Primer día completado! Sigue así'**
-  String get streakMsgFirstDay;
-
-  /// No description provided for @streakMsgGoingWell.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Vas muy bien! No lo detengas'**
-  String get streakMsgGoingWell;
-
-  /// No description provided for @streakMsgWeek.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Una semana seguida! Increíble'**
-  String get streakMsgWeek;
-
-  /// No description provided for @streakMsgMachine.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Eres una máquina! Más de {days} días'**
-  String streakMsgMachine(int days);
-
-  /// No description provided for @streakMsgLegend.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Leyenda viva! {days} días de racha'**
-  String streakMsgLegend(int days);
 
   /// No description provided for @recapSignInRequired.
   ///

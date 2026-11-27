@@ -183,6 +183,22 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('announced zones are targets of at least 48 x 48 dp', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final h = _Harness(tester);
+    await h.pump(
+      marks: {
+        for (final zone in RecapAnatomyZone.values)
+          zone.id: RecapZoneMark.withData,
+      },
+    );
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+    handle.dispose();
+  });
+
   testWidgets('without marks the Recap behaviour is kept', (tester) async {
     final h = _Harness(tester);
     await h.pump(marks: null);

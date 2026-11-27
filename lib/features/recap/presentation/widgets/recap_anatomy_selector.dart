@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -393,6 +394,19 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector>
     widget.onZoneSelected(zoneId);
   }
 
+  /// Bounds of the semantic button of a zone. In a measure map it is at
+  /// least [kMinInteractiveDimension] square around the plate centre (the
+  /// physical touch area is already bigger than the plate, see
+  /// [_kNearestZoneDp]); Recap keeps the plate bounds.
+  Rect _semanticRect(Rect plate) {
+    if (widget.zoneMarks == null) return plate;
+    return Rect.fromCenter(
+      center: plate.center,
+      width: math.max(plate.width, kMinInteractiveDimension),
+      height: math.max(plate.height, kMinInteractiveDimension),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -440,11 +454,13 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector>
                       in figure.bounds.entries)
                     if (widget.zoneMarks?.containsKey(zoneId) ?? true)
                       Positioned.fromRect(
-                        rect: Rect.fromLTRB(
-                          bounds.left * scale,
-                          bounds.top * scale,
-                          bounds.right * scale,
-                          bounds.bottom * scale,
+                        rect: _semanticRect(
+                          Rect.fromLTRB(
+                            bounds.left * scale,
+                            bounds.top * scale,
+                            bounds.right * scale,
+                            bounds.bottom * scale,
+                          ),
                         ),
                         child: Semantics(
                           container: true,

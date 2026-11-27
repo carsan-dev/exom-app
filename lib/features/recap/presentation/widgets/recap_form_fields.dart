@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
@@ -95,87 +94,6 @@ String recapCopy(BuildContext context, String value) {
   }
 
   return formatRecapOption(value);
-}
-
-class RecapSliderField extends StatelessWidget {
-  final String label;
-  final String helperText;
-  final double value;
-  final double min;
-  final double max;
-  final int? divisions;
-  final String Function(double value) valueLabelBuilder;
-  final ValueChanged<double> onChanged;
-
-  const RecapSliderField({
-    super.key,
-    required this.label,
-    required this.helperText,
-    required this.value,
-    required this.min,
-    required this.max,
-    this.divisions,
-    required this.valueLabelBuilder,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12, // l5-allow: unused widget, kept as it was (C5a)
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: Slider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                divisions: divisions,
-                activeColor: palette.primary,
-                inactiveColor: palette.surfaceVariant,
-                label: valueLabelBuilder(value),
-                onChanged: onChanged,
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(left: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: GlassDecoration.card(borderRadius: 12),
-              child: Text(
-                valueLabelBuilder(value),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
 /// Header of a question of the form (`.x-q-l`): its position («01»…), the

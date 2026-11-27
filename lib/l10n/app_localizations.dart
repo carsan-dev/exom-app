@@ -2102,12 +2102,6 @@ abstract class AppLocalizations {
   /// **'Cuéntanos más'**
   String get recapTellUsMore;
 
-  /// No description provided for @recapSentSuccessfully.
-  ///
-  /// In es, this message translates to:
-  /// **'Recap enviado correctamente'**
-  String get recapSentSuccessfully;
-
   /// No description provided for @newRecap.
   ///
   /// In es, this message translates to:
@@ -8695,12 +8689,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mejora'**
   String get recapImprovement;
-
-  /// No description provided for @recapSentKicker.
-  ///
-  /// In es, this message translates to:
-  /// **'Cinco pasos completados'**
-  String get recapSentKicker;
 
   /// No description provided for @recapSentTitleFirst.
   ///

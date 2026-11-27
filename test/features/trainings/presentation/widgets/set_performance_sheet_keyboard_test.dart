@@ -104,6 +104,26 @@ void _expectWeightAboveFooter(WidgetTester tester) {
   );
 }
 
+/// The weight error message (it quotes what was typed).
+Finder get _weightError => find.byWidgetPredicate(
+  (widget) => widget is Text && (widget.data?.contains('62.5,5') ?? false),
+);
+
+/// INT-D1: the whole error message under the focused weight field, not only
+/// the field and its caret, must be scrolled above the footer.
+void _expectWeightErrorAboveFooter(WidgetTester tester) {
+  _expectWeightAboveFooter(tester);
+  final errorRect = tester.getRect(_weightError);
+  final footerTop = tester.getRect(_footer.first).top;
+  expect(
+    errorRect.bottom,
+    lessThanOrEqualTo(footerTop),
+    reason:
+        'the weight error under the focused field must be fully visible '
+        'above the footer',
+  );
+}
+
 void main() {
   for (final locale in const [Locale('es'), Locale('en')]) {
     testWidgets('E-D1 ($locale): after a weight error, tapping the field '
@@ -131,6 +151,41 @@ void main() {
       _expectWeightAboveFooter(tester);
     });
   }
+
+  testWidgets('INT-D1 (es): after a weight error, tapping the field again '
+      'scrolls the field and its whole two-line error above the footer', (
+    tester,
+  ) async {
+    await _openSheet(tester, const Locale('es'));
+    await tester.enterText(_weight, '62.5,5');
+    await tester.pump();
+    await tester.tap(_save);
+    await tester.pumpAndSettle();
+    expect(_weightError, findsOneWidget);
+
+    await _hideKeyboard(tester);
+    await tester.tap(_weight);
+    await _raiseKeyboard(tester);
+
+    _expectWeightErrorAboveFooter(tester);
+  });
+
+  // Regression guard for the Save path; it also passes without the INT-D1 fix.
+  testWidgets('guard (es): when the weight error appears with the field '
+      'focused and the keyboard up, the whole error is above the footer', (
+    tester,
+  ) async {
+    await _openSheet(tester, const Locale('es'));
+    await tester.tap(_weight);
+    await _raiseKeyboard(tester);
+    await tester.enterText(_weight, '62.5,5');
+    await tester.pump();
+    await tester.tap(_save);
+    await tester.pumpAndSettle();
+    expect(_weightError, findsOneWidget);
+
+    _expectWeightErrorAboveFooter(tester);
+  });
 
   testWidgets('E-D1 control: without an error, focusing the weight field '
       'with the keyboard scrolls it above the footer', (tester) async {

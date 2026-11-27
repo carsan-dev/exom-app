@@ -160,6 +160,10 @@ class _Storage extends LocalStorage {
     String exerciseId,
     String date,
   ) => null;
+  // No active exercise saved by another training (L5-D64 asks in the detail).
+  @override
+  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
+      const [];
   @override
   ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
       ValueNotifier<Box<ActiveWorkoutHiveModel>>(_EmptyBox());

@@ -17,6 +17,10 @@ import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/widgets/android_nonlinear_text_scaler.dart';
+import '../../golden/redesign_scenes.dart' show loadRedesignFonts;
 
 const _date = '2026-11-18';
 
@@ -234,6 +238,119 @@ void main() {
         findsOneWidget,
       );
       expect(find.widgetWithText(ExomQuietButton, 'Receta'), findsOneWidget);
+    });
+  });
+
+  // L5-D63 (OBS-4): with large text the sheet opens tall enough to show the
+  // name, calories and macros above its pinned foot; at 1,0 it opens at 70 %.
+  group('L5-D63 initial height', () {
+    Future<void> open(WidgetTester tester, TextScaler scaler) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _Repository(_withOptions);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      // The sheet is page-aware: it needs the app router.
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showMealDetailSheet(
+                    context,
+                    mealId: 'm-1',
+                    selectedDate: _date,
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          theme: AppTheme.dark,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: scaler),
+            child: child!,
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    final foot = find.byKey(const Key('meal-detail-foot'));
+    final draggable = find.byType(DraggableScrollableSheet);
+
+    for (final (label, scaler) in [
+      ('1.3', const AndroidNonlinearTextScaler(1.3)),
+      ('1.6', const AndroidNonlinearTextScaler(1.6)),
+    ]) {
+      testWidgets('$label: the macros show above the foot, or it opens at '
+          'its maximum', (tester) async {
+        await open(tester, scaler);
+        final initial = tester.widget<DraggableScrollableSheet>(draggable)
+            .initialChildSize;
+        expect(initial, greaterThan(0.7));
+        final macros = find.byType(ExomFigureColumns);
+        final shown = macros.evaluate().isNotEmpty &&
+            tester.getBottomLeft(macros).dy <= tester.getTopLeft(foot).dy;
+        expect(shown || initial == 0.95, isTrue);
+        expect(tester.takeException(), isNull);
+
+        // Still draggable from the list.
+        final top = tester.getTopLeft(draggable).dy;
+        await tester.drag(
+          find.descendant(of: draggable, matching: find.byType(Scrollable))
+              .first,
+          const Offset(0, 80),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(draggable).dy, greaterThan(top + 20));
+      });
+    }
+
+    testWidgets('1.6 with the app fonts: the macros show above the foot', (
+      tester,
+    ) async {
+      // The test font is wider and taller than the app's; with the bundled
+      // fonts the block fits under the sheet maximum on a 390x844 phone.
+      await loadRedesignFonts();
+      await open(tester, const AndroidNonlinearTextScaler(1.6));
+      final macros = find.byType(ExomFigureColumns);
+      expect(macros, findsOneWidget);
+      expect(
+        tester.getBottomLeft(macros).dy,
+        lessThanOrEqualTo(tester.getTopLeft(foot).dy),
+      );
+    });
+
+    testWidgets('1.0: opens at 70 % as before', (tester) async {
+      await open(tester, TextScaler.noScaling);
+      expect(
+        tester.widget<DraggableScrollableSheet>(draggable).initialChildSize,
+        0.7,
+      );
+      expect(tester.getTopLeft(draggable).dy, moreOrLessEquals(844 * 0.3));
     });
   });
 }

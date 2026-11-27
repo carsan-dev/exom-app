@@ -32,9 +32,11 @@ import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_large_text.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_scroll_away_footer.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_scale_chips.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
@@ -55,6 +57,7 @@ import 'package:exom_app/features/trainings/presentation/pages/training_mileston
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/utils/exercise_text_bullets.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/discard_foreign_progress_dialog.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_bullet_list.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_sync_state.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_status.dart';
@@ -787,6 +790,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     // FB1 r4 (D2): the missing-video message goes once a route covers this
     // detail or it is popped (depends on the route's `isCurrent`).
     if (ModalRoute.isCurrentOf(context) == false) _missingVideoNotice?.dismiss();
+    // L5-D63: back to the fixed footer (smaller text or a screen reader), the
+    // next time it scrolls away it starts shown.
+    if (!exomScrollAwayFooterEnabled(context)) _footerVisibility.show();
   }
 
   @override
@@ -1008,8 +1014,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     _syncChanges?.cancel();
     _feedbackChanges?.cancel();
     _notesController.dispose();
+    _footerVisibility.dispose();
     super.dispose();
   }
+
+  /// Footer visibility while it scrolls away with large text (L5-D63).
+  final _footerVisibility = ExomScrollAwayFooterController();
 
   TrainingEntity? _groupedTraining;
   List<_ExerciseRowGroup> _groups = const [];
@@ -1075,6 +1085,18 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       training, widget.state.selectedDate,
       legacyExerciseId: ex.id);
     if (!mounted || !context.mounted || !_sameSession || sessionId == null) return;
+    // L5-D64: the active exercise saved by another training is asked about
+    // here, over this detail, before the exercise route exists. Asked from
+    // that route's first frame (as before) the dialog covered a page with
+    // nothing built yet. Same answers as there: cancel opens nothing and
+    // keeps that progress; confirm discards it and opens the exercise.
+    final storage = sl<LocalStorage>();
+    if (storage.getForeignActiveWorkouts(training.id).isNotEmpty) {
+      final discard = await confirmDiscardForeignProgress(context);
+      if (!discard || !mounted || !context.mounted || !_sameSession) return;
+      await storage.clearForeignActiveWorkouts(training.id);
+      if (!mounted || !context.mounted || !_sameSession) return;
+    }
     final selectedProgress = widget.state.sessionProgress[sessionId]
         ?? const TrainingDayProgress();
     await context.push<void>(
@@ -1615,14 +1637,11 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     // exercise is done the completion button takes the primary style.
     final completeIsPrimary = next == null;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: GlassAppBar(
-        leading: _DetailBackButton(onPressed: () => context.pop()),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
+    // L5-D63: with large text the pinned footer scrolls away while the user
+    // scrolls the list down. The body then runs under the footer slot and the
+    // list keeps the footer's height as bottom room.
+    final scrollAway = exomScrollAwayFooterEnabled(context);
+    final listChildren = <Widget>[
           _DetailHeader(
             training: training,
             selectedDate: widget.state.selectedDate,
@@ -1734,16 +1753,15 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               ),
             ),
           ),
-        ],
-      ),
-
+        ];
+    final Widget footer =
       // Pinned thumb-zone actions: the next exercise (lime) and the session
       // completion, which becomes the lime action once every exercise is done.
       // FB1 r4 (D3): the bottom inset stays outside the footer's scroll view:
       // when large text makes the footer reach its height cap and scroll, the
       // inset no longer scrolls with it and the button stays above the
       // gesture bar. Same paint as before (the inset takes the footer's fill).
-      bottomNavigationBar: ColoredBox(
+      ColoredBox(
         color: palette.background,
         child: Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
@@ -1797,7 +1815,41 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
               ),
           ),
         ),
+      );
+
+    return Scaffold(
+      backgroundColor: palette.background,
+      extendBody: scrollAway,
+      appBar: GlassAppBar(
+        leading: _DetailBackButton(onPressed: () => context.pop()),
       ),
+      body: scrollAway
+          ? NotificationListener<ScrollMetricsNotification>(
+              onNotification: _footerVisibility.handleMetricsNotification,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _footerVisibility.handleScrollNotification,
+                child: Builder(
+                  builder: (context) => ListView(
+                    // The extended body's bottom padding is the footer slot.
+                    padding: EdgeInsets.only(
+                      bottom: 24 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    children: listChildren,
+                  ),
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: listChildren,
+            ),
+      bottomNavigationBar: scrollAway
+          ? ExomScrollAwayFooter(
+              key: const Key('training-detail-scroll-away-footer'),
+              controller: _footerVisibility,
+              child: footer,
+            )
+          : footer,
     );
   }
 }
@@ -2907,11 +2959,13 @@ class _ExerciseCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _ExerciseSheetHost(
-        sheetBuilder: (scrollController, onFootHeight) => _ExerciseDetailSheet(
+        sheetBuilder: (scrollController, onFootHeight, onLeadBottom) =>
+            _ExerciseDetailSheet(
           exercise: ex,
           trainingExercise: trainingExercise,
           scrollController: scrollController,
           onFootHeight: onFootHeight,
+          onLeadBottom: onLeadBottom,
           isCompleted: isCompleted,
           weightUsed: weightUsed,
           weightText: weightText,
@@ -3044,13 +3098,15 @@ String _trainingLevelLabel(AppLocalizations l10n, String level) =>
 /// Draggable container of the exercise sheet. Its smallest size is never below
 /// what the pinned foot needs (measured, so it follows the text scale) plus a
 /// minimum of body, so the foot actions are always fully visible (HOJA-PULIDO
-/// H2); the usual 40 % applies when the foot is small.
+/// H2); the usual 40 % applies when the foot is small. With large text it
+/// opens tall enough to show the name and the level above the foot (L5-D63).
 class _ExerciseSheetHost extends StatefulWidget {
   const _ExerciseSheetHost({required this.sheetBuilder});
 
   final Widget Function(
     ScrollController scrollController,
     ValueChanged<double> onFootHeight,
+    ValueChanged<double> onLeadBottom,
   )
   sheetBuilder;
 
@@ -3065,9 +3121,17 @@ class _ExerciseSheetHostState extends State<_ExerciseSheetHost> {
 
   double _footHeight = 0;
 
+  /// Bottom of the name and level block in the body content (L5-D63).
+  double _leadBottom = 0;
+
   void _onFootHeight(double height) {
     if ((height - _footHeight).abs() < 0.5 || !mounted) return;
     setState(() => _footHeight = height);
+  }
+
+  void _onLeadBottom(double bottom) {
+    if ((bottom - _leadBottom).abs() < 0.5 || !mounted) return;
+    setState(() => _leadBottom = bottom);
   }
 
   @override
@@ -3084,11 +3148,21 @@ class _ExerciseSheetHostState extends State<_ExerciseSheetHost> {
         );
         return DraggableScrollableSheet(
           expand: false,
-          initialChildSize: math.max(_initialFraction, minSize),
+          initialChildSize: exomSheetInitialSize(
+            context,
+            initialSize: math.max(_initialFraction, minSize),
+            maxSize: _maxFraction,
+            available: available,
+            leadBottom: _leadBottom,
+            footHeight: _footHeight,
+          ),
           minChildSize: minSize,
           maxChildSize: _maxFraction,
-          builder: (_, scrollController) =>
-              widget.sheetBuilder(scrollController, _onFootHeight),
+          builder: (_, scrollController) => widget.sheetBuilder(
+            scrollController,
+            _onFootHeight,
+            _onLeadBottom,
+          ),
         );
       },
     );
@@ -3109,6 +3183,9 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final TrainingExerciseEntity trainingExercise;
   final ScrollController scrollController;
   final ValueChanged<double> onFootHeight;
+
+  /// Where the level fact ends in the body content (L5-D63).
+  final ValueChanged<double> onLeadBottom;
   final bool isCompleted;
   final double? weightUsed;
   final _WeightText weightText;
@@ -3121,6 +3198,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.trainingExercise,
     required this.scrollController,
     required this.onFootHeight,
+    required this.onLeadBottom,
     required this.isCompleted,
     required this.weightText,
     required this.trainingLevel,
@@ -3201,50 +3279,61 @@ class _ExerciseDetailSheet extends StatelessWidget {
       controller: scrollController,
       padding: const EdgeInsets.only(bottom: 20),
       children: [
-        _ExerciseSheetHeader(onClose: () => Navigator.of(context).pop()),
-        if (hasThumbnail || hasVideo)
-          _ExerciseSheetMedia(
-            key: const Key('exercise-sheet-media'),
-            thumbnailUrl: hasThumbnail ? thumbnailUrl : null,
-            semanticLabel: l10n.exerciseSheetWatchVideo(exercise.name),
-            onPlay: hasVideo ? () => _openVideo(context) : null,
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                exercise.name.toUpperCase(),
-                semanticsLabel: exercise.name,
-                style: ExomType.headline2Section.copyWith(
-                  color: palette.textPrimary,
-                ),
+        // One list child, so the lazy list always lays it out and the level
+        // can be measured however tall it gets (L5-D63). Stretched, each part
+        // gets the full width, as when they were separate children.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ExerciseSheetHeader(onClose: () => Navigator.of(context).pop()),
+            if (hasThumbnail || hasVideo)
+              _ExerciseSheetMedia(
+                key: const Key('exercise-sheet-media'),
+                thumbnailUrl: hasThumbnail ? thumbnailUrl : null,
+                semanticLabel: l10n.exerciseSheetWatchVideo(exercise.name),
+                onPlay: hasVideo ? () => _openVideo(context) : null,
               ),
-              const SizedBox(height: 8),
-              Text(
-                _buildMetadata(l10n),
-                style: TextStyle(
-                  fontFamily: AppTheme.bodyFontFamily,
-                  color: palette.textSecondary,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exercise.name.toUpperCase(),
+                    semanticsLabel: exercise.name,
+                    style: ExomType.headline2Section.copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _buildMetadata(l10n),
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      color: palette.textSecondary,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ExomScrollContentBottomReporter(
+                    onBottom: onLeadBottom,
+                    child: _ExerciseSheetFact(
+                      icon: ExomIcons.streak,
+                      text: _trainingLevelLabel(l10n, trainingLevel),
+                    ),
+                  ),
+                  if (muscleGroups.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    _ExerciseSheetFact(
+                      icon: ExomIcons.target,
+                      text: muscleGroups.join(', '),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 14),
-              _ExerciseSheetFact(
-                icon: ExomIcons.streak,
-                text: _trainingLevelLabel(l10n, trainingLevel),
-              ),
-              if (muscleGroups.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                _ExerciseSheetFact(
-                  icon: ExomIcons.target,
-                  text: muscleGroups.join(', '),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
         if (weight != null || currentPerformanceLabels.isNotEmpty) ...[
           const SizedBox(height: 24),

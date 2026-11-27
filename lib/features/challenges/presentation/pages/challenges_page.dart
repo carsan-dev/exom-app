@@ -353,9 +353,14 @@ class _EmptyChallenges extends StatelessWidget {
   }
 }
 
+/// Retos figures (weights and the like) show up to 2 decimals, trailing zeros
+/// dropped (owner decision 2026-11-27).
+String _measure(BuildContext context, num value) =>
+    formatFigure(context, value, maxDecimalDigits: 2);
+
 String _figures(BuildContext context, ChallengeEntity challenge, String sep) =>
-    '${formatFigure(context, challenge.currentValue)}$sep'
-    '${formatFigure(context, challenge.targetValue)} ${challenge.unit}';
+    '${_measure(context, challenge.currentValue)}$sep'
+    '${_measure(context, challenge.targetValue)} ${challenge.unit}';
 
 int _percent(ChallengeEntity challenge) => (challenge.progress * 100).toInt();
 
@@ -441,13 +446,13 @@ class _MainGoalBlock extends StatelessWidget {
                       Text(formatFigure(context, 0), style: scaleStyle),
                       const SizedBox(width: ExomSpacing.md),
                       Text(
-                        formatFigure(context, challenge.targetValue / 2),
+                        _measure(context, challenge.targetValue / 2),
                         style: scaleStyle,
                       ),
                       const SizedBox(width: ExomSpacing.md),
                       Flexible(
                         child: Text(
-                          '${formatFigure(context, challenge.targetValue)} ${challenge.unit}',
+                          '${_measure(context, challenge.targetValue)} ${challenge.unit}',
                           textAlign: TextAlign.end,
                           style: scaleStyle,
                         ),

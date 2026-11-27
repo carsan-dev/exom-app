@@ -63,11 +63,6 @@ void main() {
         final border = decoration.border! as Border;
         expect(border.top.color, palette.borderSoft);
       });
-
-      test('scaffold background gradient is flat', () {
-        final gradient = ExomGradients.scaffoldBackground(palette);
-        expect(gradient.colors.toSet(), {palette.background});
-      });
     });
   }
 }

@@ -6,9 +6,6 @@ import 'package:flutter/material.dart';
 /// Minimum height of the primary and secondary buttons (plan §6).
 const double kExomButtonMinHeight = 56;
 
-/// Foreground of the enabled primary (lime) button, for what leaves it.
-const Color kExomPrimaryForeground = AppColors.textOnPrimary;
-
 /// Minimum tap target of every EXOM control (plan §6).
 const double kExomMinTapTarget = 48;
 

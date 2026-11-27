@@ -90,6 +90,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   static const defaultSummaryTimeout = Duration(seconds: 45);
   final Duration summaryTimeout;
 
+  /// The bounds of the summaries in flight. Each belongs to this bloc:
+  /// [close] cancels them, so none outlives it.
+  final Set<Timer> _summaryBounds = {};
+
   /// [connectivityChanges] reports whether the device has network (`true`)
   /// or not. Without it (older wiring, tests) Inicio never reloads by itself
   /// when the network comes back.
@@ -176,13 +180,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     _summariesInFlight++;
     try {
-      return await request().timeout(
-        summaryTimeout,
-        onTimeout: () => throw ApiException(
-          statusCode: 0,
-          message: 'Home summary timed out after $summaryTimeout',
-        ),
-      );
+      return await _bounded(request());
     } finally {
       _summariesInFlight--;
       // The handler emits the resulting state after this await returns (in
@@ -193,8 +191,45 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  /// [request] for [summaryTimeout] at most. Unlike [Future.timeout], its
+  /// timer is cancelled by [close]: after it the wait never ends, as the
+  /// handler of a closed bloc emits nothing anyway.
+  Future<HomeSummaryEntity> _bounded(Future<HomeSummaryEntity> request) {
+    final result = Completer<HomeSummaryEntity>();
+    late final Timer bound;
+    bound = Timer(summaryTimeout, () {
+      _summaryBounds.remove(bound);
+      if (result.isCompleted) return;
+      result.completeError(
+        ApiException(
+          statusCode: 0,
+          message: 'Home summary timed out after $summaryTimeout',
+        ),
+      );
+    });
+    _summaryBounds.add(bound);
+    request.then(
+      (summary) {
+        bound.cancel();
+        _summaryBounds.remove(bound);
+        if (!result.isCompleted) result.complete(summary);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        bound.cancel();
+        _summaryBounds.remove(bound);
+        // A late failure, past the bound, goes nowhere.
+        if (!result.isCompleted) result.completeError(error, stackTrace);
+      },
+    );
+    return result.future;
+  }
+
   @override
   Future<void> close() async {
+    for (final bound in _summaryBounds) {
+      bound.cancel();
+    }
+    _summaryBounds.clear();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _pendingReconnect = false;

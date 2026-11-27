@@ -561,7 +561,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   // outside it, so it stays a SnackBar.
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(l10n.deleteAccountSuccessMessage),
+                      content: Text(
+                        l10n.deleteAccountSuccessMessage,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onError,
+                        ),
+                      ),
                       backgroundColor: palette.error,
                     ),
                   );

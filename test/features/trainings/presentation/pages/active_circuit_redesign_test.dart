@@ -384,8 +384,13 @@ void main() {
         }),
       );
       final action = (snapshot['completion_actions'] as Map)['a'] as Map;
+      // C-O1: the snapshot also freezes when the exercise's last set was
+      // logged (UTC, milliseconds); every other value is the pre-L3 one.
+      final completedAt = action['completed_at'];
+      expect(completedAt, isA<String>());
+      expect(DateTime.parse(completedAt as String).isUtc, isTrue);
       expect(
-        jsonEncode({...action}..remove('operation_id')),
+        jsonEncode({...action}..remove('operation_id')..remove('completed_at')),
         jsonEncode({
           'sets': [expectedSet],
           'weight_used': 62.5,
@@ -394,6 +399,7 @@ void main() {
       );
       final event = h.bloc.completions.single;
       expect(event.operationId, action['operation_id']);
+      expect(event.completedAt, DateTime.parse(completedAt));
       expect(event.weightUsed, 62.5);
       expect(event.weightUsed, isA<double>());
       expect(jsonEncode(event.sets!.map((s) => s.toJson()).toList()), jsonEncode([expectedSet]));

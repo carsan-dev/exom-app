@@ -114,6 +114,10 @@ class ActiveExerciseState {
   final String? lastSetFeedbackClientUploadId;
   final String? completionOperationId;
 
+  /// When the last set was logged (C-O1), in milliseconds as the draft keeps
+  /// it. It dates the completion, not the end of the rest that follows.
+  final DateTime? lastSetLoggedAt;
+
   const ActiveExerciseState({
     this.timedElapsedMs = 0,
     this.timedStartedAt,
@@ -132,6 +136,7 @@ class ActiveExerciseState {
     this.errorMessage,
     this.lastSetFeedbackClientUploadId,
     this.completionOperationId,
+    this.lastSetLoggedAt,
   });
 
   factory ActiveExerciseState.initial(
@@ -211,6 +216,7 @@ class ActiveExerciseState {
     Object? errorMessage = _unset,
     Object? lastSetFeedbackClientUploadId = _unset,
     String? completionOperationId,
+    DateTime? lastSetLoggedAt,
   }) {
     return ActiveExerciseState(
       timedElapsedMs: timedElapsedMs ?? this.timedElapsedMs,
@@ -241,6 +247,7 @@ class ActiveExerciseState {
           ? this.lastSetFeedbackClientUploadId
           : lastSetFeedbackClientUploadId as String?,
       completionOperationId: completionOperationId ?? this.completionOperationId,
+      lastSetLoggedAt: lastSetLoggedAt ?? this.lastSetLoggedAt,
     );
   }
 }
@@ -409,7 +416,15 @@ class ActiveExerciseBloc
   ) async {
     if (_exerciseId == null || !state.isExecuting) return;
 
-    final setBase = state.copyWith(timedElapsedMs: 0, timedStartedAt: null);
+    final now = _now();
+    final setBase = state.copyWith(
+      timedElapsedMs: 0,
+      timedStartedAt: null,
+      lastSetLoggedAt: DateTime.fromMillisecondsSinceEpoch(
+        now.millisecondsSinceEpoch,
+        isUtc: true,
+      ),
+    );
     final noValues =
         event.reps == null &&
         event.seconds == null &&
@@ -458,7 +473,7 @@ class ActiveExerciseBloc
           weightKg: nextWeight,
           setPerformances: nextPerformances,
           status: ActiveExerciseStatus.finalResting,
-          restEndsAt: _now().add(Duration(seconds: state.restSeconds)),
+          restEndsAt: now.add(Duration(seconds: state.restSeconds)),
           errorMessage: null,
           lastSetFeedbackClientUploadId:
               event.lastSetFeedbackClientUploadId ??
@@ -512,7 +527,7 @@ class ActiveExerciseBloc
       weightKg: nextWeight,
       setPerformances: nextPerformances,
       status: ActiveExerciseStatus.resting,
-      restEndsAt: _now().add(Duration(seconds: state.restSeconds)),
+      restEndsAt: now.add(Duration(seconds: state.restSeconds)),
       errorMessage: null,
     );
     emit(restingState);
@@ -669,6 +684,7 @@ class ActiveExerciseBloc
       lastSetFeedbackClientUploadId: saved.lastSetFeedbackClientUploadId,
       completionOperationId: saved.completionOperationId ??
           (finished && !hasPendingRest ? newOperationId() : null),
+      lastSetLoggedAt: saved.lastSetLoggedAt?.toUtc(),
     );
   }
 
@@ -722,6 +738,7 @@ class ActiveExerciseBloc
           lastSetFeedbackClientUploadId:
               nextState.lastSetFeedbackClientUploadId,
           completionOperationId: nextState.completionOperationId,
+          lastSetLoggedAt: nextState.lastSetLoggedAt,
         ),
       );
       return true;

@@ -15,6 +15,7 @@ abstract class TrainingRepository {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId});
   Future<void> completeTraining(

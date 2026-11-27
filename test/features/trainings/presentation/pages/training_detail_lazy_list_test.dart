@@ -171,6 +171,7 @@ class _Repository extends Fake implements TrainingRepository {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) async {}
   @override
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>

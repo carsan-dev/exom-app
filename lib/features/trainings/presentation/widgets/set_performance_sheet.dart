@@ -37,6 +37,10 @@ const double _numeralMinSize = 36;
 /// Room kept for the caret and the suffix gap when fitting the numeral.
 const double _numeralFitSlack = 8;
 
+/// Practical floor (logical dp) of the shrinking numeral: below it the value
+/// stays at this size and the field scrolls like any other text field.
+const double _numeralFitFloor = 24;
+
 /// Size of the value numeral in the footer rows at text scale 1.0 (L6 A-O1,
 /// sketch `l6-hoja-tercio-inferior.html` `.t-n`: 44 instead of 64).
 const double _numeralSize = 44;
@@ -500,10 +504,10 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
         .floorToDouble();
     // L6 A-O1 polish: when even 36 does not fit (a long or invalid value beside
     // the label on a narrow screen), the value keeps shrinking like the
-    // resting numeral (`FittedBox`) instead of scrolling inside the field and
-    // cutting its first characters. Re-measured because a nonlinear text
+    // resting numeral (`FittedBox`) down to [_numeralFitFloor], instead of
+    // scrolling inside the field and cutting its first characters. Re-measured because a nonlinear text
     // scaler is not proportional.
-    while (fitted > 1 &&
+    while (fitted > _numeralFitFloor &&
         measure(shown, style.copyWith(fontSize: fitted)) > room) {
       fitted -= 1;
     }

@@ -261,10 +261,15 @@ void main() {
     final scalers = <String, TextScaler>{
       '1.0': TextScaler.noScaling,
       '1.3': const TextScaler.linear(1.3),
+      '1.6': const TextScaler.linear(1.6),
       '2.0 linear': const TextScaler.linear(2),
       '2.0 nonlinear': const AndroidNonlinearTextScaler(2),
     };
-    for (final size in const [Size(320, 640), Size(360, 780)]) {
+    for (final size in const [
+      Size(320, 640),
+      Size(360, 780),
+      Size(411, 891),
+    ]) {
       for (final entry in scalers.entries) {
         for (final keyboard in const [false, true]) {
           final name =
@@ -338,6 +343,52 @@ void main() {
         }
       }
     }
+  });
+
+  group('± sizes in the footer', () {
+    for (final (label, size, scaler) in const [
+      ('360x780 at 1.0', Size(360, 780), TextScaler.noScaling),
+      ('411x891 at 1.6', Size(411, 891), TextScaler.linear(1.6)),
+    ]) {
+      testWidgets('$label: the four ± have a 56x56 tap area and a visible '
+          '48x48 box', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _openSheet(tester, size: size, textScaler: scaler);
+        expect(tester.takeException(), isNull);
+        for (final button in _plusMinus) {
+          expect(tester.getSize(button), const Size(56, 56));
+          expect(button.hitTestable(), findsOneWidget);
+          final box = find
+              .descendant(of: button, matching: find.byType(Container))
+              .first;
+          expect(tester.getSize(box), const Size(48, 48));
+          expect(
+            tester.getCenter(box),
+            tester.getCenter(button),
+            reason: 'the invisible margin is even on every side',
+          );
+        }
+        semantics.dispose();
+      });
+    }
+  });
+
+  group('numeral fit floor', () {
+    testWidgets('320x640 at 2.0: a 12-character value stops shrinking at '
+        '24 dp and the field scrolls without overflow', (tester) async {
+      await _openSheet(
+        tester,
+        size: const Size(320, 640),
+        textScaler: const TextScaler.linear(2),
+      );
+      await tester.ensureVisible(_weight);
+      await tester.pumpAndSettle();
+      await tester.enterText(_weight, '123456789,12');
+      await tester.pumpAndSettle();
+      final fontSize = tester.widget<TextField>(_weight).style!.fontSize!;
+      expect(fontSize, greaterThanOrEqualTo(24));
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('typing error inside the footer', () {

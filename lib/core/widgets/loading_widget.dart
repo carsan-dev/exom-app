@@ -263,7 +263,7 @@ class ShimmerCard extends StatelessWidget {
             (borderRadius ?? BorderRadius.circular(16)).topLeft.x,
           ),
           border: Border.all(
-            color: palette.glassBorder.withValues(alpha: 0.12),
+            color: palette.borderSoft.withValues(alpha: 0.12),
           ),
         ),
       ),

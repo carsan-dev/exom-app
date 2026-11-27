@@ -47,11 +47,18 @@ class ExomPrimaryButton extends StatelessWidget {
     this.busy = false,
     this.semanticLabel,
     this.trailing,
+    this.centerLabel = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? trailingIcon;
+
+  /// Centres the label (also when it wraps) instead of starting it at the
+  /// leading edge. For a button stacked with an [ExomSecondaryButton] (whose
+  /// label is always centred) and no [trailingIcon], so both share one
+  /// alignment.
+  final bool centerLabel;
   final bool busy;
 
   /// Replaces the static [trailingIcon] in its 22 px slot (for example an
@@ -115,6 +122,7 @@ class ExomPrimaryButton extends StatelessWidget {
               Expanded(
                 child: Text(
                   label.toUpperCase(),
+                  textAlign: centerLabel ? TextAlign.center : null,
                   style: _labelStyle(foreground),
                 ),
               ),

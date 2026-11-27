@@ -14,6 +14,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
+import 'package:exom_app/core/services/rest_timer_session_guard.dart';
 
 // Auth
 import 'package:exom_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -148,9 +149,12 @@ final sl = GetIt.instance;
 void handleExecutionTimerSessionState(AuthState state) {
   final gate = sl<ValidatedSessionGate>();
   gate.handle(state);
-  sl<ExecutionTimerCoordinator>().updateOwner(
-    gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null,
-  );
+  final owner = gate.isAuthenticated ? sl<LocalStorage>().sessionStamp : null;
+  sl<ExecutionTimerCoordinator>().updateOwner(owner);
+  // The native rest timer has no owner of its own (DESCANSO-AVISO).
+  if (sl.isRegistered<RestTimerSessionGuard>()) {
+    sl<RestTimerSessionGuard>().handle(state, owner);
+  }
 }
 
 /// Every [AuthBloc] state change: session gate, execution timer owner and
@@ -268,6 +272,9 @@ Future<void> initDependencies() async {
     () => PlatformRestTimerCoordinator(
       notificationSoundEnabled: sl<LocalStorage>().getRestTimerSoundEnabled,
     ),
+  );
+  sl.registerLazySingleton<RestTimerSessionGuard>(
+    () => RestTimerSessionGuard(() => sl<RestTimerCoordinator>()),
   );
 
   sl.registerLazySingleton<OfflineSyncService>(

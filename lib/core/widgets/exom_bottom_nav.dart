@@ -50,7 +50,6 @@ class ExomBottomNav extends StatelessWidget {
 
   static const _barHeight = 64.0;
   static const _iconSize = 24.0;
-  static const _iosHorizontalInset = 16.0;
   static const _iosBottomInsetReduction = 22.0;
   static const _iosBottomInsetReductionThreshold = 28.0;
 
@@ -212,20 +211,6 @@ class ExomBottomNav extends StatelessWidget {
     }
   }
 
-  static double horizontalContentInset(BuildContext context) {
-    if (kIsWeb) {
-      return 0;
-    }
-    final viewPadding = MediaQuery.viewPaddingOf(context);
-    final safeInset = viewPadding.left > viewPadding.right
-        ? viewPadding.left
-        : viewPadding.right;
-    if (defaultTargetPlatform == TargetPlatform.iOS && safeInset == 0) {
-      return _iosHorizontalInset;
-    }
-    return safeInset;
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -233,7 +218,7 @@ class ExomBottomNav extends StatelessWidget {
     final bottomInset = platformBottomInset(context);
     // V4: the flat bar's slots span the full width (sketch: five equal
     // columns); only a landscape safe-area inset is respected. The former iOS
-    // 16 px inset of [horizontalContentInset] belonged to the floating circle.
+    // 16 px iOS inset belonged to the floating circle and is gone.
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final horizontalInset = kIsWeb
         ? 0.0

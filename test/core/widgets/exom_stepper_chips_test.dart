@@ -82,6 +82,30 @@ void main() {
       });
     }
 
+    testWidgets('without compact the ± keep 56 visible and an 8 gap', (
+      tester,
+    ) async {
+      await pumpComponent(tester, const _StepperHost());
+      final minus = find.bySemanticsLabel('Restar 2,5 kg');
+      final plus = find.bySemanticsLabel('Sumar 2,5 kg');
+      for (final button in [minus, plus]) {
+        final box = find
+            .descendant(of: button, matching: find.byType(Container))
+            .first;
+        expect(tester.getSize(box), const Size(56, 56));
+      }
+      final centre = tester.getRect(
+        find
+            .descendant(
+              of: find.byKey(const Key('stepper')),
+              matching: find.byType(Expanded),
+            )
+            .first,
+      );
+      expect(centre.left - tester.getRect(minus).right, 8);
+      expect(tester.getRect(plus).left - centre.right, 8);
+    });
+
     testWidgets('exposes increase/decrease semantics actions', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpComponent(tester, const _StepperHost());

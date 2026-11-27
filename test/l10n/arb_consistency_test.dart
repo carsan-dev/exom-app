@@ -39,6 +39,7 @@ const Map<String, String> identicalValueAllowlist = {
   'activeExerciseRestExtend': 'Symbol "+{seconds} s", same in both languages.',
   'setSheetRirLabel': 'Acronym "RIR", same in both languages.',
   'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',
+  'setSheetWeightStep': 'Only the "±" sign and the formatted step.',
   // L4 unit 4 (Progreso): only placeholders and a separator, no prose.
   'progressMeasureSide': 'Placeholders "{measure} · {side}", no words.',
   // L5-E5 (Circuito): the exercise name closed by a period, no words.

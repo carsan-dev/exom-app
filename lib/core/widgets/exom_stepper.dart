@@ -27,6 +27,11 @@ import 'package:flutter/services.dart';
 /// [valueBuilder] replaces the static value display, [valueStyle] replaces
 /// the value text style (static and typed), and [onValueTap] makes the value
 /// tappable and adds a tap action to the control's semantics node.
+///
+/// [compact] (L6 A-O1, the set sheet's footer rows): the ± are drawn at
+/// [compactButtonSize] inside the same [buttonSize] tap area (4 dp of
+/// invisible margin per side) and sit [compactGap] from the value, so the
+/// visible gap stays 6 dp; the typed field is a little shorter.
 class ExomStepper<T> extends StatelessWidget {
   const ExomStepper({
     super.key,
@@ -55,6 +60,7 @@ class ExomStepper<T> extends StatelessWidget {
     this.valueBuilder,
     this.valueStyle,
     this.onValueTap,
+    this.compact = false,
   });
 
   final T value;
@@ -113,7 +119,20 @@ class ExomStepper<T> extends StatelessWidget {
   /// action of the control's semantics node.
   final VoidCallback? onValueTap;
 
+  /// Draws the ± at [compactButtonSize] within the [buttonSize] tap area.
+  final bool compact;
+
+  /// Tap area of each ± (visible size too, unless [compact]).
   static const double buttonSize = 56;
+
+  /// Visible size of each ± when [compact].
+  static const double compactButtonSize = 48;
+
+  /// Gap between each ± tap area and the value when [compact].
+  static const double compactGap = 2;
+
+  /// Gap between each ± and the value otherwise.
+  static const double gap = 8;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +178,7 @@ class ExomStepper<T> extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: palette.textSecondary,
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 6),
+          contentPadding: EdgeInsets.symmetric(vertical: compact ? 4 : 6),
           border: UnderlineInputBorder(
             borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
           ),
@@ -238,8 +257,9 @@ class ExomStepper<T> extends StatelessWidget {
             icon: ExomIcons.remove,
             semanticLabel: decrementLabel,
             onPressed: onDecrement,
+            compact: compact,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: compact ? compactGap : gap),
           Expanded(
             child: textController != null
                 ? centre
@@ -253,11 +273,12 @@ class ExomStepper<T> extends StatelessWidget {
                           ),
                   ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: compact ? compactGap : gap),
           _StepButton(
             icon: ExomIcons.add,
             semanticLabel: incrementLabel,
             onPressed: onIncrement,
+            compact: compact,
           ),
         ],
       ),
@@ -409,11 +430,13 @@ class _StepButton extends StatefulWidget {
     required this.icon,
     required this.semanticLabel,
     required this.onPressed,
+    this.compact = false,
   });
 
   final IconData icon;
   final String semanticLabel;
   final VoidCallback? onPressed;
+  final bool compact;
 
   @override
   State<_StepButton> createState() => _StepButtonState();
@@ -441,24 +464,34 @@ class _StepButtonState extends State<_StepButton> {
         onTapUp: enabled ? (_) => _set(false) : null,
         onTapCancel: enabled ? () => _set(false) : null,
         onTap: widget.onPressed,
-        child: Container(
-          width: ExomStepper.buttonSize,
-          height: ExomStepper.buttonSize,
-          decoration: BoxDecoration(
-            color: _pressed ? palette.surfaceElevated : null,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: enabled ? palette.textSecondary : palette.borderSoft,
-              width: 1.5,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            widget.icon,
-            size: 24,
-            color: enabled ? palette.textPrimary : palette.textDisabled,
-          ),
+        child: SizedBox.square(
+          dimension: ExomStepper.buttonSize,
+          child: Center(child: _box(palette, enabled)),
         ),
+      ),
+    );
+  }
+
+  Widget _box(ExomThemePalette palette, bool enabled) {
+    final visible = widget.compact
+        ? ExomStepper.compactButtonSize
+        : ExomStepper.buttonSize;
+    return Container(
+      width: visible,
+      height: visible,
+      decoration: BoxDecoration(
+        color: _pressed ? palette.surfaceElevated : null,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: enabled ? palette.textSecondary : palette.borderSoft,
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        widget.icon,
+        size: 24,
+        color: enabled ? palette.textPrimary : palette.textDisabled,
       ),
     );
   }

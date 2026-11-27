@@ -1,8 +1,10 @@
-// L6 E-D1: in the set-logging sheet, after a weight validation error, tapping
-// the weight field again opens the keyboard and the field must still be
-// scrolled above the pinned footer (Guardar). The keyboard is simulated with
-// the view's insets, as the engine reports it, so the focused field reacts to
-// the metrics change like on a device.
+// L6 E-D1 / INT-D1: in the set-logging sheet, after a weight validation
+// error, tapping the weight field again opens the keyboard and the field and
+// its whole error must stay visible above the keyboard. Since L6 A-O1
+// (variant B) the weight row and its error live in the pinned footer, which
+// sits on top of the keyboard and scrolls inside itself when it does not fit.
+// The keyboard is simulated with the view's insets, as the engine reports it,
+// so the focused field reacts to the metrics change like on a device.
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_exercise_page.dart';
@@ -15,16 +17,12 @@ import '../../../../golden/redesign_scenes.dart' show loadRedesignFonts;
 final _weight = find.byKey(const Key('set-sheet-weight-field'));
 final _save = find.byKey(const Key('set-sheet-save'));
 
-/// The pinned footer: the box with the top border that holds Guardar.
-Finder get _footer => find.ancestor(
-  of: _save,
-  matching: find.byWidgetPredicate(
-    (widget) =>
-        widget is DecoratedBox &&
-        widget.decoration is BoxDecoration &&
-        (widget.decoration as BoxDecoration).border is Border &&
-        ((widget.decoration as BoxDecoration).border! as Border).top.width > 0,
-  ),
+/// The pinned footer (Reps, Peso, Guardar and the quiet actions).
+final _footer = find.byKey(const Key('set-sheet-footer'));
+
+/// The visible part of the footer (its scroll view).
+Rect _footerViewport(WidgetTester tester) => tester.getRect(
+  find.descendant(of: _footer, matching: find.byType(Scrollable)).first,
 );
 
 // Samsung S25: 1080 x 2340 px; the Samsung keyboard starts at y = 1330 px.
@@ -91,17 +89,26 @@ Future<void> _hideKeyboard(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-void _expectWeightAboveFooter(WidgetTester tester) {
-  final weightRect = tester.getRect(_weight);
-  final footerTop = tester.getRect(_footer.first).top;
+/// [rect] is inside the visible footer and above the keyboard.
+void _expectVisible(WidgetTester tester, Rect rect, String what) {
+  final viewport = _footerViewport(tester);
   final keyboardTop = (_physical.height - _keyboardPx) / _dpr;
-  expect(footerTop, lessThanOrEqualTo(keyboardTop));
-  expect(weightRect.top, greaterThanOrEqualTo(0));
+  expect(viewport.bottom, lessThanOrEqualTo(keyboardTop + 0.5));
   expect(
-    weightRect.bottom,
-    lessThanOrEqualTo(footerTop),
-    reason: 'the focused weight field must be scrolled above the footer',
+    rect.top,
+    greaterThanOrEqualTo(viewport.top - 0.5),
+    reason: '$what must not be scrolled out of the top of the footer',
   );
+  expect(
+    rect.bottom,
+    lessThanOrEqualTo(viewport.bottom + 0.5),
+    reason: '$what must be fully visible above the keyboard',
+  );
+}
+
+void _expectWeightAboveFooter(WidgetTester tester) {
+  expect(find.descendant(of: _footer, matching: _weight), findsOneWidget);
+  _expectVisible(tester, tester.getRect(_weight), 'the focused weight field');
 }
 
 /// The weight error message (it quotes what was typed).
@@ -110,24 +117,23 @@ Finder get _weightError => find.byWidgetPredicate(
 );
 
 /// INT-D1: the whole error message under the focused weight field, not only
-/// the field and its caret, must be scrolled above the footer.
+/// the field and its caret, must be visible above the keyboard.
 void _expectWeightErrorAboveFooter(WidgetTester tester) {
   _expectWeightAboveFooter(tester);
-  final errorRect = tester.getRect(_weightError);
-  final footerTop = tester.getRect(_footer.first).top;
-  expect(
-    errorRect.bottom,
-    lessThanOrEqualTo(footerTop),
-    reason:
-        'the weight error under the focused field must be fully visible '
-        'above the footer',
+  expect(find.descendant(of: _footer, matching: _weightError), findsOneWidget);
+  _expectVisible(
+    tester,
+    tester.getRect(_weightError),
+    'the weight error under the focused field',
   );
 }
 
 void main() {
   for (final locale in const [Locale('es'), Locale('en')]) {
     testWidgets('E-D1 ($locale): after a weight error, tapping the field '
-        'again scrolls it above the footer and the keyboard', (tester) async {
+        'again keeps it visible in the footer above the keyboard', (
+      tester,
+    ) async {
       await _openSheet(tester, locale);
       await tester.enterText(_weight, '62.5,5');
       await tester.pump();
@@ -153,7 +159,7 @@ void main() {
   }
 
   testWidgets('INT-D1 (es): after a weight error, tapping the field again '
-      'scrolls the field and its whole two-line error above the footer', (
+      'keeps the field and its whole two-line error above the keyboard', (
     tester,
   ) async {
     await _openSheet(tester, const Locale('es'));
@@ -172,7 +178,7 @@ void main() {
 
   // Regression guard for the Save path; it also passes without the INT-D1 fix.
   testWidgets('guard (es): when the weight error appears with the field '
-      'focused and the keyboard up, the whole error is above the footer', (
+      'focused and the keyboard up, the whole error is above the keyboard', (
     tester,
   ) async {
     await _openSheet(tester, const Locale('es'));
@@ -188,7 +194,7 @@ void main() {
   });
 
   testWidgets('E-D1 control: without an error, focusing the weight field '
-      'with the keyboard scrolls it above the footer', (tester) async {
+      'with the keyboard keeps it above the keyboard', (tester) async {
     await _openSheet(tester, const Locale('es'));
     await tester.tap(_weight);
     await _raiseKeyboard(tester);

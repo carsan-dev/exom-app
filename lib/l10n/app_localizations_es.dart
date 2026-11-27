@@ -4748,6 +4748,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String setSheetWeightStep(String step) {
+    return '± $step';
+  }
+
+  @override
   String get setSheetRirLabel => 'RIR';
 
   @override

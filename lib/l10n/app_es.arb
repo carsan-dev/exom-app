@@ -1640,6 +1640,8 @@
   "setSheetWeightLbA11y": "Peso en libras",
   "setSheetWeightHint": "pasos de {step} · toca la cifra para escribir",
   "@setSheetWeightHint": {"placeholders": {"step": {"type": "String"}}},
+  "setSheetWeightStep": "± {step}",
+  "@setSheetWeightStep": {"placeholders": {"step": {"type": "String"}}},
   "setSheetRirLabel": "RIR",
   "setSheetRirChipA11y": "RIR {value}",
   "@setSheetRirChipA11y": {"placeholders": {"value": {"type": "int"}}},

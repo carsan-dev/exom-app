@@ -398,6 +398,33 @@ void main() {
   });
 
   group('protagonist numeral', () {
+    // A day with several sessions counts its sessions, as the week line and
+    // Inicio do: 1 of 5 in mode ALL (day not completed) is 1/5, not 0/1.
+    testWidgets('training: counts the sessions of the month, not the days', (
+      tester,
+    ) async {
+      await pumpCalendarScene(
+        tester,
+        state: sceneLoaded(
+          days: [
+            CalendarDayEntity(
+              date: DateTime(kSceneYear, kSceneMonth, 27),
+              hasTraining: true,
+              hasDiet: false,
+              isRestDay: false,
+              trainingCompleted: false,
+              dietCompleted: false,
+              trainingsAssigned: 5,
+              trainingsDone: 1,
+              trainingCompletionMode: 'ALL',
+            ),
+          ],
+        ),
+      );
+      final numeral = _numeral(tester);
+      expect((numeral.value, numeral.unit), ('1', '/5'));
+    });
+
     testWidgets('training: sessions done of the month', (tester) async {
       await pumpCalendarScene(tester, state: sceneLoaded());
       final l10n = _l10n(tester);

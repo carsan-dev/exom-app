@@ -2213,6 +2213,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noActivitiesThisMonthSubtitle => 'No trainings or diets scheduled';
 
   @override
+  String get noPastTrainingsThisMonth => 'No past workouts this month';
+
+  @override
+  String get noPastTrainingsThisMonthSubtitle =>
+      'Workouts from past days will show up here.';
+
+  @override
   String get onboardingWelcomeTitle => 'Welcome to EXOM!';
 
   @override

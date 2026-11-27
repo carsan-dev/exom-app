@@ -379,7 +379,10 @@ void main() {
         find.byType(ExomInlineMessage),
       );
       expect(message.kind, ExomMessageKind.info);
-      expect(message.title, l10n.noActivitiesThisMonth);
+      // The history lists only past workouts: it must not claim that nothing
+      // is scheduled (the calendar's wording).
+      expect(message.title, l10n.noPastTrainingsThisMonth);
+      expect(message.body, l10n.noPastTrainingsThisMonthSubtitle);
     });
 
     testWidgets('first load and month change show flat skeletons', (

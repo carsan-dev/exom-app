@@ -343,8 +343,8 @@ class _TrainingsViewState extends State<_TrainingsView> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: ExomInlineMessage(
           kind: ExomMessageKind.info,
-          title: l10n.noActivitiesThisMonth,
-          body: l10n.noActivitiesThisMonthSubtitle,
+          title: l10n.noPastTrainingsThisMonth,
+          body: l10n.noPastTrainingsThisMonthSubtitle,
         ),
       );
     } else {

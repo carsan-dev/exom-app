@@ -4028,6 +4028,18 @@ abstract class AppLocalizations {
   /// **'No hay entrenamientos ni dietas programados'**
   String get noActivitiesThisMonthSubtitle;
 
+  /// No description provided for @noPastTrainingsThisMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin entrenamientos anteriores este mes'**
+  String get noPastTrainingsThisMonth;
+
+  /// No description provided for @noPastTrainingsThisMonthSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aquí verás los entrenamientos de los días pasados.'**
+  String get noPastTrainingsThisMonthSubtitle;
+
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In es, this message translates to:

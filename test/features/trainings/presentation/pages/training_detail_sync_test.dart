@@ -562,6 +562,42 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await sl.reset();
   });
+  for (final entry in {'es': '5 de septiembre de 2026', 'en': 'September 5, 2026'}.entries) {
+    testWidgets('TEXTOS-2 O6: session picker shows the date in the ${entry.key} locale, never ISO', (tester) async {
+      await sl.reset();
+      final storage = _FilteredStorage()
+        ..actionStatus = null
+        ..executions = [
+          {'id': 'exec-a', 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+        ];
+      final repository = _Repository();
+      sl.registerSingleton<LocalStorage>(storage);
+      sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+        getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+        getTrainingsUseCase: GetTrainingsUseCase(repository),
+        getTrainingUseCase: GetTrainingUseCase(repository),
+        markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+        unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+        completeTrainingUseCase: CompleteTrainingUseCase(repository),
+        getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+        getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+      ));
+      await tester.pumpWidget(MaterialApp(
+        locale: Locale(entry.key),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('complete-training-button')));
+      await tester.pumpAndSettle();
+      final picker = find.byType(AlertDialog);
+      expect(find.descendant(of: picker, matching: find.textContaining(entry.value)), findsOneWidget);
+      expect(find.descendant(of: picker, matching: find.textContaining(_date)), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
+  }
   testWidgets('cold detail displays sole confirmed execution without selecting it for writes', (tester) async {
     await sl.reset();
     final storage = _FilteredStorage()..status = 'confirmed'..actionStatus = null;

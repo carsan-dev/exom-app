@@ -730,7 +730,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
             children: [
               for (final (index, entry) in pending.indexed)
                 ListTile(
-                  title: Text('${training.name} · $date'),
+                  title: Text('${training.name} · ${_sessionDateLabel(dialogContext, date)}'),
                   subtitle: Text(l10n.trainingExecutionLabel(index + 1)),
                   onTap: () => Navigator.of(dialogContext).pop(entry['id'] as String),
                 ),
@@ -2477,6 +2477,15 @@ class _NumberedRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Long date of [isoDate] in the active locale (TEXTOS-2 O6); an
+/// unparseable value is shown as it came.
+String _sessionDateLabel(BuildContext context, String isoDate) {
+  final day = DateTime.tryParse(isoDate);
+  if (day == null) return isoDate;
+  final locale = Localizations.localeOf(context).toString();
+  return DateFormat.yMMMMd(locale).format(day);
 }
 
 /// FB1 r3: text at Android's 1.5x setting or above (the 14 sp body size grows

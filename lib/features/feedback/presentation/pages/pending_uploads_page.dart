@@ -409,15 +409,15 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
     final isVideo = item['media_type'] == 'VIDEO';
     final name = _exerciseName(item);
     final description = [
-      // A training exercise is never shown by its identifier (FB1); a plain
-      // exercise feedback saved by an earlier build keeps today's fallback.
+      // An exercise is never shown by its identifier (FB1, TEXTOS-2 O2): a
+      // plain exercise feedback saved without a name reads as a generic label.
       if (item['training_exercise_id'] != null || item['exercise_id'] != null)
         if (name != null)
           l10n.pendingEvidenceExercise(name)
         else if (item['training_exercise_id'] != null)
           l10n.pendingEvidenceExerciseUnnamed
         else
-          l10n.pendingEvidenceExercise(item['exercise_id'].toString()),
+          l10n.pendingEvidenceExerciseGeneric,
       if (item['assignment_date'] is String) item['assignment_date'] as String,
     ].join(' · ');
     // FB1: a last-set video that queued progress waits for cannot be

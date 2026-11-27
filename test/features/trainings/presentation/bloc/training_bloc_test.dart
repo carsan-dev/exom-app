@@ -383,7 +383,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('Entrenamiento 1 · 2026-09-05'), findsNWidgets(2));
+    expect(find.text('Entrenamiento 1 · 5 de septiembre de 2026'), findsNWidgets(2));
     await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('completion-rpe-10')));

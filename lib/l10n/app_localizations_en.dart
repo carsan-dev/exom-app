@@ -3061,6 +3061,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingEvidenceExerciseUnnamed => 'Exercise from a workout';
 
   @override
+  String get pendingEvidenceExerciseGeneric => 'Exercise';
+
+  @override
   String get pendingFeedbackError =>
       'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
 

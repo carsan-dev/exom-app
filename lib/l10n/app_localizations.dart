@@ -5312,6 +5312,12 @@ abstract class AppLocalizations {
   /// **'Ejercicio de un entreno'**
   String get pendingEvidenceExerciseUnnamed;
 
+  /// No description provided for @pendingEvidenceExerciseGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio'**
+  String get pendingEvidenceExerciseGeneric;
+
   /// No description provided for @pendingFeedbackError.
   ///
   /// In es, this message translates to:

@@ -3096,6 +3096,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pendingEvidenceExerciseUnnamed => 'Ejercicio de un entreno';
 
   @override
+  String get pendingEvidenceExerciseGeneric => 'Ejercicio';
+
+  @override
   String get pendingFeedbackError =>
       'No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.';
 

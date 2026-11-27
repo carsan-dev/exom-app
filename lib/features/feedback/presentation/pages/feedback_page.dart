@@ -166,6 +166,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 }
                 return _FeedbackForm(
                   exerciseId: args?.exercise?.exerciseId,
+                  exerciseName: args?.exercise?.exerciseName,
                   layout: layout,
                 );
               },
@@ -645,9 +646,10 @@ class _FeedbackLoadingBody extends StatelessWidget {
 /// Single-exercise form (sketch C1): 01 evidence type, 02 file, 03 notes; the
 /// send button in the pinned footer, off until there is a file.
 class _FeedbackForm extends StatefulWidget {
-  const _FeedbackForm({required this.layout, this.exerciseId});
+  const _FeedbackForm({required this.layout, this.exerciseId, this.exerciseName});
 
   final String? exerciseId;
+  final String? exerciseName;
   final FeedbackFormLayout layout;
 
   @override
@@ -693,6 +695,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
             ? null
             : _notesController.text.trim(),
         exerciseId: widget.exerciseId,
+        exerciseName: widget.exerciseName,
       );
       if (!mounted) return;
       setState(() => _selectedFile = null);

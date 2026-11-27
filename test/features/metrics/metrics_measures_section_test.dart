@@ -938,5 +938,64 @@ void main() {
       expect(labelOf('chest_left'), 'Pecho, 96,5 cm');
       expect(labelOf('chest_right'), 'Pecho, 96,5 cm');
     });
+
+    // Issue 4: closing the sheet gives the focus back to its trigger.
+    Future<FocusNode> focusRow(WidgetTester tester, BodyZone zone) async {
+      await tester.scrollUntilVisible(
+        measureRow(zone),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pump();
+      final focus = Focus.of(
+        tester.element(
+          find
+              .descendant(
+                of: find.descendant(
+                  of: measureRow(zone),
+                  matching: find.byType(InkWell),
+                ),
+                matching: find.byType(Text),
+              )
+              .first,
+        ),
+      );
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasPrimaryFocus, isTrue);
+      return focus;
+    }
+
+    Future<void> activate(WidgetTester tester) async {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(measureSheet(), findsOneWidget);
+    }
+
+    testWidgets('focus returns to the row after «Hecho»', (tester) async {
+      await _mount(tester, latest: _metric);
+      final rowFocus = await focusRow(tester, BodyZone.upperArm);
+      await activate(tester);
+      expect(rowFocus.hasPrimaryFocus, isFalse, reason: 'focus in the sheet');
+      await tapMeasureDone(tester);
+      expect(measureSheet(), findsNothing);
+      expect(rowFocus.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('focus returns to the row after dismissing the sheet', (
+      tester,
+    ) async {
+      await _mount(tester, latest: _metric);
+      final rowFocus = await focusRow(tester, BodyZone.thigh);
+      await activate(tester);
+      Navigator.of(tester.element(measureSheet())).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(measureSheet(), findsNothing);
+      expect(rowFocus.hasPrimaryFocus, isTrue);
+    });
   });
 }

@@ -741,6 +741,35 @@ void main() {
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
   });
 
+  for (final (name, theme) in [
+    ('dark', AppTheme.dark),
+    ('light', AppTheme.light),
+  ]) {
+    testWidgets('error SnackBar text uses onError over error ($name)', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        theme: theme,
+        completed: {for (var i = 1; i <= 5; i++) 'te-$i'},
+      );
+      await tester.tap(completeButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('completion-rpe-8')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('confirm-complete-training')));
+      await tester.pumpAndSettle();
+      final snack = find.byType(SnackBar);
+      expect(snack, findsOneWidget);
+      final colors = Theme.of(tester.element(snack)).colorScheme;
+      expect(tester.widget<SnackBar>(snack).backgroundColor, colors.error);
+      final text = tester.widget<Text>(
+        find.descendant(of: snack, matching: find.byType(Text)).first,
+      );
+      expect(text.style?.color, colors.onError);
+    });
+  }
+
   testWidgets('a draft set with only RIR is not counted as done in the row', (
     tester,
   ) async {

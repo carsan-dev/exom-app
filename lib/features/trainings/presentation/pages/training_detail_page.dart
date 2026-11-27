@@ -476,10 +476,14 @@ class _TrainingDetailView extends StatelessWidget {
     return BlocConsumer<TrainingBloc, TrainingState>(
       listener: (context, state) {
         if (state is TrainingDetailLoaded && state.errorMessage != null) {
+          final colors = Theme.of(context).colorScheme;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError)),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text(
+                localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError),
+                style: TextStyle(color: colors.onError),
+              ),
+              backgroundColor: colors.error,
             ),
           );
         }

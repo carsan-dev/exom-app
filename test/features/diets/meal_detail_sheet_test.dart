@@ -716,4 +716,141 @@ void main() {
       );
     });
   });
+
+  // The size is settled when the sheet opens; with it open, turning the phone
+  // or changing the text scale must settle it again for the new values.
+  group('the open sheet follows screen and text scale changes', () {
+    final scale = ValueNotifier<TextScaler>(TextScaler.noScaling);
+    final draggable = find.byType(DraggableScrollableSheet);
+    final loadedFoot = find.byKey(const Key('meal-detail-foot'));
+
+    Future<void> open(
+      WidgetTester tester,
+      Size size,
+      TextScaler scaler, {
+      MealEntity? meal,
+    }) async {
+      meal ??= _withOptions;
+      await loadRedesignFonts();
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _Repository(meal);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      final mealId = meal.id;
+      scale.value = scaler;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showMealDetailSheet(
+                    context,
+                    mealId: mealId,
+                    selectedDate: _date,
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          theme: AppTheme.light,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => ValueListenableBuilder<TextScaler>(
+            valueListenable: scale,
+            builder: (context, scaler, _) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: scaler),
+              child: child!,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(loadedFoot, findsOneWidget);
+    }
+
+    Future<double> freshHeight(
+      WidgetTester tester,
+      Size size,
+      TextScaler scaler,
+    ) async {
+      await open(tester, size, scaler);
+      return tester.getSize(draggable).height;
+    }
+
+    const portrait = Size(390, 844);
+    const landscape = Size(844, 390);
+    const large = AndroidNonlinearTextScaler(1.6);
+
+    testWidgets('text scale 1.0 to 1.6 with the sheet open', (tester) async {
+      final expected = await freshHeight(tester, portrait, large);
+      await open(tester, portrait, TextScaler.noScaling);
+      expect(tester.getSize(draggable).height, lessThan(expected - 1));
+      scale.value = large;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('text scale 1.6 to 1.0 with the sheet open', (tester) async {
+      final expected = await freshHeight(tester, portrait, TextScaler.noScaling);
+      await open(tester, portrait, large);
+      expect(tester.getSize(draggable).height, greaterThan(expected + 1));
+      scale.value = TextScaler.noScaling;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+    });
+
+    testWidgets('turning the phone with the sheet open at 1.6', (tester) async {
+      final expected = await freshHeight(tester, landscape, large);
+      await open(tester, portrait, large);
+      tester.view.physicalSize = landscape;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(expected, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a sheet the user dragged keeps its size', (tester) async {
+      await open(tester, portrait, TextScaler.noScaling);
+      await tester.drag(
+        find.descendant(of: draggable, matching: find.byType(Scrollable)).first,
+        const Offset(0, 120),
+      );
+      await tester.pumpAndSettle();
+      final dragged = tester.getSize(draggable).height;
+      scale.value = large;
+      await tester.pumpAndSettle();
+      expect(tester.getSize(draggable).height, moreOrLessEquals(dragged));
+    });
+  });
 }

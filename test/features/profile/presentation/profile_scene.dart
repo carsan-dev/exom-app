@@ -45,7 +45,11 @@ const ProfileEntity sceneProfile = ProfileEntity(
   muscleMassGoalKg: 40,
 );
 
-/// Weight history from 71.4 to 68.4 kg.
+/// Weight history from 71.4 to 68.4 kg, every 14 days from 20 Aug to 12 Nov
+/// 2026. The days are counted on the calendar (`DateTime(y, m, d + n)`), not
+/// with `add(Duration(days: n))`: a local 24 h step crosses the end of summer
+/// time on 25 Oct in Europe/Madrid and gave «11 nov» at 23:00, while UTC (CI)
+/// gave «12 nov», so the goldens depended on the time zone.
 List<BodyMetricEntity> sceneHistory() {
   const points = [
     (0, 71.4),
@@ -60,7 +64,7 @@ List<BodyMetricEntity> sceneHistory() {
     for (var i = 0; i < points.length; i++)
       BodyMetricEntity(
         id: 'w$i',
-        date: DateTime(2026, 8, 20).add(Duration(days: points[i].$1)),
+        date: DateTime(2026, 8, 20 + points[i].$1),
         weightKg: points[i].$2,
       ),
   ];

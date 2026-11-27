@@ -29,6 +29,20 @@ Widget _nav({int selected = 2, ValueChanged<int>? onTap, bool? showLabels}) {
   return Scaffold(body: const SizedBox.expand(), bottomNavigationBar: nav);
 }
 
+/// Android 14+ style scaler: not a straight multiple. Small text grows by a
+/// factor of 2.0, larger text by less.
+class _NonLinearScaler extends TextScaler {
+  const _NonLinearScaler();
+
+  @override
+  double scale(double fontSize) =>
+      fontSize <= 20 ? fontSize * 2.0 : fontSize * 1.4;
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => 2.0;
+}
+
 void main() {
   testWidgets('the label-scale search is computed once per input set', (
     tester,
@@ -296,6 +310,83 @@ void main() {
       handle.dispose();
     }
   });
+
+  for (final locale in const [Locale('es'), Locale('en')]) {
+    Future<List<double>> labelSizes(
+      WidgetTester tester,
+      double width,
+      TextScaler scaler,
+    ) async {
+      await pumpComponent(
+        tester,
+        _nav(),
+        width: width,
+        height: 640,
+        textScaler: scaler,
+        locale: locale,
+        wrapInScaffold: false,
+      );
+      expectNoOverflow(tester);
+      final labels = locale.languageCode == 'es' ? _labelsEs : _labelsEn;
+      return [
+        for (final label in labels)
+          tester
+              .renderObject<RenderParagraph>(find.text(label))
+              .textScaler
+              .scale(13),
+      ];
+    }
+
+    testWidgets(
+      '390 dp, ${locale.languageCode}: 2.0x gives the same label size as 1.6x',
+      (tester) async {
+        final at16 = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(1.6),
+        );
+        final at20 = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(2.0),
+        );
+        expect(at20, at16);
+        for (final size in at20) {
+          expect(size, lessThanOrEqualTo(13 * 1.3 + 0.001));
+          expect(size, greaterThan(13));
+        }
+      },
+    );
+
+    testWidgets(
+      '390 dp, ${locale.languageCode}: non-linear scaler is capped to 1.3x',
+      (tester) async {
+        final sizes = await labelSizes(tester, 390, const _NonLinearScaler());
+        for (final size in sizes) {
+          expect(size, greaterThanOrEqualTo(13));
+          expect(size, lessThanOrEqualTo(13 * 1.3 + 0.001));
+        }
+        final linear = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(2.0),
+        );
+        expect(sizes, linear);
+      },
+    );
+
+    for (final scaler in const [TextScaler.linear(2.0), _NonLinearScaler()]) {
+      testWidgets(
+        '320 dp, ${locale.languageCode}, ${scaler.runtimeType}: labels stay 13',
+        (tester) async {
+          final sizes = await labelSizes(tester, 320, scaler);
+          for (final size in sizes) {
+            expect(size, 13);
+          }
+        },
+      );
+    }
+  }
 
   for (final locale in const [Locale('es'), Locale('en')]) {
     for (final scale in const [1.0, 1.3, 1.6]) {

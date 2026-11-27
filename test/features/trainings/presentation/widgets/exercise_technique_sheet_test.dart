@@ -116,6 +116,35 @@ void main() {
     expect(taps.value, 1);
   });
 
+  testWidgets('a list text paints bullets with indent, not the literal «- »; '
+      'a paragraph stays text', (tester) async {
+    await pumpTechniqueSheet(
+      tester,
+      hasVideo: false,
+      sections: const [
+        (
+          title: 'Técnica',
+          text: '- Espalda recta\n* Core firme\n- 90 grados de rodilla',
+        ),
+        (title: 'Errores comunes', text: '-5 kg de lastre'),
+      ],
+    );
+    expectNoOverflow(tester);
+    expect(_inPanel(find.text('Espalda recta')), findsOneWidget);
+    expect(_inPanel(find.text('Core firme')), findsOneWidget);
+    expect(_inPanel(find.text('90 grados de rodilla')), findsOneWidget);
+    expect(_inPanel(find.textContaining('- Espalda')), findsNothing);
+    expect(_inPanel(find.textContaining('* Core')), findsNothing);
+    // Three bullet marks, one per item; the paragraph has none.
+    expect(find.byKey(const Key('exercise-bullet-mark')), findsNWidgets(3));
+    expect(_inPanel(find.text('-5 kg de lastre')), findsOneWidget);
+    // Indent: the text starts to the right of the section text edge.
+    final item = tester.getTopLeft(_inPanel(find.text('Espalda recta'))).dx;
+    final paragraph =
+        tester.getTopLeft(_inPanel(find.text('-5 kg de lastre'))).dx;
+    expect(item, greaterThan(paragraph + 8));
+  });
+
   testWidgets('without video the sheet starts with the texts', (tester) async {
     await pumpTechniqueSheet(tester, hasVideo: false);
     expectNoOverflow(tester);

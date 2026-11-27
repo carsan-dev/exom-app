@@ -251,4 +251,25 @@ void main() {
     expect((h.bloc.state as HomeLoaded).refreshError, isNull);
     await h.finish(tester);
   });
+
+  testWidgets('closing the bloc with a load in flight cancels its bound: no '
+      'timer outlives the bloc', (tester) async {
+    // Signing out or switching account disposes the shell while the summary
+    // is still in flight. The bound of that wait belongs to the bloc: once it
+    // is closed nothing may keep a timer running (the test binding fails the
+    // test on any timer still pending at its end).
+    final repo = _HomeRepository();
+    final bloc = HomeBloc(
+      getHomeSummaryUseCase: GetHomeSummaryUseCase(repo),
+      summaryTimeout: _timeout,
+    )..add(const HomeLoadRequested());
+    await tester.pump();
+    expect(repo.calls, 1);
+    expect(bloc.state, isA<HomeLoading>());
+
+    // Not awaited, as the shell does not await it: close() waits for the
+    // handler, which stays on the load that never answers.
+    unawaited(bloc.close());
+    await tester.pump();
+  });
 }

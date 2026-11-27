@@ -50,7 +50,6 @@ class ExomBottomNav extends StatelessWidget {
 
   static const _barHeight = 64.0;
   static const _iconSize = 24.0;
-  static const _iosHorizontalInset = 16.0;
   static const _iosBottomInsetReduction = 22.0;
   static const _iosBottomInsetReductionThreshold = 28.0;
 
@@ -138,7 +137,8 @@ class ExomBottomNav extends StatelessWidget {
   })?
   _lastLabelScale;
 
-  /// Number of text layouts the label-scale search has run (tests).
+  /// Number of text layouts the label-scale search has run. Only counted in
+  /// debug/test builds (assert), never in release.
   @visibleForTesting
   static int labelLayoutCount = 0;
 
@@ -157,7 +157,10 @@ class ExomBottomNav extends StatelessWidget {
         textScaler: scaler,
         maxLines: 1,
       )..layout();
-      labelLayoutCount++;
+      assert(() {
+        labelLayoutCount++;
+        return true;
+      }());
       final width = painter.width;
       painter.dispose();
       final isEdge = i == 0 || i == last;
@@ -212,20 +215,6 @@ class ExomBottomNav extends StatelessWidget {
     }
   }
 
-  static double horizontalContentInset(BuildContext context) {
-    if (kIsWeb) {
-      return 0;
-    }
-    final viewPadding = MediaQuery.viewPaddingOf(context);
-    final safeInset = viewPadding.left > viewPadding.right
-        ? viewPadding.left
-        : viewPadding.right;
-    if (defaultTargetPlatform == TargetPlatform.iOS && safeInset == 0) {
-      return _iosHorizontalInset;
-    }
-    return safeInset;
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -233,7 +222,7 @@ class ExomBottomNav extends StatelessWidget {
     final bottomInset = platformBottomInset(context);
     // V4: the flat bar's slots span the full width (sketch: five equal
     // columns); only a landscape safe-area inset is respected. The former iOS
-    // 16 px inset of [horizontalContentInset] belonged to the floating circle.
+    // 16 px iOS inset belonged to the floating circle and is gone.
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final horizontalInset = kIsWeb
         ? 0.0
@@ -377,52 +366,48 @@ class _NavTab extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  glyph,
-                  if (label != null) ...[
-                    const SizedBox(height: 4),
-                    ExcludeSemantics(
-                      child: Padding(
-                        // Keeps the two edge labels off the screen edge.
-                        padding: EdgeInsetsDirectional.only(
-                          start: index == 0 ? ExomBottomNav.labelEdgeInset : 0,
-                          end: index == 4 ? ExomBottomNav.labelEdgeInset : 0,
-                        ),
-                        child: OverflowBox(
-                          fit: OverflowBoxFit.deferToChild,
-                          // A label wider than its slot spills inwards at the
-                          // two edge slots so it never leaves the screen.
-                          alignment: index == 0
-                              ? Alignment.centerLeft
-                              : index == 4
-                              ? Alignment.centerRight
-                              : Alignment.center,
-                          maxWidth: slotWidth + ExomBottomNav.labelSpill * 2,
-                          child: Text(
-                            label!,
-                            key: ValueKey('exom-bottom-nav-label-$index'),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            textScaler: labelScaler,
-                            style: ExomBottomNav._labelStyle(
-                              selected,
-                            ).copyWith(color: color),
-                          ),
-                        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              glyph,
+              if (label != null) ...[
+                const SizedBox(height: 4),
+                ExcludeSemantics(
+                  child: Padding(
+                    // Keeps the two edge labels off the screen edge.
+                    padding: EdgeInsetsDirectional.only(
+                      start: index == 0 ? ExomBottomNav.labelEdgeInset : 0,
+                      end: index == 4 ? ExomBottomNav.labelEdgeInset : 0,
+                    ),
+                    child: OverflowBox(
+                      fit: OverflowBoxFit.deferToChild,
+                      // A label wider than its slot spills inwards at the
+                      // two edge slots so it never leaves the screen.
+                      alignment: index == 0
+                          ? Alignment.centerLeft
+                          : index == 4
+                          ? Alignment.centerRight
+                          : Alignment.center,
+                      maxWidth: slotWidth + ExomBottomNav.labelSpill * 2,
+                      child: Text(
+                        label!,
+                        key: ValueKey('exom-bottom-nav-label-$index'),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        textScaler: labelScaler,
+                        style: ExomBottomNav._labelStyle(
+                          selected,
+                        ).copyWith(color: color),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

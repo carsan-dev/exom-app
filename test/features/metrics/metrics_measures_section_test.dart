@@ -831,6 +831,10 @@ void main() {
       ('en', '33.25', '33.25', 'L 33.25 · R 33.5 cm', 33.25),
       // A third decimal is rounded on input to the two the app shows.
       ('es', '33,256', '33,26', 'I 33,26 · D 33,5 cm', 33.26),
+      // A typed half rounds up despite binary floating point: 1.005 * 100
+      // is 100.4999…, which used to show and send 1,00.
+      ('es', '1,005', '1,01', 'I 1,01 · D 33,5 cm', 1.01),
+      ('es', '2,675', '2,68', 'I 2,68 · D 33,5 cm', 2.68),
     ]) {
       testWidgets('$locale typed «$typed» shows «$shown» and sends $sent', (
         tester,

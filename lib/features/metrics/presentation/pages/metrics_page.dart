@@ -12,7 +12,7 @@ import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/formatters/unit_converters.dart';
 import 'package:exom_app/core/formatters/unit_formatters.dart';
 import 'package:exom_app/core/formatters/weight_input.dart'
-    show decimalSeparatorFor, formatDisplayDecimal;
+    show decimalSeparatorFor, formatDisplayDecimal, roundToHundredths;
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -1906,10 +1906,10 @@ class _MeasureSheet extends StatefulWidget {
 }
 
 class _MeasureSheetState extends State<_MeasureSheet> {
-  /// A value as the sheet shows it: at most two decimals («33,256» becomes
-  /// 33.26), so the draft and the save carry exactly the number shown.
-  static double _measurePrecision(double value) =>
-      value.isFinite ? (value * 100).round() / 100 : value;
+  /// A value as the sheet shows it: at most two decimals, half up on the
+  /// typed digits («33,256» becomes 33.26, «1,005» 1.01), so the draft and
+  /// the save carry exactly the number shown.
+  static double _measurePrecision(double value) => roundToHundredths(value);
 
   late final List<double> _values = [
     for (final side in widget.sides) side.initial,

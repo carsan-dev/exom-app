@@ -71,10 +71,10 @@ class ExomPrimaryButton extends StatelessWidget {
     final palette = context.exomPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final disabled = onPressed == null;
-    final fill = disabled ? palette.borderSoft : AppColors.primary;
+    final fill = disabled ? palette.borderSoft : palette.limeFill;
     final foreground = disabled
         ? (isDark ? palette.textDisabled : palette.textSecondary)
-        : kExomPrimaryForeground;
+        : palette.onLimeFill;
 
     final Widget? trailingSlot = busy
         ? ExcludeSemantics(
@@ -96,13 +96,12 @@ class ExomPrimaryButton extends StatelessWidget {
         ? null
         : Icon(trailingIcon, size: 22, color: foreground);
 
+    final outline = palette.limeFillOutline;
     final surface = DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(_radius),
-        border: isDark
-            ? null
-            : Border.all(color: AppColors.textOnPrimary, width: 1.5),
+        border: outline == null ? null : Border.all(color: outline, width: 1.5),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(

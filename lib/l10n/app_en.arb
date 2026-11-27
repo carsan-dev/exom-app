@@ -1130,6 +1130,7 @@
   "pendingUploadsHeroLabel": "{count, plural, =1{pending upload} other{pending uploads}}",
   "@pendingUploadsHeroLabel": {"placeholders": {"count": {"type": "int"}}},
   "pendingUploadsSectionEvidence": "Evidence",
+  "pendingUploadsSectionSent": "Sent",
   "pendingUploadsEmptyFirst": "All clear.",
   "pendingUploadsEmptySecond": "No uploads.",
   "pendingUploadsEmptyBody": "Every file stays on this phone until EXOM confirms it received it.",

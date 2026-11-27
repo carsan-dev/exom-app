@@ -414,9 +414,12 @@ void main() {
 
   for (final locale in ['es', 'en']) {
     group('L5-C1b $locale', () {
-      testWidgets('completed rows stay in the list but are not counted', (
+      testWidgets('header counts pending and failed apart, never confirmed', (
         tester,
       ) async {
+        tester.view.physicalSize = const Size(540, 1600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
         final l10n = await _pumpList(tester, locale: locale, items: [
           _row('a', 'failed'),
           _row('b', 'completed'),
@@ -424,15 +427,91 @@ void main() {
         ]);
         expect(
           find.text(
-            '${l10n.pendingUploadsCountSubtitle(2)} · '
+            '${l10n.pendingUploadsCountSubtitle(1)} · '
             '${l10n.pendingUploadsErrorCount(1)}',
           ),
           findsOneWidget,
         );
-        expect(find.text('2'), findsOneWidget);
-        expect(find.text('3'), findsNothing);
-        expect(find.text(l10n.pendingUploadsHeroLabel(2)), findsOneWidget);
+        expect(find.text(l10n.pendingUploadsHeroLabel(1)), findsOneWidget);
         expect(find.byKey(const ValueKey('pending-row-b')), findsOneWidget);
+      });
+
+      testWidgets('L5-D66: 1 confirmed + 1 failed reads only «con error»', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {..._row('ok', 'completed'), 'attempts': 2},
+          {..._row('bad', 'failed'), 'attempts': 1},
+        ]);
+        expect(find.text(l10n.pendingUploadsErrorCount(1)), findsWidgets);
+        expect(find.text(l10n.pendingUploadsCountSubtitle(1)), findsNothing);
+        expect(find.text(l10n.pendingUploadsNone), findsNothing);
+      });
+
+      testWidgets('L5-D66: confirmed rows sit under «Enviadas» with Eliminar', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(540, 1600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {..._row('ok', 'completed'), 'attempts': 2},
+          _row('bad', 'failed'),
+        ]);
+        final sent = find.text(l10n.pendingUploadsSectionSent.toUpperCase());
+        final evidence = find.text(
+          l10n.pendingUploadsSectionEvidence.toUpperCase(),
+        );
+        expect(sent, findsOneWidget);
+        expect(evidence, findsOneWidget);
+        final rows = find.byKey(const ValueKey('pending-row-ok'));
+        expect(rows, findsOneWidget);
+        expect(
+          tester.getTopLeft(sent).dy,
+          greaterThan(tester.getTopLeft(evidence).dy),
+        );
+        expect(
+          tester.getTopLeft(rows).dy,
+          greaterThan(tester.getTopLeft(sent).dy),
+        );
+        expect(
+          tester.getTopLeft(find.byKey(const ValueKey('pending-row-bad'))).dy,
+          lessThan(tester.getTopLeft(sent).dy),
+        );
+        expect(find.byKey(const Key('pending-delete-ok')), findsOneWidget);
+      });
+
+      testWidgets('L5-D66: «Enviadas» is hidden without confirmed rows', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('bad', 'failed'),
+          _row('q', 'queued'),
+        ]);
+        expect(
+          find.text(l10n.pendingUploadsSectionSent.toUpperCase()),
+          findsNothing,
+        );
+        expect(
+          find.text(l10n.pendingUploadsSectionEvidence.toUpperCase()),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('L5-D66: only confirmed rows leave no pending group', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('ok', 'completed'),
+        ]);
+        expect(
+          find.text(l10n.pendingUploadsSectionSent.toUpperCase()),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.pendingUploadsSectionEvidence.toUpperCase()),
+          findsNothing,
+        );
       });
 
       testWidgets('only completed rows: the summary says nothing is pending', (

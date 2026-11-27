@@ -101,6 +101,11 @@ class _MealSheetHostState extends State<_MealSheetHost> {
       DraggableScrollableController();
 
   double _available = 0;
+  double? _lastScale;
+
+  /// The screen or the text scale changed with the sheet open: its size is
+  /// settled again once the new measurements arrive.
+  bool _environmentChanged = false;
 
   /// Initial size, settled once from the skeleton measurement.
   double? _settledSize;
@@ -131,11 +136,17 @@ class _MealSheetHostState extends State<_MealSheetHost> {
   void _onSkeletonFoot(double height) {
     _skeletonFoot = height;
     _settleFromSkeleton();
+    _scheduleEnvironmentReconcile();
   }
 
   void _onSkeletonLead(double bottom) {
     _skeletonLead = bottom;
     _settleFromSkeleton();
+    _scheduleEnvironmentReconcile();
+  }
+
+  void _scheduleEnvironmentReconcile() {
+    if (_environmentChanged) _scheduleContentReconcile();
   }
 
   void _settleFromSkeleton() {
@@ -164,11 +175,27 @@ class _MealSheetHostState extends State<_MealSheetHost> {
 
   void _reconcileWithContent() {
     if (!mounted || _userDragged || !_controller.isAttached) return;
-    if (_contentFoot <= 0 || _contentLead <= 0) return;
-    final target = _sizeFor(_contentLead, _contentFoot);
+    // The loaded header measures the sheet; until then, the skeleton does.
+    final loaded = _contentFoot > 0 && _contentLead > 0;
+    final foot = loaded ? _contentFoot : _skeletonFoot;
+    final lead = loaded ? _contentLead : _skeletonLead;
+    final resettle = _environmentChanged;
+    final needsMeasure = !resettle || exomIsLargeText(context);
+    if (needsMeasure && (foot <= 0 || lead <= 0)) {
+      // Not measured yet: let the next report try again.
+      if (resettle) _contentReconcileScheduled = false;
+      return;
+    }
+    // From here on only another change of screen or text scale resizes it.
+    _environmentChanged = false;
+    _contentReconcileScheduled = true;
+    final target = _sizeFor(lead, foot);
     final current = _controller.size;
-    // Grow only, and only when it reveals at least a pixel more.
-    if (_available <= 0 || (target - current) * _available < 1) return;
+    if (_available <= 0) return;
+    final difference = (target - current) * _available;
+    // Normally it only grows, and only when it reveals at least a pixel more;
+    // after a change of screen or text scale it goes to the new size.
+    if (resettle ? difference.abs() < 1 : difference < 1) return;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.jumpTo(target);
     } else {
@@ -189,13 +216,26 @@ class _MealSheetHostState extends State<_MealSheetHost> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(1);
+        final changed =
+            _lastScale != null &&
+            (_available != constraints.maxHeight || _lastScale != scale);
         _available = constraints.maxHeight;
+        _lastScale = scale;
+        if (changed && !_userDragged) {
+          _environmentChanged = true;
+          _contentReconcileScheduled = false;
+          // At the plain size nothing reports; settle it after this frame.
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _scheduleContentReconcile(),
+          );
+        }
         return DraggableScrollableSheet(
           expand: false,
           controller: _controller,
-          initialChildSize: exomIsLargeText(context)
-              ? _settledSize ?? _initialFraction
-              : _initialFraction,
+          // Never changed after opening, or the sheet would reset to it; later
+          // adjustments go through the controller.
+          initialChildSize: _settledSize ?? _initialFraction,
           minChildSize: _minFraction,
           maxChildSize: _maxFraction,
           builder: (_, scrollController) =>
@@ -364,6 +404,10 @@ class _MealDetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below large text the sheet never needed the final geometry: the plain
+    // skeleton of before OBS-1.
+    if (!exomIsLargeText(context)) return _plainSkeleton(context);
+
     final preview = this.preview;
     final standIn =
         preview ??
@@ -409,6 +453,27 @@ class _MealDetailLoading extends StatelessWidget {
         onFootHeight == null
             ? foot
             : ExomHeightReporter(onHeight: onFootHeight, child: foot),
+      ],
+    );
+  }
+
+  Widget _plainSkeleton(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return ListView(
+      controller: scrollController,
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + bottomInset),
+      children: const [
+        _SheetTopBar(),
+        ShimmerCard(height: 168, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 28, width: 220, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 72, width: 160, borderRadius: _skeletonRadius),
+        SizedBox(height: 16),
+        ShimmerCard(height: 64, borderRadius: _skeletonRadius),
+        SizedBox(height: 24),
+        ShimmerCard(height: 120, borderRadius: _skeletonRadius),
       ],
     );
   }

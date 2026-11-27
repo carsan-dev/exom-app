@@ -2,6 +2,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'exom_component_harness.dart';
@@ -89,11 +90,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(taps, 1, reason: 'repeat taps while busy must be ignored');
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      final semantics = tester.getSemantics(find.bySemanticsLabel('REGISTRAR'));
+      final semantics = tester.getSemantics(find.bySemanticsLabel('Registrar'));
       expect(
         semantics,
         matchesSemantics(
-          label: 'REGISTRAR',
+          label: 'Registrar',
           value: 'En curso',
           isButton: true,
           hasEnabledState: true,
@@ -122,7 +123,7 @@ void main() {
             ]),
             locale: locale,
           );
-          final node = tester.getSemantics(find.bySemanticsLabel('REGISTRAR'));
+          final node = tester.getSemantics(find.bySemanticsLabel('Registrar'));
           expect(
             // Merged data: the button node merges its label and value.
             node.getSemanticsData().value,
@@ -133,6 +134,91 @@ void main() {
       }
       handle.dispose();
     });
+
+    testWidgets('screen readers hear the label in its original case', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(
+        tester,
+        _column([
+          ExomPrimaryButton(
+            key: const Key('primary'),
+            label: 'Registrar serie',
+            onPressed: () {},
+          ),
+          ExomPrimaryButton(
+            key: const Key('overridden'),
+            label: 'Guardar',
+            semanticLabel: 'Guardar la serie 2',
+            onPressed: () {},
+          ),
+        ]),
+      );
+      // The painted label stays uppercase.
+      expect(find.text('REGISTRAR SERIE'), findsOneWidget);
+      expect(find.bySemanticsLabel('Registrar serie'), findsOneWidget);
+      expect(find.bySemanticsLabel('REGISTRAR SERIE'), findsNothing);
+      expect(find.bySemanticsLabel('Guardar la serie 2'), findsOneWidget);
+      handle.dispose();
+    });
+
+    for (final override in [null, 'Registrar la serie 2']) {
+      testWidgets('enabled: screen readers can activate it '
+          '(semanticLabel: $override)', (tester) async {
+        final handle = tester.ensureSemantics();
+        var taps = 0;
+        await pumpComponent(
+          tester,
+          _column([
+            ExomPrimaryButton(
+              label: 'Registrar',
+              semanticLabel: override,
+              onPressed: () => taps++,
+            ),
+          ]),
+        );
+        final label = override ?? 'Registrar';
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          matchesSemantics(
+            label: label,
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+            textDirection: TextDirection.ltr,
+          ),
+        );
+        tester.semantics.tap(find.semantics.byLabel(label));
+        await tester.pump();
+        expect(taps, 1);
+        handle.dispose();
+      });
+    }
+
+    for (final busy in [false, true]) {
+      testWidgets('${busy ? 'busy' : 'disabled'}: no tap action', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await pumpComponent(
+          tester,
+          _column([
+            ExomPrimaryButton(
+              label: 'Registrar',
+              busy: busy,
+              onPressed: busy ? () {} : null,
+            ),
+          ]),
+        );
+        final data = tester
+            .getSemantics(find.bySemanticsLabel('Registrar'))
+            .getSemanticsData();
+        expect(data.hasAction(SemanticsAction.tap), isFalse);
+        handle.dispose();
+      });
+    }
 
     testWidgets('disabled when onPressed is null', (tester) async {
       await pumpComponent(

@@ -287,6 +287,38 @@ void main() {
     });
   }
 
+  for (final reduced in const [false, true]) {
+    testWidgets('a dialog over the sheet mid-drag: the release springs back'
+        '${reduced ? ' (reduced motion)' : ''}', (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events, disableAnimations: reduced);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      final gesture = await tester.startGesture(tester.getCenter(_handle));
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top + 70, 0.5));
+      // A route lands on top before the finger lifts.
+      final dialog = showDialog<void>(
+        context: tester.element(find.text('Serie 2 de 4')),
+        builder: (_) => const AlertDialog(content: Text('Encima')),
+      );
+      await tester.pumpAndSettle();
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      Navigator.of(tester.element(find.text('Encima'))).pop();
+      await dialog;
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(_sheetRoute(tester).isCurrent, isTrue);
+      expect(events, isEmpty);
+    });
+  }
+
   testWidgets('a quick downward fling closes', (tester) async {
     final events = <String>[];
     // Tall enough that a fling long enough to be measured stays under 30 %.

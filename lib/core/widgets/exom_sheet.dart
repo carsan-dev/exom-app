@@ -374,7 +374,14 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
   void _onDragEnd(DragEndDetails details) {
     if (!_dragging) return;
     _dragging = false;
-    if (!_canDrag) return;
+    // Already closing: the exit animation owns the position.
+    if (_route.animation!.status == AnimationStatus.reverse) return;
+    if (!_canDrag) {
+      // Another route landed on top mid-drag: never leave the sheet half
+      // down; spring it back without closing.
+      _springBack();
+      return;
+    }
     final velocity = details.primaryVelocity ?? 0;
     // Downward distance travelled during this gesture (not the distance from
     // the fully open position, which a mid-enter grab would inflate).
@@ -385,7 +392,13 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
             dragged > ExomSheetRoute.closeThreshold);
     if (close) {
       Navigator.of(context).pop();
-    } else if (_slides) {
+    } else {
+      _springBack();
+    }
+  }
+
+  void _springBack() {
+    if (_slides) {
       _route._settle();
     } else {
       _reducedDrag.value = 0;

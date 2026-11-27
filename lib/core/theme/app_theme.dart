@@ -503,14 +503,14 @@ class AppTheme {
   static ButtonStyle _primaryButtonStyle(bool isDark) {
     final foreground = WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.disabled)) {
-        return isDark ? AppColors.textDisabled : const Color(0xFF55594F);
+        return isDark ? AppColors.textDisabled : _lightPalette.textSecondary;
       }
       return AppColors.textOnPrimary;
     });
     return ButtonStyle(
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return isDark ? AppColors.borderSoft : const Color(0xFFCFCEC2);
+          return isDark ? AppColors.borderSoft : _lightPalette.borderSoft;
         }
         if (states.contains(WidgetState.pressed)) {
           return AppColors.primaryPressed;

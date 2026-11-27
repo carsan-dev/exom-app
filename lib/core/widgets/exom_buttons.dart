@@ -113,14 +113,18 @@ class ExomPrimaryButton extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  label.toUpperCase(),
-                  style: _labelStyle(foreground),
+                // The accessible name comes from the outer Semantics, in the
+                // original case; the tap action still comes from the gesture.
+                child: ExcludeSemantics(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: _labelStyle(foreground),
+                  ),
                 ),
               ),
               if (trailingSlot != null) ...[
                 const SizedBox(width: 12),
-                trailingSlot,
+                ExcludeSemantics(child: trailingSlot),
               ],
             ],
           ),
@@ -139,7 +143,6 @@ class ExomPrimaryButton extends StatelessWidget {
         // While busy, screen readers hear "in progress" and not only
         // "disabled".
         value: busy ? AppLocalizations.of(context).buttonBusyA11y : null,
-        excludeSemantics: true,
         child: TappableScale.light(
           enabled: _enabled,
           onTap: _enabled ? onPressed : null,

@@ -1,7 +1,7 @@
 // Contract change approved in decision D2 (redesign plan
 // docs/plans/rediseno-exom-app.md, lot L1): the app adopts the web's V4 brand.
 // The assertions below pin the approved V4 token values; the previous brown /
-// cream palette and the CabinetGrotesk default font are intentionally replaced.
+// cream palette and the old default font are intentionally replaced.
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -121,10 +121,10 @@ class WeeklyDietPdfService {
   }) async {
     await initializeDateFormatting(locale);
     final regular = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/CabinetGrotesk-Regular.ttf'),
+      await rootBundle.load('assets/fonts/dm-sans-400.ttf'),
     );
     final bold = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/CabinetGrotesk-Bold.ttf'),
+      await rootBundle.load('assets/fonts/dm-sans-600.ttf'),
     );
     final brand = await _loadBrand();
     final document = pw.Document(
@@ -198,10 +198,10 @@ class WeeklyDietPdfService {
   }) async {
     await initializeDateFormatting(locale);
     final regular = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/CabinetGrotesk-Regular.ttf'),
+      await rootBundle.load('assets/fonts/dm-sans-400.ttf'),
     );
     final bold = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/CabinetGrotesk-Bold.ttf'),
+      await rootBundle.load('assets/fonts/dm-sans-600.ttf'),
     );
     final brand = await _loadBrand();
     final dateFormat = DateFormat.yMMMMd(locale);

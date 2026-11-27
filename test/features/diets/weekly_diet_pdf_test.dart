@@ -209,6 +209,8 @@ void main() {
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
       expect(requested, contains('assets/images/exom_balance.svg'));
       expect(requested, contains('assets/fonts/barlow-condensed-800.ttf'));
+      expect(requested, contains('assets/fonts/dm-sans-400.ttf'));
+      expect(requested, contains('assets/fonts/dm-sans-600.ttf'));
       expect(requested, isNot(contains('assets/images/logo.svg')));
     },
   );

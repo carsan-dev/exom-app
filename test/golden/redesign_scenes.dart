@@ -635,16 +635,14 @@ class _FakeTrainingBloc extends Fake implements TrainingBloc {
 bool _fontsLoaded = false;
 
 /// Loads the bundled font families used by AppTheme (L1: DMSans by default,
-/// BarlowCondensed for display/headline slots; CabinetGrotesk is still bundled
-/// and kept loaded) and the SDK Material Icons so layouts are realistic instead
-/// of Ahem boxes. Reads files from disk; pubspec.yaml is the source of the
+/// BarlowCondensed for display/headline slots) and the SDK Material Icons so
+/// layouts are realistic instead of Ahem boxes. Reads files from disk; pubspec.yaml is the source of the
 /// family names. If the SDK icon font cannot be located the icons stay as Ahem
 /// boxes.
 Future<void> loadRedesignFonts() async {
   if (_fontsLoaded) return;
   _fontsLoaded = true;
   const families = <String, String>{
-    'CabinetGrotesk': 'CabinetGrotesk-',
     'DMSans': 'dm-sans-',
     'BarlowCondensed': 'barlow-condensed-',
   };

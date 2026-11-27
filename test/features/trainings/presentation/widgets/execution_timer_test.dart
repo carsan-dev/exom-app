@@ -63,11 +63,10 @@ const exercise = TrainingExerciseEntity(
 
 void main() {
   setUpAll(() async {
-    final loader = FontLoader('CabinetGrotesk');
-    for (final weight in ['Regular', 'Medium', 'Bold']) {
-      loader.addFont(
-        rootBundle.load('assets/fonts/CabinetGrotesk-$weight.ttf'),
-      );
+    // The timer renders with the theme body family (AppTheme.bodyFontFamily).
+    final loader = FontLoader(AppTheme.bodyFontFamily);
+    for (final weight in ['400', '600']) {
+      loader.addFont(rootBundle.load('assets/fonts/dm-sans-$weight.ttf'));
     }
     await loader.load();
   });

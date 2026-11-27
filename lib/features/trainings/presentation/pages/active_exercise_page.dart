@@ -34,6 +34,7 @@ import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bl
 import 'package:exom_app/features/trainings/presentation/bloc/training_bloc.dart';
 import 'package:exom_app/features/trainings/presentation/pages/exercise_video_player_page.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/active_exercise_set_chips.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/discard_foreign_progress_dialog.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/exercise_technique_sheet.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_reminder.dart';
 import 'package:exom_app/features/trainings/presentation/widgets/last_set_video_sheet.dart';
@@ -219,29 +220,12 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
     final foreignWorkouts = storage.getForeignActiveWorkouts(widget.trainingId);
 
     if (foreignWorkouts.isNotEmpty) {
-      final shouldDiscard = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          final l10n = AppLocalizations.of(dialogContext);
-          return AlertDialog(
-            title: Text(l10n.activeExerciseDiscardTitle),
-            content: Text(l10n.activeExerciseDiscardMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(l10n.activeExerciseDiscardAction),
-              ),
-            ],
-          );
-        },
-      );
+      // The detail asks before opening this route (L5-D64); this stays for
+      // any other way in, with the same dialog and answers.
+      final shouldDiscard = await confirmDiscardForeignProgress(context);
 
       if (!mounted) return;
-      if (shouldDiscard != true) {
+      if (!shouldDiscard) {
         _popOnce();
         return;
       }

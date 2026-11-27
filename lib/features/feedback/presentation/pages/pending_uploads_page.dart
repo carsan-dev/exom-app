@@ -315,14 +315,18 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
         ? _offlineSync.pendingActions
         : <Map<String, dynamic>>[];
     final empty = items.isEmpty && syncFailures.isEmpty;
-    final failedCount = items.where((i) => i['status'] == 'failed').length;
-    // A confirmed row stays listed but is no longer pending (L5-D45, same
-    // rule as the Ajustes counter).
-    final pendingCount = items.where((i) => i['status'] != 'completed').length;
-    final subtitle = empty || pendingCount == 0
+    // L5-D66: «completed» (confirmed) rows leave the pending group and the
+    // header counts. Every other row is pending (queued, sending, preparing,
+    // or bytes sent and awaiting processing) or failed (`failed` or
+    // `discarding`, both drawn as an error), so none is counted twice.
+    final sentItems = items.where((i) => i['status'] == 'completed').toList();
+    final openItems = items.where((i) => i['status'] != 'completed').toList();
+    final failedCount = openItems.where(_isFailed).length;
+    final pendingCount = openItems.length - failedCount;
+    final subtitle = empty || pendingCount + failedCount == 0
         ? l10n.pendingUploadsNone
         : [
-            l10n.pendingUploadsCountSubtitle(pendingCount),
+            if (pendingCount > 0) l10n.pendingUploadsCountSubtitle(pendingCount),
             if (failedCount > 0) l10n.pendingUploadsErrorCount(failedCount),
           ].join(' · ');
     final outcome = _visibleOutcome;
@@ -353,17 +357,28 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
                       body: l10n.pendingUploadsEmptyBody,
                     )
                   else ...[
-                    _Summary(count: pendingCount, failed: failedCount),
-                    if (items.isNotEmpty) ...[
+                    // L5-D66: the numeral counts everything not yet sent (pending +
+                    // failed), as Ajustes does; the failed line stays under it.
+                    _Summary(count: openItems.length, failed: failedCount),
+                    if (openItems.isNotEmpty) ...[
                       _SectionHeader(
                         n: 1,
                         title: l10n.pendingUploadsSectionEvidence,
                       ),
-                      for (final item in items) _evidenceRow(l10n, item),
+                      for (final item in openItems) _evidenceRow(l10n, item),
+                    ],
+                    if (sentItems.isNotEmpty) ...[
+                      _SectionHeader(
+                        n: openItems.isEmpty ? 1 : 2,
+                        title: l10n.pendingUploadsSectionSent,
+                      ),
+                      for (final item in sentItems) _evidenceRow(l10n, item),
                     ],
                     if (syncFailures.isNotEmpty) ...[
                       _SectionHeader(
-                        n: items.isEmpty ? 1 : 2,
+                        n: (openItems.isEmpty ? 0 : 1) +
+                            (sentItems.isEmpty ? 0 : 1) +
+                            1,
                         title: l10n.pendingSyncFailuresTitle,
                       ),
                       for (final item in syncFailures) _syncRow(l10n, item),
@@ -381,6 +396,9 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
       ),
     );
   }
+
+  static bool _isFailed(Map<String, dynamic> item) =>
+      item['status'] == 'failed' || item['status'] == 'discarding';
 
   Widget _outcomeMessage(AppLocalizations l10n, _Outcome outcome) {
     final (ExomMessageKind kind, String text) = switch (outcome) {

@@ -1753,6 +1753,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get clearCacheConfirmButton => 'Borrar caché';
 
   @override
+  String get logoutUnfinishedWorkoutTitle =>
+      'Tienes un entrenamiento sin terminar';
+
+  @override
+  String get logoutUnfinishedWorkoutBody =>
+      'Se conserva en este dispositivo y lo verás al volver a entrar con esta cuenta.';
+
+  @override
+  String get logoutUnfinishedWorkoutConfirm => 'Cerrar sesión';
+
+  @override
   String get retry => 'Reintentar';
 
   @override
@@ -2979,8 +2990,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get trainingRetryCompletion => 'Reintentar finalización';
 
   @override
-  String get trainingPendingFinalizeNotice =>
-      'Tienes un entrenamiento pendiente de finalizar';
+  String trainingPendingFinalizeNotice(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tienes $count entrenamientos pendientes de finalizar',
+      one: 'Tienes un entrenamiento pendiente de finalizar',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get trainingPendingFinalize => 'Pendiente de finalizar';
@@ -3361,6 +3379,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pendingUploadsSectionEvidence => 'Evidencias';
+
+  @override
+  String get pendingUploadsSectionSent => 'Enviadas';
 
   @override
   String get pendingUploadsEmptyFirst => 'Todo al día.';

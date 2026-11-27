@@ -62,6 +62,13 @@ class _Repository extends Fake implements ChallengesRepository {
       target: 100,
       unit: 'min',
     ),
+    _challenge(
+      'weight',
+      type: 'WEEKLY',
+      current: 79.856,
+      target: 80,
+      unit: 'kg',
+    ),
   ];
 
   @override
@@ -114,10 +121,18 @@ void main() {
     ) async {
       await _mount(tester, locale);
       // Main goal card: current / target.
-      expect(find.text('1234 / 12346 kcal'), findsOneWidget);
+      // Owner decision 2026-11-27: up to 2 decimals, trailing zeros dropped.
+      final es = locale.languageCode == 'es';
+      expect(
+        find.text(es ? '1234 / 12345,5 kcal' : '1234 / 12345.5 kcal'),
+        findsOneWidget,
+      );
+      // Main goal scale: half and full target.
+      expect(find.text(es ? '6172,75' : '6172.75'), findsOneWidget);
       // Weekly card: current/target.
       expect(find.text('1234/5000 pasos'), findsOneWidget);
-      expect(find.text('68/100 min'), findsOneWidget);
+      expect(find.text(es ? '68,4/100 min' : '68.4/100 min'), findsOneWidget);
+      expect(find.text(es ? '79,86/80 kg' : '79.86/80 kg'), findsOneWidget);
       expect(find.textContaining('1.234'), findsNothing);
       expect(find.textContaining('1,234'), findsNothing);
     });

@@ -8,6 +8,7 @@ import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
+import 'package:exom_app/features/trainings/presentation/utils/session_date_label.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 /// Global, owner-scoped recovery list independent of the visible calendar month.
@@ -165,6 +166,12 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
     );
   }
 
+  /// Long date of the row title, as the session selector shows it (L5-D52).
+  String _rowDate(BuildContext context, Object? assignmentDate) =>
+      assignmentDate is String
+          ? sessionDateLabel(context, assignmentDate)
+          : '$assignmentDate';
+
   /// Status line of a local session: icon and text, never colour alone.
   Widget _status(AppLocalizations l10n, Object? status) => switch (status) {
     'pending-sync' => ExomSyncStatus(
@@ -188,6 +195,9 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
     final stamp = widget.storage.sessionStamp ?? '';
     final l10n = AppLocalizations.of(context);
     final message = _message;
+    // Sessions the notice talks about: those still to finalize.
+    final finalizable =
+        entries.where((entry) => entry['status'] != 'pending-sync').length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -201,12 +211,12 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
               title: message,
             ),
           ),
-        if (entries.any((entry) => entry['status'] != 'pending-sync'))
+        if (finalizable > 0)
           Padding(
             padding: _messagePadding,
             child: ExomInlineMessage(
               kind: ExomMessageKind.pendiente,
-              title: l10n.trainingPendingFinalizeNotice,
+              title: l10n.trainingPendingFinalizeNotice(finalizable),
             ),
           ),
         ExomFlatRowGroup(
@@ -221,7 +231,7 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
                   ExomRichRow(
                     leading: _leading(context, entry['assignment_date']),
                     title:
-                        '${entry['training_name'] ?? entry['training_id']} · ${entry['assignment_date']}',
+                        '${entry['training_name'] ?? entry['training_id']} · ${_rowDate(context, entry['assignment_date'])}',
                     status: _status(l10n, entry['status']),
                   ),
                   Padding(

@@ -9,6 +9,7 @@ Future<String> _format(
   Locale locale,
   num value, {
   int decimalDigits = 0,
+  int? maxDecimalDigits,
 }) async {
   late String result;
   await tester.pumpWidget(
@@ -17,7 +18,12 @@ Future<String> _format(
       delegates: const [DefaultWidgetsLocalizations.delegate],
       child: Builder(
         builder: (context) {
-          result = formatFigure(context, value, decimalDigits: decimalDigits);
+          result = formatFigure(
+            context,
+            value,
+            decimalDigits: decimalDigits,
+            maxDecimalDigits: maxDecimalDigits,
+          );
           return const SizedBox();
         },
       ),
@@ -71,5 +77,25 @@ void main() {
   testWidgets('.5 rounds as NumberFormat does with 0 decimals', (tester) async {
     expect(await _format(tester, const Locale('en'), 2.5), '3');
     expect(await _format(tester, const Locale('es'), 3.5), '4');
+  });
+
+  testWidgets('maxDecimalDigits 2: up to 2 decimals, zeros dropped', (
+    tester,
+  ) async {
+    for (final (locale, sep) in [(const Locale('es'), ','), (const Locale('en'), '.')]) {
+      Future<String> f(num v) =>
+          _format(tester, locale, v, maxDecimalDigits: 2);
+      expect(await f(79.8), '79${sep}8');
+      expect(await f(79.85), '79${sep}85');
+      expect(await f(80.0), '80');
+      expect(await f(79.856), '79${sep}86');
+      expect(await f(0), '0');
+      expect(await f(12345.5), '12345${sep}5');
+      expect(await f(-3.25), '-3${sep}25');
+    }
+  });
+
+  testWidgets('default keeps the integer format', (tester) async {
+    expect(await _format(tester, const Locale('es'), 79.8), '80');
   });
 }

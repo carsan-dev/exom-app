@@ -3158,6 +3158,24 @@ abstract class AppLocalizations {
   /// **'Borrar caché'**
   String get clearCacheConfirmButton;
 
+  /// No description provided for @logoutUnfinishedWorkoutTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes un entrenamiento sin terminar'**
+  String get logoutUnfinishedWorkoutTitle;
+
+  /// No description provided for @logoutUnfinishedWorkoutBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se conserva en este dispositivo y lo verás al volver a entrar con esta cuenta.'**
+  String get logoutUnfinishedWorkoutBody;
+
+  /// No description provided for @logoutUnfinishedWorkoutConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get logoutUnfinishedWorkoutConfirm;
+
   /// No description provided for @retry.
   ///
   /// In es, this message translates to:
@@ -5111,8 +5129,8 @@ abstract class AppLocalizations {
   /// No description provided for @trainingPendingFinalizeNotice.
   ///
   /// In es, this message translates to:
-  /// **'Tienes un entrenamiento pendiente de finalizar'**
-  String get trainingPendingFinalizeNotice;
+  /// **'{count, plural, =1{Tienes un entrenamiento pendiente de finalizar} other{Tienes {count} entrenamientos pendientes de finalizar}}'**
+  String trainingPendingFinalizeNotice(int count);
 
   /// No description provided for @trainingPendingFinalize.
   ///
@@ -5719,6 +5737,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Evidencias'**
   String get pendingUploadsSectionEvidence;
+
+  /// No description provided for @pendingUploadsSectionSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviadas'**
+  String get pendingUploadsSectionSent;
 
   /// No description provided for @pendingUploadsEmptyFirst.
   ///

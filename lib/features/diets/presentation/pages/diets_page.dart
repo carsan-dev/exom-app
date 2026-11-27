@@ -704,6 +704,7 @@ class _MealRow extends StatelessWidget {
                       context,
                       mealId: meal.id,
                       selectedDate: selectedDate,
+                      preview: meal,
                     );
                     if (context.mounted) {
                       context.read<DietBloc>().add(

@@ -221,9 +221,30 @@ class _TrainingsViewState extends State<_TrainingsView> {
       }
     }
     final footerEntry = continuable;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureFirstSession());
+    // The height the first session needs depends on the text scale: depend on
+    // it so a change made while the tab is open rebuilds and measures again.
+    MediaQuery.textScalerOf(context);
     return LayoutBuilder(
-      builder: (context, constraints) => Column(
+      builder: (context, constraints) {
+        // Also measure when only the constraints change (rotation, split
+        // screen): the cap below is computed from them.
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _measureFirstSession(),
+        );
+        return _buildPage(context, constraints, pending, footerEntry, stamp, storage);
+      },
+    );
+  }
+
+  Widget _buildPage(
+    BuildContext context,
+    BoxConstraints constraints,
+    List<Map<String, dynamic>> pending,
+    Map<String, dynamic>? footerEntry,
+    String? stamp,
+    LocalStorage storage,
+  ) {
+    return Column(
         children: [
           if (pending.isNotEmpty)
             ConstrainedBox(
@@ -338,7 +359,6 @@ class _TrainingsViewState extends State<_TrainingsView> {
               ),
             ),
         ],
-      ),
     );
   }
 

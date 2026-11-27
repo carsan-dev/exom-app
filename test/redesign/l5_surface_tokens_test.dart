@@ -148,8 +148,7 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/diets/presentation/widgets/weekly_shopping_list_flow.dart',
   // L5-F3 · Tutorial: the tour bubble (its prompt is in kPartlyRepaintedFiles).
   'lib/core/widgets/tutorial_overlay.dart',
-  // L5-E1 · Inicio. `streak_card.dart` is not on the screen (only its plural
-  // test uses it) and keeps its legacy surface.
+  // L5-E1 · Inicio.
   'lib/features/home/presentation/pages/home_page.dart',
   'lib/features/home/presentation/widgets/home_clock.dart',
   'lib/features/home/presentation/widgets/home_headline.dart',

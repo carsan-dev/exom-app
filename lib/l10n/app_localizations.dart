@@ -6176,6 +6176,12 @@ abstract class AppLocalizations {
   /// **'Nueva sesión'**
   String get newTrainingExecution;
 
+  /// No description provided for @trainingExecutionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión {number}'**
+  String trainingExecutionLabel(int number);
+
   /// No description provided for @quarantinedWorkoutNotice.
   ///
   /// In es, this message translates to:
@@ -8135,8 +8141,8 @@ abstract class AppLocalizations {
   /// No description provided for @calendarWeekTrainings.
   ///
   /// In es, this message translates to:
-  /// **'{done} de {total} entrenos esta semana'**
-  String calendarWeekTrainings(String done, String total);
+  /// **'{done} de {total, plural, one{{total} entreno} other{{total} entrenos}} esta semana'**
+  String calendarWeekTrainings(String done, int total);
 
   /// No description provided for @calendarEmptyMonthFirst.
   ///

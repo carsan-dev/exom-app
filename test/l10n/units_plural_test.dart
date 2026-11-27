@@ -21,6 +21,23 @@ void main() {
     });
   });
 
+  group('calendarWeekTrainings', () {
+    test('es', () {
+      expect(es.calendarWeekTrainings('1', 1), '1 de 1 entreno esta semana');
+      expect(es.calendarWeekTrainings('2', 3), '2 de 3 entrenos esta semana');
+      expect(es.calendarWeekTrainings('0', 0), '0 de 0 entrenos esta semana');
+    });
+    test('en', () {
+      expect(en.calendarWeekTrainings('1', 1), '1 of 1 workout this week');
+      expect(en.calendarWeekTrainings('2', 3), '2 of 3 workouts this week');
+    });
+  });
+
+  group('trainingExecutionLabel', () {
+    test('es', () => expect(es.trainingExecutionLabel(2), 'Sesión 2'));
+    test('en', () => expect(en.trainingExecutionLabel(2), 'Session 2'));
+  });
+
   group('activeExerciseCloseMessage', () {
     test('es', () {
       expect(

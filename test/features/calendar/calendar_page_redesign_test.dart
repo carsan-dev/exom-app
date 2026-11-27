@@ -492,7 +492,7 @@ void main() {
       expect(
         find.descendant(
           of: block,
-          matching: find.text(l10n.calendarWeekTrainings('3', '4')),
+          matching: find.text(l10n.calendarWeekTrainings('3', 4)),
         ),
         findsOneWidget,
       );
@@ -533,7 +533,7 @@ void main() {
       final l10n = _l10n(tester);
       expect(find.byKey(_dietRow), findsOneWidget);
       expect(find.byKey(_trainingRow), findsNothing);
-      expect(find.text(l10n.calendarWeekTrainings('3', '4')), findsNothing);
+      expect(find.text(l10n.calendarWeekTrainings('3', 4)), findsNothing);
     });
 
     for (final brightness in Brightness.values) {

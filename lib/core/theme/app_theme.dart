@@ -265,17 +265,12 @@ class AppColors {
   static const primaryHover = Color(0xFFC8F562);
   static const primaryPressed = Color(0xFFA4DA2A);
   static const primarySoft = Color(0xFF232B14);
-  static const primaryDark = primaryPressed; // alias de pressed
 
   // ── Fondos ────────────────────────────────────────────────────────────────
   static const background = Color(0xFF101111);
-  static const backgroundSecondary = Color(0xFF191B19);
-  static const backgroundTertiary = Color(0xFF222522);
 
   // ── Navegación ────────────────────────────────────────────────────────────
   static const header = Color(0xFF101111);
-  static const bottomNav = Color(0xFF191B19);
-  static const tabActive = primarySoft;
 
   // ── Superficies ───────────────────────────────────────────────────────────
   static const surface = Color(0xFF191B19);
@@ -283,15 +278,8 @@ class AppColors {
   static const surfaceVariant = Color(0xFF222522);
   static const card = Color(0xFF191B19);
 
-  // Antiguas superficies de cristal: ahora opacas y planas.
-  static const surfaceGlass = surface;
-  static const surfaceGlassLight = primarySoft;
-
   // ── Bordes (filete V4) ────────────────────────────────────────────────────
   static const borderSoft = Color(0xFF363B32);
-  static const borderMedium = Color(0xFF363B32);
-  static const borderStrong = Color(0xFF363B32);
-  static const focusRing = textPrimary;
   static const divider = Color(0xFF363B32);
 
   // ── Texto ─────────────────────────────────────────────────────────────────
@@ -302,28 +290,13 @@ class AppColors {
   static const textDisabled = Color(0xFF9A9F96);
   static const textOnPrimary = Color(0xFF101111);
 
-  // ── Iconos ────────────────────────────────────────────────────────────────
-  static const iconDefault = textSecondary;
-
   // ── Estados ───────────────────────────────────────────────────────────────
   static const success = Color(0xFF8CCB68);
   static const warning = Color(0xFFE5BE58);
   static const error = Color(0xFFFF8A73);
   static const info = Color(0xFF7FB5D8);
 
-  // ── Botones ───────────────────────────────────────────────────────────────
-  static const buttonDisabled = Color(0xFF363B32);
-  static const buttonDanger = Color(0xFFD76C5E);
-  static const buttonDangerHover = Color(0xFFE17B6E);
-  static const buttonDangerPressed = Color(0xFFC95C4E);
-  static const buttonDangerDisabled = Color(0xFF6A4742);
-
   // ── Feature-specific ──────────────────────────────────────────────────────
-  // Los degradados marrón/verde de tarjeta pasan a panel plano.
-  static const dietCardStart = surface;
-  static const dietCardEnd = surface;
-  static const trainingCardStart = surface;
-  static const trainingCardEnd = surface;
   static const calorieAccent = Color(0xFFE8943A);
   static const sleepAccent = Color(0xFF9B7FCC);
 
@@ -331,24 +304,18 @@ class AppColors {
   static const glassBackground = surface;
   static const glassBackgroundElevated = surfaceElevated;
   static const glassBorderLight = borderSoft;
-  static const glassBorderTop = borderSoft;
   static const gradientStart = background;
   static const gradientEnd = background;
   static const navBarGlass = surface;
-  static const headerGlass = background;
 
   // ── Antiguo cristal (tema CLARO): ahora opaco ────────────────────────────
   static const glassBackgroundLightTheme = Color(0xFFFBFAF4);
   static const glassBackgroundElevatedLightTheme = Color(0xFFE8E7DD);
   static const glassBorderLightTheme = Color(0xFFCFCEC2);
   static const navBarGlassLightTheme = Color(0xFFFBFAF4);
-  static const headerGlassLightTheme = Color(0xFFF2F1E9);
 
   // ── Alias legacy ──────────────────────────────────────────────────────────
-  static const secondary = primary;
   static const accent = error;
-  static const dietCard = dietCardStart;
-  static const trainingCard = trainingCardStart;
 }
 
 class AppTheme {

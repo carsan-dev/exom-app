@@ -2011,7 +2011,7 @@ class _FlyingSendIcon extends AnimatedWidget {
     final Matrix4 transform;
     // Starts as the button's foreground; the overlay would otherwise give it
     // its own default icon colour.
-    var color = kExomPrimaryForeground;
+    var color = context.exomPalette.onLimeFill;
     if (value < _anticipation) {
       final pull = Curves.easeOut.transform(value / _anticipation);
       final at = _pullBack * pull;
@@ -2050,7 +2050,7 @@ class _FlyingSendIcon extends AnimatedWidget {
           )
           .clamp(0.0, 1.0);
       color = Color.lerp(
-        kExomPrimaryForeground,
+        context.exomPalette.onLimeFill,
         context.exomPalette.textPrimary,
         offButton,
       )!;

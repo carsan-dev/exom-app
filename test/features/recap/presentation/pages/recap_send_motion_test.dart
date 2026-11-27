@@ -463,10 +463,10 @@ void main() {
         final palette = tester.element(find.byKey(_action)).exomPalette;
         await tester.tap(find.byKey(_action));
         await tester.pump();
-        expect(colour(), kExomPrimaryForeground);
+        expect(colour(), palette.onLimeFill);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 40));
-        expect(colour(), kExomPrimaryForeground, reason: 'still on the button');
+        expect(colour(), palette.onLimeFill, reason: 'still on the button');
         // Off the button before it leaves the screen.
         await tester.pump(const Duration(milliseconds: 210));
         expect(find.byKey(_icon), findsOneWidget);

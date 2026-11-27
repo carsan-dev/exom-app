@@ -4022,6 +4022,48 @@ abstract class AppLocalizations {
   /// **'Gemelo'**
   String get measureCalf;
 
+  /// No description provided for @metricsMeasureSheetKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'06 · Medidas'**
+  String get metricsMeasureSheetKicker;
+
+  /// No description provided for @metricsMeasureLast.
+  ///
+  /// In es, this message translates to:
+  /// **'Última: {value} · {date}'**
+  String metricsMeasureLast(String value, String date);
+
+  /// No description provided for @metricsMeasureEdited.
+  ///
+  /// In es, this message translates to:
+  /// **'Editada'**
+  String get metricsMeasureEdited;
+
+  /// No description provided for @metricsMeasureTapZone.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca una zona para medirla'**
+  String get metricsMeasureTapZone;
+
+  /// No description provided for @metricsMeasureDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho'**
+  String get metricsMeasureDone;
+
+  /// No description provided for @metricsMeasureLeftInitial.
+  ///
+  /// In es, this message translates to:
+  /// **'I'**
+  String get metricsMeasureLeftInitial;
+
+  /// No description provided for @metricsMeasureRightInitial.
+  ///
+  /// In es, this message translates to:
+  /// **'D'**
+  String get metricsMeasureRightInitial;
+
   /// No description provided for @noTrainingsAssigned.
   ///
   /// In es, this message translates to:

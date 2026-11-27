@@ -8,7 +8,6 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -18,6 +17,7 @@ import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +25,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+
+import 'metrics_measures_helpers.dart';
 
 final _metric = BodyMetricEntity(
   id: 'metric-1',
@@ -209,11 +211,6 @@ Finder _saveButton(AppLocalizations l10n) {
   );
 }
 
-Finder _fieldOfLabel(String label) => find.descendant(
-  of: find.ancestor(of: find.text(label), matching: find.byType(Column)).first,
-  matching: find.byType(TextFormField),
-);
-
 Finder _fieldWithText(String text) => find.byWidgetPredicate(
   (w) => w is TextFormField && w.controller?.text == text,
 );
@@ -327,10 +324,24 @@ void main() {
       _expectNoTextBelow13(tester);
     });
 
+    testWidgets('measure sheet of a pair', (tester) async {
+      await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.upperArm);
+      expect(measureSheet(), findsOneWidget);
+      _expectNoTextBelow13(tester);
+    });
+
     testWidgets('muscle mass estimate dialog', (tester) async {
       await _mount(tester, latest: _metric);
       final l10n = _l10n(tester);
-      await _scrollTo(tester, find.text(l10n.calculateEstimateButton));
+      // Scrolled only until visible: with the shorter measure list (L6-D2)
+      // the extra drag of _scrollTo would put the link under the app bar.
+      await tester.scrollUntilVisible(
+        find.text(l10n.calculateEstimateButton),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
       await tester.tap(find.text(l10n.calculateEstimateButton));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -339,8 +350,12 @@ void main() {
     });
   });
 
-  group('body map alignment', () {
-    testWidgets('zone columns are as tall as the rendered body; tabs >= 48', (
+  // L6-D2: the body view is the C5b figure; the old zone columns beside the
+  // figure (whose height this group compared with the body) are gone. What
+  // stays: the figure is there, its view tabs keep a 48 dp target and the
+  // hint sits under it.
+  group('body map', () {
+    testWidgets('the C5b figure, tabs >= 48 and the hint under it', (
       tester,
     ) async {
       await _mount(tester, latest: _metric);
@@ -349,38 +364,23 @@ void main() {
       await tester.tap(find.text(l10n.bodyViewToggle));
       await tester.pump();
 
-      final bodyHeight = tester
-          .getSize(
-            find
-                .descendant(
-                  of: find.byType(AnatomySelector),
-                  matching: find.byType(CustomPaint),
-                )
-                .first,
-          )
-          .height;
-      final columns = find.byWidgetPredicate(
-        (w) =>
-            w is Align &&
-            (w.alignment == Alignment.topRight ||
-                w.alignment == Alignment.topLeft) &&
-            w.child is SizedBox,
-      );
-      expect(columns, findsNWidgets(2));
-      for (final column in columns.evaluate()) {
-        final box = find.descendant(
-          of: find.byWidget(column.widget),
-          matching: find.byType(SizedBox),
-        );
-        expect(tester.getSize(box.first).height, bodyHeight);
-      }
-
+      final selector = find.byType(RecapAnatomySelector);
+      expect(selector, findsOneWidget);
       for (final label in [l10n.frontViewLabel, l10n.backViewLabel]) {
         final tab = find
-            .ancestor(of: find.text(label), matching: find.byType(Container))
+            .ancestor(
+              of: find.text(label),
+              matching: find.byType(GestureDetector),
+            )
             .first;
         expect(tester.getSize(tab).height, greaterThanOrEqualTo(48));
       }
+      await tester.ensureVisible(find.text(l10n.metricsMeasureTapZone));
+      await tester.pump();
+      expect(
+        tester.getRect(find.text(l10n.metricsMeasureTapZone)).top,
+        greaterThan(tester.getRect(selector).bottom),
+      );
     });
   });
 
@@ -414,9 +414,10 @@ void main() {
     testWidgets('editing a measure sends the edited value', (tester) async {
       final h = await _mount(tester, latest: _metric);
       final l10n = _l10n(tester);
-      await _scrollTo(tester, find.text('Cintura'));
-      await tester.enterText(_fieldOfLabel('Cintura'), '73,5');
-      await tester.pump();
+      // L6-D2: the measure is edited in its sheet and applied with «Hecho».
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -465,11 +466,11 @@ void main() {
 
     testWidgets('es shows the loaded values with a comma', (tester) async {
       await _mount(tester, latest: decimals, size: const Size(390, 6000));
-      expect(
-        fieldTexts(tester),
-        containsAll(['180,5', '32,5', '7,5', '74,5', '35,5', '36,0']),
-      );
+      expect(fieldTexts(tester), containsAll(['180,5', '32,5', '7,5']));
       expect(fieldTexts(tester).where((t) => t.contains('.')), isEmpty);
+      // L6-D2: the measures are the values of the list rows.
+      expect(measureValueText(tester, BodyZone.waist), '74,5 cm');
+      expect(measureValueText(tester, BodyZone.upperArm), 'I 35,5 · D 36,0 cm');
       expect(_weightFigure('68,4'), findsWidgets);
       expect(_weightFigure('68.4'), findsNothing);
     });
@@ -481,11 +482,10 @@ void main() {
         size: const Size(390, 6000),
         locale: const Locale('en'),
       );
-      expect(
-        fieldTexts(tester),
-        containsAll(['180.5', '32.5', '7.5', '74.5', '35.5', '36.0']),
-      );
+      expect(fieldTexts(tester), containsAll(['180.5', '32.5', '7.5']));
       expect(fieldTexts(tester).where((t) => t.contains(',')), isEmpty);
+      expect(measureValueText(tester, BodyZone.waist), '74.5 cm');
+      expect(measureValueText(tester, BodyZone.upperArm), 'L 35.5 · R 36.0 cm');
       expect(_weightFigure('68.4'), findsWidgets);
       expect(_weightFigure('68,4'), findsNothing);
     });
@@ -500,7 +500,12 @@ void main() {
     });
 
     // Typed entries: the event sent to the bloc is the same number as before
-    // this change (characterisation of the unchanged parser).
+    // this change (characterisation of the unchanged parser). L6-D2: they are
+    // typed in the sheet stepper, whose filter keeps only digits, «,» and
+    // «.» (« 78,60 » arrives as «78,60»). An empty or invalid value is refused
+    // by «Hecho» and never reaches the draft, so the save sends the loaded
+    // value; before L6 an emptied field was omitted and an invalid one
+    // blocked the save with a snack bar.
     for (final locale in [const Locale('es'), const Locale('en')]) {
       group('typed entries (${locale.languageCode})', () {
         final cases = <String, double?>{
@@ -508,7 +513,6 @@ void main() {
           '78.6': 78.6,
           '78': 78.0,
           ' 78,60 ': 78.6,
-          '': null,
         };
         for (final entry in cases.entries) {
           testWidgets('waist "${entry.key}" sends ${entry.value}', (
@@ -516,10 +520,9 @@ void main() {
           ) async {
             final h = await _mount(tester, latest: _metric, locale: locale);
             final l10n = _l10n(tester);
-            final label = BodyZone.waist.label(l10n);
-            await _scrollTo(tester, find.text(label));
-            await tester.enterText(_fieldOfLabel(label), entry.key);
-            await tester.pump();
+            await openMeasureSheet(tester, BodyZone.waist);
+            await typeMeasure(tester, 'waist_cm', entry.key);
+            await tapMeasureDone(tester);
             await tester.tap(_saveButton(l10n));
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 300));
@@ -527,21 +530,24 @@ void main() {
             expect(h.repository.saved.single['waist_cm'], entry.value);
           });
         }
-        for (final raw in ['78,6,1', 'abc', ',']) {
-          testWidgets('waist "$raw" is rejected, nothing is sent', (
+        for (final raw in ['', '78,6,1', 'abc', ',']) {
+          testWidgets('waist "$raw" is refused, the loaded value is sent', (
             tester,
           ) async {
             final h = await _mount(tester, latest: _metric, locale: locale);
             final l10n = _l10n(tester);
-            final label = BodyZone.waist.label(l10n);
-            await _scrollTo(tester, find.text(label));
-            await tester.enterText(_fieldOfLabel(label), raw);
+            await openMeasureSheet(tester, BodyZone.waist);
+            await typeMeasure(tester, 'waist_cm', raw);
+            await tapMeasureDone(tester);
+            expect(measureSheet(), findsOneWidget, reason: 'stays open');
+            Navigator.of(tester.element(measureSheet())).pop();
             await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
             await tester.tap(_saveButton(l10n));
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 300));
-            expect(h.repository.saved, isEmpty);
-            expect(find.byType(SnackBar), findsOneWidget);
+            expect(h.repository.saved, hasLength(1));
+            expect(h.repository.saved.single['waist_cm'], 74.0);
           });
         }
       });
@@ -556,17 +562,10 @@ void main() {
         locale: const Locale('en'),
       );
       final l10n = _l10n(tester);
-      final label = BodyZone.upperArm.label(l10n);
-      await _scrollTo(tester, find.text(label));
-      final fields = find.descendant(
-        of: find
-            .ancestor(of: find.text(label), matching: find.byType(Column))
-            .first,
-        matching: find.byType(TextFormField),
-      );
-      await tester.enterText(fields.at(0), '35,5');
-      await tester.enterText(fields.at(1), '36.5');
-      await tester.pump();
+      await openMeasureSheet(tester, BodyZone.upperArm);
+      await typeMeasure(tester, 'arm_left_cm', '35,5');
+      await typeMeasure(tester, 'arm_right_cm', '36.5');
+      await tapMeasureDone(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

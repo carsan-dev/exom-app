@@ -2238,6 +2238,29 @@ class AppLocalizationsEs extends AppLocalizations {
   String get measureCalf => 'Gemelo';
 
   @override
+  String get metricsMeasureSheetKicker => '06 · Medidas';
+
+  @override
+  String metricsMeasureLast(String value, String date) {
+    return 'Última: $value · $date';
+  }
+
+  @override
+  String get metricsMeasureEdited => 'Editada';
+
+  @override
+  String get metricsMeasureTapZone => 'Toca una zona para medirla';
+
+  @override
+  String get metricsMeasureDone => 'Hecho';
+
+  @override
+  String get metricsMeasureLeftInitial => 'I';
+
+  @override
+  String get metricsMeasureRightInitial => 'D';
+
+  @override
   String get noTrainingsAssigned => 'No tienes entrenamientos asignados';
 
   @override

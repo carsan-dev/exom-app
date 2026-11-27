@@ -1,7 +1,10 @@
 import 'dart:io';
 
-// L4-I11: body-map zone columns of the metrics form at large system text.
-// Uses the real DM Sans face: the default test font (Ahem) fakes widths.
+// L4-I11: section «06 Medidas corporales» of the metrics form at large system
+// text. L6-D2 replaced the zone columns beside the old figure with a list of
+// flat rows and the C5b figure: the checks are now on the rows (no overflow,
+// no split name, no cut value, 48 dp targets) and on the figure and its view
+// tabs. Uses the real DM Sans face: the default test font (Ahem) fakes widths.
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -15,6 +18,7 @@ import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +26,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'metrics_measures_helpers.dart';
 
 final _metric = BodyMetricEntity(
   id: 'metric-1',
@@ -154,13 +160,6 @@ Future<void> _openBodyMap(WidgetTester tester) async {
   await tester.pump();
 }
 
-const _baseline = <String, String>{
-  'es 390.0 1.0':
-      'neck:20.00,356.00,95.42,48.00 shoulders:20.00,419.11,95.42,48.00 chest:20.00,497.33,95.42,49.00 waist:20.00,576.56,95.42,49.00 hips:20.00,655.78,95.42,48.00 upperArm:274.58,405.80,95.42,68.00 forearm:274.58,490.40,95.42,48.00 thigh:274.58,588.20,95.42,48.00 calf:274.58,669.40,95.42,48.00',
-  'en 390.0 1.0':
-      'neck:20.00,356.00,95.42,48.00 shoulders:20.00,419.11,95.42,48.00 chest:20.00,497.33,95.42,49.00 waist:20.00,576.56,95.42,49.00 hips:20.00,655.78,95.42,48.00 upperArm:274.58,405.80,95.42,68.00 forearm:274.58,490.40,95.42,48.00 thigh:274.58,588.20,95.42,48.00 calf:274.58,669.40,95.42,48.00',
-};
-
 const _zones = [
   BodyZone.neck,
   BodyZone.shoulders,
@@ -173,10 +172,21 @@ const _zones = [
   BodyZone.calf,
 ];
 
-/// The tappable zone control that wraps the zone name.
-Finder _zoneControl(String label) => find
-    .ancestor(of: find.text(label), matching: find.byType(GestureDetector))
-    .first;
+/// Whether the paragraph of [text] lays out in a single line.
+void _expectOneLine(WidgetTester tester, Finder text, String reason) {
+  final paragraph = tester.renderObject<RenderParagraph>(text);
+  final oneLine = TextPainter(
+    text: paragraph.text,
+    textDirection: TextDirection.ltr,
+    textScaler: paragraph.textScaler,
+  )..layout();
+  expect(
+    paragraph.size.height,
+    lessThanOrEqualTo(oneLine.height + 0.5),
+    reason: '$reason wraps inside the word',
+  );
+  oneLine.dispose();
+}
 
 void main() {
   setUpAll(() async {
@@ -193,7 +203,12 @@ void main() {
   });
   tearDown(sl.reset);
 
-  group('zone columns never overflow nor split a name', () {
+  // Was «zone columns never overflow nor split a name»: the same widths and
+  // scales on the rows that replaced the columns. Each row keeps its name on
+  // one line, a 48 dp target inside the screen, its whole value (moved under
+  // the name when they do not fit together, still at the end) and opens the
+  // sheet of its zone.
+  group('measure rows never overflow, split a name nor cut a value', () {
     for (final locale in const ['es', 'en']) {
       for (final width in const [320.0, 360.0, 390.0, 412.0]) {
         for (final scale in const [1.0, 1.3, 1.31, 1.35, 1.5, 2.0]) {
@@ -205,108 +220,80 @@ void main() {
               textScale: scale,
               locale: Locale(locale),
             );
-            await _openBodyMap(tester);
             expect(tester.takeException(), isNull);
             final l10n = AppLocalizations.of(
               tester.element(find.byType(MetricsFormPage)),
             );
             for (final zone in _zones) {
               final label = zone.label(l10n);
-              final text = find.text(label);
-              expect(text, findsOneWidget, reason: label);
-              await tester.ensureVisible(text);
-              await tester.pump();
-              final paragraph = tester.renderObject<RenderParagraph>(text);
               // Zone names are single words: one line means none is split.
               expect(label.contains(' '), isFalse, reason: label);
-              final oneLine = TextPainter(
-                text: paragraph.text,
-                textDirection: TextDirection.ltr,
-                textScaler: paragraph.textScaler,
-              )..layout();
-              expect(
-                paragraph.size.height,
-                lessThanOrEqualTo(oneLine.height + 0.5),
-                reason: '$label wraps inside the word',
+              await tester.scrollUntilVisible(
+                measureRow(zone),
+                200,
+                scrollable: find.byType(Scrollable).first,
               );
-              final rect = tester.getRect(_zoneControl(label));
-              expect(rect.height, greaterThanOrEqualTo(48), reason: label);
-              expect(rect.left, greaterThanOrEqualTo(0), reason: label);
-              expect(rect.right, lessThanOrEqualTo(width), reason: label);
-              // Tapping selects the zone: its editor appears next to the
-              // zone control, both showing the zone name.
-              await tester.tap(_zoneControl(label));
               await tester.pump();
-              expect(text, findsNWidgets(2), reason: '$label: editor');
-              expect(tester.takeException(), isNull, reason: label);
-              // The selected name is painted bold: it must still be one
-              // line, and selecting must not change the layout.
-              final selected = find.descendant(
-                of: _zoneControl(label),
+              final name = find.descendant(
+                of: measureRow(zone),
                 matching: find.text(label),
               );
-              final selectedParagraph = tester.renderObject<RenderParagraph>(
-                selected,
-              );
-              final selectedOneLine = TextPainter(
-                text: selectedParagraph.text,
-                textDirection: TextDirection.ltr,
-                textScaler: selectedParagraph.textScaler,
-              )..layout();
+              expect(name, findsOneWidget, reason: label);
+              _expectOneLine(tester, name, label);
+              final row = tester.getRect(measureRow(zone));
+              expect(row.height, greaterThanOrEqualTo(48), reason: label);
+              expect(row.left, greaterThanOrEqualTo(0), reason: label);
+              expect(row.right, lessThanOrEqualTo(width), reason: label);
+              final value = tester.getRect(measureValue(zone));
+              expect(value.left, greaterThanOrEqualTo(row.left), reason: label);
+              expect(value.right, lessThanOrEqualTo(row.right), reason: label);
+              expect(value.top, greaterThanOrEqualTo(row.top), reason: label);
               expect(
-                selectedParagraph.size.height,
-                lessThanOrEqualTo(selectedOneLine.height + 0.5),
-                reason: '$label selected wraps inside the word',
+                value.bottom,
+                lessThanOrEqualTo(row.bottom),
+                reason: label,
               );
-              expect(
-                selectedParagraph.text.style?.fontWeight,
-                FontWeight.w700,
-                reason: '$label selected is bold',
-              );
-              expect(
-                tester.getRect(_zoneControl(label)),
-                rect,
-                reason: '$label: selecting moves the control',
-              );
+              final nameRect = tester.getRect(name);
+              if (value.top >= nameRect.bottom) {
+                // Under the name: still at the end of the row, past the name.
+                expect(
+                  value.right,
+                  greaterThan(nameRect.right),
+                  reason: '$label value at the end',
+                );
+              }
             }
+            // Opening a row shows the sheet of its zone without overflow.
+            await openMeasureSheet(tester, BodyZone.upperArm);
+            expect(tester.takeException(), isNull);
+            expect(measureSheet(), findsOneWidget);
+            expect(
+              find.descendant(
+                of: measureSheet(),
+                matching: find.text(
+                  BodyZone.upperArm.label(l10n).toUpperCase(),
+                ),
+              ),
+              findsOneWidget,
+            );
           });
         }
       }
     }
   });
 
-  group('side-by-side layout is kept where the names fit', () {
-    // Zone control rects (left, top, width, height) of the default case
-    // (390 dp, 1.0x), measured on the layout before this change.
-    // L5-E9b: the numbered section headers moved the scrolled body map
-    // 24 dp down; lefts, widths and heights are unchanged.
+  // Was «side-by-side layout» and «stacked layout»: there are no zone columns
+  // any more. The figure keeps its size, centred and inside the screen, at
+  // every width and scale, front and back.
+  group('body view keeps the figure inside the screen', () {
     for (final locale in const ['es', 'en']) {
-      testWidgets('$locale 390dp x1.0', (tester) async {
-        await _mount(tester, latest: _metric, locale: Locale(locale));
-        await _openBodyMap(tester);
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(MetricsFormPage)),
-        );
-        final out = <String>[];
-        for (final zone in _zones) {
-          final r = tester.getRect(_zoneControl(zone.label(l10n)));
-          out.add(
-            '${zone.name}:${r.left.toStringAsFixed(2)},'
-            '${r.top.toStringAsFixed(2)},${r.width.toStringAsFixed(2)},'
-            '${r.height.toStringAsFixed(2)}',
-          );
-        }
-        expect(tester.takeException(), isNull);
-        expect(out.join(' '), _baseline['$locale 390.0 1.0']);
-      });
-    }
-  });
-
-  group('stacked layout when the names do not fit the side columns', () {
-    // The layout follows the width of the column and the text scale: these
-    // combinations were side by side before and split a name or overflowed.
-    for (final locale in const ['es', 'en']) {
-      for (final (width, scale) in const [(390.0, 1.3), (320.0, 1.0)]) {
+      for (final (width, scale) in const [
+        (320.0, 1.0),
+        (320.0, 2.0),
+        (390.0, 1.0),
+        (390.0, 1.3),
+        (412.0, 2.0),
+      ]) {
         testWidgets('$locale ${width}dp x$scale', (tester) async {
           await _mount(
             tester,
@@ -316,76 +303,89 @@ void main() {
             locale: Locale(locale),
           );
           await _openBodyMap(tester);
+          expect(tester.takeException(), isNull);
           final l10n = AppLocalizations.of(
             tester.element(find.byType(MetricsFormPage)),
           );
-          final rects = [
-            for (final zone in _zones)
-              tester.getRect(_zoneControl(zone.label(l10n))),
-          ];
-          expect(tester.takeException(), isNull);
-          // One column: same left edge and width, none above the previous.
-          for (final r in rects) {
-            expect(r.left, rects.first.left);
-            expect(r.width, rects.first.width);
+          final figure = find.descendant(
+            of: find.byType(RecapAnatomySelector),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is CustomPaint && w.painter != null && w.size.height > 200,
+            ),
+          );
+          for (final view in [l10n.frontViewLabel, l10n.backViewLabel]) {
+            await tester.ensureVisible(find.text(view));
+            await tester.pump();
+            await tester.tap(find.text(view));
+            await tester.pump(const Duration(milliseconds: 300));
+            final rect = tester.getRect(figure);
+            expect(rect.height, 450, reason: view);
+            expect(rect.left, greaterThanOrEqualTo(0), reason: view);
+            expect(rect.right, lessThanOrEqualTo(width), reason: view);
+            expect(
+              (rect.center.dx - width / 2).abs(),
+              lessThan(1),
+              reason: '$view centred',
+            );
+            expect(tester.takeException(), isNull, reason: view);
           }
-          final tops = rects.map((r) => r.top).toList()..sort();
-          expect(tops.toSet().length, rects.length);
+          final hint = find.text(l10n.metricsMeasureTapZone);
+          await tester.ensureVisible(hint);
+          await tester.pump();
+          expect(tester.getRect(hint).right, lessThanOrEqualTo(width - 20));
         });
       }
     }
   });
 
-  group('L4-I14 measure hints follow the locale decimal separator', () {
-    Iterable<String?> hints(WidgetTester tester) => tester
-        .widgetList<TextField>(find.byType(TextField))
-        .map((field) => field.decoration?.hintText);
-
-    for (final (locale, imperial, metric) in const [
-      ('es', '0,0', '0'),
-      ('en', '0.0', '0'),
+  // Was «L4-I14 measure hints follow the locale decimal separator»: the empty
+  // fields and their «0,0» hints are gone; the figures of the list and of the
+  // sheet stepper carry the separator now, in metric and imperial.
+  group('L4-I14 measure figures follow the locale decimal separator', () {
+    for (final (locale, imperialList, imperialFigure, metricList) in const [
+      ('es', '29,1 in', '29,1', '74,0 cm'),
+      ('en', '29.1 in', '29.1', '74.0 cm'),
     ]) {
-      testWidgets('$locale imperial hint is $imperial', (tester) async {
+      testWidgets('$locale imperial shows $imperialList', (tester) async {
         await _mount(
           tester,
+          latest: _metric,
           locale: Locale(locale),
           unitSystem: UnitSystem.imperial,
+          size: const Size(390, 3000),
         );
-        await _openBodyMap(tester);
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(MetricsFormPage)),
+        expect(measureValueText(tester, BodyZone.waist), imperialList);
+        await openMeasureSheet(tester, BodyZone.waist);
+        expect(
+          find.descendant(
+            of: measureStepper('waist_cm'),
+            matching: find.textContaining(imperialFigure, findRichText: true),
+          ),
+          findsWidgets,
         );
-        // A single field (neck) and a bilateral one (upper arm).
-        for (final zone in [BodyZone.neck, BodyZone.upperArm]) {
-          final label = zone.label(l10n);
-          await tester.ensureVisible(find.text(label));
-          await tester.pump();
-          await tester.tap(_zoneControl(label));
-          await tester.pump();
-          final found = hints(tester).whereType<String>().toList();
-          expect(found, contains(imperial), reason: '${zone.name}: $found');
-          expect(
-            found.where((h) => h == '0.0' || h == '0,0'),
-            everyElement(imperial),
-            reason: '${zone.name}: $found',
-          );
-        }
+        final other = locale == 'es' ? '29.1' : '29,1';
+        expect(
+          find.descendant(
+            of: measureStepper('waist_cm'),
+            matching: find.textContaining(other, findRichText: true),
+          ),
+          findsNothing,
+        );
       });
 
-      testWidgets('$locale metric hint stays $metric', (tester) async {
-        await _mount(tester, locale: Locale(locale));
-        await _openBodyMap(tester);
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(MetricsFormPage)),
+      testWidgets('$locale metric shows $metricList', (tester) async {
+        await _mount(
+          tester,
+          latest: _metric,
+          locale: Locale(locale),
+          size: const Size(390, 3000),
         );
-        for (final zone in [BodyZone.neck, BodyZone.upperArm]) {
-          final label = zone.label(l10n);
-          await tester.ensureVisible(find.text(label));
-          await tester.pump();
-          await tester.tap(_zoneControl(label));
-          await tester.pump();
-          expect(hints(tester).whereType<String>(), contains(metric));
-        }
+        expect(measureValueText(tester, BodyZone.waist), metricList);
+        expect(
+          measureValueText(tester, BodyZone.upperArm),
+          locale == 'es' ? 'I 35,0 · D 36,0 cm' : 'L 35.0 · R 36.0 cm',
+        );
       });
     }
   });
@@ -411,15 +411,13 @@ void main() {
               await tester.ensureVisible(text);
               await tester.pump();
               final tab = find
-                  .ancestor(of: text, matching: find.byType(Container))
+                  .ancestor(of: text, matching: find.byType(GestureDetector))
                   .first;
               final box = tester.getRect(tab);
               final textRect = tester.getRect(text);
               final paragraph = tester.renderObject<RenderParagraph>(text);
-              // Painted size: the FittedBox may shrink the label to fit.
-              final shrink = textRect.height / paragraph.size.height;
-              // 1.5 dp border + 4 dp padding between the border and the text.
-              const gap = 1.5 + 4;
+              // Segment padding of ExomSegmentedControl (8 dp each side).
+              const gap = 8;
               expect(tester.takeException(), isNull, reason: label);
               expect(box.height, greaterThanOrEqualTo(48), reason: label);
               expect(
@@ -433,7 +431,7 @@ void main() {
                 reason: '$label touches the right edge of its tab',
               );
               expect(
-                14 * scale * shrink,
+                paragraph.text.style!.fontSize! * paragraph.textScaler.scale(1),
                 greaterThanOrEqualTo(13),
                 reason: '$label is painted below 13 px',
               );

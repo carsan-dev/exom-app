@@ -146,6 +146,60 @@ void main() {
     expect(tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value, '68.4');
   });
 
+  group('fractionDigits', () {
+    Widget fixed(double value, {int? digits, _Probe? probe}) =>
+        ExomNumeralStepper(
+          value: value,
+          min: 0,
+          max: 200,
+          step: 0.5,
+          unit: 'cm',
+          label: 'Brazo',
+          decrementLabel: 'Restar',
+          incrementLabel: 'Sumar',
+          acceptsTypedOutOfRange: true,
+          fractionDigits: digits,
+          onChanged: (v) => probe?.values.add(v),
+        );
+
+    String shown(WidgetTester tester) =>
+        tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value;
+
+    testWidgets('null keeps the trimmed format', (tester) async {
+      await pumpComponent(tester, fixed(33));
+      expect(shown(tester), '33');
+    });
+
+    testWidgets('1 shows a fixed decimal in es', (tester) async {
+      await pumpComponent(tester, fixed(33, digits: 1));
+      expect(shown(tester), '33,0');
+    });
+
+    testWidgets('1 shows a fixed decimal in en', (tester) async {
+      await pumpComponent(
+        tester,
+        fixed(33.5, digits: 1),
+        locale: const Locale('en'),
+      );
+      expect(shown(tester), '33.5');
+      await pumpComponent(
+        tester,
+        fixed(33, digits: 1),
+        locale: const Locale('en'),
+      );
+      expect(shown(tester), '33.0');
+    });
+
+    testWidgets('typing and emitted values are unchanged', (tester) async {
+      final probe = _Probe();
+      await pumpComponent(tester, fixed(33, digits: 1, probe: probe));
+      await _startEditing(tester);
+      await tester.enterText(find.byKey(ExomNumeralStepper.fieldKey), '34,25');
+      await tester.pump();
+      expect(probe.values, [34.25]);
+    });
+  });
+
   testWidgets('limit: ± stop at min and max and the button is disabled', (
     tester,
   ) async {

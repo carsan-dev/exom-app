@@ -18,14 +18,17 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/models/body_zone.dart';
-import 'package:exom_app/core/widgets/anatomy_selector.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
@@ -33,6 +36,7 @@ import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dar
 import 'package:exom_app/features/metrics/domain/utils/seen_muscle_mass_estimator.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 
 /// Day form of Métricas (record date, height, weight, muscle mass, sleep and
 /// measures). Opened from «Añadir medida» in the «Progreso» view; a
@@ -100,6 +104,8 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _bodyMapMode = false;
   BodyZone? _selectedMeasure;
 
+  /// Zones of section 06 in the order of the sketch (L6-D2): Cuello, Hombros,
+  /// Pecho, Cintura, Caderas, Brazo, Antebrazo, Muslo, Gemelo.
   static const _measureZones = <_MeasureZoneConfig>[
     _MeasureZoneConfig.single(zone: BodyZone.neck, fieldKey: 'neck_cm'),
     _MeasureZoneConfig.single(
@@ -107,6 +113,8 @@ class _MetricsViewState extends State<_MetricsView> {
       fieldKey: 'shoulders_cm',
     ),
     _MeasureZoneConfig.single(zone: BodyZone.chest, fieldKey: 'chest_cm'),
+    _MeasureZoneConfig.single(zone: BodyZone.waist, fieldKey: 'waist_cm'),
+    _MeasureZoneConfig.single(zone: BodyZone.hips, fieldKey: 'hips_cm'),
     _MeasureZoneConfig.bilateral(
       zone: BodyZone.upperArm,
       leftFieldKey: 'arm_left_cm',
@@ -117,8 +125,6 @@ class _MetricsViewState extends State<_MetricsView> {
       leftFieldKey: 'forearm_left_cm',
       rightFieldKey: 'forearm_right_cm',
     ),
-    _MeasureZoneConfig.single(zone: BodyZone.waist, fieldKey: 'waist_cm'),
-    _MeasureZoneConfig.single(zone: BodyZone.hips, fieldKey: 'hips_cm'),
     _MeasureZoneConfig.bilateral(
       zone: BodyZone.thigh,
       leftFieldKey: 'thigh_left_cm',
@@ -169,22 +175,6 @@ class _MetricsViewState extends State<_MetricsView> {
     super.dispose();
   }
 
-  static const _bodyMapLeftZones = [
-    BodyZone.neck,
-    BodyZone.shoulders,
-    BodyZone.chest,
-    BodyZone.waist,
-    BodyZone.hips,
-  ];
-  static const _bodyMapRightZones = [
-    BodyZone.upperArm,
-    BodyZone.forearm,
-    BodyZone.thigh,
-    BodyZone.calf,
-  ];
-  static const _bodyMapLeftFlex = [1, 2, 4, 6, 8];
-  static const _bodyMapRightFlex = [3, 4, 7, 9];
-
   String _localizedZoneLabel(BuildContext context, BodyZone zone) {
     return zone.label(AppLocalizations.of(context));
   }
@@ -207,21 +197,6 @@ class _MetricsViewState extends State<_MetricsView> {
     _touchedMeasures.add(fieldKey);
   }
 
-  String _zoneValuePreview(BodyZone zone) {
-    final config = _measureZone(zone);
-    if (!config.isBilateral) {
-      return _controllerForField(config.fieldKey!).text.trim();
-    }
-
-    final left = _controllerForField(config.leftFieldKey!).text.trim();
-    final right = _controllerForField(config.rightFieldKey!).text.trim();
-    if (left.isEmpty && right.isEmpty) {
-      return '';
-    }
-
-    return '${left.isEmpty ? '-' : left} / ${right.isEmpty ? '-' : right}';
-  }
-
   String _preferredSeenCalfText() {
     final leftText = _controllerForField('calf_left_cm').text.trim();
     final rightText = _controllerForField('calf_right_cm').text.trim();
@@ -235,28 +210,6 @@ class _MetricsViewState extends State<_MetricsView> {
       return leftText;
     }
     return leftValue >= rightValue ? leftText : rightText;
-  }
-
-  Widget _buildMeasureEditor(BuildContext context, BodyZone zone) {
-    final config = _measureZone(zone);
-    if (!config.isBilateral) {
-      return _MeasureInput(
-        label: _localizedZoneLabel(context, zone),
-        controller: _controllerForField(config.fieldKey!),
-        onChanged: (_) => _markMeasureTouched(config.fieldKey!),
-      );
-    }
-
-    final l10n = AppLocalizations.of(context);
-    return _BilateralMeasureInput(
-      label: _localizedZoneLabel(context, zone),
-      leftLabel: l10n.leftSideShortLabel,
-      rightLabel: l10n.rightSideShortLabel,
-      leftController: _controllerForField(config.leftFieldKey!),
-      rightController: _controllerForField(config.rightFieldKey!),
-      onLeftChanged: (_) => _markMeasureTouched(config.leftFieldKey!),
-      onRightChanged: (_) => _markMeasureTouched(config.rightFieldKey!),
-    );
   }
 
   String _heightHint(AppLocalizations l10n, UnitSystem unitSystem) {
@@ -416,272 +369,344 @@ class _MetricsViewState extends State<_MetricsView> {
     }
   }
 
-  /// Horizontal and vertical room a zone control takes besides its text:
-  /// 8 dp of padding and the 1.5 dp border on each side.
-  static const double _zoneControlChromeWidth = 19;
-  static const double _zoneControlChromeHeight = 11;
-  static const double _bodyMapSelectorHeight = 440;
+  /// Plates of the C5b figure that stand for each measure (L6-D2 mapping of
+  /// the sketch «L6 · 06 Medidas corporales»). Every other plate is muted and
+  /// inert in the body view.
+  static const _measurePlates = <BodyZone, List<String>>{
+    BodyZone.neck: ['neck_front'],
+    BodyZone.shoulders: [
+      'shoulder_left_front',
+      'shoulder_right_front',
+      'shoulder_left_back',
+      'shoulder_right_back',
+    ],
+    BodyZone.chest: ['chest_left', 'chest_right'],
+    BodyZone.waist: ['abdomen'],
+    BodyZone.hips: ['hip_flexors', 'glutes_left', 'glutes_right'],
+    BodyZone.upperArm: [
+      'biceps_left',
+      'biceps_right',
+      'triceps_left',
+      'triceps_right',
+    ],
+    BodyZone.forearm: [
+      'forearm_left_front',
+      'forearm_right_front',
+      'forearm_left_back',
+      'forearm_right_back',
+    ],
+    BodyZone.thigh: [
+      'quadriceps_left',
+      'quadriceps_right',
+      'hamstrings_left',
+      'hamstrings_right',
+    ],
+    BodyZone.calf: ['shin_left', 'shin_right', 'calves_left', 'calves_right'],
+  };
 
-  /// Whether the zone names and values fit the side columns of the body map
-  /// without splitting a word or outgrowing the body height. It depends only
-  /// on the available width, the text scale and the locale, never on what the
-  /// user typed, so the layout (and the editor under it) does not change while
-  /// typing.
-  bool _bodyMapFitsSideBySide(
-    BuildContext context,
-    double maxWidth,
+  /// Starting value of the stepper of a side without data, in centimetres:
+  /// an adult reference so ± starts near a plausible figure. It is never
+  /// sent unless the client changes it.
+  static const _measureSeedCm = <BodyZone, double>{
+    BodyZone.neck: 38,
+    BodyZone.shoulders: 110,
+    BodyZone.chest: 95,
+    BodyZone.waist: 80,
+    BodyZone.hips: 95,
+    BodyZone.upperArm: 30,
+    BodyZone.forearm: 26,
+    BodyZone.thigh: 55,
+    BodyZone.calf: 37,
+  };
+
+  /// Range and step of the measure steppers, in the display unit. A typed
+  /// value is taken as the old fields took it (any number).
+  static const double _measureStep = 0.5;
+  static const double _measureMaxCm = 300;
+
+  BodyZone? _zoneForPlate(String plateId) {
+    for (final MapEntry(key: zone, value: plates) in _measurePlates.entries) {
+      if (plates.contains(plateId)) return zone;
+    }
+    return null;
+  }
+
+  /// Draft value of [fieldKey] in the display unit; null when empty.
+  double? _draftValue(String fieldKey) =>
+      _parseDouble(_controllerForField(fieldKey).text);
+
+  bool _zoneHasDraft(BodyZone zone) =>
+      _measureZone(zone).fieldKeys.any((key) => _draftValue(key) != null);
+
+  bool _zoneEdited(BodyZone zone) =>
+      _measureZone(zone).fieldKeys.any(_touchedMeasures.contains);
+
+  String _decimalSeparator() =>
+      decimalSeparatorFor(Localizations.localeOf(context).languageCode);
+
+  /// A measure as shown: at least one decimal, at most two, with the locale
+  /// separator («38,0», «33,25»).
+  String _measureNumber(double value) {
+    final separator = _decimalSeparator();
+    final text = formatDisplayDecimal(value, decimalSeparator: separator);
+    return text.contains(separator) ? text : '$text${separator}0';
+  }
+
+  /// A value from the sheet as draft text: the exact number with the locale
+  /// separator, parsed back by [_parseDouble] as the old fields were.
+  String _draftText(double value) =>
+      value.toString().replaceFirst('.', _decimalSeparator());
+
+  /// Value spans of a zone: «38,0 cm», «I 33,5 · D 34,0 cm», «I 55,0 · D —»
+  /// or «Sin dato». No-break spaces keep «I 33,5» and «D 34,0 cm» whole, so a
+  /// narrow line can only break after the middle dot. [values] holds one
+  /// value (single zone) or the left and right ones, in the display unit.
+  List<InlineSpan> _measureSpans(
+    AppLocalizations l10n,
+    List<double?> values,
+    String unit,
+    TextStyle muted,
+  ) {
+    const nbsp = ' ';
+    if (values.every((value) => value == null)) {
+      return [TextSpan(text: l10n.optionalRatingNoData, style: muted)];
+    }
+    if (values.length == 1) {
+      return [TextSpan(text: '${_measureNumber(values.single!)}$nbsp$unit')];
+    }
+    InlineSpan side(String initial, double? value, {required bool last}) =>
+        value == null
+        ? TextSpan(
+            children: [
+              TextSpan(text: '$initial$nbsp'),
+              TextSpan(text: '—', style: muted),
+            ],
+          )
+        : TextSpan(
+            text:
+                '$initial$nbsp${_measureNumber(value)}'
+                '${last ? '$nbsp$unit' : ''}',
+          );
+    return [
+      side(l10n.metricsMeasureLeftInitial, values.first, last: false),
+      const TextSpan(text: '$nbsp· '),
+      side(l10n.metricsMeasureRightInitial, values.last, last: true),
+    ];
+  }
+
+  /// Spoken value of a zone: «Izquierda 33,5 cm, Derecha —».
+  String _measureSpoken(
+    AppLocalizations l10n,
+    List<double?> values,
+    String unit,
+  ) {
+    if (values.every((value) => value == null)) {
+      return l10n.optionalRatingNoData;
+    }
+    String one(double? value) =>
+        value == null ? '—' : '${_measureNumber(value)} $unit';
+    if (values.length == 1) return one(values.single);
+    return '${l10n.leftSideLabel} ${one(values.first)}, '
+        '${l10n.rightSideLabel} ${one(values.last)}';
+  }
+
+  /// Stored values of [metric] by field key, in centimetres.
+  static Map<String, double?> _storedMeasures(BodyMetricEntity? metric) => {
+    'neck_cm': metric?.neckCm,
+    'shoulders_cm': metric?.shouldersCm,
+    'chest_cm': metric?.chestCm,
+    'arm_left_cm': metric?.armLeftCm,
+    'arm_right_cm': metric?.armRightCm,
+    'forearm_left_cm': metric?.forearmLeftCm,
+    'forearm_right_cm': metric?.forearmRightCm,
+    'waist_cm': metric?.waistCm,
+    'hips_cm': metric?.hipsCm,
+    'thigh_left_cm': metric?.thighLeftCm,
+    'thigh_right_cm': metric?.thighRightCm,
+    'calf_left_cm': metric?.calfLeftCm,
+    'calf_right_cm': metric?.calfRightCm,
+  };
+
+  /// «Última: I 33,0 · D 33,5 cm · 19 nov»: the stored values of the loaded
+  /// record and its date; null when the zone has none stored.
+  String? _lastMeasureLine(
+    AppLocalizations l10n,
+    BodyZone zone,
     UnitSystem unitSystem,
   ) {
-    // The context below the page's Material, where the zone texts inherit
-    // their default style from.
-    final scaler = MediaQuery.textScalerOf(context);
-    final base = DefaultTextStyle.of(context).style;
-    final labelStyle = base.merge(
-      const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-    );
-    final valueStyle = base.merge(const TextStyle(fontSize: 13));
-    final contentWidth =
-        (maxWidth - AnatomySelector.widthFor(_bodyMapSelectorHeight)) / 2 -
-        _zoneControlChromeWidth;
-    if (contentWidth <= 0) {
-      return false;
-    }
-    final unit = lengthUnitSymbol(unitSystem);
-    // Measures and releases the painter right away.
-    Size measure(String text, TextStyle style, double maxWidth) {
-      final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
-        textDirection: Directionality.of(context),
-        textScaler: scaler,
-      );
-      try {
-        painter.layout(maxWidth: maxWidth);
-        return painter.size;
-      } finally {
-        painter.dispose();
-      }
-    }
-
-    final bodyHeight = AnatomySelector.bodyHeightFor(_bodyMapSelectorHeight);
-    for (final column in [_bodyMapLeftZones, _bodyMapRightZones]) {
-      var columnHeight = 0.0;
-      for (final zone in column) {
-        final label = measure(
-          _localizedZoneLabel(context, zone),
-          labelStyle,
-          double.infinity,
-        );
-        if (label.width > contentWidth) {
-          return false;
-        }
-        // Widest value the zone can show: two sides of three digits and a
-        // decimal for the bilateral zones.
-        final value = _measureZone(zone).isBilateral
-            ? '000.0 / 000.0 $unit'
-            : '000.0 $unit';
-        if (measure('000.0', valueStyle, double.infinity).width >
-            contentWidth) {
-          return false;
-        }
-        final valueHeight = measure(value, valueStyle, contentWidth).height;
-        columnHeight += math.max(
-          kExomMinTapTarget,
-          _zoneControlChromeHeight + label.height + valueHeight,
-        );
-      }
-      if (columnHeight > bodyHeight) {
-        return false;
-      }
-    }
-    return true;
+    final metric = _currentMetricSnapshot();
+    if (metric == null) return null;
+    final stored = _storedMeasures(metric);
+    final values = [
+      for (final key in _measureZone(zone).fieldKeys)
+        stored[key] == null
+            ? null
+            : UnitConverters.lengthToDisplay(stored[key]!, unitSystem),
+    ];
+    if (values.every((value) => value == null)) return null;
+    final text = TextSpan(
+      children: _measureSpans(
+        l10n,
+        values,
+        lengthUnitSymbol(unitSystem),
+        const TextStyle(),
+      ),
+    ).toPlainText();
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final date = languageCode == 'en'
+        ? DateFormat('MMM d', 'en').format(metric.date)
+        : DateFormat('d MMM', 'es').format(metric.date);
+    return l10n.metricsMeasureLast(text, date);
   }
 
-  static const _bodyMapStackedZones = [
-    BodyZone.neck,
-    BodyZone.shoulders,
-    BodyZone.chest,
-    BodyZone.upperArm,
-    BodyZone.forearm,
-    BodyZone.waist,
-    BodyZone.hips,
-    BodyZone.thigh,
-    BodyZone.calf,
-  ];
+  void _onPlateSelected(String plateId) {
+    final zone = _zoneForPlate(plateId);
+    if (zone == null) return;
+    _openMeasureSheet(zone);
+  }
 
-  Widget _buildBodyMapMeasurements() {
+  /// Opens the sheet of [zone] (from its row or its plates). «Hecho» writes
+  /// the sides the client changed into the draft and marks them touched;
+  /// dismissing the sheet changes nothing. The page save stays the only
+  /// write.
+  Future<void> _openMeasureSheet(BodyZone zone) async {
+    final l10n = AppLocalizations.of(context);
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
-    return LayoutBuilder(
-      builder: (context, constraints) =>
-          _bodyMapFitsSideBySide(context, constraints.maxWidth, unitSystem)
-          ? _buildSideBySideBodyMap(unitSystem)
-          : _buildStackedBodyMap(unitSystem),
+    final config = _measureZone(zone);
+    final unit = lengthUnitSymbol(unitSystem);
+    final drafts = [for (final key in config.fieldKeys) _draftValue(key)];
+    final seedCm = _measureSeedCm[zone]!;
+    final seed =
+        drafts.whereType<double>().firstOrNull ??
+        (UnitConverters.lengthToDisplay(seedCm, unitSystem) / _measureStep)
+                .round() *
+            _measureStep;
+    final stepText = '${_measureNumberPlain(_measureStep)} $unit';
+    final label = _localizedZoneLabel(context, zone);
+    setState(() => _selectedMeasure = zone);
+
+    final result = await showExomSheet<Map<String, double>>(
+      context: context,
+      builder: (_) => _MeasureSheet(
+        kicker: l10n.metricsMeasureSheetKicker,
+        title: label,
+        lastLine: _lastMeasureLine(l10n, zone, unitSystem),
+        sides: [
+          for (var i = 0; i < config.fieldKeys.length; i++)
+            _MeasureSide(
+              fieldKey: config.fieldKeys[i],
+              label: !config.isBilateral
+                  ? null
+                  : i == 0
+                  ? l10n.leftSideLabel
+                  : l10n.rightSideLabel,
+              initial: drafts[i] ?? seed,
+            ),
+        ],
+        zoneLabel: label,
+        unit: unit,
+        step: _measureStep,
+        max: UnitConverters.lengthToDisplay(_measureMaxCm, unitSystem),
+        hint: l10n.setSheetWeightHint(stepText),
+        decrementLabel: l10n.metricsWeightDecrease(stepText),
+        incrementLabel: l10n.metricsWeightIncrease(stepText),
+        doneLabel: l10n.metricsMeasureDone,
+        reviewMessage: l10n.measurementReviewTemplate(label.toLowerCase()),
+      ),
+    );
+    if (!mounted || result == null || result.isEmpty) return;
+    setState(() {
+      for (final MapEntry(key: fieldKey, value: value) in result.entries) {
+        _controllerForField(fieldKey).text = _draftText(value);
+        _markMeasureTouched(fieldKey);
+      }
+    });
+  }
+
+  /// The step as text («0,5»).
+  String _measureNumberPlain(double value) =>
+      formatDisplayDecimal(value, decimalSeparator: _decimalSeparator());
+
+  Widget _buildMeasureList(AppLocalizations l10n, UnitSystem unitSystem) {
+    final palette = context.exomPalette;
+    final unit = lengthUnitSymbol(unitSystem);
+    final muted = TextStyle(color: palette.textSecondary);
+    return ExomFlatRowGroup(
+      children: [
+        for (final config in _measureZones)
+          _MeasureRow(
+            key: Key('metrics-measure-row-${config.zone.name}'),
+            zone: config.zone,
+            label: _localizedZoneLabel(context, config.zone),
+            valueSpans: _measureSpans(
+              l10n,
+              [for (final key in config.fieldKeys) _draftValue(key)],
+              unit,
+              muted,
+            ),
+            spokenValue: _measureSpoken(l10n, [
+              for (final key in config.fieldKeys) _draftValue(key),
+            ], unit),
+            edited: _zoneEdited(config.zone),
+            editedLabel: l10n.metricsMeasureEdited,
+            onTap: () => _openMeasureSheet(config.zone),
+          ),
+      ],
     );
   }
 
-  Widget _buildStackedBodyMap(UnitSystem unitSystem) {
-    const selectorHeight = _bodyMapSelectorHeight;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 8),
-        Center(
-          child: AnatomySelector(
-            height: selectorHeight,
-            selectedZone: _selectedMeasure,
-            onZoneSelected: (zone) {
-              setState(() => _selectedMeasure = zone);
+  /// Height of the C5b selector in the body view: the 48 dp view toggle, its
+  /// 12 dp gap and a 450 dp figure, as in the sketch.
+  static const double _bodySelectorHeight = 510;
+
+  Widget _buildMeasureBody(AppLocalizations l10n, UnitSystem unitSystem) {
+    final palette = context.exomPalette;
+    final unit = lengthUnitSymbol(unitSystem);
+    final selected = _selectedMeasure;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ExomSpacing.xl,
+        ExomSpacing.lg,
+        ExomSpacing.xl,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RecapAnatomySelector(
+            height: _bodySelectorHeight,
+            selectedZoneIds: selected == null
+                ? const <String>{}
+                : _measurePlates[selected]!.toSet(),
+            onZoneSelected: _onPlateSelected,
+            zoneMarks: {
+              for (final MapEntry(key: zone, value: plates)
+                  in _measurePlates.entries)
+                for (final plate in plates)
+                  plate: _zoneHasDraft(zone)
+                      ? RecapZoneMark.withData
+                      : RecapZoneMark.withoutData,
+            },
+            zoneLabelOf: (plateId) {
+              final zone = _zoneForPlate(plateId)!;
+              final values = [
+                for (final key in _measureZone(zone).fieldKeys)
+                  _draftValue(key),
+              ];
+              return '${_localizedZoneLabel(context, zone)}, '
+                  '${_measureSpoken(l10n, values, unit)}';
             },
           ),
-        ),
-        const SizedBox(height: 8),
-        for (final zone in _bodyMapStackedZones)
-          _zoneLabel(zone, unitSystem, stacked: true),
-        if (_selectedMeasure != null) ...[
-          const SizedBox(height: 16),
-          _buildMeasureEditor(context, _selectedMeasure!),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSideBySideBodyMap(UnitSystem unitSystem) {
-    const selectorHeight = _bodyMapSelectorHeight;
-    final selectorBodyHeight = AnatomySelector.bodyHeightFor(selectorHeight);
-
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        SizedBox(
-          height: selectorHeight,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: SizedBox(
-                    height: selectorBodyHeight,
-                    child: _buildZoneColumn(
-                      _bodyMapLeftZones,
-                      _bodyMapLeftFlex,
-                      CrossAxisAlignment.end,
-                      unitSystem,
-                    ),
-                  ),
-                ),
-              ),
-              AnatomySelector(
-                height: selectorHeight,
-                selectedZone: _selectedMeasure,
-                onZoneSelected: (zone) {
-                  setState(() => _selectedMeasure = zone);
-                },
-              ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    height: selectorBodyHeight,
-                    child: _buildZoneColumn(
-                      _bodyMapRightZones,
-                      _bodyMapRightFlex,
-                      CrossAxisAlignment.start,
-                      unitSystem,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (_selectedMeasure != null) ...[
-          const SizedBox(height: 16),
-          _buildMeasureEditor(context, _selectedMeasure!),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildZoneColumn(
-    List<BodyZone> zones,
-    List<int> flex,
-    CrossAxisAlignment align,
-    UnitSystem unitSystem,
-  ) {
-    final children = <Widget>[];
-    for (var i = 0; i < zones.length; i++) {
-      if (i == 0 && flex[i] > 1) {
-        children.add(Spacer(flex: flex[i]));
-      } else if (i > 0) {
-        children.add(Spacer(flex: flex[i] - flex[i - 1]));
-      }
-      children.add(_zoneLabel(zones[i], unitSystem));
-    }
-    children.add(Spacer(flex: 10 - flex.last));
-
-    return Column(crossAxisAlignment: align, children: children);
-  }
-
-  Widget _zoneLabel(
-    BodyZone zone,
-    UnitSystem unitSystem, {
-    bool stacked = false,
-  }) {
-    final palette = context.exomPalette;
-    final val = _zoneValuePreview(zone);
-    final isSelected = _selectedMeasure == zone;
-    // Stacked (large text): one line per text, scaled down as a last resort
-    // so a word is never split.
-    Widget fit(Widget text) =>
-        stacked ? FittedBox(fit: BoxFit.scaleDown, child: text) : text;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedMeasure = zone),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: kExomMinTapTarget),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: isSelected ? palette.textPrimary : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            fit(
-              Text(
-                _localizedZoneLabel(context, zone),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isSelected
-                      ? palette.textPrimary
-                      : palette.textSecondary,
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
+          const SizedBox(height: ExomSpacing.lg),
+          Text(
+            l10n.metricsMeasureTapZone,
+            style: TextStyle(
+              color: palette.textSecondary,
+              fontSize: 14,
+              height: 1.45,
             ),
-            if (val.isNotEmpty)
-              fit(
-                Text(
-                  '$val ${lengthUnitSymbol(unitSystem)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isSelected
-                        ? palette.textPrimary
-                        : palette.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1481,35 +1506,14 @@ class _MetricsViewState extends State<_MetricsView> {
                                 _selectedMeasure = null;
                               }),
                             ),
-                            if (_bodyMapMode)
-                              _buildBodyMapMeasurements()
-                            else
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 12,
-                                      mainAxisSpacing: 8,
-                                      mainAxisExtent:
-                                          112 *
-                                          math.max(
-                                            1.0,
-                                            MediaQuery.textScalerOf(
-                                                  context,
-                                                ).scale(14) /
-                                                14,
-                                          ),
-                                    ),
-                                itemCount: _measureZones.length,
-                                itemBuilder: (context, index) {
-                                  final zone = _measureZones[index].zone;
-                                  return _buildMeasureEditor(context, zone);
-                                },
-                              ),
                           ],
                         ),
+                        if (_bodyMapMode)
+                          _buildMeasureBody(l10n, unitSystem)
+                        else ...[
+                          const SizedBox(height: ExomSpacing.md),
+                          _buildMeasureList(l10n, unitSystem),
+                        ],
                       ],
                     ),
                   ),
@@ -1664,171 +1668,363 @@ class _DateField extends StatelessWidget {
   }
 }
 
-/// Placeholder of a measure field: «0» in metric, «0.0» in imperial with the
-/// decimal separator of the app locale (the one the field values use).
-String _measureHint(BuildContext context, UnitSystem unitSystem) =>
-    unitSystem == UnitSystem.imperial
-    ? '0.0'.replaceFirst(
-        '.',
-        decimalSeparatorFor(Localizations.localeOf(context).languageCode),
-      )
-    : '0';
-
-class _MeasureInput extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
-
-  const _MeasureInput({
+/// Row of a measure in the list of «06 Medidas corporales» (sketch `.l6-r`):
+/// the zone name (with the «Editada» marker when it was changed in this
+/// session), the value at the end in tabular figures and a chevron, on the
+/// shared flat-row surface. When the name and the value do not fit one line
+/// (large text), the value moves under the name and stays at the end. The
+/// row is one button for assistive technology.
+class _MeasureRow extends StatelessWidget {
+  const _MeasureRow({
+    super.key,
+    required this.zone,
     required this.label,
-    required this.controller,
-    this.onChanged,
+    required this.valueSpans,
+    required this.spokenValue,
+    required this.edited,
+    required this.editedLabel,
+    required this.onTap,
   });
+
+  final BodyZone zone;
+  final String label;
+  final List<InlineSpan> valueSpans;
+  final String spokenValue;
+  final bool edited;
+  final String editedLabel;
+  final VoidCallback onTap;
+
+  /// Gaps of the sketch: 12 between name and value, 10 before the marker.
+  static const double _valueGap = 12;
+  static const double _markerGap = 10;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final palette = context.exomPalette;
-    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
-      (cubit) => cubit.state.unitSystem,
+    final labelStyle = theme.textTheme.bodyLarge!.copyWith(
+      color: palette.textPrimary,
+      height: 1.3,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final valueStyle = labelStyle.copyWith(
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final markerStyle = TextStyle(
+      color: palette.textSecondary,
+      fontSize: 13,
+      height: 1.3,
+    );
+    final value = Text.rich(
+      TextSpan(children: valueSpans),
+      key: Key('metrics-measure-value-${zone.name}'),
+      textAlign: TextAlign.end,
+      style: valueStyle,
+    );
+    final marker = edited
+        ? Row(
+            key: Key('metrics-measure-edited-${zone.name}'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: palette.textPrimary,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(editedLabel, style: markerStyle),
+            ],
+          )
+        : null;
+    final name = Wrap(
+      spacing: _markerGap,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: palette.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: TextStyle(color: palette.textPrimary, fontSize: 16),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: _measureHint(context, unitSystem),
-            suffixText: lengthUnitSymbol(unitSystem),
-            suffixStyle: TextStyle(
-              color: palette.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-          ),
-        ),
+        Text(label, style: labelStyle),
+        ?marker,
       ],
+    );
+
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        label: [label, spokenValue, if (edited) editedLabel].join(', '),
+        excludeSemantics: true,
+        child: ExomRowSurface(
+          onTap: onTap,
+          child: Row(
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final scaler = MediaQuery.textScalerOf(context);
+                    final direction = Directionality.of(context);
+                    double width(InlineSpan span) {
+                      final painter = TextPainter(
+                        text: span,
+                        textDirection: direction,
+                        textScaler: scaler,
+                      );
+                      try {
+                        painter.layout();
+                        return painter.width;
+                      } finally {
+                        painter.dispose();
+                      }
+                    }
+
+                    var nameWidth = width(
+                      TextSpan(text: label, style: labelStyle),
+                    );
+                    if (edited) {
+                      nameWidth +=
+                          _markerGap +
+                          12 +
+                          width(
+                            TextSpan(text: editedLabel, style: markerStyle),
+                          );
+                    }
+                    final valueWidth = width(
+                      TextSpan(children: valueSpans, style: valueStyle),
+                    );
+                    if (nameWidth + _valueGap + valueWidth <=
+                        constraints.maxWidth) {
+                      return Row(
+                        children: [
+                          Expanded(child: name),
+                          const SizedBox(width: _valueGap),
+                          value,
+                        ],
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        name,
+                        const SizedBox(height: 2),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: value,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(ExomIcons.next, size: 22, color: palette.textSecondary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _BilateralMeasureInput extends StatelessWidget {
-  final String label;
-  final String leftLabel;
-  final String rightLabel;
-  final TextEditingController leftController;
-  final TextEditingController rightController;
-  final ValueChanged<String>? onLeftChanged;
-  final ValueChanged<String>? onRightChanged;
-
-  const _BilateralMeasureInput({
+/// One stepper of the measure sheet: [fieldKey] of the draft, its side
+/// label (null for a single zone) and the value it starts from, in the
+/// display unit.
+class _MeasureSide {
+  const _MeasureSide({
+    required this.fieldKey,
     required this.label,
-    required this.leftLabel,
-    required this.rightLabel,
-    required this.leftController,
-    required this.rightController,
-    this.onLeftChanged,
-    this.onRightChanged,
+    required this.initial,
   });
+
+  final String fieldKey;
+  final String? label;
+  final double initial;
+}
+
+/// Sheet of a measure (sketch «Hoja»): kicker «06 · Medidas», the zone name,
+/// «Última…» when the loaded record has it, one numeral stepper per side
+/// (stacked «Izquierda» and «Derecha» for a pair; step 0.5, typed with a
+/// comma or a point) and «Hecho» pinned under them.
+///
+/// «Hecho» pops the sides the client changed, by field key; an invalid typed
+/// value keeps the sheet open with the review message. Closing it any other
+/// way pops null. Built like the set sheet: the fields scroll, the action
+/// stays.
+class _MeasureSheet extends StatefulWidget {
+  const _MeasureSheet({
+    required this.kicker,
+    required this.title,
+    required this.lastLine,
+    required this.sides,
+    required this.zoneLabel,
+    required this.unit,
+    required this.step,
+    required this.max,
+    required this.hint,
+    required this.decrementLabel,
+    required this.incrementLabel,
+    required this.doneLabel,
+    required this.reviewMessage,
+  });
+
+  final String kicker;
+  final String title;
+  final String? lastLine;
+  final List<_MeasureSide> sides;
+  final String zoneLabel;
+  final String unit;
+  final double step;
+  final double max;
+  final String hint;
+  final String decrementLabel;
+  final String incrementLabel;
+  final String doneLabel;
+  final String reviewMessage;
+
+  @override
+  State<_MeasureSheet> createState() => _MeasureSheetState();
+}
+
+class _MeasureSheetState extends State<_MeasureSheet> {
+  late final List<double> _values = [
+    for (final side in widget.sides) side.initial,
+  ];
+  late final List<bool> _changed = [for (final _ in widget.sides) false];
+  late final List<bool> _invalid = [for (final _ in widget.sides) false];
+  bool _showErrors = false;
+
+  void _done() {
+    if (_invalid.any((invalid) => invalid)) {
+      setState(() => _showErrors = true);
+      return;
+    }
+    Navigator.of(context).pop(<String, double>{
+      for (var i = 0; i < widget.sides.length; i++)
+        if (_changed[i]) widget.sides[i].fieldKey: _values[i],
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final unitSystem = context.select<AppPreferencesCubit, UnitSystem>(
-      (cubit) => cubit.state.unitSystem,
+    final media = MediaQuery.of(context);
+    // As in the set sheet: the frame caps its content at 90 % of the space
+    // above the keyboard; the fields scroll and «Hecho» stays pinned.
+    final bottomSafe = MediaQueryData.fromView(View.of(context)).padding.bottom;
+    final maxHeight = math.max(
+      0.0,
+      (media.size.height - media.padding.top - media.viewInsets.bottom) * 0.9 -
+          16 -
+          bottomSafe -
+          1,
+    );
+    final mutedStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 14,
+      height: 1.4,
+      color: palette.textSecondary,
+    );
+    final labelStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      height: 1.3,
+      color: palette.textPrimary,
     );
 
-    InputDecoration decoration() {
-      return InputDecoration(
-        hintText: _measureHint(context, unitSystem),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-      );
-    }
-
-    Widget buildSideField({
-      required String sideLabel,
-      required TextEditingController controller,
-      required ValueChanged<String>? onChanged,
-    }) {
-      return Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 2),
-              child: Text(
-                sideLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: palette.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            TextFormField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: TextStyle(color: palette.textPrimary, fontSize: 16),
-              onChanged: onChanged,
-              decoration: decoration(),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: palette.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+    final fields = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomKicker(widget.kicker),
           ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            buildSideField(
-              sideLabel: leftLabel,
-              controller: leftController,
-              onChanged: onLeftChanged,
+          const SizedBox(height: 4),
+          Semantics(
+            header: true,
+            child: Text(
+              widget.title.toUpperCase(),
+              style: ExomType.headline2Section.copyWith(
+                color: palette.textPrimary,
+              ),
             ),
-            const SizedBox(width: 8),
-            buildSideField(
-              sideLabel: rightLabel,
-              controller: rightController,
-              onChanged: onRightChanged,
+          ),
+          if (widget.lastLine case final last?) ...[
+            const SizedBox(height: 6),
+            Text(
+              last,
+              key: const Key('metrics-measure-last'),
+              style: mutedStyle,
             ),
           ],
+          for (var i = 0; i < widget.sides.length; i++) ...[
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                if (widget.sides[i].label case final side?)
+                  Text(side, style: labelStyle),
+                if (i == 0) Text(widget.hint, style: mutedStyle),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ExomNumeralStepper(
+              key: Key('metrics-measure-stepper-${widget.sides[i].fieldKey}'),
+              value: _values[i],
+              min: 0,
+              max: widget.max,
+              step: widget.step,
+              fractionDigits: 1,
+              unit: widget.unit,
+              label: widget.sides[i].label ?? widget.zoneLabel,
+              decrementLabel: widget.decrementLabel,
+              incrementLabel: widget.incrementLabel,
+              // The old fields took any typed number.
+              acceptsTypedOutOfRange: true,
+              onChanged: (value) => setState(() {
+                _values[i] = value;
+                _changed[i] = true;
+                _invalid[i] = false;
+              }),
+              onInvalidInput: (_) => setState(() => _invalid[i] = true),
+              errorText: _showErrors && _invalid[i]
+                  ? widget.reviewMessage
+                  : null,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final actions = DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: palette.borderSoft)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+        child: ExomPrimaryButton(
+          key: const Key('metrics-measure-done'),
+          label: widget.doneLabel,
+          trailingIcon: ExomIcons.check,
+          onPressed: _done,
         ),
-      ],
+      ),
+    );
+
+    return ConstrainedBox(
+      key: const Key('metrics-measure-sheet'),
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(child: SingleChildScrollView(child: fields)),
+          actions,
+        ],
+      ),
     );
   }
 }

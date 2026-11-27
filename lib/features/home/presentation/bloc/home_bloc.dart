@@ -90,9 +90,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   static const defaultSummaryTimeout = Duration(seconds: 45);
   final Duration summaryTimeout;
 
-  /// The bounds of the summaries in flight. Each belongs to this bloc:
-  /// [close] cancels them, so none outlives it.
-  final Set<Timer> _summaryBounds = {};
+  /// The bounds of the summaries in flight, each with the wait it ends.
+  /// They belong to this bloc: [close] cancels every bound and ends its wait,
+  /// so neither a timer nor a handler outlives it.
+  final Map<Timer, Completer<HomeSummaryEntity>> _summaryBounds = {};
 
   /// [connectivityChanges] reports whether the device has network (`true`)
   /// or not. Without it (older wiring, tests) Inicio never reloads by itself
@@ -192,8 +193,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   /// [request] for [summaryTimeout] at most. Unlike [Future.timeout], its
-  /// timer is cancelled by [close]: after it the wait never ends, as the
-  /// handler of a closed bloc emits nothing anyway.
+  /// timer belongs to the bloc: [close] cancels it and ends the wait with
+  /// [_HomeBlocClosed], so a request that never answers cannot hold the
+  /// handler, nor therefore close(), forever.
   Future<HomeSummaryEntity> _bounded(Future<HomeSummaryEntity> request) {
     final result = Completer<HomeSummaryEntity>();
     late final Timer bound;
@@ -207,7 +209,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         ),
       );
     });
-    _summaryBounds.add(bound);
+    _summaryBounds[bound] = result;
     request.then(
       (summary) {
         bound.cancel();
@@ -226,13 +228,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   @override
   Future<void> close() async {
-    for (final bound in _summaryBounds) {
-      bound.cancel();
-    }
-    _summaryBounds.clear();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _pendingReconnect = false;
+    // Loads still in flight are discarded: their handlers return before
+    // emitting (the closed bloc emits nothing), the ones released below too.
+    _requestEpoch++;
+    final bounds = Map.of(_summaryBounds);
+    _summaryBounds.clear();
+    bounds.forEach((bound, wait) {
+      bound.cancel();
+      if (!wait.isCompleted) wait.completeError(const _HomeBlocClosed());
+    });
     await _connectivitySubscription?.cancel();
     return super.close();
   }
@@ -583,4 +590,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   static bool _unchanged(HomeWeekMarks? next, HomeWeekMarks? current) =>
       next == null ? current == null : next.sameAs(current);
+}
+
+/// Ends the summary waits of a closing [HomeBloc]. Never shown: the handler
+/// it reaches returns without emitting.
+class _HomeBlocClosed implements Exception {
+  const _HomeBlocClosed();
+
+  @override
+  String toString() => 'HomeBloc closed';
 }

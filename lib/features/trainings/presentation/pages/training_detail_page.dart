@@ -675,10 +675,10 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final entry in pending)
+              for (final (index, entry) in pending.indexed)
                 ListTile(
                   title: Text('${training.name} · $date'),
-                  subtitle: Text(entry['id'] as String),
+                  subtitle: Text(l10n.trainingExecutionLabel(index + 1)),
                   onTap: () => Navigator.of(dialogContext).pop(entry['id'] as String),
                 ),
               if (legacy)

@@ -523,6 +523,45 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await sl.reset();
   });
+  testWidgets('session picker labels executions by start order, never by raw id', (tester) async {
+    await sl.reset();
+    const firstId = '3f2b8c1e-5a7d-4e90-9b1c-aaaaaaaaaaaa';
+    const secondId = '9d4e7a20-1c3b-4f68-8a52-bbbbbbbbbbbb';
+    final storage = _FilteredStorage()
+      ..actionStatus = null
+      ..executions = [
+        {'id': firstId, 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+        {'id': secondId, 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+      ];
+    final repository = _Repository();
+    sl.registerSingleton<LocalStorage>(storage);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('es'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('complete-training-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
+    expect(find.text('Sesión 1'), findsOneWidget);
+    expect(find.text('Sesión 2'), findsOneWidget);
+    expect(find.text(firstId), findsNothing);
+    expect(find.text(secondId), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await sl.reset();
+  });
   testWidgets('cold detail displays sole confirmed execution without selecting it for writes', (tester) async {
     await sl.reset();
     final storage = _FilteredStorage()..status = 'confirmed'..actionStatus = null;
@@ -725,7 +764,7 @@ void main() {
     expect(repository.completions, 0, reason: 'hydration must not finalize the execution');
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text(_session), findsOneWidget,
+    expect(find.text('Sesión 1'), findsOneWidget,
       reason: 'display-only hydration must not bypass explicit execution selection');
     expect(repository.completions, 0);
     await tester.pumpWidget(const SizedBox.shrink());

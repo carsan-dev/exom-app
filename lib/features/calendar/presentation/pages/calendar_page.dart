@@ -969,7 +969,7 @@ class _CalendarViewState extends State<_CalendarView> {
                   Text(
                     l10n.calendarWeekTrainings(
                       formatFigure(context, summary.trainingsCompleted),
-                      formatFigure(context, summary.trainingsAssigned),
+                      summary.trainingsAssigned,
                     ),
                     style: TextStyle(
                       fontFamily: AppTheme.bodyFontFamily,

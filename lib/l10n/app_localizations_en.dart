@@ -3590,6 +3590,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newTrainingExecution => 'New execution';
 
   @override
+  String trainingExecutionLabel(int number) {
+    return 'Session $number';
+  }
+
+  @override
   String get quarantinedWorkoutNotice =>
       'Saved workout data from an unknown account or date is kept on this device. It cannot be restored automatically; contact support to recover it.';
 
@@ -5038,8 +5043,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String calendarWeekTrainings(String done, String total) {
-    return '$done of $total workouts this week';
+  String calendarWeekTrainings(String done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total workouts',
+      one: '$total workout',
+    );
+    return '$done of $_temp0 this week';
   }
 
   @override

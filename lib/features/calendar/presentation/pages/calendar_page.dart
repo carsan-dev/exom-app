@@ -39,6 +39,7 @@ import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart'
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 import 'package:exom_app/features/diets/domain/utils/diet_export_period_utils.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
+import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
 import 'package:exom_app/features/diets/presentation/widgets/weekly_shopping_list_flow.dart';
 
 enum _DietExportPeriod { week, month }
@@ -717,8 +718,9 @@ class _CalendarViewState extends State<_CalendarView> {
     }
   }
 
-  /// Protagonist (sketch A1 `.x-hero-96`): Entrenamiento counts the training
-  /// days of the month that are done; Dietas, the meals done this week (week
+  /// Protagonist (sketch A1 `.x-hero-96`): Entrenamiento counts the sessions
+  /// of the month that are done, like the week line and Inicio (per-day counts
+  /// and ALL/ANY from [HomeDaySessions.ofCalendarDay]); Dietas, the meals done this week (week
   /// summary of the selected day). Nothing scheduled: a plain 0, in the text
   /// colour (it is not an achievement). Dietas without a week summary (the
   /// bloc swallows its failure): no figure at all, never an invented 0.
@@ -730,14 +732,13 @@ class _CalendarViewState extends State<_CalendarView> {
     if (!_showTrainings && state.weekSummary == null) {
       return null;
     } else if (_showTrainings) {
-      final scheduled = state.days.where(
-        (d) =>
-            d.hasTraining &&
-            d.date.year == state.year &&
-            d.date.month == state.month,
-      );
-      total = scheduled.length;
-      done = scheduled.where((d) => d.trainingCompleted).length;
+      final sessions = state.days
+          .where(
+            (d) => d.date.year == state.year && d.date.month == state.month,
+          )
+          .map(HomeDaySessions.ofCalendarDay);
+      total = sessions.fold(0, (sum, s) => sum + s.total);
+      done = sessions.fold(0, (sum, s) => sum + s.done);
     } else {
       total = state.weekSummary?.totalMeals ?? 0;
       done = state.weekSummary?.mealsCompleted ?? 0;

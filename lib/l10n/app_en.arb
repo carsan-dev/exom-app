@@ -800,6 +800,8 @@
   "noTrainingsAssignedSubtitle": "Your coach hasn't assigned a plan yet",
   "noActivitiesThisMonth": "No activities this month",
   "noActivitiesThisMonthSubtitle": "No trainings or diets scheduled",
+  "noPastTrainingsThisMonth": "No past workouts this month",
+  "noPastTrainingsThisMonthSubtitle": "Workouts from past days will show up here.",
 
   "onboardingWelcomeTitle": "Welcome to EXOM!",
   "onboardingWelcomeDescription": "Set up your profile in a few steps so your coach can personalize your plan.",

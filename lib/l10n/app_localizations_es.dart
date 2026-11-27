@@ -2241,6 +2241,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No hay entrenamientos ni dietas programados';
 
   @override
+  String get noPastTrainingsThisMonth =>
+      'Sin entrenamientos anteriores este mes';
+
+  @override
+  String get noPastTrainingsThisMonthSubtitle =>
+      'Aquí verás los entrenamientos de los días pasados.';
+
+  @override
   String get onboardingWelcomeTitle => '¡Bienvenido a EXOM!';
 
   @override

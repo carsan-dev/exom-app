@@ -837,6 +837,8 @@
   "noTrainingsAssignedSubtitle": "Tu entrenador aún no te ha asignado un plan",
   "noActivitiesThisMonth": "Sin actividades este mes",
   "noActivitiesThisMonthSubtitle": "No hay entrenamientos ni dietas programados",
+  "noPastTrainingsThisMonth": "Sin entrenamientos anteriores este mes",
+  "noPastTrainingsThisMonthSubtitle": "Aquí verás los entrenamientos de los días pasados.",
 
   "onboardingWelcomeTitle": "¡Bienvenido a EXOM!",
   "onboardingWelcomeDescription": "Configura tu perfil en unos pocos pasos para que tu entrenador pueda personalizar tu plan.",

@@ -260,7 +260,15 @@ class ExomStepper<T> extends StatelessWidget {
         ],
       ),
     );
-    if (!errorOutside) return control;
+    // With the message below the row and a text field, the control always
+    // sits in this Column, error or not: switching between the bare control
+    // and a Column when the error appears would remount the TextField, and the
+    // new EditableText of an already focused field never listens to the
+    // keyboard insets, so it would not scroll itself above the keyboard and
+    // the pinned actions (E-D1).
+    if (!errorOutside && !(errorBelowRow && textController != null)) {
+      return control;
+    }
 
     final icon = errorIcon;
     return Column(
@@ -268,37 +276,39 @@ class ExomStepper<T> extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         control,
-        const SizedBox(height: 8),
-        Semantics(
-          container: true,
-          liveRegion: true,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (icon != null) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: ExcludeSemantics(
-                    child: Icon(icon, size: 18, color: palette.error),
+        if (error != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            container: true,
+            liveRegion: true,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (icon != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: ExcludeSemantics(
+                      child: Icon(icon, size: 18, color: palette.error),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    error,
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      color: palette.error,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 6),
               ],
-              Expanded(
-                child: Text(
-                  error,
-                  style: TextStyle(
-                    fontFamily: AppTheme.bodyFontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                    color: palette.error,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

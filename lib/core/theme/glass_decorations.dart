@@ -67,34 +67,3 @@ class GlassDecoration {
     );
   }
 }
-
-class ExomGradients {
-  ExomGradients._();
-
-  /// Scaffold background. Flat in the V4 system (both stops are the
-  /// background token); kept as a gradient for API compatibility.
-  static LinearGradient scaffoldBackground(ExomThemePalette palette) {
-    return LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [palette.gradientStart, palette.gradientEnd],
-    );
-  }
-
-  /// Formerly a diagonal accent tint for cards. Flat in the V4 system: it
-  /// paints nothing; [accent] is kept for API compatibility.
-  static LinearGradient cardAccent(Color accent) {
-    return const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Colors.transparent, Colors.transparent],
-    );
-  }
-
-  /// Top-to-bottom fade for app bar overlay.
-  static const LinearGradient headerFade = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0x33000000), Colors.transparent],
-  );
-}

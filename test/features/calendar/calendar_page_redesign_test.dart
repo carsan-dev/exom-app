@@ -20,7 +20,6 @@ import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
@@ -792,7 +791,6 @@ void main() {
       );
       expect(find.byKey(_dayBlock), findsNothing);
       expect(find.byType(ExomMonthGrid), findsOneWidget);
-      expect(find.byType(GlassCard), findsNothing);
     });
 
     testWidgets('loading: flat skeletons, no shimmer cards', (tester) async {
@@ -800,7 +798,6 @@ void main() {
       expect(find.byType(ExomSkeleton), findsWidgets);
       expect(find.byType(ExomFeatureBlock), findsOneWidget);
       expect(find.byType(ShimmerCard), findsNothing);
-      expect(find.byType(GlassCard), findsNothing);
     });
 
     testWidgets(

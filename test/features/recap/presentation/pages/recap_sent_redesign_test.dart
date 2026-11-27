@@ -152,7 +152,7 @@ void main() {
       final l10n = _l10n(tester);
       expect(find.byKey(_sent), findsOneWidget);
       expect(find.text(l10n.weeklyRecapTitle.toUpperCase()), findsOneWidget);
-      expect(find.text(l10n.recapSentKicker.toUpperCase()), findsNothing);
+      expect(find.text('CINCO PASOS COMPLETADOS'), findsNothing);
       expect(find.text('RECAP'), findsOneWidget);
       expect(find.text('ENVIADO.'), findsOneWidget);
       expect(find.byType(ExomSyncStatus), findsNothing);
@@ -161,7 +161,7 @@ void main() {
       expect(find.text(l10n.recapSentCoach), findsOneWidget);
       expect(find.text(l10n.recapBackToRecaps), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
-      expect(find.text(l10n.recapSentSuccessfully), findsNothing);
+      expect(find.text('Recap enviado correctamente'), findsNothing);
       expect(find.byKey(const ValueKey('recap-new')), findsNothing);
       expect(find.byKey(const ValueKey('recap-list')), findsNothing);
     });
@@ -283,7 +283,7 @@ void main() {
       );
       expect(find.byKey(_sent), findsNothing);
       expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text(_l10n(tester).recapSentSuccessfully), findsNothing);
+      expect(find.text('Recap enviado correctamente'), findsNothing);
     });
   });
 

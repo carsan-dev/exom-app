@@ -404,7 +404,6 @@
   "recapWhatCanWeImprove": "What can we improve?",
   "recapTellUsMore": "Tell us more",
 
-  "recapSentSuccessfully": "Recap sent successfully",
   "newRecap": "New recap",
   "editRecap": "Edit recap",
   "weeklyRecapTitle": "Weekly recap",
@@ -1732,7 +1731,6 @@
   "recapZonesSemantics": "{count, plural, one{{count} area} other{{count} areas}}: {zones}",
   "@recapZonesSemantics": {"placeholders": {"count": {"type": "int"}, "zones": {"type": "String"}}},
   "recapImprovement": "Improve",
-  "recapSentKicker": "Five steps completed",
   "recapSentTitleFirst": "Recap",
   "recapSentTitleSecond": "sent.",
   "recapSentCoach": "Thanks for telling me. I'll review it and leave my comment on your recap.",

@@ -22,31 +22,6 @@ class ExomStaticBackground extends StatelessWidget {
   }
 }
 
-/// Former animated background of the splash. In V4 it paints the same flat
-/// background as [ExomStaticBackground] and runs no animation (so it costs no
-/// frames). The constructor is unchanged: [intensity] and [showVeil] have no
-/// visual effect; [showBase] false leaves the background transparent so the
-/// parent's colour shows through, as before.
-class ExomAnimatedBackground extends StatelessWidget {
-  const ExomAnimatedBackground({
-    super.key,
-    required this.child,
-    this.intensity = 1,
-    this.showBase = true,
-    this.showVeil = true,
-  });
-
-  final Widget child;
-  final double intensity;
-  final bool showBase;
-  final bool showVeil;
-
-  @override
-  Widget build(BuildContext context) {
-    return _FlatBackground(paintBase: showBase, child: child);
-  }
-}
-
 class _FlatBackground extends StatelessWidget {
   const _FlatBackground({required this.paintBase, required this.child});
 

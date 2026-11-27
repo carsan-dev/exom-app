@@ -2,8 +2,8 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_panel.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:flutter/material.dart';
@@ -30,52 +30,45 @@ BoxDecoration _firstDecoration(WidgetTester tester, Finder of) {
       as BoxDecoration;
 }
 
+/// State widgets sit on the shared V4 raised panel (`ExomPanel`), not on a
+/// bespoke rounded card.
+void _expectRaisedPanel(WidgetTester tester, ExomThemePalette palette) {
+  final panel = tester.widget<ExomPanel>(find.byType(ExomPanel));
+  expect(panel.raised, isTrue);
+  final decoration = _firstDecoration(tester, find.byType(ExomPanel));
+  expect(decoration.color, palette.surfaceElevated);
+  expect(decoration.borderRadius, isNull);
+}
+
 void main() {
   for (final brightness in Brightness.values) {
     final palette = themeFor(brightness).extension<ExomThemePalette>()!;
 
     testWidgets(
-      'backgrounds are the flat theme background (${brightness.name})',
+      'static background is the flat theme background (${brightness.name})',
       (tester) async {
         await pumpComponent(
           tester,
-          const Column(
-            children: [
-              Expanded(child: ExomStaticBackground(child: Text('Estático'))),
-              Expanded(child: ExomAnimatedBackground(child: Text('Animado'))),
-            ],
-          ),
+          const ExomStaticBackground(child: Text('Estático')),
           brightness: brightness,
         );
         final boxes = tester.widgetList<ColoredBox>(
           find.descendant(
-            of: find.byWidgetPredicate(
-              (w) => w is ExomStaticBackground || w is ExomAnimatedBackground,
-            ),
+            of: find.byType(ExomStaticBackground),
             matching: find.byType(ColoredBox),
           ),
         );
         expect(boxes.map((b) => b.color).toSet(), {palette.background});
-        expect(
-          find.descendant(
-            of: find.byType(ExomAnimatedBackground),
-            matching: find.byType(CustomPaint),
-          ),
-          findsNothing,
-        );
-        // No animation is left running (the splash can settle).
-        await tester.pumpAndSettle();
-        expect(find.text('Animado'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'GlassAppBar is flat, opaque, rule at the bottom (${brightness.name})',
+      'ExomAppBar is flat, opaque, rule at the bottom (${brightness.name})',
       (tester) async {
         await pumpComponent(
           tester,
           Scaffold(
-            appBar: GlassAppBar(
+            appBar: ExomAppBar(
               title: const Text('Detalle'),
               actions: [
                 IconButton(
@@ -92,64 +85,18 @@ void main() {
         );
         expect(
           find.descendant(
-            of: find.byType(GlassAppBar),
+            of: find.byType(ExomAppBar),
             matching: find.byType(BackdropFilter),
           ),
           findsNothing,
         );
-        final decoration = _firstDecoration(tester, find.byType(GlassAppBar));
+        final decoration = _firstDecoration(tester, find.byType(ExomAppBar));
         expect(decoration.color, palette.background);
         final border = decoration.border! as Border;
         expect(border.bottom.color, palette.borderSoft);
         expect(border.bottom.width, 1);
         expect(border.top, BorderSide.none);
         await expectTapTargetGuidelines(tester);
-      },
-    );
-
-    testWidgets(
-      'GlassCard: radius 0 by default, explicit radius kept (${brightness.name})',
-      (tester) async {
-        await pumpComponent(
-          tester,
-          const Column(
-            children: [
-              GlassCard(key: Key('default'), child: Text('Por defecto')),
-              GlassCard(
-                key: Key('explicit'),
-                borderRadius: 16,
-                padding: EdgeInsets.all(8),
-                elevated: true,
-                child: Text('Explícita'),
-              ),
-            ],
-          ),
-          brightness: brightness,
-        );
-        final byDefault = _firstDecoration(
-          tester,
-          find.byKey(const Key('default')),
-        );
-        expect(byDefault.color, palette.surface);
-        expect(byDefault.borderRadius, BorderRadius.circular(0));
-        expect((byDefault.border! as Border).top.color, palette.borderSoft);
-        expect((byDefault.border! as Border).top.width, 1);
-        expect(byDefault.boxShadow, isNull);
-        final explicit = _firstDecoration(
-          tester,
-          find.byKey(const Key('explicit')),
-        );
-        expect(explicit.color, palette.surfaceElevated);
-        expect(explicit.borderRadius, BorderRadius.circular(16));
-        expect(
-          find.descendant(
-            of: find.byKey(const Key('explicit')),
-            matching: find.byWidgetPredicate(
-              (w) => w is Padding && w.padding == const EdgeInsets.all(8),
-            ),
-          ),
-          findsOneWidget,
-        );
       },
     );
 
@@ -163,6 +110,7 @@ void main() {
       );
       final icon = tester.widget<Icon>(find.byIcon(ExomIcons.error));
       expect(icon.color, palette.error);
+      _expectRaisedPanel(tester, palette);
       await pumpComponent(
         tester,
         NoConnectionWidget(onRetry: () {}),
@@ -173,6 +121,19 @@ void main() {
         wifi.color,
         themeFor(brightness).extension<ExomSemanticPalette>()!.warning,
       );
+      _expectRaisedPanel(tester, palette);
+      await pumpComponent(
+        tester,
+        const LoadingWidget(),
+        brightness: brightness,
+      );
+      _expectRaisedPanel(tester, palette);
+      await pumpComponent(
+        tester,
+        const ServerErrorWidget(),
+        brightness: brightness,
+      );
+      _expectRaisedPanel(tester, palette);
     });
   }
 

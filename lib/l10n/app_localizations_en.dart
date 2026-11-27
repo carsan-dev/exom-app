@@ -1127,9 +1127,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recapTellUsMore => 'Tell us more';
 
   @override
-  String get recapSentSuccessfully => 'Recap sent successfully';
-
-  @override
   String get newRecap => 'New recap';
 
   @override
@@ -5414,9 +5411,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapImprovement => 'Improve';
-
-  @override
-  String get recapSentKicker => 'Five steps completed';
 
   @override
   String get recapSentTitleFirst => 'Recap';

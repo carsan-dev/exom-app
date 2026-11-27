@@ -18,7 +18,6 @@ import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
     show FeedbackPageArgs;
@@ -1204,7 +1203,6 @@ void main() {
       for (final id in const ['te-1', 'te-2', 'te-3']) {
         expect(find.byKey(Key('training-exercise-thumb-$id')), findsOneWidget);
       }
-      expect(find.byType(GlassCard), findsNothing);
     });
 
     testWidgets('in progress: the progress is a figure in a featured block', (

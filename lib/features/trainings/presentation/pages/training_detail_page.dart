@@ -42,7 +42,7 @@ import 'package:exom_app/core/widgets/exom_scale_chips.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
 import 'package:intl/intl.dart';
@@ -530,7 +530,7 @@ class _TrainingDetailLoadingScaffold extends StatelessWidget {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        appBar: ExomAppBar(
           leading: _DetailBackButton(onPressed: () => context.pop()),
         ),
         body: ListView(
@@ -1825,7 +1825,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final scaffold = Scaffold(
       backgroundColor: palette.background,
       extendBody: scrollAway,
-      appBar: GlassAppBar(
+      appBar: ExomAppBar(
         leading: _DetailBackButton(onPressed: () => context.pop()),
       ),
       // One tree for both footers: changing it would rebuild the list and

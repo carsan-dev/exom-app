@@ -12,7 +12,6 @@ import 'package:exom_app/core/widgets/exom_empty_state.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/features/feedback/presentation/feedback_notice_snack_bars.dart';
 import 'package:exom_app/features/feedback/presentation/inline_upload_status_scope.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart';
@@ -62,7 +61,6 @@ void main() {
           'reply', (tester) async {
         await pumpFeedbackScene(tester, locale: Locale(locale));
         final l10n = _l10n(tester);
-        expect(find.byType(GlassCard), findsNothing);
         // Numbered questions 01-03 of the form.
         for (final n in [1, 2, 3]) {
           expect(
@@ -169,7 +167,6 @@ void main() {
           enqueueError: StateError('copy failed'),
         );
         final l10n = _l10n(tester);
-        expect(find.byType(GlassCard), findsNothing);
         expect(find.text('Sentadilla goblet'), findsOneWidget);
         expect(
           find.byWidgetPredicate((w) => w is ExomIndexNumber && w.n == 2),

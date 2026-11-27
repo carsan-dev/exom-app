@@ -3,7 +3,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/widgets/exom_panel.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +28,16 @@ BoxDecoration _firstDecoration(WidgetTester tester, Finder of) {
           ? widget.decoration
           : (widget as Container).decoration)
       as BoxDecoration;
+}
+
+/// State widgets sit on the shared V4 raised panel (`ExomPanel`), not on a
+/// bespoke rounded card.
+void _expectRaisedPanel(WidgetTester tester, ExomThemePalette palette) {
+  final panel = tester.widget<ExomPanel>(find.byType(ExomPanel));
+  expect(panel.raised, isTrue);
+  final decoration = _firstDecoration(tester, find.byType(ExomPanel));
+  expect(decoration.color, palette.surfaceElevated);
+  expect(decoration.borderRadius, isNull);
 }
 
 void main() {
@@ -90,52 +100,6 @@ void main() {
       },
     );
 
-    testWidgets(
-      'GlassCard: radius 0 by default, explicit radius kept (${brightness.name})',
-      (tester) async {
-        await pumpComponent(
-          tester,
-          const Column(
-            children: [
-              GlassCard(key: Key('default'), child: Text('Por defecto')),
-              GlassCard(
-                key: Key('explicit'),
-                borderRadius: 16,
-                padding: EdgeInsets.all(8),
-                elevated: true,
-                child: Text('Explícita'),
-              ),
-            ],
-          ),
-          brightness: brightness,
-        );
-        final byDefault = _firstDecoration(
-          tester,
-          find.byKey(const Key('default')),
-        );
-        expect(byDefault.color, palette.surface);
-        expect(byDefault.borderRadius, BorderRadius.circular(0));
-        expect((byDefault.border! as Border).top.color, palette.borderSoft);
-        expect((byDefault.border! as Border).top.width, 1);
-        expect(byDefault.boxShadow, isNull);
-        final explicit = _firstDecoration(
-          tester,
-          find.byKey(const Key('explicit')),
-        );
-        expect(explicit.color, palette.surfaceElevated);
-        expect(explicit.borderRadius, BorderRadius.circular(16));
-        expect(
-          find.descendant(
-            of: find.byKey(const Key('explicit')),
-            matching: find.byWidgetPredicate(
-              (w) => w is Padding && w.padding == const EdgeInsets.all(8),
-            ),
-          ),
-          findsOneWidget,
-        );
-      },
-    );
-
     testWidgets('state widgets use theme tokens (${brightness.name})', (
       tester,
     ) async {
@@ -146,6 +110,7 @@ void main() {
       );
       final icon = tester.widget<Icon>(find.byIcon(ExomIcons.error));
       expect(icon.color, palette.error);
+      _expectRaisedPanel(tester, palette);
       await pumpComponent(
         tester,
         NoConnectionWidget(onRetry: () {}),
@@ -156,6 +121,13 @@ void main() {
         wifi.color,
         themeFor(brightness).extension<ExomSemanticPalette>()!.warning,
       );
+      _expectRaisedPanel(tester, palette);
+      await pumpComponent(
+        tester,
+        const LoadingWidget(),
+        brightness: brightness,
+      );
+      _expectRaisedPanel(tester, palette);
     });
   }
 

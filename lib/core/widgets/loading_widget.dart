@@ -5,7 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../theme/app_theme.dart';
 import '../theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'glass_card.dart';
+import 'exom_panel.dart';
 
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key});
@@ -15,20 +15,21 @@ class LoadingWidget extends StatelessWidget {
     final palette = context.exomPalette;
 
     return Center(
-      child: GlassCard(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        borderRadius: 24,
-        elevated: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(color: palette.primary),
-            ),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ExomPanel(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          raised: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(color: palette.primary),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -50,18 +51,13 @@ class ErrorWidget2 extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(24),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _StateIconBadge(
-                icon: ExomIcons.error,
-                color: palette.error,
-              ),
+              _StateIconBadge(icon: ExomIcons.error, color: palette.error),
               const SizedBox(height: 16),
               Text(
                 message,
@@ -107,18 +103,13 @@ class ServerErrorWidget extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _StateIconBadge(
-                icon: ExomIcons.offline,
-                color: palette.error,
-              ),
+              _StateIconBadge(icon: ExomIcons.offline, color: palette.error),
               const SizedBox(height: 20),
               Text(
                 l10n.serverErrorTitle,
@@ -184,11 +175,9 @@ class NoConnectionWidget extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

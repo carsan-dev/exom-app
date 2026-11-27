@@ -158,6 +158,22 @@ void _expectFullyVisible(
   );
 }
 
+/// The [RenderEditable] that paints the text of the field [field].
+RenderEditable _renderEditable(WidgetTester tester, Finder field) {
+  RenderEditable? found;
+  void visit(RenderObject node) {
+    if (found != null) return;
+    if (node is RenderEditable) {
+      found = node;
+      return;
+    }
+    node.visitChildren(visit);
+  }
+
+  visit(tester.renderObject(field));
+  return found!;
+}
+
 /// Pre-order walk of the semantics tree in traversal (reading) order.
 List<SemanticsNode> _readingOrder(WidgetTester tester) {
   final out = <SemanticsNode>[];
@@ -385,6 +401,96 @@ void main() {
           tester.getRect(_save).bottom,
           lessThanOrEqualTo(keyboardTop + 0.5),
         );
+      });
+    }
+  });
+
+  group('Reps and Peso rows share one stepper column', () {
+    // Orchestrator decision (departs from the sketch's flex split): the − of
+    // both rows at the same x, the + at the same x, and both rows laid out
+    // the same way at a given scale (label beside or above the stepper).
+    for (final (label, size, scaler) in const [
+      ('360x780 at 1.0', Size(360, 780), TextScaler.noScaling),
+      ('390x844 at 1.0', Size(390, 844), TextScaler.noScaling),
+      ('411x891 at 1.0', Size(411, 891), TextScaler.noScaling),
+      ('360x780 at 1.3', Size(360, 780), TextScaler.linear(1.3)),
+      ('390x844 at 1.6', Size(390, 844), TextScaler.linear(1.6)),
+      ('411x891 at 1.6', Size(411, 891), TextScaler.linear(1.6)),
+      ('320x640 at 2.0', Size(320, 640), TextScaler.linear(2)),
+    ]) {
+      testWidgets('$label: − and + aligned, same disposition', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _openSheet(tester, size: size, textScaler: scaler);
+        expect(tester.takeException(), isNull);
+        final [repsMinus, repsPlus, weightMinus, weightPlus] = [
+          for (final f in _plusMinus) tester.getRect(f),
+        ];
+        expect(repsMinus.left, moreOrLessEquals(weightMinus.left));
+        expect(repsMinus.right, moreOrLessEquals(weightMinus.right));
+        expect(repsPlus.left, moreOrLessEquals(weightPlus.left));
+        expect(repsPlus.right, moreOrLessEquals(weightPlus.right));
+        final countField = tester.getRect(
+          find.byKey(const Key('set-sheet-count-field')),
+        );
+        final weightField = tester.getRect(_weight);
+        expect(countField.left, moreOrLessEquals(weightField.left));
+        expect(countField.right, moreOrLessEquals(weightField.right));
+
+        bool stacked(String text, Rect minus) {
+          final caption = find.descendant(
+            of: _footer,
+            matching: find.text(text),
+          );
+          return tester.getRect(caption).bottom <= minus.top + 0.5;
+        }
+
+        expect(
+          stacked(_es.setSheetWeightLabel, weightMinus),
+          stacked(_es.setSheetRepsLabel, repsMinus),
+          reason: 'both rows stacked or both inline',
+        );
+        semantics.dispose();
+      });
+    }
+  });
+
+  group('a typed value with an error is never cut', () {
+    for (final (label, size, scaler) in const [
+      ('360x780 at 1.0', Size(360, 780), TextScaler.noScaling),
+      ('390x844 at 1.6', Size(390, 844), TextScaler.linear(1.6)),
+      ('411x891 at 1.6', Size(411, 891), TextScaler.linear(1.6)),
+      ('320x640 at 1.6', Size(320, 640), TextScaler.linear(1.6)),
+    ]) {
+      testWidgets('$label: «62,5,5» fits in its field, focused or not', (
+        tester,
+      ) async {
+        await _openSheet(tester, size: size, textScaler: scaler);
+        await tester.ensureVisible(_weight);
+        await tester.pumpAndSettle();
+        await tester.enterText(_weight, '62,5,5');
+        await tester.pump();
+        await tester.ensureVisible(_save);
+        await tester.pumpAndSettle();
+        await tester.tap(_save);
+        await tester.pumpAndSettle();
+        expect(_weightError, findsOneWidget);
+
+        void expectWhole(String state) {
+          final editable = _renderEditable(tester, _weight);
+          expect(
+            editable.getMaxIntrinsicWidth(double.infinity),
+            lessThanOrEqualTo(editable.size.width + 0.5),
+            reason: '$state: the whole text fits in the field',
+          );
+          expect(editable.offset.pixels, 0, reason: '$state: not scrolled');
+        }
+
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        expectWhole('unfocused');
+        await tester.tap(_weight);
+        await tester.pumpAndSettle();
+        expectWhole('focused');
       });
     }
   });

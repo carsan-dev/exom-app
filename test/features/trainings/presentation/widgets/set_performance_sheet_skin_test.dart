@@ -309,19 +309,20 @@ void main() {
   });
 
   group('layout', () {
-    testWidgets('a long value shrinks to fit between ± (never below 36)', (
-      tester,
-    ) async {
-      await _pumpExercise(tester, width: 320, height: 640, textScale: 1.6);
-      await tester.enterText(_weight, '62,5,5');
-      await tester.pump();
-      final size = _fieldStyle(tester, _weight).fontSize!;
-      expect(size, lessThan(44));
-      expect(size, greaterThanOrEqualTo(36));
-      // The short reps value keeps the full size.
-      expect(_fieldStyle(tester, _count).fontSize, 44);
-      expect(tester.widget<TextField>(_weight).controller!.text, '62,5,5');
-    });
+    testWidgets(
+      'a long value shrinks to fit between ± (not below 36 when it fits at 36)',
+      (tester) async {
+        await _pumpExercise(tester, width: 320, height: 640, textScale: 1.6);
+        await tester.enterText(_weight, '62,5,5');
+        await tester.pump();
+        final size = _fieldStyle(tester, _weight).fontSize!;
+        expect(size, lessThan(44));
+        expect(size, greaterThanOrEqualTo(36));
+        // The short reps value keeps the full size.
+        expect(_fieldStyle(tester, _count).fontSize, 44);
+        expect(tester.widget<TextField>(_weight).controller!.text, '62,5,5');
+      },
+    );
 
     for (final locale in const [Locale('es'), Locale('en')]) {
       for (final (width, scale) in const [

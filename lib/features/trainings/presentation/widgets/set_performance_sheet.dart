@@ -30,7 +30,8 @@ typedef SetPerformanceResult = ({
   bool skipped,
 });
 
-/// Smallest size of the fitted value numeral (the size before L5-E4).
+/// Preferred smallest size of the fitted value numeral (the size before
+/// L5-E4); it only goes below when the value does not fit even at 36.
 const double _numeralMinSize = 36;
 
 /// Room kept for the caret and the suffix gap when fitting the numeral.
@@ -456,8 +457,9 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
   /// [style] (Barlow 44) shrunk so that [text] and its [unit] fit between the
   /// ± buttons of a compact stepper [width] wide, instead of scrolling inside
   /// the field at large text sizes: the numeral scales down like
-  /// `ExomNumeral`. Never below 36, the size before L5-E4; the text itself is
-  /// never touched.
+  /// `ExomNumeral`. Not below 36, the size before L5-E4, unless the value
+  /// does not fit even then: the whole value stays visible (L6 A-O1). The
+  /// text itself is never touched.
   TextStyle _fitNumeral(
     BuildContext context,
     TextStyle style,
@@ -490,10 +492,22 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
         2 * ExomStepper.compactGap -
         unitWidth -
         _numeralFitSlack;
-    final needed = measure(text.isEmpty ? '0' : text, style);
+    final shown = text.isEmpty ? '0' : text;
+    final needed = measure(shown, style);
     if (needed <= room || room <= 0) return style;
-    final fitted = math.max(_numeralMinSize, size * room / needed);
-    return style.copyWith(fontSize: fitted.floorToDouble());
+    var fitted = math
+        .max(_numeralMinSize, size * room / needed)
+        .floorToDouble();
+    // L6 A-O1 polish: when even 36 does not fit (a long or invalid value beside
+    // the label on a narrow screen), the value keeps shrinking like the
+    // resting numeral (`FittedBox`) instead of scrolling inside the field and
+    // cutting its first characters. Re-measured because a nonlinear text
+    // scaler is not proportional.
+    while (fitted > 1 &&
+        measure(shown, style.copyWith(fontSize: fitted)) > room) {
+      fitted -= 1;
+    }
+    return style.copyWith(fontSize: fitted);
   }
 
   // ---- build ----
@@ -570,6 +584,25 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
         : _minutes
         ? l10n.setPerformanceMinutes
         : l10n.setSheetSecondsLabel;
+
+    final weightDetail = l10n.setSheetWeightStep(stepText);
+    // One stepper column for both rows: the widest caption sets it.
+    final captionWidth = math.max(
+      _FooterRow.captionWidthOf(
+        context,
+        label: countLabel,
+        detail: null,
+        labelStyle: labelStyle,
+        detailStyle: mutedStyle,
+      ),
+      _FooterRow.captionWidthOf(
+        context,
+        label: l10n.setSheetWeightLabel,
+        detail: weightDetail,
+        labelStyle: labelStyle,
+        detailStyle: mutedStyle,
+      ),
+    );
 
     final fields = Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
@@ -667,6 +700,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
                       detail: null,
                       labelStyle: labelStyle,
                       detailStyle: mutedStyle,
+                      captionWidth: captionWidth,
                       stepper: (context, width) => ExomStepper<String>(
                         key: _countKey,
                         compact: true,
@@ -716,9 +750,10 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
                     // leaves 8 dp between the visible 48 dp ± (sketch `.t-steps`).
                     _FooterRow(
                       label: l10n.setSheetWeightLabel,
-                      detail: l10n.setSheetWeightStep(stepText),
+                      detail: weightDetail,
                       labelStyle: labelStyle,
                       detailStyle: mutedStyle,
+                      captionWidth: captionWidth,
                       stepper: (context, width) => ExomStepper<String>(
                         key: _weightKey,
                         compact: true,
@@ -833,15 +868,25 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
 
 /// Compact footer row «label | − value +» (L6 A-O1, sketch `.t-row`): the
 /// label (and its [detail], e.g. the weight step) on the left and the
-/// stepper on the right, the spare width shared half and half between them
-/// (`.t-lbl` and `.t-step` both `flex-grow: 1`); when they do not fit side
-/// by side (narrow screens, large text) the label goes above the stepper.
+/// stepper on the right.
+///
+/// The Reps and Peso rows share one stepper column (orchestrator decision,
+/// departing from the sketch's per-row flex split): both get the same
+/// [captionWidth] (the widest caption of the two, [captionWidthOf]), so at a
+/// given width and scale they take the same disposition and the same
+/// stepper width, which puts both − at the same x, both + at the same x and
+/// both values in the same width. Beside the label, the caption column is
+/// exactly that widest caption and the stepper takes the rest of the row
+/// (so the shared column does not shrink the value); when the widest caption
+/// and the stepper do not fit side by side (narrow screens, large text) both
+/// labels go above full-width steppers.
 class _FooterRow extends StatelessWidget {
   const _FooterRow({
     required this.label,
     required this.detail,
     required this.labelStyle,
     required this.detailStyle,
+    required this.captionWidth,
     required this.stepper,
   });
 
@@ -849,6 +894,9 @@ class _FooterRow extends StatelessWidget {
   final String? detail;
   final TextStyle labelStyle;
   final TextStyle detailStyle;
+
+  /// Width of the caption column, common to every row of the footer.
+  final double captionWidth;
   final Widget Function(BuildContext context, double width) stepper;
 
   static const double _labelGap = 12;
@@ -857,8 +905,14 @@ class _FooterRow extends StatelessWidget {
   /// `100px + 4.5em`), scaled with the text.
   static const double _minValueWidth = 72;
 
-  @override
-  Widget build(BuildContext context) {
+  /// Width of the caption [label] (with its [detail]) at the current scale.
+  static double captionWidthOf(
+    BuildContext context, {
+    required String label,
+    required String? detail,
+    required TextStyle labelStyle,
+    required TextStyle detailStyle,
+  }) {
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
     double measure(String text, TextStyle style) {
@@ -873,6 +927,17 @@ class _FooterRow extends StatelessWidget {
       return width;
     }
 
+    return math
+        .max(
+          measure(label, labelStyle),
+          detail == null ? 0.0 : measure(detail, detailStyle),
+        )
+        .ceilToDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
     final detail = this.detail;
     final caption = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,17 +949,11 @@ class _FooterRow extends StatelessWidget {
     );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final labelWidth = math
-            .max(
-              measure(label, labelStyle),
-              detail == null ? 0.0 : measure(detail, detailStyle),
-            )
-            .ceilToDouble();
         final minStepper =
             2 * ExomStepper.buttonSize +
             2 * ExomStepper.compactGap +
             scaler.scale(_minValueWidth);
-        if (labelWidth + _labelGap + minStepper > constraints.maxWidth) {
+        if (captionWidth + _labelGap + minStepper > constraints.maxWidth) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -905,9 +964,7 @@ class _FooterRow extends StatelessWidget {
             ],
           );
         }
-        final stepperWidth =
-            minStepper +
-            (constraints.maxWidth - labelWidth - _labelGap - minStepper) / 2;
+        final stepperWidth = constraints.maxWidth - captionWidth - _labelGap;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

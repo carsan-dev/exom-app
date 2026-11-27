@@ -10,8 +10,17 @@ import 'package:flutter/widgets.dart';
 /// sent, not unfinished work).
 const _unfinishedExecutionStatuses = ['pending', 'pending-finalize'];
 
-/// Whether the current owner has a workout in progress on this device:
-/// an unfinished execution, an active workout draft or an active circuit.
+/// Whether the current owner has a workout in progress on this device: an
+/// unfinished execution or an active circuit.
+///
+/// It mirrors the «pending» box of Entrenar: the same
+/// `getPendingTrainingExecutions()` list, keeping only effective statuses
+/// `pending` and `pending-finalize`. That method already covers drafts: a
+/// draft whose execution is registered is judged by the registry status
+/// (leftover 0-set drafts of a finished execution never count), and a draft
+/// whose execution is not registered is listed as `pending` only when its
+/// date/session suffix is verifiable; drafts without a session id are not
+/// listed. So `getActiveWorkouts()` is deliberately not read on its own.
 ///
 /// Read-only over the owner's namespace (L5-D67).
 bool hasUnfinishedLocalWorkout(LocalStorage storage) {
@@ -21,7 +30,7 @@ bool hasUnfinishedLocalWorkout(LocalStorage storage) {
   )) {
     return true;
   }
-  return storage.getActiveWorkouts().isNotEmpty || storage.hasActiveCircuitState;
+  return storage.hasActiveCircuitState;
 }
 
 /// Decides whether the user's «Cerrar sesión» may go on (L5-D67).
@@ -35,19 +44,19 @@ bool hasUnfinishedLocalWorkout(LocalStorage storage) {
 /// If reading the local state fails the check is skipped and it returns
 /// `true`: a storage problem must never keep the user from signing out.
 Future<bool> confirmLogoutIfUnfinishedWorkout(BuildContext context) async {
-  final LocalStorage storage;
-  final String? sessionStamp;
-  final bool unfinished;
   try {
-    storage = sl<LocalStorage>();
-    sessionStamp = storage.sessionStamp;
-    unfinished = hasUnfinishedLocalWorkout(storage);
+    return await _confirmLogout(context);
   } catch (error) {
     // Type only: the message could carry account data.
-    debugPrint('Logout: unfinished-workout check failed (${error.runtimeType})');
+    debugPrint('Logout: confirmation failed (${error.runtimeType})');
     return true;
   }
-  if (!unfinished) return true;
+}
+
+Future<bool> _confirmLogout(BuildContext context) async {
+  final storage = sl<LocalStorage>();
+  final sessionStamp = storage.sessionStamp;
+  if (!hasUnfinishedLocalWorkout(storage)) return true;
   if (!context.mounted) return false;
 
   final l10n = AppLocalizations.of(context);

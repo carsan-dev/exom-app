@@ -44,6 +44,23 @@ class _Auth extends Fake implements AuthBloc {
   Future<void> close() async {}
 }
 
+class _ThrowingStorage extends LocalStorage {
+  _ThrowingStorage({required super.currentSession});
+
+  @override
+  List<Map<String, dynamic>> getPendingTrainingExecutions() =>
+      throw StateError('storage unavailable');
+}
+
+ActiveWorkoutHiveModel _draft({String? sessionId, String? exerciseId}) =>
+    ActiveWorkoutHiveModel(
+      trainingId: 'training-1',
+      sessionId: sessionId,
+      exerciseId: exerciseId ?? 'exercise-1:2026-11-27:exec-1',
+      currentSet: 1,
+      completedSets: 0,
+    );
+
 Map<String, Object> _execution(String status) => {
   'id': 'exec-1',
   'training_id': 'training-1',
@@ -195,6 +212,77 @@ void main() {
       expect(auth.events, isEmpty);
     });
 
+    for (final status in ['pending-sync', 'confirmed']) {
+      testWidgets('leftover draft of a $status execution: no sheet', (
+        tester,
+      ) async {
+        await storage.cacheData('training_executions', [_execution(status)]);
+        await storage.saveActiveWorkout(_draft(sessionId: 'exec-1'));
+        await tapSettingsLogout(tester);
+        expect(sheet, findsNothing);
+        expect(auth.events.single, isA<AuthLogoutRequested>());
+      });
+    }
+
+    testWidgets('draft of an unfinished execution on its own: sheet', (
+      tester,
+    ) async {
+      await storage.saveActiveWorkout(_draft(sessionId: 'exec-1'));
+      await tapSettingsLogout(tester);
+      expect(sheet, findsOneWidget);
+      expect(auth.events, isEmpty);
+    });
+
+    testWidgets('draft of a pending execution: sheet', (tester) async {
+      await storage.cacheData('training_executions', [_execution('pending')]);
+      await storage.saveActiveWorkout(_draft(sessionId: 'exec-1'));
+      await tapSettingsLogout(tester);
+      expect(sheet, findsOneWidget);
+    });
+
+    testWidgets('draft with no session id is not unfinished work', (
+      tester,
+    ) async {
+      await storage.saveActiveWorkout(_draft());
+      await tapSettingsLogout(tester);
+      expect(sheet, findsNothing);
+      expect(auth.events.single, isA<AuthLogoutRequested>());
+    });
+
+    testWidgets('barrier tap closes the sheet without logging out', (
+      tester,
+    ) async {
+      await storage.cacheData('training_executions', [_execution('pending')]);
+      await tapSettingsLogout(tester);
+      expect(sheet, findsOneWidget);
+      await tester.tapAt(const Offset(195, 20));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(auth.events, isEmpty);
+    });
+
+    testWidgets('system back closes the sheet without logging out', (
+      tester,
+    ) async {
+      await storage.cacheData('training_executions', [_execution('pending')]);
+      await tapSettingsLogout(tester);
+      expect(sheet, findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(auth.events, isEmpty);
+    });
+
+    testWidgets('the storage check throws: logs out as before', (tester) async {
+      final throwing = _ThrowingStorage(currentSession: () => session);
+      await sl.reset();
+      sl.registerSingleton<LocalStorage>(throwing);
+      sl.registerSingleton<AppUpdateService>(_Update());
+      await tapSettingsLogout(tester);
+      expect(sheet, findsNothing);
+      expect(auth.events.single, isA<AuthLogoutRequested>());
+    });
+
     testWidgets('another account unfinished work does not ask', (tester) async {
       session = const LocalAuthSession(uid: 'uid-b', generation: 1);
       await storage.cacheData('training_executions', [_execution('pending')]);
@@ -271,6 +359,40 @@ void main() {
       await settle(tester);
       expect(auth.events.single, isA<AuthLogoutRequested>());
       expect(find.byType(Drawer), findsNothing);
+    });
+
+    testWidgets('Cancel leaves the drawer open', (tester) async {
+      await storage.cacheData('training_executions', [_execution('pending')]);
+      await tapDrawerLogout(tester);
+      await tester.tap(cancel);
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(find.byType(Drawer), findsOneWidget);
+      expect(auth.events, isEmpty);
+    });
+
+    testWidgets('session changed while the sheet is open: no logout', (
+      tester,
+    ) async {
+      await storage.cacheData('training_executions', [_execution('pending')]);
+      await tapDrawerLogout(tester);
+      expect(sheet, findsOneWidget);
+      session = const LocalAuthSession(uid: 'uid-a', generation: 2);
+      await tester.tap(confirm);
+      await settle(tester);
+      expect(auth.events, isEmpty);
+    });
+
+    testWidgets('leftover draft of a pending-sync execution: no sheet', (
+      tester,
+    ) async {
+      await storage.cacheData('training_executions', [
+        _execution('pending-sync'),
+      ]);
+      await storage.saveActiveWorkout(_draft(sessionId: 'exec-1'));
+      await tapDrawerLogout(tester);
+      expect(sheet, findsNothing);
+      expect(auth.events.single, isA<AuthLogoutRequested>());
     });
   });
 }

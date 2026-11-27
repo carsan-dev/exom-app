@@ -432,8 +432,39 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text(l10n.pendingUploadsHeroLabel(1)), findsOneWidget);
+        // L5-D66: hero counts everything not yet sent (pending + failed).
+        expect(find.text(l10n.pendingUploadsHeroLabel(2)), findsOneWidget);
         expect(find.byKey(const ValueKey('pending-row-b')), findsOneWidget);
+      });
+
+      testWidgets('L5-D66: hero counts failed uploads when none is pending', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          {..._row('bad', 'failed'), 'attempts': 1},
+        ]);
+        expect(find.text(l10n.pendingUploadsHeroLabel(1)), findsOneWidget);
+        expect(find.text(l10n.pendingUploadsHeroLabel(0)), findsNothing);
+        expect(find.text('1'), findsWidgets);
+        expect(find.text(l10n.pendingUploadsErrorCount(1)), findsWidgets);
+      });
+
+      testWidgets('L5-D66: hero 2 for 1 sending + 1 failed, header apart', (
+        tester,
+      ) async {
+        final l10n = await _pumpList(tester, locale: locale, items: [
+          _row('run', 'uploading'),
+          {..._row('bad', 'failed'), 'attempts': 1},
+        ]);
+        expect(find.text(l10n.pendingUploadsHeroLabel(2)), findsOneWidget);
+        expect(find.text('2'), findsWidgets);
+        expect(
+          find.text(
+            '${l10n.pendingUploadsCountSubtitle(1)} · '
+            '${l10n.pendingUploadsErrorCount(1)}',
+          ),
+          findsOneWidget,
+        );
       });
 
       testWidgets('L5-D66: 1 confirmed + 1 failed reads only «con error»', (

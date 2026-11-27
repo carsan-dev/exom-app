@@ -195,9 +195,14 @@ class _PendingTrainingExecutionsState extends State<PendingTrainingExecutions> {
     final stamp = widget.storage.sessionStamp ?? '';
     final l10n = AppLocalizations.of(context);
     final message = _message;
-    // Sessions the notice talks about: those still to finalize.
-    final finalizable =
-        entries.where((entry) => entry['status'] != 'pending-sync').length;
+    // Sessions the notice talks about: those still to finalize. A `conflict`
+    // one has its own status and offers no continue/finalize, only discard.
+    final finalizable = entries
+        .where(
+          (entry) =>
+              entry['status'] != 'pending-sync' && entry['status'] != 'conflict',
+        )
+        .length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,

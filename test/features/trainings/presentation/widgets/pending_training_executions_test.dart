@@ -168,4 +168,23 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('finalize notice counts only sessions that can be finalized, not conflict',
+      (tester) async {
+    final h = DiscardHarness();
+    // Harness rows: one `conflict` (own status, discard only) and one
+    // `pending-sync`; add one session still to finalize.
+    h.storage.entries.add({'id': 'to-finalize', 'training_id': 'strength',
+      'training_name': 'Fuerza', 'assignment_date': '2026-09-06', 'status': 'pending'});
+    await tester.pumpWidget(h.app());
+    await tester.pumpAndSettle();
+    expect(find.text('Tienes un entrenamiento pendiente de finalizar'), findsOneWidget);
+    expect(find.textContaining('Tienes 2 entrenamientos'), findsNothing);
+    // A lone conflict (or pending-sync) session raises no finalize notice.
+    h.storage.entries.removeWhere((entry) => entry['id'] == 'to-finalize');
+    await tester.pumpWidget(h.app(brightness: Brightness.dark));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('pendiente de finalizar'), findsNothing);
+    expect(find.byKey(const Key('pending-discard-full-session-123456789')), findsOneWidget);
+  });
 }

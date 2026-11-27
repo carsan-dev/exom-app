@@ -1100,6 +1100,7 @@
   "pendingEvidenceExerciseUnnamed": "Ejercicio de un entreno",
   "pendingEvidenceExerciseGeneric": "Ejercicio",
   "pendingFeedbackError": "No se pudo enviar el feedback. Tu evidencia se conserva; reintenta o revisa la subida.",
+  "pendingFeedbackQueuedRetry": "Se reintentará solo. Tu evidencia se conserva.",
   "pendingEvidenceExercise": "Ejercicio: {exercise}",
   "@pendingEvidenceExercise": {"placeholders": {"exercise": {"type": "String"}}},
   "pendingUploadsOption": "Subidas pendientes",

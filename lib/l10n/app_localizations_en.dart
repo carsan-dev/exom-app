@@ -3092,6 +3092,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
 
   @override
+  String get pendingFeedbackQueuedRetry =>
+      'It will retry on its own. Your evidence is kept.';
+
+  @override
   String pendingEvidenceExercise(String exercise) {
     return 'Exercise: $exercise';
   }

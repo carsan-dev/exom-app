@@ -1063,6 +1063,7 @@
   "pendingEvidenceExerciseUnnamed": "Exercise from a workout",
   "pendingEvidenceExerciseGeneric": "Exercise",
   "pendingFeedbackError": "The feedback could not be sent. Your evidence is kept; retry or review the upload.",
+  "pendingFeedbackQueuedRetry": "It will retry on its own. Your evidence is kept.",
   "pendingEvidenceExercise": "Exercise: {exercise}",
   "@pendingEvidenceExercise": {"placeholders": {"exercise": {"type": "String"}}},
   "pendingUploadsOption": "Pending uploads",

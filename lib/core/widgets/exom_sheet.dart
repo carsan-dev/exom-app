@@ -7,10 +7,17 @@ import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 
 /// Top radius of every EXOM sheet: square (L5 D12; was 20 in plan §6).
 const double kExomSheetRadius = 0;
+
+/// Height of the invisible area from which the sheet is dragged (owner rule:
+/// touch targets are at least 48 dp; the visible handle strip is only 16 dp).
+const double kExomSheetGrabHeight = 48;
+
+/// Height of the invisible area from which the sheet is dragged (owner rule: /// touch targets are at least 48 dp; the visible handle strip is only 16 dp). const double kExomSheetGrabHeight = 48;
 
 /// Opens an EXOM modal bottom sheet (sketch «A · Hoja de registro», motion
 /// card §8b) and returns its result.
@@ -27,7 +34,9 @@ const double kExomSheetRadius = 0;
 /// * **Drag** ([enableDrag]): the sheet follows the finger 1:1 from its drag
 ///   handle and from any part of the panel that does not scroll; content that
 ///   overflows and scrolls keeps its own vertical drag, so such a sheet is
-///   dragged from the handle. Releasing past 30 % of the sheet height or with
+///   dragged from the handle (or from the invisible [kExomSheetGrabHeight]
+///   grab area over the top 48 dp of the panel, which wins over the scroll
+///   view there). Releasing past 30 % of the sheet height or with
 ///   a downward fling faster than [ExomSheetRoute.flingVelocity] closes it;
 ///   otherwise it returns in 200 ms. With reduced motion the drag still
 ///   follows the finger and closes; it snaps back without animation.
@@ -36,7 +45,8 @@ const double kExomSheetRadius = 0;
 ///   `isDismissible: false` none of them does (the content must pop it).
 /// * **Layout**: `panel` surface, square corners ([kExomSheetRadius], 0), 1 px `rule` outline, no
 ///   shadow, a 40x4 handle; content in a scroll view capped at 90 % of the
-///   screen height, above the keyboard and the bottom safe area. Builders
+///   space left between the top inset (status bar) and the keyboard, above
+///   the keyboard and the bottom safe area. Builders
 ///   return plain (non-scrolling) content.
 /// * **Semantics**: modal barrier labelled `sheetBarrierA11y`; the panel
 ///   scopes and names the route.
@@ -44,7 +54,10 @@ const double kExomSheetRadius = 0;
 ///   still open or closing (until its subtree is disposed), another call
 ///   opens nothing: a repeated trigger is ignored and resolves to null. Only
 ///   the original caller receives the sheet's result. Callers should still
-///   disable their trigger while awaiting.
+///   disable their trigger while awaiting. Exception: with
+///   `waitForDisposal: false` the guard is released as soon as the result is
+///   received, before the subtree is disposed, so a new sheet may open while
+///   the previous one is still closing (`calendar_page.dart` relies on it).
 ///
 /// The returned future completes only after the sheet has been fully removed
 /// and its subtree disposed (the "wait until destroyed" contract of
@@ -430,36 +443,63 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
         ),
         side: BorderSide(color: palette.borderSoft, width: 1),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 10, bottom: 2),
-              child: Center(
-                child: Container(
-                  key: const Key('exom-sheet-handle'),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: palette.borderSoft,
-                    borderRadius: BorderRadius.circular(2),
+      child: Stack(
+        children: [
+          SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 2),
+                  child: Center(
+                    child: Container(
+                      key: const Key('exom-sheet-handle'),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: palette.textMuted,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
                 ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: widget.child,
+                  ),
+                ),
+                if (actions != null && actions.isNotEmpty)
+                  _ExomSheetActions(actions: actions),
+              ],
+            ),
+          ),
+          if (_route.enableDrag)
+            // Invisible grab area: a 48 dp band over the top of the panel
+            // (the handle strip is only 16 dp). It sits above the scrolling
+            // content so a drag started in it moves the sheet instead of
+            // scrolling; it has no tap handler, so taps still reach the
+            // content underneath.
+            Positioned(
+              key: const Key('exom-sheet-grab-area'),
+              top: 0,
+              left: 0,
+              right: 0,
+              height: kExomSheetGrabHeight,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                dragStartBehavior: DragStartBehavior.down,
+                excludeFromSemantics: true,
+                onVerticalDragStart: _onDragStart,
+                onVerticalDragUpdate: _onDragUpdate,
+                onVerticalDragEnd: _onDragEnd,
+                onVerticalDragCancel: () =>
+                    _onDragEnd(DragEndDetails(primaryVelocity: 0)),
               ),
             ),
-            Flexible(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: widget.child,
-              ),
-            ),
-            if (actions != null && actions.isNotEmpty)
-              _ExomSheetActions(actions: actions),
-          ],
-        ),
+        ],
       ),
     );
 

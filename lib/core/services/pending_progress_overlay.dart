@@ -83,6 +83,7 @@ Map<String, dynamic> overlayPendingProgressActions({
             'sets': _mergePendingSets(existing['sets'], action['sets']),
           'completed_at':
               existing['completed_at'] ??
+              action['completed_at'] ??
               action['queued_at'] ??
               DateTime.now().toUtc().toIso8601String(),
         });

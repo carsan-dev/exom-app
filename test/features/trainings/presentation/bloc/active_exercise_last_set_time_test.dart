@@ -43,6 +43,50 @@ class _Rest implements RestTimerCoordinator {
   Future<void> cancel() async => activeSession = null;
 }
 
+// Adapter as it was before field 14 (c56bb8e): 14 fields, indexes 0-13.
+class _PreLastSetLoggedAtAdapter extends TypeAdapter<ActiveWorkoutHiveModel> {
+  @override
+  final int typeId = ActiveWorkoutHiveModel.typeId;
+
+  @override
+  ActiveWorkoutHiveModel read(BinaryReader reader) =>
+      throw UnimplementedError('write-only');
+
+  @override
+  void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
+    writer
+      ..writeByte(14)
+      ..writeByte(0)
+      ..write(obj.trainingId)
+      ..writeByte(1)
+      ..write(obj.exerciseId)
+      ..writeByte(2)
+      ..write(obj.currentSet)
+      ..writeByte(3)
+      ..write(obj.completedSets)
+      ..writeByte(4)
+      ..write(obj.restEndsAt)
+      ..writeByte(5)
+      ..write(obj.lastWeightKg)
+      ..writeByte(6)
+      ..write(obj.completedSetData)
+      ..writeByte(7)
+      ..write(obj.lastSetFeedbackClientUploadId)
+      ..writeByte(8)
+      ..write(obj.timedElapsedMs)
+      ..writeByte(9)
+      ..write(obj.timedStartedAt)
+      ..writeByte(10)
+      ..write(obj.timedTotalSeconds)
+      ..writeByte(11)
+      ..write(obj.timedPrescription?.toJson())
+      ..writeByte(12)
+      ..write(obj.sessionId)
+      ..writeByte(13)
+      ..write(obj.completionOperationId);
+  }
+}
+
 TrainingExerciseEntity _exercise({int sets = 2, int restSeconds = 90}) =>
     TrainingExerciseEntity(
       id: 'te-1',
@@ -201,6 +245,42 @@ void main() {
       expect(read.completionOperationId, 'op-1');
       expect(read.copyWith(currentSet: 1).lastSetLoggedAt!.toUtc(),
           DateTime.utc(2026, 11, 27, 13, 56, 51, 120));
+    });
+
+    test('reads bytes written by the adapter without field 14', () async {
+      Hive.registerAdapter(_PreLastSetLoggedAtAdapter(), override: true);
+      var box = await Hive.openBox<ActiveWorkoutHiveModel>('legacy_drafts');
+      await box.put(
+        _key,
+        ActiveWorkoutHiveModel(
+          trainingId: 't-1',
+          sessionId: 'execution-1',
+          exerciseId: _key,
+          currentSet: 3,
+          completedSets: 2,
+          lastWeightKg: 42.5,
+          completedSetData: const [
+            {'set_number': 1, 'reps': 10},
+            {'set_number': 2, 'reps': 8},
+          ],
+          completionOperationId: 'frozen-op',
+          timedElapsedMs: 1500,
+          lastSetLoggedAt: DateTime.utc(2026, 11, 27), // not written
+        ),
+      );
+      await Hive.close();
+      Hive.registerAdapter(ActiveWorkoutHiveModelAdapter(), override: true);
+      box = await Hive.openBox<ActiveWorkoutHiveModel>('legacy_drafts');
+      final read = box.get(_key)!;
+      expect(read.lastSetLoggedAt, isNull);
+      expect(read.trainingId, 't-1');
+      expect(read.sessionId, 'execution-1');
+      expect(read.currentSet, 3);
+      expect(read.completedSets, 2);
+      expect(read.lastWeightKg, 42.5);
+      expect(read.completedSetData.map((s) => s['reps']), [10, 8]);
+      expect(read.completionOperationId, 'frozen-op');
+      expect(read.timedElapsedMs, 1500);
     });
   });
 }

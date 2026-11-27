@@ -601,9 +601,10 @@ class _MetricsViewState extends State<_MetricsView> {
                   ? l10n.leftSideLabel
                   : l10n.rightSideLabel,
               initial: drafts[i] ?? seed,
-              // The unmeasured side of a measured pair starts from the other
-              // side but shows «—» until the client changes it.
-              empty: drafts[i] == null && drafts.any((d) => d != null),
+              // A side without a value shows «—» until the client changes
+              // it. Its ± starts from the other side when that one has a
+              // value (owner decision) and from the zone seed otherwise.
+              empty: drafts[i] == null,
             ),
         ],
         zoneLabel: label,

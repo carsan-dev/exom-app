@@ -788,4 +788,85 @@ void main() {
     expect(harness.repository.completions.single.rpe, 10);
     expect(tester.takeException(), isNull);
   });
+
+  // S11-09 (matriz L6): a rapid double tap on the detail's «Terminar sesión»
+  // (opens the closing sheet) and on the sheet's «Terminar sesión» sends a
+  // single completion and never stacks a second sheet, whether both taps
+  // land in the same frame or ~50 ms apart. A deliberate tap after the
+  // 640 ms window still works.
+  group('S11-09 double tap', () {
+    final panel = find.byKey(const Key('exom-sheet-panel'));
+
+    Future<void> doubleTap(
+      WidgetTester tester,
+      Finder finder,
+      Duration? gap,
+    ) async {
+      await tester.tap(finder);
+      if (gap != null) await tester.pump(gap);
+      await tester.tap(finder, warnIfMissed: false);
+    }
+
+    for (final (label, gap) in [
+      ('same frame', null),
+      ('50 ms apart', const Duration(milliseconds: 50)),
+    ]) {
+      testWidgets('footer «Terminar sesión», $label: one sheet', (
+        tester,
+      ) async {
+        final harness = await _mount(tester);
+        await tester.ensureVisible(_completeButton);
+        await tester.pumpAndSettle();
+        await doubleTap(tester, _completeButton, gap);
+        await tester.pumpAndSettle();
+        expect(_sheet.evaluate().length, lessThanOrEqualTo(1));
+        expect(panel.evaluate().length, lessThanOrEqualTo(1));
+        if (gap == null) expect(_sheet, findsOneWidget);
+        expect(harness.repository.completions, isEmpty);
+      });
+
+      testWidgets('sheet «Terminar sesión», $label: one completion', (
+        tester,
+      ) async {
+        final harness = await _mount(tester);
+        await _open(tester);
+        await _tapIn(tester, _rpe(7));
+        await tester.pumpAndSettle();
+        await doubleTap(tester, _confirm, gap);
+        await tester.pumpAndSettle();
+        expect(_sheet, findsNothing);
+        expect(panel, findsNothing);
+        expect(harness.repository.completions, [
+          (sessionId: _execution, rpe: 7, notes: null),
+        ]);
+      });
+    }
+
+    testWidgets('after the 640 ms window a deliberate tap opens it again', (
+      tester,
+    ) async {
+      final harness = await _mount(tester);
+      await tester.ensureVisible(_completeButton);
+      await tester.pumpAndSettle();
+      await doubleTap(tester, _completeButton, null);
+      await tester.pumpAndSettle();
+      expect(_sheet, findsOneWidget);
+      await tester.tap(_cancel);
+      await tester.pumpAndSettle();
+      expect(_sheet, findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.tap(_completeButton);
+      await tester.pumpAndSettle();
+      expect(_sheet, findsOneWidget);
+      expect(panel, findsOneWidget);
+      await _tapIn(tester, _rpe(5));
+      await tester.pumpAndSettle();
+      await tester.tap(_confirm);
+      await tester.pumpAndSettle();
+      expect(harness.repository.completions, [
+        (sessionId: _execution, rpe: 5, notes: null),
+      ]);
+    });
+  });
 }

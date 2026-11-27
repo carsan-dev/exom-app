@@ -541,6 +541,8 @@ class _RefreshMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Its own node: merged into the notice it would announce both texts.
+      container: true,
       liveRegion: true,
       label: AppLocalizations.of(context).progressLoading,
       excludeSemantics: true,
@@ -572,6 +574,7 @@ class _CachedBanner extends StatelessWidget {
   final bool refreshing;
 
   /// Live region only when no section notice is announcing at the same time.
+  /// While [refreshing] the progress mark is the only announcement (L4-I26b).
   final bool announce;
 
   @override
@@ -591,7 +594,7 @@ class _CachedBanner extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 24),
                 child: Semantics(
-                  liveRegion: announce,
+                  liveRegion: announce && !refreshing,
                   child: Text(
                     text,
                     style: TextStyle(
@@ -902,7 +905,12 @@ class _LatestMeasures extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Semantics(liveRegion: true, child: _MutedText(notice)),
+                // While refreshing, the progress mark below is the only
+                // live region (L4-I26b).
+                Semantics(
+                  liveRegion: !refreshing,
+                  child: _MutedText(notice),
+                ),
                 const SizedBox(height: 12),
                 ExomSecondaryButton(
                   label: format.l10n.retry,

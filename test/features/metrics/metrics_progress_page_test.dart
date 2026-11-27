@@ -1004,6 +1004,54 @@ void main() {
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
     });
 
+    // L4-I26b: during a reload the notice (or the banner) and the progress
+    // mark were two live regions announced together. Only the mark announces
+    // while the reload is in flight.
+    List<SemanticsNode> liveRegions(WidgetTester tester) {
+      final live = <SemanticsNode>[];
+      bool visit(SemanticsNode node) {
+        if (node.flagsCollection.isLiveRegion) live.add(node);
+        node.visitChildren(visit);
+        return true;
+      }
+
+      for (final view in tester.binding.renderViews) {
+        final root = view.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      return live;
+    }
+
+    for (final (name, latestOffline) in const [
+      ('banner and section notice', true),
+      ('banner alone', false),
+    ]) {
+      testWidgets('$name: one live region while reloading', (tester) async {
+        final handle = tester.ensureSemantics();
+        final repository = _Repository(history: _weekly, latest: _latest)
+          ..historyFromCache = true
+          ..latestFromCache = !latestOffline
+          ..latestError = latestOffline ? offline() : null;
+        await _mount(tester, repository: repository);
+        final l10n = _l10n(tester);
+        expect(liveRegions(tester), hasLength(1), reason: 'before the reload');
+        repository.historyGate = Completer<void>();
+        await tester.ensureVisible(find.text(l10n.retry));
+        await tester.pump();
+        await tester.tap(find.text(l10n.retry));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        final live = liveRegions(tester);
+        expect(live, hasLength(1), reason: 'during the reload');
+        // The one announcement is the progress mark, alone.
+        expect(live.single.label, l10n.progressLoading);
+        repository.historyGate!.complete();
+        await tester.pumpAndSettle();
+        handle.dispose();
+      });
+    }
+
     testWidgets('a failing retry shows the error screen, not old content', (
       tester,
     ) async {

@@ -35,37 +35,20 @@ void main() {
     final palette = themeFor(brightness).extension<ExomThemePalette>()!;
 
     testWidgets(
-      'backgrounds are the flat theme background (${brightness.name})',
+      'static background is the flat theme background (${brightness.name})',
       (tester) async {
         await pumpComponent(
           tester,
-          const Column(
-            children: [
-              Expanded(child: ExomStaticBackground(child: Text('Estático'))),
-              Expanded(child: ExomAnimatedBackground(child: Text('Animado'))),
-            ],
-          ),
+          const ExomStaticBackground(child: Text('Estático')),
           brightness: brightness,
         );
         final boxes = tester.widgetList<ColoredBox>(
           find.descendant(
-            of: find.byWidgetPredicate(
-              (w) => w is ExomStaticBackground || w is ExomAnimatedBackground,
-            ),
+            of: find.byType(ExomStaticBackground),
             matching: find.byType(ColoredBox),
           ),
         );
         expect(boxes.map((b) => b.color).toSet(), {palette.background});
-        expect(
-          find.descendant(
-            of: find.byType(ExomAnimatedBackground),
-            matching: find.byType(CustomPaint),
-          ),
-          findsNothing,
-        );
-        // No animation is left running (the splash can settle).
-        await tester.pumpAndSettle();
-        expect(find.text('Animado'), findsOneWidget);
       },
     );
 

@@ -86,70 +86,6 @@ class ErrorWidget2 extends StatelessWidget {
   }
 }
 
-class EmptyWidget extends StatelessWidget {
-  const EmptyWidget({
-    super.key,
-    required this.message,
-    this.subtitle,
-    this.icon,
-    this.action,
-  });
-
-  final String message;
-  final String? subtitle;
-  final IconData? icon;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _StateIconBadge(
-                icon: icon ?? ExomIcons.inbox,
-                color: palette.textDisabled,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  subtitle!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-              if (action != null) ...[const SizedBox(height: 24), action!],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class ServerErrorWidget extends StatelessWidget {
   const ServerErrorWidget({
     super.key,
@@ -308,81 +244,6 @@ class NoConnectionWidget extends StatelessWidget {
   }
 }
 
-class NotFoundWidget extends StatelessWidget {
-  const NotFoundWidget({super.key, this.onGoToCalendar, this.onGoHome});
-
-  final VoidCallback? onGoToCalendar;
-  final VoidCallback? onGoHome;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _StateIconBadge(
-                icon: ExomIcons.searchOff,
-                color: palette.textMuted,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n.notFoundTitle,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.notFoundMessage,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-              if (onGoToCalendar != null)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onGoToCalendar,
-                    icon: const Icon(ExomIcons.calendarMonth, size: 18),
-                    label: Text(l10n.goToCalendarButton),
-                  ),
-                ),
-              if (onGoHome != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: onGoHome,
-                    icon: const Icon(ExomIcons.home, size: 18),
-                    label: Text(l10n.goHomeButton),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class ShimmerCard extends StatelessWidget {
   const ShimmerCard({
     super.key,
@@ -430,23 +291,6 @@ class _StateIconBadge extends StatelessWidget {
       height: 72,
       decoration: GlassDecoration.accentCard(color, borderRadius: 999),
       child: Icon(icon, color: color, size: 36),
-    );
-  }
-}
-
-class ShimmerList extends StatelessWidget {
-  const ShimmerList({super.key, this.count = 5, this.itemHeight = 80});
-
-  final int count;
-  final double itemHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: count,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => ShimmerCard(height: itemHeight),
     );
   }
 }

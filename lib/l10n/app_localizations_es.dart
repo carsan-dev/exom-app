@@ -2261,6 +2261,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get metricsMeasureRightInitial => 'D';
 
   @override
+  String metricsMeasureZoneLeft(String zone) {
+    return '$zone, lado izquierdo';
+  }
+
+  @override
+  String metricsMeasureZoneRight(String zone) {
+    return '$zone, lado derecho';
+  }
+
+  @override
   String get noTrainingsAssigned => 'No tienes entrenamientos asignados';
 
   @override

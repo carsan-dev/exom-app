@@ -903,5 +903,40 @@ void main() {
       expect(repository.saved.single['forearm_right_cm'], 27.5);
       expect(repository.saved.single.containsKey('forearm_left_cm'), isFalse);
     });
+
+    // Issue 3: the plates of a pair name their side.
+    for (final (locale, left, right) in const [
+      ('es', 'Brazo, lado izquierdo, 33,0 cm', 'Brazo, lado derecho, 33,5 cm'),
+      ('en', 'Arm, left side, 33.0 cm', 'Arm, right side, 33.5 cm'),
+    ]) {
+      testWidgets('$locale plates of a pair name their side', (tester) async {
+        await _mount(tester, latest: _metric, locale: Locale(locale));
+        await _openBody(tester);
+        final handle = tester.ensureSemantics();
+        expect(find.bySemanticsLabel(left), findsOneWidget);
+        expect(find.bySemanticsLabel(right), findsOneWidget);
+        handle.dispose();
+        final labelOf = tester
+            .widget<RecapAnatomySelector>(find.byType(RecapAnatomySelector))
+            .zoneLabelOf!;
+        expect(labelOf('triceps_left'), left);
+        expect(labelOf('triceps_right'), right);
+      });
+    }
+
+    testWidgets('plates of a pair with one side: the empty one says so', (
+      tester,
+    ) async {
+      await _mount(tester, latest: _metric);
+      await _openBody(tester);
+      final labelOf = tester
+          .widget<RecapAnatomySelector>(find.byType(RecapAnatomySelector))
+          .zoneLabelOf!;
+      expect(labelOf('quadriceps_left'), 'Muslo, lado izquierdo, 55,0 cm');
+      expect(labelOf('quadriceps_right'), 'Muslo, lado derecho, —');
+      // Single zones keep their name and value.
+      expect(labelOf('chest_left'), 'Pecho, 96,5 cm');
+      expect(labelOf('chest_right'), 'Pecho, 96,5 cm');
+    });
   });
 }

@@ -659,6 +659,26 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
+  /// Spoken label of a plate: «Pecho, 96,5 cm» for a single zone; a plate of
+  /// a pair names its side and reads that side only («Brazo, lado izquierdo,
+  /// 33,0 cm», «Muslo, lado derecho, —»). Plate ids carry the anatomical side
+  /// (`biceps_left`), the same one as the field keys (`arm_left_cm`).
+  String _plateLabel(AppLocalizations l10n, String plateId, String unit) {
+    final zone = _zoneForPlate(plateId)!;
+    final config = _measureZone(zone);
+    final name = _localizedZoneLabel(context, zone);
+    if (!config.isBilateral) {
+      final values = [for (final key in config.fieldKeys) _draftValue(key)];
+      return '$name, ${_measureSpoken(l10n, values, unit)}';
+    }
+    final left = plateId.contains('_left');
+    final value = _draftValue(config.fieldKeys[left ? 0 : 1]);
+    final side = left
+        ? l10n.metricsMeasureZoneLeft(name)
+        : l10n.metricsMeasureZoneRight(name);
+    return '$side, ${value == null ? '—' : '${_measureNumber(value)} $unit'}';
+  }
+
   /// Height of the C5b selector in the body view: the 48 dp view toggle, its
   /// 12 dp gap and a 450 dp figure, as in the sketch.
   static const double _bodySelectorHeight = 510;
@@ -691,15 +711,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ? RecapZoneMark.withData
                       : RecapZoneMark.withoutData,
             },
-            zoneLabelOf: (plateId) {
-              final zone = _zoneForPlate(plateId)!;
-              final values = [
-                for (final key in _measureZone(zone).fieldKeys)
-                  _draftValue(key),
-              ];
-              return '${_localizedZoneLabel(context, zone)}, '
-                  '${_measureSpoken(l10n, values, unit)}';
-            },
+            zoneLabelOf: (plateId) => _plateLabel(l10n, plateId, unit),
           ),
           const SizedBox(height: ExomSpacing.lg),
           Text(

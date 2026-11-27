@@ -2233,6 +2233,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricsMeasureRightInitial => 'R';
 
   @override
+  String metricsMeasureZoneLeft(String zone) {
+    return '$zone, left side';
+  }
+
+  @override
+  String metricsMeasureZoneRight(String zone) {
+    return '$zone, right side';
+  }
+
+  @override
   String get noTrainingsAssigned => 'No trainings assigned';
 
   @override

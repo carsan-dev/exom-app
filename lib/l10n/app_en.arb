@@ -806,6 +806,10 @@
   "metricsMeasureDone": "Done",
   "metricsMeasureLeftInitial": "L",
   "metricsMeasureRightInitial": "R",
+  "metricsMeasureZoneLeft": "{zone}, left side",
+  "@metricsMeasureZoneLeft": {"placeholders": {"zone": {"type": "String"}}},
+  "metricsMeasureZoneRight": "{zone}, right side",
+  "@metricsMeasureZoneRight": {"placeholders": {"zone": {"type": "String"}}},
 
   "noTrainingsAssigned": "No trainings assigned",
   "noTrainingsAssignedSubtitle": "Your coach hasn't assigned a plan yet",

@@ -2,7 +2,7 @@
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/core/widgets/exom_panel.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/core/widgets/tappable_scale.dart';
@@ -63,12 +63,12 @@ void main() {
     );
 
     testWidgets(
-      'GlassAppBar is flat, opaque, rule at the bottom (${brightness.name})',
+      'ExomAppBar is flat, opaque, rule at the bottom (${brightness.name})',
       (tester) async {
         await pumpComponent(
           tester,
           Scaffold(
-            appBar: GlassAppBar(
+            appBar: ExomAppBar(
               title: const Text('Detalle'),
               actions: [
                 IconButton(
@@ -85,12 +85,12 @@ void main() {
         );
         expect(
           find.descendant(
-            of: find.byType(GlassAppBar),
+            of: find.byType(ExomAppBar),
             matching: find.byType(BackdropFilter),
           ),
           findsNothing,
         );
-        final decoration = _firstDecoration(tester, find.byType(GlassAppBar));
+        final decoration = _firstDecoration(tester, find.byType(ExomAppBar));
         expect(decoration.color, palette.background);
         final border = decoration.border! as Border;
         expect(border.bottom.color, palette.borderSoft);

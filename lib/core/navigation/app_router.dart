@@ -19,7 +19,7 @@ import 'package:exom_app/core/theme/exom_page_transitions.dart';
 import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/features/splash/presentation/v4d/v4d_handoff.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';
 
@@ -704,7 +704,7 @@ class _MainShellState extends State<MainShell> {
             backgroundColor: Colors.transparent,
             extendBodyBehindAppBar: true,
             extendBody: true,
-            appBar: GlassAppBar(
+            appBar: ExomAppBar(
               // L5-D3: the header logo lands at the end of the V4d opening.
               title: const V4dHeaderLanding(child: ExomBrandLogo(height: 28)),
               actions: [

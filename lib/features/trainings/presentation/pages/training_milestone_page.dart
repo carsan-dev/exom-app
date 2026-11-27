@@ -9,7 +9,7 @@ import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -224,7 +224,7 @@ class _TrainingMilestonePageState extends State<TrainingMilestonePage>
     return Scaffold(
       key: const Key('training-milestone'),
       backgroundColor: palette.background,
-      appBar: GlassAppBar(
+      appBar: ExomAppBar(
         leading: IconButton(
           key: const Key('training-milestone-close'),
           icon: Icon(ExomIcons.close, color: palette.textPrimary),

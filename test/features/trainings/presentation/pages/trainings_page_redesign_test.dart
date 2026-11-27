@@ -37,6 +37,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../a11y/resolved_text_contrast.dart';
 import '../../../../core/widgets/exom_component_harness.dart';
 import '../../../../core/widgets/exom_text_component_matrix.dart';
 import '../../../../core/widgets/expect_no_lime_ink.dart';
@@ -920,7 +921,12 @@ void main() {
           selectedDate: selectedDate,
           brightness: brightness,
         );
-        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        // The pending rows' underlined links («Continuar entrenando»,
+        // «Descartar esta sesión pendiente») are sampled as their underline
+        // shade on Linux CI (FreeType anti-aliasing): every label the
+        // sampler reports is resolved and must reach AA (see
+        // test/a11y/resolved_text_contrast.dart).
+        await expectResolvedTextContrast(tester);
         await expectTapTargetGuidelines(tester);
         if (brightness == Brightness.light) expectNoLimeInk(tester);
         handle.dispose();

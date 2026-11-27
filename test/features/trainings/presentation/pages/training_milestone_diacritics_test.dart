@@ -11,7 +11,12 @@
 // Two checks:
 // * real ink: the headline is painted with the bundled fonts and the rows of
 //   the first line (text colour) and of the name (data colour) are compared;
-//   at least one clean row must separate them.
+//   at least one logical pixel of clean rows must separate them. The frame is
+//   painted at [_inkPixelRatio], a phone density, not at 1.0: at 1.0 the
+//   ~2 px of air are two whole pixels and the host rasteriser decides them
+//   (FreeType on Linux CI paints the dots of «Ü» one row higher than
+//   DirectWrite on Windows: rows 142/143, no clean row, against 142/144).
+//   At 2.0 both leave at least 2 logical px (4 clean rows).
 // * layout: when the name wraps, every line of the name leaves room above its
 //   capitals for a dieresis (920 units) plus .03 em of air before the baseline
 //   above (the same air as the ExomType two-line headlines at .95).
@@ -32,6 +37,10 @@ const double _dieresisTop = 0.92;
 
 /// Air between that diacritic and the baseline above, in em.
 const double _air = 0.03;
+
+/// Device pixel ratio of the ink check: xhdpi, the coarsest common phone
+/// density, so the most demanding one in physical rows.
+const double _inkPixelRatio = 2.0;
 
 class _Frame {
   _Frame(this.width, this.height, this.rgba);
@@ -65,6 +74,10 @@ Future<void> _expectClearRow(
   await loadRedesignFonts();
   await initializeDateFormatting('es');
   await pumpMilestone(tester, trainingName: name);
+  // pumpMilestone paints at 1.0 (its teardown restores the view).
+  tester.view.physicalSize = tester.view.physicalSize * _inkPixelRatio;
+  tester.view.devicePixelRatio = _inkPixelRatio;
+  await tester.pump();
 
   final first = tester.getRect(find.text(firstLine));
   final second = tester.getRect(find.text(secondLine));
@@ -79,12 +92,14 @@ Future<void> _expectClearRow(
   final textBlue = (_byte(text.b) + _byte(page.b)) / 2;
   final dataSpread = (_byte(data.g) - _byte(data.b)) / 2;
 
-  final left = first.left.floor();
-  final right = first.right.ceil().clamp(0, frame.width);
+  // Physical rows and columns of the logical rects.
+  const ratio = _inkPixelRatio;
+  final left = (first.left * ratio).floor();
+  final right = (first.right * ratio).ceil().clamp(0, frame.width);
   // The data rule sits 20 px above the headline; the acute of the first line
   // overhangs its box by a few pixels.
-  final top = (first.top - 12).floor().clamp(0, frame.height);
-  final bottom = second.bottom.ceil().clamp(0, frame.height);
+  final top = ((first.top - 12) * ratio).floor().clamp(0, frame.height);
+  final bottom = (second.bottom * ratio).ceil().clamp(0, frame.height);
   int? lastTextRow;
   int? firstDataRow;
   for (var y = top; y < bottom; y++) {
@@ -99,11 +114,12 @@ Future<void> _expectClearRow(
   expect(lastTextRow, isNotNull, reason: 'first line painted');
   expect(firstDataRow, isNotNull, reason: 'name painted');
   expect(
-    firstDataRow! - lastTextRow!,
-    greaterThanOrEqualTo(2),
+    firstDataRow! - lastTextRow! - 1,
+    greaterThanOrEqualTo(ratio),
     reason:
-        'the top of «$secondLine» (row $firstDataRow) must leave a clean row '
-        'below «$firstLine» (last row $lastTextRow)',
+        'the top of «$secondLine» (row $firstDataRow) must leave one logical '
+        'pixel ($ratio rows at $ratio x) of clean rows below «$firstLine» '
+        '(last row $lastTextRow)',
   );
 }
 

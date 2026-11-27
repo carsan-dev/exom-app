@@ -11,6 +11,7 @@ import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -346,6 +347,28 @@ void main() {
       expect(find.text(l10n.leftSideLabel), findsOneWidget);
       expect(find.text(l10n.rightSideLabel), findsOneWidget);
     });
+
+    for (final (locale, left, right) in [
+      ('es', '33,0', '33,5'),
+      ('en', '33.0', '33.5'),
+    ]) {
+      testWidgets('$locale pair numerals show one fixed decimal', (
+        tester,
+      ) async {
+        await _mount(tester, latest: _metric, locale: Locale(locale));
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        String numeral(String key) => tester
+            .widget<ExomNumeral>(
+              find.descendant(
+                of: measureStepper(key),
+                matching: find.byType(ExomNumeral),
+              ),
+            )
+            .value;
+        expect(numeral('arm_left_cm'), left);
+        expect(numeral('arm_right_cm'), right);
+      });
+    }
 
     testWidgets('a zone without data has no «Última» line', (tester) async {
       await _mount(tester, latest: _metric);

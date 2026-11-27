@@ -1977,6 +1977,7 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               min: 0,
               max: widget.max,
               step: widget.step,
+              fractionDigits: 1,
               unit: widget.unit,
               label: widget.sides[i].label ?? widget.zoneLabel,
               decrementLabel: widget.decrementLabel,

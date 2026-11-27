@@ -2060,9 +2060,9 @@ void main() {
       expect(footerShown(tester), isTrue);
       final nextLabel = RegExp(
         RegExp.escape(
-          _l10n(tester)
-              .trainingDetailNextAction('Sentadilla búlgara')
-              .toUpperCase(),
+          // B-2: the accessible name keeps the original case; only the
+          // visible text is uppercase.
+          _l10n(tester).trainingDetailNextAction('Sentadilla búlgara'),
         ),
       );
       expect(find.semantics.byLabel(nextLabel), findsWidgets);

@@ -447,8 +447,6 @@ class AppTheme {
       brightness: Brightness.dark,
       palette: _darkPalette,
       appBarBackground: AppColors.header,
-      bottomNavBackground: AppColors.bottomNav,
-      bottomNavIndicator: AppColors.tabActive,
     );
   }
 
@@ -457,8 +455,6 @@ class AppTheme {
       brightness: Brightness.light,
       palette: _lightPalette,
       appBarBackground: _lightPalette.background,
-      bottomNavBackground: _lightPalette.surface,
-      bottomNavIndicator: _lightPalette.primarySoft,
     );
   }
 
@@ -541,8 +537,6 @@ class AppTheme {
     required Brightness brightness,
     required ExomThemePalette palette,
     required Color appBarBackground,
-    required Color bottomNavBackground,
-    required Color bottomNavIndicator,
   }) {
     final isDark = brightness == Brightness.dark;
     final colorScheme = ColorScheme(
@@ -761,24 +755,6 @@ class AppTheme {
           borderRadius: BorderRadius.zero,
           side: BorderSide(color: palette.borderSoft),
         ),
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: bottomNavBackground,
-        selectedItemColor: palette.primary,
-        unselectedItemColor: palette.textDisabled,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: bottomNavBackground,
-        indicatorColor: bottomNavIndicator,
-        surfaceTintColor: Colors.transparent,
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: palette.primary);
-          }
-          return IconThemeData(color: palette.textDisabled);
-        }),
       ),
       listTileTheme: ListTileThemeData(
         iconColor: palette.textSecondary,

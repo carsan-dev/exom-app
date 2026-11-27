@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../widgets/pending_training_executions.dart';
 export '../widgets/pending_training_executions.dart';
@@ -78,6 +79,11 @@ class _TrainingsViewState extends State<_TrainingsView> {
   bool _contentArrived = false;
 
   final ScrollController _pendingScroll = ScrollController();
+  final GlobalKey _pendingKey = GlobalKey();
+  final GlobalKey _firstActionsKey = GlobalKey();
+  // Height the pending box needs to show the first session down to its
+  // actions; 0 until measured. Large text makes it taller than 30 %.
+  double _firstSessionHeight = 0;
 
   @override
   void initState() {
@@ -178,6 +184,28 @@ class _TrainingsViewState extends State<_TrainingsView> {
     if (mounted && storage.sessionStamp == stamp) setState(() {});
   }
 
+  /// Measures the pending list from its top to the bottom of the first
+  /// session's actions and the padding under them, and rebuilds when the box
+  /// needs another height.
+  void _measureFirstSession() {
+    if (!mounted) return;
+    final root = _pendingKey.currentContext?.findRenderObject();
+    final actions = _firstActionsKey.currentContext?.findRenderObject();
+    var height = 0.0;
+    if (root is RenderBox &&
+        actions is RenderBox &&
+        root.attached &&
+        actions.attached) {
+      height = actions
+          .localToGlobal(Offset(0, actions.size.height), ancestor: root)
+          .dy +
+          pendingActionsBottomPadding;
+    }
+    if ((height - _firstSessionHeight).abs() > .5) {
+      setState(() => _firstSessionHeight = height);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = sl<LocalStorage>();
@@ -193,33 +221,50 @@ class _TrainingsViewState extends State<_TrainingsView> {
       }
     }
     final footerEntry = continuable;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureFirstSession());
     return LayoutBuilder(
       builder: (context, constraints) => Column(
         children: [
           if (pending.isNotEmpty)
             ConstrainedBox(
+              // 30 % of the page, but never less than what the first session
+              // needs to show its actions (large text), up to 75 %. More
+              // sessions scroll; the scroll bar shows there are more.
               constraints: BoxConstraints(
-                maxHeight: constraints.maxHeight * .3,
+                maxHeight: math.min(
+                  math.max(constraints.maxHeight * .3, _firstSessionHeight),
+                  constraints.maxHeight * .75,
+                ),
               ),
-              // Large text can make the sessions taller than the box: the
-              // scroll bar shows there is more (Finalizar, Descartar).
               child: Scrollbar(
                 controller: _pendingScroll,
                 thumbVisibility: true,
                 child: SingleChildScrollView(
                   controller: _pendingScroll,
-                  child: PendingTrainingExecutions(
-                    storage: storage,
-                    inspectDiscard: sl.isRegistered<OfflineSyncService>()
-                        ? sl<OfflineSyncService>()
-                              .inspectTrainingExecutionDiscard
-                        : null,
-                    discard: sl.isRegistered<OfflineSyncService>()
-                        ? sl<OfflineSyncService>().discardTrainingExecution
-                        : null,
-                    onSelect: (entry, action) =>
-                        _openPending(storage, stamp, entry, action),
-                    onBusyChanged: _onPendingBusyChanged,
+                  child: SizeChangedLayoutNotifier(
+                    child: NotificationListener<SizeChangedLayoutNotification>(
+                      onNotification: (_) {
+                        WidgetsBinding.instance.addPostFrameCallback(
+                          (_) => _measureFirstSession(),
+                        );
+                        return false;
+                      },
+                      child: PendingTrainingExecutions(
+                        key: _pendingKey,
+                        firstActionsKey: _firstActionsKey,
+                        storage: storage,
+                        inspectDiscard: sl.isRegistered<OfflineSyncService>()
+                            ? sl<OfflineSyncService>()
+                                  .inspectTrainingExecutionDiscard
+                            : null,
+                        discard: sl.isRegistered<OfflineSyncService>()
+                            ? sl<OfflineSyncService>().discardTrainingExecution
+                            : null,
+                        onSelect: (entry, action) =>
+                            _openPending(storage, stamp, entry, action),
+                        onBusyChanged: _onPendingBusyChanged,
+                      ),
+                    ),
                   ),
                 ),
               ),

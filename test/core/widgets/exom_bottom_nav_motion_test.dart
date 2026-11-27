@@ -1,6 +1,6 @@
 // T0.5 M2: the active bar of the bottom navigation slides 200 ms between
 // tabs; with reduced motion it cuts. The tab callback is never delayed.
-import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,7 +24,7 @@ class _HostState extends State<_Host> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: const SizedBox.expand(),
-      bottomNavigationBar: GlassBottomNav(
+      bottomNavigationBar: ExomBottomNav(
         selectedIndex: _selected,
         onTap: (i) {
           widget.taps.add(i);
@@ -36,13 +36,13 @@ class _HostState extends State<_Host> {
 }
 
 Finder get _indicator => find.descendant(
-  of: find.byType(GlassBottomNav),
+  of: find.byType(ExomBottomNav),
   matching: find.byType(ColoredBox),
 );
 
 /// Centre of tab slot [i] (the edge labels are inset, the bar is not).
 double _labelCenter(WidgetTester tester, int i) {
-  final nav = tester.getRect(find.byType(GlassBottomNav));
+  final nav = tester.getRect(find.byType(ExomBottomNav));
   final slot = nav.width / 5;
   return nav.left + slot * i + slot / 2;
 }

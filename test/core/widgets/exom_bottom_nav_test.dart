@@ -1,7 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -20,8 +20,8 @@ const _a11yEn = _labelsEn;
 
 Widget _nav({int selected = 2, ValueChanged<int>? onTap, bool? showLabels}) {
   final nav = showLabels == null
-      ? GlassBottomNav(selectedIndex: selected, onTap: onTap ?? (_) {})
-      : GlassBottomNav(
+      ? ExomBottomNav(selectedIndex: selected, onTap: onTap ?? (_) {})
+      : ExomBottomNav(
           selectedIndex: selected,
           onTap: onTap ?? (_) {},
           showLabels: showLabels,
@@ -34,23 +34,23 @@ void main() {
     tester,
   ) async {
     const labels = ['Aa', 'Bbb', 'Cccc', 'Dd', 'Eeeee'];
-    final before = GlassBottomNav.labelLayoutCount;
-    TextScaler call(double width) => GlassBottomNav.labelTextScalerFor(
+    final before = ExomBottomNav.labelLayoutCount;
+    TextScaler call(double width) => ExomBottomNav.labelTextScalerFor(
       system: const TextScaler.linear(1.3),
       slotWidth: width,
       labels: labels,
       textDirection: TextDirection.ltr,
     );
     final first = call(78);
-    final afterFirst = GlassBottomNav.labelLayoutCount;
+    final afterFirst = ExomBottomNav.labelLayoutCount;
     expect(afterFirst, greaterThan(before));
     for (var i = 0; i < 20; i++) {
       expect(call(78), first);
     }
-    expect(GlassBottomNav.labelLayoutCount, afterFirst, reason: 'cached');
+    expect(ExomBottomNav.labelLayoutCount, afterFirst, reason: 'cached');
     call(80);
     expect(
-      GlassBottomNav.labelLayoutCount,
+      ExomBottomNav.labelLayoutCount,
       greaterThan(afterFirst),
       reason: 'a new width recomputes',
     );
@@ -80,8 +80,8 @@ void main() {
       expect(find.text(label), findsNothing);
     }
     expect(
-      tester.getSize(find.byType(GlassBottomNav)).height,
-      GlassBottomNav.totalHeight,
+      tester.getSize(find.byType(ExomBottomNav)).height,
+      ExomBottomNav.totalHeight,
     );
   });
 
@@ -98,7 +98,7 @@ void main() {
         final palette = themeFor(brightness).extension<ExomThemePalette>()!;
         expect(
           find.descendant(
-            of: find.byType(GlassBottomNav),
+            of: find.byType(ExomBottomNav),
             matching: find.byType(BackdropFilter),
           ),
           findsNothing,
@@ -106,7 +106,7 @@ void main() {
         final bar = tester.widget<DecoratedBox>(
           find
               .descendant(
-                of: find.byType(GlassBottomNav),
+                of: find.byType(ExomBottomNav),
                 matching: find.byType(DecoratedBox),
               )
               .first,
@@ -120,7 +120,7 @@ void main() {
           ...tester
               .widgetList<Icon>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(Icon),
                 ),
               )
@@ -128,7 +128,7 @@ void main() {
           ...tester
               .widgetList<Text>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(Text),
                 ),
               )
@@ -136,7 +136,7 @@ void main() {
           ...tester
               .widgetList<ColoredBox>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(ColoredBox),
                 ),
               )
@@ -174,7 +174,7 @@ void main() {
     }
     expect(taps, [0, 1, 2, 3, 4]);
     final indicator = find.descendant(
-      of: find.byType(GlassBottomNav),
+      of: find.byType(ExomBottomNav),
       matching: find.byType(ColoredBox),
     );
     expect(indicator, findsOneWidget);

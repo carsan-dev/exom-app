@@ -20,7 +20,7 @@ import 'package:exom_app/core/widgets/exom_animated_background.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/features/splash/presentation/v4d/v4d_handoff.dart';
 import 'package:exom_app/core/widgets/glass_app_bar.dart';
-import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';
 
 // Auth pages
@@ -689,7 +689,7 @@ class _MainShellState extends State<MainShell> {
     final l10n = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final topInset = mediaQuery.padding.top + kToolbarHeight;
-    final bottomInset = GlassBottomNav.reservedHeight(context);
+    final bottomInset = ExomBottomNav.reservedHeight(context);
 
     // Scaffold wrapped in Stack so overlay renders ABOVE drawer
     return MultiBlocProvider(
@@ -774,7 +774,7 @@ class _MainShellState extends State<MainShell> {
                 child: SizedBox.expand(child: widget.child),
               ),
             ),
-            bottomNavigationBar: GlassBottomNav(
+            bottomNavigationBar: ExomBottomNav(
               selectedIndex: selected,
               onTap: (i) => context.go(MainShell._tabs[i]),
             ),

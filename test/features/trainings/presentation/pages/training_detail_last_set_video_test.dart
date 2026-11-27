@@ -652,6 +652,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
+      // O7: the pinned footer ignores taps until the pushed detail has
+      // entered (240 ms) plus 400 ms after the push. Wait longer than that
+      // on its own, whatever time the pumps above advanced, so the tap
+      // below is a deliberate one.
+      const footerArmedAfterPush = Duration(milliseconds: 700);
+      await tester.pump(footerArmedAfterPush);
       final l10n = _l10n(tester);
       final message =
           find.text(l10n.trainingLastSetVideoMissingFor('Peso muerto rumano'));

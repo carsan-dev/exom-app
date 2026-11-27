@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart' show Drag;
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -385,13 +386,57 @@ class TrainingDetailPage extends StatefulWidget {
   State<TrainingDetailPage> createState() => _TrainingDetailPageState();
 }
 
+/// O7: after the route finishes entering, the pinned footer actions still
+/// ignore taps for this long. Inicio's «Empezar sesión» and the detail's
+/// «Siguiente» share the same spot, so a repeated tap ~0,5 s after opening
+/// (route entry is `ExomMotion.pushIn`, 240 ms) landed on «Siguiente» and
+/// created a session with 0 sets. Entry plus this margin ends ~640 ms after
+/// the push, before a deliberate tap on a just-shown screen is realistic.
+const Duration _footerEntryTapGuard = Duration(milliseconds: 400);
+
 class _TrainingDetailPageState extends State<TrainingDetailPage> {
   late final String? _sessionStamp;
+
+  /// Whether the pinned footer actions accept taps (O7). True at once when
+  /// the route is already in place (no entry transition to wait for).
+  final _footerArmed = ValueNotifier<bool>(false);
+  Timer? _footerArmTimer;
 
   @override
   void initState() {
     super.initState();
     _sessionStamp = sl<LocalStorage>().sessionStamp;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_footerArmed.value || _footerArmTimer != null) return;
+    final route = ModalRoute.of(context);
+    // On the first frame of a push the route is offstage and its animation
+    // reports «completed» (Hero measuring), so «offstage» also means entering.
+    final entering = route != null &&
+        (route.offstage ||
+            route.animation?.status != AnimationStatus.completed);
+    if (!entering) {
+      // Built on a route already in place: no entry to wait for.
+      _footerArmed.value = true;
+      return;
+    }
+    // The page is built when the push starts: arm once its entry has run
+    // ([TransitionRoute.transitionDuration]) plus the margin. A plain timer
+    // cannot leave the footer disarmed if no animation event ever arrives.
+    _footerArmTimer =
+        Timer(route.transitionDuration + _footerEntryTapGuard, () {
+      if (mounted) _footerArmed.value = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _footerArmTimer?.cancel();
+    _footerArmed.dispose();
+    super.dispose();
   }
 
   @override
@@ -401,6 +446,7 @@ class _TrainingDetailPageState extends State<TrainingDetailPage> {
           sl<TrainingBloc>()
             ..add(TrainingDetailLoadRequested(widget.trainingId, date: widget.selectedDate)),
       child: _TrainingDetailView(
+        footerArmed: _footerArmed,
         sessionStamp: _sessionStamp,
         selectedExecutionId: widget.selectedExecutionId,
         finalizeSelected: widget.finalizeSelected,
@@ -410,9 +456,11 @@ class _TrainingDetailPageState extends State<TrainingDetailPage> {
 }
 
 class _TrainingDetailView extends StatelessWidget {
-  const _TrainingDetailView({required this.sessionStamp,
+  const _TrainingDetailView({required this.footerArmed,
+    required this.sessionStamp,
     required this.selectedExecutionId, required this.finalizeSelected});
 
+  final ValueListenable<bool> footerArmed;
   final String? sessionStamp;
   final String? selectedExecutionId;
   final bool finalizeSelected;
@@ -452,6 +500,7 @@ class _TrainingDetailView extends StatelessWidget {
         }
         if (state is TrainingDetailLoaded) {
           return _DetailScaffold(
+            footerArmed: footerArmed,
             state: state, sessionStamp: sessionStamp,
             selectedExecutionId: selectedExecutionId,
             finalizeSelected: finalizeSelected,
@@ -524,12 +573,14 @@ class _TrainingDetailLoadingScaffold extends StatelessWidget {
 }
 
 class _DetailScaffold extends StatefulWidget {
+  final ValueListenable<bool> footerArmed;
   final TrainingDetailLoaded state;
   final String? sessionStamp;
   final String? selectedExecutionId;
   final bool finalizeSelected;
 
-  const _DetailScaffold({required this.state, required this.sessionStamp,
+  const _DetailScaffold({required this.footerArmed,
+    required this.state, required this.sessionStamp,
     required this.selectedExecutionId, required this.finalizeSelected});
 
   @override
@@ -1162,6 +1213,16 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     );
   }
 
+  /// O7: [action] for a pinned footer button, ignoring taps that land while
+  /// the route is still entering (plus [_footerEntryTapGuard]). A null action
+  /// stays null, so the button looks the same either way.
+  VoidCallback? _onceArmed(FutureOr<void> Function()? action) => action == null
+      ? null
+      : () {
+          if (!widget.footerArmed.value) return;
+          action();
+        };
+
   /// Runs the pinned "next" action once: repeated taps while the execution is
   /// being selected, or while the opened route is on top, are ignored.
   Future<void> _runNext(Future<void> Function() action) async {
@@ -1713,10 +1774,12 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       busy: _openingNext,
                       onPressed: !_sameSession
                           ? null
-                          : () => _runNext(() => next.blockExercises == null
-                              ? _openActiveExercise(context, training, next.leader)
-                              : _startCircuit(context, training, next.leader,
-                                  next.blockExercises!)),
+                          : _onceArmed(() => _runNext(() =>
+                              next.blockExercises == null
+                                  ? _openActiveExercise(
+                                      context, training, next.leader)
+                                  : _startCircuit(context, training,
+                                      next.leader, next.blockExercises!))),
                     ),
                     if (!sessionFinished) const SizedBox(height: 8),
                   ],
@@ -1725,7 +1788,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                       primary: completeIsPrimary,
                       label: completeLabel,
                       done: allDone,
-                      onPressed: completeOnPressed,
+                      onPressed: _onceArmed(completeOnPressed),
                     ),
                 ],
               ),

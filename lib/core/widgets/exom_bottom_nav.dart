@@ -137,7 +137,8 @@ class ExomBottomNav extends StatelessWidget {
   })?
   _lastLabelScale;
 
-  /// Number of text layouts the label-scale search has run (tests).
+  /// Number of text layouts the label-scale search has run. Only counted in
+  /// debug/test builds (assert), never in release.
   @visibleForTesting
   static int labelLayoutCount = 0;
 
@@ -156,7 +157,10 @@ class ExomBottomNav extends StatelessWidget {
         textScaler: scaler,
         maxLines: 1,
       )..layout();
-      labelLayoutCount++;
+      assert(() {
+        labelLayoutCount++;
+        return true;
+      }());
       final width = painter.width;
       painter.dispose();
       final isEdge = i == 0 || i == last;

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'package:flutter/gestures.dart' show Drag;
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
@@ -2838,15 +2840,12 @@ class _ExerciseCard extends StatelessWidget {
     final result = await showPageAwareModalBottomSheet<_SheetCompletionResult>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        maxChildSize: 0.95,
-        builder: (_, scrollController) => _ExerciseDetailSheet(
+      builder: (_) => _ExerciseSheetHost(
+        sheetBuilder: (scrollController, onFootHeight) => _ExerciseDetailSheet(
           exercise: ex,
           trainingExercise: trainingExercise,
           scrollController: scrollController,
+          onFootHeight: onFootHeight,
           isCompleted: isCompleted,
           weightUsed: weightUsed,
           weightText: weightText,
@@ -2976,6 +2975,60 @@ String _trainingLevelLabel(AppLocalizations l10n, String level) =>
       _ => level,
     };
 
+/// Draggable container of the exercise sheet. Its smallest size is never below
+/// what the pinned foot needs (measured, so it follows the text scale) plus a
+/// minimum of body, so the foot actions are always fully visible (HOJA-PULIDO
+/// H2); the usual 40 % applies when the foot is small.
+class _ExerciseSheetHost extends StatefulWidget {
+  const _ExerciseSheetHost({required this.sheetBuilder});
+
+  final Widget Function(
+    ScrollController scrollController,
+    ValueChanged<double> onFootHeight,
+  )
+  sheetBuilder;
+
+  @override
+  State<_ExerciseSheetHost> createState() => _ExerciseSheetHostState();
+}
+
+class _ExerciseSheetHostState extends State<_ExerciseSheetHost> {
+  static const double _baseMinFraction = 0.4;
+  static const double _initialFraction = 0.7;
+  static const double _maxFraction = 0.95;
+
+  double _footHeight = 0;
+
+  void _onFootHeight(double height) {
+    if ((height - _footHeight).abs() < 0.5 || !mounted) return;
+    setState(() => _footHeight = height);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available = constraints.maxHeight;
+        final needed = available > 0
+            ? (_footHeight + _ExerciseDetailSheet.minBodyHeight) / available
+            : 0.0;
+        final minSize = math.min(
+          math.max(_baseMinFraction, needed),
+          _maxFraction - 0.05,
+        );
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: math.max(_initialFraction, minSize),
+          minChildSize: minSize,
+          maxChildSize: _maxFraction,
+          builder: (_, scrollController) =>
+              widget.sheetBuilder(scrollController, _onFootHeight),
+        );
+      },
+    );
+  }
+}
+
 /// Exercise sheet (L5-D47, sketch `g-hoja-ejercicio.html` variant «A · media
 /// arriba»): the thumbnail or video at full bleed (not painted without
 /// either), the name in the display face, the prescription, level and muscles
@@ -2989,6 +3042,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
   final ExerciseEntity exercise;
   final TrainingExerciseEntity trainingExercise;
   final ScrollController scrollController;
+  final ValueChanged<double> onFootHeight;
   final bool isCompleted;
   final double? weightUsed;
   final _WeightText weightText;
@@ -3000,6 +3054,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
     required this.exercise,
     required this.trainingExercise,
     required this.scrollController,
+    required this.onFootHeight,
     required this.isCompleted,
     required this.weightText,
     required this.trainingLevel,
@@ -3008,9 +3063,9 @@ class _ExerciseDetailSheet extends StatelessWidget {
     this.currentPerformances,
   });
 
-  /// Largest share of the sheet the pinned foot may take; beyond it (large
-  /// text on the smallest sheet size) the foot scrolls on its own.
-  static const double _footMaxFraction = 0.5;
+  /// Body kept above the pinned foot (handle, close and the name), also what
+  /// the sheet's smallest size reserves besides the foot.
+  static const double minBodyHeight = 160;
 
   String _buildMetadata(AppLocalizations l10n) {
     return l10n.exerciseMetadata(
@@ -3038,6 +3093,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
       return lines.map(_stripBulletPrefix).toList();
     }
 
+    // A list of one bullet (a lone "- item") is still a list.
+    // "-5 kg" or "*bold*" are text: a dash or star needs a space after it.
+    if (RegExp(r'^(?:[-*]\s+|\u2022\s*)\S').hasMatch(normalized) &&
+        !normalized.substring(1).contains('\u2022')) {
+      final item = _stripMarker(normalized);
+      return item.isEmpty ? const [] : [item];
+    }
+
     if (normalized.contains('\u2022')) {
       final inlineItems = normalized
           .split('\u2022')
@@ -3053,11 +3116,15 @@ class _ExerciseDetailSheet extends StatelessWidget {
     return const [];
   }
 
+  String _stripMarker(String value) =>
+      value.replaceFirst(RegExp(r'^[-*\u2022]+\s*'), '').trim();
+
+  /// Drops the marker; a numbered line without marker ("1. Pie") also loses
+  /// its number, but the numbers after a marker ("- 90 grados") are content.
   String _stripBulletPrefix(String value) {
-    return value
-        .replaceFirst(RegExp(r'^[-*\u2022]+\s*'), '')
-        .replaceFirst(RegExp(r'^\d+[.)-]?\s*'), '')
-        .trim();
+    final withoutMarker = _stripMarker(value);
+    if (withoutMarker != value.trim()) return withoutMarker;
+    return value.replaceFirst(RegExp(r'^\d+[.)-]?\s*'), '').trim();
   }
 
   Future<void> _openVideo(BuildContext context) async {
@@ -3178,6 +3245,8 @@ class _ExerciseDetailSheet extends StatelessWidget {
     );
 
     final foot = _ExerciseSheetFoot(
+      scrollController: scrollController,
+      onHeight: onFootHeight,
       onFeedback: () => _openFeedback(context),
       children: isCompleted
           ? [
@@ -3215,8 +3284,13 @@ class _ExerciseDetailSheet extends StatelessWidget {
         children: [
           Expanded(child: body),
           ConstrainedBox(
+            // The foot never scrolls while the sheet has room for it plus the
+            // minimum body; only on a screen too small for both it does.
             constraints: BoxConstraints(
-              maxHeight: constraints.maxHeight * _footMaxFraction,
+              maxHeight: math.max(
+                constraints.maxHeight * 0.5,
+                constraints.maxHeight - minBodyHeight,
+              ),
             ),
             child: foot,
           ),
@@ -3567,28 +3641,96 @@ class _ExerciseSheetText extends StatelessWidget {
 /// Pinned foot of the sheet (`.sheet-act`): the «Enviar feedback» row (L5-D47
 /// alternative F) above the exercise action. Transparent over the live sheet
 /// background; past its height limit it scrolls on its own.
-class _ExerciseSheetFoot extends StatelessWidget {
-  const _ExerciseSheetFoot({required this.onFeedback, required this.children});
+class _ExerciseSheetFoot extends StatefulWidget {
+  const _ExerciseSheetFoot({
+    required this.scrollController,
+    required this.onHeight,
+    required this.onFeedback,
+    required this.children,
+  });
 
+  /// The body's controller: a vertical drag on the foot is replayed on it, so
+  /// the sheet moves exactly as when dragging the body (HOJA-PULIDO H1).
+  final ScrollController scrollController;
+
+  /// Natural height of the foot (what it needs to show all its actions).
+  final ValueChanged<double> onHeight;
   final VoidCallback onFeedback;
   final List<Widget> children;
 
   @override
+  State<_ExerciseSheetFoot> createState() => _ExerciseSheetFootState();
+}
+
+class _ExerciseSheetFootState extends State<_ExerciseSheetFoot> {
+  final GlobalKey _contentKey = GlobalKey();
+  Drag? _drag;
+
+  static const double _padTop = 10;
+  static const double _padBottom = 12;
+  static const double _borderTop = 1;
+
+  /// What the foot adds around its content: padding and top border.
+  static const double _chrome = _padTop + _padBottom + _borderTop;
+
+  void _reportHeight() {
+    final box = _contentKey.currentContext?.findRenderObject();
+    if (!mounted || box is! RenderBox || !box.hasSize) return;
+    widget.onHeight(
+      box.size.height + _chrome + MediaQuery.paddingOf(context).bottom,
+    );
+  }
+
+  void _dragStart(DragStartDetails details) {
+    final controller = widget.scrollController;
+    if (!controller.hasClients) return;
+    _drag = controller.position.drag(details, () => _drag = null);
+  }
+
+  @override
+  void dispose() {
+    _drag?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
+    return GestureDetector(
+      onVerticalDragStart: _dragStart,
+      onVerticalDragUpdate: (details) => _drag?.update(details),
+      onVerticalDragEnd: (details) {
+        _drag?.end(details);
+        _drag = null;
+      },
+      onVerticalDragCancel: () {
+        _drag?.cancel();
+        _drag = null;
+      },
+      child: _buildFoot(context),
+    );
+  }
+
+  Widget _buildFoot(BuildContext context) {
+    final onFeedback = widget.onFeedback;
+    final children = widget.children;
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       key: const Key('exercise-sheet-footer'),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: palette.borderSoft)),
+        border: Border(
+          top: BorderSide(color: palette.borderSoft, width: _borderTop),
+        ),
       ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
           // Not the sheet's scrollable: the body list owns the drag.
           primary: false,
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, _padTop, 20, _padBottom),
           child: Column(
+            key: _contentKey,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               MergeSemantics(

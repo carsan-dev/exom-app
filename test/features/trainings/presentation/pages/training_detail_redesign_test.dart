@@ -415,7 +415,11 @@ Future<void> pumpTrainingDetail(
 /// Training of the exercise sheet scenes (L5-D47): the first exercise has its
 /// muscles, the three texts and, optionally, a video (no thumbnail: the tests
 /// load no network image).
-TrainingEntity _sheetTraining({String? videoUrl, String? thumbnailUrl}) => TrainingEntity(
+TrainingEntity _sheetTraining({
+  String? videoUrl,
+  String? thumbnailUrl,
+  String? commonErrorsText,
+}) => TrainingEntity(
   id: _trainingId,
   name: 'Pierna fuerza',
   types: const ['FUERZA'],
@@ -442,8 +446,9 @@ TrainingEntity _sheetTraining({String? videoUrl, String? thumbnailUrl}) => Train
             'suelo.\n'
             '- Empuja con el talón delantero para subir.',
         commonErrorsText:
+            commonErrorsText ??
             '- La rodilla delantera se va hacia dentro.\n'
-            '- El tronco se inclina demasiado al bajar.',
+                '- El tronco se inclina demasiado al bajar.',
         explanationText:
             'Trabaja cada pierna por separado y mejora el equilibrio. Ayuda a '
             'igualar la fuerza entre los dos lados.',
@@ -479,10 +484,15 @@ Future<_Harness> _openExerciseSheet(
   Size size = const Size(390, 844),
   String? videoUrl = _sheetVideoUrl,
   String? thumbnailUrl,
+  String? commonErrorsText,
 }) async {
   final harness = await _mount(
     tester,
-    training: _sheetTraining(videoUrl: videoUrl, thumbnailUrl: thumbnailUrl),
+    training: _sheetTraining(
+      videoUrl: videoUrl,
+      thumbnailUrl: thumbnailUrl,
+      commonErrorsText: commonErrorsText,
+    ),
     completed: scene == ExerciseSheetScene.completed ? {'te-1'} : const {},
     performances: _todaySets,
     theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
@@ -1740,6 +1750,146 @@ void main() {
         (2, l10n.commonMistakes),
         (3, l10n.explanation),
       ]);
+    });
+
+    // HOJA-PULIDO H3: a list of one bullet is still a list.
+    for (final (raw, shown) in [
+      ('- Bloquear las rodillas.', 'Bloquear las rodillas.'),
+      ('• Bloquear las rodillas.', 'Bloquear las rodillas.'),
+    ]) {
+      testWidgets('H3: a single bullet «$raw» is drawn as a bullet', (
+        tester,
+      ) async {
+        await _openExerciseSheet(
+          tester,
+          scene: ExerciseSheetScene.completed,
+          size: const Size(390, 1600),
+          commonErrorsText: raw,
+        );
+        // The list builds lazily: bring the section on stage.
+        for (var i = 0; i < 6 && inSheet(find.text(shown)).evaluate().isEmpty;
+            i++) {
+          await tester.drag(sheetList, const Offset(0, -300));
+          await tester.pumpAndSettle();
+        }
+        expect(inSheet(find.text(shown)), findsOneWidget);
+        expect(inSheet(find.text(raw)), findsNothing);
+        // Same row as the other bullets: marker + text.
+        final row = find.ancestor(
+          of: inSheet(find.text(shown)),
+          matching: find.byType(Row),
+        );
+        expect(row, findsWidgets);
+        expect(
+          find.descendant(
+            of: row.first,
+            matching: find.byWidgetPredicate(
+              (w) => w is Container && w.constraints?.maxWidth == 6,
+            ),
+          ),
+          findsOneWidget,
+        );
+      });
+    }
+
+    // HOJA-PULIDO H3 r2: only a real marker is stripped, and numbers stay.
+    for (final raw in ['-5 kg de lastre', '*Cuidado* con la rodilla']) {
+      testWidgets('H3 r2: «$raw» stays plain text', (tester) async {
+        await _openExerciseSheet(
+          tester,
+          scene: ExerciseSheetScene.completed,
+          size: const Size(390, 1600),
+          commonErrorsText: raw,
+        );
+        for (var i = 0; i < 6 && inSheet(find.text(raw)).evaluate().isEmpty;
+            i++) {
+          await tester.drag(sheetList, const Offset(0, -300));
+          await tester.pumpAndSettle();
+        }
+        expect(inSheet(find.text(raw)), findsOneWidget);
+      });
+    }
+
+    for (final (raw, shown) in [
+      ('- 90 grados de flexión', '90 grados de flexión'),
+      ('- 90 grados\n- 3 series', '3 series'),
+    ]) {
+      testWidgets('H3 r2: bullets keep their numbers «$raw»', (tester) async {
+        await _openExerciseSheet(
+          tester,
+          scene: ExerciseSheetScene.completed,
+          size: const Size(390, 1600),
+          commonErrorsText: raw,
+        );
+        for (var i = 0; i < 6 && inSheet(find.text(shown)).evaluate().isEmpty;
+            i++) {
+          await tester.drag(sheetList, const Offset(0, -300));
+          await tester.pumpAndSettle();
+        }
+        expect(inSheet(find.text(shown)), findsOneWidget);
+        if (raw.contains('\n')) {
+          expect(inSheet(find.text('90 grados')), findsOneWidget);
+        }
+      });
+    }
+
+    // HOJA-PULIDO H2: in the completed state every foot action is visible
+    // without scrolling the foot, at any sheet height.
+    for (final (label, scaler) in [
+      ('1.0', TextScaler.noScaling),
+      ('1.6', const AndroidNonlinearTextScaler(1.6)),
+    ]) {
+      testWidgets('H2 ($label): completed foot never needs scrolling at the '
+          'smallest height', (tester) async {
+        await _openExerciseSheet(
+          tester,
+          scene: ExerciseSheetScene.completed,
+          textScaler: scaler,
+        );
+        final l10n = _l10n(tester);
+        final gesture = await tester.startGesture(
+          tester.getCenter(sheetList),
+        );
+        await gesture.moveBy(const Offset(0, 40));
+        await tester.pump();
+        for (var i = 0; i < 12; i++) {
+          await gesture.moveBy(const Offset(0, 40));
+          await tester.pump();
+        }
+        final footScroll = find.descendant(
+          of: footer,
+          matching: find.byType(Scrollable),
+        );
+        expect(
+          tester.state<ScrollableState>(footScroll).position.maxScrollExtent,
+          0,
+        );
+        expect(find.text(l10n.markExercisePendingButton), findsOneWidget);
+        expect(
+          tester.getBottomLeft(find.text(l10n.markExercisePendingButton)).dy,
+          lessThanOrEqualTo(844),
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+    }
+
+    // HOJA-PULIDO H1: a vertical drag on the foot moves the sheet; taps on its
+    // buttons still work.
+    testWidgets('H1: dragging the foot moves the sheet', (tester) async {
+      await _openExerciseSheet(tester, scene: ExerciseSheetScene.completed);
+      final before = tester.getTopLeft(sheet).dy;
+      await tester.drag(
+        footer,
+        const Offset(0, -120),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(sheet).dy, lessThan(before - 20));
+      final l10n = _l10n(tester);
+      await tester.tap(find.text(l10n.editData));
+      await tester.pumpAndSettle();
+      expect(find.text('active-exercise-route'), findsOneWidget);
     });
 
     for (final brightness in Brightness.values) {

@@ -3158,6 +3158,24 @@ abstract class AppLocalizations {
   /// **'Borrar caché'**
   String get clearCacheConfirmButton;
 
+  /// No description provided for @logoutUnfinishedWorkoutTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes un entrenamiento sin terminar'**
+  String get logoutUnfinishedWorkoutTitle;
+
+  /// No description provided for @logoutUnfinishedWorkoutBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se conserva en este dispositivo y lo verás al volver a entrar con esta cuenta.'**
+  String get logoutUnfinishedWorkoutBody;
+
+  /// No description provided for @logoutUnfinishedWorkoutConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get logoutUnfinishedWorkoutConfirm;
+
   /// No description provided for @retry.
   ///
   /// In es, this message translates to:

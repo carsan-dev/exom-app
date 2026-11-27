@@ -22,6 +22,7 @@ import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:exom_app/features/auth/presentation/logout_confirmation.dart';
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
@@ -295,6 +296,15 @@ class _SettingsPageState extends State<SettingsPage> {
         (l10n) => l10n.cacheDeletedMessage,
       ),
     );
+  }
+
+  /// «Cerrar sesión»: asks first when the account has an unfinished workout
+  /// on this device (L5-D67).
+  Future<void> _logOut() async {
+    final authBloc = context.read<AuthBloc>();
+    final confirmed = await confirmLogoutIfUnfinishedWorkout(context);
+    if (!confirmed || !mounted) return;
+    authBloc.add(const AuthLogoutRequested());
   }
 
   Future<void> _setThemeMode(ThemeMode themeMode) async {
@@ -811,9 +821,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: ExomSecondaryButton(
                       key: const Key('settings-logout'),
                       label: l10n.logOutButton,
-                      onPressed: () => context.read<AuthBloc>().add(
-                        const AuthLogoutRequested(),
-                      ),
+                      onPressed: _logOut,
                     ),
                   ),
                   // `.b-danger`: the destructive link after a hairline.

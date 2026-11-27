@@ -29,6 +29,7 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/account_locked_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_event.dart';
+import '../../features/auth/presentation/logout_confirmation.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 
 // Home pages
@@ -884,6 +885,17 @@ class AppDrawer extends StatelessWidget {
       go();
     };
 
+    // «Cerrar sesión» (L5-D67): the confirmation, if any, opens while the
+    // drawer is still mounted; it closes only once the user goes on. Cancel
+    // leaves everything as it was.
+    Future<void> logOut() async {
+      final authBloc = context.read<AuthBloc>();
+      final confirmed = await confirmLogoutIfUnfinishedWorkout(context);
+      if (!confirmed || !context.mounted) return;
+      Navigator.pop(context);
+      authBloc.add(const AuthLogoutRequested());
+    }
+
     return Drawer(
       width: math.min(304.0, math.max(0.0, screenWidth - 56)),
       backgroundColor: palette.background,
@@ -982,11 +994,7 @@ class AppDrawer extends StatelessWidget {
                   child: ExomSecondaryButton(
                     label: l10n.logOutMenuItem,
                     labelKey: drawerItemKeys[6],
-                    onPressed: leave(
-                      () => context.read<AuthBloc>().add(
-                        const AuthLogoutRequested(),
-                      ),
-                    ),
+                    onPressed: logOut,
                   ),
                 ),
               ],

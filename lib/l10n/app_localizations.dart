@@ -5111,8 +5111,8 @@ abstract class AppLocalizations {
   /// No description provided for @trainingPendingFinalizeNotice.
   ///
   /// In es, this message translates to:
-  /// **'Tienes un entrenamiento pendiente de finalizar'**
-  String get trainingPendingFinalizeNotice;
+  /// **'{count, plural, =1{Tienes un entrenamiento pendiente de finalizar} other{Tienes {count} entrenamientos pendientes de finalizar}}'**
+  String trainingPendingFinalizeNotice(int count);
 
   /// No description provided for @trainingPendingFinalize.
   ///

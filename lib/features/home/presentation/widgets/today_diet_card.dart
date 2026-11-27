@@ -86,6 +86,7 @@ class TodayDietCard extends StatelessWidget {
             context,
             mealId: summary.nextMealId!,
             selectedDate: assignmentDate,
+            previewName: summary.nextMealName,
           );
         } else {
           await context.push('/diets?date=$assignmentDate');

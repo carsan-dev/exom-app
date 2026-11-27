@@ -1,4 +1,6 @@
 // Macro chips of the meal detail use the decimal separator of the locale.
+import 'dart:async';
+
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_choice_chips.dart';
@@ -70,6 +72,48 @@ final _withOptions = MealEntity(
   variants: [_variant],
 );
 
+/// Its alternative has a much longer name, so its header is taller.
+final _withLongOption = MealEntity(
+  id: 'm-1',
+  type: 'LUNCH',
+  name: 'Arroz con pollo',
+  calories: 520,
+  proteinG: 26.9,
+  carbsG: 60.25,
+  fatG: 12,
+  nutritionalBadges: const [],
+  ingredients: const [],
+  variants: [
+    MealEntity(
+      id: 'm-1b',
+      type: 'LUNCH',
+      name: 'Pasta integral con atún, tomate seco y albahaca',
+      calories: 640,
+      proteinG: 30,
+      carbsG: 80,
+      fatG: 15,
+      nutritionalBadges: const [],
+      ingredients: const [],
+      variants: const [],
+    ),
+  ],
+);
+
+/// A name of several lines at large text, which a skeleton without the
+/// caller's meal cannot foresee.
+final _longNamed = MealEntity(
+  id: 'm-1',
+  type: 'LUNCH',
+  name: 'Pasta integral con atún, tomate seco y albahaca',
+  calories: 640,
+  proteinG: 30,
+  carbsG: 80,
+  fatG: 15,
+  nutritionalBadges: const [],
+  ingredients: const [],
+  variants: const [],
+);
+
 class _Repository extends Fake implements DietRepository {
   _Repository(this.meal);
 
@@ -86,6 +130,20 @@ class _Repository extends Fake implements DietRepository {
   @override
   Future<void> markMealCompleted(String mealId, String date) async {
     marked.add('$mealId@$date');
+  }
+}
+
+/// Holds the meal load until [gate] completes, so the sheet stays on its
+/// loading skeleton as long as a test needs.
+class _GatedRepository extends _Repository {
+  _GatedRepository(super.meal);
+
+  final gate = Completer<void>();
+
+  @override
+  Future<DietEntity?> getTodayDiet({String? date}) async {
+    await gate.future;
+    return super.getTodayDiet(date: date);
   }
 }
 
@@ -351,6 +409,311 @@ void main() {
         0.7,
       );
       expect(tester.getTopLeft(draggable).dy, moreOrLessEquals(844 * 0.3));
+    });
+  });
+
+  // OBS-1 (EMU-REVISION-1127): at 1,6 the sheet opened on its skeleton and
+  // jumped when the meal arrived. It must open at its final size, or at most
+  // grow animated to reveal the header, and never resize on an option pick.
+  group('OBS-1 the sheet opens without a jump', () {
+    const height = 844.0;
+
+    Future<_GatedRepository> open(
+      WidgetTester tester,
+      TextScaler scaler, {
+      required MealEntity meal,
+      bool disableAnimations = false,
+      Future<void> Function(BuildContext context)? show,
+    }) async {
+      await loadRedesignFonts();
+      tester.view.physicalSize = const Size(390, height);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await sl.reset();
+      final repository = _GatedRepository(meal);
+      sl.registerFactory<DietBloc>(
+        () => DietBloc(
+          getTodayDietUseCase: GetTodayDietUseCase(repository),
+          getMealUseCase: GetMealUseCase(repository),
+          markMealCompletedUseCase: MarkMealCompletedUseCase(repository),
+          unmarkMealCompletedUseCase: UnmarkMealCompletedUseCase(repository),
+          getCompletedMealsUseCase: GetCompletedMealsUseCase(repository),
+        ),
+      );
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => show != null
+                      ? show(context)
+                      : showMealDetailSheet(
+                          context,
+                          mealId: meal.id,
+                          selectedDate: _date,
+                        ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          theme: AppTheme.light,
+          locale: const Locale('es'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: scaler,
+              disableAnimations: disableAnimations,
+            ),
+            child: child!,
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      return repository;
+    }
+
+    final draggable = find.byType(DraggableScrollableSheet);
+    // Only the loaded sheet has the keyed foot; the skeleton's is a mask.
+    final loadedFoot = find.byKey(const Key('meal-detail-foot'));
+
+    /// Sheet height of every frame in which the sheet is on screen.
+    Future<List<double>> record(WidgetTester tester, int frames) async {
+      final heights = <double>[];
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (draggable.evaluate().isEmpty) continue;
+        if (tester.getTopLeft(draggable).dy >= height - 0.5) continue;
+        heights.add(tester.getSize(draggable).height);
+      }
+      return heights;
+    }
+
+    /// Loads after the entrance, then records until everything settles.
+    Future<(List<double>, List<double>, double)> openAndLoad(
+      WidgetTester tester,
+      TextScaler scaler, {
+      required MealEntity meal,
+      bool disableAnimations = false,
+      Future<void> Function(BuildContext context)? show,
+    }) async {
+      final repository = await open(
+        tester,
+        scaler,
+        meal: meal,
+        disableAnimations: disableAnimations,
+        show: show,
+      );
+      final loading = await record(tester, 40);
+      expect(loadedFoot, findsNothing, reason: 'still loading');
+      repository.gate.complete();
+      final loaded = await record(tester, 40);
+      await tester.pumpAndSettle();
+      expect(loadedFoot, findsOneWidget);
+      return (loading, loaded, tester.getSize(draggable).height);
+    }
+
+    /// Never shrinks, and grows over several frames (animated), not at once.
+    void expectNoJump(List<double> heights, double end) {
+      expect(heights, isNotEmpty);
+      for (var i = 1; i < heights.length; i++) {
+        expect(
+          heights[i],
+          greaterThanOrEqualTo(heights[i - 1] - 0.01),
+          reason: 'frame $i shrinks: $heights',
+        );
+      }
+      final total = end - heights.first;
+      if (total <= 1) return;
+      final steps = <double>[
+        for (var i = 1; i < heights.length; i++) heights[i] - heights[i - 1],
+      ].where((d) => d > 0.01).toList();
+      expect(
+        steps.length,
+        greaterThanOrEqualTo(3),
+        reason:
+            'a ${total.toStringAsFixed(1)} px change in '
+            '${steps.length} frame(s) is a jump: $heights',
+      );
+    }
+
+    testWidgets('1.6: on screen the sheet never jumps when the meal loads', (
+      tester,
+    ) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _withOptions,
+      );
+      expectNoJump([...loading, ...loaded], end);
+      // A known one-line name: the skeleton already had the final size.
+      expect(loading.first, moreOrLessEquals(end, epsilon: 1));
+      // The header ends above the pinned foot, or the sheet is at its max.
+      final macros = find.byType(ExomFigureColumns);
+      final foot = find.byKey(const Key('meal-detail-foot'));
+      expect(
+        tester.getBottomLeft(macros).dy <= tester.getTopLeft(foot).dy + 0.5 ||
+            (end - height * 0.95).abs() < 1,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('1.6 with the meal from the caller: the skeleton already has '
+        'the final size', (tester) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _withOptions,
+        show: (context) => showMealDetailSheet(
+          context,
+          mealId: _withOptions.id,
+          selectedDate: _date,
+          preview: _withOptions,
+        ),
+      );
+      expect(loading, isNotEmpty);
+      for (final h in [...loading, ...loaded]) {
+        expect(h, moreOrLessEquals(end, epsilon: 1));
+      }
+      expect(end, greaterThan(height * 0.7));
+    });
+
+    testWidgets('1.6 with only the name from the caller: final size at once', (
+      tester,
+    ) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _meal,
+        show: (context) => showMealDetailSheet(
+          context,
+          mealId: _meal.id,
+          selectedDate: _date,
+          previewName: _meal.name,
+        ),
+      );
+      for (final h in [...loading, ...loaded]) {
+        expect(h, moreOrLessEquals(end, epsilon: 1));
+      }
+    });
+
+    testWidgets('1.6, a longer name than foreseen: grows animated, no jump', (
+      tester,
+    ) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _longNamed,
+      );
+      expect(end, greaterThan(loading.last + 1), reason: 'it had to grow');
+      expectNoJump([...loading, ...loaded], end);
+      final macros = find.byType(ExomFigureColumns);
+      final foot = find.byKey(const Key('meal-detail-foot'));
+      expect(
+        tester.getBottomLeft(macros).dy <= tester.getTopLeft(foot).dy + 0.5 ||
+            (end - height * 0.95).abs() < 1,
+        isTrue,
+      );
+    });
+
+    testWidgets('1.6 with reduced motion: any growth is a single step', (
+      tester,
+    ) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _longNamed,
+        disableAnimations: true,
+      );
+      final all = [...loading, ...loaded];
+      expect(end, greaterThan(loading.last + 1), reason: 'it had to grow');
+      final grew = [
+        for (var i = 1; i < all.length; i++) all[i] - all[i - 1],
+      ].where((d) => d > 0.01);
+      expect(grew, hasLength(1), reason: 'instant, in one frame: $all');
+      for (var i = 1; i < all.length; i++) {
+        expect(all[i], greaterThanOrEqualTo(all[i - 1] - 0.01));
+      }
+      expect(all.last, moreOrLessEquals(end, epsilon: 0.01));
+    });
+
+    testWidgets('1.6: picking an option does not resize the sheet', (
+      tester,
+    ) async {
+      final (_, _, end) = await openAndLoad(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _withLongOption,
+      );
+      tester
+          .widget<ExomChoiceChips<String>>(
+            find.byType(ExomChoiceChips<String>, skipOffstage: false),
+          )
+          .onSelected!('m-1b');
+      final after = await record(tester, 30);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value, '640');
+      for (final h in [...after, tester.getSize(draggable).height]) {
+        expect(h, moreOrLessEquals(end, epsilon: 0.01));
+      }
+    });
+
+    testWidgets('1.6: a user drag wins over the late growth', (tester) async {
+      final repository = await open(
+        tester,
+        const AndroidNonlinearTextScaler(1.6),
+        meal: _longNamed,
+      );
+      await record(tester, 40);
+      await tester.drag(
+        find.descendant(of: draggable, matching: find.byType(Scrollable)).first,
+        const Offset(0, 120),
+      );
+      // The skeleton shimmers forever: pump frames instead of settling.
+      await record(tester, 20);
+      final dragged = tester.getSize(draggable).height;
+      expect(loadedFoot, findsNothing, reason: 'still loading');
+      repository.gate.complete();
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(dragged, epsilon: 0.01),
+      );
+    });
+
+    testWidgets('1.0: opens at 70 % and stays there through load and pick', (
+      tester,
+    ) async {
+      final (loading, loaded, end) = await openAndLoad(
+        tester,
+        TextScaler.noScaling,
+        meal: _withOptions,
+      );
+      for (final h in [...loading, ...loaded]) {
+        expect(h, moreOrLessEquals(height * 0.7, epsilon: 0.01));
+      }
+      expect(end, moreOrLessEquals(height * 0.7, epsilon: 0.01));
+      tester
+          .widget<ExomChoiceChips<String>>(
+            find.byType(ExomChoiceChips<String>, skipOffstage: false),
+          )
+          .onSelected!('m-1b');
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(draggable).height,
+        moreOrLessEquals(height * 0.7, epsilon: 0.01),
+      );
     });
   });
 }

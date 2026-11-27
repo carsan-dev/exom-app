@@ -60,7 +60,8 @@ class ExomPrimaryButton extends StatelessWidget {
   /// indicator instead.
   final Widget? trailing;
 
-  /// Overrides the accessible label (defaults to [label]).
+  /// Overrides the accessible label (defaults to [label] in its original
+  /// case; only the painted label is uppercase).
   final String? semanticLabel;
 
   bool get _enabled => onPressed != null && !busy;
@@ -133,11 +134,13 @@ class ExomPrimaryButton extends StatelessWidget {
         container: true,
         button: true,
         enabled: _enabled,
-        label: semanticLabel,
+        // The original case: the painted label is uppercase only for looks,
+        // and some screen readers spell short uppercase words as acronyms.
+        label: semanticLabel ?? label,
         // While busy, screen readers hear "in progress" and not only
         // "disabled".
         value: busy ? AppLocalizations.of(context).buttonBusyA11y : null,
-        excludeSemantics: semanticLabel != null,
+        excludeSemantics: true,
         child: TappableScale.light(
           enabled: _enabled,
           onTap: _enabled ? onPressed : null,

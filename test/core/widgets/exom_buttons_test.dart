@@ -89,11 +89,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(taps, 1, reason: 'repeat taps while busy must be ignored');
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      final semantics = tester.getSemantics(find.bySemanticsLabel('REGISTRAR'));
+      final semantics = tester.getSemantics(find.bySemanticsLabel('Registrar'));
       expect(
         semantics,
         matchesSemantics(
-          label: 'REGISTRAR',
+          label: 'Registrar',
           value: 'En curso',
           isButton: true,
           hasEnabledState: true,
@@ -122,7 +122,7 @@ void main() {
             ]),
             locale: locale,
           );
-          final node = tester.getSemantics(find.bySemanticsLabel('REGISTRAR'));
+          final node = tester.getSemantics(find.bySemanticsLabel('Registrar'));
           expect(
             // Merged data: the button node merges its label and value.
             node.getSemanticsData().value,
@@ -131,6 +131,34 @@ void main() {
           );
         }
       }
+      handle.dispose();
+    });
+
+    testWidgets('screen readers hear the label in its original case', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(
+        tester,
+        _column([
+          ExomPrimaryButton(
+            key: const Key('primary'),
+            label: 'Registrar serie',
+            onPressed: () {},
+          ),
+          ExomPrimaryButton(
+            key: const Key('overridden'),
+            label: 'Guardar',
+            semanticLabel: 'Guardar la serie 2',
+            onPressed: () {},
+          ),
+        ]),
+      );
+      // The painted label stays uppercase.
+      expect(find.text('REGISTRAR SERIE'), findsOneWidget);
+      expect(find.bySemanticsLabel('Registrar serie'), findsOneWidget);
+      expect(find.bySemanticsLabel('REGISTRAR SERIE'), findsNothing);
+      expect(find.bySemanticsLabel('Guardar la serie 2'), findsOneWidget);
       handle.dispose();
     });
 

@@ -541,7 +541,9 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
         : setValueLabel(l10n, widget.today!, _weightText, withRir: true);
     final objective = widget.objective.trim();
     final summary = objective.isEmpty
-        ? (previousLabel == null ? null : l10n.setPerformancePrevious(previousLabel))
+        ? (previousLabel == null
+              ? null
+              : l10n.setPerformancePrevious(previousLabel))
         : previousLabel == null
         ? l10n.setSheetObjective(objective)
         : l10n.setSheetObjectiveWithPrevious(objective, previousLabel);
@@ -831,8 +833,9 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
 
 /// Compact footer row «label | − value +» (L6 A-O1, sketch `.t-row`): the
 /// label (and its [detail], e.g. the weight step) on the left and the
-/// stepper filling the rest; when they do not fit side by side (narrow
-/// screens, large text) the label goes above the stepper.
+/// stepper on the right, the spare width shared half and half between them
+/// (`.t-lbl` and `.t-step` both `flex-grow: 1`); when they do not fit side
+/// by side (narrow screens, large text) the label goes above the stepper.
 class _FooterRow extends StatelessWidget {
   const _FooterRow({
     required this.label,
@@ -902,11 +905,13 @@ class _FooterRow extends StatelessWidget {
             ],
           );
         }
+        final stepperWidth =
+            minStepper +
+            (constraints.maxWidth - labelWidth - _labelGap - minStepper) / 2;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: labelWidth,
+            Expanded(
               // Centred on the ± row, not on the row plus an error below.
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
@@ -919,11 +924,9 @@ class _FooterRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: _labelGap),
-            Expanded(
-              child: stepper(
-                context,
-                constraints.maxWidth - labelWidth - _labelGap,
-              ),
+            SizedBox(
+              width: stepperWidth,
+              child: stepper(context, stepperWidth),
             ),
           ],
         );

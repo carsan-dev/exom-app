@@ -601,6 +601,9 @@ class _MetricsViewState extends State<_MetricsView> {
                   ? l10n.leftSideLabel
                   : l10n.rightSideLabel,
               initial: drafts[i] ?? seed,
+              // The unmeasured side of a measured pair starts from the other
+              // side but shows «—» until the client changes it.
+              empty: drafts[i] == null && drafts.any((d) => d != null),
             ),
         ],
         zoneLabel: label,
@@ -611,6 +614,7 @@ class _MetricsViewState extends State<_MetricsView> {
         decrementLabel: l10n.metricsWeightDecrease(stepText),
         incrementLabel: l10n.metricsWeightIncrease(stepText),
         doneLabel: l10n.metricsMeasureDone,
+        noDataLabel: l10n.optionalRatingNoData,
         reviewMessage: l10n.measurementReviewTemplate(label.toLowerCase()),
       ),
     );
@@ -655,6 +659,26 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
+  /// Spoken label of a plate: «Pecho, 96,5 cm» for a single zone; a plate of
+  /// a pair names its side and reads that side only («Brazo, lado izquierdo,
+  /// 33,0 cm», «Muslo, lado derecho, —»). Plate ids carry the anatomical side
+  /// (`biceps_left`), the same one as the field keys (`arm_left_cm`).
+  String _plateLabel(AppLocalizations l10n, String plateId, String unit) {
+    final zone = _zoneForPlate(plateId)!;
+    final config = _measureZone(zone);
+    final name = _localizedZoneLabel(context, zone);
+    if (!config.isBilateral) {
+      final values = [for (final key in config.fieldKeys) _draftValue(key)];
+      return '$name, ${_measureSpoken(l10n, values, unit)}';
+    }
+    final left = plateId.contains('_left');
+    final value = _draftValue(config.fieldKeys[left ? 0 : 1]);
+    final side = left
+        ? l10n.metricsMeasureZoneLeft(name)
+        : l10n.metricsMeasureZoneRight(name);
+    return '$side, ${value == null ? '—' : '${_measureNumber(value)} $unit'}';
+  }
+
   /// Height of the C5b selector in the body view: the 48 dp view toggle, its
   /// 12 dp gap and a 450 dp figure, as in the sketch.
   static const double _bodySelectorHeight = 510;
@@ -687,15 +711,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       ? RecapZoneMark.withData
                       : RecapZoneMark.withoutData,
             },
-            zoneLabelOf: (plateId) {
-              final zone = _zoneForPlate(plateId)!;
-              final values = [
-                for (final key in _measureZone(zone).fieldKeys)
-                  _draftValue(key),
-              ];
-              return '${_localizedZoneLabel(context, zone)}, '
-                  '${_measureSpoken(l10n, values, unit)}';
-            },
+            zoneLabelOf: (plateId) => _plateLabel(l10n, plateId, unit),
           ),
           const SizedBox(height: ExomSpacing.lg),
           Text(
@@ -1827,17 +1843,20 @@ class _MeasureRow extends StatelessWidget {
 
 /// One stepper of the measure sheet: [fieldKey] of the draft, its side
 /// label (null for a single zone) and the value it starts from, in the
-/// display unit.
+/// display unit. An [empty] side shows «—» until it is changed; [initial] is
+/// then only the base of its ±.
 class _MeasureSide {
   const _MeasureSide({
     required this.fieldKey,
     required this.label,
     required this.initial,
+    this.empty = false,
   });
 
   final String fieldKey;
   final String? label;
   final double initial;
+  final bool empty;
 }
 
 /// Sheet of a measure (sketch «Hoja»): kicker «06 · Medidas», the zone name,
@@ -1863,6 +1882,7 @@ class _MeasureSheet extends StatefulWidget {
     required this.decrementLabel,
     required this.incrementLabel,
     required this.doneLabel,
+    required this.noDataLabel,
     required this.reviewMessage,
   });
 
@@ -1878,6 +1898,7 @@ class _MeasureSheet extends StatefulWidget {
   final String decrementLabel;
   final String incrementLabel;
   final String doneLabel;
+  final String noDataLabel;
   final String reviewMessage;
 
   @override
@@ -1885,6 +1906,11 @@ class _MeasureSheet extends StatefulWidget {
 }
 
 class _MeasureSheetState extends State<_MeasureSheet> {
+  /// A value as the sheet shows it: at most two decimals («33,256» becomes
+  /// 33.26), so the draft and the save carry exactly the number shown.
+  static double _measurePrecision(double value) =>
+      value.isFinite ? (value * 100).round() / 100 : value;
+
   late final List<double> _values = [
     for (final side in widget.sides) side.initial,
   ];
@@ -1977,7 +2003,9 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               min: 0,
               max: widget.max,
               step: widget.step,
-              fractionDigits: 1,
+              minFractionDigits: 1,
+              empty: widget.sides[i].empty && !_changed[i],
+              emptySemanticsValue: widget.noDataLabel,
               unit: widget.unit,
               label: widget.sides[i].label ?? widget.zoneLabel,
               decrementLabel: widget.decrementLabel,
@@ -1985,7 +2013,7 @@ class _MeasureSheetState extends State<_MeasureSheet> {
               // The old fields took any typed number.
               acceptsTypedOutOfRange: true,
               onChanged: (value) => setState(() {
-                _values[i] = value;
+                _values[i] = _measurePrecision(value);
                 _changed[i] = true;
                 _invalid[i] = false;
               }),

@@ -843,6 +843,10 @@
   "metricsMeasureDone": "Hecho",
   "metricsMeasureLeftInitial": "I",
   "metricsMeasureRightInitial": "D",
+  "metricsMeasureZoneLeft": "{zone}, lado izquierdo",
+  "@metricsMeasureZoneLeft": {"placeholders": {"zone": {"type": "String"}}},
+  "metricsMeasureZoneRight": "{zone}, lado derecho",
+  "@metricsMeasureZoneRight": {"placeholders": {"zone": {"type": "String"}}},
 
   "noTrainingsAssigned": "No tienes entrenamientos asignados",
   "noTrainingsAssignedSubtitle": "Tu entrenador aún no te ha asignado un plan",

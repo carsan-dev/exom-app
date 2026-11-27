@@ -813,4 +813,189 @@ void main() {
       expect(measureValueText(tester, BodyZone.upperArm), 'I 34,0 · D 33,5 cm');
     });
   });
+
+  group('L6 medidas menores', () {
+    String numeral(WidgetTester tester, String key) => tester
+        .widget<ExomNumeral>(
+          find.descendant(
+            of: measureStepper(key),
+            matching: find.byType(ExomNumeral),
+          ),
+        )
+        .value;
+
+    // Issue 1: POST /metrics stores the measures as Float, so «33,25» is
+    // saved as 33.25; the numeral must show that, not «33,3».
+    for (final (locale, typed, shown, row, sent) in const [
+      ('es', '33,25', '33,25', 'I 33,25 · D 33,5 cm', 33.25),
+      ('en', '33.25', '33.25', 'L 33.25 · R 33.5 cm', 33.25),
+      // A third decimal is rounded on input to the two the app shows.
+      ('es', '33,256', '33,26', 'I 33,26 · D 33,5 cm', 33.26),
+    ]) {
+      testWidgets('$locale typed «$typed» shows «$shown» and sends $sent', (
+        tester,
+      ) async {
+        final repository = await _mount(
+          tester,
+          latest: _metric,
+          locale: Locale(locale),
+        );
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        await typeMeasure(tester, 'arm_left_cm', typed);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump();
+        expect(numeral(tester, 'arm_left_cm'), shown);
+        await tapMeasureDone(tester);
+        expect(measureValueText(tester, BodyZone.upperArm), row);
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        expect(numeral(tester, 'arm_left_cm'), shown, reason: 'reopened');
+        Navigator.of(tester.element(measureSheet())).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await _save(tester);
+        expect(repository.saved.single['arm_left_cm'], sent);
+      });
+    }
+
+    // Issue 2 (and the missing test of issue 4): a pair with only one side
+    // measured. The empty side shows «—», never the other side's value, and
+    // nothing is saved for it.
+    testWidgets('a pair with one side: the empty side shows «—»', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.thigh);
+      expect(numeral(tester, 'thigh_left_cm'), '55,0');
+      expect(numeral(tester, 'thigh_right_cm'), '—');
+      expect(
+        find.descendant(
+          of: measureStepper('thigh_right_cm'),
+          matching: find.textContaining('55', findRichText: true),
+        ),
+        findsNothing,
+      );
+      // Changing the measured side leaves the other one empty.
+      await stepMeasure(tester, 'thigh_left_cm');
+      expect(numeral(tester, 'thigh_right_cm'), '—');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.thigh), 'I 55,5 · D —');
+      await _save(tester);
+      expect(repository.saved.single, {
+        ..._untouchedPayload(),
+        'thigh_left_cm': 55.5,
+      });
+      expect(repository.saved.single.containsKey('thigh_right_cm'), isFalse);
+    });
+
+    testWidgets('a pair with one side drafted: the other side stays «—»', (
+      tester,
+    ) async {
+      final repository = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.forearm);
+      await typeMeasure(tester, 'forearm_right_cm', '27,5');
+      await tapMeasureDone(tester);
+      await openMeasureSheet(tester, BodyZone.forearm);
+      expect(numeral(tester, 'forearm_right_cm'), '27,5');
+      expect(numeral(tester, 'forearm_left_cm'), '—');
+      await tapMeasureDone(tester);
+      expect(measureValueText(tester, BodyZone.forearm), 'I — · D 27,5 cm');
+      await _save(tester);
+      expect(repository.saved.single['forearm_right_cm'], 27.5);
+      expect(repository.saved.single.containsKey('forearm_left_cm'), isFalse);
+    });
+
+    // Issue 3: the plates of a pair name their side.
+    for (final (locale, left, right) in const [
+      ('es', 'Brazo, lado izquierdo, 33,0 cm', 'Brazo, lado derecho, 33,5 cm'),
+      ('en', 'Arm, left side, 33.0 cm', 'Arm, right side, 33.5 cm'),
+    ]) {
+      testWidgets('$locale plates of a pair name their side', (tester) async {
+        await _mount(tester, latest: _metric, locale: Locale(locale));
+        await _openBody(tester);
+        final handle = tester.ensureSemantics();
+        expect(find.bySemanticsLabel(left), findsOneWidget);
+        expect(find.bySemanticsLabel(right), findsOneWidget);
+        handle.dispose();
+        final labelOf = tester
+            .widget<RecapAnatomySelector>(find.byType(RecapAnatomySelector))
+            .zoneLabelOf!;
+        expect(labelOf('triceps_left'), left);
+        expect(labelOf('triceps_right'), right);
+      });
+    }
+
+    testWidgets('plates of a pair with one side: the empty one says so', (
+      tester,
+    ) async {
+      await _mount(tester, latest: _metric);
+      await _openBody(tester);
+      final labelOf = tester
+          .widget<RecapAnatomySelector>(find.byType(RecapAnatomySelector))
+          .zoneLabelOf!;
+      expect(labelOf('quadriceps_left'), 'Muslo, lado izquierdo, 55,0 cm');
+      expect(labelOf('quadriceps_right'), 'Muslo, lado derecho, —');
+      // Single zones keep their name and value.
+      expect(labelOf('chest_left'), 'Pecho, 96,5 cm');
+      expect(labelOf('chest_right'), 'Pecho, 96,5 cm');
+    });
+
+    // Issue 4: closing the sheet gives the focus back to its trigger.
+    Future<FocusNode> focusRow(WidgetTester tester, BodyZone zone) async {
+      await tester.scrollUntilVisible(
+        measureRow(zone),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pump();
+      final focus = Focus.of(
+        tester.element(
+          find
+              .descendant(
+                of: find.descendant(
+                  of: measureRow(zone),
+                  matching: find.byType(InkWell),
+                ),
+                matching: find.byType(Text),
+              )
+              .first,
+        ),
+      );
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasPrimaryFocus, isTrue);
+      return focus;
+    }
+
+    Future<void> activate(WidgetTester tester) async {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(measureSheet(), findsOneWidget);
+    }
+
+    testWidgets('focus returns to the row after «Hecho»', (tester) async {
+      await _mount(tester, latest: _metric);
+      final rowFocus = await focusRow(tester, BodyZone.upperArm);
+      await activate(tester);
+      expect(rowFocus.hasPrimaryFocus, isFalse, reason: 'focus in the sheet');
+      await tapMeasureDone(tester);
+      expect(measureSheet(), findsNothing);
+      expect(rowFocus.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('focus returns to the row after dismissing the sheet', (
+      tester,
+    ) async {
+      await _mount(tester, latest: _metric);
+      final rowFocus = await focusRow(tester, BodyZone.thigh);
+      await activate(tester);
+      Navigator.of(tester.element(measureSheet())).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(measureSheet(), findsNothing);
+      expect(rowFocus.hasPrimaryFocus, isTrue);
+    });
+  });
 }

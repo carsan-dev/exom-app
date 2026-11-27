@@ -4064,6 +4064,18 @@ abstract class AppLocalizations {
   /// **'D'**
   String get metricsMeasureRightInitial;
 
+  /// No description provided for @metricsMeasureZoneLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'{zone}, lado izquierdo'**
+  String metricsMeasureZoneLeft(String zone);
+
+  /// No description provided for @metricsMeasureZoneRight.
+  ///
+  /// In es, this message translates to:
+  /// **'{zone}, lado derecho'**
+  String metricsMeasureZoneRight(String zone);
+
   /// No description provided for @noTrainingsAssigned.
   ///
   /// In es, this message translates to:

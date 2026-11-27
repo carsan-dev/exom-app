@@ -146,7 +146,7 @@ void main() {
     expect(tester.widget<ExomNumeral>(find.byType(ExomNumeral)).value, '68.4');
   });
 
-  group('fractionDigits', () {
+  group('minFractionDigits', () {
     Widget fixed(double value, {int? digits, _Probe? probe}) =>
         ExomNumeralStepper(
           value: value,
@@ -158,7 +158,7 @@ void main() {
           decrementLabel: 'Restar',
           incrementLabel: 'Sumar',
           acceptsTypedOutOfRange: true,
-          fractionDigits: digits,
+          minFractionDigits: digits,
           onChanged: (v) => probe?.values.add(v),
         );
 
@@ -190,6 +190,18 @@ void main() {
       expect(shown(tester), '33.0');
     });
 
+    // L6 medidas: «33,25» typed was shown «33,3» while 33.25 was saved.
+    testWidgets('1 keeps a second decimal the value has', (tester) async {
+      await pumpComponent(tester, fixed(33.25, digits: 1));
+      expect(shown(tester), '33,25');
+      await pumpComponent(
+        tester,
+        fixed(33.25, digits: 1),
+        locale: const Locale('en'),
+      );
+      expect(shown(tester), '33.25');
+    });
+
     testWidgets('typing and emitted values are unchanged', (tester) async {
       final probe = _Probe();
       await pumpComponent(tester, fixed(33, digits: 1, probe: probe));
@@ -197,6 +209,65 @@ void main() {
       await tester.enterText(find.byKey(ExomNumeralStepper.fieldKey), '34,25');
       await tester.pump();
       expect(probe.values, [34.25]);
+    });
+  });
+
+  group('empty', () {
+    Widget empty({_Probe? probe}) => ExomNumeralStepper(
+      value: 55,
+      min: 0,
+      max: 300,
+      step: 0.5,
+      unit: 'cm',
+      label: 'Derecha',
+      decrementLabel: 'Restar',
+      incrementLabel: 'Sumar',
+      acceptsTypedOutOfRange: true,
+      minFractionDigits: 1,
+      empty: true,
+      emptySemanticsValue: 'Sin dato',
+      onChanged: (v) => probe?.values.add(v),
+    );
+
+    testWidgets('shows «—», not the value it steps from', (tester) async {
+      await pumpComponent(tester, empty());
+      final numeral = tester.widget<ExomNumeral>(find.byType(ExomNumeral));
+      expect(numeral.value, '—');
+      expect(numeral.unit, isNull);
+      expect(find.textContaining('55', findRichText: true), findsNothing);
+    });
+
+    testWidgets('announces the empty value; ± announce real values', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpComponent(tester, empty());
+      final data = tester
+          .getSemantics(
+            find
+                .descendant(
+                  of: find.byType(ExomNumeralStepper),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          )
+          .getSemanticsData();
+      expect(data.value, 'Sin dato');
+      expect(data.increasedValue, '55,5 cm');
+      expect(data.decreasedValue, '54,5 cm');
+      handle.dispose();
+    });
+
+    testWidgets('typing starts from an empty field', (tester) async {
+      await pumpComponent(tester, empty());
+      await _startEditing(tester);
+      final field = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(ExomNumeralStepper.fieldKey),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(field.controller.text, isEmpty);
     });
   });
 

@@ -3973,18 +3973,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get chooseAnOption => 'Elige una opción';
 
   @override
-  String streakDaysLabel(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'días de racha',
-      one: 'día de racha',
-      zero: 'días de racha',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get recapDetailTitle => 'Detalle del recap';
 
   @override
@@ -4096,28 +4084,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get timerReset => 'Reiniciar tiempo';
-
-  @override
-  String get streakMsgStart => '¡Empieza tu racha hoy!';
-
-  @override
-  String get streakMsgFirstDay => '¡Primer día completado! Sigue así';
-
-  @override
-  String get streakMsgGoingWell => '¡Vas muy bien! No lo detengas';
-
-  @override
-  String get streakMsgWeek => '¡Una semana seguida! Increíble';
-
-  @override
-  String streakMsgMachine(int days) {
-    return '¡Eres una máquina! Más de $days días';
-  }
-
-  @override
-  String streakMsgLegend(int days) {
-    return '¡Leyenda viva! $days días de racha';
-  }
 
   @override
   String get recapSignInRequired => 'Inicia sesión para ver el recap.';

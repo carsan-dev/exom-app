@@ -3930,18 +3930,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseAnOption => 'Choose an option';
 
   @override
-  String streakDaysLabel(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'day streak',
-      one: 'day streak',
-      zero: 'day streak',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get recapDetailTitle => 'Recap details';
 
   @override
@@ -4053,28 +4041,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerReset => 'Reset timer';
-
-  @override
-  String get streakMsgStart => 'Start your streak today!';
-
-  @override
-  String get streakMsgFirstDay => 'First day done! Keep it up';
-
-  @override
-  String get streakMsgGoingWell => 'You are doing great! Do not stop';
-
-  @override
-  String get streakMsgWeek => 'A full week in a row! Incredible';
-
-  @override
-  String streakMsgMachine(int days) {
-    return 'You are a machine! Over $days days';
-  }
-
-  @override
-  String streakMsgLegend(int days) {
-    return 'Living legend! $days-day streak';
-  }
 
   @override
   String get recapSignInRequired => 'Sign in to view the recap.';

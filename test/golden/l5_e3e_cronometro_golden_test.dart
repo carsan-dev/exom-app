@@ -7,6 +7,9 @@
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_e3e_cronometro_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -8,6 +8,9 @@
 // Generated on Windows with the bundled fonts (loadRedesignFonts); regenerate
 // on the same OS with:
 //   flutter test --update-goldens test/golden/l5_f3_tutorial_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/tutorial_overlay.dart';

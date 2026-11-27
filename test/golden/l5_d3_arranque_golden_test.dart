@@ -8,6 +8,9 @@
 // Same platform rules as components_golden_test.dart: generated on Windows with
 // the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_d3_arranque_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'dart:ui' as ui;
 
 import 'package:exom_app/core/auth/auth_token_provider.dart';

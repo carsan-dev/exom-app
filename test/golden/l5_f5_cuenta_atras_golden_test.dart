@@ -11,6 +11,9 @@
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_f5_cuenta_atras_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

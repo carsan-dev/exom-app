@@ -6,6 +6,9 @@
 // Same platform rules as components_golden_test.dart: generated on Windows with
 // the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_d2_onboarding_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:flutter/material.dart';

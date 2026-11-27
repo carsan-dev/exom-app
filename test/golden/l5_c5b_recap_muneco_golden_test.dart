@@ -6,6 +6,9 @@
 // Same platform rules as components_golden_test.dart: generated on Windows with
 // the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_c5b_recap_muneco_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

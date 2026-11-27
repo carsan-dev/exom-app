@@ -20,6 +20,9 @@
 // Inicio was skipped in L0 because HomePage read DateTime.now() directly. L3
 // (decision D10) added an injectable clock to HomePage; the Inicio scenes fix
 // it to Wednesday 18 Nov 2026 (see redesign_scenes.dart).
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -8,6 +8,9 @@
 // Same platform rules as redesign_baseline_golden_test.dart: generated on
 // Windows with the bundled fonts, so regenerate on the same OS with:
 //   flutter test --update-goldens test/golden/l5_e9b_metricas_formulario_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/features/metrics/presentation/pages/metrics_page.dart';

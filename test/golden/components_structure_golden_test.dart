@@ -18,6 +18,9 @@
 //    closed) and ExomNoticeRow (unread and read).
 //  * componentes_estructura_hoja: the confirmation variant of showExomSheet
 //    (title, body and pinned actions) open over a plain page.
+@Tags(['golden'])
+library;
+
 import 'dart:typed_data';
 
 import 'package:exom_app/core/theme/exom_icons.dart';

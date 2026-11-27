@@ -8,6 +8,9 @@
 // Windows with the bundled fonts (loadRedesignFonts), so regenerate on the same
 // OS with:
 //   flutter test --update-goldens test/golden/l5_a3_entrenar_golden_test.dart
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

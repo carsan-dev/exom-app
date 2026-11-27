@@ -11,6 +11,9 @@
 // Scene componentes_mensajes: ExomCoachBlock, ExomReplyBlock,
 // ExomInlineMessage (the four kinds), ExomTextLink (normal and danger),
 // ExomEmptyState and ExomSkeleton (numeral, headline, rule, row).
+@Tags(['golden'])
+library;
+
 import 'package:exom_app/core/widgets/exom_coach_block.dart';
 import 'package:exom_app/core/widgets/exom_empty_state.dart';
 import 'package:exom_app/core/widgets/exom_inline_message.dart';

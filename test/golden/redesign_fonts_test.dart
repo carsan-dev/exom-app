@@ -1,5 +1,8 @@
 // The golden helper must load the Lucide font; if it cannot find it, it throws
 // instead of leaving every icon as an Ahem box.
+@Tags(['golden'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'redesign_scenes.dart';

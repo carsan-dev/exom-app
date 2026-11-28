@@ -935,7 +935,10 @@ void main() {
   }
 
   for (final legacy in [false, true]) {
-    testWidgets('another execution conflict does not block selected pending execution (legacy: $legacy)', (tester) async {
+    // Storage-only contract: without the queue service registered, the detail
+    // reads just the stored actions and executions. With it, a conflict
+    // without session does lead to «Subidas pendientes» (see the scenarios).
+    testWidgets('another execution conflict does not block selected pending execution (legacy: $legacy, no queue service)', (tester) async {
       await sl.reset();
       final storage = _Storage()
         ..actionStatus = null
@@ -984,6 +987,111 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await sl.reset();
     });
+  }
+  // L6-UX1: a day blocked by a progress conflict (409 PROGRESS_VERSION_CONFLICT)
+  // is recovered from «Subidas pendientes»; the detail leads there, as for a
+  // failed video. Each scenario: (queue, fake blocker, real queue service, leads).
+  const conflict = 'progress_conflict_review_required';
+  Map<String, dynamic> action(String id, String type, {String? training,
+      String date = _date, String? session = _session, String? exercise,
+      String? error, String? code, String status = 'queued'}) => {
+    'id': id, 'type': type, 'date': date, 'format_version': 2,
+    'training_id': ?training, 'training_session_id': ?session,
+    'training_exercise_id': ?exercise, 'status': status,
+    'last_error': ?error, 'failure_code': ?code,
+  };
+  final scenarios = <String, (List<Map<String, dynamic>>, CompletionSyncBlockerKind?, bool, bool)>{
+    'completion conflict': ([action('a', 'complete_training', training: 'training-1',
+        error: conflict, status: 'failed')], null, false, true),
+    'exercise mark conflict': ([action('a', 'mark_exercise_completed',
+        training: 'training-1', exercise: 'te-1', error: conflict, status: 'failed')],
+        null, false, true),
+    'unmark conflict without training_id': ([action('a', 'unmark_exercise_completed',
+        exercise: 'te-1', error: conflict, status: 'failed')], null, false, true),
+    'blocker only': (<Map<String, dynamic>>[], CompletionSyncBlockerKind.conflict,
+        false, true),
+    'held behind another training conflict': ([
+        action('a', 'mark_exercise_completed', training: 'training-2',
+          session: 'other', exercise: 'te-9', error: conflict, status: 'failed'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, true),
+    'another training conflict, none of this training': ([
+        action('a', 'mark_exercise_completed', training: 'training-2',
+          session: 'other', exercise: 'te-9', error: conflict, status: 'failed'),
+      ], null, true, false),
+    'conflict of another date': ([
+        action('a', 'mark_exercise_completed', training: 'training-1',
+          date: '2026-09-06', exercise: 'te-1', error: conflict, status: 'failed'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, false),
+    // The replay does not hold another session's rejected history
+    // (_isIndependentOfRejectedHistory), so neither does the detail.
+    'ambiguous history of another session': ([
+        action('a', 'mark_exercise_completed', training: 'training-1',
+          session: 'other', exercise: 'te-1', error: conflict, status: 'failed',
+          code: 'PROGRESS_HISTORY_AMBIGUOUS'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, false),
+    'conflict without session': ([action('a', 'mark_exercise_completed',
+        training: 'training-1', session: null, exercise: 'te-1', error: conflict,
+        status: 'failed')], null, true, true),
+    'no conflict': ([action('a', 'mark_exercise_completed', training: 'training-1',
+        exercise: 'te-1')], null, true, false),
+  };
+  for (final entry in scenarios.entries) {
+    for (final locale in ['es', 'en']) {
+      testWidgets('progress conflict: ${entry.key} (leads: ${entry.value.$4}, $locale)', (tester) async {
+        final (queue, blocker, realService, leads) = entry.value;
+        await sl.reset();
+        final storage = _Storage()
+          ..actionStatus = null
+          ..status = 'pending'
+          ..conflictActions = queue;
+        final sync = realService ? _Sync(storage) : (_FeedbackSync(storage)..kind = blocker);
+        final repository = _Repository()..requireSets = true;
+        sl.registerSingleton<LocalStorage>(storage);
+        sl.registerSingleton<OfflineSyncService>(sync);
+        sl.registerSingleton<FeedbackUploadQueueService>(_FeedbackQueue());
+        sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+          getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+          getTrainingsUseCase: GetTrainingsUseCase(repository),
+          getTrainingUseCase: GetTrainingUseCase(repository),
+          markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+          unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+          completeTrainingUseCase: CompleteTrainingUseCase(repository),
+          getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+          getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+        ));
+        await tester.pumpWidget(MaterialApp(
+          locale: Locale(locale),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date,
+            selectedExecutionId: _session),
+        ));
+        await tester.pumpAndSettle();
+        final button = find.byKey(const Key('complete-training-button'));
+        final footerStatus = find.descendant(
+          of: find.ancestor(of: button, matching: find.byType(Column)).first,
+          matching: find.byWidgetPredicate((widget) => widget is ExomSyncStatus &&
+            widget.state == ExomSyncState.fallida && widget.label == null));
+        expect(footerStatus, leads ? findsOneWidget : findsNothing);
+        expect(tester.widget<ElevatedButton>(button).onPressed, isNotNull);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.byType(PendingUploadsPage), leads ? findsOneWidget : findsNothing);
+        expect(repository.completions, 0);
+        if (leads) {
+          Navigator.of(tester.element(find.byType(PendingUploadsPage))).pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(PendingUploadsPage), findsNothing);
+          expect(find.byType(TrainingDetailPage), findsOneWidget);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await sync.closeEvents();
+        await sl.reset();
+      });
+    }
   }
   testWidgets('mounted detail retains completed exercise checks through pending sync and ACK', (tester) async {
     await sl.reset();

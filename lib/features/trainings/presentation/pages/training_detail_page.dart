@@ -1534,10 +1534,21 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       action['training_session_id'] == selectedCompletionId);
     final executions = storage.getTrainingExecutions(
       training.id, widget.state.selectedDate);
-    final needsConflictReview = completionActions.any((action) =>
+    // L6-UX1: queued progress of this training and day in conflict, or held
+    // behind a conflict of the day chain, is recovered from «Subidas
+    // pendientes». A mark without training_id belongs to the training by its
+    // exercise, as the exercise rows associate it.
+    final exerciseIds = {for (final e in training.exercises) e.id};
+    final needsConflictReview = pendingActions.any((action) =>
+      (action['training_id'] == training.id ||
+        action['training_id'] == null &&
+          exerciseIds.contains(action['training_exercise_id'])) &&
+      action['date'] == widget.state.selectedDate &&
       action['last_error'] == 'progress_conflict_review_required' &&
       (selectedCompletionId == null ||
         action['training_session_id'] == selectedCompletionId)) ||
+        (sync?.progressHeldByConflict(training.id, widget.state.selectedDate,
+            selectedCompletionId, exerciseIds) ?? false) ||
         executions.any((entry) => entry['status'] == 'conflict' &&
           (selectedCompletionId == null || entry['id'] == selectedCompletionId));
     final hasFailedExecution = executions.any((entry) =>
@@ -1561,8 +1572,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final next = _firstUnfinished(groups);
 
     // Status of the session completion next to its button (plan §6: pending
-    // is amber + clock, failure is error colour + icon). A conflict keeps
-    // today's treatment: only the button label.
+    // is amber + clock, failure is error colour + icon).
+    // L6-UX1: a conflict is painted failed and leads to «Subidas pendientes».
     // FB1: a completion waiting on videos names their exercises.
     String? videoNames(Set<LastSetVideoState> states) {
       final names = [
@@ -1576,7 +1587,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final ExomSyncStatus? completionStatus;
     if (needsConflictReview ||
         blocker?.kind == CompletionSyncBlockerKind.conflict) {
-      completionStatus = null;
+      completionStatus = const ExomSyncStatus(state: ExomSyncState.fallida);
     } else if (blocker?.kind == CompletionSyncBlockerKind.feedbackWaiting) {
       final waiting = videoNames(
           const {LastSetVideoState.pending, LastSetVideoState.sending});
@@ -1619,7 +1630,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
     final completeOnPressed = widget.state.isCompleting || !_sameSession
         ? null
-        : blocker?.kind == CompletionSyncBlockerKind.feedbackFailed &&
+        : (blocker?.kind == CompletionSyncBlockerKind.feedbackFailed ||
+            blocker?.kind == CompletionSyncBlockerKind.conflict ||
+            needsConflictReview) &&
             sl.isRegistered<FeedbackUploadQueueService>()
             ? () async {
                 if (!_sameSession) return;

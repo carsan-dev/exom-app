@@ -248,7 +248,7 @@ class _SetPerformanceSheetState extends State<SetPerformanceSheet> {
   double? _stepWeightValue(int direction) {
     final base = _weightBase();
     if (base == null) return null;
-    final next = ((base + direction * _step) * 100).round() / 100;
+    final next = roundToHundredths(base + direction * _step);
     return next.clamp(0, _maxWeight).toDouble();
   }
 

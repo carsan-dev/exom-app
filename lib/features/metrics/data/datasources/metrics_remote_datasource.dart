@@ -41,6 +41,13 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
 
       await _localStorage.cacheData('metrics_latest', inner);
       await _localStorage.cacheData('home_latest_metric', inner);
+      // The offline copy of the saved date, read by a later load of that
+      // date (M-6): without it the form showed the values from before the
+      // save. The key is the requested date, as `_readLatestMetric` uses it.
+      final savedDate = _dayOf(data['date']) ?? _dayOf(inner['date']);
+      if (savedDate != null) {
+        await _localStorage.cacheData('metrics_latest_$savedDate', inner);
+      }
 
       final history =
           (_localStorage.getCachedList('metrics_weight_history') ?? [])

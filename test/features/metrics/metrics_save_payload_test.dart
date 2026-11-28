@@ -12,12 +12,16 @@ import 'package:exom_app/features/metrics/data/datasources/metrics_remote_dataso
 import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Answers every POST /metrics with [saved] and records the request bodies.
+/// Answers every POST /metrics with [saved] and records the request bodies;
+/// [offline] makes every request fail as without connection.
 class _Adapter implements HttpClientAdapter {
   _Adapter(this.saved);
 
   final Map<String, Object?> saved;
   final bodies = <Object?>[];
+
+  /// When set, every request fails as without connection.
+  bool offline = false;
 
   @override
   Future<ResponseBody> fetch(
@@ -25,6 +29,12 @@ class _Adapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    if (offline) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      );
+    }
     if (requestStream != null) {
       final bytes = <int>[];
       await for (final chunk in requestStream) {
@@ -203,6 +213,63 @@ void main() {
         expect(env.storage.cache['metrics_weight_history'], [saved, ...odd]);
       },
     );
+  });
+
+  // M-6: the save did not refresh the cache of its date, so a later load of
+  // that date without connection filled the form with the values from before
+  // the save.
+  group('the cache of the saved date', () {
+    test(
+      'saving a date writes metrics_latest_<date> with the answer',
+      () async {
+        final saved = <String, Object?>{
+          'id': 'm-11',
+          'date': '2026-11-20T00:00:00.000Z',
+          'weight_kg': 80.0,
+          'waist_cm': 82.0,
+        };
+        final env = _env(saved);
+        env.storage.cache['metrics_latest_2026-11-20'] = <String, dynamic>{
+          'id': 'm-11',
+          'date': '2026-11-20T00:00:00.000Z',
+          'weight_kg': 80.0,
+          'waist_cm': 80.0,
+        };
+        await env.datasource.saveMetric({
+          'date': '2026-11-20',
+          'waist_cm': 82.0,
+        });
+        expect(env.storage.cache['metrics_latest_2026-11-20'], saved);
+      },
+    );
+
+    test('only that date key is added to the keys the save wrote', () async {
+      final env = _env({'id': 'm-12', 'date': '2026-11-20', 'weight_kg': 80.0});
+      await env.datasource.saveMetric({
+        'date': '2026-11-20',
+        'weight_kg': 80.0,
+      });
+      expect(env.storage.cache.keys.toSet(), {
+        'metrics_latest',
+        'home_latest_metric',
+        'metrics_weight_history',
+        'metrics_latest_2026-11-20',
+      });
+    });
+
+    test('a later load of that date without connection reads the saved '
+        'values', () async {
+      final saved = <String, Object?>{
+        'id': 'm-13',
+        'date': '2026-11-20T00:00:00.000Z',
+        'waist_cm': 82.0,
+      };
+      final env = _env(saved);
+      await env.datasource.saveMetric({'date': '2026-11-20', 'waist_cm': 82.0});
+      env.adapter.offline = true;
+      final model = await env.datasource.getLatestMetric(date: '2026-11-20');
+      expect(model?.waistCm, 82.0);
+    });
   });
 
   test('a saved muscle_mass_kg: null stays null in the answer and the cache, '

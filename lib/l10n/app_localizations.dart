@@ -1838,6 +1838,12 @@ abstract class AppLocalizations {
   /// **'El peso solo se guarda si lo modificas en esta actualización.'**
   String get weightUpdateNote;
 
+  /// No description provided for @weightUpdateNoteToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy se guardará el peso de tu perfil aunque no lo cambies.'**
+  String get weightUpdateNoteToday;
+
   /// No description provided for @muscleMassSectionTitle.
   ///
   /// In es, this message translates to:
@@ -2101,12 +2107,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cuéntanos más'**
   String get recapTellUsMore;
-
-  /// No description provided for @recapSentSuccessfully.
-  ///
-  /// In es, this message translates to:
-  /// **'Recap enviado correctamente'**
-  String get recapSentSuccessfully;
 
   /// No description provided for @newRecap.
   ///
@@ -4022,6 +4022,60 @@ abstract class AppLocalizations {
   /// **'Gemelo'**
   String get measureCalf;
 
+  /// No description provided for @metricsMeasureSheetKicker.
+  ///
+  /// In es, this message translates to:
+  /// **'06 · Medidas'**
+  String get metricsMeasureSheetKicker;
+
+  /// No description provided for @metricsMeasureLast.
+  ///
+  /// In es, this message translates to:
+  /// **'Última: {value} · {date}'**
+  String metricsMeasureLast(String value, String date);
+
+  /// No description provided for @metricsMeasureEdited.
+  ///
+  /// In es, this message translates to:
+  /// **'Editada'**
+  String get metricsMeasureEdited;
+
+  /// No description provided for @metricsMeasureTapZone.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca una zona para medirla'**
+  String get metricsMeasureTapZone;
+
+  /// No description provided for @metricsMeasureDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho'**
+  String get metricsMeasureDone;
+
+  /// No description provided for @metricsMeasureLeftInitial.
+  ///
+  /// In es, this message translates to:
+  /// **'I'**
+  String get metricsMeasureLeftInitial;
+
+  /// No description provided for @metricsMeasureRightInitial.
+  ///
+  /// In es, this message translates to:
+  /// **'D'**
+  String get metricsMeasureRightInitial;
+
+  /// No description provided for @metricsMeasureZoneLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'{zone}, lado izquierdo'**
+  String metricsMeasureZoneLeft(String zone);
+
+  /// No description provided for @metricsMeasureZoneRight.
+  ///
+  /// In es, this message translates to:
+  /// **'{zone}, lado derecho'**
+  String metricsMeasureZoneRight(String zone);
+
   /// No description provided for @noTrainingsAssigned.
   ///
   /// In es, this message translates to:
@@ -4669,6 +4723,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Notificaciones'**
   String get notificationsTitle;
+
+  /// No description provided for @notificationsBellLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Notificaciones} other{Notificaciones, {count} sin leer}}'**
+  String notificationsBellLabel(int count);
 
   /// No description provided for @notificationsEmpty.
   ///
@@ -5407,6 +5467,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Eliminar esta evidencia?'**
   String get pendingUploadDeleteTitle;
+
+  /// No description provided for @pendingSyncDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar este cambio sin sincronizar?'**
+  String get pendingSyncDeleteTitle;
 
   /// No description provided for @pendingUploadDeleteMessage.
   ///
@@ -6422,6 +6488,18 @@ abstract class AppLocalizations {
   /// **'No se pudo cargar el resumen. Vuelve a intentarlo.'**
   String get homeLoadError;
 
+  /// No description provided for @metricsDayLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el día…'**
+  String get metricsDayLoading;
+
+  /// No description provided for @metricsDayLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las métricas de este día'**
+  String get metricsDayLoadError;
+
   /// No description provided for @metricsSaveError.
   ///
   /// In es, this message translates to:
@@ -6614,12 +6692,6 @@ abstract class AppLocalizations {
   /// **'Elige una opción'**
   String get chooseAnOption;
 
-  /// No description provided for @streakDaysLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, =0{días de racha} =1{día de racha} other{días de racha}}'**
-  String streakDaysLabel(int count);
-
   /// No description provided for @recapDetailTitle.
   ///
   /// In es, this message translates to:
@@ -6787,42 +6859,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reiniciar tiempo'**
   String get timerReset;
-
-  /// No description provided for @streakMsgStart.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Empieza tu racha hoy!'**
-  String get streakMsgStart;
-
-  /// No description provided for @streakMsgFirstDay.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Primer día completado! Sigue así'**
-  String get streakMsgFirstDay;
-
-  /// No description provided for @streakMsgGoingWell.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Vas muy bien! No lo detengas'**
-  String get streakMsgGoingWell;
-
-  /// No description provided for @streakMsgWeek.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Una semana seguida! Increíble'**
-  String get streakMsgWeek;
-
-  /// No description provided for @streakMsgMachine.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Eres una máquina! Más de {days} días'**
-  String streakMsgMachine(int days);
-
-  /// No description provided for @streakMsgLegend.
-  ///
-  /// In es, this message translates to:
-  /// **'¡Leyenda viva! {days} días de racha'**
-  String streakMsgLegend(int days);
 
   /// No description provided for @recapSignInRequired.
   ///
@@ -7594,6 +7630,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'pasos de {step} · toca la cifra para escribir'**
   String setSheetWeightHint(String step);
+
+  /// No description provided for @setSheetWeightStep.
+  ///
+  /// In es, this message translates to:
+  /// **'± {step}'**
+  String setSheetWeightStep(String step);
 
   /// No description provided for @setSheetRirLabel.
   ///
@@ -8647,12 +8689,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mejora'**
   String get recapImprovement;
-
-  /// No description provided for @recapSentKicker.
-  ///
-  /// In es, this message translates to:
-  /// **'Cinco pasos completados'**
-  String get recapSentKicker;
 
   /// No description provided for @recapSentTitleFirst.
   ///

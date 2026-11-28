@@ -234,6 +234,23 @@ void main() {
     });
   });
 
+  group('weight step rounding (L6-RND1)', () {
+    testWidgets('the step rounds half up like the rest of the weight code', (
+      tester,
+    ) async {
+      // 1.515 kg + 2.5 = 4.015: the old `(v * 100).round() / 100` gave 4.01
+      // (4.015 * 100 = 401.49999999999994); roundToHundredths gives 4.02.
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, previousWeight: 1.515);
+      await tester.enterText(_weight, '');
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(RegExp('Sumar 2,5')));
+      await tester.pump();
+      expect(_text(tester, _weight), '4,02');
+      semantics.dispose();
+    });
+  });
+
   group('optional tracking', () {
     testWidgets('«Completar sin registrar» returns skipped', (tester) async {
       final results = await _pump(tester, repsRequired: false);

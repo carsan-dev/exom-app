@@ -4,7 +4,6 @@
 // theme, fonts, locale and text scale.
 // Not a test file: it has no `main` and is only imported.
 import 'package:exom_app/core/api/api_client.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/domain/entities/week_summary_entity.dart';
 import 'package:exom_app/features/calendar/domain/repositories/calendar_repository.dart';
@@ -163,6 +162,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
   TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
+  double devicePixelRatio = 1.0,
 }) async {
   final bloc = SeededCalendarBloc(state);
   await pumpCalendarWithBloc(
@@ -176,6 +176,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
     textScaler: textScaler,
     locale: locale,
     disableAnimations: disableAnimations,
+    devicePixelRatio: devicePixelRatio,
   );
   return bloc;
 }
@@ -193,16 +194,16 @@ Future<void> pumpCalendarWithBloc(
   TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
+  double devicePixelRatio = 1.0,
 }) async {
   await loadRedesignFonts();
   await sl.reset();
   openedRoutes.clear();
   sl.registerFactory<CalendarBloc>(() => bloc);
-  tester.view.physicalSize = Size(width, height);
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = Size(width, height) * devicePixelRatio;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   Widget stub(GoRouterState routeState) {
     openedRoutes.add(routeState.uri.toString());
     return const Scaffold(body: SizedBox.shrink());
@@ -232,7 +233,6 @@ Future<void> pumpCalendarWithBloc(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler ?? TextScaler.linear(textScale),

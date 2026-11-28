@@ -42,9 +42,9 @@ import 'package:exom_app/core/widgets/exom_scale_chips.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/injection_container.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
@@ -121,8 +121,16 @@ Future<TrainingCompletionInput?> showCompleteTrainingSheet(
   try {
     return await showExomSheet<TrainingCompletionInput>(
       context: context,
-      builder: (_) => _CompletionSheetBody(form: form,
-        trainingName: trainingName, pendingExercises: pendingExercises),
+      // While «Terminar sesión» or «Cancelar» writes the draft, back and the
+      // scrim wait for it (L6 S11-10a): closing halfway would drop the
+      // confirmation; the write itself then pops the sheet.
+      builder: (_) => ListenableBuilder(
+        listenable: form,
+        builder: (_, body) => PopScope<TrainingCompletionInput>(
+          canPop: !form.isSaving, child: body!),
+        child: _CompletionSheetBody(form: form,
+          trainingName: trainingName, pendingExercises: pendingExercises),
+      ),
       actions: [
         _CompletionConfirmAction(form: form),
         _CompletionCancelAction(form: form),
@@ -476,10 +484,14 @@ class _TrainingDetailView extends StatelessWidget {
     return BlocConsumer<TrainingBloc, TrainingState>(
       listener: (context, state) {
         if (state is TrainingDetailLoaded && state.errorMessage != null) {
+          final colors = Theme.of(context).colorScheme;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError)),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text(
+                localizedErrorTextOf(context, state.errorMessage, fallback: (l10n) => l10n.trainingProgressSaveError),
+                style: TextStyle(color: colors.onError),
+              ),
+              backgroundColor: colors.error,
             ),
           );
         }
@@ -530,7 +542,7 @@ class _TrainingDetailLoadingScaffold extends StatelessWidget {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        appBar: ExomAppBar(
           leading: _DetailBackButton(onPressed: () => context.pop()),
         ),
         body: ListView(
@@ -1522,10 +1534,21 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
       action['training_session_id'] == selectedCompletionId);
     final executions = storage.getTrainingExecutions(
       training.id, widget.state.selectedDate);
-    final needsConflictReview = completionActions.any((action) =>
+    // L6-UX1: queued progress of this training and day in conflict, or held
+    // behind a conflict of the day chain, is recovered from «Subidas
+    // pendientes». A mark without training_id belongs to the training by its
+    // exercise, as the exercise rows associate it.
+    final exerciseIds = {for (final e in training.exercises) e.id};
+    final needsConflictReview = pendingActions.any((action) =>
+      (action['training_id'] == training.id ||
+        action['training_id'] == null &&
+          exerciseIds.contains(action['training_exercise_id'])) &&
+      action['date'] == widget.state.selectedDate &&
       action['last_error'] == 'progress_conflict_review_required' &&
       (selectedCompletionId == null ||
         action['training_session_id'] == selectedCompletionId)) ||
+        (sync?.progressHeldByConflict(training.id, widget.state.selectedDate,
+            selectedCompletionId, exerciseIds) ?? false) ||
         executions.any((entry) => entry['status'] == 'conflict' &&
           (selectedCompletionId == null || entry['id'] == selectedCompletionId));
     final hasFailedExecution = executions.any((entry) =>
@@ -1549,8 +1572,8 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final next = _firstUnfinished(groups);
 
     // Status of the session completion next to its button (plan §6: pending
-    // is amber + clock, failure is error colour + icon). A conflict keeps
-    // today's treatment: only the button label.
+    // is amber + clock, failure is error colour + icon).
+    // L6-UX1: a conflict is painted failed and leads to «Subidas pendientes».
     // FB1: a completion waiting on videos names their exercises.
     String? videoNames(Set<LastSetVideoState> states) {
       final names = [
@@ -1564,7 +1587,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final ExomSyncStatus? completionStatus;
     if (needsConflictReview ||
         blocker?.kind == CompletionSyncBlockerKind.conflict) {
-      completionStatus = null;
+      completionStatus = const ExomSyncStatus(state: ExomSyncState.fallida);
     } else if (blocker?.kind == CompletionSyncBlockerKind.feedbackWaiting) {
       final waiting = videoNames(
           const {LastSetVideoState.pending, LastSetVideoState.sending});
@@ -1607,7 +1630,9 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
 
     final completeOnPressed = widget.state.isCompleting || !_sameSession
         ? null
-        : blocker?.kind == CompletionSyncBlockerKind.feedbackFailed &&
+        : (blocker?.kind == CompletionSyncBlockerKind.feedbackFailed ||
+            blocker?.kind == CompletionSyncBlockerKind.conflict ||
+            needsConflictReview) &&
             sl.isRegistered<FeedbackUploadQueueService>()
             ? () async {
                 if (!_sameSession) return;
@@ -1825,7 +1850,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
     final scaffold = Scaffold(
       backgroundColor: palette.background,
       extendBody: scrollAway,
-      appBar: GlassAppBar(
+      appBar: ExomAppBar(
         leading: _DetailBackButton(onPressed: () => context.pop()),
       ),
       // One tree for both footers: changing it would rebuild the list and
@@ -2811,25 +2836,30 @@ class _CircuitCard extends StatelessWidget {
           padding: const EdgeInsetsDirectional.fromSTEB(62, 0, 12, 8),
           child: Row(
             children: [
-              Flexible(
-                child: TextButton.icon(
-                  key: const ValueKey('circuit-feedback-button'),
-                  onPressed: onFeedback,
-                  style: TextButton.styleFrom(
-                    foregroundColor: palette.textPrimary,
-                    minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
-                    textStyle: const TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+              // The button takes the width the mark leaves (a Flexible next
+              // to a Spacer split it in halves and wrapped the label).
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('circuit-feedback-button'),
+                    onPressed: onFeedback,
+                    style: TextButton.styleFrom(
+                      foregroundColor: palette.textPrimary,
+                      minimumSize:
+                          const Size(kExomMinTapTarget, kExomMinTapTarget),
+                      textStyle: const TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                    icon: const Icon(ExomIcons.videoLibrary, size: 20),
+                    label: Text(l10n.circuitFeedbackAction),
                   ),
-                  icon: const Icon(ExomIcons.videoLibrary, size: 20),
-                  label: Text(l10n.circuitFeedbackAction),
                 ),
               ),
               if (onMarkPending != null) ...[
-                const Spacer(),
                 IconButton(
                   onPressed: onMarkPending,
                   color: palette.textPrimary,

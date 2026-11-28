@@ -7,7 +7,7 @@ import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_index_number.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
-import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -247,7 +247,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       if (bubbleLeft + bubbleWidth > screenWidth - horizontalMargin) {
         bubbleLeft = screenWidth - horizontalMargin - bubbleWidth;
       }
-      final arrowBottom = GlassBottomNav.totalHeight + bottomPadding + 4;
+      final arrowBottom = ExomBottomNav.totalHeight + bottomPadding + 4;
       final bubbleBottom = arrowBottom + _arrowHeight;
 
       children.addAll([
@@ -304,7 +304,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
             maxHeight:
                 screenHeight -
                 bubbleTop -
-                GlassBottomNav.totalHeight -
+                ExomBottomNav.totalHeight -
                 bottomPadding -
                 edgeMargin,
           ),

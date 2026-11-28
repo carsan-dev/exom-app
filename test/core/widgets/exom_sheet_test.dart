@@ -1,6 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -69,13 +70,13 @@ Future<GoRouter> _pump(
   bool tall = false,
   double extra = 0,
   int opens = 1,
+  bool? popScopeCanPop,
 }) async {
   await loadRedesignFonts();
   tester.view.physicalSize = Size(width, _screenHeight);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -91,8 +92,18 @@ Future<GoRouter> _pump(
                   showExomSheet<String>(
                     context: context,
                     isDismissible: isDismissible,
-                    builder: (_) =>
-                        _Probe(events: events, tall: tall, extra: extra),
+                    builder: (_) {
+                      final probe =
+                          _Probe(events: events, tall: tall, extra: extra);
+                      return popScopeCanPop == null
+                          ? probe
+                          : PopScope<String>(
+                              canPop: popScopeCanPop,
+                              onPopInvokedWithResult: (didPop, _) =>
+                                  events.add('popInvoked:$didPop'),
+                              child: probe,
+                            );
+                    },
                   ).then((result) {
                     events.add('returned');
                     results?.add(result);
@@ -217,26 +228,114 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('layout: top radius 20, panel colour, no shadow, handle', (
-    tester,
-  ) async {
-    final events = <String>[];
-    await _pump(tester, events: events);
-    await _open(tester);
-    await tester.pumpAndSettle();
-    expect(tester.getSize(_handle), const Size(40, 4));
-    final material = tester.widget<Material>(_panel);
-    final shape = material.shape! as RoundedRectangleBorder;
-    expect(
-      shape.borderRadius,
-      const BorderRadius.vertical(top: Radius.circular(kExomSheetRadius)),
-    );
-    expect(
-      material.color,
-      AppTheme.dark.extension<ExomThemePalette>()!.surface,
-    );
-    expect(material.elevation, 0);
-    expect(find.byType(BottomSheet), findsNothing);
+  testWidgets(
+    'layout: square top corners (kExomSheetRadius), panel colour, no shadow, handle',
+    (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(_handle), const Size(40, 4));
+      final material = tester.widget<Material>(_panel);
+      final shape = material.shape! as RoundedRectangleBorder;
+      expect(
+        shape.borderRadius,
+        const BorderRadius.vertical(top: Radius.circular(kExomSheetRadius)),
+      );
+      expect(
+        material.color,
+        AppTheme.dark.extension<ExomThemePalette>()!.surface,
+      );
+      expect(material.elevation, 0);
+      expect(find.byType(BottomSheet), findsNothing);
+    },
+  );
+
+  group('grab area and handle (B-5)', () {
+    final grab = find.byKey(const Key('exom-sheet-grab-area'));
+
+    testWidgets('the grab area is at least 48 dp tall and full width', (
+      tester,
+    ) async {
+      await _pump(tester, events: <String>[], tall: true);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(grab).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(grab).width, tester.getSize(_panel).width);
+      expect(tester.getTopLeft(grab), tester.getTopLeft(_panel));
+      // The visible handle is unchanged.
+      expect(tester.getSize(_handle), const Size(40, 4));
+    });
+
+    testWidgets('dragging from the edge of the grab area moves the sheet', (
+      tester,
+    ) async {
+      // Tall content scrolls: without the grab area a drag below the 16 dp
+      // strip would scroll it instead of moving the sheet.
+      await _pump(tester, events: <String>[], tall: true);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      final start = Offset(
+        tester.getCenter(_panel).dx,
+        top + 44, // inside 48 dp, well outside the old 16 dp strip
+      );
+      final gesture = await tester.startGesture(start);
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top + 70, 0.5));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a drag just below the grab area scrolls the content', (
+      tester,
+    ) async {
+      await _pump(tester, events: <String>[], tall: true);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      final gesture = await tester.startGesture(
+        Offset(tester.getCenter(_panel).dx, top + 60),
+      );
+      await gesture.moveBy(const Offset(0, -40));
+      await tester.pump();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('the handle contrasts >= 3:1 with the panel '
+          '(${brightness.name})', (tester) async {
+        await _pump(tester, events: <String>[], brightness: brightness);
+        await _open(tester);
+        await tester.pumpAndSettle();
+        final theme = brightness == Brightness.dark
+            ? AppTheme.dark
+            : AppTheme.light;
+        final palette = theme.extension<ExomThemePalette>()!;
+        final handle = tester.widget<Container>(_handle);
+        final color = (handle.decoration! as BoxDecoration).color!;
+        expect(color, palette.textMuted);
+        final lighter = math.max(
+          color.computeLuminance(),
+          palette.surface.computeLuminance(),
+        );
+        final darker = math.min(
+          color.computeLuminance(),
+          palette.surface.computeLuminance(),
+        );
+        final ratio = (lighter + 0.05) / (darker + 0.05);
+        // ignore: avoid_print
+        print(
+          'handle contrast ${brightness.name}: ${ratio.toStringAsFixed(2)}',
+        );
+        expect(ratio, greaterThanOrEqualTo(3));
+      });
+    }
   });
 
   testWidgets('the drag follows the finger 1:1', (tester) async {
@@ -284,6 +383,127 @@ void main() {
         await tester.pumpAndSettle();
         expect(events, isEmpty);
       }
+    });
+  }
+
+  // L6 S11-10a: a drag past the close threshold goes through the sheet's
+  // PopScope like system back does; with canPop false the sheet stays and
+  // returns to its open position.
+  for (final reduced in const [false, true]) {
+    final suffix = reduced ? ' (reduced motion)' : '';
+    testWidgets('PopScope(canPop: false): a 31 % drag springs back$suffix', (
+      tester,
+    ) async {
+      final events = <String>[];
+      await _pump(
+        tester,
+        events: events,
+        popScopeCanPop: false,
+        disableAnimations: reduced,
+      );
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final height = tester.getSize(_panel).height;
+      final top = tester.getTopLeft(_panel).dy;
+      await tester.timedDrag(
+        _handle,
+        Offset(0, height * 0.31),
+        const Duration(seconds: 2),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(_panel, findsOneWidget);
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(events, ['popInvoked:false']);
+    });
+
+    testWidgets('PopScope(canPop: false): a quick fling springs back$suffix', (
+      tester,
+    ) async {
+      final events = <String>[];
+      await _pump(
+        tester,
+        events: events,
+        popScopeCanPop: false,
+        disableAnimations: reduced,
+      );
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      await tester.fling(_handle, const Offset(0, 120), 1500);
+      await tester.pumpAndSettle();
+      expect(_panel, findsOneWidget);
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(events, ['popInvoked:false']);
+    });
+  }
+
+  testWidgets('PopScope(canPop: true): a 31 % drag closes as before', (
+    tester,
+  ) async {
+    final events = <String>[];
+    await _pump(tester, events: events, popScopeCanPop: true);
+    await _open(tester);
+    await tester.pumpAndSettle();
+    final height = tester.getSize(_panel).height;
+    await tester.timedDrag(
+      _handle,
+      Offset(0, height * 0.31),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(_panel, findsNothing);
+    expect(events, ['popInvoked:true', 'disposed', 'returned']);
+  });
+
+  testWidgets('isDismissible: false still closes with a 31 % drag', (
+    tester,
+  ) async {
+    final events = <String>[];
+    await _pump(tester, events: events, isDismissible: false);
+    await _open(tester);
+    await tester.pumpAndSettle();
+    final height = tester.getSize(_panel).height;
+    await tester.timedDrag(
+      _handle,
+      Offset(0, height * 0.31),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(_panel, findsNothing);
+    expect(events, ['disposed', 'returned']);
+  });
+
+  for (final reduced in const [false, true]) {
+    testWidgets('a dialog over the sheet mid-drag: the release springs back'
+        '${reduced ? ' (reduced motion)' : ''}', (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events, disableAnimations: reduced);
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      final gesture = await tester.startGesture(tester.getCenter(_handle));
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top + 70, 0.5));
+      // A route lands on top before the finger lifts.
+      final dialog = showDialog<void>(
+        context: tester.element(find.text('Serie 2 de 4')),
+        builder: (_) => const AlertDialog(content: Text('Encima')),
+      );
+      await tester.pumpAndSettle();
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      Navigator.of(tester.element(find.text('Encima'))).pop();
+      await dialog;
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(_sheetRoute(tester).isCurrent, isTrue);
+      expect(events, isEmpty);
     });
   }
 
@@ -368,6 +588,43 @@ void main() {
         node.owner!.performAction(node.id, SemanticsAction.dismiss);
       });
       handle.dispose();
+    });
+
+    // S11-09: a second tap of a double tap on the trigger lands on the scrim
+    // of the entering sheet; it must not close it. Once the entry has
+    // finished the scrim closes it again; back still closes it mid-entry.
+    for (final reduced in [false, true]) {
+      final suffix = reduced ? ' (reduced motion)' : '';
+      testWidgets('a scrim tap mid-entry keeps the sheet$suffix', (
+        tester,
+      ) async {
+        final events = <String>[];
+        await _pump(tester, events: events, disableAnimations: reduced);
+        await _open(tester);
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(_sheetRoute(tester).animation!.status, AnimationStatus.forward);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(_panel, findsOneWidget);
+        expect(events, isEmpty);
+
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(_panel, findsNothing);
+        expect(events, ['disposed', 'returned']);
+      });
+    }
+
+    testWidgets('system back mid-entry still closes', (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events);
+      await _open(tester);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(_sheetRoute(tester).animation!.status, AnimationStatus.forward);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(_panel, findsNothing);
+      expect(events, ['disposed', 'returned']);
     });
 
     testWidgets('isDismissible: false ignores scrim, back and Escape', (
@@ -577,35 +834,32 @@ void main() {
   });
 
   for (final (fraction, closes) in const [(0.18, false), (0.31, true)]) {
-    testWidgets(
-      'grabbing mid-enter: slow ${(fraction * 100).round()} % drag '
-      '${closes ? 'closes' : 'settles open'}',
-      (tester) async {
-        final events = <String>[];
-        await _pump(tester, events: events);
-        await _open(tester);
-        await tester.pump(const Duration(milliseconds: 60));
-        final route = _sheetRoute(tester) as ExomSheetRoute<dynamic>;
-        expect(route.shownFraction, inInclusiveRange(0.4, 0.9));
-        final height = tester.getSize(_panel).height;
-        final gesture = await tester.startGesture(tester.getCenter(_handle));
-        const steps = 20;
-        for (var i = 0; i < steps; i++) {
-          await gesture.moveBy(Offset(0, height * fraction / steps));
-          await tester.pump(const Duration(milliseconds: 50));
-        }
-        await gesture.up();
-        await tester.pumpAndSettle();
-        if (closes) {
-          expect(_panel, findsNothing);
-          expect(events, ['disposed', 'returned']);
-        } else {
-          expect(_panel, findsOneWidget);
-          expect(tester.getRect(_panel).bottom, closeTo(_screenHeight, 0.5));
-          expect(events, isEmpty);
-        }
-      },
-    );
+    testWidgets('grabbing mid-enter: slow ${(fraction * 100).round()} % drag '
+        '${closes ? 'closes' : 'settles open'}', (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events);
+      await _open(tester);
+      await tester.pump(const Duration(milliseconds: 60));
+      final route = _sheetRoute(tester) as ExomSheetRoute<dynamic>;
+      expect(route.shownFraction, inInclusiveRange(0.4, 0.9));
+      final height = tester.getSize(_panel).height;
+      final gesture = await tester.startGesture(tester.getCenter(_handle));
+      const steps = 20;
+      for (var i = 0; i < steps; i++) {
+        await gesture.moveBy(Offset(0, height * fraction / steps));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      if (closes) {
+        expect(_panel, findsNothing);
+        expect(events, ['disposed', 'returned']);
+      } else {
+        expect(_panel, findsOneWidget);
+        expect(tester.getRect(_panel).bottom, closeTo(_screenHeight, 0.5));
+        expect(events, isEmpty);
+      }
+    });
   }
 
   group('body drag (DV-L2-14)', () {
@@ -639,8 +893,9 @@ void main() {
           .descendant(of: _panel, matching: find.byType(Scrollable))
           .first;
       final before = tester.state<ScrollableState>(scrollable).position.pixels;
+      // Starts below the 48 dp grab area, which owns the top of the panel.
       await tester.timedDrag(
-        find.text('Serie 2 de 4'),
+        find.byKey(const Key('exom-sheet-panel')),
         const Offset(0, -200),
         const Duration(seconds: 1),
       );

@@ -1,7 +1,7 @@
 // Redesign L0 baseline goldens (plan: docs/plans/rediseno-exom-app.md, L0).
 //
 // IMPORTANT: goldens were generated on Windows with the flutter_test default
-// font (Ahem) replaced by the bundled CabinetGrotesk and the SDK Material Icons,
+// font (Ahem) replaced by the bundled DMSans/BarlowCondensed and the SDK Material Icons,
 // both read from disk in redesign_scenes.dart (loadRedesignFonts). If those files
 // cannot be found the fallback is Ahem boxes and the goldens will not match. They
 // are LAYOUT baselines for this Flutter version/OS (3.41.5, Windows): text

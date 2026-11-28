@@ -71,6 +71,8 @@ Future<bool> _confirmLogout(BuildContext context) async {
         builder: (sheetContext) => ExomPrimaryButton(
           key: const Key('logout-unfinished-confirm'),
           label: l10n.logoutUnfinishedWorkoutConfirm,
+          // Stacked over the centred «Cancelar»: same alignment.
+          centerLabel: true,
           onPressed: () => Navigator.of(sheetContext).pop(true),
         ),
       ),

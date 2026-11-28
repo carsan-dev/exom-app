@@ -12,6 +12,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/config/flavor_config.dart';
+import 'package:exom_app/core/licenses/font_licenses.dart';
 import 'package:exom_app/core/navigation/app_router.dart';
 import 'package:exom_app/core/navigation/notification_navigation_coordinator.dart';
 import 'package:exom_app/core/navigation/notification_route_utils.dart';
@@ -22,7 +23,6 @@ import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/services/local_notification_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/core/widgets/exom_brand_logo.dart';
 import 'package:exom_app/core/widgets/exom_launch_symbol.dart';
 import 'package:exom_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -44,6 +44,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   // P-E3b-1 r2: asked now, while the splash and the bootstrap run, so that
   // the app's restoration scope gets the data synchronously at runApp.
   final restorationData = RestorationDataPreload.start();
@@ -569,9 +570,6 @@ class _ExomAppViewState extends State<_ExomAppView> {
             supportedLocales: AppPreferencesDefaults.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             builder: (context, child) {
-              // Sync glass decoration brightness with the active theme so
-              // static GlassDecoration.* factories pick the right tokens.
-              GlassDecoration.brightness = Theme.of(context).brightness;
               return GestureDetector(
                 onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                 child: child ?? const SizedBox.shrink(),

@@ -17,7 +17,7 @@ import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
-import 'package:exom_app/core/widgets/glass_app_bar.dart';
+import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
@@ -93,7 +93,7 @@ class _ProgressViewState extends State<_ProgressView> {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: GlassAppBar(
+        appBar: ExomAppBar(
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             icon: Icon(ExomIcons.back, color: palette.textPrimary),
@@ -196,6 +196,17 @@ class _ProgressViewState extends State<_ProgressView> {
             onRetry: retry,
             refreshing: refreshing,
             announce: !latestUnavailable,
+          )
+        else if (refreshing && !latestUnavailable)
+          // No retry on screen to carry the mark (e.g. the reload after
+          // saving a measure, L4-I26c): the mark alone, in the slot of the
+          // cached banner, only while the reload is in flight.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _RefreshMark(key: Key('progress-refresh-mark')),
+            ),
           ),
         const _Intro(),
         Padding(
@@ -536,11 +547,13 @@ class _MutedText extends StatelessWidget {
 /// Small spinner with an accessible label, shown next to a disabled retry
 /// while the reload is in flight.
 class _RefreshMark extends StatelessWidget {
-  const _RefreshMark();
+  const _RefreshMark({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Its own node: merged into the notice it would announce both texts.
+      container: true,
       liveRegion: true,
       label: AppLocalizations.of(context).progressLoading,
       excludeSemantics: true,
@@ -572,6 +585,7 @@ class _CachedBanner extends StatelessWidget {
   final bool refreshing;
 
   /// Live region only when no section notice is announcing at the same time.
+  /// While [refreshing] the progress mark is the only announcement (L4-I26b).
   final bool announce;
 
   @override
@@ -591,7 +605,7 @@ class _CachedBanner extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 24),
                 child: Semantics(
-                  liveRegion: announce,
+                  liveRegion: announce && !refreshing,
                   child: Text(
                     text,
                     style: TextStyle(
@@ -902,7 +916,12 @@ class _LatestMeasures extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Semantics(liveRegion: true, child: _MutedText(notice)),
+                // While refreshing, the progress mark below is the only
+                // live region (L4-I26b).
+                Semantics(
+                  liveRegion: !refreshing,
+                  child: _MutedText(notice),
+                ),
                 const SizedBox(height: 12),
                 ExomSecondaryButton(
                   label: format.l10n.retry,

@@ -307,19 +307,23 @@ void main() {
     });
   });
 
-  test(
-    'MetricsBloc day form: session change shows an empty form, not A',
-    () async {
-      final env = _env()..adapter.hold(_latestPath);
-      final bloc = env.metricsBloc();
-      final result = bloc.stream.firstWhere((s) => s is MetricsLoaded);
-      bloc.add(const MetricsLoadRequested(date: '2026-11-18'));
-      await env.switchWhileInFlight(_latestPath);
+  // L6-UX7 (a): it used to arrive as Loaded(null), an empty day the form
+  // offered to save (with the profile weight) under the new session.
+  test('MetricsBloc day form: session change is a load failure, not A nor an '
+      'empty day', () async {
+    final env = _env()..adapter.hold(_latestPath);
+    final bloc = env.metricsBloc();
+    final result = bloc.stream.firstWhere(
+      (s) => s is MetricsLoaded || s is MetricsLoadFailed,
+    );
+    bloc.add(const MetricsLoadRequested(date: '2026-11-18'));
+    await env.switchWhileInFlight(_latestPath);
 
-      expect(
-        await result,
-        isA<MetricsLoaded>().having((s) => s.current, 'current', isNull),
-      );
-    },
-  );
+    expect(
+      await result,
+      isA<MetricsLoadFailed>()
+          .having((s) => s.sessionChanged, 'sessionChanged', isTrue)
+          .having((s) => s.date, 'date', '2026-11-18'),
+    );
+  });
 }

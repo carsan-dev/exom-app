@@ -27,7 +27,7 @@ import 'package:exom_app/features/home/domain/repositories/home_repository.dart'
 import 'package:exom_app/features/home/domain/usecases/get_home_summary_usecase.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
 import 'package:exom_app/features/home/presentation/pages/home_page.dart';
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';

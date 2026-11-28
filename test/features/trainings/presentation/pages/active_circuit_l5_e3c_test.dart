@@ -371,6 +371,8 @@ void main() {
       // Exercise b: dismissing (scrim) is the same as «Cancelar».
       await _saveRound(tester);
       expect(find.byKey(_videoSheet), findsOneWidget);
+      // The scrim ignores taps until the sheet has entered (S11-09).
+      await settleFrames(tester, 2);
       await tester.tapAt(const Offset(10, 10));
       await settleFrames(tester, 6);
       // Ready to finish: the same missing videos as before E3c, in order.

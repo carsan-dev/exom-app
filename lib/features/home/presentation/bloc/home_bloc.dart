@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/features/calendar/domain/usecases/get_month_calendar_usecase.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
 import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
@@ -82,6 +83,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   bool _pendingReconnect = false;
   StreamSubscription<bool>? _connectivitySubscription;
 
+  /// L6 C-D1: longest wait for one summary. Above the HTTP client's own
+  /// bounds (10 s to connect plus 30 s to answer), so it only ends a load
+  /// stuck below it (opened without network, a platform call that never
+  /// returns). Past it the load is a connectivity failure.
+  static const defaultSummaryTimeout = Duration(seconds: 45);
+  final Duration summaryTimeout;
+
+  /// The bounds of the summaries in flight, each with the wait it ends.
+  /// They belong to this bloc: [close] cancels every bound and ends its wait,
+  /// so neither a timer nor a handler outlives it.
+  final Map<Timer, Completer<HomeSummaryEntity>> _summaryBounds = {};
+
   /// [connectivityChanges] reports whether the device has network (`true`)
   /// or not. Without it (older wiring, tests) Inicio never reloads by itself
   /// when the network comes back.
@@ -91,6 +104,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     String? Function()? sessionStamp,
     Stream<bool>? connectivityChanges,
     Duration reconnectDebounce = const Duration(seconds: 2),
+    this.summaryTimeout = defaultSummaryTimeout,
   }) : _getHomeSummaryUseCase = getHomeSummaryUseCase,
        _getMonthCalendarUseCase = getMonthCalendarUseCase,
        _sessionStamp = sessionStamp,
@@ -158,13 +172,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  /// Runs [request] counted in [_summariesInFlight].
+  /// Runs [request] counted in [_summariesInFlight], for [summaryTimeout] at
+  /// most (L6 C-D1): a request that never answers would otherwise hold the
+  /// reconnection reload, which waits for it, forever. Past the bound it is
+  /// a connectivity failure; its late answer goes nowhere.
   Future<HomeSummaryEntity> _countedInFlight(
     Future<HomeSummaryEntity> Function() request,
   ) async {
     _summariesInFlight++;
     try {
-      return await request();
+      return await _bounded(request());
     } finally {
       _summariesInFlight--;
       // The handler emits the resulting state after this await returns (in
@@ -175,11 +192,54 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  /// [request] for [summaryTimeout] at most. Unlike [Future.timeout], its
+  /// timer belongs to the bloc: [close] cancels it and ends the wait with
+  /// [_HomeBlocClosed], so a request that never answers cannot hold the
+  /// handler, nor therefore close(), forever.
+  Future<HomeSummaryEntity> _bounded(Future<HomeSummaryEntity> request) {
+    final result = Completer<HomeSummaryEntity>();
+    late final Timer bound;
+    bound = Timer(summaryTimeout, () {
+      _summaryBounds.remove(bound);
+      if (result.isCompleted) return;
+      result.completeError(
+        ApiException(
+          statusCode: 0,
+          message: 'Home summary timed out after $summaryTimeout',
+        ),
+      );
+    });
+    _summaryBounds[bound] = result;
+    request.then(
+      (summary) {
+        bound.cancel();
+        _summaryBounds.remove(bound);
+        if (!result.isCompleted) result.complete(summary);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        bound.cancel();
+        _summaryBounds.remove(bound);
+        // A late failure, past the bound, goes nowhere.
+        if (!result.isCompleted) result.completeError(error, stackTrace);
+      },
+    );
+    return result.future;
+  }
+
   @override
   Future<void> close() async {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _pendingReconnect = false;
+    // Loads still in flight are discarded: their handlers return before
+    // emitting (the closed bloc emits nothing), the ones released below too.
+    _requestEpoch++;
+    final bounds = Map.of(_summaryBounds);
+    _summaryBounds.clear();
+    bounds.forEach((bound, wait) {
+      bound.cancel();
+      if (!wait.isCompleted) wait.completeError(const _HomeBlocClosed());
+    });
     await _connectivitySubscription?.cancel();
     return super.close();
   }
@@ -530,4 +590,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   static bool _unchanged(HomeWeekMarks? next, HomeWeekMarks? current) =>
       next == null ? current == null : next.sameAs(current);
+}
+
+/// Ends the summary waits of a closing [HomeBloc]. Never shown: the handler
+/// it reaches returns without emitting.
+class _HomeBlocClosed implements Exception {
+  const _HomeBlocClosed();
+
+  @override
+  String toString() => 'HomeBloc closed';
 }

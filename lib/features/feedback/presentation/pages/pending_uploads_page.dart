@@ -165,14 +165,14 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
   /// Destructive confirmation as an EXOM sheet (L5 D17-1, sketch C2 «(b)»):
   /// «Eliminar» is secondary, never lime. The sheet closes without running its
   /// action when the router location changes (CC 11).
-  Future<bool> _confirmDelete(String message) async {
+  Future<bool> _confirmDelete(String title, String message) async {
     final l10n = AppLocalizations.of(context);
     _sheetsOpen++;
     final bool? confirmed;
     try {
       confirmed = await showExomSheet<bool>(
         context: context,
-        title: l10n.pendingUploadDeleteTitle,
+        title: title,
         body: message,
         actions: [
           Builder(
@@ -198,8 +198,10 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
 
   Future<void> _discard(String id) async {
     setState(_clearOutcome);
+    final l10n = AppLocalizations.of(context);
     final confirmed = await _confirmDelete(
-      AppLocalizations.of(context).pendingUploadDeleteMessage,
+      l10n.pendingUploadDeleteTitle,
+      l10n.pendingUploadDeleteMessage,
     );
     if (!confirmed || !_sameSession) return;
     await _queue.discard(id);
@@ -290,8 +292,10 @@ class _PendingUploadsPageState extends State<PendingUploadsPage> {
 
   Future<void> _discardSync(String id) async {
     setState(_clearOutcome);
+    final l10n = AppLocalizations.of(context);
     final confirmed = await _confirmDelete(
-      AppLocalizations.of(context).pendingSyncDeleteMessage,
+      l10n.pendingSyncDeleteTitle,
+      l10n.pendingSyncDeleteMessage,
     );
     if (!confirmed || !_sameSession) return;
     await _offlineSync.discardAction(id);

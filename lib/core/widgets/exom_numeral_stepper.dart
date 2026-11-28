@@ -47,6 +47,9 @@ class ExomNumeralStepper extends StatefulWidget {
     this.errorText,
     this.rejectsSignedInput = false,
     this.onSubmittedInvalid,
+    this.minFractionDigits,
+    this.empty = false,
+    this.emptySemanticsValue,
   }) : assert(min <= max, 'min must not exceed max'),
        assert(step > 0, 'step must be positive');
 
@@ -75,6 +78,21 @@ class ExomNumeralStepper extends StatefulWidget {
   /// pressed while the typed text is invalid. Typing stays open and keeps
   /// the focus; by default nothing else happens.
   final ValueChanged<String>? onSubmittedInvalid;
+
+  /// Minimum number of decimals shown (e.g. 1 gives «33,0» and keeps
+  /// «33,25»), with the locale separator; at most 2 are shown, as in the
+  /// default format. Presentation only: typing, parsing and the emitted values
+  /// are unchanged. Null keeps the default format (2 decimals, trailing zeros
+  /// trimmed).
+  final int? minFractionDigits;
+
+  /// Whether there is no value yet (e.g. the unmeasured side of a pair): the
+  /// numeral shows «—» without unit and typing starts from an empty field.
+  /// [value] is still the base of ± and of the announced resulting values.
+  final bool empty;
+
+  /// Value announced while [empty] (e.g. «Sin dato»); «—» by default.
+  final String? emptySemanticsValue;
 
   /// Key of the tappable numeral, for tests.
   static const Key valueKey = ValueKey('exom-numeral-stepper-value');
@@ -118,12 +136,21 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
     super.dispose();
   }
 
-  String _format(double value) => formatDisplayDecimal(
-    value,
-    decimalSeparator: decimalSeparatorFor(
+  String _format(double value) {
+    final separator = decimalSeparatorFor(
       Localizations.localeOf(context).languageCode,
-    ),
-  );
+    );
+    final text = formatDisplayDecimal(value, decimalSeparator: separator);
+    final digits = widget.minFractionDigits;
+    if (digits == null || digits <= 0 || !value.isFinite) return text;
+    final cut = text.indexOf(separator);
+    final shown = cut < 0 ? 0 : text.length - cut - 1;
+    if (shown >= digits) return text;
+    return '${cut < 0 ? '$text$separator' : text}${'0' * (digits - shown)}';
+  }
+
+  /// The numeral of an [ExomNumeralStepper.empty] value.
+  static const String _emptyNumeral = '—';
 
   /// Removes floating point noise (0.1 + 0.2) from a stepped value.
   static double _clean(double value) => (value * 1e6).round() / 1e6;
@@ -137,7 +164,7 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
   }
 
   void _startEditing() {
-    _controller.text = _format(widget.value);
+    _controller.text = widget.empty ? '' : _format(widget.value);
     _controller.selection = TextSelection(
       baseOffset: 0,
       extentOffset: _controller.text.length,
@@ -193,9 +220,14 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
     final canDecrement = enabled && widget.value > widget.min;
     final canIncrement = enabled && widget.value < widget.max;
     final unit = widget.unit;
+    final empty = widget.empty;
     return ExomStepper<double>(
       value: widget.value,
-      formatValue: (v) => '${_format(v)} $unit',
+      // While empty only the current value is announced as such: the
+      // resulting values of ± (never equal to it) stay real numbers.
+      formatValue: (v) => empty && v == widget.value
+          ? (widget.emptySemanticsValue ?? _emptyNumeral)
+          : '${_format(v)} $unit',
       label: widget.label,
       decrementLabel: widget.decrementLabel,
       incrementLabel: widget.incrementLabel,
@@ -205,6 +237,9 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
       increasedValue: canIncrement ? _stepped(1) : null,
       unit: unit,
       textController: _editing ? _controller : null,
+      // Widest typed value: three digits and two decimals, as the measure
+      // sheet and `_format` allow («100,25»), in the widest digits.
+      typedSample: '888,88',
       textFieldKey: ExomNumeralStepper.fieldKey,
       focusNode: _focus,
       autofocus: true,
@@ -227,8 +262,8 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
       valueBuilder: (context, value) => Center(
         key: ExomNumeralStepper.valueKey,
         child: ExomNumeral(
-          value: _format(value),
-          unit: unit,
+          value: empty ? _emptyNumeral : _format(value),
+          unit: empty ? null : unit,
           size: ExomNumeralSize.hero64,
         ),
       ),

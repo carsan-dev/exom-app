@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 
-/// Flat V4 app bar (redesign L2). The name is kept for source compatibility:
-/// there is no blur any more.
+/// Flat V4 app bar (redesign L2).
 ///
 /// Opaque theme background with a 1 px `rule` at the bottom. Content sits in a
 /// [SafeArea] (top only) row of [height]; actions should be at least 48x48
 /// (e.g. [IconButton], whose default tap target is 48).
-class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const GlassAppBar({
+class ExomAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const ExomAppBar({
     super.key,
     this.title,
     this.actions,

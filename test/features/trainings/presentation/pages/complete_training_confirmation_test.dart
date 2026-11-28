@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -23,6 +27,15 @@ import 'package:exom_app/features/trainings/data/models/active_workout_hive_mode
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// L6-UX1: «Subidas pendientes» only needs the notice stream and the queue.
+class _FeedbackQueue extends Fake implements FeedbackUploadQueueService {
+  final events = StreamController<FeedbackUploadNotice>.broadcast();
+  @override
+  Stream<FeedbackUploadNotice> get notices => events.stream;
+  @override
+  List<Map<String, dynamic>> get pendingItems => [];
+}
+
 void main() {
   for (final (error, label, retry) in [
     ('Bad state: progress_receipt_missing', 'Falta la confirmación: reintenta la sincronización', true),
@@ -46,6 +59,7 @@ void main() {
     final repository = _CompletionRepository();
     sl.registerSingleton<LocalStorage>(store);
     sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerSingleton<FeedbackUploadQueueService>(_FeedbackQueue());
     sl.registerFactory<TrainingBloc>(() => TrainingBloc(
       getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
       getTrainingsUseCase: GetTrainingsUseCase(repository),
@@ -68,12 +82,16 @@ void main() {
     expect(find.text(label), findsOneWidget);
     expect(find.text('Pendiente de sincronización'), findsNothing);
     final button = find.byKey(const Key('complete-training-button'));
-    expect(tester.widget<ElevatedButton>(button).onPressed, retry ? isNotNull : isNull);
-    if (retry) {
+    final isConflict = error == 'progress_conflict_review_required';
+    expect(tester.widget<ElevatedButton>(button).onPressed,
+        retry || isConflict ? isNotNull : isNull);
+    if (retry || isConflict) {
       await tester.ensureVisible(button);
       await tester.tap(button);
       await tester.pumpAndSettle();
     }
+    // A conflict is recovered from «Subidas pendientes», never retried here.
+    expect(find.byType(PendingUploadsPage), isConflict ? findsOneWidget : findsNothing);
     expect(store.actions.first['status'], retry ? 'queued' : 'failed');
     expect(store.actions.first['id'], 'exercise-op');
     expect(store.actions.first['expected_revision'], 0);

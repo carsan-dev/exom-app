@@ -1133,4 +1133,72 @@ void main() {
       );
     });
   });
+
+  group('E-D2: the final rest ends under «Salir del ejercicio»', () {
+    /// One exercise, two rounds, restored in the final rest with [left] to go.
+    Future<CircuitHarness> finalRest(WidgetTester tester) => pumpCircuit(
+      tester,
+      exercises: [circuitExercise('a', 'Burpees', restSeconds: 30)],
+      rounds: 2,
+      restored: preL3State(
+        round: 2,
+        status: 'finalResting',
+        restEndsAt: DateTime.now().add(const Duration(milliseconds: 1500)),
+        performances: {
+          'a': [
+            {'set_number': 1, 'reps': 12},
+            {'set_number': 2, 'reps': 12},
+          ],
+        },
+      ),
+    );
+
+    Future<void> openExitDialog(WidgetTester tester) async {
+      await tester.binding.handlePopRoute();
+      await settleFrames(tester);
+      expect(
+        find.text(circuitL10n(tester).activeExerciseCloseTitle),
+        findsOneWidget,
+      );
+    }
+
+    /// Lets the persisted rest end run out in real time, then its ticker fire.
+    Future<void> restRunsOut(WidgetTester tester) async {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 1600)),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      await settleFrames(tester, 6);
+    }
+
+    testWidgets('the dialog closes and the page leaves once, with one '
+        'completion', (tester) async {
+      final h = await finalRest(tester);
+      await openExitDialog(tester);
+
+      await restRunsOut(tester);
+
+      expect(h.bloc.completions, hasLength(1));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(ActiveCircuitPage), findsNothing);
+      expect(find.text('detail'), findsOneWidget);
+    });
+
+    testWidgets('Cancelar before the rest ends keeps the page, then it leaves '
+        'once at the end', (tester) async {
+      final h = await finalRest(tester);
+      await openExitDialog(tester);
+      await tester.tap(find.text(circuitL10n(tester).cancel));
+      await settleFrames(tester);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(ActiveCircuitPage), findsOneWidget);
+      expect(h.bloc.completions, isEmpty);
+
+      await restRunsOut(tester);
+
+      expect(h.bloc.completions, hasLength(1));
+      expect(find.byType(ActiveCircuitPage), findsNothing);
+      expect(find.text('detail'), findsOneWidget);
+    });
+  });
 }

@@ -2,7 +2,6 @@
 // bundled fonts, localizations, configurable width/text scale/theme and
 // reduced motion.
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +12,7 @@ ThemeData themeFor(Brightness brightness) =>
     brightness == Brightness.dark ? AppTheme.dark : AppTheme.light;
 
 /// Pumps [child] inside a localized MaterialApp/Scaffold on a [width] x
-/// [height] surface at devicePixelRatio 1.
+/// [height] logical surface at [devicePixelRatio] (1 by default).
 Future<void> pumpComponent(
   WidgetTester tester,
   Widget child, {
@@ -26,13 +25,13 @@ Future<void> pumpComponent(
   Locale locale = const Locale('es'),
   EdgeInsets viewInsets = EdgeInsets.zero,
   bool wrapInScaffold = true,
+  double devicePixelRatio = 1.0,
 }) async {
   await loadRedesignFonts();
-  tester.view.physicalSize = Size(width, height);
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = Size(width, height) * devicePixelRatio;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   final theme = themeFor(brightness);
   await tester.pumpWidget(
     MaterialApp(
@@ -42,7 +41,6 @@ Future<void> pumpComponent(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, app) {
-        GlassDecoration.brightness = Theme.of(context).brightness;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler ?? TextScaler.linear(textScale),

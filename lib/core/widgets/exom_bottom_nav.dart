@@ -8,8 +8,7 @@ import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_motion.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
-/// Main bottom navigation (V4, redesign L2). The name is kept for source
-/// compatibility: there is no glass or blur any more.
+/// Main bottom navigation (V4, redesign L2).
 ///
 /// Flat opaque bar in the theme `panel` colour with a 1 px `rule` on top. The
 /// active tab is marked by a short 2 px bar above it plus `text` colour (and
@@ -29,12 +28,12 @@ import 'package:exom_app/l10n/app_localizations.dart';
 ///
 /// The tab's spoken name equals its visible label (WCAG 2.5.3 label-in-name);
 /// it comes from the `navTab*A11y` strings.
-class GlassBottomNav extends StatelessWidget {
+class ExomBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
   final bool showLabels;
 
-  const GlassBottomNav({
+  const ExomBottomNav({
     super.key,
     required this.selectedIndex,
     required this.onTap,
@@ -51,7 +50,6 @@ class GlassBottomNav extends StatelessWidget {
 
   static const _barHeight = 64.0;
   static const _iconSize = 24.0;
-  static const _iosHorizontalInset = 16.0;
   static const _iosBottomInsetReduction = 22.0;
   static const _iosBottomInsetReductionThreshold = 28.0;
 
@@ -139,7 +137,8 @@ class GlassBottomNav extends StatelessWidget {
   })?
   _lastLabelScale;
 
-  /// Number of text layouts the label-scale search has run (tests).
+  /// Number of text layouts the label-scale search has run. Only counted in
+  /// debug/test builds (assert), never in release.
   @visibleForTesting
   static int labelLayoutCount = 0;
 
@@ -158,7 +157,10 @@ class GlassBottomNav extends StatelessWidget {
         textScaler: scaler,
         maxLines: 1,
       )..layout();
-      labelLayoutCount++;
+      assert(() {
+        labelLayoutCount++;
+        return true;
+      }());
       final width = painter.width;
       painter.dispose();
       final isEdge = i == 0 || i == last;
@@ -213,20 +215,6 @@ class GlassBottomNav extends StatelessWidget {
     }
   }
 
-  static double horizontalContentInset(BuildContext context) {
-    if (kIsWeb) {
-      return 0;
-    }
-    final viewPadding = MediaQuery.viewPaddingOf(context);
-    final safeInset = viewPadding.left > viewPadding.right
-        ? viewPadding.left
-        : viewPadding.right;
-    if (defaultTargetPlatform == TargetPlatform.iOS && safeInset == 0) {
-      return _iosHorizontalInset;
-    }
-    return safeInset;
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
@@ -234,7 +222,7 @@ class GlassBottomNav extends StatelessWidget {
     final bottomInset = platformBottomInset(context);
     // V4: the flat bar's slots span the full width (sketch: five equal
     // columns); only a landscape safe-area inset is respected. The former iOS
-    // 16 px inset of [horizontalContentInset] belonged to the floating circle.
+    // 16 px iOS inset belonged to the floating circle and is gone.
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final horizontalInset = kIsWeb
         ? 0.0
@@ -362,14 +350,14 @@ class _NavTab extends StatelessWidget {
     final color = selected ? activeColor : inactiveColor;
     final Widget glyph = icon == null
         ? SizedBox.square(
-            dimension: GlassBottomNav._iconSize,
+            dimension: ExomBottomNav._iconSize,
             child: SvgPicture.asset(
               'assets/images/exom_balance.svg',
               fit: BoxFit.contain,
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
           )
-        : Icon(icon, size: GlassBottomNav._iconSize, color: color);
+        : Icon(icon, size: ExomBottomNav._iconSize, color: color);
 
     return Semantics(
       button: true,
@@ -378,52 +366,48 @@ class _NavTab extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  glyph,
-                  if (label != null) ...[
-                    const SizedBox(height: 4),
-                    ExcludeSemantics(
-                      child: Padding(
-                        // Keeps the two edge labels off the screen edge.
-                        padding: EdgeInsetsDirectional.only(
-                          start: index == 0 ? GlassBottomNav.labelEdgeInset : 0,
-                          end: index == 4 ? GlassBottomNav.labelEdgeInset : 0,
-                        ),
-                        child: OverflowBox(
-                          fit: OverflowBoxFit.deferToChild,
-                          // A label wider than its slot spills inwards at the
-                          // two edge slots so it never leaves the screen.
-                          alignment: index == 0
-                              ? Alignment.centerLeft
-                              : index == 4
-                              ? Alignment.centerRight
-                              : Alignment.center,
-                          maxWidth: slotWidth + GlassBottomNav.labelSpill * 2,
-                          child: Text(
-                            label!,
-                            key: ValueKey('glass-bottom-nav-label-$index'),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            textScaler: labelScaler,
-                            style: GlassBottomNav._labelStyle(
-                              selected,
-                            ).copyWith(color: color),
-                          ),
-                        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              glyph,
+              if (label != null) ...[
+                const SizedBox(height: 4),
+                ExcludeSemantics(
+                  child: Padding(
+                    // Keeps the two edge labels off the screen edge.
+                    padding: EdgeInsetsDirectional.only(
+                      start: index == 0 ? ExomBottomNav.labelEdgeInset : 0,
+                      end: index == 4 ? ExomBottomNav.labelEdgeInset : 0,
+                    ),
+                    child: OverflowBox(
+                      fit: OverflowBoxFit.deferToChild,
+                      // A label wider than its slot spills inwards at the
+                      // two edge slots so it never leaves the screen.
+                      alignment: index == 0
+                          ? Alignment.centerLeft
+                          : index == 4
+                          ? Alignment.centerRight
+                          : Alignment.center,
+                      maxWidth: slotWidth + ExomBottomNav.labelSpill * 2,
+                      child: Text(
+                        label!,
+                        key: ValueKey('exom-bottom-nav-label-$index'),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        textScaler: labelScaler,
+                        style: ExomBottomNav._labelStyle(
+                          selected,
+                        ).copyWith(color: color),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

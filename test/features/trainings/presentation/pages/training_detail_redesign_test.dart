@@ -18,11 +18,10 @@ import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_sync_status.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/utils/training_type_utils.dart';
 import 'package:exom_app/features/feedback/presentation/pages/feedback_page.dart'
     show FeedbackPageArgs;
-import 'package:exom_app/features/home/presentation/widgets/home_session_photo.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -426,6 +425,81 @@ Future<_Harness> _mount(
   return _Harness(storage, sync, pushed, router);
 }
 
+TrainingExerciseEntity _blockMember(
+  int order,
+  String name,
+  String blockId,
+  String blockName,
+  int position,
+  int rounds,
+) => TrainingExerciseEntity(
+  id: 'te-$order',
+  order: order,
+  sets: rounds,
+  repsOrDuration: '10',
+  restSeconds: 30,
+  blockId: blockId,
+  positionInBlock: position,
+  blockName: blockName,
+  blockRounds: rounds,
+  restBetweenRoundsSeconds: 45,
+  exercise: ExerciseEntity(id: 'ex-$order', name: name, muscleGroups: []),
+);
+
+/// A dense session for the P12 golden: nine exercises with a superset and a
+/// circuit among single rows; te-1 and the superset are done, te-4 has a
+/// draft with one set logged (in progress) and the rest are pending.
+Future<void> pumpDenseTrainingDetail(
+  WidgetTester tester, {
+  required Brightness brightness,
+  Size size = const Size(390, 1500),
+}) async {
+  final training = TrainingEntity(
+    id: _trainingId,
+    name: 'Pierna fuerza',
+    types: const ['FUERZA'],
+    level: 'INTERMEDIATE',
+    estimatedDurationMin: 75,
+    tags: const [],
+    exercises: [
+      _exercise(1, 'Sentadilla búlgara', sets: 4),
+      _blockMember(2, 'Press militar', 'block-1', 'Superserie A', 0, 3),
+      _blockMember(3, 'Remo con mancuerna', 'block-1', 'Superserie A', 1, 3),
+      _exercise(4, 'Peso muerto rumano', sets: 4),
+      _exercise(5, 'Hip thrust'),
+      _blockMember(6, 'Crunch inverso', 'block-2', 'Circuito core', 0, 3),
+      _blockMember(7, 'Plancha lateral', 'block-2', 'Circuito core', 1, 3),
+      _blockMember(8, 'Bicho muerto', 'block-2', 'Circuito core', 2, 3),
+      _exercise(9, 'Elevación de gemelos'),
+    ],
+  );
+  await _mount(
+    tester,
+    training: training,
+    completed: const {'te-1', 'te-2', 'te-3'},
+    performances: const {
+      'te-1': [
+        SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+        SetPerformance(setNumber: 2, reps: 8, weightKg: 60, rir: 2),
+      ],
+    },
+    theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+    size: size,
+    disableAnimations: true,
+    seed: (storage) => storage.drafts['te-4:$_date:$_execution'] =
+        ActiveWorkoutHiveModel(
+          trainingId: _trainingId,
+          exerciseId: 'te-4:$_date:$_execution',
+          currentSet: 2,
+          completedSets: 1,
+          lastWeightKg: 70,
+          completedSetData: const [
+            {'set_number': 1, 'reps': 10, 'weight_kg': 70.0, 'rir': 2},
+          ],
+        ),
+  );
+}
+
 /// The detail of [training] (by default five exercises) for the overflow
 /// sweep of `test/l10n/long_string_overflow_test.dart` (CC 3).
 Future<void> pumpTrainingDetail(
@@ -741,6 +815,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
   });
+
+  for (final (name, theme) in [
+    ('dark', AppTheme.dark),
+    ('light', AppTheme.light),
+  ]) {
+    testWidgets('error SnackBar text uses onError over error ($name)', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        theme: theme,
+        completed: {for (var i = 1; i <= 5; i++) 'te-$i'},
+      );
+      await tester.tap(completeButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('completion-rpe-8')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('confirm-complete-training')));
+      await tester.pumpAndSettle();
+      final snack = find.byType(SnackBar);
+      expect(snack, findsOneWidget);
+      final colors = Theme.of(tester.element(snack)).colorScheme;
+      expect(tester.widget<SnackBar>(snack).backgroundColor, colors.error);
+      final text = tester.widget<Text>(
+        find.descendant(of: snack, matching: find.byType(Text)).first,
+      );
+      expect(text.style?.color, colors.onError);
+    });
+  }
 
   testWidgets('a draft set with only RIR is not counted as done in the row', (
     tester,
@@ -1204,7 +1307,6 @@ void main() {
       for (final id in const ['te-1', 'te-2', 'te-3']) {
         expect(find.byKey(Key('training-exercise-thumb-$id')), findsOneWidget);
       }
-      expect(find.byType(GlassCard), findsNothing);
     });
 
     testWidgets('in progress: the progress is a figure in a featured block', (
@@ -2060,9 +2162,9 @@ void main() {
       expect(footerShown(tester), isTrue);
       final nextLabel = RegExp(
         RegExp.escape(
-          _l10n(tester)
-              .trainingDetailNextAction('Sentadilla búlgara')
-              .toUpperCase(),
+          // B-2: the accessible name keeps the original case; only the
+          // visible text is uppercase.
+          _l10n(tester).trainingDetailNextAction('Sentadilla búlgara'),
         ),
       );
       expect(find.semantics.byLabel(nextLabel), findsWidgets);

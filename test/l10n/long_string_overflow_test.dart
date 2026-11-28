@@ -184,7 +184,8 @@ Future<void> _pumpMetricsForm(
           ),
           child: app!,
         ),
-        home: const MetricsFormPage(),
+        // «Today» is the day of the loaded record (L6-UX7 b).
+        home: MetricsFormPage(clock: () => _metric.date),
       ),
     ),
   );
@@ -1187,7 +1188,14 @@ void main() {
             // List mode of the measurements.
             await sweep(tester, 'list');
             expect(find.text(l10n.saveMetricsButton.toUpperCase()), findsOneWidget);
-            // Body-map mode, front and back views.
+            // Body-map mode, front and back views. At 2.0x the measure list
+            // (L6-D2) is tall enough for the toggle to leave the built
+            // range at the end of the sweep: scroll back up to it first.
+            await tester.scrollUntilVisible(
+              find.text(l10n.bodyViewToggle),
+              -250,
+              scrollable: find.byType(Scrollable).first,
+            );
             await tester.ensureVisible(find.text(l10n.bodyViewToggle));
             await tester.pump();
             await tester.tap(find.text(l10n.bodyViewToggle));

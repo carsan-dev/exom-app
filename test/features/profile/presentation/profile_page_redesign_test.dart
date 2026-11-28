@@ -21,7 +21,6 @@ import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_operation_bar.dart';
 import 'package:exom_app/core/widgets/exom_progress_rule.dart';
 import 'package:exom_app/core/widgets/exom_skeleton.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/presentation/bloc/profile_bloc.dart';
@@ -732,7 +731,6 @@ void main() {
       expect(hero.unit, 'kg');
       expect(find.text('−3,0\u00A0kg'), findsOneWidget);
       expect(find.text('desde 71,4\u00A0kg'), findsOneWidget);
-      expect(find.byType(GlassCard), findsNothing);
       expect(find.byType(CircleAvatar), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
@@ -764,7 +762,6 @@ void main() {
       await pumpProfileScene(tester, profiles: profiles, settle: false);
       expect(find.byType(ExomSkeleton), findsWidgets);
       expect(find.byType(ShimmerCard), findsNothing);
-      expect(find.byType(GlassCard), findsNothing);
       profiles.gate!.complete();
       await tester.pumpAndSettle();
       expect(find.byType(ExomSkeleton), findsNothing);

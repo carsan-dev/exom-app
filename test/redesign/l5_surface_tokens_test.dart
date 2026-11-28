@@ -130,7 +130,6 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/onboarding/presentation/widgets/onboarding_step_layout.dart',
   // L5-E9b · Formulario de métricas.
   'lib/features/metrics/presentation/pages/metrics_page.dart',
-  'lib/core/widgets/anatomy_selector.dart',
   // L5-F1 · Fotos de progreso.
   'lib/features/progress_photos/presentation/pages/progress_photos_page.dart',
   'lib/features/progress_photos/presentation/progress_photo_upload_state.dart',
@@ -149,13 +148,12 @@ const List<String> kRepaintedFiles = <String>[
   'lib/features/diets/presentation/widgets/weekly_shopping_list_flow.dart',
   // L5-F3 · Tutorial: the tour bubble (its prompt is in kPartlyRepaintedFiles).
   'lib/core/widgets/tutorial_overlay.dart',
-  // L5-E1 · Inicio. `streak_card.dart` is not on the screen (only its plural
-  // test uses it) and keeps its legacy surface.
+  // L5-E1 · Inicio.
   'lib/features/home/presentation/pages/home_page.dart',
   'lib/features/home/presentation/widgets/home_clock.dart',
   'lib/features/home/presentation/widgets/home_headline.dart',
   'lib/features/home/presentation/widgets/home_row.dart',
-  'lib/features/home/presentation/widgets/home_session_photo.dart',
+  'lib/core/widgets/home_session_photo.dart',
   'lib/features/home/presentation/widgets/stats_row.dart',
   'lib/features/home/presentation/widgets/today_diet_card.dart',
   'lib/features/home/presentation/widgets/today_training_card.dart',

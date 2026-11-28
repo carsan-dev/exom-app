@@ -370,6 +370,36 @@ void main() {
         expect(sync.discarded, 'sync-1');
         expect(find.text(env.l10n.pendingSyncDeleteDone), findsOneWidget);
       });
+
+      testWidgets('delete sheet title: sync action vs evidence', (tester) async {
+        // The sheet paints its title upper case.
+        final syncTitle = (locale == 'es'
+            ? '¿Eliminar este cambio sin sincronizar?'
+            : 'Delete this unsynced change?').toUpperCase();
+        final evidenceTitle = (locale == 'es'
+            ? '¿Eliminar esta evidencia?'
+            : 'Delete this evidence?').toUpperCase();
+        final env = await _pump(
+          tester,
+          locale: locale,
+          sync: _SyncWithFailure(),
+        );
+        await tester.tap(find.byKey(_deleteKey));
+        await tester.pumpAndSettle();
+        expect(find.text(evidenceTitle), findsOneWidget);
+        expect(find.text(syncTitle), findsNothing);
+        await tester.tap(find.text(env.l10n.cancel));
+        await tester.pumpAndSettle();
+        final syncDelete = find.byKey(const Key('pending-delete-sync-1'));
+        await tester.scrollUntilVisible(syncDelete, 200);
+        await tester.ensureVisible(syncDelete);
+        await tester.pumpAndSettle();
+        await tester.tap(syncDelete);
+        await tester.pumpAndSettle();
+        expect(find.text(syncTitle), findsOneWidget);
+        expect(find.text(evidenceTitle), findsNothing);
+        expect(find.text(env.l10n.pendingSyncDeleteMessage), findsOneWidget);
+      });
     });
   }
 

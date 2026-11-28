@@ -13,6 +13,7 @@ import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -267,6 +268,23 @@ Finder _addMeasure(AppLocalizations l10n) {
   );
 }
 
+/// L6-UX4: the form only saves after a change; a sleep chip is the lightest.
+Future<void> _changeSleep(WidgetTester tester) async {
+  final chip = find.widgetWithText(ActionChip, '9 h');
+  await tester.scrollUntilVisible(
+    chip,
+    300,
+    scrollable: find
+        .descendant(
+          of: find.byType(MetricsFormPage),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(chip);
+  await tester.pump();
+}
+
 Finder _saveButton(AppLocalizations l10n) {
   final wanted = l10n.saveMetricsButton.toLowerCase();
   return find.byWidgetPredicate(
@@ -481,6 +499,50 @@ void main() {
       ]);
     });
 
+    testWidgets('a latest record with muscle_mass_kg: null paints no muscle '
+        'mass row (never 0)', (tester) async {
+      // As the API (or the cache written after a save) returns a cleared
+      // muscle mass (L6-UX5).
+      final model = BodyMetricModel.fromJson({
+        'id': 'latest-null-muscle',
+        'date': '2026-11-18',
+        'weight_kg': 68.4,
+        'muscle_mass_kg': null,
+        'waist_cm': 74,
+      });
+      expect(model.muscleMassKg, isNull);
+      await _mount(
+        tester,
+        repository: _Repository(
+          history: _weekly,
+          latest: BodyMetricEntity(
+            id: model.id,
+            date: model.date,
+            weightKg: model.weightKg,
+            muscleMassKg: model.muscleMassKg,
+            waistCm: model.waistCm,
+          ),
+        ),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is KeyedSubtree &&
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith(
+                'progress-measure-muscle_mass_kg-',
+              ),
+        ),
+        findsNothing,
+      );
+      final label = _l10n(tester).muscleMassSectionTitle;
+      expect(
+        _figures(tester).where((figure) => figure.startsWith(label)),
+        isEmpty,
+      );
+      expect(_figures(tester), contains('Cintura · 18 nov: 74 cm'));
+    });
+
     testWidgets('the photos row opens the existing progress photos route', (
       tester,
     ) async {
@@ -524,6 +586,7 @@ void main() {
         date: DateTime(2026, 11, 25),
         weightKg: 68.1,
       );
+      await _changeSleep(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pumpAndSettle();
 
@@ -534,6 +597,61 @@ void main() {
       expect(_allText(tester), contains('EL 25 DE NOVIEMBRE'));
       // The chart keeps the last eight weights: 7 Oct (70,6) → 25 Nov (68,1).
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+    });
+  });
+
+  // L4-I26c: the reload after saving a measure (network data, no retry on
+  // screen) had no progress mark at all.
+  group('reload after saving a measure (L4-I26c)', () {
+    testWidgets('the mark shows while reloading, alone, and then goes', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final repository = _Repository(history: _weekly, latest: _latest);
+      await _mount(tester, repository: repository);
+      final l10n = _l10n(tester);
+      await tester.tap(_addMeasure(l10n));
+      await tester.pumpAndSettle();
+      final gate = Completer<void>();
+      repository.historyGate = gate;
+      await _changeSleep(tester);
+      await tester.tap(_saveButton(l10n));
+      // The form saves, pops itself and the summary reloads.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(MetricsFormPage), findsNothing);
+      expect(repository.historyCalls, 2);
+      final mark = find.byKey(const Key('progress-refresh-mark'));
+      expect(mark, findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.getSize(mark).height, 18);
+      // The loaded content stays; there is no retry button.
+      expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
+      expect(find.text(l10n.retry), findsNothing);
+      final live = <SemanticsNode>[];
+      bool visit(SemanticsNode node) {
+        if (node.flagsCollection.isLiveRegion) live.add(node);
+        node.visitChildren(visit);
+        return true;
+      }
+
+      for (final view in tester.binding.renderViews) {
+        final root = view.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      // The form's «saved» snack bar is its own live region, outside the
+      // page; within the page the mark is the only one.
+      final saved = l10n.metricsSuccessMessage;
+      final page = live.where((node) => node.label != saved).toList();
+      expect(page, hasLength(1));
+      expect(page.single.label, l10n.progressLoading);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(mark, findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      handle.dispose();
     });
   });
 
@@ -1003,6 +1121,54 @@ void main() {
       expect(find.byType(ExomQuietButton), findsNothing);
       expect(find.text('2,5 kg menos en 7 semanas'), findsOneWidget);
     });
+
+    // L4-I26b: during a reload the notice (or the banner) and the progress
+    // mark were two live regions announced together. Only the mark announces
+    // while the reload is in flight.
+    List<SemanticsNode> liveRegions(WidgetTester tester) {
+      final live = <SemanticsNode>[];
+      bool visit(SemanticsNode node) {
+        if (node.flagsCollection.isLiveRegion) live.add(node);
+        node.visitChildren(visit);
+        return true;
+      }
+
+      for (final view in tester.binding.renderViews) {
+        final root = view.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      return live;
+    }
+
+    for (final (name, latestOffline) in const [
+      ('banner and section notice', true),
+      ('banner alone', false),
+    ]) {
+      testWidgets('$name: one live region while reloading', (tester) async {
+        final handle = tester.ensureSemantics();
+        final repository = _Repository(history: _weekly, latest: _latest)
+          ..historyFromCache = true
+          ..latestFromCache = !latestOffline
+          ..latestError = latestOffline ? offline() : null;
+        await _mount(tester, repository: repository);
+        final l10n = _l10n(tester);
+        expect(liveRegions(tester), hasLength(1), reason: 'before the reload');
+        repository.historyGate = Completer<void>();
+        await tester.ensureVisible(find.text(l10n.retry));
+        await tester.pump();
+        await tester.tap(find.text(l10n.retry));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        final live = liveRegions(tester);
+        expect(live, hasLength(1), reason: 'during the reload');
+        // The one announcement is the progress mark, alone.
+        expect(live.single.label, l10n.progressLoading);
+        repository.historyGate!.complete();
+        await tester.pumpAndSettle();
+        handle.dispose();
+      });
+    }
 
     testWidgets('a failing retry shows the error screen, not old content', (
       tester,

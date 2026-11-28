@@ -11,9 +11,9 @@
 //  - Inicio and Inicio descanso: since L3 (decision D10) HomePage takes an
 //    injectable clock; the scenes fix it to Wednesday 18 Nov 2026 and load the
 //    HomeBloc for that date, so they are stable goldens.
-//  - Descanso: the rest footer counts down from DateTime.now(). The saved rest
-//    ends exactly 90 s after "now", and the scene is captured without advancing
-//    real time, so the visible value is 90 for any machine speed below 1 s.
+//  - Descanso: the rest countdown reads restCountdownClock, which the scene
+//    freezes at the seed instant. The saved rest ends exactly 90 s after it, so
+//    the visible value is 90 whatever the machine speed.
 //  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
 //    after "now" («1:00»).
 //  - The rest bar (L5-D48) steps with the figures of the countdown, from the
@@ -28,7 +28,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -598,10 +598,6 @@ Widget _app(ThemeData theme, double textScale, Widget home) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     builder: (context, child) {
-      // Mirrors lib/main.dart: static GlassDecoration factories read the
-      // active brightness. Without this the light scenes painted the dark
-      // tokens (hidden while they were translucent; opaque since L1).
-      GlassDecoration.brightness = Theme.of(context).brightness;
       return MediaQuery(
         data: MediaQuery.of(
           context,
@@ -635,16 +631,14 @@ class _FakeTrainingBloc extends Fake implements TrainingBloc {
 bool _fontsLoaded = false;
 
 /// Loads the bundled font families used by AppTheme (L1: DMSans by default,
-/// BarlowCondensed for display/headline slots; CabinetGrotesk is still bundled
-/// and kept loaded) and the SDK Material Icons so layouts are realistic instead
-/// of Ahem boxes. Reads files from disk; pubspec.yaml is the source of the
+/// BarlowCondensed for display/headline slots) and the SDK Material Icons so
+/// layouts are realistic instead of Ahem boxes. Reads files from disk; pubspec.yaml is the source of the
 /// family names. If the SDK icon font cannot be located the icons stay as Ahem
 /// boxes.
 Future<void> loadRedesignFonts() async {
   if (_fontsLoaded) return;
   _fontsLoaded = true;
   const families = <String, String>{
-    'CabinetGrotesk': 'CabinetGrotesk-',
     'DMSans': 'dm-sans-',
     'BarlowCondensed': 'barlow-condensed-',
   };
@@ -735,16 +729,16 @@ Future<SceneHandle> pumpRedesignScene(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  addTearDown(() => GlassDecoration.brightness = Brightness.dark);
   await loadRedesignFonts();
   await initializeDateFormatting('es');
   await sl.reset();
 
-  // Limit: the countdown shows 90 only if under 1 s of real time passes between
-  // this seed and the build. Fake-async pumps do not advance DateTime.now, and
-  // L0 allows no hook in lib/ to inject a clock into the page; the rest bar
-  // reads the same clock as the figures (L5-D48).
+  // The countdown (figures and bar, L5-D48) reads the seed instant through
+  // restCountdownClock, so the rest shows its full length however long the
+  // machine takes between this seed and the build.
   final restSeedNow = DateTime.now();
+  restCountdownClock = () => restSeedNow;
+  addTearDown(() => restCountdownClock = DateTime.now);
   final restSeed =
       scene == RedesignScene.descanso || scene == RedesignScene.descansoMas30
       ? ActiveWorkoutHiveModel(

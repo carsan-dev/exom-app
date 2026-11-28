@@ -424,14 +424,15 @@ void main() {
       await bloc.close();
     });
 
-    test('load failure still degrades to Loaded(null)', () async {
+    // L6-UX7 (a): it used to degrade to Loaded(null), a day without metrics.
+    test('load failure is MetricsLoadFailed, not Loaded(null)', () async {
       final repository = _Repository()..latestError = Exception('x');
       final bloc = _bloc(repository);
       bloc.add(const MetricsLoadRequested());
       await _settle();
       await _settle();
-      expect(bloc.state, isA<MetricsLoaded>());
-      expect((bloc.state as MetricsLoaded).current, isNull);
+      expect(bloc.state, isA<MetricsLoadFailed>());
+      expect((bloc.state as MetricsLoadFailed).date, isNull);
       await bloc.close();
     });
 

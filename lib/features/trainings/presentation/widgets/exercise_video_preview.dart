@@ -3,7 +3,6 @@ import 'package:exom_app/core/performance/performance_profile.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 class ExerciseVideoPreview extends StatelessWidget {
@@ -36,7 +35,11 @@ class ExerciseVideoPreview extends StatelessWidget {
         onTap: canOpenVideo ? onTap : null,
         borderRadius: BorderRadius.circular(28),
         child: Ink(
-          decoration: GlassDecoration.card(borderRadius: 28),
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: palette.borderSoft),
+          ),
           child: Stack(
             fit: StackFit.expand,
             children: [

@@ -1,9 +1,10 @@
 // L5-E4 · Hoja de serie (piel), docs/plans/rediseno-app-l5-contrato-v2.md §4.
 //
 // Skin of the set sheet (sketch e-migradas.html, «Hoja de registro de serie»
-// and «Hoja · error de entrada»): values as Barlow 64 numerals in the data
-// colour, the title at the section size (`.t1b`, 28), RIR selection in bone
-// (the text colour, never lime), the field error in line with its icon and a
+// and «Hoja · error de entrada»): values as Barlow numerals in the data
+// colour (44 since L6 A-O1, the compact footer rows), the title at the
+// section size (`.t1b`, 28), RIR selection in bone (the text colour, never
+// lime), the field error in line with its icon and a
 // straight sheet. The behaviour is unchanged and pinned here too: the same two
 // taps (Registrar → Guardar) with the prefill (D4), the field error (D3), the
 // RIR chips (D13 of L3) and the circuit's use of the same sheet, in es/en and
@@ -147,7 +148,7 @@ TextStyle _fieldStyle(WidgetTester tester, Finder field) => tester
 void _expectDataNumeral(WidgetTester tester, Finder field) {
   final style = _fieldStyle(tester, field);
   expect(style.fontFamily, AppTheme.displayFontFamily);
-  expect(style.fontSize, 64);
+  expect(style.fontSize, 44);
   expect(style.fontWeight, FontWeight.w800);
   expect(style.color, _palette(tester).data);
 }
@@ -161,7 +162,7 @@ void main() {
   group('skin', () {
     for (final brightness in Brightness.values) {
       testWidgets(
-        'values are Barlow 64 in the data colour (${brightness.name})',
+        'values are Barlow 44 in the data colour (${brightness.name})',
         (tester) async {
           await _pumpExercise(tester, brightness: brightness);
           _expectDataNumeral(tester, _count);
@@ -308,19 +309,20 @@ void main() {
   });
 
   group('layout', () {
-    testWidgets('a long value shrinks to fit between ± (never below 36)', (
-      tester,
-    ) async {
-      await _pumpExercise(tester, width: 320, height: 640, textScale: 1.6);
-      await tester.enterText(_weight, '62,5,5');
-      await tester.pump();
-      final size = _fieldStyle(tester, _weight).fontSize!;
-      expect(size, lessThan(64));
-      expect(size, greaterThanOrEqualTo(36));
-      // The short reps value keeps the full size.
-      expect(_fieldStyle(tester, _count).fontSize, 64);
-      expect(tester.widget<TextField>(_weight).controller!.text, '62,5,5');
-    });
+    testWidgets(
+      'a long value shrinks to fit between ± (not below 36 when it fits at 36)',
+      (tester) async {
+        await _pumpExercise(tester, width: 320, height: 640, textScale: 1.6);
+        await tester.enterText(_weight, '62,5,5');
+        await tester.pump();
+        final size = _fieldStyle(tester, _weight).fontSize!;
+        expect(size, lessThan(44));
+        expect(size, greaterThanOrEqualTo(36));
+        // The short reps value keeps the full size.
+        expect(_fieldStyle(tester, _count).fontSize, 44);
+        expect(tester.widget<TextField>(_weight).controller!.text, '62,5,5');
+      },
+    );
 
     for (final locale in const [Locale('es'), Locale('en')]) {
       for (final (width, scale) in const [

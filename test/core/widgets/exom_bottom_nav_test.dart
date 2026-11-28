@@ -1,7 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_bottom_nav.dart';
+import 'package:exom_app/core/widgets/exom_bottom_nav.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -20,8 +20,8 @@ const _a11yEn = _labelsEn;
 
 Widget _nav({int selected = 2, ValueChanged<int>? onTap, bool? showLabels}) {
   final nav = showLabels == null
-      ? GlassBottomNav(selectedIndex: selected, onTap: onTap ?? (_) {})
-      : GlassBottomNav(
+      ? ExomBottomNav(selectedIndex: selected, onTap: onTap ?? (_) {})
+      : ExomBottomNav(
           selectedIndex: selected,
           onTap: onTap ?? (_) {},
           showLabels: showLabels,
@@ -29,28 +29,42 @@ Widget _nav({int selected = 2, ValueChanged<int>? onTap, bool? showLabels}) {
   return Scaffold(body: const SizedBox.expand(), bottomNavigationBar: nav);
 }
 
+/// Android 14+ style scaler: not a straight multiple. Small text grows by a
+/// factor of 2.0, larger text by less.
+class _NonLinearScaler extends TextScaler {
+  const _NonLinearScaler();
+
+  @override
+  double scale(double fontSize) =>
+      fontSize <= 20 ? fontSize * 2.0 : fontSize * 1.4;
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => 2.0;
+}
+
 void main() {
   testWidgets('the label-scale search is computed once per input set', (
     tester,
   ) async {
     const labels = ['Aa', 'Bbb', 'Cccc', 'Dd', 'Eeeee'];
-    final before = GlassBottomNav.labelLayoutCount;
-    TextScaler call(double width) => GlassBottomNav.labelTextScalerFor(
+    final before = ExomBottomNav.labelLayoutCount;
+    TextScaler call(double width) => ExomBottomNav.labelTextScalerFor(
       system: const TextScaler.linear(1.3),
       slotWidth: width,
       labels: labels,
       textDirection: TextDirection.ltr,
     );
     final first = call(78);
-    final afterFirst = GlassBottomNav.labelLayoutCount;
+    final afterFirst = ExomBottomNav.labelLayoutCount;
     expect(afterFirst, greaterThan(before));
     for (var i = 0; i < 20; i++) {
       expect(call(78), first);
     }
-    expect(GlassBottomNav.labelLayoutCount, afterFirst, reason: 'cached');
+    expect(ExomBottomNav.labelLayoutCount, afterFirst, reason: 'cached');
     call(80);
     expect(
-      GlassBottomNav.labelLayoutCount,
+      ExomBottomNav.labelLayoutCount,
       greaterThan(afterFirst),
       reason: 'a new width recomputes',
     );
@@ -80,8 +94,8 @@ void main() {
       expect(find.text(label), findsNothing);
     }
     expect(
-      tester.getSize(find.byType(GlassBottomNav)).height,
-      GlassBottomNav.totalHeight,
+      tester.getSize(find.byType(ExomBottomNav)).height,
+      ExomBottomNav.totalHeight,
     );
   });
 
@@ -98,7 +112,7 @@ void main() {
         final palette = themeFor(brightness).extension<ExomThemePalette>()!;
         expect(
           find.descendant(
-            of: find.byType(GlassBottomNav),
+            of: find.byType(ExomBottomNav),
             matching: find.byType(BackdropFilter),
           ),
           findsNothing,
@@ -106,7 +120,7 @@ void main() {
         final bar = tester.widget<DecoratedBox>(
           find
               .descendant(
-                of: find.byType(GlassBottomNav),
+                of: find.byType(ExomBottomNav),
                 matching: find.byType(DecoratedBox),
               )
               .first,
@@ -120,7 +134,7 @@ void main() {
           ...tester
               .widgetList<Icon>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(Icon),
                 ),
               )
@@ -128,7 +142,7 @@ void main() {
           ...tester
               .widgetList<Text>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(Text),
                 ),
               )
@@ -136,7 +150,7 @@ void main() {
           ...tester
               .widgetList<ColoredBox>(
                 find.descendant(
-                  of: find.byType(GlassBottomNav),
+                  of: find.byType(ExomBottomNav),
                   matching: find.byType(ColoredBox),
                 ),
               )
@@ -174,7 +188,7 @@ void main() {
     }
     expect(taps, [0, 1, 2, 3, 4]);
     final indicator = find.descendant(
-      of: find.byType(GlassBottomNav),
+      of: find.byType(ExomBottomNav),
       matching: find.byType(ColoredBox),
     );
     expect(indicator, findsOneWidget);
@@ -296,6 +310,83 @@ void main() {
       handle.dispose();
     }
   });
+
+  for (final locale in const [Locale('es'), Locale('en')]) {
+    Future<List<double>> labelSizes(
+      WidgetTester tester,
+      double width,
+      TextScaler scaler,
+    ) async {
+      await pumpComponent(
+        tester,
+        _nav(),
+        width: width,
+        height: 640,
+        textScaler: scaler,
+        locale: locale,
+        wrapInScaffold: false,
+      );
+      expectNoOverflow(tester);
+      final labels = locale.languageCode == 'es' ? _labelsEs : _labelsEn;
+      return [
+        for (final label in labels)
+          tester
+              .renderObject<RenderParagraph>(find.text(label))
+              .textScaler
+              .scale(13),
+      ];
+    }
+
+    testWidgets(
+      '390 dp, ${locale.languageCode}: 2.0x gives the same label size as 1.6x',
+      (tester) async {
+        final at16 = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(1.6),
+        );
+        final at20 = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(2.0),
+        );
+        expect(at20, at16);
+        for (final size in at20) {
+          expect(size, lessThanOrEqualTo(13 * 1.3 + 0.001));
+          expect(size, greaterThan(13));
+        }
+      },
+    );
+
+    testWidgets(
+      '390 dp, ${locale.languageCode}: non-linear scaler is capped to 1.3x',
+      (tester) async {
+        final sizes = await labelSizes(tester, 390, const _NonLinearScaler());
+        for (final size in sizes) {
+          expect(size, greaterThanOrEqualTo(13));
+          expect(size, lessThanOrEqualTo(13 * 1.3 + 0.001));
+        }
+        final linear = await labelSizes(
+          tester,
+          390,
+          const TextScaler.linear(2.0),
+        );
+        expect(sizes, linear);
+      },
+    );
+
+    for (final scaler in const [TextScaler.linear(2.0), _NonLinearScaler()]) {
+      testWidgets(
+        '320 dp, ${locale.languageCode}, ${scaler.runtimeType}: labels stay 13',
+        (tester) async {
+          final sizes = await labelSizes(tester, 320, scaler);
+          for (final size in sizes) {
+            expect(size, 13);
+          }
+        },
+      );
+    }
+  }
 
   for (final locale in const [Locale('es'), Locale('en')]) {
     for (final scale in const [1.0, 1.3, 1.6]) {

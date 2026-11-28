@@ -6,9 +6,6 @@ import 'package:flutter/material.dart';
 /// Minimum height of the primary and secondary buttons (plan §6).
 const double kExomButtonMinHeight = 56;
 
-/// Foreground of the enabled primary (lime) button, for what leaves it.
-const Color kExomPrimaryForeground = AppColors.textOnPrimary;
-
 /// Minimum tap target of every EXOM control (plan §6).
 const double kExomMinTapTarget = 48;
 
@@ -47,11 +44,18 @@ class ExomPrimaryButton extends StatelessWidget {
     this.busy = false,
     this.semanticLabel,
     this.trailing,
+    this.centerLabel = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? trailingIcon;
+
+  /// Centres the label (also when it wraps) instead of starting it at the
+  /// leading edge. For a button stacked with an [ExomSecondaryButton] (whose
+  /// label is always centred) and no [trailingIcon], so both share one
+  /// alignment.
+  final bool centerLabel;
   final bool busy;
 
   /// Replaces the static [trailingIcon] in its 22 px slot (for example an
@@ -60,7 +64,8 @@ class ExomPrimaryButton extends StatelessWidget {
   /// indicator instead.
   final Widget? trailing;
 
-  /// Overrides the accessible label (defaults to [label]).
+  /// Overrides the accessible label (defaults to [label] in its original
+  /// case; only the painted label is uppercase).
   final String? semanticLabel;
 
   bool get _enabled => onPressed != null && !busy;
@@ -70,10 +75,10 @@ class ExomPrimaryButton extends StatelessWidget {
     final palette = context.exomPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final disabled = onPressed == null;
-    final fill = disabled ? palette.borderSoft : AppColors.primary;
+    final fill = disabled ? palette.borderSoft : palette.limeFill;
     final foreground = disabled
         ? (isDark ? palette.textDisabled : palette.textSecondary)
-        : kExomPrimaryForeground;
+        : palette.onLimeFill;
 
     final Widget? trailingSlot = busy
         ? ExcludeSemantics(
@@ -95,13 +100,12 @@ class ExomPrimaryButton extends StatelessWidget {
         ? null
         : Icon(trailingIcon, size: 22, color: foreground);
 
+    final outline = palette.limeFillOutline;
     final surface = DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(_radius),
-        border: isDark
-            ? null
-            : Border.all(color: AppColors.textOnPrimary, width: 1.5),
+        border: outline == null ? null : Border.all(color: outline, width: 1.5),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
@@ -113,14 +117,19 @@ class ExomPrimaryButton extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  label.toUpperCase(),
-                  style: _labelStyle(foreground),
+                // The accessible name comes from the outer Semantics, in the
+                // original case; the tap action still comes from the gesture.
+                child: ExcludeSemantics(
+                  child: Text(
+                    label.toUpperCase(),
+                    textAlign: centerLabel ? TextAlign.center : null,
+                    style: _labelStyle(foreground),
+                  ),
                 ),
               ),
               if (trailingSlot != null) ...[
                 const SizedBox(width: 12),
-                trailingSlot,
+                ExcludeSemantics(child: trailingSlot),
               ],
             ],
           ),
@@ -133,11 +142,12 @@ class ExomPrimaryButton extends StatelessWidget {
         container: true,
         button: true,
         enabled: _enabled,
-        label: semanticLabel,
+        // The original case: the painted label is uppercase only for looks,
+        // and some screen readers spell short uppercase words as acronyms.
+        label: semanticLabel ?? label,
         // While busy, screen readers hear "in progress" and not only
         // "disabled".
         value: busy ? AppLocalizations.of(context).buttonBusyA11y : null,
-        excludeSemantics: semanticLabel != null,
         child: TappableScale.light(
           enabled: _enabled,
           onTap: _enabled ? onPressed : null,

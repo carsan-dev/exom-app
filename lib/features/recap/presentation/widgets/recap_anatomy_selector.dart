@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,11 @@ import 'package:exom_app/l10n/app_localizations.dart';
 part 'recap_anatomy_geometry.dart';
 
 enum RecapAnatomyView { front, back }
+
+/// How a measurable zone of a measure map is painted (L6-D2, «06 Medidas
+/// corporales» of the metrics form): filled when it has data, outlined when
+/// it has none. Zones without a mark are muted and inert in a measure map.
+enum RecapZoneMark { withData, withoutData }
 
 class RecapAnatomyZone {
   final String id;
@@ -263,11 +269,24 @@ class RecapAnatomySelector extends StatefulWidget {
   final ValueChanged<String> onZoneSelected;
   final double height;
 
+  /// Measure-map mode when not null (L6-D2): only the zones in the map take
+  /// taps and are announced; a zone [RecapZoneMark.withData] is filled, one
+  /// [RecapZoneMark.withoutData] is only outlined, a selected one is lime as
+  /// in Recap, and every other plate (other zones and the neutral plates) is
+  /// muted. Null (default) keeps the Recap figure: every zone is idle and
+  /// tappable until selected.
+  final Map<String, RecapZoneMark>? zoneMarks;
+
+  /// Semantic label of a zone; by default its anatomical name.
+  final String Function(String zoneId)? zoneLabelOf;
+
   const RecapAnatomySelector({
     super.key,
     required this.selectedZoneIds,
     required this.onZoneSelected,
     this.height = 440,
+    this.zoneMarks,
+    this.zoneLabelOf,
   });
 
   /// Interior point of [zoneId] not covered by another plate, in the
@@ -277,7 +296,13 @@ class RecapAnatomySelector extends StatefulWidget {
 
   /// Plate tones the figure paints with in the theme of [context].
   @visibleForTesting
-  static ({Color idle, Color neutral, Color selected, Color gap, Color? outline})
+  static ({
+    Color idle,
+    Color neutral,
+    Color selected,
+    Color gap,
+    Color? outline,
+  })
   debugPlateTones(BuildContext context) {
     final tones = _PlateTones.of(context);
     return (
@@ -286,6 +311,30 @@ class RecapAnatomySelector extends StatefulWidget {
       selected: tones.selected,
       gap: tones.gap,
       outline: tones.outline,
+    );
+  }
+
+  /// Tones of the measure-map mode ([zoneMarks]) in the theme of [context]:
+  /// [filled] for a zone with data, [empty] fill and [outline] for one
+  /// without data, [muted] for the inert plates and the selection tones.
+  @visibleForTesting
+  static ({
+    Color filled,
+    Color empty,
+    Color outline,
+    Color muted,
+    Color selected,
+    Color? selectedOutline,
+  })
+  debugMeasureTones(BuildContext context) {
+    final tones = _PlateTones.of(context);
+    return (
+      filled: tones.idle,
+      empty: tones.gap,
+      outline: tones.idle,
+      muted: tones.muted,
+      selected: tones.selected,
+      selectedOutline: tones.outline,
     );
   }
 
@@ -338,10 +387,24 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector>
     final zoneId = _RecapFigure.of(_view).zoneAt(
       details.localPosition * unitsPerDp,
       maxDistance: _kNearestZoneDp * unitsPerDp,
+      tappable: widget.zoneMarks?.keys.toSet(),
     );
     if (zoneId == null) return;
     HapticFeedback.selectionClick();
     widget.onZoneSelected(zoneId);
+  }
+
+  /// Bounds of the semantic button of a zone. In a measure map it is at
+  /// least [kMinInteractiveDimension] square around the plate centre (the
+  /// physical touch area is already bigger than the plate, see
+  /// [_kNearestZoneDp]); Recap keeps the plate bounds.
+  Rect _semanticRect(Rect plate) {
+    if (widget.zoneMarks == null) return plate;
+    return Rect.fromCenter(
+      center: plate.center,
+      width: math.max(plate.width, kMinInteractiveDimension),
+      height: math.max(plate.height, kMinInteractiveDimension),
+    );
   }
 
   @override
@@ -382,28 +445,34 @@ class _RecapAnatomySelectorState extends State<RecapAnatomySelector>
                       previousZoneIds: _previousZoneIds,
                       fade: _fade,
                       tones: _PlateTones.of(context),
+                      zoneMarks: widget.zoneMarks,
                     ),
                   ),
                   // One semantic button per zone of the view, over its
                   // bounds; touches go through [_handleTap].
                   for (final MapEntry(key: zoneId, value: bounds)
                       in figure.bounds.entries)
-                    Positioned.fromRect(
-                      rect: Rect.fromLTRB(
-                        bounds.left * scale,
-                        bounds.top * scale,
-                        bounds.right * scale,
-                        bounds.bottom * scale,
+                    if (widget.zoneMarks?.containsKey(zoneId) ?? true)
+                      Positioned.fromRect(
+                        rect: _semanticRect(
+                          Rect.fromLTRB(
+                            bounds.left * scale,
+                            bounds.top * scale,
+                            bounds.right * scale,
+                            bounds.bottom * scale,
+                          ),
+                        ),
+                        child: Semantics(
+                          container: true,
+                          button: true,
+                          selected: widget.selectedZoneIds.contains(zoneId),
+                          label:
+                              widget.zoneLabelOf?.call(zoneId) ??
+                              _zonesById[zoneId]!.label(context),
+                          onTap: () => widget.onZoneSelected(zoneId),
+                          child: const SizedBox.expand(),
+                        ),
                       ),
-                      child: Semantics(
-                        container: true,
-                        button: true,
-                        selected: widget.selectedZoneIds.contains(zoneId),
-                        label: _zonesById[zoneId]!.label(context),
-                        onTap: () => widget.onZoneSelected(zoneId),
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -425,6 +494,10 @@ class _PlateTones {
   final Color selected;
   final Color gap;
 
+  /// Inert plates of a measure map: dimmer than [neutral], a silhouette that
+  /// stays clearly apart from the measurable plates.
+  final Color muted;
+
   /// Outline of a selected plate: the lime-fill outline token, which only the
   /// light theme sets (lime against the idle plate is only just above 3:1
   /// there, so the dark outline carries the shape of the selected plate).
@@ -435,6 +508,7 @@ class _PlateTones {
     required this.neutral,
     required this.selected,
     required this.gap,
+    required this.muted,
     required this.outline,
   });
 
@@ -452,6 +526,7 @@ class _PlateTones {
       neutral: Color.lerp(palette.background, idle, 0.65)!,
       selected: palette.limeFill,
       gap: palette.background,
+      muted: Color.lerp(palette.background, idle, 0.3)!,
       outline: palette.limeFillOutline,
     );
   }
@@ -463,10 +538,11 @@ class _PlateTones {
       other.neutral == neutral &&
       other.selected == selected &&
       other.gap == gap &&
+      other.muted == muted &&
       other.outline == outline;
 
   @override
-  int get hashCode => Object.hash(idle, neutral, selected, gap, outline);
+  int get hashCode => Object.hash(idle, neutral, selected, gap, muted, outline);
 }
 
 class _RecapPlateData {
@@ -529,15 +605,29 @@ class _RecapFigure {
   /// containing it, even under a neutral plate (neutral plates never capture
   /// a tap); otherwise (gap, neutral plate alone, outside the figure) the zone
   /// whose edge is nearest, if it is closer than [maxDistance].
-  String? zoneAt(Offset point, {required double maxDistance}) {
+  ///
+  /// With [tappable] (measure map) only those zones are candidates, and a
+  /// tap that lands on any other plate is ignored: inert parts never pass
+  /// their tap to a neighbour.
+  String? zoneAt(
+    Offset point, {
+    required double maxDistance,
+    Set<String>? tappable,
+  }) {
+    bool candidate(String? zoneId) =>
+        zoneId != null && (tappable == null || tappable.contains(zoneId));
     for (final plate in plates.reversed) {
-      if (plate.zoneId != null && plate.path.contains(point)) {
+      if (candidate(plate.zoneId) && plate.path.contains(point)) {
         return plate.zoneId;
       }
+    }
+    if (tappable != null && plates.any((plate) => plate.path.contains(point))) {
+      return null;
     }
     String? nearest;
     var nearestDistance = maxDistance;
     for (final entry in _edgeSamples.entries) {
+      if (!candidate(entry.key)) continue;
       for (final sample in entry.value) {
         final distance = (sample - point).distance;
         if (distance < nearestDistance) {
@@ -556,6 +646,7 @@ class _RecapAnatomyPainter extends CustomPainter {
   final Set<String> previousZoneIds;
   final Animation<double> fade;
   final _PlateTones tones;
+  final Map<String, RecapZoneMark>? zoneMarks;
 
   _RecapAnatomyPainter({
     required this.figure,
@@ -563,6 +654,7 @@ class _RecapAnatomyPainter extends CustomPainter {
     required this.previousZoneIds,
     required this.fade,
     required this.tones,
+    required this.zoneMarks,
   }) : super(repaint: fade);
 
   /// How selected [zoneId] looks at fade progress [t]: 0 idle, 1 selected.
@@ -601,17 +693,47 @@ class _RecapAnatomyPainter extends CustomPainter {
       ..strokeWidth = _kPlateGapWidth + 2 * outlineWidth
       ..strokeJoin = StrokeJoin.round;
 
+    // Outline of a measurable zone without data (measure map): the idle
+    // tone, as wide and placed as the selection outline.
+    final emptyOutline = Paint()
+      ..color = tones.idle
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _kPlateGapWidth + 2 * outlineWidth
+      ..strokeJoin = StrokeJoin.round;
+
+    final marks = zoneMarks;
     for (final plate in figure.plates) {
       final zoneId = plate.zoneId;
+      final mark = zoneId == null ? null : marks?[zoneId];
+      if (marks != null && mark == null) {
+        // Measure map: a part that cannot be measured, muted and inert.
+        fill.color = tones.muted;
+        canvas.drawPath(plate.path, fill);
+        for (final line in plate.deco) {
+          canvas.drawPath(line, deco);
+        }
+        canvas.drawPath(plate.path, gap);
+        continue;
+      }
       final selection = zoneId == null ? 0.0 : _selectionOf(zoneId, t);
+      final base = mark == RecapZoneMark.withoutData ? tones.gap : tones.idle;
       fill.color = zoneId == null
           ? tones.neutral
-          : Color.lerp(tones.idle, tones.selected, selection)!;
+          : Color.lerp(base, tones.selected, selection)!;
       canvas.drawPath(plate.path, fill);
       for (final line in plate.deco) {
         canvas.drawPath(line, deco);
       }
       canvas.drawPath(plate.path, gap);
+      if (mark == RecapZoneMark.withoutData && selection < 1) {
+        emptyOutline.color = tones.idle.withValues(
+          alpha: tones.idle.a * (1 - selection),
+        );
+        canvas.save();
+        canvas.clipPath(plate.path);
+        canvas.drawPath(plate.path, emptyOutline);
+        canvas.restore();
+      }
       if (outlineColor != null && selection > 0) {
         outline.color = outlineColor.withValues(
           alpha: outlineColor.a * selection,
@@ -632,11 +754,18 @@ class _RecapAnatomyPainter extends CustomPainter {
       !_setsEqual(oldDelegate.selectedZoneIds, selectedZoneIds) ||
       !_setsEqual(oldDelegate.previousZoneIds, previousZoneIds) ||
       oldDelegate.fade != fade ||
-      oldDelegate.tones != tones;
+      oldDelegate.tones != tones ||
+      !_marksEqual(oldDelegate.zoneMarks, zoneMarks);
 }
 
 bool _setsEqual<T>(Set<T> a, Set<T> b) =>
     a.length == b.length && a.containsAll(b);
+
+bool _marksEqual(Map<String, RecapZoneMark>? a, Map<String, RecapZoneMark>? b) {
+  if (a == null || b == null) return a == b;
+  return a.length == b.length &&
+      a.entries.every((entry) => b[entry.key] == entry.value);
+}
 
 Path _parseSvgPath(String d) {
   final tokens = RegExp(

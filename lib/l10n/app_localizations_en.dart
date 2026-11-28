@@ -986,6 +986,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Weight is saved only if you change it in this update.';
 
   @override
+  String get weightUpdateNoteToday =>
+      'Today your profile weight is saved even if you don\'t change it.';
+
+  @override
   String get muscleMassSectionTitle => 'Muscle mass';
 
   @override
@@ -1125,9 +1129,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapTellUsMore => 'Tell us more';
-
-  @override
-  String get recapSentSuccessfully => 'Recap sent successfully';
 
   @override
   String get newRecap => 'New recap';
@@ -2210,6 +2211,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measureCalf => 'Calf';
 
   @override
+  String get metricsMeasureSheetKicker => '06 · Measurements';
+
+  @override
+  String metricsMeasureLast(String value, String date) {
+    return 'Last: $value · $date';
+  }
+
+  @override
+  String get metricsMeasureEdited => 'Edited';
+
+  @override
+  String get metricsMeasureTapZone => 'Tap an area to measure it';
+
+  @override
+  String get metricsMeasureDone => 'Done';
+
+  @override
+  String get metricsMeasureLeftInitial => 'L';
+
+  @override
+  String get metricsMeasureRightInitial => 'R';
+
+  @override
+  String metricsMeasureZoneLeft(String zone) {
+    return '$zone, left side';
+  }
+
+  @override
+  String metricsMeasureZoneRight(String zone) {
+    return '$zone, right side';
+  }
+
+  @override
   String get noTrainingsAssigned => 'No trainings assigned';
 
   @override
@@ -2566,6 +2600,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsTitle => 'Notifications';
+
+  @override
+  String notificationsBellLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Notifications, $count unread',
+      zero: 'Notifications',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notificationsEmpty => 'No notifications yet';
@@ -3129,6 +3174,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingUploadDeleteTitle => 'Delete this evidence?';
+
+  @override
+  String get pendingSyncDeleteTitle => 'Delete this unsynced change?';
 
   @override
   String get pendingUploadDeleteMessage =>
@@ -3753,6 +3801,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'The summary could not be loaded. Please try again.';
 
   @override
+  String get metricsDayLoading => 'Loading the day…';
+
+  @override
+  String get metricsDayLoadError =>
+      'We could not load the metrics for this day';
+
+  @override
   String get metricsSaveError =>
       'The measurements could not be saved. Please try again.';
 
@@ -3889,18 +3944,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseAnOption => 'Choose an option';
 
   @override
-  String streakDaysLabel(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'day streak',
-      one: 'day streak',
-      zero: 'day streak',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get recapDetailTitle => 'Recap details';
 
   @override
@@ -4012,28 +4055,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerReset => 'Reset timer';
-
-  @override
-  String get streakMsgStart => 'Start your streak today!';
-
-  @override
-  String get streakMsgFirstDay => 'First day done! Keep it up';
-
-  @override
-  String get streakMsgGoingWell => 'You are doing great! Do not stop';
-
-  @override
-  String get streakMsgWeek => 'A full week in a row! Incredible';
-
-  @override
-  String streakMsgMachine(int days) {
-    return 'You are a machine! Over $days days';
-  }
-
-  @override
-  String streakMsgLegend(int days) {
-    return 'Living legend! $days-day streak';
-  }
 
   @override
   String get recapSignInRequired => 'Sign in to view the recap.';
@@ -4660,6 +4681,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String setSheetWeightHint(String step) {
     return 'steps of $step · tap the number to type';
+  }
+
+  @override
+  String setSheetWeightStep(String step) {
+    return '± $step';
   }
 
   @override
@@ -5370,9 +5396,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapImprovement => 'Improve';
-
-  @override
-  String get recapSentKicker => 'Five steps completed';
 
   @override
   String get recapSentTitleFirst => 'Recap';

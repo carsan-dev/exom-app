@@ -44,9 +44,13 @@ final _metric = BodyMetricEntity(
 );
 
 class _Repository extends Fake implements MetricsRepository {
-  _Repository(this.latest, {this.gate, this.saveError});
+  _Repository(this.latest, {this.gate, this.saveError, this.loader});
 
   BodyMetricEntity? latest;
+
+  /// When set, answers every load instead of [latest] and [gate] (L6-UX6:
+  /// each date can answer on its own schedule).
+  final Future<BodyMetricEntity?> Function(String? date)? loader;
 
   /// When set, every save throws it.
   final Object? saveError;
@@ -57,6 +61,7 @@ class _Repository extends Fake implements MetricsRepository {
 
   @override
   Future<BodyMetricEntity?> getLatestMetric({String? date}) async {
+    if (loader case final load?) return load(date);
     await gate?.future;
     return latest;
   }
@@ -120,6 +125,7 @@ Future<_Harness> _mount(
   Completer<void>? latestGate,
   Object? saveError,
   UnitSystem unitSystem = UnitSystem.metric,
+  Future<BodyMetricEntity?> Function(String? date)? loader,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -131,6 +137,7 @@ Future<_Harness> _mount(
     latest,
     gate: latestGate,
     saveError: saveError,
+    loader: loader,
   );
   final profile = _ProfileRepository();
   sl.registerSingleton<LocalStorage>(storage);
@@ -882,6 +889,129 @@ void main() {
       expect(h.repository.saved, [
         {'date': today, 'muscle_mass_kg': null, 'waist_cm': 74.0},
       ]);
+    });
+  });
+
+  // L6-UX6: a load that answers after the date changed used to fill the form
+  // (and the loaded metric the save carries) of the new date with the values
+  // of another day; saving then overwrote the new date with them.
+  group('L6-UX6 a late load of another date', () {
+    final dayB = BodyMetricEntity(
+      id: 'metric-b',
+      date: DateTime(2026, 11, 1),
+      weightKg: 80,
+      muscleMassKg: 40,
+      sleepHours: 6,
+      waistCm: 90,
+    );
+
+    /// The day [_pickOtherDay] picks, as the API date.
+    String pickedDay() {
+      final now = DateTime.now();
+      final day = now.day == 1
+          ? DateTime(now.year, now.month - 1)
+          : DateTime(now.year, now.month);
+      return DateFormat('yyyy-MM-dd').format(day);
+    }
+
+    bool saveEnabled(WidgetTester tester) =>
+        tester
+            .widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton))
+            .onPressed !=
+        null;
+
+    testWidgets('the form and the save keep the new date when the previous '
+        'load answers late', (tester) async {
+      final initial = Completer<BodyMetricEntity?>();
+      final requested = <String?>[];
+      final h = await _mount(
+        tester,
+        size: const Size(390, 6000),
+        loader: (date) {
+          requested.add(date);
+          return date == null ? initial.future : Future.value(dayB);
+        },
+      );
+      await _pickOtherDay(tester);
+      expect(requested, [null, pickedDay()]);
+      expect(_fieldWithText('40,0'), findsOneWidget);
+
+      // The initial «latest» load (the metric of another day) answers now.
+      initial.complete(_metric);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(_fieldWithText('40,0'), findsOneWidget);
+      expect(_fieldWithText('32,5'), findsNothing);
+      expect(_weightFigure('80'), findsWidgets);
+      expect(_weightFigure('68,4'), findsNothing);
+      expect(saveEnabled(tester), isFalse);
+
+      await tester.enterText(_fieldWithText('40,0'), '41');
+      await tester.pump();
+      expect(saveEnabled(tester), isTrue);
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(h.repository.saved, hasLength(1));
+      final sent = h.repository.saved.single;
+      expect(sent['date'], pickedDay());
+      expect(sent['weight_kg'], 80.0);
+      expect(sent['muscle_mass_kg'], 41.0);
+      expect(sent['sleep_hours'], 6.0);
+      expect(sent['waist_cm'], 90.0);
+      // Nothing of the other day travels with it.
+      expect(sent.containsKey('chest_cm'), isFalse);
+      expect(sent.containsKey('arm_left_cm'), isFalse);
+    });
+
+    testWidgets('a late load error of the previous date neither empties the '
+        'form nor enables the save', (tester) async {
+      final initial = Completer<BodyMetricEntity?>();
+      final h = await _mount(
+        tester,
+        size: const Size(390, 6000),
+        profileCache: {'current_weight': 72.5},
+        loader: (date) => date == null ? initial.future : Future.value(dayB),
+      );
+      await _pickOtherDay(tester);
+      expect(_fieldWithText('40,0'), findsOneWidget);
+      expect(saveEnabled(tester), isFalse);
+
+      // Read as «day without metrics», it would load the profile weight and
+      // offer to save it over day B.
+      initial.completeError(Exception('timeout of the initial load'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(_fieldWithText('40,0'), findsOneWidget);
+      expect(_weightFigure('80'), findsWidgets);
+      expect(_weightFigure('72,5'), findsNothing);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('a loaded metric without muscle mass leaves its field empty, '
+        'not 0', (tester) async {
+      await _mount(
+        tester,
+        size: const Size(390, 6000),
+        loader: (_) async => BodyMetricEntity(
+          id: 'metric-null-muscle',
+          date: DateTime(2026, 11, 18),
+          weightKg: 68.4,
+          muscleMassKg: null,
+        ),
+      );
+      final muscleField = tester.widget<TextFormField>(
+        find.byType(TextFormField).at(1),
+      );
+      expect(muscleField.controller!.text, isEmpty);
+      expect(_fieldWithText('0'), findsNothing);
+      expect(_fieldWithText('0,0'), findsNothing);
     });
   });
 

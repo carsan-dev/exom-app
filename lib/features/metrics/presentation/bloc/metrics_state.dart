@@ -12,9 +12,22 @@ class MetricsLoading extends MetricsState {
   const MetricsLoading();
 }
 
+/// Answer to a [MetricsLoadRequested]: [current] is the metric of the
+/// requested day, or null for a day without metrics (or a failed load).
+///
+/// Only the newest load emits it; [date] and [request] tag which load it
+/// answers.
 class MetricsLoaded extends MetricsState {
   final BodyMetricEntity? current;
-  const MetricsLoaded(this.current);
+
+  /// The `yyyy-MM-dd` date that was requested, or null for the initial
+  /// «latest» load.
+  final String? date;
+
+  /// Sequence number of the load within its bloc (0 when not set).
+  final int request;
+
+  const MetricsLoaded(this.current, {this.date, this.request = 0});
 }
 
 class MetricsSaving extends MetricsState {

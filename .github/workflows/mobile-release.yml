@@ -93,7 +93,9 @@ jobs:
             NEXT_BUILD=$((CURRENT_BUILD + 1))
           fi
 
-          ANDROID_TRACK="${ANDROID_TRACK_INPUT:-internal}"
+          # A tag push has no inputs: it publishes to closed testing (alpha).
+          # A manual run keeps its own default (internal) for test builds.
+          ANDROID_TRACK="${ANDROID_TRACK_INPUT:-alpha}"
           UPDATE_POLICY="${UPDATE_POLICY_INPUT:-recommended}"
 
           {
@@ -178,7 +180,7 @@ jobs:
 
   ios:
     name: Build and upload iOS
-    runs-on: macos-26
+    runs-on: xcode-27
     needs: prepare
 
     steps:
@@ -194,9 +196,9 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Select Xcode 26
+      - name: Select Xcode 27
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
           xcodebuild -version
           xcodebuild -showsdks
 

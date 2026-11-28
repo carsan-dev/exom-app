@@ -425,6 +425,81 @@ Future<_Harness> _mount(
   return _Harness(storage, sync, pushed, router);
 }
 
+TrainingExerciseEntity _blockMember(
+  int order,
+  String name,
+  String blockId,
+  String blockName,
+  int position,
+  int rounds,
+) => TrainingExerciseEntity(
+  id: 'te-$order',
+  order: order,
+  sets: rounds,
+  repsOrDuration: '10',
+  restSeconds: 30,
+  blockId: blockId,
+  positionInBlock: position,
+  blockName: blockName,
+  blockRounds: rounds,
+  restBetweenRoundsSeconds: 45,
+  exercise: ExerciseEntity(id: 'ex-$order', name: name, muscleGroups: []),
+);
+
+/// A dense session for the P12 golden: nine exercises with a superset and a
+/// circuit among single rows; te-1 and the superset are done, te-4 has a
+/// draft with one set logged (in progress) and the rest are pending.
+Future<void> pumpDenseTrainingDetail(
+  WidgetTester tester, {
+  required Brightness brightness,
+  Size size = const Size(390, 1500),
+}) async {
+  final training = TrainingEntity(
+    id: _trainingId,
+    name: 'Pierna fuerza',
+    types: const ['FUERZA'],
+    level: 'INTERMEDIATE',
+    estimatedDurationMin: 75,
+    tags: const [],
+    exercises: [
+      _exercise(1, 'Sentadilla búlgara', sets: 4),
+      _blockMember(2, 'Press militar', 'block-1', 'Superserie A', 0, 3),
+      _blockMember(3, 'Remo con mancuerna', 'block-1', 'Superserie A', 1, 3),
+      _exercise(4, 'Peso muerto rumano', sets: 4),
+      _exercise(5, 'Hip thrust'),
+      _blockMember(6, 'Crunch inverso', 'block-2', 'Circuito core', 0, 3),
+      _blockMember(7, 'Plancha lateral', 'block-2', 'Circuito core', 1, 3),
+      _blockMember(8, 'Bicho muerto', 'block-2', 'Circuito core', 2, 3),
+      _exercise(9, 'Elevación de gemelos'),
+    ],
+  );
+  await _mount(
+    tester,
+    training: training,
+    completed: const {'te-1', 'te-2', 'te-3'},
+    performances: const {
+      'te-1': [
+        SetPerformance(setNumber: 1, reps: 8, weightKg: 60, rir: 2),
+        SetPerformance(setNumber: 2, reps: 8, weightKg: 60, rir: 2),
+      ],
+    },
+    theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
+    size: size,
+    disableAnimations: true,
+    seed: (storage) => storage.drafts['te-4:$_date:$_execution'] =
+        ActiveWorkoutHiveModel(
+          trainingId: _trainingId,
+          exerciseId: 'te-4:$_date:$_execution',
+          currentSet: 2,
+          completedSets: 1,
+          lastWeightKg: 70,
+          completedSetData: const [
+            {'set_number': 1, 'reps': 10, 'weight_kg': 70.0, 'rir': 2},
+          ],
+        ),
+  );
+}
+
 /// The detail of [training] (by default five exercises) for the overflow
 /// sweep of `test/l10n/long_string_overflow_test.dart` (CC 3).
 Future<void> pumpTrainingDetail(

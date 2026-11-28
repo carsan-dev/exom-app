@@ -234,6 +234,7 @@ Future<SceneDietRepository> pumpDietsScene(
 /// options, badges and ingredients.
 Future<SceneDietRepository> pumpMealSheetScene(
   WidgetTester tester, {
+  DietEntity? diet,
   Brightness brightness = Brightness.dark,
   double width = 390,
   double height = 844,
@@ -241,7 +242,7 @@ Future<SceneDietRepository> pumpMealSheetScene(
   Locale locale = const Locale('es'),
 }) async {
   final repository = await _register(
-    diet: sceneDiet,
+    diet: diet ?? sceneDiet,
     completed: const {},
     actions: const [],
   );

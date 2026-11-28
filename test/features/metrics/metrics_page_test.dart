@@ -1304,6 +1304,85 @@ void main() {
       expect(h.repository.saved, isEmpty);
     });
 
+    // Second defence after the epoch of the bloc: an answer tagged with
+    // another date than the selected one never fills the form.
+    group('an answer of another date reaching the page', () {
+      final dayX = BodyMetricEntity(
+        id: 'metric-x',
+        date: DateTime(2026, 11, 5),
+        weightKg: 95,
+        muscleMassKg: 50,
+        waistCm: 100,
+      );
+
+      MetricsBloc blocOf(WidgetTester tester) => BlocProvider.of<MetricsBloc>(
+        tester.element(find.byType(ExomPrimaryButton)),
+      );
+
+      Future<void> settle(WidgetTester tester) async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      for (final (name, date) in [
+        ('a dated answer of another date', '2026-11-05'),
+        ('a late «latest» answer after picking a date', null),
+      ]) {
+        testWidgets('$name is ignored', (tester) async {
+          final h = await _mount(
+            tester,
+            size: const Size(390, 6000),
+            loader: (date) async => date == null ? _metric : dayB,
+          );
+          await _pickOtherDay(tester);
+          expect(_fieldWithText('40,0'), findsOneWidget);
+
+          blocOf(tester).emit(MetricsLoaded(dayX, date: date, request: 99));
+          await settle(tester);
+
+          expect(_fieldWithText('40,0'), findsOneWidget);
+          expect(_fieldWithText('50,0'), findsNothing);
+          expect(_weightFigure('95'), findsNothing);
+          expect(saveEnabled(tester), isFalse);
+          await tester.enterText(_fieldWithText('40,0'), '41');
+          await tester.pump();
+          await tester.tap(_saveButton(_l10n(tester)));
+          await settle(tester);
+          expect(h.repository.saved, [
+            {'date': pickedDay(), 'muscle_mass_kg': 41.0},
+          ]);
+        });
+      }
+
+      testWidgets('a failure of another date shows no error and keeps the '
+          'day', (tester) async {
+        await _mount(
+          tester,
+          size: const Size(390, 6000),
+          loader: (date) async => date == null ? _metric : dayB,
+        );
+        await _pickOtherDay(tester);
+        blocOf(tester).emit(const MetricsLoadFailed(date: '2026-11-05'));
+        await settle(tester);
+        expect(find.byKey(const Key('metrics-load-error')), findsNothing);
+        expect(_fieldWithText('40,0'), findsOneWidget);
+      });
+
+      testWidgets('the answer of the selected date still fills it', (
+        tester,
+      ) async {
+        await _mount(
+          tester,
+          size: const Size(390, 6000),
+          loader: (date) async => date == null ? _metric : dayB,
+        );
+        await _pickOtherDay(tester);
+        blocOf(tester).emit(MetricsLoaded(dayX, date: pickedDay()));
+        await settle(tester);
+        expect(_fieldWithText('50,0'), findsOneWidget);
+      });
+    });
+
     testWidgets('a loaded metric without muscle mass leaves its field empty, '
         'not 0', (tester) async {
       await _mount(

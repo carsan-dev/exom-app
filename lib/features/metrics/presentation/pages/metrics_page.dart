@@ -141,6 +141,17 @@ class _MetricsViewState extends State<_MetricsView> {
   /// failed load is never read as a day without metrics.
   MetricsLoadFailed? _loadFailure;
 
+  /// Whether the client picked a date: from then on the initial «latest»
+  /// load no longer answers the selection.
+  bool _datePicked = false;
+
+  /// Whether a load answer tagged with [date] answers the selected date: a
+  /// dated answer must carry the selected date, and the initial «latest»
+  /// answer (null) only counts until a date is picked. A second defence
+  /// after the epoch of the bloc (L6-UX6).
+  bool _answersSelection(String? date) =>
+      date == null ? !_datePicked : date == _apiDate(_selectedMetricDate);
+
   bool _bodyMapMode = false;
   BodyZone? _selectedMeasure;
 
@@ -290,6 +301,7 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     setState(() {
+      _datePicked = true;
       _selectedMetricDate = DateUtils.dateOnly(picked);
       _selectedMeasure = null;
       _lastLoaded = null;
@@ -1450,14 +1462,14 @@ class _MetricsViewState extends State<_MetricsView> {
     );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
-        if (state is MetricsLoadFailed) {
+        if (state is MetricsLoadFailed && _answersSelection(state.date)) {
           setState(() {
             _lastLoaded = null;
             _dayLoaded = false;
             _loadFailure = state;
           });
         }
-        if (state is MetricsLoaded) {
+        if (state is MetricsLoaded && _answersSelection(state.date)) {
           final metric = state.current;
           // The initial «latest» load answers the newest record of any date:
           // only a record of the selected day is its baseline. One of another

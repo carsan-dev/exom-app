@@ -13,6 +13,7 @@ import 'package:exom_app/features/metrics/presentation/bloc/metrics_bloc.dart';
 import 'package:exom_app/features/profile/domain/entities/profile_entity.dart';
 import 'package:exom_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:exom_app/features/profile/domain/usecases/update_profile_usecase.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _dayA = BodyMetricEntity(
@@ -57,11 +58,30 @@ class _ProfileRepository extends Fake implements ProfileRepository {
       _Profile();
 }
 
-MetricsBloc _bloc(_GatedRepository repository) => MetricsBloc(
-  saveMetricUseCase: SaveMetricUseCase(repository),
-  metricsRepository: repository,
-  updateProfileUseCase: UpdateProfileUseCase(_ProfileRepository()),
-);
+_TestBloc _bloc(_GatedRepository repository) => _TestBloc(repository);
+
+/// The bloc over [repository], which the test keeps to answer its loads.
+class _TestBloc extends MetricsBloc {
+  _TestBloc(this.metricsRepositoryForTest)
+    : super(
+        saveMetricUseCase: SaveMetricUseCase(metricsRepositoryForTest),
+        metricsRepository: metricsRepositoryForTest,
+        updateProfileUseCase: UpdateProfileUseCase(_ProfileRepository()),
+      );
+
+  final _GatedRepository metricsRepositoryForTest;
+}
+
+/// Records every error a bloc reports.
+class _ErrorObserver extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 Future<void> _settle() async {
   for (var i = 0; i < 3; i++) {
@@ -274,6 +294,42 @@ void main() {
     final failed = bloc.state as MetricsLoadFailed;
     expect(failed.date, '2026-11-20');
     expect(failed.request, greaterThan(initial.request));
+  });
+
+  // L6-UX6 (b): the page closes its bloc (pop) with a load in flight. The
+  // load answering later must neither emit nor throw.
+  group('closing the bloc with a load in flight', () {
+    for (final (name, answer)
+        in <(String, void Function(Completer<BodyMetricEntity?>))>[
+          ('the load answers', (reply) => reply.complete(_dayA)),
+          (
+            'the load fails',
+            (reply) => reply.completeError(Exception('late 500')),
+          ),
+        ]) {
+      test('$name after close: no emission, no error', () async {
+        final observer = _ErrorObserver();
+        final previous = Bloc.observer;
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previous);
+        final closing = _bloc(_GatedRepository());
+        final repository = closing.metricsRepositoryForTest;
+        final seen = <MetricsState>[];
+        final subscription = closing.stream.listen(seen.add);
+        closing.add(const MetricsLoadRequested(date: '2026-11-10'));
+        await _settle();
+        expect(seen, [isA<MetricsLoading>()]);
+
+        await closing.close();
+        answer(repository.loads.single.reply);
+        await _settle();
+
+        expect(seen, [isA<MetricsLoading>()]);
+        expect(closing.state, isA<MetricsLoading>());
+        expect(observer.errors, isEmpty);
+        await subscription.cancel();
+      });
+    }
   });
 
   test('a stale load answering during a save does not interrupt it', () async {

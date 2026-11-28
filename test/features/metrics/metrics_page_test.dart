@@ -8,6 +8,8 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -44,13 +46,13 @@ final _metric = BodyMetricEntity(
 class _Repository extends Fake implements MetricsRepository {
   _Repository(this.latest, {this.gate, this.saveError});
 
-  final BodyMetricEntity? latest;
+  BodyMetricEntity? latest;
 
   /// When set, every save throws it.
   final Object? saveError;
 
   /// When set, the latest metric does not arrive until it completes.
-  final Completer<void>? gate;
+  Completer<void>? gate;
   final saved = <Map<String, dynamic>>[];
 
   @override
@@ -80,7 +82,9 @@ class _ProfileRepository extends Fake implements ProfileRepository {
 }
 
 class _Storage extends LocalStorage {
-  _Storage(this.profile);
+  _Storage(this.profile, [this.unitSystem = UnitSystem.metric]);
+
+  final UnitSystem unitSystem;
 
   /// The cached `profile_me` document.
   final Map<String, dynamic>? profile;
@@ -90,7 +94,7 @@ class _Storage extends LocalStorage {
   @override
   Locale? getLocalePreference() => null;
   @override
-  UnitSystem getUnitSystemPreference() => UnitSystem.metric;
+  UnitSystem getUnitSystemPreference() => unitSystem;
   @override
   Map<String, dynamic>? getCachedMap(String key) =>
       key == 'profile_me' ? profile : null;
@@ -115,13 +119,14 @@ Future<_Harness> _mount(
   Map<String, dynamic>? profileCache,
   Completer<void>? latestGate,
   Object? saveError,
+  UnitSystem unitSystem = UnitSystem.metric,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   await sl.reset();
-  final storage = _Storage(profileCache);
+  final storage = _Storage(profileCache, unitSystem);
   final repository = _Repository(
     latest,
     gate: latestGate,
@@ -261,6 +266,43 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
   await tester.pump();
 }
 
+/// Picks another day of the month in the date picker and lets its load run.
+Future<void> _pickOtherDay(WidgetTester tester) async {
+  final dateField = find.text(_l10n(tester).todayLabel);
+  await tester.scrollUntilVisible(
+    dateField,
+    -300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(dateField);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  final dialog = find.byType(DatePickerDialog);
+  if (DateTime.now().day == 1) {
+    await tester.tap(
+      find.byTooltip(
+        MaterialLocalizations.of(tester.element(dialog)).previousMonthTooltip,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await tester.tap(
+    find.descendant(of: dialog, matching: find.text('1')).first,
+  );
+  await tester.pump();
+  await tester.tap(
+    find.descendant(
+      of: dialog,
+      matching: find.text(
+        MaterialLocalizations.of(tester.element(dialog)).okButtonLabel,
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
+}
+
 void main() {
   // The body map picks side-by-side or stacked zones by measuring the names,
   // so it needs the real DM Sans face: the default test font (Ahem) is far
@@ -394,11 +436,14 @@ void main() {
   });
 
   group('existing actions', () {
-    testWidgets('saving without edits sends the loaded values and the date', (
+    testWidgets('a change sends the loaded values, the change and the date', (
       tester,
     ) async {
       final h = await _mount(tester, latest: _metric);
       final l10n = _l10n(tester);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -413,7 +458,7 @@ void main() {
         'chest_cm': 100.0,
         'arm_left_cm': 35.0,
         'arm_right_cm': 36.0,
-        'waist_cm': 74.0,
+        'waist_cm': 73.5,
       });
       expect(h.profile.updates, [
         {'height': 180.0},
@@ -441,15 +486,277 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(DatePickerDialog), findsOneWidget);
     });
+  });
 
-    testWidgets('an empty day saves only the date', (tester) async {
-      final h = await _mount(tester);
-      final l10n = _l10n(tester);
-      await tester.tap(_saveButton(l10n));
+  // L6-UX4: an untouched form used to POST a record with every measure null.
+  group('L6-UX4 save needs a change', () {
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    bool saveEnabled(WidgetTester tester) {
+      final button = tester.widget<ExomPrimaryButton>(
+        find.byType(ExomPrimaryButton),
+      );
+      return button.onPressed != null;
+    }
+
+    for (final (name, latest) in [
+      ('empty day', null as BodyMetricEntity?),
+      ('loaded metric', _metric),
+    ]) {
+      testWidgets('$name: untouched form has the save disabled and sends '
+          'nothing', (tester) async {
+        final h = await _mount(tester, latest: latest);
+        expect(saveEnabled(tester), isFalse);
+        await tapSave(tester);
+        expect(h.repository.saved, isEmpty);
+        expect(h.profile.updates, isEmpty);
+      });
+    }
+
+    // Owner decision L6-UX4: the preloaded profile weight counts as data.
+    testWidgets('profile weight preloaded: enabled untouched, sends date and '
+        'weight only', (tester) async {
+      final h = await _mount(
+        tester,
+        profileCache: {'height': 178, 'current_weight': 72.5},
+      );
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
       expect(h.repository.saved, hasLength(1));
-      expect(h.repository.saved.single.keys, ['date']);
+      expect(h.repository.saved.single.keys.toSet(), {'date', 'weight_kg'});
+      expect(h.repository.saved.single['weight_kg'], 72.5);
+    });
+
+    testWidgets('empty day with a profile but no weight: disabled, 0 POST', (
+      tester,
+    ) async {
+      final h = await _mount(tester, profileCache: {'height': 178});
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('a save error keeps the button enabled and the changes', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        saveError: Exception('boom'),
+      );
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      expect(saveEnabled(tester), isTrue);
+      expect(measureValueText(tester, BodyZone.waist), '73,5 cm');
+      // The error snack bar covers the pinned button: dismiss it to retry.
+      ScaffoldMessenger.of(
+        tester.element(find.byType(MetricsFormPage)),
+      ).clearSnackBars();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(2));
+      expect(h.repository.saved.last['waist_cm'], 73.5);
+    });
+
+    testWidgets('changing the date recaptures the initial state', (
+      tester,
+    ) async {
+      final h = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
+      expect(saveEnabled(tester), isTrue);
+      await _pickOtherDay(tester);
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('imperial: a weight step and back is no change', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        unitSystem: UnitSystem.imperial,
+      );
+      expect(saveEnabled(tester), isFalse);
+      for (final icon in [ExomIcons.add, ExomIcons.remove]) {
+        await tester.tap(
+          find.descendant(of: _weightStepper(), matching: find.byIcon(icon)),
+        );
+        await tester.pump();
+      }
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('«Hecho» without changing the value does not mark «Editado»', (
+      tester,
+    ) async {
+      await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await tapMeasureDone(tester);
+      expect(measureEdited(BodyZone.waist), findsNothing);
+      expect(saveEnabled(tester), isFalse);
+    });
+
+    testWidgets('empty day: touching the weight and coming back stays '
+        'enabled and sends the profile weight', (tester) async {
+      final h = await _mount(
+        tester,
+        profileCache: {'current_weight': 72.5},
+      );
+      for (final icon in [ExomIcons.add, ExomIcons.remove]) {
+        await tester.tap(
+          find.descendant(of: _weightStepper(), matching: find.byIcon(icon)),
+        );
+        await tester.pump();
+      }
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved.single['weight_kg'], 72.5);
+    });
+
+    testWidgets('after a save error the retry sends the loaded weight and '
+        'values, not the profile weight', (tester) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        profileCache: {'current_weight': 90.0},
+        saveError: Exception('boom'),
+      );
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
+      await tapSave(tester);
+      ScaffoldMessenger.of(
+        tester.element(find.byType(MetricsFormPage)),
+      ).clearSnackBars();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(2));
+      expect(h.repository.saved.last['weight_kg'], 68.4);
+      expect(h.repository.saved.last['sleep_hours'], 7.5);
+      expect(h.repository.saved.last['waist_cm'], 73.5);
+    });
+
+    testWidgets('while a date loads the save is disabled', (tester) async {
+      final gate = Completer<void>();
+      final h = await _mount(
+        tester,
+        profileCache: {'current_weight': 72.5},
+        latestGate: gate,
+      );
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+      gate.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(saveEnabled(tester), isTrue);
+    });
+
+    testWidgets('a date change does not carry the previous date metric', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        profileCache: {'current_weight': 72.5},
+      );
+      h.repository.latest = null;
+      await _pickOtherDay(tester);
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved.single.keys.toSet(), {'date', 'weight_kg'});
+      expect(h.repository.saved.single['weight_kg'], 72.5);
+    });
+
+    testWidgets('a change enables the save and sends it as before', (
+      tester,
+    ) async {
+      final h = await _mount(tester);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '81');
+      await tapMeasureDone(tester);
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      expect(h.repository.saved.single['waist_cm'], 81.0);
+    });
+
+    testWidgets('changing the weight and going back disables the save', (
+      tester,
+    ) async {
+      final h = await _mount(tester, latest: _metric);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(
+        find.descendant(
+          of: _weightStepper(),
+          matching: find.byIcon(ExomIcons.add),
+        ),
+      );
+      await tester.pump();
+      expect(saveEnabled(tester), isTrue);
+      await tester.tap(
+        find.descendant(
+          of: _weightStepper(),
+          matching: find.byIcon(ExomIcons.remove),
+        ),
+      );
+      await tester.pump();
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('changing a measure and going back disables the save', (
+      tester,
+    ) async {
+      final h = await _mount(tester, latest: _metric);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '73,5');
+      await tapMeasureDone(tester);
+      expect(saveEnabled(tester), isTrue);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '74');
+      await tapMeasureDone(tester);
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('clearing the only value leaves no measure and sends nothing', (
+      tester,
+    ) async {
+      final onlySleep = BodyMetricEntity(
+        id: 'metric-2',
+        date: DateTime(2026, 11, 18),
+        sleepHours: 7.5,
+      );
+      final h = await _mount(
+        tester,
+        latest: onlySleep,
+        size: const Size(390, 6000),
+      );
+      expect(saveEnabled(tester), isFalse);
+      await tester.enterText(_fieldWithText('7,5'), '');
+      await tester.pump();
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+      expect(h.profile.updates, isEmpty);
     });
   });
 
@@ -470,6 +777,10 @@ void main() {
           saveError: Exception('boom'),
         );
         final l10n = _l10n(tester);
+        // L6-UX4: the save needs a change.
+        await openMeasureSheet(tester, BodyZone.waist);
+        await typeMeasure(tester, 'waist_cm', '73,5');
+        await tapMeasureDone(tester);
         await tester.tap(_saveButton(l10n));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
@@ -551,8 +862,8 @@ void main() {
     // this change (characterisation of the unchanged parser). L6-D2: they are
     // typed in the sheet stepper, whose filter keeps only digits, «,» and
     // «.» (« 78,60 » arrives as «78,60»). An empty or invalid value is refused
-    // by «Hecho» and never reaches the draft, so the save sends the loaded
-    // value; before L6 an emptied field was omitted and an invalid one
+    // by «Hecho» and never reaches the draft, so the form stays unchanged and
+    // nothing is sent (L6-UX4); before L6 an emptied field was omitted and an invalid one
     // blocked the save with a snack bar.
     for (final locale in [const Locale('es'), const Locale('en')]) {
       group('typed entries (${locale.languageCode})', () {
@@ -579,7 +890,7 @@ void main() {
           });
         }
         for (final raw in ['', '78,6,1', 'abc', ',']) {
-          testWidgets('waist "$raw" is refused, the loaded value is sent', (
+          testWidgets('waist "$raw" is refused, nothing is sent', (
             tester,
           ) async {
             final h = await _mount(tester, latest: _metric, locale: locale);
@@ -591,11 +902,12 @@ void main() {
             Navigator.of(tester.element(measureSheet())).pop();
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 400));
+            // L6-UX4: the refused value never reaches the draft, so the form
+            // is unchanged: the save is disabled and nothing is sent.
             await tester.tap(_saveButton(l10n));
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 300));
-            expect(h.repository.saved, hasLength(1));
-            expect(h.repository.saved.single['waist_cm'], 74.0);
+            expect(h.repository.saved, isEmpty);
           });
         }
       });

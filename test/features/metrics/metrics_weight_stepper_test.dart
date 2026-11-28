@@ -19,6 +19,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -234,6 +235,19 @@ Future<void> _save(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 300));
 }
 
+/// L6-UX4: the save needs a change. A «9 h» chip is one that does not touch
+/// the weight, so the weight sent is the loaded one.
+Future<void> _changeSleep(WidgetTester tester) async {
+  final chip = find.widgetWithText(ActionChip, '9 h');
+  await tester.ensureVisible(chip);
+  await tester.tap(chip);
+  await tester.pump();
+}
+
+bool _saveEnabled(WidgetTester tester) =>
+    tester.widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton)).onPressed !=
+    null;
+
 void main() {
   tearDown(sl.reset);
 
@@ -265,7 +279,7 @@ void main() {
           expect(stepper.value, UnitConverters.weightToDisplay(68.4, unit));
         });
 
-        testWidgets('untouched, the save sends the loaded weight', (
+        testWidgets('untouched, the save is disabled and sends nothing', (
           tester,
         ) async {
           final repository = await _mount(
@@ -274,9 +288,9 @@ void main() {
             unitSystem: unit,
             latest: _metricWithWeight(68.4),
           );
+          expect(_saveEnabled(tester), isFalse);
           await _save(tester);
-          expect(repository.saved, hasLength(1));
-          expect(repository.saved.single['weight_kg'], 68.4);
+          expect(repository.saved, isEmpty);
         });
 
         testWidgets('+ sends 0.5 kg more, in kilograms', (tester) async {
@@ -418,7 +432,7 @@ void main() {
         ]) {
           final below = loadedKg < limitKg;
           testWidgets('a loaded ${loadedKg.round()} kg is shown and, '
-              'untouched, sent as is', (tester) async {
+              'untouched, sent as is with another change', (tester) async {
             final repository = await _mount(
               tester,
               locale: locale,
@@ -429,6 +443,7 @@ void main() {
               tester.widget<ExomNumeralStepper>(_stepper()).value,
               UnitConverters.weightToDisplay(loadedKg, unit),
             );
+            await _changeSleep(tester);
             await _save(tester);
             expect(repository.saved.single['weight_kg'], loadedKg);
           });
@@ -478,6 +493,7 @@ void main() {
             tester.widget<ExomNumeralStepper>(_stepper()).value,
             UnitConverters.weightToDisplay(81, unit),
           );
+          await _changeSleep(tester);
           await _save(tester);
           expect(repository.saved.single['weight_kg'], 81.0);
         });
@@ -493,6 +509,7 @@ void main() {
       unitSystem: UnitSystem.metric,
     );
     expect(_stepper(), findsOneWidget);
+    await _changeSleep(tester);
     await _save(tester);
     expect(repository.saved.single.containsKey('weight_kg'), isFalse);
   });

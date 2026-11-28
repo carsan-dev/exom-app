@@ -267,6 +267,23 @@ Finder _addMeasure(AppLocalizations l10n) {
   );
 }
 
+/// L6-UX4: the form only saves after a change; a sleep chip is the lightest.
+Future<void> _changeSleep(WidgetTester tester) async {
+  final chip = find.widgetWithText(ActionChip, '9 h');
+  await tester.scrollUntilVisible(
+    chip,
+    300,
+    scrollable: find
+        .descendant(
+          of: find.byType(MetricsFormPage),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(chip);
+  await tester.pump();
+}
+
 Finder _saveButton(AppLocalizations l10n) {
   final wanted = l10n.saveMetricsButton.toLowerCase();
   return find.byWidgetPredicate(
@@ -524,6 +541,7 @@ void main() {
         date: DateTime(2026, 11, 25),
         weightKg: 68.1,
       );
+      await _changeSleep(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pumpAndSettle();
 
@@ -551,6 +569,7 @@ void main() {
       await tester.pumpAndSettle();
       final gate = Completer<void>();
       repository.historyGate = gate;
+      await _changeSleep(tester);
       await tester.tap(_saveButton(l10n));
       // The form saves, pops itself and the summary reloads.
       for (var i = 0; i < 10; i++) {

@@ -411,7 +411,8 @@ void main() {
     testWidgets('untouched: the loaded values, nothing else', (tester) async {
       final repository = await _mount(tester, latest: _metric);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('typed waist «73,5» + «Hecho»: only waist_cm changes', (
@@ -477,7 +478,8 @@ void main() {
       expect(measureValueText(tester, BodyZone.hips), 'Sin dato');
       expect(measureEdited(BodyZone.hips), findsNothing);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('dismissing the sheet discards its changes', (tester) async {
@@ -492,7 +494,8 @@ void main() {
       expect(measureSheet(), findsNothing);
       expect(measureValueText(tester, BodyZone.waist), '74,0 cm');
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     for (final locale in const [Locale('es'), Locale('en')]) {
@@ -543,7 +546,8 @@ void main() {
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 400));
             await _save(tester);
-            expect(repository.saved.single['waist_cm'], 74.0);
+            // L6-UX4: nothing changed, so nothing is sent.
+            expect(repository.saved, isEmpty);
           });
         }
       });
@@ -1320,7 +1324,8 @@ void main() {
       await tapMeasureDone(tester);
       expect(measureEdited(BodyZone.shoulders), findsNothing);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('the empty side of a measured pair steps from the other', (

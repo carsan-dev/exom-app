@@ -53,6 +53,12 @@ class MetricsFormPage extends StatelessWidget {
   }
 }
 
+typedef _SavePlan = ({
+  Map<String, dynamic> data,
+  Map<String, dynamic> profileData,
+  String? error,
+});
+
 class _MetricsView extends StatefulWidget {
   const _MetricsView();
 
@@ -100,6 +106,16 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _muscleMassTouched = false;
   bool _sleepTouched = false;
   final Set<String> _touchedMeasures = <String>{};
+
+  /// The form as it was filled by the last load (or the profile fallback):
+  /// the save is only offered once something differs from it (L6-UX4).
+  double _baselineWeightKg = 75.0;
+  Map<String, String> _baselineTexts = const <String, String>{};
+
+  /// Metric of the selected date as last loaded, and whether that load has
+  /// arrived: the save is not offered while a date is loading.
+  BodyMetricEntity? _lastLoaded;
+  bool _dayLoaded = false;
 
   bool _bodyMapMode = false;
   BodyZone? _selectedMeasure;
@@ -161,6 +177,7 @@ class _MetricsViewState extends State<_MetricsView> {
     if (!_fallbackPopulated) {
       _fallbackPopulated = true;
       _populateFallbackValuesFromCachedProfile();
+      _captureBaseline();
     }
   }
 
@@ -250,6 +267,8 @@ class _MetricsViewState extends State<_MetricsView> {
     setState(() {
       _selectedMetricDate = DateUtils.dateOnly(picked);
       _selectedMeasure = null;
+      _lastLoaded = null;
+      _dayLoaded = false;
     });
     _loadMetricForSelectedDate();
   }
@@ -329,6 +348,44 @@ class _MetricsViewState extends State<_MetricsView> {
     return double.tryParse(rawValue?.toString() ?? '');
   }
 
+  Map<String, String> _currentTexts() => {
+    'height': _heightController.text,
+    'sleep': _sleepController.text,
+    'muscle_mass': _muscleMassController.text,
+    for (final entry in _measureControllers.entries)
+      entry.key: entry.value.text,
+  };
+
+  void _captureBaseline() {
+    _baselineWeightKg = _weightKg;
+    _baselineTexts = _currentTexts();
+  }
+
+  /// Whether two draft texts hold the same value: «74» and «74,0» do.
+  bool _sameDraft(String a, String b) {
+    final left = a.trim();
+    final right = b.trim();
+    if (left.isEmpty || right.isEmpty) return left == right;
+    final parsedLeft = _parseDouble(left);
+    final parsedRight = _parseDouble(right);
+    if (parsedLeft == null || parsedRight == null) return left == right;
+    return (parsedLeft - parsedRight).abs() < 1e-6;
+  }
+
+  /// Whether any value of the form differs from [_captureBaseline]. Changing
+  /// a value and going back to the initial one is not a change.
+  bool get _hasChanges {
+    if (_weightTouched &&
+        (_weightInputInvalid ||
+            (_weightKg - _baselineWeightKg).abs() > 1e-6)) {
+      return true;
+    }
+    final current = _currentTexts();
+    return current.entries.any(
+      (entry) => !_sameDraft(entry.value, _baselineTexts[entry.key] ?? ''),
+    );
+  }
+
   void _populateFallbackValuesFromCachedProfile() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final heightCm = _cachedProfileNumber('height');
@@ -367,6 +424,7 @@ class _MetricsViewState extends State<_MetricsView> {
     for (final controller in _measureControllers.values) {
       controller.clear();
     }
+    _captureBaseline();
   }
 
   /// Plates of the C5b figure that stand for each measure (L6-D2 mapping of
@@ -622,7 +680,13 @@ class _MetricsViewState extends State<_MetricsView> {
     if (!mounted || result == null || result.isEmpty) return;
     setState(() {
       for (final MapEntry(key: fieldKey, value: value) in result.entries) {
-        _controllerForField(fieldKey).text = _draftText(value);
+        // «Hecho» with the value as it was is not an edit.
+        final text = _draftText(value);
+        if (_sameDraft(_controllerForField(fieldKey).text, text) &&
+            _controllerForField(fieldKey).text.trim().isNotEmpty) {
+          continue;
+        }
+        _controllerForField(fieldKey).text = text;
         _markMeasureTouched(fieldKey);
       }
     });
@@ -728,15 +792,16 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  BodyMetricEntity? _currentMetricSnapshot() {
-    final state = context.read<MetricsBloc>().state;
-    if (state is MetricsLoaded) {
-      return state.current;
-    }
-    return null;
-  }
+  /// The metric loaded for the selected date. Kept across Loading, Saving
+  /// and Error states (a failed save must retry with the loaded values) and
+  /// dropped when the date changes.
+  BodyMetricEntity? _currentMetricSnapshot() => _lastLoaded;
 
-  void _save() {
+  /// What a save would send, without side effects: the payload (always with
+  /// the date), the profile update and, when a typed value does not parse,
+  /// the message to show instead. The save button and [_save] both read it, so
+  /// the button is enabled exactly when the save sends more than the date.
+  _SavePlan _planSave() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final currentMetric = _currentMetricSnapshot();
     final currentWeightKg = currentMetric?.weightKg;
@@ -752,10 +817,11 @@ class _MetricsViewState extends State<_MetricsView> {
     if (_heightTouched) {
       final rawHeight = _parseDouble(_heightController.text);
       if (rawHeight == null) {
-        _showValidationMessage(
-          AppLocalizations.of(context).validHeightRequired,
+        return (
+          data: data,
+          profileData: profileData,
+          error: AppLocalizations.of(context).validHeightRequired,
         );
-        return;
       }
 
       nextHeightCm = UnitConverters.lengthFromDisplay(rawHeight, unitSystem);
@@ -767,10 +833,11 @@ class _MetricsViewState extends State<_MetricsView> {
 
     if (_weightTouched) {
       if (_weightInputInvalid) {
-        _showValidationMessage(
-          AppLocalizations.of(context).validWeightRequired,
+        return (
+          data: data,
+          profileData: profileData,
+          error: AppLocalizations.of(context).validWeightRequired,
         );
-        return;
       }
       data['weight_kg'] = _weightKg;
     } else if (currentWeightKg != null) {
@@ -782,8 +849,11 @@ class _MetricsViewState extends State<_MetricsView> {
     if (_sleepTouched) {
       final sleepHours = _parseDouble(_sleepController.text);
       if (sleepHours == null) {
-        _showValidationMessage(AppLocalizations.of(context).validSleepRequired);
-        return;
+        return (
+          data: data,
+          profileData: profileData,
+          error: AppLocalizations.of(context).validSleepRequired,
+        );
       }
       data['sleep_hours'] = sleepHours;
     } else if (currentSleepHours != null) {
@@ -795,10 +865,11 @@ class _MetricsViewState extends State<_MetricsView> {
       if (rawMuscleMass.isNotEmpty) {
         final muscleMass = _parseDouble(rawMuscleMass);
         if (muscleMass == null) {
-          _showValidationMessage(
-            AppLocalizations.of(context).validMuscleMassRequired,
+          return (
+            data: data,
+            profileData: profileData,
+            error: AppLocalizations.of(context).validMuscleMassRequired,
           );
-          return;
         }
         data['muscle_mass_kg'] = UnitConverters.weightFromDisplay(
           muscleMass,
@@ -841,15 +912,16 @@ class _MetricsViewState extends State<_MetricsView> {
 
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
-        _showValidationMessage(
-          AppLocalizations.of(context).measurementReviewTemplate(
+        return (
+          data: data,
+          profileData: profileData,
+          error: AppLocalizations.of(context).measurementReviewTemplate(
             _localizedZoneLabel(
               context,
               _zoneForFieldKey(entry.key),
             ).toLowerCase(),
           ),
         );
-        return;
       }
 
       data[entry.key] = UnitConverters.lengthFromDisplay(
@@ -858,14 +930,42 @@ class _MetricsViewState extends State<_MetricsView> {
       );
     }
 
-    if (data.isEmpty) {
+    return (data: data, profileData: profileData, error: null);
+  }
+
+  /// The profile weight stands in for the weight of a day without a metric
+  /// (owner decision L6-UX4: it counts as data and can be saved untouched).
+  /// A day without a metric that sends a weight: the profile weight stands in
+  /// for it (owner decision L6-UX4) or the client set one. It counts as data.
+  bool _sendsWeightForEmptyDay(_SavePlan plan) =>
+      _dayLoaded && _lastLoaded == null && plan.data.containsKey('weight_kg');
+
+  /// The save is offered once the day is loaded and it would send more than
+  /// the date (or a typed value needs its message), and the form either
+  /// changed from what was loaded or is an empty day whose payload carries
+  /// the weight. Nothing is created from a form with no measure (L6-UX4).
+  bool get _canSave {
+    if (!_dayLoaded) return false;
+    final plan = _planSave();
+    if (plan.error != null) return true;
+    if (plan.data.keys.every((key) => key == 'date')) return false;
+    return _hasChanges || _sendsWeightForEmptyDay(plan);
+  }
+
+  void _save() {
+    final plan = _planSave();
+    if (plan.error case final message?) {
+      _showValidationMessage(message);
+      return;
+    }
+    if (plan.data.keys.every((key) => key == 'date')) {
       _showValidationMessage(AppLocalizations.of(context).noChangesMessage);
       return;
     }
-
+    final profileData = plan.profileData;
     context.read<MetricsBloc>().add(
       MetricsSaveRequested(
-        data,
+        plan.data,
         profileData: profileData.isEmpty ? null : profileData,
       ),
     );
@@ -1225,6 +1325,7 @@ class _MetricsViewState extends State<_MetricsView> {
         _controllerForField(entry.key).clear();
       }
     }
+    _captureBaseline();
   }
 
   @override
@@ -1238,6 +1339,8 @@ class _MetricsViewState extends State<_MetricsView> {
       listener: (context, state) {
         if (state is MetricsLoaded) {
           final currentMetric = state.current;
+          _lastLoaded = currentMetric;
+          _dayLoaded = true;
           if (currentMetric != null) {
             _populateFromMetric(currentMetric);
           } else {
@@ -1413,7 +1516,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                 suffixText: lengthUnitSymbol(unitSystem),
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _heightTouched = true,
+                              onChanged: (_) => setState(() => _heightTouched = true),
                             ),
                             Text(l10n.heightDescription, style: secondary),
                           ],
@@ -1442,7 +1545,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                 suffixText: weightUnit,
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _muscleMassTouched = true,
+                              onChanged: (_) => setState(() => _muscleMassTouched = true),
                             ),
                             Text(l10n.muscleMassDescription, style: secondary),
                             const SizedBox(height: ExomSpacing.sm),
@@ -1491,7 +1594,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                 suffixText: 'h',
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _sleepTouched = true,
+                              onChanged: (_) => setState(() => _sleepTouched = true),
                             ),
                             Text(l10n.sleepHoursDescription, style: secondary),
                             Wrap(
@@ -1545,7 +1648,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       label: l10n.saveMetricsButton,
                       trailingIcon: ExomIcons.check,
                       busy: isSaving,
-                      onPressed: _save,
+                      onPressed: _canSave ? _save : null,
                     ),
                   ),
                 ],

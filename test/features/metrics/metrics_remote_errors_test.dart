@@ -383,19 +383,45 @@ void main() {
     });
   });
 
-  // Characterization: readers that relied on the silent null keep their
-  // visible behaviour.
-  group('day form (MetricsLoadRequested) keeps an empty form on error', () {
-    for (final reply in <_Reply>[
-      const _Status(500),
-      const _Fail(DioExceptionType.connectionError),
+  // L6-UX7 (a): the day form used to read a failed load as a day without
+  // metrics (MetricsLoaded(null)) and offered to save over it. Only «no
+  // record» (200 with data null, 404) is an empty day; a failure is reported.
+  group('day form (MetricsLoadRequested): a failure is not an empty day', () {
+    for (final (name, reply, offline) in <(String, _Reply, bool)>[
+      ('500', const _Status(500), false),
+      ('no connection', const _Fail(DioExceptionType.connectionError), true),
+      ('timeout', const _Fail(DioExceptionType.receiveTimeout), true),
     ]) {
-      test('${reply.runtimeType} → MetricsLoaded(null)', () async {
+      test('$name → MetricsLoadFailed (offline: $offline)', () async {
         final env = _env()..reply(_latestPath, reply);
         final bloc = env.metricsBloc();
         addTearDown(bloc.close);
         bloc.add(const MetricsLoadRequested(date: '2026-11-19'));
-        final state = await bloc.stream.firstWhere((s) => s is MetricsLoaded);
+        final state = await bloc.stream.firstWhere(
+          (s) => s is MetricsLoaded || s is MetricsLoadFailed,
+        );
+        expect(
+          state,
+          isA<MetricsLoadFailed>()
+              .having((s) => s.date, 'date', '2026-11-19')
+              .having((s) => s.offline, 'offline', offline)
+              .having((s) => s.sessionChanged, 'sessionChanged', isFalse),
+        );
+      });
+    }
+
+    for (final (name, reply) in <(String, _Reply)>[
+      ('200 with data null', const _Ok(null)),
+      ('404', const _Status(404)),
+    ]) {
+      test('$name → MetricsLoaded(null): a day without a record', () async {
+        final env = _env()..reply(_latestPath, reply);
+        final bloc = env.metricsBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MetricsLoadRequested(date: '2026-11-19'));
+        final state = await bloc.stream.firstWhere(
+          (s) => s is MetricsLoaded || s is MetricsLoadFailed,
+        );
         expect(
           state,
           isA<MetricsLoaded>().having((s) => s.current, 'current', isNull),

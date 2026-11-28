@@ -1000,6 +1000,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'El peso solo se guarda si lo modificas en esta actualización.';
 
   @override
+  String get weightUpdateNoteToday =>
+      'Hoy se guardará el peso de tu perfil aunque no lo cambies.';
+
+  @override
   String get muscleMassSectionTitle => 'Masa muscular';
 
   @override
@@ -3838,6 +3842,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get homeLoadError =>
       'No se pudo cargar el resumen. Vuelve a intentarlo.';
+
+  @override
+  String get metricsDayLoading => 'Cargando el día…';
+
+  @override
+  String get metricsDayLoadError =>
+      'No se pudieron cargar las métricas de este día.';
 
   @override
   String get metricsSaveError =>

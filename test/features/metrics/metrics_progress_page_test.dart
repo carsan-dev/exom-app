@@ -13,6 +13,7 @@ import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -267,6 +268,23 @@ Finder _addMeasure(AppLocalizations l10n) {
   );
 }
 
+/// L6-UX4: the form only saves after a change; a sleep chip is the lightest.
+Future<void> _changeSleep(WidgetTester tester) async {
+  final chip = find.widgetWithText(ActionChip, '9 h');
+  await tester.scrollUntilVisible(
+    chip,
+    300,
+    scrollable: find
+        .descendant(
+          of: find.byType(MetricsFormPage),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(chip);
+  await tester.pump();
+}
+
 Finder _saveButton(AppLocalizations l10n) {
   final wanted = l10n.saveMetricsButton.toLowerCase();
   return find.byWidgetPredicate(
@@ -481,6 +499,50 @@ void main() {
       ]);
     });
 
+    testWidgets('a latest record with muscle_mass_kg: null paints no muscle '
+        'mass row (never 0)', (tester) async {
+      // As the API (or the cache written after a save) returns a cleared
+      // muscle mass (L6-UX5).
+      final model = BodyMetricModel.fromJson({
+        'id': 'latest-null-muscle',
+        'date': '2026-11-18',
+        'weight_kg': 68.4,
+        'muscle_mass_kg': null,
+        'waist_cm': 74,
+      });
+      expect(model.muscleMassKg, isNull);
+      await _mount(
+        tester,
+        repository: _Repository(
+          history: _weekly,
+          latest: BodyMetricEntity(
+            id: model.id,
+            date: model.date,
+            weightKg: model.weightKg,
+            muscleMassKg: model.muscleMassKg,
+            waistCm: model.waistCm,
+          ),
+        ),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is KeyedSubtree &&
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith(
+                'progress-measure-muscle_mass_kg-',
+              ),
+        ),
+        findsNothing,
+      );
+      final label = _l10n(tester).muscleMassSectionTitle;
+      expect(
+        _figures(tester).where((figure) => figure.startsWith(label)),
+        isEmpty,
+      );
+      expect(_figures(tester), contains('Cintura · 18 nov: 74 cm'));
+    });
+
     testWidgets('the photos row opens the existing progress photos route', (
       tester,
     ) async {
@@ -524,6 +586,7 @@ void main() {
         date: DateTime(2026, 11, 25),
         weightKg: 68.1,
       );
+      await _changeSleep(tester);
       await tester.tap(_saveButton(l10n));
       await tester.pumpAndSettle();
 
@@ -551,6 +614,7 @@ void main() {
       await tester.pumpAndSettle();
       final gate = Completer<void>();
       repository.historyGate = gate;
+      await _changeSleep(tester);
       await tester.tap(_saveButton(l10n));
       // The form saves, pops itself and the summary reloads.
       for (var i = 0; i < 10; i++) {

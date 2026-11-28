@@ -32,7 +32,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
 
 import 'metrics_measures_helpers.dart';
 
@@ -53,20 +52,10 @@ final _metric = BodyMetricEntity(
   thighLeftCm: 55,
 );
 
-/// The payload of a save without edits: the loaded values and the date.
-Map<String, dynamic> _untouchedPayload() => {
-  'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-  'height_cm': 180.0,
-  'weight_kg': 68.4,
-  'sleep_hours': 7.5,
-  'muscle_mass_kg': 32.5,
-  'neck_cm': 38.0,
-  'chest_cm': 96.5,
-  'waist_cm': 74.0,
-  'arm_left_cm': 33.0,
-  'arm_right_cm': 33.5,
-  'thigh_left_cm': 55.0,
-};
+/// What every save carries besides its changes: the date of the selected day
+/// («today» of the harness is the day of [_metric]). The loaded values are
+/// not resent (M-1): the API keeps every absent key.
+Map<String, dynamic> _datePayload() => {'date': '2026-11-19'};
 
 class _Repository extends Fake implements MetricsRepository {
   _Repository(this.latest);
@@ -152,7 +141,11 @@ Future<_Repository> _mount(
     ),
   );
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      // «Today» is the day of the loaded record, so the initial «latest» load
+      // answers the record of the selected day (L6-UX7 b).
+      builder: (_) => MetricsFormPage(clock: () => (latest ?? _metric).date),
+    ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
@@ -411,7 +404,8 @@ void main() {
     testWidgets('untouched: the loaded values, nothing else', (tester) async {
       final repository = await _mount(tester, latest: _metric);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('typed waist «73,5» + «Hecho»: only waist_cm changes', (
@@ -433,10 +427,7 @@ void main() {
         findsOneWidget,
       );
       await _save(tester);
-      expect(repository.saved.single, {
-        ..._untouchedPayload(),
-        'waist_cm': 73.5,
-      });
+      expect(repository.saved.single, {..._datePayload(), 'waist_cm': 73.5});
     });
 
     testWidgets('+ on the right arm: only arm_right_cm moves 0.5', (
@@ -449,7 +440,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.upperArm), 'I 33,0 · D 34,0 cm');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         'arm_right_cm': 34.0,
       });
     });
@@ -464,7 +455,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.thigh), 'I 55,0 · D 56,0 cm');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         'thigh_right_cm': 56.0,
       });
     });
@@ -477,7 +468,8 @@ void main() {
       expect(measureValueText(tester, BodyZone.hips), 'Sin dato');
       expect(measureEdited(BodyZone.hips), findsNothing);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('dismissing the sheet discards its changes', (tester) async {
@@ -492,7 +484,8 @@ void main() {
       expect(measureSheet(), findsNothing);
       expect(measureValueText(tester, BodyZone.waist), '74,0 cm');
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     for (final locale in const [Locale('es'), Locale('en')]) {
@@ -543,7 +536,8 @@ void main() {
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 400));
             await _save(tester);
-            expect(repository.saved.single['waist_cm'], 74.0);
+            // L6-UX4: nothing changed, so nothing is sent.
+            expect(repository.saved, isEmpty);
           });
         }
       });
@@ -587,7 +581,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.neck), '15,0 in');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         // 29.6 in, converted as the old field did.
         'waist_cm': 29.6 * 2.54,
       });
@@ -674,10 +668,7 @@ void main() {
         'triceps_right',
       });
       await _save(tester);
-      expect(repository.saved.single, {
-        ..._untouchedPayload(),
-        'arm_left_cm': 32.5,
-      });
+      expect(repository.saved.single, {..._datePayload(), 'arm_left_cm': 32.5});
     });
 
     testWidgets('a part that cannot be measured opens nothing', (tester) async {
@@ -1244,7 +1235,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.thigh), 'I 55,5 · D —');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         'thigh_left_cm': 55.5,
       });
       expect(repository.saved.single.containsKey('thigh_right_cm'), isFalse);
@@ -1288,7 +1279,7 @@ void main() {
       await tapMeasureDone(tester);
       expect(measureValueText(tester, BodyZone.hips), '95,5 cm');
       await _save(tester);
-      expect(repository.saved.single, {..._untouchedPayload(), 'hips_cm': 95.5});
+      expect(repository.saved.single, {..._datePayload(), 'hips_cm': 95.5});
     });
 
     testWidgets('a pair without data: both sides «—», ± from the seed', (
@@ -1306,7 +1297,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.calf), 'I 36,5 · D —');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         'calf_left_cm': 36.5,
       });
     });
@@ -1320,7 +1311,8 @@ void main() {
       await tapMeasureDone(tester);
       expect(measureEdited(BodyZone.shoulders), findsNothing);
       await _save(tester);
-      expect(repository.saved.single, _untouchedPayload());
+      // L6-UX4: nothing changed, so nothing is sent.
+      expect(repository.saved, isEmpty);
     });
 
     testWidgets('the empty side of a measured pair steps from the other', (
@@ -1335,7 +1327,7 @@ void main() {
       expect(measureValueText(tester, BodyZone.thigh), 'I 55,0 · D 55,5 cm');
       await _save(tester);
       expect(repository.saved.single, {
-        ..._untouchedPayload(),
+        ..._datePayload(),
         'thigh_right_cm': 55.5,
       });
     });

@@ -1838,6 +1838,12 @@ abstract class AppLocalizations {
   /// **'El peso solo se guarda si lo modificas en esta actualización.'**
   String get weightUpdateNote;
 
+  /// No description provided for @weightUpdateNoteToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy se guardará el peso de tu perfil aunque no lo cambies.'**
+  String get weightUpdateNoteToday;
+
   /// No description provided for @muscleMassSectionTitle.
   ///
   /// In es, this message translates to:
@@ -6481,6 +6487,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo cargar el resumen. Vuelve a intentarlo.'**
   String get homeLoadError;
+
+  /// No description provided for @metricsDayLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el día…'**
+  String get metricsDayLoading;
+
+  /// No description provided for @metricsDayLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las métricas de este día.'**
+  String get metricsDayLoadError;
 
   /// No description provided for @metricsSaveError.
   ///

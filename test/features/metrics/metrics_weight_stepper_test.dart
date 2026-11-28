@@ -19,6 +19,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
@@ -126,7 +127,12 @@ Future<_Repository> _mount(
     ),
   );
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      // «Today» is the day of the loaded record, so the initial «latest» load
+      // answers the record of the selected day (L6-UX7 b).
+      builder: (_) =>
+          MetricsFormPage(clock: () => (latest ?? _metricWithWeight(70)).date),
+    ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
@@ -194,7 +200,7 @@ Future<void> _pickOtherDay(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   final dialog = find.byType(DatePickerDialog);
-  if (DateTime.now().day == 1) {
+  if (_metricWithWeight(70).date.day == 1) {
     final previous = MaterialLocalizations.of(
       tester.element(dialog),
     ).previousMonthTooltip;
@@ -234,6 +240,19 @@ Future<void> _save(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 300));
 }
 
+/// L6-UX4: the save needs a change. A «9 h» chip is one that does not touch
+/// the weight, so the weight sent is the loaded one.
+Future<void> _changeSleep(WidgetTester tester) async {
+  final chip = find.widgetWithText(ActionChip, '9 h');
+  await tester.ensureVisible(chip);
+  await tester.tap(chip);
+  await tester.pump();
+}
+
+bool _saveEnabled(WidgetTester tester) =>
+    tester.widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton)).onPressed !=
+    null;
+
 void main() {
   tearDown(sl.reset);
 
@@ -265,7 +284,7 @@ void main() {
           expect(stepper.value, UnitConverters.weightToDisplay(68.4, unit));
         });
 
-        testWidgets('untouched, the save sends the loaded weight', (
+        testWidgets('untouched, the save is disabled and sends nothing', (
           tester,
         ) async {
           final repository = await _mount(
@@ -274,9 +293,9 @@ void main() {
             unitSystem: unit,
             latest: _metricWithWeight(68.4),
           );
+          expect(_saveEnabled(tester), isFalse);
           await _save(tester);
-          expect(repository.saved, hasLength(1));
-          expect(repository.saved.single['weight_kg'], 68.4);
+          expect(repository.saved, isEmpty);
         });
 
         testWidgets('+ sends 0.5 kg more, in kilograms', (tester) async {
@@ -417,8 +436,10 @@ void main() {
           (170.0, 160.0),
         ]) {
           final below = loadedKg < limitKg;
+          // M-1: an untouched weight is not resent (it used to travel as is);
+          // the stored value stays, never clamped to the range.
           testWidgets('a loaded ${loadedKg.round()} kg is shown and, '
-              'untouched, sent as is', (tester) async {
+              'untouched, not sent with another change', (tester) async {
             final repository = await _mount(
               tester,
               locale: locale,
@@ -429,8 +450,12 @@ void main() {
               tester.widget<ExomNumeralStepper>(_stepper()).value,
               UnitConverters.weightToDisplay(loadedKg, unit),
             );
+            await _changeSleep(tester);
             await _save(tester);
-            expect(repository.saved.single['weight_kg'], loadedKg);
+            expect(repository.saved.single, {
+              'date': '2026-11-18',
+              'sleep_hours': 9.0,
+            });
           });
 
           testWidgets('from a loaded ${loadedKg.round()} kg the button away '
@@ -455,9 +480,8 @@ void main() {
         }
 
         testWidgets('invalid typed text, then another date with a metric: the '
-            'field shows the loaded weight and the save sends it', (
-          tester,
-        ) async {
+            'field shows the loaded weight and the save is not blocked by '
+            'it', (tester) async {
           final repository = await _mount(
             tester,
             locale: locale,
@@ -478,8 +502,12 @@ void main() {
             tester.widget<ExomNumeralStepper>(_stepper()).value,
             UnitConverters.weightToDisplay(81, unit),
           );
+          await _changeSleep(tester);
           await _save(tester);
-          expect(repository.saved.single['weight_kg'], 81.0);
+          // M-1: the loaded weight is not resent untouched.
+          expect(repository.saved, hasLength(1));
+          expect(repository.saved.single.containsKey('weight_kg'), isFalse);
+          expect(repository.saved.single['sleep_hours'], 9.0);
         });
       });
     }
@@ -493,6 +521,7 @@ void main() {
       unitSystem: UnitSystem.metric,
     );
     expect(_stepper(), findsOneWidget);
+    await _changeSleep(tester);
     await _save(tester);
     expect(repository.saved.single.containsKey('weight_kg'), isFalse);
   });

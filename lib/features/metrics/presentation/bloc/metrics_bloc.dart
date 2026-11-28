@@ -135,17 +135,39 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
     return isOfflineError(error);
   }
 
+  /// Bumped by every day-form load. Loads run concurrently (bloc's default
+  /// transformer), so an older one can answer after a newer one: only the
+  /// newest may emit, success or failure, or the form of the selected date
+  /// would be filled (and saved) with the metric of another day (L6-UX6).
+  int _loadEpoch = 0;
+
   Future<void> _onLoadRequested(
     MetricsLoadRequested event,
     Emitter<MetricsState> emit,
   ) async {
+    final request = ++_loadEpoch;
     emit(const MetricsLoading());
+    final BodyMetricEntity? metric;
     try {
-      final metric = await _metricsRepository.getLatestMetric(date: event.date);
-      emit(MetricsLoaded(metric));
-    } catch (_) {
-      emit(const MetricsLoaded(null));
+      // The datasource answers null only when the day has no record (200
+      // with `data: null`, or 404); every other failure throws.
+      metric = await _metricsRepository.getLatestMetric(date: event.date);
+    } catch (error) {
+      if (request != _loadEpoch) return;
+      // Not a day without metrics: the form must not be saved over a load
+      // that never arrived (L6-UX7).
+      emit(
+        MetricsLoadFailed(
+          date: event.date,
+          request: request,
+          offline: isOfflineError(error),
+          sessionChanged: _isSessionChange(error),
+        ),
+      );
+      return;
     }
+    if (request != _loadEpoch) return;
+    emit(MetricsLoaded(metric, date: event.date, request: request));
   }
 
   Future<void> _onSaveRequested(

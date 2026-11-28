@@ -23,12 +23,14 @@ import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
@@ -42,19 +44,31 @@ import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selec
 /// measures). Opened from «Añadir medida» in the «Progreso» view; a
 /// successful save pops it.
 class MetricsFormPage extends StatelessWidget {
-  const MetricsFormPage({super.key});
+  const MetricsFormPage({super.key, this.clock = DateTime.now});
+
+  /// Source of «today» (the initial date, the «Hoy» label and the last day of
+  /// the picker). Tests fix it so that today and a past day are stable.
+  final DateTime Function() clock;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<MetricsBloc>(),
-      child: const _MetricsView(),
+      child: _MetricsView(clock: clock),
     );
   }
 }
 
+typedef _SavePlan = ({
+  Map<String, dynamic> data,
+  Map<String, dynamic> profileData,
+  String? error,
+});
+
 class _MetricsView extends StatefulWidget {
-  const _MetricsView();
+  const _MetricsView({required this.clock});
+
+  final DateTime Function() clock;
 
   @override
   State<_MetricsView> createState() => _MetricsViewState();
@@ -88,7 +102,7 @@ class _MetricsViewState extends State<_MetricsView> {
   final _sleepController = TextEditingController();
   final _heightController = TextEditingController();
   final _muscleMassController = TextEditingController();
-  DateTime _selectedMetricDate = DateUtils.dateOnly(DateTime.now());
+  late DateTime _selectedMetricDate = _today();
   bool _heightTouched = false;
   bool _weightTouched = false;
 
@@ -100,6 +114,44 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _muscleMassTouched = false;
   bool _sleepTouched = false;
   final Set<String> _touchedMeasures = <String>{};
+
+  /// The form as it was filled by the last load (or the profile fallback):
+  /// the save is only offered once something differs from it (L6-UX4).
+  double _baselineWeightKg = 75.0;
+  Map<String, String> _baselineTexts = const <String, String>{};
+
+  /// The texts the record of the selected day fills, by [_currentTexts] key;
+  /// a value the record lacks (or a day without a record) is missing, i.e.
+  /// empty. Unlike [_baselineTexts] it leaves out the profile fallback: a
+  /// field is sent only when its text differs from these (M-1).
+  Map<String, String> _recordTexts = const <String, String>{};
+
+  /// The newest record, of another day than the selected one, as the initial
+  /// «latest» load answered it. It is not the baseline of the day: its values
+  /// are only shown as a reference with their date («Última: … · 20 nov») and
+  /// never sent (L6-UX7 b). Dropped when the date changes.
+  BodyMetricEntity? _reference;
+
+  /// Metric of the selected date as last loaded, and whether that load has
+  /// arrived: the save is not offered while a date is loading.
+  BodyMetricEntity? _lastLoaded;
+  bool _dayLoaded = false;
+
+  /// The load of the selected date failed (L6-UX7): the form shows the error
+  /// with «Reintentar» and the save stays disabled until a load arrives. A
+  /// failed load is never read as a day without metrics.
+  MetricsLoadFailed? _loadFailure;
+
+  /// Whether the client picked a date: from then on the initial «latest»
+  /// load no longer answers the selection.
+  bool _datePicked = false;
+
+  /// Whether a load answer tagged with [date] answers the selected date: a
+  /// dated answer must carry the selected date, and the initial «latest»
+  /// answer (null) only counts until a date is picked. A second defence
+  /// after the epoch of the bloc (L6-UX6).
+  bool _answersSelection(String? date) =>
+      date == null ? !_datePicked : date == _apiDate(_selectedMetricDate);
 
   bool _bodyMapMode = false;
   BodyZone? _selectedMeasure;
@@ -161,6 +213,7 @@ class _MetricsViewState extends State<_MetricsView> {
     if (!_fallbackPopulated) {
       _fallbackPopulated = true;
       _populateFallbackValuesFromCachedProfile();
+      _captureBaseline();
     }
   }
 
@@ -223,9 +276,10 @@ class _MetricsViewState extends State<_MetricsView> {
 
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
+  DateTime _today() => DateUtils.dateOnly(widget.clock());
+
   String _selectedDateLabel(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    if (_selectedMetricDate == today) {
+    if (_selectedMetricDate == _today()) {
       return AppLocalizations.of(context).todayLabel;
     }
     final isEn = Localizations.localeOf(context).languageCode == 'en';
@@ -239,7 +293,7 @@ class _MetricsViewState extends State<_MetricsView> {
       context: context,
       initialDate: _selectedMetricDate,
       firstDate: DateTime(2024),
-      lastDate: DateTime.now(),
+      lastDate: _today(),
       locale: Localizations.localeOf(context),
     );
 
@@ -248,10 +302,24 @@ class _MetricsViewState extends State<_MetricsView> {
     }
 
     setState(() {
+      _datePicked = true;
       _selectedMetricDate = DateUtils.dateOnly(picked);
       _selectedMeasure = null;
+      _lastLoaded = null;
+      _reference = null;
+      _dayLoaded = false;
+      _loadFailure = null;
     });
     _loadMetricForSelectedDate();
+  }
+
+  /// Launches again the load that failed, for the same date (or the initial
+  /// «latest» load).
+  void _retryLoad() {
+    final failure = _loadFailure;
+    if (failure == null) return;
+    setState(() => _loadFailure = null);
+    context.read<MetricsBloc>().add(MetricsLoadRequested(date: failure.date));
   }
 
   void _loadMetricForSelectedDate() {
@@ -329,6 +397,44 @@ class _MetricsViewState extends State<_MetricsView> {
     return double.tryParse(rawValue?.toString() ?? '');
   }
 
+  Map<String, String> _currentTexts() => {
+    'height': _heightController.text,
+    'sleep': _sleepController.text,
+    'muscle_mass': _muscleMassController.text,
+    for (final entry in _measureControllers.entries)
+      entry.key: entry.value.text,
+  };
+
+  void _captureBaseline() {
+    _baselineWeightKg = _weightKg;
+    _baselineTexts = _currentTexts();
+  }
+
+  /// Whether two draft texts hold the same value: «74» and «74,0» do.
+  bool _sameDraft(String a, String b) {
+    final left = a.trim();
+    final right = b.trim();
+    if (left.isEmpty || right.isEmpty) return left == right;
+    final parsedLeft = _parseDouble(left);
+    final parsedRight = _parseDouble(right);
+    if (parsedLeft == null || parsedRight == null) return left == right;
+    return (parsedLeft - parsedRight).abs() < 1e-6;
+  }
+
+  /// Whether any value of the form differs from [_captureBaseline]. Changing
+  /// a value and going back to the initial one is not a change.
+  bool get _hasChanges {
+    if (_weightTouched &&
+        (_weightInputInvalid ||
+            (_weightKg - _baselineWeightKg).abs() > 1e-6)) {
+      return true;
+    }
+    final current = _currentTexts();
+    return current.entries.any(
+      (entry) => !_sameDraft(entry.value, _baselineTexts[entry.key] ?? ''),
+    );
+  }
+
   void _populateFallbackValuesFromCachedProfile() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final heightCm = _cachedProfileNumber('height');
@@ -367,6 +473,8 @@ class _MetricsViewState extends State<_MetricsView> {
     for (final controller in _measureControllers.values) {
       controller.clear();
     }
+    _captureBaseline();
+    _recordTexts = const <String, String>{};
   }
 
   /// Plates of the C5b figure that stand for each measure (L6-D2 mapping of
@@ -528,13 +636,14 @@ class _MetricsViewState extends State<_MetricsView> {
   };
 
   /// «Última: I 33,0 · D 33,5 cm · 19 nov»: the stored values of the loaded
-  /// record and its date; null when the zone has none stored.
+  /// record (or of the [_reference] of another day) and its date; null when
+  /// the zone has none stored.
   String? _lastMeasureLine(
     AppLocalizations l10n,
     BodyZone zone,
     UnitSystem unitSystem,
   ) {
-    final metric = _currentMetricSnapshot();
+    final metric = _currentMetricSnapshot() ?? _reference;
     if (metric == null) return null;
     final stored = _storedMeasures(metric);
     final values = [
@@ -552,11 +661,57 @@ class _MetricsViewState extends State<_MetricsView> {
         const TextStyle(),
       ),
     ).toPlainText();
+    return l10n.metricsMeasureLast(text, _shortDate(metric.date));
+  }
+
+  /// «20 nov» / «Nov 20»: the day of a «Última» reference.
+  String _shortDate(DateTime date) {
     final languageCode = Localizations.localeOf(context).languageCode;
-    final date = languageCode == 'en'
-        ? DateFormat('MMM d', 'en').format(metric.date)
-        : DateFormat('d MMM', 'es').format(metric.date);
-    return l10n.metricsMeasureLast(text, date);
+    return languageCode == 'en'
+        ? DateFormat('MMM d', 'en').format(date)
+        : DateFormat('d MMM', 'es').format(date);
+  }
+
+  /// «Última: 7,5 h · 20 nov»: [value] of the [_reference] of another day as
+  /// the hint of an empty field; null without a reference or a value.
+  String? _referenceHint(AppLocalizations l10n, String? value) {
+    final reference = _reference;
+    if (reference == null || value == null) return null;
+    return l10n.metricsMeasureLast(value, _shortDate(reference.date));
+  }
+
+  /// The reference hints of height, muscle mass and sleep (the measures show
+  /// theirs in the sheet, [_lastMeasureLine]).
+  String? _heightReference(AppLocalizations l10n, UnitSystem unitSystem) {
+    final heightCm = _reference?.heightCm;
+    return _referenceHint(
+      l10n,
+      heightCm == null
+          ? null
+          : '${_lengthField(heightCm, unitSystem)} '
+                '${lengthUnitSymbol(unitSystem)}',
+    );
+  }
+
+  String? _muscleMassReference(AppLocalizations l10n, UnitSystem unitSystem) {
+    final muscleMassKg = _reference?.muscleMassKg;
+    return _referenceHint(
+      l10n,
+      muscleMassKg == null
+          ? null
+          : '${_weightField(muscleMassKg, unitSystem)} '
+                '${weightUnitSymbol(unitSystem)}',
+    );
+  }
+
+  String? _sleepReference(AppLocalizations l10n) {
+    final sleepHours = _reference?.sleepHours;
+    return _referenceHint(
+      l10n,
+      sleepHours == null
+          ? null
+          : '${_fieldNumber(sleepHours.toStringAsFixed(1))} h',
+    );
   }
 
   void _onPlateSelected(String plateId) {
@@ -622,7 +777,13 @@ class _MetricsViewState extends State<_MetricsView> {
     if (!mounted || result == null || result.isEmpty) return;
     setState(() {
       for (final MapEntry(key: fieldKey, value: value) in result.entries) {
-        _controllerForField(fieldKey).text = _draftText(value);
+        // «Hecho» with the value as it was is not an edit.
+        final text = _draftText(value);
+        if (_sameDraft(_controllerForField(fieldKey).text, text) &&
+            _controllerForField(fieldKey).text.trim().isNotEmpty) {
+          continue;
+        }
+        _controllerForField(fieldKey).text = text;
         _markMeasureTouched(fieldKey);
       }
     });
@@ -728,120 +889,112 @@ class _MetricsViewState extends State<_MetricsView> {
     );
   }
 
-  BodyMetricEntity? _currentMetricSnapshot() {
-    final state = context.read<MetricsBloc>().state;
-    if (state is MetricsLoaded) {
-      return state.current;
-    }
-    return null;
-  }
+  /// The metric loaded for the selected date. Kept across Loading, Saving
+  /// and Error states (a failed save must retry with the loaded values) and
+  /// dropped when the date changes.
+  BodyMetricEntity? _currentMetricSnapshot() => _lastLoaded;
 
-  void _save() {
+  /// Whether the text of [key] differs from what the record of the selected
+  /// day fills ([_recordTexts]): «74» and «74,0» do not.
+  bool _differsFromRecord(String key) =>
+      !_sameDraft(_currentTexts()[key] ?? '', _recordTexts[key] ?? '');
+
+  /// What a save would send, without side effects: the payload (always with
+  /// the date), the profile update and, when a typed value does not parse,
+  /// the message to show instead. The save button and [_save] both read it, so
+  /// the button is enabled exactly when the save sends a value besides the
+  /// date.
+  ///
+  /// Only the values that differ from the record of the selected day travel
+  /// (M-1): `POST /metrics` upserts by date and keeps every absent key, so a
+  /// value nobody touched here is never rewritten with the copy loaded here,
+  /// which another device or the admin may have changed since. A cleared
+  /// value the record had is sent as null (L6-UX5).
+  _SavePlan _planSave() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final currentMetric = _currentMetricSnapshot();
-    final currentWeightKg = currentMetric?.weightKg;
-    final currentSleepHours = currentMetric?.sleepHours;
-    final currentMuscleMassKg = currentMetric?.muscleMassKg;
     final profileWeightKg = _cachedProfileNumber('current_weight');
     final data = <String, dynamic>{};
     final profileData = <String, dynamic>{};
+    _SavePlan invalid(String message) =>
+        (data: data, profileData: profileData, error: message);
 
     data['date'] = _apiDate(_selectedMetricDate);
 
-    double? nextHeightCm = currentMetric?.heightCm;
     if (_heightTouched) {
       final rawHeight = _parseDouble(_heightController.text);
       if (rawHeight == null) {
-        _showValidationMessage(
-          AppLocalizations.of(context).validHeightRequired,
-        );
-        return;
+        return invalid(AppLocalizations.of(context).validHeightRequired);
       }
-
-      nextHeightCm = UnitConverters.lengthFromDisplay(rawHeight, unitSystem);
-    }
-    if (nextHeightCm != null) {
-      data['height_cm'] = nextHeightCm;
-      profileData['height'] = nextHeightCm;
+      if (_differsFromRecord('height')) {
+        final heightCm = UnitConverters.lengthFromDisplay(
+          rawHeight,
+          unitSystem,
+        );
+        data['height_cm'] = heightCm;
+        // Only a height changed in this save updates the profile: saving
+        // another value of an old day must not set the profile to the
+        // height of that day (M-3).
+        profileData['height'] = heightCm;
+      }
     }
 
     if (_weightTouched) {
       if (_weightInputInvalid) {
-        _showValidationMessage(
-          AppLocalizations.of(context).validWeightRequired,
-        );
-        return;
+        return invalid(AppLocalizations.of(context).validWeightRequired);
       }
-      data['weight_kg'] = _weightKg;
-    } else if (currentWeightKg != null) {
-      data['weight_kg'] = currentWeightKg;
-    } else if (currentMetric == null && profileWeightKg != null) {
+      final storedKg = currentMetric?.weightKg;
+      if (storedKg == null || (_weightKg - storedKg).abs() > 1e-6) {
+        data['weight_kg'] = _weightKg;
+      }
+    } else if (_profileWeightStandsIn) {
       data['weight_kg'] = profileWeightKg;
     }
 
     if (_sleepTouched) {
       final sleepHours = _parseDouble(_sleepController.text);
       if (sleepHours == null) {
-        _showValidationMessage(AppLocalizations.of(context).validSleepRequired);
-        return;
+        return invalid(AppLocalizations.of(context).validSleepRequired);
       }
-      data['sleep_hours'] = sleepHours;
-    } else if (currentSleepHours != null) {
-      data['sleep_hours'] = currentSleepHours;
+      if (_differsFromRecord('sleep')) data['sleep_hours'] = sleepHours;
     }
 
     if (_muscleMassTouched) {
       final rawMuscleMass = _muscleMassController.text.trim();
-      if (rawMuscleMass.isNotEmpty) {
+      if (rawMuscleMass.isEmpty) {
+        // A cleared value the loaded metric had is sent as null so the API
+        // clears it; omitting the key would keep the old value (L6-UX5).
+        if (currentMetric?.muscleMassKg != null) {
+          data['muscle_mass_kg'] = null;
+        }
+      } else {
         final muscleMass = _parseDouble(rawMuscleMass);
         if (muscleMass == null) {
-          _showValidationMessage(
-            AppLocalizations.of(context).validMuscleMassRequired,
-          );
-          return;
+          return invalid(AppLocalizations.of(context).validMuscleMassRequired);
         }
-        data['muscle_mass_kg'] = UnitConverters.weightFromDisplay(
-          muscleMass,
-          unitSystem,
-        );
+        if (_differsFromRecord('muscle_mass')) {
+          data['muscle_mass_kg'] = UnitConverters.weightFromDisplay(
+            muscleMass,
+            unitSystem,
+          );
+        }
       }
-    } else if (currentMuscleMassKg != null) {
-      data['muscle_mass_kg'] = currentMuscleMassKg;
     }
 
-    final existingMeasures = <String, double?>{
-      'neck_cm': currentMetric?.neckCm,
-      'shoulders_cm': currentMetric?.shouldersCm,
-      'chest_cm': currentMetric?.chestCm,
-      'arm_left_cm': currentMetric?.armLeftCm,
-      'arm_right_cm': currentMetric?.armRightCm,
-      'forearm_left_cm': currentMetric?.forearmLeftCm,
-      'forearm_right_cm': currentMetric?.forearmRightCm,
-      'waist_cm': currentMetric?.waistCm,
-      'hips_cm': currentMetric?.hipsCm,
-      'thigh_left_cm': currentMetric?.thighLeftCm,
-      'thigh_right_cm': currentMetric?.thighRightCm,
-      'calf_left_cm': currentMetric?.calfLeftCm,
-      'calf_right_cm': currentMetric?.calfRightCm,
-    };
-
+    final storedMeasures = _storedMeasures(currentMetric);
     for (final entry in _measureControllers.entries) {
-      if (!_touchedMeasures.contains(entry.key)) {
-        final existingValue = existingMeasures[entry.key];
-        if (existingValue != null) {
-          data[entry.key] = existingValue;
-        }
-        continue;
-      }
+      if (!_touchedMeasures.contains(entry.key)) continue;
 
       final rawValue = entry.value.text.trim();
       if (rawValue.isEmpty) {
+        // As the muscle mass: a cleared saved measure is sent as null.
+        if (storedMeasures[entry.key] != null) data[entry.key] = null;
         continue;
       }
 
       final parsedValue = _parseDouble(rawValue);
       if (parsedValue == null) {
-        _showValidationMessage(
+        return invalid(
           AppLocalizations.of(context).measurementReviewTemplate(
             _localizedZoneLabel(
               context,
@@ -849,23 +1002,86 @@ class _MetricsViewState extends State<_MetricsView> {
             ).toLowerCase(),
           ),
         );
-        return;
       }
 
-      data[entry.key] = UnitConverters.lengthFromDisplay(
-        parsedValue,
-        unitSystem,
-      );
+      if (_differsFromRecord(entry.key)) {
+        data[entry.key] = UnitConverters.lengthFromDisplay(
+          parsedValue,
+          unitSystem,
+        );
+      }
     }
 
-    if (data.isEmpty) {
+    return (data: data, profileData: profileData, error: null);
+  }
+
+  /// Today without a record and with a profile weight: the preloaded profile
+  /// weight counts as data and is saved untouched (owner decision L6-UX4).
+  /// On a past day without a record it is only shown: an untouched one is
+  /// not sent, or the day would get a weight nobody logged for it (M-17).
+  bool get _profileWeightStandsIn =>
+      _dayLoaded &&
+      _lastLoaded == null &&
+      _selectedMetricDate == _today() &&
+      _cachedProfileNumber('current_weight') != null;
+
+  /// A day without a metric that sends a weight: the profile weight stands in
+  /// for it ([_profileWeightStandsIn]) or the client set one. It counts as
+  /// data.
+  bool _sendsWeightForEmptyDay(_SavePlan plan) =>
+      _dayLoaded && _lastLoaded == null && plan.data.containsKey('weight_kg');
+
+  /// Whether the payload changes something and the day keeps a value after
+  /// it: a value it sends, or a stored value of the day it does not clear.
+  /// The payload carries only the changes (M-1), so the values left out stay
+  /// stored. A save that would only clear the day is not offered (owner
+  /// decision L6-UX5), nor one with nothing but the date.
+  bool _sendsAnyValue(_SavePlan plan) {
+    final changes = {
+      for (final MapEntry(:key, :value) in plan.data.entries)
+        if (key != 'date') key: value,
+    };
+    if (changes.values.any((value) => value != null)) return true;
+    if (changes.isEmpty) return false;
+    final metric = _currentMetricSnapshot();
+    final stored = <String, double?>{
+      'weight_kg': metric?.weightKg,
+      'height_cm': metric?.heightCm,
+      'muscle_mass_kg': metric?.muscleMassKg,
+      'sleep_hours': metric?.sleepHours,
+      ..._storedMeasures(metric),
+    };
+    return stored.entries.any(
+      (entry) => entry.value != null && !changes.containsKey(entry.key),
+    );
+  }
+
+  /// The save is offered once the day is loaded and it would send more than
+  /// the date (or a typed value needs its message), and the form either
+  /// changed from what was loaded or is an empty day whose payload carries
+  /// the weight. Nothing is created from a form with no measure (L6-UX4).
+  bool get _canSave {
+    if (!_dayLoaded) return false;
+    final plan = _planSave();
+    if (plan.error != null) return true;
+    if (!_sendsAnyValue(plan)) return false;
+    return _hasChanges || _sendsWeightForEmptyDay(plan);
+  }
+
+  void _save() {
+    final plan = _planSave();
+    if (plan.error case final message?) {
+      _showValidationMessage(message);
+      return;
+    }
+    if (!_sendsAnyValue(plan)) {
       _showValidationMessage(AppLocalizations.of(context).noChangesMessage);
       return;
     }
-
+    final profileData = plan.profileData;
     context.read<MetricsBloc>().add(
       MetricsSaveRequested(
-        data,
+        plan.data,
         profileData: profileData.isEmpty ? null : profileData,
       ),
     );
@@ -930,9 +1146,9 @@ class _MetricsViewState extends State<_MetricsView> {
           ? _lengthField(initialHeightCm, unitSystem)
           : '',
     );
-    final calfController = TextEditingController(
-      text: _preferredSeenCalfText(),
-    );
+    final initialHeightText = heightController.text;
+    final initialCalfText = _preferredSeenCalfText();
+    final calfController = TextEditingController(text: initialCalfText);
     var selectedSex = parseSeenBiologicalSex(profile?['sex'] as String?);
     String? errorText;
 
@@ -1110,19 +1326,36 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    _controllerForField('calf_left_cm').text = _lengthField(
-                      calfCm,
-                      unitSystem,
-                    );
-                    _controllerForField('calf_right_cm').text = _lengthField(
-                      calfCm,
-                      unitSystem,
-                    );
-                    _heightController.text = _lengthField(heightCm, unitSystem);
-                    _heightTouched = true;
+                    // The calf of the estimate never overwrites a measured
+                    // side (M-4). A new calf typed here only fills the side
+                    // without a value when the other one has it.
+                    final emptyCalves = [
+                      for (final key in const ['calf_left_cm', 'calf_right_cm'])
+                        if (_controllerForField(key).text.trim().isEmpty) key,
+                    ];
+                    if (emptyCalves.length == 1 &&
+                        !_sameDraft(calfController.text, initialCalfText)) {
+                      _controllerForField(emptyCalves.single).text = _draftText(
+                        calfValue,
+                      );
+                      _markMeasureTouched(emptyCalves.single);
+                    }
+                    // The height is written (and counts as edited) only when
+                    // the user changed the one the dialog opened with (the
+                    // field's, or the profile's when the field is empty),
+                    // compared in the displayed unit so a conversion is not
+                    // a change.
+                    if (!_sameDraft(
+                      heightController.text,
+                      initialHeightText,
+                    )) {
+                      _heightController.text = _lengthField(
+                        heightCm,
+                        unitSystem,
+                      );
+                      _heightTouched = true;
+                    }
                     _muscleMassTouched = true;
-                    _markMeasureTouched('calf_left_cm');
-                    _markMeasureTouched('calf_right_cm');
                     Navigator.of(dialogContext).pop(result);
                   },
                   child: Text(
@@ -1225,6 +1458,14 @@ class _MetricsViewState extends State<_MetricsView> {
         _controllerForField(entry.key).clear();
       }
     }
+    _captureBaseline();
+    _recordTexts = {
+      ..._currentTexts(),
+      // The profile height fills a record without one; it is not the record.
+      'height': metric.heightCm != null
+          ? _lengthField(metric.heightCm, unitSystem)
+          : '',
+    };
   }
 
   @override
@@ -1236,8 +1477,27 @@ class _MetricsViewState extends State<_MetricsView> {
     );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
-        if (state is MetricsLoaded) {
-          final currentMetric = state.current;
+        if (state is MetricsLoadFailed && _answersSelection(state.date)) {
+          setState(() {
+            _lastLoaded = null;
+            _dayLoaded = false;
+            _loadFailure = state;
+          });
+        }
+        if (state is MetricsLoaded && _answersSelection(state.date)) {
+          final metric = state.current;
+          // The initial «latest» load answers the newest record of any date:
+          // only a record of the selected day is its baseline. One of another
+          // day leaves the day empty and stays as a reference (L6-UX7 b).
+          final otherDay =
+              state.date == null &&
+              metric != null &&
+              !DateUtils.isSameDay(metric.date, _selectedMetricDate);
+          final currentMetric = otherDay ? null : metric;
+          _lastLoaded = currentMetric;
+          _reference = otherDay ? metric : null;
+          _dayLoaded = true;
+          _loadFailure = null;
           if (currentMetric != null) {
             _populateFromMetric(currentMetric);
           } else {
@@ -1304,6 +1564,11 @@ class _MetricsViewState extends State<_MetricsView> {
           body: BlocBuilder<MetricsBloc, MetricsState>(
             builder: (context, state) {
               final isSaving = state is MetricsSaving;
+              final isLoading = state is MetricsLoading;
+              // L6-UX8: while the day loads or saves the inputs are inert, so
+              // nothing typed is lost to the repopulation that follows. The
+              // date picker stays live while loading (to change the day).
+              final inputsLocked = isLoading || isSaving;
               final bottomInset = MediaQuery.of(context).padding.bottom;
               final l10n = AppLocalizations.of(context);
               final secondary = TextStyle(
@@ -1349,9 +1614,34 @@ class _MetricsViewState extends State<_MetricsView> {
                           children: [
                             _DateField(
                               label: _selectedDateLabel(context),
-                              onTap: _pickMetricDate,
+                              onTap: isSaving ? null : _pickMetricDate,
                             ),
                             Text(l10n.recordDateDescription, style: secondary),
+                            if (isLoading)
+                              Semantics(
+                                liveRegion: true,
+                                label: l10n.metricsDayLoading,
+                                child: const ExomSkeleton.rule(
+                                  key: Key('metrics-day-loading'),
+                                ),
+                              ),
+                            if (_loadFailure case final failure?)
+                              ExomInlineMessage(
+                                key: const Key('metrics-load-error'),
+                                kind: ExomMessageKind.error,
+                                title: l10n.metricsDayLoadError,
+                                body: failure.offline
+                                    ? l10n.noConnectionMessage
+                                    : null,
+                                // After a session change the form belongs to
+                                // the previous session: it is not reloaded.
+                                actionLabel: failure.sessionChanged
+                                    ? null
+                                    : l10n.retryButton,
+                                onAction: failure.sessionChanged
+                                    ? null
+                                    : _retryLoad,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -1360,6 +1650,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.weightSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             KeyedSubtree(
                               key: ValueKey(_weightFieldGeneration),
@@ -1391,7 +1682,12 @@ class _MetricsViewState extends State<_MetricsView> {
                               ),
                             ),
                             Text(l10n.metricsWeightTypeHint, style: secondary),
-                            Text(l10n.weightUpdateNote, style: secondary),
+                            Text(
+                              _profileWeightStandsIn
+                                  ? l10n.weightUpdateNoteToday
+                                  : l10n.weightUpdateNote,
+                              style: secondary,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -1400,6 +1696,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.heightSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _heightController,
@@ -1408,12 +1705,15 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
-                                hintText: _heightHint(l10n, unitSystem),
+                                hintText:
+                                    _heightReference(l10n, unitSystem) ??
+                                    _heightHint(l10n, unitSystem),
                                 suffixText: lengthUnitSymbol(unitSystem),
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _heightTouched = true,
+                              onChanged: (_) => setState(() => _heightTouched = true),
                             ),
                             Text(l10n.heightDescription, style: secondary),
                           ],
@@ -1424,6 +1724,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.muscleMassSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _muscleMassController,
@@ -1432,17 +1733,20 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
-                                hintText: localizedInputExample(
-                                  l10n,
-                                  unitSystem == UnitSystem.imperial
-                                      ? 71.7
-                                      : 32.5,
-                                ),
+                                hintText:
+                                    _muscleMassReference(l10n, unitSystem) ??
+                                    localizedInputExample(
+                                      l10n,
+                                      unitSystem == UnitSystem.imperial
+                                          ? 71.7
+                                          : 32.5,
+                                    ),
                                 suffixText: weightUnit,
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _muscleMassTouched = true,
+                              onChanged: (_) => setState(() => _muscleMassTouched = true),
                             ),
                             Text(l10n.muscleMassDescription, style: secondary),
                             const SizedBox(height: ExomSpacing.sm),
@@ -1478,6 +1782,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.sleepHoursSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _sleepController,
@@ -1486,12 +1791,15 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
-                                hintText: localizedInputExample(l10n, 7.5),
+                                hintText:
+                                    _sleepReference(l10n) ??
+                                    localizedInputExample(l10n, 7.5),
                                 suffixText: 'h',
                                 suffixStyle: unitStyle,
                               ),
-                              onChanged: (_) => _sleepTouched = true,
+                              onChanged: (_) => setState(() => _sleepTouched = true),
                             ),
                             Text(l10n.sleepHoursDescription, style: secondary),
                             Wrap(
@@ -1516,6 +1824,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.bodyMeasurementsTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             ExomSegmentedControl<bool>(
                               options: const [true, false],
@@ -1531,10 +1840,16 @@ class _MetricsViewState extends State<_MetricsView> {
                           ],
                         ),
                         if (_bodyMapMode)
-                          _buildMeasureBody(l10n, unitSystem)
+                          IgnorePointer(
+                            ignoring: inputsLocked,
+                            child: _buildMeasureBody(l10n, unitSystem),
+                          )
                         else ...[
                           const SizedBox(height: ExomSpacing.md),
-                          _buildMeasureList(l10n, unitSystem),
+                          IgnorePointer(
+                            ignoring: inputsLocked,
+                            child: _buildMeasureList(l10n, unitSystem),
+                          ),
                         ],
                       ],
                     ),
@@ -1545,7 +1860,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       label: l10n.saveMetricsButton,
                       trailingIcon: ExomIcons.check,
                       busy: isSaving,
-                      onPressed: _save,
+                      onPressed: _canSave && !inputsLocked ? _save : null,
                     ),
                   ),
                 ],
@@ -1609,9 +1924,13 @@ class _SeenSourceLink extends StatelessWidget {
 /// sketch «Formulario de métricas»): 20 dp sides, 8 dp from the header and
 /// between its children.
 class _FormSection extends StatelessWidget {
-  const _FormSection({required this.children});
+  const _FormSection({required this.children, this.inert = false});
 
   final List<Widget> children;
+
+  /// Ignores pointer input in the whole section (the form is loading or
+  /// saving).
+  final bool inert;
 
   @override
   Widget build(BuildContext context) {
@@ -1622,14 +1941,17 @@ class _FormSection extends StatelessWidget {
         ExomSpacing.xl,
         0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(height: ExomSpacing.sm),
-            children[i],
+      child: IgnorePointer(
+        ignoring: inert,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: ExomSpacing.sm),
+              children[i],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1642,7 +1964,9 @@ class _DateField extends StatelessWidget {
   const _DateField({required this.label, required this.onTap});
 
   final String label;
-  final VoidCallback onTap;
+
+  /// Null while the form is saving: the field then does nothing.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

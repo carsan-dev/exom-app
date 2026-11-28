@@ -93,7 +93,9 @@ jobs:
             NEXT_BUILD=$((CURRENT_BUILD + 1))
           fi
 
-          ANDROID_TRACK="${ANDROID_TRACK_INPUT:-internal}"
+          # A tag push has no inputs: it publishes to closed testing (alpha).
+          # A manual run keeps its own default (internal) for test builds.
+          ANDROID_TRACK="${ANDROID_TRACK_INPUT:-alpha}"
           UPDATE_POLICY="${UPDATE_POLICY_INPUT:-recommended}"
 
           {

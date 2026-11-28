@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/data/datasources/metrics_remote_datasource.dart';
+import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Answers every POST /metrics with [saved] and records the request bodies.
@@ -147,5 +148,88 @@ void main() {
       saved,
       {'date': '2026-11-18', 'weight_kg': 78.6},
     ]);
+  });
+
+  // `_dayOf` reads the first ten characters of a date string; anything shorter
+  // or missing has no day and must neither match another entry nor throw.
+  group('a saved or cached date without a full day', () {
+    final cachedHistory = <dynamic>[
+      <String, dynamic>{'date': '2026-11-18', 'weight_kg': 78.6},
+      <String, dynamic>{'date': '2026-11-11T00:00:00.000Z', 'weight_kg': 79.0},
+    ];
+
+    for (final (name, saved) in <(String, Map<String, Object?>)>[
+      ('short date', {'id': 'm-4', 'date': '2026-11', 'weight_kg': 77.0}),
+      ('empty date', {'id': 'm-5', 'date': '', 'weight_kg': 77.0}),
+      ('null date', {'id': 'm-6', 'date': null, 'weight_kg': 77.0}),
+      ('no date', {'id': 'm-7', 'weight_kg': 77.0}),
+    ]) {
+      test('$name: added in front, no cached day replaced', () async {
+        final env = _env(saved);
+        env.storage.cache['metrics_weight_history'] = <dynamic>[
+          ...cachedHistory,
+        ];
+        await env.datasource.saveMetric({
+          'date': '2026-11-18',
+          'weight_kg': 77.0,
+        });
+        expect(env.storage.cache['metrics_weight_history'], [
+          saved,
+          ...cachedHistory,
+        ]);
+      });
+    }
+
+    test(
+      'cached entries with a short or missing date are never replaced',
+      () async {
+        final saved = <String, Object?>{
+          'id': 'm-9',
+          'date': '2026-11-18',
+          'weight_kg': 77.0,
+        };
+        final env = _env(saved);
+        final odd = <dynamic>[
+          <String, dynamic>{'date': '2026-11', 'weight_kg': 70.0},
+          <String, dynamic>{'weight_kg': 71.0},
+          <String, dynamic>{'date': null, 'weight_kg': 72.0},
+          <String, dynamic>{'date': 20261118, 'weight_kg': 73.0},
+        ];
+        env.storage.cache['metrics_weight_history'] = <dynamic>[...odd];
+        await env.datasource.saveMetric({
+          'date': '2026-11-18',
+          'weight_kg': 77.0,
+        });
+        expect(env.storage.cache['metrics_weight_history'], [saved, ...odd]);
+      },
+    );
+  });
+
+  test('a saved muscle_mass_kg: null stays null in the answer and the cache, '
+      'never 0', () async {
+    final saved = <String, Object?>{
+      'id': 'm-10',
+      'date': '2026-11-18',
+      'weight_kg': 78.6,
+      'muscle_mass_kg': null,
+    };
+    final env = _env(saved);
+    final model = await env.datasource.saveMetric({
+      'date': '2026-11-18',
+      'weight_kg': 78.6,
+      'muscle_mass_kg': null,
+    });
+    expect(model.muscleMassKg, isNull);
+    for (final key in ['metrics_latest', 'home_latest_metric']) {
+      final cached = env.storage.getCachedMap(key);
+      expect(cached, isNotNull, reason: key);
+      expect(cached!.containsKey('muscle_mass_kg'), isTrue, reason: key);
+      expect(cached['muscle_mass_kg'], isNull, reason: key);
+      expect(
+        BodyMetricModel.fromJson(cached).muscleMassKg,
+        isNull,
+        reason: key,
+      );
+    }
   });
 }

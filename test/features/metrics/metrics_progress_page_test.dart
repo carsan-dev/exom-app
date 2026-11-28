@@ -13,6 +13,7 @@ import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_figure_columns.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -496,6 +497,50 @@ void main() {
         'Cintura · 18 nov: 74 cm',
         'Peso · 11 nov: 68,8 kg',
       ]);
+    });
+
+    testWidgets('a latest record with muscle_mass_kg: null paints no muscle '
+        'mass row (never 0)', (tester) async {
+      // As the API (or the cache written after a save) returns a cleared
+      // muscle mass (L6-UX5).
+      final model = BodyMetricModel.fromJson({
+        'id': 'latest-null-muscle',
+        'date': '2026-11-18',
+        'weight_kg': 68.4,
+        'muscle_mass_kg': null,
+        'waist_cm': 74,
+      });
+      expect(model.muscleMassKg, isNull);
+      await _mount(
+        tester,
+        repository: _Repository(
+          history: _weekly,
+          latest: BodyMetricEntity(
+            id: model.id,
+            date: model.date,
+            weightKg: model.weightKg,
+            muscleMassKg: model.muscleMassKg,
+            waistCm: model.waistCm,
+          ),
+        ),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is KeyedSubtree &&
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith(
+                'progress-measure-muscle_mass_kg-',
+              ),
+        ),
+        findsNothing,
+      );
+      final label = _l10n(tester).muscleMassSectionTitle;
+      expect(
+        _figures(tester).where((figure) => figure.startsWith(label)),
+        isEmpty,
+      );
+      expect(_figures(tester), contains('Cintura · 18 nov: 74 cm'));
     });
 
     testWidgets('the photos row opens the existing progress photos route', (

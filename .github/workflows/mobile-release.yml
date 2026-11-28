@@ -178,7 +178,7 @@ jobs:
 
   ios:
     name: Build and upload iOS
-    runs-on: macos-26
+    runs-on: xcode-27
     needs: prepare
 
     steps:
@@ -194,9 +194,9 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Select Xcode 26
+      - name: Select Xcode 27
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
           xcodebuild -version
           xcodebuild -showsdks
 

@@ -908,19 +908,22 @@ class _MetricsViewState extends State<_MetricsView> {
 
     data['date'] = _apiDate(_selectedMetricDate);
 
-    double? nextHeightCm = currentMetric?.heightCm;
     if (_heightTouched) {
       final rawHeight = _parseDouble(_heightController.text);
       if (rawHeight == null) {
         return invalid(AppLocalizations.of(context).validHeightRequired);
       }
       if (_differsFromRecord('height')) {
-        nextHeightCm = UnitConverters.lengthFromDisplay(rawHeight, unitSystem);
-        data['height_cm'] = nextHeightCm;
+        final heightCm = UnitConverters.lengthFromDisplay(
+          rawHeight,
+          unitSystem,
+        );
+        data['height_cm'] = heightCm;
+        // Only a height changed in this save updates the profile: saving
+        // another value of an old day must not set the profile to the
+        // height of that day (M-3).
+        profileData['height'] = heightCm;
       }
-    }
-    if (nextHeightCm != null) {
-      profileData['height'] = nextHeightCm;
     }
 
     if (_weightTouched) {

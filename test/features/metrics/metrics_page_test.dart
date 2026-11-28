@@ -465,9 +465,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(h.repository.saved, hasLength(1));
       expect(h.repository.saved.single, {'date': _todayApi, 'waist_cm': 73.5});
-      expect(h.profile.updates, [
-        {'height': 180.0},
-      ]);
+      // M-3: the height was not changed, so the profile is not touched.
+      expect(h.profile.updates, isEmpty);
     });
 
     testWidgets('editing a measure sends the edited value', (tester) async {
@@ -910,6 +909,60 @@ void main() {
       await tapSave(tester);
       expect(h.repository.saved, [
         {'date': '2026-11-20', 'calf_right_cm': 37.0},
+      ]);
+    });
+  });
+
+  // M-3: any save of a day with a height rewrote the profile height with it,
+  // so correcting a measure of an old day set the profile to that old height.
+  group('M-3 the profile height follows only a changed height', () {
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    final oldDay = BodyMetricEntity(
+      id: 'metric-old',
+      date: DateTime(2026, 11, 1),
+      heightCm: 178,
+      waistCm: 80,
+    );
+
+    testWidgets('a past day saved without touching the height leaves the '
+        'profile alone', (tester) async {
+      final h = await _mount(
+        tester,
+        loader: (date) async => date == null ? null : oldDay,
+        profileCache: {'height': 180},
+      );
+      await _pickOtherDay(tester);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '81');
+      await tapMeasureDone(tester);
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-01', 'waist_cm': 81.0},
+      ]);
+      expect(h.profile.updates, isEmpty);
+    });
+
+    testWidgets('a changed height is saved in the day and in the profile', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        size: const Size(390, 6000),
+      );
+      await tester.enterText(_fieldWithText('180,0'), '181');
+      await tester.pump();
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': _todayApi, 'height_cm': 181.0},
+      ]);
+      expect(h.profile.updates, [
+        {'height': 181.0},
       ]);
     });
   });

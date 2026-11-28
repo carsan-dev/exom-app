@@ -945,6 +945,89 @@ void main() {
       }
     }
 
+    for (final locale in const ['es', 'en']) {
+      testWidgets('$locale 384dp x2.0: stacked semantics keep value and '
+          'actions, the unit is no extra node', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _mount(
+          tester,
+          latest: _metric,
+          locale: Locale(locale),
+          size: const Size(384, 832),
+          textScale: 2.0,
+        );
+        await openMeasureSheet(tester, BodyZone.upperArm);
+        await typeMeasure(
+          tester,
+          'arm_left_cm',
+          locale == 'en' ? '33.5' : '33,5',
+        );
+        await tester.pump();
+        // Stacked: the ± sit under the field (the row would be on one line).
+        final plus = tester.getRect(
+          find.descendant(
+            of: measureStepper('arm_left_cm'),
+            matching: find.byIcon(ExomIcons.add),
+          ),
+        );
+        final field = tester.getRect(
+          find.descendant(
+            of: measureStepper('arm_left_cm'),
+            matching: find.byKey(ExomNumeralStepper.fieldKey),
+          ),
+        );
+        expect(plus.top, greaterThanOrEqualTo(field.bottom - 0.5));
+
+        // The control's node: the one carrying the ± actions. The widget's
+        // semantics root is an ancestor that merges the whole scroll area.
+        SemanticsNode? control;
+        void seek(SemanticsNode n) {
+          if (n.getSemanticsData().hasAction(SemanticsAction.increase) &&
+              n.getSemanticsData().value.contains('33')) {
+            control = n;
+          }
+          n.visitChildren((child) {
+            seek(child);
+            return true;
+          });
+        }
+
+        seek(tester.getSemantics(measureStepper('arm_left_cm')));
+        final node = control!;
+        final data = node.getSemanticsData();
+        final expected = locale == 'en' ? '33.5 cm' : '33,5 cm';
+        expect(
+          data.value.replaceAll(' ', ' '),
+          expected,
+          reason: 'the control announces value and unit',
+        );
+        expect(data.hasAction(SemanticsAction.increase), isTrue);
+        expect(data.hasAction(SemanticsAction.decrease), isTrue);
+        expect(data.increasedValue, isNotEmpty);
+        expect(data.decreasedValue, isNotEmpty);
+
+        // The «cm» painted between the ± is excluded: no node of its own
+        // announces the unit, so it is read once, with the value.
+        bool isUnitNode(SemanticsNode n) {
+          final d = n.getSemanticsData();
+          return d.label.trim() == 'cm' || d.value.trim() == 'cm';
+        }
+
+        var unitNodes = 0;
+        void walk(SemanticsNode n) {
+          if (isUnitNode(n)) unitNodes++;
+          n.visitChildren((child) {
+            walk(child);
+            return true;
+          });
+        }
+
+        walk(node);
+        expect(unitNodes, 0);
+        handle.dispose();
+      });
+    }
+
     testWidgets('a width change keeps focus, text and selection', (
       tester,
     ) async {

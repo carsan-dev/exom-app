@@ -12,7 +12,7 @@ ThemeData themeFor(Brightness brightness) =>
     brightness == Brightness.dark ? AppTheme.dark : AppTheme.light;
 
 /// Pumps [child] inside a localized MaterialApp/Scaffold on a [width] x
-/// [height] surface at devicePixelRatio 1.
+/// [height] logical surface at [devicePixelRatio] (1 by default).
 Future<void> pumpComponent(
   WidgetTester tester,
   Widget child, {
@@ -25,10 +25,11 @@ Future<void> pumpComponent(
   Locale locale = const Locale('es'),
   EdgeInsets viewInsets = EdgeInsets.zero,
   bool wrapInScaffold = true,
+  double devicePixelRatio = 1.0,
 }) async {
   await loadRedesignFonts();
-  tester.view.physicalSize = Size(width, height);
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = Size(width, height) * devicePixelRatio;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   final theme = themeFor(brightness);

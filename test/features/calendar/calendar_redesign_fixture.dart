@@ -162,6 +162,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
   TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
+  double devicePixelRatio = 1.0,
 }) async {
   final bloc = SeededCalendarBloc(state);
   await pumpCalendarWithBloc(
@@ -175,6 +176,7 @@ Future<SeededCalendarBloc> pumpCalendarScene(
     textScaler: textScaler,
     locale: locale,
     disableAnimations: disableAnimations,
+    devicePixelRatio: devicePixelRatio,
   );
   return bloc;
 }
@@ -192,13 +194,14 @@ Future<void> pumpCalendarWithBloc(
   TextScaler? textScaler,
   Locale locale = const Locale('es'),
   bool disableAnimations = true,
+  double devicePixelRatio = 1.0,
 }) async {
   await loadRedesignFonts();
   await sl.reset();
   openedRoutes.clear();
   sl.registerFactory<CalendarBloc>(() => bloc);
-  tester.view.physicalSize = Size(width, height);
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = Size(width, height) * devicePixelRatio;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   Widget stub(GoRouterState routeState) {

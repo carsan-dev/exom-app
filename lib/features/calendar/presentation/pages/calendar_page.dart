@@ -455,7 +455,12 @@ class _CalendarViewState extends State<_CalendarView> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             // L5-A4c: the figure moves with the month.
-            child: ExomStepTransition(step: monthStep, child: hero),
+            // L6-S25-D2: moved as an image, like the grid and the title.
+            child: ExomStepTransition(
+              step: monthStep,
+              snapshot: true,
+              child: hero,
+            ),
           ),
         ),
       _buildToggle(context),
@@ -1124,7 +1129,11 @@ class _MonthHeader extends StatelessWidget {
         children: [
           // L5-A4c: the title moves to the requested month at once.
           Expanded(
-            child: ExomStepTransition(step: year * 12 + month, child: title),
+            child: ExomStepTransition(
+              step: year * 12 + month,
+              snapshot: true,
+              child: title,
+            ),
           ),
           if (previous != null)
             IconButton(

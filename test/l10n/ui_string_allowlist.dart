@@ -12,21 +12,6 @@ class UiStringAllowance {
 
 const List<UiStringAllowance> uiStringAllowlist = [
   UiStringAllowance(
-    'lib/features/diets/presentation/pages/diets_page.dart',
-    r'${meal.calories} kcal',
-    'Unit symbol kcal, language neutral.',
-  ),
-  UiStringAllowance(
-    'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
-    r'${_height.toStringAsFixed(0)} cm',
-    'Metric unit symbol, language neutral.',
-  ),
-  UiStringAllowance(
-    'lib/features/onboarding/presentation/widgets/onboarding_body_step.dart',
-    r'${_weight.toStringAsFixed(1)} kg',
-    'Metric unit symbol, language neutral.',
-  ),
-  UiStringAllowance(
     'lib/features/settings/presentation/pages/settings_page.dart',
     r'Carlos Sánchez Román',
     'Proper name of the author.',
@@ -37,13 +22,8 @@ const List<UiStringAllowance> uiStringAllowlist = [
     'URL/handle, not translatable.',
   ),
   UiStringAllowance(
-    'lib/features/splash/presentation/pages/splash_page.dart',
+    'lib/features/help/presentation/pages/help_page.dart',
     r'EXOM',
-    'Brand name.',
-  ),
-  UiStringAllowance(
-    'lib/main.dart',
-    r'EXOM',
-    'Brand name (bootstrap screens, no locale available).',
+    'Brand name (decorative watermark, excluded from semantics).',
   ),
 ];

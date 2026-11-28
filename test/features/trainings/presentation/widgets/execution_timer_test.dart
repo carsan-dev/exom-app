@@ -3,6 +3,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -62,11 +63,10 @@ const exercise = TrainingExerciseEntity(
 
 void main() {
   setUpAll(() async {
-    final loader = FontLoader('CabinetGrotesk');
-    for (final weight in ['Regular', 'Medium', 'Bold']) {
-      loader.addFont(
-        rootBundle.load('assets/fonts/CabinetGrotesk-$weight.ttf'),
-      );
+    // The timer renders with the theme body family (AppTheme.bodyFontFamily).
+    final loader = FontLoader(AppTheme.bodyFontFamily);
+    for (final weight in ['400', '600']) {
+      loader.addFont(rootBundle.load('assets/fonts/dm-sans-$weight.ttf'));
     }
     await loader.load();
   });
@@ -115,8 +115,10 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pump();
       final start = tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Iniciar tiempo'),
+          .widget<ExomSecondaryButton>(
+            // L5-E3a: the start action is a secondary button (one lime
+            // action per state); same callback.
+            find.widgetWithText(ExomSecondaryButton, 'Iniciar tiempo'),
           )
           .onPressed!;
       start();

@@ -1,37 +1,82 @@
-import 'package:exom_app/core/api/api_error_helper.dart';
-import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:async';
 
+import 'package:exom_app/core/api/api_error_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/spacing.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
+import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
 import 'package:exom_app/features/home/presentation/bloc/home_bloc.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_row.dart';
+import 'package:exom_app/core/widgets/home_session_photo.dart';
 import 'package:exom_app/features/home/presentation/widgets/stats_row.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/week_day_selector.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
+/// Return to Inicio from «Sesión hecha» (E6a): reloads Inicio and, with the
+/// identity of what the server confirmed, lets HomeBloc paint that session
+/// done at once (owner decision 2026-11-26). Each navigation passes a new
+/// instance; the same instance again (a route rebuild) does nothing.
 class HomeCompletionRefresh {
-  const HomeCompletionRefresh();
+  const HomeCompletionRefresh({this.trainingId, this.date, this.sessionStamp});
+
+  /// The confirmed training.
+  final String? trainingId;
+
+  /// Its assignment date, `yyyy-mm-dd`.
+  final String? date;
+
+  /// The session (account and sign-in generation) that confirmed it.
+  final String? sessionStamp;
 }
 
+/// Instances whose patch was applied already: a route rebuilt with the same
+/// retained `extra` must not paint a completion that the reload may have
+/// said undone since. Identity based, nothing persisted.
+final Expando<bool> _consumedRefreshes = Expando<bool>('HomeCompletionRefresh');
+
+/// Inicio, direction A «Sesión de hoy» (redesign L3), repainted in L5-E1
+/// (sketch `e-migradas.html` «Inicio»).
+///
+/// The session is the first thing on screen; the only lime fill is the
+/// action pinned above the bottom navigation (and the «Hoy» pill on the
+/// session photo). Data comes only from HomeBloc.
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.completionRefresh});
+  const HomePage({super.key, this.completionRefresh, this.now = DateTime.now});
 
   final HomeCompletionRefresh? completionRefresh;
+
+  /// Clock for "today" in the presentation layer (decision D10). Tests pass a
+  /// fixed clock; production uses the real one.
+  final HomeNow now;
+
+  /// Upper bound for keeping the pull-to-refresh indicator open while the
+  /// reload runs. The bloc emits nothing when a refresh fails with content on
+  /// screen, so the wait must end on its own.
+  static const Duration refreshTimeout = Duration(seconds: 10);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  /// Bumped when HomeBloc patched a confirmed completion: the view is built
+  /// anew so every part of Inicio reads the patched content in its first
+  /// frame (a mounted bloc builder would paint its previous state until the
+  /// bloc's asynchronous emission reaches it).
+  int _patches = 0;
+
   @override
   void initState() {
     super.initState();
@@ -46,24 +91,117 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Called from [initState] and [didUpdateWidget], so the patch is in
+  /// place before the build that follows. One reload either way.
   void _refreshCompletion() {
-    if (widget.completionRefresh != null) {
-      context.read<HomeBloc>().add(const HomeLoadRequested());
+    final refresh = widget.completionRefresh;
+    if (refresh == null) return;
+    final bloc = context.read<HomeBloc>();
+    final trainingId = refresh.trainingId;
+    final date = refresh.date;
+    final fresh = _consumedRefreshes[refresh] != true;
+    _consumedRefreshes[refresh] = true;
+    if (fresh &&
+        trainingId != null &&
+        date != null &&
+        bloc.applyConfirmedCompletion(
+          trainingId: trainingId,
+          date: date,
+          sessionStamp: refresh.sessionStamp,
+        )) {
+      _patches++;
     }
+    bloc.add(const HomeLoadRequested());
   }
 
   @override
   Widget build(BuildContext context) {
-    return const _HomeView();
+    return HomeClock(
+      now: widget.now,
+      child: _HomeView(key: ValueKey(_patches)),
+    );
   }
 }
 
-class _HomeView extends StatelessWidget {
-  const _HomeView();
+/// Reloads [date] and completes when the bloc emits its next settled state
+/// (loaded, rest day or error), or after [HomePage.refreshTimeout]. Subscribes
+/// before dispatching so a fast emission is never missed. A failed reload with
+/// content on screen arrives as that content flagged with its error: the wait
+/// ends and Inicio shows the failure inline (D14-3), the data stays. Returns
+/// the settled state, or `null` when the wait ended without one.
+Future<HomeState?> _refreshHome(BuildContext context, DateTime date) async {
+  final bloc = context.read<HomeBloc>();
+  final settled = bloc.stream.firstWhere(
+    (state) => state is! HomeLoading && state is! HomeInitial,
+  );
+  bloc.add(HomeLoadRequested(date: date));
+  try {
+    return await settled.timeout(HomePage.refreshTimeout);
+  } on TimeoutException {
+    // The reload may still land later; the indicator just stops waiting.
+  } on StateError {
+    // Bloc closed while waiting.
+  }
+  return null;
+}
+
+/// D14-3 (L5-E1): the last reload failed and the data on screen is the
+/// previous one. Kept by the page until a load succeeds: a re-emission of
+/// the same content (the week marks arriving) does not clear it.
+class _ReloadFailure {
+  const _ReloadFailure(this.raw, this.summary);
+
+  final String raw;
+
+  /// Content the failure was reported over.
+  final HomeSummaryEntity summary;
+
+  /// A connectivity failure (`ApiException` with status 0).
+  bool get isOffline => raw.startsWith('ApiException(0)');
+}
+
+class _HomeView extends StatefulWidget {
+  const _HomeView({super.key});
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  _ReloadFailure? _failure;
+
+  static (HomeSummaryEntity?, String?) _contentOf(
+    HomeState state,
+  ) => switch (state) {
+    HomeLoaded(:final summary, :final refreshError) => (summary, refreshError),
+    HomeRestDay(:final summary, :final refreshError) => (summary, refreshError),
+    _ => (null, null),
+  };
+
+  void _onState(BuildContext context, HomeState state) {
+    final (summary, error) = _contentOf(state);
+    final current = _failure;
+    if (summary != null && error != null) {
+      setState(() => _failure = _ReloadFailure(error, summary));
+    } else if (current != null &&
+        (summary == null || !identical(summary, current.summary))) {
+      setState(() => _failure = null);
+    }
+  }
+
+  /// Pull to refresh and «Reintentar»: a reload that settles without error
+  /// clears the inline failure, even when it brings the same content back.
+  Future<void> _reload(DateTime date) async {
+    final settled = await _refreshHome(context, date);
+    if (!mounted || settled == null || _failure == null) return;
+    final (summary, error) = _contentOf(settled);
+    if (summary != null && error == null) setState(() => _failure = null);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<HomeBloc, HomeState>(
+    return BlocConsumer<HomeBloc, HomeState>(
+      listener: _onState,
       builder: (context, state) => _buildBody(context, state),
     );
   }
@@ -75,22 +213,32 @@ class _HomeView extends StatelessWidget {
 
     if (state is HomeError) {
       return ErrorWidget2(
-        message: localizedErrorTextOf(context, state.message, fallback: (l10n) => l10n.homeLoadError),
+        message: localizedErrorTextOf(
+          context,
+          state.message,
+          fallback: (l10n) => l10n.homeLoadError,
+        ),
         onRetry: () => context.read<HomeBloc>().add(const HomeLoadRequested()),
       );
     }
 
     if (state is HomeRestDay) {
-      return _RestDayBody(
+      return _HomeContent(
         summary: state.summary,
         selectedDate: state.selectedDate,
+        noPlan: state.dayPlan == HomeDayPlan.unassigned,
+        failure: _failure,
+        onReload: _reload,
       );
     }
 
     if (state is HomeLoaded) {
-      return _LoadedBody(
+      return _HomeContent(
         summary: state.summary,
         selectedDate: state.selectedDate,
+        noPlan: false,
+        failure: _failure,
+        onReload: _reload,
       );
     }
 
@@ -98,858 +246,280 @@ class _HomeView extends StatelessWidget {
   }
 }
 
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({
+    required this.summary,
+    required this.selectedDate,
+    required this.noPlan,
+    required this.failure,
+    required this.onReload,
+  });
+
+  final HomeSummaryEntity summary;
+  final DateTime selectedDate;
+
+  /// L5-D27: the calendar says the day has no assignment.
+  final bool noPlan;
+  final _ReloadFailure? failure;
+  final Future<void> Function(DateTime date) onReload;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final hasTraining = HomeSessionAction.appliesTo(summary);
+    final reload = failure;
+
+    return Column(
+      children: [
+        Expanded(
+          child: RefreshIndicator(
+            color: palette.textPrimary,
+            backgroundColor: palette.surface,
+            onRefresh: () => onReload(selectedDate),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 8, bottom: 24),
+              children: [
+                if (reload != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: ExomInlineMessage(
+                      kind: ExomMessageKind.pendiente,
+                      title: reload.isOffline
+                          ? l10n.homeOfflineSavedData
+                          : localizedErrorTextOf(
+                              context,
+                              reload.raw,
+                              fallback: (l10n) => l10n.homeLoadError,
+                            ),
+                      actionLabel: l10n.retry,
+                      onAction: () => onReload(selectedDate),
+                    ),
+                  ),
+                if (hasTraining)
+                  TodayTrainingCard(
+                    summary: summary,
+                    selectedDate: selectedDate,
+                  )
+                else if (noPlan)
+                  const HomeNoPlanHeader()
+                else
+                  HomeRestDayHeader(
+                    selectedDate: selectedDate,
+                    programWeek: summary.programWeek,
+                  ),
+                SizedBox(height: noPlan ? 0 : 24),
+                if (noPlan)
+                  const WeekDaySelector()
+                else
+                  _HomeWeekSection(featured: !hasTraining),
+                const SizedBox(height: 24),
+                HomeRowGroup(
+                  children: [
+                    TodayDietCard(summary: summary, selectedDate: selectedDate),
+                    StatsRow(summary: summary, selectedDate: selectedDate),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (hasTraining)
+          HomeSessionAction(summary: summary, selectedDate: selectedDate),
+      ],
+    );
+  }
+}
+
+/// «Tu semana» (L5-E1): the week strip under its title and, when the calendar
+/// marks of the clock's week are loaded, the count of done sessions derived
+/// from them («N de M sesiones hechas»). On a day without training
+/// ([featured]) the count is the protagonist: a 96 figure «N/M» in a feature
+/// block (sketch «Inicio · día de descanso»). Without marks, no count.
+class _HomeWeekSection extends StatelessWidget {
+  const _HomeWeekSection({required this.featured});
+
+  final bool featured;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final theme = Theme.of(context);
+    final weekStart = WeekDaySelector.weekStartOf(HomeClock.todayOf(context));
+
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        var marks = switch (state) {
+          HomeLoaded(:final weekMarks) => weekMarks,
+          HomeRestDay(:final weekMarks) => weekMarks,
+          _ => null,
+        };
+        if (marks != null &&
+            HomeWeekMarks.dayKey(marks.weekStart) !=
+                HomeWeekMarks.dayKey(weekStart)) {
+          marks = null;
+        }
+        final total = marks?.sessionCount ?? 0;
+        final done = marks?.doneCount ?? 0;
+        final secondary = theme.textTheme.bodyMedium?.copyWith(
+          color: palette.textSecondary,
+          fontSize: 14,
+          height: 1.35,
+        );
+
+        if (featured) {
+          return ExomFeatureBlock(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: ExomKicker(l10n.homeWeekTitle),
+                      ),
+                      if (total > 0) ...[
+                        const SizedBox(height: 12),
+                        ExomNumeral(
+                          value: formatFigure(context, done),
+                          unit: '/${formatFigure(context, total)}',
+                          side: Text(
+                            l10n.homeWeekSessionsDoneFoot(total),
+                            style: secondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const WeekDaySelector(),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  Semantics(
+                    header: true,
+                    label: l10n.homeWeekTitle,
+                    excludeSemantics: true,
+                    child: Text(
+                      l10n.homeWeekTitle.toUpperCase(),
+                      style: ExomType.section.copyWith(
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (total > 0)
+                    Text(
+                      l10n.homeWeekSessionsDone(done, total),
+                      style: secondary,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const WeekDaySelector(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// First load (L5-E1, sketch «Inicio · carga»): skeletons with the final
+/// shape (headline, photo, three figure columns, the week and two rows), no
+/// footer until there is data. Announced once as one status node.
 class _HomeLoadingBody extends StatelessWidget {
   const _HomeLoadingBody();
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        const _HomeHeroAccent(),
-        CustomScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            const SliverToBoxAdapter(child: _HomeDateHeaderSkeleton()),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            const SliverToBoxAdapter(child: _HomeWeekSelectorSkeleton()),
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-            const SliverToBoxAdapter(child: _HomeFeatureCardSkeleton()),
-            const SliverToBoxAdapter(
-              child: _HomeFeatureCardSkeleton(showSecondaryChip: false),
+    final raised = context.exomPalette.surfaceElevated;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: AppLocalizations.of(context).homeLoadingLabel,
+      child: ExcludeSemantics(
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: ExomSkeleton.headline(),
             ),
-            const SliverToBoxAdapter(child: _HomeStatsRowSkeleton()),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: ExomSkeleton.rule(),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: HomeSessionPhoto.height,
+              child: ColoredBox(color: raised),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  for (var i = 0; i < 3; i++) ...[
+                    if (i > 0) const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ExomSkeleton.numeral(),
+                          SizedBox(height: 8),
+                          ExomSkeleton.rule(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  for (var i = 0; i < 7; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
+                        child: SizedBox(
+                          height: 64,
+                          child: ColoredBox(color: raised),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const ExomSkeleton.row(),
+            const ExomSkeleton.row(),
           ],
         ),
-      ],
-    );
-  }
-}
-
-class _HomeDateHeaderSkeleton extends StatelessWidget {
-  const _HomeDateHeaderSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        ExomSpacing.lg,
-        ExomSpacing.sm,
-        ExomSpacing.lg,
-        ExomSpacing.xs,
-      ),
-      child: Row(
-        children: const [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShimmerCard(
-                  height: 34,
-                  width: 148,
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                ),
-                SizedBox(height: 8),
-                ShimmerCard(
-                  height: 16,
-                  width: 188,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 12),
-          ShimmerCard(
-            height: 44,
-            width: 44,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-        ],
       ),
     );
-  }
-}
-
-class _HomeWeekSelectorSkeleton extends StatelessWidget {
-  const _HomeWeekSelectorSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.lg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(
-          7,
-          (index) => const ShimmerCard(
-            height: 44,
-            width: 44,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeFeatureCardSkeleton extends StatelessWidget {
-  const _HomeFeatureCardSkeleton({this.showSecondaryChip = true});
-
-  final bool showSecondaryChip;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 24,
-      child: Row(
-        children: [
-          const ShimmerCard(
-            height: 56,
-            width: 56,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const ShimmerCard(
-                      height: 20,
-                      width: 72,
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                    if (showSecondaryChip) ...[
-                      const SizedBox(width: 8),
-                      const ShimmerCard(
-                        height: 14,
-                        width: 60,
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 10),
-                const ShimmerCard(
-                  height: 20,
-                  width: 176,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                const SizedBox(height: 8),
-                const ShimmerCard(
-                  height: 14,
-                  width: 148,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          const ShimmerCard(
-            height: 18,
-            width: 18,
-            borderRadius: BorderRadius.all(Radius.circular(9)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HomeStatsRowSkeleton extends StatelessWidget {
-  const _HomeStatsRowSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ExomSpacing.lg,
-        vertical: ExomSpacing.sm,
-      ),
-      child: Row(
-        children: List.generate(3, (index) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: index == 2 ? 0 : ExomSpacing.md),
-              child: GlassCard(
-                margin: EdgeInsets.zero,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ExomSpacing.md,
-                  vertical: ExomSpacing.md + 2,
-                ),
-                borderRadius: 16,
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ShimmerCard(
-                      height: 24,
-                      width: 48,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    SizedBox(height: ExomSpacing.xxs),
-                    ShimmerCard(
-                      height: 12,
-                      width: 32,
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                    SizedBox(height: ExomSpacing.xs + 2),
-                    ShimmerCard(
-                      height: 14,
-                      width: 58,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// iOS-style collapsing large title header (SliverPersistentHeader).
-//
-// Expanded: 28px relative-date label + subtitle + calendar icon.
-// Collapsed: 20px label only + calendar icon, with light glass tint behind.
-// ---------------------------------------------------------------------------
-
-String _relativeLabel(BuildContext context, DateTime date) {
-  final today = DateTime.now();
-  final todayNorm = DateTime(today.year, today.month, today.day);
-  final dateNorm = DateTime(date.year, date.month, date.day);
-  final diff = dateNorm.difference(todayNorm).inDays;
-  final l10n = AppLocalizations.of(context);
-
-  switch (diff) {
-    case 0:
-      return l10n.todayLabel;
-    case 1:
-      return l10n.tomorrowLabel;
-    case 2:
-      return l10n.dayAfterTomorrowLabel;
-    case -1:
-      return l10n.yesterdayLabel;
-    case -2:
-      return l10n.twoDaysAgoLabel;
-    default:
-      if (diff > 0) {
-        return l10n.inDaysLabel(diff);
-      }
-      return l10n.daysAgoLabel(diff.abs());
-  }
-}
-
-class _HomeSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _HomeSliverHeaderDelegate({required this.selectedDate});
-
-  final DateTime selectedDate;
-
-  // Expanded: big title (28px * 1.07 ≈ 30) + gap 4 + subtitle (~20) + padding
-  static const double _max = 100.0;
-  // Collapsed: compact title (~22) + vertical padding
-  static const double _min = 56.0;
-
-  @override
-  double get maxExtent => _max;
-
-  @override
-  double get minExtent => _min;
-
-  @override
-  bool shouldRebuild(covariant _HomeSliverHeaderDelegate old) =>
-      old.selectedDate != selectedDate;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final currentExtent = (_max - shrinkOffset).clamp(_min, _max).toDouble();
-    final t = (shrinkOffset / (_max - _min)).clamp(0.0, 1.0);
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final locale = Localizations.localeOf(context).languageCode;
-    final dayName = DateFormat('EEEE', locale).format(selectedDate);
-    final isEnglish = locale == 'en';
-    final dayMonth = isEnglish
-        ? DateFormat('MMMM d', locale).format(selectedDate)
-        : DateFormat('d \'de\' MMMM', locale).format(selectedDate);
-    final capitalDay = dayName[0].toUpperCase() + dayName.substring(1);
-    final label = _relativeLabel(context, selectedDate);
-
-    // Interpolated font: 28 → 20 px, spacing –0.8 → –0.4
-    final fontSize = lerpDouble(28, 20, t)!;
-    final letterSpacing = lerpDouble(-0.8, -0.4, t)!;
-    // Subtitle fades out faster than the overall collapse
-    final subtitleOpacity = (1.0 - t * 2.5).clamp(0.0, 1.0);
-    // Glass tint behind collapsed header
-    final glassTint = t * 0.85;
-
-    return SizedBox(
-      height: currentExtent,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18 * t, sigmaY: 18 * t),
-          child: Container(
-            color: palette.background.withValues(alpha: glassTint * 0.72),
-            padding: EdgeInsets.fromLTRB(
-              ExomSpacing.lg,
-              lerpDouble(ExomSpacing.sm, ExomSpacing.lg, t)!,
-              ExomSpacing.lg,
-              ExomSpacing.xs,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: theme.textTheme.displayMedium?.copyWith(
-                          color: palette.textPrimary,
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w800,
-                          height: 1.07,
-                          letterSpacing: letterSpacing,
-                        ),
-                      ),
-                      if (subtitleOpacity > 0)
-                        Opacity(
-                          opacity: subtitleOpacity,
-                          child: Text(
-                            '$capitalDay $dayMonth',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: palette.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => context.go('/calendar'),
-                  tooltip: AppLocalizations.of(context).openCalendarButton,
-                  iconSize: 18,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 44,
-                    height: 44,
-                  ),
-                  padding: EdgeInsets.zero,
-                  icon: Container(
-                    padding: const EdgeInsets.all(ExomSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: palette.glassBackground,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: palette.glassBorder.withValues(alpha: 0.15),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.calendar_today_outlined,
-                      color: palette.textSecondary,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadedBody extends StatelessWidget {
-  const _LoadedBody({required this.summary, required this.selectedDate});
-
-  final HomeSummaryEntity summary;
-  final DateTime selectedDate;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
-    return RefreshIndicator(
-      color: palette.primary,
-      backgroundColor: palette.surface,
-      onRefresh: () async {
-        context.read<HomeBloc>().add(HomeLoadRequested(date: selectedDate));
-      },
-      child: Stack(
-        children: [
-          const _HomeHeroAccent(),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _HomeSliverHeaderDelegate(selectedDate: selectedDate),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-              const SliverToBoxAdapter(child: WeekDaySelector()),
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverToBoxAdapter(
-                child: TodayTrainingCard(
-                  summary: summary,
-                  selectedDate: selectedDate,
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: TodayDietCard(
-                  summary: summary,
-                  selectedDate: selectedDate,
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: StatsRow(summary: summary, selectedDate: selectedDate),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RestDayBody extends StatelessWidget {
-  const _RestDayBody({required this.summary, required this.selectedDate});
-
-  final HomeSummaryEntity summary;
-  final DateTime selectedDate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return RefreshIndicator(
-      color: palette.primary,
-      backgroundColor: palette.surface,
-      onRefresh: () async {
-        context.read<HomeBloc>().add(HomeLoadRequested(date: selectedDate));
-      },
-      child: Stack(
-        children: [
-          const _HomeHeroAccent(),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _HomeSliverHeaderDelegate(selectedDate: selectedDate),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-              const SliverToBoxAdapter(child: WeekDaySelector()),
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverToBoxAdapter(
-                child: GlassCard(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(32),
-                  borderRadius: 24,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: palette.glassBackground,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: palette.glassBorder.withValues(alpha: 0.15),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.fitness_center,
-                            color: palette.textDisabled,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l10n.restDayTitle,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: palette.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.restDayMessage,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: palette.textSecondary,
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      OutlinedButton(
-                        onPressed: () => context.go('/calendar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: palette.primary,
-                          side: BorderSide(color: palette.primary),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(l10n.openCalendarButton),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(
-                child: StatsRow(summary: summary, selectedDate: selectedDate),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HomeHeroAccent extends StatelessWidget {
-  const _HomeHeroAccent();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = context.exomPalette;
-
-    return IgnorePointer(
-      child: Transform.translate(
-        offset: const Offset(0, -48),
-        child: SizedBox(
-          height: isDark ? 440 : 400,
-          width: double.infinity,
-          child: ShaderMask(
-            shaderCallback: (bounds) {
-              return const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.white, Colors.white, Colors.transparent],
-                stops: [0, 0.66, 1],
-              ).createShader(bounds);
-            },
-            blendMode: BlendMode.dstIn,
-            child: Opacity(
-              opacity: isDark ? 0.86 : 0.72,
-              child: CustomPaint(
-                painter: _HomeHeroAccentPainter(
-                  palette: palette,
-                  isDark: isDark,
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeHeroAccentPainter extends CustomPainter {
-  const _HomeHeroAccentPainter({required this.palette, required this.isDark});
-
-  final ExomThemePalette palette;
-  final bool isDark;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) {
-      return;
-    }
-
-    final rect = Offset.zero & size;
-    final warm = isDark ? const Color(0xFF7A3B19) : const Color(0xFFC4AD96);
-    final primaryTint = Color.lerp(
-      palette.primary,
-      warm,
-      isDark ? 0.26 : 0.42,
-    )!;
-
-    final basePaint = Paint()
-      ..shader = LinearGradient(
-        begin: const Alignment(-0.9, -1),
-        end: const Alignment(0.85, 1),
-        colors: isDark
-            ? [
-                warm.withValues(alpha: 0.055),
-                palette.primary.withValues(alpha: 0.045),
-                palette.background.withValues(alpha: 0),
-              ]
-            : [
-                Colors.white.withValues(alpha: 0.32),
-                warm.withValues(alpha: 0.16),
-                palette.primary.withValues(alpha: 0.05),
-                palette.background.withValues(alpha: 0),
-              ],
-        stops: isDark ? const [0, 0.5, 1] : const [0, 0.32, 0.62, 1],
-      ).createShader(rect);
-    canvas.drawRect(rect, basePaint);
-
-    if (isDark) {
-      _paintRibbon(
-        canvas,
-        size,
-        centerY: 0.02,
-        amplitude: 0.032,
-        thickness: size.height * 0.28,
-        phase: 0.75,
-        drift: 0.6,
-        colors: [
-          Colors.transparent,
-          warm.withValues(alpha: 0.07),
-          palette.primary.withValues(alpha: 0.032),
-          Colors.transparent,
-        ],
-        stops: const [0, 0.24, 0.58, 1],
-      );
-      _paintRibbon(
-        canvas,
-        size,
-        centerY: 0.28,
-        amplitude: 0.046,
-        thickness: size.height * 0.22,
-        phase: 2.35,
-        drift: 1.3,
-        colors: [
-          Colors.transparent,
-          Colors.white.withValues(alpha: 0.012),
-          primaryTint.withValues(alpha: 0.06),
-          warm.withValues(alpha: 0.045),
-          Colors.transparent,
-        ],
-        stops: const [0, 0.18, 0.46, 0.76, 1],
-        blendMode: BlendMode.plus,
-      );
-      _paintRibbon(
-        canvas,
-        size,
-        centerY: 0.54,
-        amplitude: 0.054,
-        thickness: size.height * 0.2,
-        phase: 4.1,
-        drift: 2.1,
-        colors: [
-          Colors.transparent,
-          warm.withValues(alpha: 0.038),
-          palette.primary.withValues(alpha: 0.052),
-          Colors.transparent,
-        ],
-        stops: const [0, 0.2, 0.62, 1],
-        blendMode: BlendMode.plus,
-      );
-      return;
-    }
-
-    _paintRibbon(
-      canvas,
-      size,
-      centerY: 0.0,
-      amplitude: 0.028,
-      thickness: size.height * 0.26,
-      phase: 0.9,
-      drift: 0.55,
-      colors: [
-        Colors.transparent,
-        Colors.white.withValues(alpha: 0.34),
-        warm.withValues(alpha: 0.16),
-        Colors.transparent,
-      ],
-      stops: const [0, 0.22, 0.58, 1],
-    );
-    _paintRibbon(
-      canvas,
-      size,
-      centerY: 0.24,
-      amplitude: 0.036,
-      thickness: size.height * 0.2,
-      phase: 2.2,
-      drift: 1.2,
-      colors: [
-        Colors.transparent,
-        Colors.white.withValues(alpha: 0.2),
-        primaryTint.withValues(alpha: 0.12),
-        warm.withValues(alpha: 0.13),
-        Colors.transparent,
-      ],
-      stops: const [0, 0.18, 0.48, 0.76, 1],
-    );
-    _paintRibbon(
-      canvas,
-      size,
-      centerY: 0.5,
-      amplitude: 0.04,
-      thickness: size.height * 0.18,
-      phase: 4.65,
-      drift: 2.0,
-      colors: [
-        Colors.transparent,
-        primaryTint.withValues(alpha: 0.1),
-        Colors.white.withValues(alpha: 0.18),
-        Colors.transparent,
-      ],
-      stops: const [0, 0.28, 0.62, 1],
-    );
-  }
-
-  void _paintRibbon(
-    Canvas canvas,
-    Size size, {
-    required double centerY,
-    required double amplitude,
-    required double thickness,
-    required double phase,
-    required double drift,
-    required List<Color> colors,
-    required List<double> stops,
-    BlendMode blendMode = BlendMode.srcOver,
-  }) {
-    final path = _waveRibbon(
-      size,
-      centerY: centerY,
-      amplitude: amplitude,
-      thickness: thickness,
-      phase: phase,
-      drift: drift,
-    );
-    final bounds = path.getBounds().inflate(36);
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: colors,
-        stops: stops,
-      ).createShader(bounds)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 34)
-      ..blendMode = blendMode;
-
-    canvas.drawPath(path, paint);
-  }
-
-  Path _waveRibbon(
-    Size size, {
-    required double centerY,
-    required double amplitude,
-    required double thickness,
-    required double phase,
-    required double drift,
-  }) {
-    const sampleCount = 22;
-    final startX = -size.width * 0.25;
-    final endX = size.width * 1.25;
-    final upper = <Offset>[];
-    final lower = <Offset>[];
-
-    for (var i = 0; i <= sampleCount; i++) {
-      final t = i / sampleCount;
-      final x = startX + ((endX - startX) * t);
-      final y = _waveY(
-        size,
-        x,
-        centerY: centerY,
-        amplitude: amplitude,
-        phase: phase,
-        drift: drift,
-      );
-      upper.add(Offset(x, y - (thickness / 2)));
-      lower.add(Offset(x, y + (thickness / 2)));
-    }
-
-    final path = Path();
-    _addSmoothSegment(path, upper, moveToFirst: true);
-    _addSmoothSegment(path, lower.reversed.toList());
-    path.close();
-    return path;
-  }
-
-  void _addSmoothSegment(
-    Path path,
-    List<Offset> points, {
-    bool moveToFirst = false,
-  }) {
-    if (moveToFirst) {
-      path.moveTo(points.first.dx, points.first.dy);
-    } else {
-      path.lineTo(points.first.dx, points.first.dy);
-    }
-
-    for (var i = 1; i < points.length - 1; i++) {
-      final current = points[i];
-      final next = points[i + 1];
-      final midpoint = Offset(
-        (current.dx + next.dx) / 2,
-        (current.dy + next.dy) / 2,
-      );
-      path.quadraticBezierTo(current.dx, current.dy, midpoint.dx, midpoint.dy);
-    }
-
-    path.lineTo(points.last.dx, points.last.dy);
-  }
-
-  double _waveY(
-    Size size,
-    double x, {
-    required double centerY,
-    required double amplitude,
-    required double phase,
-    required double drift,
-  }) {
-    final normalizedX = x / size.width;
-    final baseY = size.height * centerY;
-    final primary =
-        math.sin((normalizedX * math.pi * 1.75) + phase) *
-        size.height *
-        amplitude;
-    final secondary =
-        math.cos((normalizedX * math.pi * 3.4) - (phase * 1.8) + drift) *
-        size.height *
-        (amplitude * 0.34);
-    final tertiary =
-        math.sin((normalizedX * math.pi * 6.8) + (phase * 2.4) + drift) *
-        size.height *
-        (amplitude * 0.08);
-
-    return baseY + primary + secondary + tertiary;
-  }
-
-  @override
-  bool shouldRepaint(covariant _HomeHeroAccentPainter oldDelegate) {
-    return oldDelegate.isDark != isDark ||
-        oldDelegate.palette.background != palette.background ||
-        oldDelegate.palette.primary != palette.primary;
   }
 }

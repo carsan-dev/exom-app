@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_choice_chips.dart';
+import 'package:exom_app/core/widgets/exom_coach_block.dart';
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_scale_chips.dart';
+import 'package:exom_app/core/widgets/exom_step_header.dart';
 import 'package:exom_app/features/recap/presentation/widgets/recap_anatomy_selector.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 
 String formatRecapOption(String value) {
   return value
@@ -88,156 +96,54 @@ String recapCopy(BuildContext context, String value) {
   return formatRecapOption(value);
 }
 
-class RecapSectionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Widget child;
-
-  const RecapSectionCard({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      borderRadius: 22,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: GlassDecoration.accentCard(
-                  palette.primary,
-                  borderRadius: 12,
-                ),
-                child: Icon(icon, color: palette.primary, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class RecapSliderField extends StatelessWidget {
-  final String label;
-  final String helperText;
-  final double value;
-  final double min;
-  final double max;
-  final int? divisions;
-  final String Function(double value) valueLabelBuilder;
-  final ValueChanged<double> onChanged;
-
-  const RecapSliderField({
-    super.key,
-    required this.label,
-    required this.helperText,
-    required this.value,
-    required this.min,
-    required this.max,
-    this.divisions,
-    required this.valueLabelBuilder,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+/// Header of a question of the form (`.x-q-l`): its position («01»…), the
+/// label and, under it, the helper text. The fields splice it at the top of
+/// their own column, so the label and the control share a column.
+List<Widget> recapFieldHeader(
+  BuildContext context, {
+  required String label,
+  String? helperText,
+  int? number,
+}) {
+  final theme = Theme.of(context);
+  final palette = context.exomPalette;
+  final n = number;
+  final helper = helperText;
+  return [
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: Slider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                divisions: divisions,
-                activeColor: palette.primary,
-                inactiveColor: palette.surfaceVariant,
-                label: valueLabelBuilder(value),
-                onChanged: onChanged,
-              ),
+        if (n != null) ...[
+          ExomIndexNumber(n),
+          const SizedBox(width: ExomSpacing.sm),
+        ],
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: palette.textPrimary,
+              fontSize: 16,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
             ),
-            Container(
-              margin: const EdgeInsets.only(left: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: GlassDecoration.card(borderRadius: 12),
-              child: Text(
-                valueLabelBuilder(value),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
-    );
-  }
+    ),
+    if (helper != null && helper.isNotEmpty) ...[
+      const SizedBox(height: ExomSpacing.xs),
+      Text(
+        helper,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: palette.textSecondary,
+          fontSize: 14,
+          height: 1.4,
+        ),
+      ),
+    ],
+    const SizedBox(height: ExomSpacing.md),
+  ];
 }
 
 class RecapChoiceChipsField extends StatelessWidget {
@@ -246,6 +152,7 @@ class RecapChoiceChipsField extends StatelessWidget {
   final String? value;
   final List<String> options;
   final ValueChanged<String> onSelected;
+  final int? number;
 
   const RecapChoiceChipsField({
     super.key,
@@ -254,55 +161,28 @@ class RecapChoiceChipsField extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onSelected,
+    this.number,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: label,
+          helperText: helperText,
+          number: number,
         ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ExomChoiceChips<String>(
+            options: options,
+            selected: value,
+            labelOf: (option) => recapCopy(context, option),
+            onSelected: onSelected,
           ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((option) {
-            final isSelected = value == option;
-            return ChoiceChip(
-              selected: isSelected,
-              onSelected: (_) => onSelected(option),
-              backgroundColor: palette.surfaceVariant,
-              selectedColor: palette.primary.withValues(alpha: 0.18),
-              side: BorderSide(
-                color: isSelected ? palette.primary : palette.divider,
-              ),
-              label: Text(
-                recapCopy(context, option),
-                style: TextStyle(
-                  color: isSelected ? palette.primary : palette.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
@@ -315,6 +195,7 @@ class RecapMultiSelectField extends StatelessWidget {
   final List<String> values;
   final List<String> options;
   final ValueChanged<List<String>> onChanged;
+  final int? number;
 
   const RecapMultiSelectField({
     super.key,
@@ -323,76 +204,52 @@ class RecapMultiSelectField extends StatelessWidget {
     required this.values,
     required this.options,
     required this.onChanged,
+    this.number,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: label,
+          helperText: helperText,
+          number: number,
         ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ExomChoiceChips<String>.multi(
+            options: options,
+            selectedValues: values.toSet(),
+            labelOf: (option) => recapCopy(context, option),
+            onToggled: (option) {
+              final nextValues = List<String>.from(values);
+              if (nextValues.contains(option)) {
+                nextValues.remove(option);
+              } else {
+                nextValues.add(option);
+              }
+              onChanged(nextValues);
+            },
           ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((option) {
-            final isSelected = values.contains(option);
-            return FilterChip(
-              selected: isSelected,
-              onSelected: (selected) {
-                final nextValues = List<String>.from(values);
-                if (selected) {
-                  nextValues.add(option);
-                } else {
-                  nextValues.remove(option);
-                }
-                onChanged(nextValues);
-              },
-              backgroundColor: palette.surfaceVariant,
-              selectedColor: semantic.info.withValues(alpha: 0.16),
-              side: BorderSide(
-                color: isSelected ? semantic.info : palette.divider,
-              ),
-              label: Text(
-                recapCopy(context, option),
-                style: TextStyle(
-                  color: isSelected ? semantic.info : palette.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
   }
 }
 
-// ── Emoji Rating (5 caras de triste a feliz) ──────────────────────────────
+/// Faces rating (D14-4): five chips, 1 to 5 as painted. What the form keeps is
+/// the index 0-4 of the chip, as it did with the faces; [value] is that index.
+/// Tapping the chip already shown writes it again, so a value that was only
+/// displayed (the form shows 2 when it has none) can be confirmed.
 class RecapEmojiRatingField extends StatelessWidget {
   final String label;
   final String helperText;
   final int value; // 0-4
   final ValueChanged<int> onChanged;
+  final int? number;
 
   const RecapEmojiRatingField({
     super.key,
@@ -400,92 +257,42 @@ class RecapEmojiRatingField extends StatelessWidget {
     required this.helperText,
     required this.value,
     required this.onChanged,
+    this.number,
   });
-
-  static const _emojis = ['😫', '😞', '😐', '🙂', '😁'];
-  static const _labels = ['MUY_MAL', 'MAL', 'NORMAL', 'BIEN', 'MUY_BIEN'];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: label,
+          helperText: helperText,
+          number: number,
         ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(5, (index) {
-            final isSelected = value == index;
-            return GestureDetector(
-              onTap: () => onChanged(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 56,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? palette.primary.withValues(alpha: 0.18)
-                      : palette.surfaceVariant,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected ? palette.primary : palette.divider,
-                    width: isSelected ? 2 : 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      _emojis[index],
-                      style: TextStyle(fontSize: isSelected ? 28 : 24),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      recapCopy(context, _labels[index]),
-                      style: TextStyle(
-                        color: isSelected
-                            ? palette.primary
-                            : palette.textDisabled,
-                        fontSize: 9,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
+        ExomScaleChips(
+          min: 1,
+          max: 5,
+          selected: value + 1,
+          allowDeselect: true,
+          lowLabel: recapCopy(context, 'MUY_MAL'),
+          highLabel: recapCopy(context, 'MUY_BIEN'),
+          onChanged: (chip) => onChanged(chip == null ? value : chip - 1),
         ),
       ],
     );
   }
 }
 
-// ── Star Rating (1-5 estrellas) ───────────────────────────────────────────
+/// Stars rating (D14-4): five chips, 1 to 5, in the text colour. [value] is
+/// what the form keeps (1-5). Tapping the chip already shown writes it again.
 class RecapStarRatingField extends StatelessWidget {
   final String label;
   final String helperText;
   final int value; // 1-5
   final ValueChanged<int> onChanged;
+  final int? number;
 
   const RecapStarRatingField({
     super.key,
@@ -493,63 +300,41 @@ class RecapStarRatingField extends StatelessWidget {
     required this.helperText,
     required this.value,
     required this.onChanged,
+    this.number,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: label,
+          helperText: helperText,
+          number: number,
         ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(5, (index) {
-            final starIndex = index + 1;
-            final isFilled = starIndex <= value;
-            return GestureDetector(
-              onTap: () => onChanged(starIndex),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Icon(
-                  isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: isFilled ? semantic.warning : palette.textDisabled,
-                  size: 40,
-                ),
-              ),
-            );
-          }),
+        ExomScaleChips(
+          min: 1,
+          max: 5,
+          selected: value,
+          allowDeselect: true,
+          lowLabel: recapCopy(context, 'MUY_MAL'),
+          highLabel: recapCopy(context, 'EXCELENTE'),
+          onChanged: (chip) => onChanged(chip ?? value),
         ),
       ],
     );
   }
 }
 
-// ── Modelo anatómico interactivo (frontal / posterior) ─────────────────────
+// ── Body map (front / back) ────────────────────────────────────────────────
 class RecapBodyMapField extends StatelessWidget {
   final String label;
   final String helperText;
   final List<String> values;
   final ValueChanged<List<String>> onChanged;
+  final int? number;
 
   const RecapBodyMapField({
     super.key,
@@ -557,6 +342,7 @@ class RecapBodyMapField extends StatelessWidget {
     required this.helperText,
     required this.values,
     required this.onChanged,
+    this.number,
   });
 
   void _toggleZone(String zoneId) {
@@ -576,65 +362,150 @@ class RecapBodyMapField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
     final selectedZoneIds = values
         .where((value) => RecapAnatomyZone.fromId(value) != null)
         .toSet();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: label,
+          helperText: helperText,
+          number: number,
         ),
-        const SizedBox(height: 4),
-        Text(
-          helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textDisabled,
-            fontSize: 12,
-          ),
+        RecapAnatomySelector(
+          height: 440,
+          selectedZoneIds: selectedZoneIds,
+          onZoneSelected: _toggleZone,
         ),
-        const SizedBox(height: 12),
-        Center(
-          child: RecapAnatomySelector(
-            height: 440,
-            selectedZoneIds: selectedZoneIds,
-            onZoneSelected: _toggleZone,
-          ),
+        const SizedBox(height: ExomSpacing.md),
+        _RecapZonesSummary(
+          labels: [for (final value in values) _zoneLabel(context, value)],
         ),
-        if (values.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: values.map((zone) {
-              return Chip(
-                label: Text(
-                  _zoneLabel(context, zone),
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
-                ),
-                backgroundColor: semantic.accent,
-                deleteIcon: const Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white,
-                ),
-                onDeleted: () => _toggleZone(zone),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              );
-            }).toList(),
-          ),
-        ],
       ],
+    );
+  }
+}
+
+/// Key of the selected-zones summary of the body map (tests).
+const ValueKey<String> recapZonesSummaryKey = ValueKey('recap-zones-summary');
+
+/// One-line summary under the figure: «4 zonas · Lumbar · Isquio izquierdo».
+/// It takes at most two lines: when the labels do not fit it shows the whole
+/// labels that do, then «+N más». Zones are deselected on the figure, so this
+/// is read-only; assistive technology reads the full list.
+class _RecapZonesSummary extends StatelessWidget {
+  final List<String> labels;
+
+  const _RecapZonesSummary({required this.labels});
+
+  static const int _maxLines = 2;
+  static const String _separator = ' · ';
+
+  TextSpan _span(
+    AppLocalizations l10n,
+    TextStyle base,
+    ExomThemePalette palette,
+    int shown,
+  ) {
+    final labelStyle = base.copyWith(color: palette.textSecondary);
+    return TextSpan(
+      style: labelStyle,
+      children: [
+        TextSpan(
+          text: l10n.recapZonesCount(labels.length),
+          style: base.copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        for (final label in labels.take(shown))
+          TextSpan(text: '$_separator$label'),
+        if (shown < labels.length)
+          TextSpan(
+            text: '$_separator${l10n.recapZonesMore(labels.length - shown)}',
+          ),
+      ],
+    );
+  }
+
+  /// Largest number of whole labels whose line (with the «+N más» tail when
+  /// some are left out) fits in [_maxLines] at [maxWidth].
+  int _fittingLabels(
+    BuildContext context,
+    AppLocalizations l10n,
+    TextStyle base,
+    ExomThemePalette palette,
+    double maxWidth,
+  ) {
+    if (!maxWidth.isFinite) return labels.length;
+    final painter = TextPainter(
+      maxLines: _maxLines,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+    );
+    try {
+      for (var shown = labels.length; shown > 0; shown--) {
+        painter.text = _span(l10n, base, palette, shown);
+        painter.layout(maxWidth: maxWidth);
+        if (!painter.didExceedMaxLines) return shown;
+      }
+    } finally {
+      painter.dispose();
+    }
+    return 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final base =
+        Theme.of(context).textTheme.bodyMedium ?? const TextStyle(fontSize: 14);
+
+    if (labels.isEmpty) {
+      return Semantics(
+        key: recapZonesSummaryKey,
+        container: true,
+        liveRegion: true,
+        label: l10n.recapZonesNone,
+        child: ExcludeSemantics(
+          child: Text(
+            l10n.recapZonesNone,
+            maxLines: _maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: base.copyWith(color: palette.textSecondary),
+          ),
+        ),
+      );
+    }
+
+    return Semantics(
+      key: recapZonesSummaryKey,
+      container: true,
+      liveRegion: true,
+      label: l10n.recapZonesSemantics(labels.length, labels.join(', ')),
+      child: ExcludeSemantics(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final shown = _fittingLabels(
+              context,
+              l10n,
+              base,
+              palette,
+              constraints.maxWidth,
+            );
+            return Text.rich(
+              _span(l10n, base, palette, shown),
+              maxLines: _maxLines,
+              overflow: TextOverflow.ellipsis,
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -648,6 +519,7 @@ class RecapIntegerField extends StatefulWidget {
   final int? value;
   final int max;
   final ValueChanged<int?> onChanged;
+  final int? number;
 
   const RecapIntegerField({
     super.key,
@@ -659,6 +531,7 @@ class RecapIntegerField extends StatefulWidget {
     required this.value,
     required this.max,
     required this.onChanged,
+    this.number,
   });
 
   @override
@@ -691,31 +564,24 @@ class _RecapIntegerFieldState extends State<RecapIntegerField> {
     super.dispose();
   }
 
+  bool get _overMax =>
+      _controller.text.isNotEmpty &&
+      (int.tryParse(_controller.text) ?? widget.max + 1) > widget.max;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
+    final invalid = _overMax;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          widget.label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: widget.label,
+          helperText: widget.helperText,
+          number: widget.number,
         ),
-        const SizedBox(height: 6),
-        Text(
-          widget.helperText,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: palette.textSecondary,
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 12),
         TextField(
           controller: _controller,
           keyboardType: TextInputType.number,
@@ -727,12 +593,9 @@ class _RecapIntegerFieldState extends State<RecapIntegerField> {
           decoration: InputDecoration(
             hintText: widget.hintText,
             suffixText: widget.suffixText,
-            errorText:
-                (_controller.text.isNotEmpty &&
-                    (int.tryParse(_controller.text) ?? widget.max + 1) >
-                        widget.max)
-                ? widget.maxErrorText
-                : null,
+            // The reason is the inline message below; this only paints the
+            // field in the error colour.
+            error: invalid ? const SizedBox.shrink() : null,
             hintStyle: TextStyle(color: palette.textDisabled),
           ),
           onChanged: (text) {
@@ -740,6 +603,13 @@ class _RecapIntegerFieldState extends State<RecapIntegerField> {
             widget.onChanged(text.isEmpty ? null : int.tryParse(text));
           },
         ),
+        if (invalid) ...[
+          const SizedBox(height: ExomSpacing.sm),
+          ExomInlineMessage(
+            kind: ExomMessageKind.error,
+            title: widget.maxErrorText,
+          ),
+        ],
       ],
     );
   }
@@ -750,6 +620,7 @@ class RecapTextAreaField extends StatefulWidget {
   final String hintText;
   final String initialValue;
   final ValueChanged<String> onChanged;
+  final int? number;
 
   const RecapTextAreaField({
     super.key,
@@ -757,6 +628,7 @@ class RecapTextAreaField extends StatefulWidget {
     required this.hintText,
     required this.initialValue,
     required this.onChanged,
+    this.number,
   });
 
   @override
@@ -793,21 +665,16 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          widget.label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: palette.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        ...recapFieldHeader(
+          context,
+          label: widget.label,
+          number: widget.number,
         ),
-        const SizedBox(height: 12),
         TextField(
           controller: _controller,
           maxLines: 4,
@@ -820,6 +687,143 @@ class _RecapTextAreaFieldState extends State<RecapTextAreaField> {
           onChanged: widget.onChanged,
         ),
       ],
+    );
+  }
+}
+
+/// Number of steps of the form after the start view.
+const int kRecapSteps = 5;
+
+/// Photo of the trainer for every coach block of Recap (L5-C5b).
+const AssetImage kRecapCoachAvatar = AssetImage('assets/images/coach/moi.png');
+
+/// The week the recap belongs to («16 nov - 22 nov»), for the steps of the
+/// form below it: a draft of an earlier week must say which week it is.
+class RecapWeekScope extends InheritedWidget {
+  const RecapWeekScope({super.key, required this.label, required super.child});
+
+  final String label;
+
+  static String? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<RecapWeekScope>()?.label;
+
+  @override
+  bool updateShouldNotify(RecapWeekScope oldWidget) => label != oldWidget.label;
+}
+
+/// The week of the recap in secondary text with its calendar mark.
+class RecapWeekLabel extends StatelessWidget {
+  const RecapWeekLabel(this.label, {super.key});
+
+  static const Key labelKey = ValueKey('recap-week-label');
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExcludeSemantics(
+          child: Icon(
+            ExomIcons.calendar,
+            size: 16,
+            color: palette.textSecondary,
+          ),
+        ),
+        const SizedBox(width: ExomSpacing.sm),
+        Flexible(
+          child: Text(
+            label,
+            key: labelKey,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One step of the form (sketch C4): the step header with its rule, the
+/// trainer's line and the numbered [questions], in one scroll.
+class RecapStepFrame extends StatelessWidget {
+  final int step;
+  final String first;
+  final String second;
+  final String coach;
+  final List<Widget> questions;
+
+  const RecapStepFrame({
+    super.key,
+    required this.step,
+    required this.first,
+    required this.second,
+    required this.coach,
+    required this.questions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final week = RecapWeekScope.maybeOf(context);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The step numeral of the sketch (`01 /05`) is painted only: the
+          // rule below says the position to assistive technology. The week
+          // beside it is read.
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Wrap(
+              spacing: 18,
+              runSpacing: ExomSpacing.sm,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                ExcludeSemantics(
+                  child: ExomNumeral(
+                    value: two(step),
+                    unit: '/${two(kRecapSteps)}',
+                    unitColor: context.exomPalette.textMuted,
+                    size: ExomNumeralSize.hero120,
+                  ),
+                ),
+                if (week != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: ExomSpacing.xs),
+                    child: RecapWeekLabel(week),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: ExomSpacing.md),
+          ExomStepHeader(
+            step: step,
+            total: kRecapSteps,
+            kicker: l10n.recapStepKicker(step, kRecapSteps),
+            first: first,
+            second: second,
+          ),
+          const SizedBox(height: ExomSpacing.lg),
+          ExomCoachBlock(
+            author: l10n.coachNameMoi,
+            text: coach,
+            avatar: kRecapCoachAvatar,
+          ),
+          const SizedBox(height: ExomSpacing.xxl),
+          for (final question in questions) ...[
+            question,
+            const SizedBox(height: ExomSpacing.xxl),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
@@ -35,12 +37,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadRequested event,
     Emitter<ProfileState> emit,
   ) async {
+    final previous = state;
     emit(const ProfileLoading());
     try {
+      // The metric calls throw on network and server errors (L4-I1). The
+      // profile does not depend on them: it still loads, without the weight
+      // chart or the latest record, as it did when the datasource returned
+      // [] / null. A session change keeps failing the whole load.
       final results = await Future.wait([
         _getProfileUseCase(),
-        _metricsRepository.getWeightHistory(),
-        _metricsRepository.getLatestMetric(),
+        _orFallback(
+          _metricsRepository.getWeightHistory(),
+          const <BodyMetricEntity>[],
+        ),
+        _orFallback(_metricsRepository.getLatestMetric(), null),
       ]);
       final profile = results[0] as ProfileEntity;
       final history = results[1] as List<BodyMetricEntity>;
@@ -49,7 +59,55 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         ProfileLoaded(profile, weightHistory: history, latestMetric: latest),
       );
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(previous, e));
+    }
+  }
+
+  /// EX-Q7: the error keeps the profile [shown] carried, if any. A session
+  /// change (LocalSessionChanged, or a request the auth interceptor cancelled)
+  /// keeps nothing: that profile belongs to the previous session (R12).
+  static ProfileError _errorKeeping(ProfileState shown, Object error) {
+    final message = error.toString();
+    final sessionChanged =
+        error is LocalSessionChanged ||
+        (error is DioException && error.type == DioExceptionType.cancel);
+    if (sessionChanged) return ProfileError(message);
+    return switch (shown) {
+      ProfileLoaded() => ProfileError(
+        message,
+        profile: shown.profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      ProfileAvatarUploading() => ProfileError(
+        message,
+        profile: shown.profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      ProfileError(profile: final ProfileEntity profile) => ProfileError(
+        message,
+        profile: profile,
+        weightHistory: shown.weightHistory,
+        latestMetric: shown.latestMetric,
+      ),
+      _ => ProfileError(message),
+    };
+  }
+
+  /// Never turns a session change into loaded data: LocalSessionChanged and a
+  /// request cancelled by the auth interceptor (session changed in flight)
+  /// still fail the whole load.
+  static Future<T> _orFallback<T>(Future<T> request, T fallback) async {
+    try {
+      return await request;
+    } on LocalSessionChanged {
+      rethrow;
+    } on DioException catch (error) {
+      if (error.type == DioExceptionType.cancel) rethrow;
+      return fallback;
+    } catch (_) {
+      return fallback;
     }
   }
 
@@ -73,7 +131,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final updated = await _uploadAvatarUseCase(event.file);
       emit(ProfileLoaded(updated, weightHistory: history, latestMetric: latest));
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(current, e));
     }
   }
 
@@ -100,7 +158,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         ),
       );
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(_errorKeeping(current, e));
     }
   }
 }

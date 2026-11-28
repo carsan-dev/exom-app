@@ -1,12 +1,18 @@
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_animated_background.dart';
+import 'package:exom_app/core/widgets/exom_figure_columns.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/exom_animated_background.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/features/recap/domain/entities/recap_entity.dart';
 import 'package:exom_app/features/recap/presentation/bloc/recap_bloc.dart';
@@ -49,10 +55,15 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
     return ExomStaticBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        // Sketch C5: the bar only carries «Volver»; the week is the body title.
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context).recapDetailTitle),
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(ExomIcons.back, color: palette.textPrimary),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () => context.pop(),
+          ),
         ),
         body: BlocConsumer<RecapBloc, RecapState>(
           listener: (context, state) {
@@ -77,7 +88,7 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, color: palette.error, size: 42),
+                      Icon(ExomIcons.error, color: palette.error, size: 42),
                       const SizedBox(height: 16),
                       Text(
                         AppLocalizations.of(context).couldNotLoadRecap,
@@ -116,132 +127,99 @@ class _RecapDetailViewState extends State<_RecapDetailView> {
   }
 }
 
+/// Loading: skeletons with the shape of the final screen (sketch C5, «Carga»):
+/// title, headline, reply, a section numeral with its rule and value rows.
 class _RecapDetailLoadingView extends StatelessWidget {
   const _RecapDetailLoadingView();
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: EdgeInsets.fromLTRB(
+        ExomSpacing.xl,
+        ExomSpacing.sm,
+        ExomSpacing.xl,
+        ExomSpacing.huge + bottomInset,
+      ),
       children: const [
-        _RecapDetailHeaderSkeleton(),
-        SizedBox(height: 16),
-        ShimmerCard(
-          height: 132,
-          borderRadius: BorderRadius.all(Radius.circular(22)),
-        ),
-        SizedBox(height: 16),
-        _RecapDetailSectionSkeleton(),
-        SizedBox(height: 14),
-        _RecapDetailSectionSkeleton(),
-        SizedBox(height: 14),
-        _RecapDetailSectionSkeleton(),
-        SizedBox(height: 14),
-        _RecapDetailSectionSkeleton(),
-        SizedBox(height: 14),
-        _RecapDetailSectionSkeleton(),
+        ExomSkeleton.headline(),
+        SizedBox(height: ExomSpacing.lg),
+        ExomSkeleton.headline(),
+        SizedBox(height: ExomSpacing.lg),
+        ExomSkeleton.row(),
+        SizedBox(height: ExomSpacing.xxl),
+        ExomSkeleton.numeral(),
+        SizedBox(height: ExomSpacing.lg),
+        ExomSkeleton.rule(),
+        SizedBox(height: ExomSpacing.md),
+        ExomSkeleton.row(),
+        ExomSkeleton.row(),
+        ExomSkeleton.row(),
       ],
     );
   }
 }
 
-class _RecapDetailHeaderSkeleton extends StatelessWidget {
-  const _RecapDetailHeaderSkeleton();
+/// One line of a section that is not a figure: a [label] and its [value].
+/// [isEmpty] marks «no answer» values («—», «No valorado», «Sin dato»…), which
+/// are painted in the secondary colour; a real answer is in the text colour.
+/// [stacked] puts the value under the label (free text such as notes).
+class _RecapField {
+  const _RecapField(
+    this.label,
+    this.value, {
+    this.isEmpty = false,
+    this.stacked = false,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(18),
-      borderRadius: 22,
-      elevated: true,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: ShimmerCard(
-                  height: 20,
-                  width: 154,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-              ),
-              SizedBox(width: 12),
-              ShimmerCard(
-                height: 28,
-                width: 72,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-            ],
-          ),
-          SizedBox(height: 10),
-          ShimmerCard(
-            height: 14,
-            width: 132,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-        ],
-      ),
-    );
-  }
+  final String label;
+  final String value;
+  final bool isEmpty;
+  final bool stacked;
 }
 
-class _RecapDetailSectionSkeleton extends StatelessWidget {
-  const _RecapDetailSectionSkeleton();
+/// Figures and rows of one numbered section.
+class _RecapSection {
+  final List<ExomFigure> figures = [];
+  final List<_RecapField> fields = [];
 
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(18),
-      borderRadius: 22,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ShimmerCard(
-            height: 16,
-            width: 84,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-          SizedBox(height: 14),
-          _RecapDetailFieldSkeleton(),
-          SizedBox(height: 12),
-          _RecapDetailFieldSkeleton(),
-          SizedBox(height: 12),
-          _RecapDetailFieldSkeleton(),
-          SizedBox(height: 12),
-          _RecapDetailFieldSkeleton(longValue: true),
-        ],
-      ),
-    );
+  /// A whole number answer: a figure when there is one, else an empty row.
+  void number(
+    String label,
+    int? value, {
+    String? unit,
+    String emptyText = '—',
+  }) {
+    if (value == null) {
+      fields.add(_RecapField(label, emptyText, isEmpty: true));
+    } else {
+      figures.add(ExomFigure(value: '$value', unit: unit, label: label));
+    }
   }
-}
 
-class _RecapDetailFieldSkeleton extends StatelessWidget {
-  const _RecapDetailFieldSkeleton({this.longValue = false});
-
-  final bool longValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const ShimmerCard(
-          height: 12,
-          width: 86,
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
-        const SizedBox(height: 6),
-        ShimmerCard(
-          height: longValue ? 36 : 14,
-          width: longValue ? null : 164,
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
-        ),
-      ],
-    );
+  /// A plain value row; blank text counts as empty.
+  void text(String label, String? value, {String emptyText = '—'}) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      fields.add(_RecapField(label, emptyText, isEmpty: true));
+    } else {
+      fields.add(_RecapField(label, trimmed));
+    }
   }
+
+  /// Free text under its label (notes, feedback).
+  void note(String label, String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      fields.add(_RecapField(label, '—', isEmpty: true));
+    } else {
+      fields.add(_RecapField(label, trimmed, stacked: true));
+    }
+  }
+
+  void empty(String label, String text) =>
+      fields.add(_RecapField(label, text, isEmpty: true));
 }
 
 class _RecapDetailContent extends StatelessWidget {
@@ -251,189 +229,124 @@ class _RecapDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final theme = Theme.of(context);
-    final fmt = DateFormat('dd MMM yyyy');
     final l10n = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    final training = _RecapSection()
+      ..number('Esfuerzo', recap.trainingEffort)
+      ..number('Sesiones', recap.trainingSessions)
+      ..text(
+        l10n.averageDailySteps,
+        recap.averageDailySteps != null
+            ? '${NumberFormat.decimalPattern(l10n.localeName).format(recap.averageDailySteps)} ${l10n.stepsPerDay}'
+            : null,
+      )
+      ..text('Progreso', _opt(recap.trainingProgress))
+      ..note('Notas', recap.trainingNotes);
+
+    final nutrition = _RecapSection()
+      ..text('Calidad alimentación', _opt(recap.nutritionQuality))
+      ..number('Calidad comidas', recap.foodQuality);
+    if (recap.hydrationEnabled) {
+      nutrition.text('Hidratación', _opt(recap.hydrationLevel));
+    } else {
+      nutrition.empty('Hidratación', 'No valorado');
+    }
+    nutrition.note('Notas', recap.nutritionNotes);
+
+    final recovery = _RecapSection()
+      ..text('Sueño', _opt(recap.sleepHoursRange))
+      ..text('Fatiga', _opt(recap.fatigueLevel));
+    if (recap.musclePainZones.isEmpty) {
+      recovery.empty('Zonas con dolor', 'Sin zonas');
+    } else {
+      recovery.text(
+        'Zonas con dolor',
+        recap.musclePainZones.map((zone) => _formatZone(zone, l10n)).join(', '),
+      );
+    }
+    recovery.note('Notas', recap.recoveryNotes);
+
+    final feelings = _RecapSection()..text('Estado de ánimo', _opt(recap.mood));
+    if (recap.stressEnabled && recap.stressLevel != null) {
+      feelings.number('Estrés', recap.stressLevel, unit: '/5');
+    } else {
+      feelings.empty('Estrés', 'No valorado');
+    }
+    feelings
+      ..number(
+        l10n.weeklyHunger,
+        recap.hungerLevel,
+        unit: '/10',
+        emptyText: l10n.optionalRatingNoData,
+      )
+      ..number(
+        l10n.weeklyEnergy,
+        recap.energyLevel,
+        unit: '/10',
+        emptyText: l10n.optionalRatingNoData,
+      )
+      ..number(
+        l10n.weeklyDigestion,
+        recap.digestionLevel,
+        unit: '/10',
+        emptyText: l10n.optionalRatingNoData,
+      )
+      ..note('Notas', recap.generalNotes);
+
+    final improvement = _RecapSection()
+      ..number('App', recap.improvementAppRating, unit: '/5')
+      ..number('Servicio', recap.improvementServiceRating, unit: '/5');
+    if (recap.improvementAreas.isEmpty) {
+      improvement.empty('Áreas de mejora', 'Sin áreas destacadas');
+    } else {
+      improvement.text('Áreas de mejora', recap.improvementAreas.map(_opt).join(', '));
+    }
+    improvement.note(l10n.feedback, recap.improvementFeedbackText);
+
+    final sections = [
+      ('Entreno', training),
+      ('Nutrición', nutrition),
+      ('Recuperación', recovery),
+      ('Sensaciones', feelings),
+      ('Mejora', improvement),
+    ];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: EdgeInsets.only(top: ExomSpacing.sm, bottom: 32 + bottomInset),
       children: [
-        // Header card
-        GlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(18),
-          borderRadius: 22,
-          elevated: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _weekRange(recap),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  _StatusChip(status: recap.status),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (recap.reviewedAt != null)
-                Text(
-                  AppLocalizations.of(context).recapReviewedOn(
-                    fmt.format(recap.reviewedAt!.toLocal()),
-                  ),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                ),
-            ],
+        _RecapHeader(recap: recap),
+        const SizedBox(height: ExomSpacing.lg),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.xl),
+          child: ExomTwoLineHeadline(
+            first: l10n.recapDetailHeadlineFirst,
+            second: l10n.recapDetailHeadlineSecond,
           ),
         ),
-
-        const SizedBox(height: 16),
-
+        const SizedBox(height: ExomSpacing.lg),
         if (recap.hasPublishedReview) ...[
           RecapPublishedReviewCard(recap: recap),
-          const SizedBox(height: 16),
+          const SizedBox(height: ExomSpacing.lg),
         ],
-
-        // Trainer feedback
         if (recap.hasClientFeedback) ...[
           RecapFeedbackCard(recap: recap),
-          const SizedBox(height: 16),
+          const SizedBox(height: ExomSpacing.lg),
         ],
-
-        // Recap sections
-        _SectionCard(
-          title: 'Entreno',
-          palette: palette,
-          theme: theme,
-          children: [
-            _Item('Esfuerzo', recap.trainingEffort?.toString() ?? '—'),
-            _Item('Sesiones', recap.trainingSessions?.toString() ?? '—'),
-            _Item(
-              l10n.averageDailySteps,
-              recap.averageDailySteps != null
-                  ? '${NumberFormat.decimalPattern(l10n.localeName).format(recap.averageDailySteps)} ${l10n.stepsPerDay}'
-                  : '—',
-            ),
-            _Item('Progreso', _opt(recap.trainingProgress)),
-            _Item('Notas', recap.trainingNotes ?? '—'),
-          ],
-        ),
-
-        _SectionCard(
-          title: 'Nutrición',
-          palette: palette,
-          theme: theme,
-          children: [
-            _Item('Calidad alimentación', _opt(recap.nutritionQuality)),
-            _Item('Calidad comidas', recap.foodQuality?.toString() ?? '—'),
-            _Item(
-              'Hidratación',
-              recap.hydrationEnabled
-                  ? _opt(recap.hydrationLevel)
-                  : 'No valorado',
-            ),
-            _Item('Notas', recap.nutritionNotes ?? '—'),
-          ],
-        ),
-
-        _SectionCard(
-          title: 'Recuperación',
-          palette: palette,
-          theme: theme,
-          children: [
-            _Item('Sueño', _opt(recap.sleepHoursRange)),
-            _Item('Fatiga', _opt(recap.fatigueLevel)),
-            _Item(
-              'Zonas con dolor',
-              recap.musclePainZones.isEmpty
-                  ? 'Sin zonas'
-                  : recap.musclePainZones
-                        .map((zone) => _formatZone(zone, l10n))
-                        .join(', '),
-            ),
-            _Item('Notas', recap.recoveryNotes ?? '—'),
-          ],
-        ),
-
-        _SectionCard(
-          title: 'Sensaciones',
-          palette: palette,
-          theme: theme,
-          children: [
-            _Item('Estado de ánimo', _opt(recap.mood)),
-            _Item(
-              'Estrés',
-              recap.stressEnabled && recap.stressLevel != null
-                  ? '${recap.stressLevel}/5'
-                  : 'No valorado',
-            ),
-            _Item(
-              l10n.weeklyHunger,
-              recap.hungerLevel == null
-                  ? l10n.optionalRatingNoData
-                  : '${recap.hungerLevel}/10',
-            ),
-            _Item(
-              l10n.weeklyEnergy,
-              recap.energyLevel == null
-                  ? l10n.optionalRatingNoData
-                  : '${recap.energyLevel}/10',
-            ),
-            _Item(
-              l10n.weeklyDigestion,
-              recap.digestionLevel == null
-                  ? l10n.optionalRatingNoData
-                  : '${recap.digestionLevel}/10',
-            ),
-            _Item('Notas', recap.generalNotes ?? '—'),
-          ],
-        ),
-
-        _SectionCard(
-          title: 'Mejora',
-          palette: palette,
-          theme: theme,
-          children: [
-            _Item(
-              'App',
-              recap.improvementAppRating != null
-                  ? '${recap.improvementAppRating}/5'
-                  : '—',
-            ),
-            _Item(
-              'Servicio',
-              recap.improvementServiceRating != null
-                  ? '${recap.improvementServiceRating}/5'
-                  : '—',
-            ),
-            _Item(
-              'Áreas de mejora',
-              recap.improvementAreas.isEmpty
-                  ? 'Sin áreas destacadas'
-                  : recap.improvementAreas.map(_opt).join(', '),
-            ),
-            _Item(AppLocalizations.of(context).feedback, recap.improvementFeedbackText ?? '—'),
-          ],
-        ),
+        for (var i = 0; i < sections.length; i++) ...[
+          const SizedBox(height: ExomSpacing.sm),
+          _RecapSectionView(
+            n: i + 1,
+            title: sections[i].$1,
+            section: sections[i].$2,
+          ),
+        ],
       ],
     );
   }
 
-  String _weekRange(RecapEntity recap) {
-    final fmt = DateFormat('dd MMM');
-    return '${fmt.format(recap.weekStartDate)} - ${DateFormat('dd MMM yyyy').format(recap.weekEndDate)}';
-  }
-
   String _opt(String? value) {
-    if (value == null || value.trim().isEmpty) return '—';
+    if (value == null || value.trim().isEmpty) return '';
     return value
         .replaceAll('_', ' ')
         .toLowerCase()
@@ -481,130 +394,180 @@ String recapCopyFromLocale(String value, AppLocalizations l10n) {
       );
 }
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-  final dynamic palette;
-  final ThemeData theme;
+/// Header (sketch C5): the week as the screen title and one status line
+/// (icon + text, no pill).
+class _RecapHeader extends StatelessWidget {
+  const _RecapHeader({required this.recap});
 
-  const _SectionCard({
-    required this.title,
-    required this.children,
-    required this.palette,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      decoration: GlassDecoration.card(borderRadius: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: context.exomPalette.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _Item extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _Item(this.label, this.value);
+  final RecapEntity recap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: palette.textDisabled,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String status;
-
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = switch (status) {
-      'REVIEWED' => semantic.success,
-      'SUBMITTED' => palette.primary,
-      _ => semantic.warning,
-    };
-    final label = switch (status) {
-      'REVIEWED' => 'Revisado',
+    final l10n = AppLocalizations.of(context);
+    final week = _weekRange(context, recap);
+    final reviewedAt = recap.reviewedAt;
+    final reviewed = recap.status == 'REVIEWED';
+    final status = switch (recap.status) {
+      'REVIEWED' =>
+        reviewedAt != null
+            ? l10n.recapReviewedOn(
+                DateFormat(
+                  'dd MMM yyyy',
+                  Localizations.localeOf(context).languageCode,
+                ).format(reviewedAt.toLocal()),
+              )
+            : 'Revisado',
       'SUBMITTED' => 'Enviado',
       _ => 'Borrador',
     };
-    final invertedColor = color.computeLuminance() > 0.5
-        ? Colors.black
-        : Colors.white;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: isDark
-          ? BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 0.5,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: ExomSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Semantics(
+            header: true,
+            label: week,
+            excludeSemantics: true,
+            child: Text(
+              week.toUpperCase(),
+              style: ExomType.screenTitle.copyWith(color: palette.textPrimary),
+            ),
+          ),
+          const SizedBox(height: ExomSpacing.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                reviewed ? ExomIcons.done : ExomIcons.time,
+                size: 16,
+                color: reviewed ? palette.textPrimary : palette.textSecondary,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                  spreadRadius: -4,
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: reviewed ? palette.textPrimary : palette.textSecondary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
                 ),
-              ],
-            )
-          : GlassDecoration.accentCard(color, borderRadius: 999),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: invertedColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _weekRange(BuildContext context, RecapEntity recap) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final fmt = DateFormat('dd MMM', languageCode);
+    return '${fmt.format(recap.weekStartDate)} - ${DateFormat('dd MMM yyyy', languageCode).format(recap.weekEndDate)}';
+  }
+}
+
+/// Numbered section (`.x-sh`): header, figures in columns for the numeric
+/// answers and one row per remaining answer.
+class _RecapSectionView extends StatelessWidget {
+  const _RecapSectionView({
+    required this.n,
+    required this.title,
+    required this.section,
+  });
+
+  final int n;
+  final String title;
+  final _RecapSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExomNumberedSectionHeader(n: n, title: title),
+        const SizedBox(height: ExomSpacing.md),
+        if (section.figures.isNotEmpty)
+          ExomFigureColumns(items: section.figures, numbered: false),
+        if (section.fields.isNotEmpty)
+          ExomFlatRowGroup(
+            children: [
+              for (final field in section.fields) _RecapFieldRow(field: field),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// Row of an answer that is not a figure (`.r` / `.rv`): label in the text
+/// colour, value at the end; free text goes under its label. A real value is
+/// in the text colour and semibold, an empty one in the secondary colour.
+class _RecapFieldRow extends StatelessWidget {
+  const _RecapFieldRow({required this.field});
+
+  final _RecapField field;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    final style = Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.3);
+    final valueStyle = field.isEmpty
+        ? style?.copyWith(color: palette.textSecondary)
+        : style?.copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w600,
+          );
+    if (field.stacked) {
+      return MergeSemantics(
+        child: ExomRowSurface(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ExomSpacing.xl,
+            vertical: 12,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                field.label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+              const SizedBox(height: ExomSpacing.xs),
+              Text(
+                field.value,
+                style: style?.copyWith(color: palette.textPrimary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return MergeSemantics(
+      child: ExomRowSurface(
+        child: LayoutBuilder(
+          builder: (context, constraints) => Row(
+            children: [
+              Expanded(
+                child: Text(
+                  field.label,
+                  style: style?.copyWith(color: palette.textPrimary),
+                ),
+              ),
+              const SizedBox(width: ExomSpacing.md),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth / 2),
+                child: Text(
+                  field.value,
+                  textAlign: TextAlign.end,
+                  style: valueStyle,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

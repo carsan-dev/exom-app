@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -141,10 +142,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(TrainingsPage), findsOneWidget);
       final pageHeight = tester.getSize(find.byType(TrainingsPage)).height;
-      expect(tester.getSize(find.byType(SingleChildScrollView).first).height,
-        lessThanOrEqualTo(pageHeight * .3),
-        reason: 'pending recovery must leave at least 70% for the workout list');
-      expect(find.textContaining('Recovery · 2026-09-06'), findsOneWidget);
+      // ENTRENAR-TEXTO: the box is 30% of the page, or what the first session
+      // needs to show its actions when that is more, never past 75%.
+      final box = tester.getRect(find.byType(SingleChildScrollView).first);
+      final firstActions = tester.getRect(
+        find.byKey(const Key('pending-discard-one')),
+      );
+      expect(box.height,
+        lessThanOrEqualTo(math.max(pageHeight * .3, firstActions.bottom - box.top + pendingActionsBottomPadding) + .5),
+        reason: 'pending recovery grows only as far as the first session needs');
+      expect(box.height, lessThanOrEqualTo(pageHeight * .75));
+      expect(firstActions.bottom, lessThanOrEqualTo(box.bottom + .5));
+      expect(find.textContaining('Recovery · 6 de septiembre de 2026'), findsOneWidget);
       expect(find.textContaining('Pendiente de sincronización'), findsOneWidget);
 
       // ACK removes the owner-scoped pending execution while the page stays mounted.
@@ -152,7 +161,7 @@ void main() {
       sync.notify();
       await tester.pumpAndSettle();
       expect(find.byType(TrainingsPage), findsOneWidget);
-      expect(find.textContaining('Recovery · 2026-09-06'), findsNothing);
+      expect(find.textContaining('Recovery · 6 de septiembre de 2026'), findsNothing);
       expect(find.textContaining('Pendiente de sincronización'), findsNothing);
       expect(repository.requests, isEmpty, reason: 'no detail navigation occurred');
     } finally {
@@ -183,10 +192,10 @@ void main() {
         onSelect: (entry, action) => selected.add('${entry['id']}:$action'),
       ))),
     ));
-    expect(find.text('Tienes un entrenamiento pendiente de finalizar'), findsOneWidget);
-    expect(find.textContaining('Strength · 2026-08-12'), findsNWidgets(2));
-    expect(find.textContaining('Mobility · 2026-09-05'), findsOneWidget);
-    expect(find.textContaining('Recovery · 2026-09-06'), findsOneWidget);
+    expect(find.text('Tienes 3 entrenamientos pendientes de finalizar'), findsOneWidget);
+    expect(find.textContaining('Strength · 12 de agosto de 2026'), findsNWidgets(2));
+    expect(find.textContaining('Mobility · 5 de septiembre de 2026'), findsOneWidget);
+    expect(find.textContaining('Recovery · 6 de septiembre de 2026'), findsOneWidget);
     expect(find.textContaining('Pendiente de sincronización'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pending-continue-one')));
     await tester.pump();

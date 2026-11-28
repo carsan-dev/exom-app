@@ -18,5 +18,10 @@
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- No native focus frame around the full-screen FlutterView: once the
+             window leaves touch mode the theme's focused selectableItemBackground
+             (a green frame on Samsung) stays drawn over the whole UI. Flutter
+             draws its own focus indicators. -->
+        <item name="android:defaultFocusHighlightEnabled">false</item>
     </style>
 </resources>

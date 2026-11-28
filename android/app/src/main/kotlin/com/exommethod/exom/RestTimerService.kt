@@ -113,7 +113,7 @@ open class RestTimerService : Service() {
 
     private fun buildOngoingNotification() =
         NotificationCompat.Builder(this, ongoingChannelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_exom)
             .setContentTitle(getString(titleResource))
             .setContentText(
                 getString(
@@ -149,7 +149,7 @@ open class RestTimerService : Service() {
 
     private fun showFinishedNotification() {
         val builder = NotificationCompat.Builder(this, finishedChannelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_exom)
             .setContentTitle(getString(finishedTitleResource))
             .setContentText(getString(finishedBodyResource))
             .setContentIntent(openAppIntent())

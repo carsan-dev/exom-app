@@ -360,6 +360,7 @@ class TrainingBloc extends Bloc<TrainingEvent, TrainingState> {
             trainingId: current.training.id,
             sessionId: event.sessionId,
             operationId: event.operationId,
+            completedAt: event.completedAt,
           );
         } else {
           await _unmarkExerciseCompletedUseCase(event.trainingExerciseId, date, sessionId: event.sessionId);

@@ -1,10 +1,10 @@
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../theme/app_theme.dart';
-import '../theme/glass_decorations.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
-import 'glass_card.dart';
+import 'exom_panel.dart';
 
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key});
@@ -14,20 +14,21 @@ class LoadingWidget extends StatelessWidget {
     final palette = context.exomPalette;
 
     return Center(
-      child: GlassCard(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        borderRadius: 24,
-        elevated: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(color: palette.primary),
-            ),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ExomPanel(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          raised: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(color: palette.primary),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -49,18 +50,13 @@ class ErrorWidget2 extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(24),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _StateIconBadge(
-                icon: Icons.error_outline,
-                color: AppColors.error,
-              ),
+              _StateIconBadge(icon: ExomIcons.error, color: palette.error),
               const SizedBox(height: 16),
               Text(
                 message,
@@ -77,70 +73,6 @@ class ErrorWidget2 extends StatelessWidget {
                   child: Text(l10n.retryButton),
                 ),
               ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class EmptyWidget extends StatelessWidget {
-  const EmptyWidget({
-    super.key,
-    required this.message,
-    this.subtitle,
-    this.icon,
-    this.action,
-  });
-
-  final String message;
-  final String? subtitle;
-  final IconData? icon;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _StateIconBadge(
-                icon: icon ?? Icons.inbox_outlined,
-                color: palette.textDisabled,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  subtitle!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-              if (action != null) ...[const SizedBox(height: 24), action!],
             ],
           ),
         ),
@@ -170,18 +102,13 @@ class ServerErrorWidget extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _StateIconBadge(
-                icon: Icons.cloud_off_outlined,
-                color: AppColors.error,
-              ),
+              _StateIconBadge(icon: ExomIcons.offline, color: palette.error),
               const SizedBox(height: 20),
               Text(
                 l10n.serverErrorTitle,
@@ -209,7 +136,7 @@ class ServerErrorWidget extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh, size: 18),
+                    icon: const Icon(ExomIcons.retry, size: 18),
                     label: Text(l10n.retryButton),
                   ),
                 ),
@@ -219,7 +146,7 @@ class ServerErrorWidget extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onContactSupport,
-                    icon: const Icon(Icons.feedback_outlined, size: 18),
+                    icon: const Icon(ExomIcons.feedback, size: 18),
                     label: Text(l10n.contactSupportButton),
                   ),
                 ),
@@ -247,17 +174,15 @@ class NoConnectionWidget extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
+        child: ExomPanel(
           padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
+          raised: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _StateIconBadge(
-                icon: Icons.wifi_off_outlined,
-                color: AppColors.warning,
+                icon: ExomIcons.wifiOff,
+                color: context.exomSemantic.warning,
               ),
               const SizedBox(height: 20),
               Text(
@@ -284,7 +209,7 @@ class NoConnectionWidget extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh, size: 18),
+                    icon: const Icon(ExomIcons.retry, size: 18),
                     label: Text(l10n.retryButton),
                   ),
                 ),
@@ -294,83 +219,8 @@ class NoConnectionWidget extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: onViewOffline,
-                    icon: const Icon(Icons.offline_pin_outlined, size: 18),
+                    icon: const Icon(ExomIcons.offlineSaved, size: 18),
                     label: Text(l10n.viewOfflineButton),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class NotFoundWidget extends StatelessWidget {
-  const NotFoundWidget({super.key, this.onGoToCalendar, this.onGoHome});
-
-  final VoidCallback? onGoToCalendar;
-  final VoidCallback? onGoHome;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
-    final l10n = AppLocalizations.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: GlassCard(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(28),
-          borderRadius: 28,
-          elevated: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _StateIconBadge(
-                icon: Icons.search_off_outlined,
-                color: palette.textMuted,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n.notFoundTitle,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: palette.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.notFoundMessage,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-              if (onGoToCalendar != null)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onGoToCalendar,
-                    icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                    label: Text(l10n.goToCalendarButton),
-                  ),
-                ),
-              if (onGoHome != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: onGoHome,
-                    icon: const Icon(Icons.home_outlined, size: 18),
-                    label: Text(l10n.goHomeButton),
                   ),
                 ),
               ],
@@ -397,14 +247,9 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
-    final baseColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.05),
-      AppColors.glassBackgroundElevated,
-    );
-    final highlightColor = Color.alphaBlend(
-      palette.primary.withValues(alpha: 0.12),
-      const Color(0x33FFF7DB),
-    );
+    // V4 tokens: raised panel with a panel-coloured sweep, in both themes.
+    final baseColor = palette.surfaceElevated;
+    final highlightColor = palette.surface;
 
     return Shimmer.fromColors(
       baseColor: baseColor,
@@ -412,9 +257,14 @@ class ShimmerCard extends StatelessWidget {
       child: Container(
         height: height,
         width: width ?? double.infinity,
-        decoration: GlassDecoration.card(
-          borderRadius: (borderRadius ?? BorderRadius.circular(16)).topLeft.x,
-          borderColor: palette.glassBorder.withValues(alpha: 0.12),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(
+            (borderRadius ?? BorderRadius.circular(16)).topLeft.x,
+          ),
+          border: Border.all(
+            color: palette.borderSoft.withValues(alpha: 0.12),
+          ),
         ),
       ),
     );
@@ -429,28 +279,16 @@ class _StateIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.exomPalette;
     return Container(
       width: 72,
       height: 72,
-      decoration: GlassDecoration.accentCard(color, borderRadius: 999),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: palette.borderSoft),
+      ),
       child: Icon(icon, color: color, size: 36),
-    );
-  }
-}
-
-class ShimmerList extends StatelessWidget {
-  const ShimmerList({super.key, this.count = 5, this.itemHeight = 80});
-
-  final int count;
-  final double itemHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: count,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => ShimmerCard(height: itemHeight),
     );
   }
 }

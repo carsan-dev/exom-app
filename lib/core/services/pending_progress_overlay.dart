@@ -1,3 +1,7 @@
+import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+
+// Pending sets that are not registered (RIR-only sets of earlier drafts) are
+// left out exactly as the replay leaves them out of the request.
 List<Map<String, dynamic>> _mergePendingSets(
   Object? existingValue,
   Object? pendingValue,
@@ -13,6 +17,7 @@ List<Map<String, dynamic>> _mergePendingSets(
         if (normalized['rir'] == null) normalized.remove('rir');
         return normalized;
       })
+      .where(isRegisteredSetJson)
       .toList(growable: false);
   final pendingByNumber = {for (final set in pending) set['set_number']: set};
   final existingNumbers = existing.map((set) => set['set_number']).toSet();
@@ -78,6 +83,7 @@ Map<String, dynamic> overlayPendingProgressActions({
             'sets': _mergePendingSets(existing['sets'], action['sets']),
           'completed_at':
               existing['completed_at'] ??
+              action['completed_at'] ??
               action['queued_at'] ??
               DateTime.now().toUtc().toIso8601String(),
         });

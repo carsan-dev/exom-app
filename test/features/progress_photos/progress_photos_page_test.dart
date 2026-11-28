@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:exom_app/core/services/managed_upload.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/progress_photos/domain/entities/progress_photo.dart';
 import 'package:exom_app/features/progress_photos/domain/repositories/progress_photo_repository.dart';
 import 'package:exom_app/features/progress_photos/presentation/pages/progress_photos_page.dart';
@@ -57,8 +58,11 @@ void main() {
 
   testWidgets('renders loading, error, empty and four-view incomplete history', (tester) async {
     repository.pendingHistory = Completer<ProgressPhotoHistory>();
+    final semantics = tester.ensureSemantics();
     await tester.pumpWidget(page());
-    expect(find.text('Loading progress photos'), findsOneWidget);
+    // L5-F1: loading is a skeleton; the loading text is its accessible label.
+    expect(find.bySemanticsLabel('Loading progress photos'), findsOneWidget);
+    semantics.dispose();
 
     repository.pendingHistory!.completeError(StateError('offline'));
     await pumpPage(tester);
@@ -71,7 +75,7 @@ void main() {
     repository.history = [sessionFor('s1', '2026-09-16', photos: [photo('front', 'FRONT')])];
     await tester.tap(find.byTooltip('Refresh progress photos'));
     await pumpPage(tester);
-    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(find.text('16 SEP 2026'), findsOneWidget);
     for (final label in ['Front', 'Left side', 'Right side', 'Back']) {
       expect(find.text(label), findsOneWidget);
     }
@@ -83,7 +87,7 @@ void main() {
     repository.history = [sessionFor('s1', '2026-09-16')];
     await tester.pumpWidget(page(pollInterval: const Duration(milliseconds: 10)));
     await pumpPage(tester);
-    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(find.text('16 SEP 2026'), findsOneWidget);
     expect(repository.requestedPages, [1]);
 
     repository.pendingHistories[1] = Completer<ProgressPhotoHistory>();
@@ -91,25 +95,25 @@ void main() {
     await tester.pump(const Duration(milliseconds: 10));
     expect(repository.requestedPages, [1, 1]);
     expect(find.text('Loading progress photos'), findsNothing);
-    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(find.text('16 SEP 2026'), findsOneWidget);
     expect(find.text('Confirmed'), findsWidgets);
     expect(find.byTooltip('Refresh progress photos'), findsOneWidget);
-    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh)).onPressed, isNotNull);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, ExomIcons.retry)).onPressed, isNotNull);
+    expect(find.byKey(const Key('progress-photos-new-session')), findsOneWidget);
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byKey(const Key('progress-photos-new-session')));
     await tester.pump();
     expect(find.byType(DatePickerDialog), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pump();
-    expect(find.text('16 Sep 2026'), findsOneWidget);
+    expect(find.text('16 SEP 2026'), findsOneWidget);
 
     repository.pendingHistories[1]!.complete(ProgressPhotoHistory(
       sessions: [sessionFor('s2', '2026-09-17')],
       total: 1, page: 1, limit: 20, totalPages: 1,
     ));
     await pumpPage(tester);
-    expect(find.text('17 Sep 2026'), findsOneWidget);
+    expect(find.text('17 SEP 2026'), findsOneWidget);
   });
 
   testWidgets('creates incomplete sessions and queues camera or gallery selection without treating cancellation as an error', (tester) async {
@@ -124,20 +128,20 @@ void main() {
       return source == ImageSource.camera ? XFile(image.path) : null;
     }));
     await pumpPage(tester);
-    expect(find.text('15 Sep 2026'), findsOneWidget);
+    expect(find.text('15 SEP 2026'), findsOneWidget);
 
     expect(repository.history, hasLength(2)); // Independent incomplete sessions remain distinct.
 
     await tester.tap(find.byTooltip('Add Front').first);
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await pumpPage(tester);
     expect(sources, [ImageSource.camera]);
     expect(queue.enqueues.single.view, 'FRONT');
 
     await tester.tap(find.byTooltip('Add Left side').first);
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Gallery'));
+    await tapSource(tester, 'GALLERY');
     await pumpPage(tester);
     expect(sources, [ImageSource.camera, ImageSource.gallery]);
     expect(queue.enqueues, hasLength(1));
@@ -161,7 +165,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Replace active photo?'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
@@ -177,7 +181,7 @@ void main() {
     queue.enqueues.clear();
     await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Cancel'));
     await pumpPage(tester);
@@ -207,6 +211,10 @@ void main() {
     expect(queue.rebased, [('stale-replacement', 'fresh-active')]);
     expect(queue.discarded, isEmpty);
 
+    // L5-F1: the taller header (headline, «Última sesión») can leave the
+    // link under the pinned footer; bring it into view first.
+    await tester.ensureVisible(find.text('Discard').first);
+    await tester.pump();
     await tester.tap(find.text('Discard').first);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Discard retained local photo?'), findsOneWidget);
@@ -380,7 +388,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Add Left side'));
     await tester.pump();
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump();
     session = 'account-b:1';
     picked.complete(XFile(image.path));
@@ -397,7 +405,7 @@ void main() {
     await pumpPage(tester);
     await tester.tap(find.byTooltip('Replace Front'));
     await tester.pump();
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     replacementPicked.complete(XFile(image.path));
     await tester.pump();
     expect(find.text('Replace active photo?'), findsOneWidget);
@@ -441,7 +449,7 @@ void main() {
       sessions: [sessionFor('a-session', '2026-09-16')], total: 1, page: 1, limit: 20, totalPages: 1,
     ));
     await pumpPage(tester);
-    expect(find.text('16 Sep 2026'), findsNothing);
+    expect(find.text('16 SEP 2026'), findsNothing);
 
     repository.pendingHistory = null;
     repository.history = [sessionFor('b-session', '2026-09-17')];
@@ -465,12 +473,20 @@ void main() {
     );
     await tester.pumpWidget(page(pollInterval: const Duration(milliseconds: 1)));
     await pumpPage(tester);
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -300));
+    // The button is reachable by scrolling; its offset depends on the tile
+    // metrics, so scroll to it instead of a fixed distance (L4 redesign).
+    await tester.scrollUntilVisible(
+      find.text('Load more'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // Built is not enough: bring it above the pinned footer (L5-F1).
+    await tester.ensureVisible(find.text('Load more'));
     await tester.pump();
     await tester.tap(find.text('Load more'));
     await pumpPage(tester);
     expect(repository.requestedPages, containsAll([1, 2]));
-    expect(find.text('17 Sep 2026'), findsOneWidget);
+    expect(find.text('17 SEP 2026'), findsOneWidget);
 
     session = 'account-b:1';
     repository.history = const [];
@@ -479,7 +495,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 5));
     await pumpPage(tester);
-    expect(find.text('17 Sep 2026'), findsNothing);
+    expect(find.text('17 SEP 2026'), findsNothing);
   });
 
   testWidgets('refreshes a page-two stale replacement by its exact session before rebasing', (tester) async {
@@ -538,7 +554,7 @@ void main() {
     await tester.pump();
     await tester.tap(loadMore);
     await pumpPage(tester);
-    final review = find.widgetWithText(TextButton, 'Review replacement');
+    final review = find.text('Review replacement');
     await tester.ensureVisible(review);
     await tester.pump();
     await tester.tap(review);
@@ -744,7 +760,7 @@ void main() {
     await tester.pumpWidget(page(locale: const Locale('es')));
     await pumpPage(tester);
 
-    expect(find.text('16 sept 2026'), findsOneWidget);
+    expect(find.text('16 SEPT 2026'), findsOneWidget);
     expect(find.text('Frontal'), findsOneWidget);
     expect(find.text('Subida pendiente'), findsWidgets);
   });
@@ -766,7 +782,7 @@ void main() {
     await pumpPage(tester);
     await tester.tap(find.byTooltip('Add Front'));
     await tester.pump();
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump();
     await tester.tap(find.text('Settings'));
     await pumpPage(tester);
@@ -791,7 +807,7 @@ void main() {
     await pumpPage(tester);
     await tester.tap(find.byTooltip('Add Front'));
     await tester.pump();
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump();
     await tester.tap(find.text('Retry'));
     await pumpPage(tester);
@@ -802,7 +818,7 @@ void main() {
     sources.clear();
     await tester.tap(find.byTooltip('Add Left side'));
     await tester.pump();
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump();
     await tester.tap(find.text('From gallery'));
     await pumpPage(tester);
@@ -819,7 +835,7 @@ void main() {
     await pumpPage(tester);
     await tester.tap(find.byTooltip('Add Front'));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Camera'));
+    await tapSource(tester, 'CAMERA');
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Allow camera or gallery access in Settings and try again.'), findsOneWidget);
     await tester.tap(find.text('Settings'));
@@ -831,9 +847,20 @@ void main() {
     await tester.pump();
     await tester.pump();
     await pumpPage(tester);
-    expect(find.text('16 Sep 2026'), findsNothing);
+    expect(find.text('16 SEP 2026'), findsNothing);
     expect(find.text('No progress photo sessions yet'), findsOneWidget);
   });
+}
+
+/// L5-F1: the image source is a straight EXOM sheet (it slides in over
+/// 280 ms and the picker opens only after it has closed and been disposed,
+/// 200 ms), instead of an AlertDialog. Lets the sheet finish opening, taps the
+/// source (painted upper case by ExomIndexList) and lets the sheet close.
+Future<void> tapSource(WidgetTester tester, String source) async {
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.tap(find.text(source));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 ProgressPhotoSession sessionFor(String id, String date, {List<ProgressPhoto> photos = const []}) =>

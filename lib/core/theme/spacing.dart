@@ -58,10 +58,36 @@ class ExomRadius {
   /// 28px — hero cards (elevated / featured).
   static const double xxl = 28;
 
+  /// 0px — panels, rows and sheets (L5). The old scale above stays until L6.
+  static const double square = 0;
+
+  /// 4px — buttons, fields, chips and dialogs (L5).
+  static const double control = 4;
+
   static BorderRadius allXs() => BorderRadius.circular(xs);
   static BorderRadius allSm() => BorderRadius.circular(sm);
   static BorderRadius allMd() => BorderRadius.circular(md);
   static BorderRadius allLg() => BorderRadius.circular(lg);
   static BorderRadius allXl() => BorderRadius.circular(xl);
   static BorderRadius allXxl() => BorderRadius.circular(xxl);
+}
+
+/// Rule (line) widths of the L5 redesign, in logical pixels.
+class ExomRule {
+  const ExomRule._();
+
+  /// 1px — hairline between rows and around panels.
+  static const double hairline = 1;
+
+  /// 2px — rule that carries data (progress, chart line).
+  static const double data = 2;
+
+  /// 4px — progress bar thickness.
+  static const double bar = 4;
+
+  /// 1.5px — outline of the lime fill in the light theme.
+  static const double outline = 1.5;
+
+  /// 2px — leading edge of a reply block.
+  static const double replyEdge = 2;
 }

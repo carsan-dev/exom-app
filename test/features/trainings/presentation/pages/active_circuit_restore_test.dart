@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/trainings/presentation/pages/active_circuit_page.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/set_performance_sheet.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
@@ -97,26 +99,37 @@ void main() {
       await tester.pumpAndSettle();
       final footer = find.byKey(const ValueKey('circuit-executing-footer'));
       await tester.ensureVisible(footer);
+      // L3 unit 4: the footer action is an ExomPrimaryButton (was an
+      // ElevatedButton) and it stays busy, with an endless spinner, while the
+      // set sheet is open, so fixed pumps replace pumpAndSettle there.
       await tester.tap(
-        find.descendant(of: footer, matching: find.byType(ElevatedButton)),
+        find.descendant(of: footer, matching: find.byType(ExomPrimaryButton)),
       );
-      await tester.pumpAndSettle();
-      final fields = find.byType(TextField);
-      final field = tester.widget<TextField>(fields.first);
-      final l10n = AppLocalizations.of(tester.element(fields.first));
-      expect(
-        field.decoration?.labelText,
-        scenario == 'repetitions'
-            ? l10n.setPerformanceReps
-            : timed && savedSeconds != 90
-            ? l10n.setPerformanceMinutes
-            : l10n.setPerformanceSeconds,
-      );
+      await _pumpSheet(tester);
+      // L3 unit 4: the AlertDialog's TextFields became the shared set sheet
+      // (D3/D5). Its ExomStepper has no InputDecoration.labelText; the unit
+      // is the visible label above the stepper.
+      final countField = find.byKey(const Key('set-sheet-count-field'));
+      final field = tester.widget<TextField>(countField);
+      final l10n = AppLocalizations.of(tester.element(countField));
+      final expectedLabel = scenario == 'repetitions'
+          ? l10n.setSheetRepsLabel
+          : timed && savedSeconds != 90
+          ? l10n.setPerformanceMinutes
+          : l10n.setSheetSecondsLabel;
+      expect(find.text(expectedLabel), findsOneWidget);
+      for (final other in {
+        l10n.setSheetRepsLabel,
+        l10n.setPerformanceMinutes,
+        l10n.setSheetSecondsLabel,
+      }.difference({expectedLabel})) {
+        expect(find.text(other), findsNothing);
+      }
       if (savedSeconds != null) {
         expect(field.controller?.text, savedSeconds == 600 ? '10' : '90');
       } else {
         await tester.enterText(
-          fields.first,
+          countField,
           timed
               ? '10'
               : scenario == 'seconds'
@@ -124,7 +137,8 @@ void main() {
               : '12',
         );
       }
-      await tester.tap(find.text(l10n.weightInputSave));
+      // L3 unit 4: «Guardar serie» of the sheet (was the dialog's «Guardar»).
+      await tester.tap(find.byKey(const Key('set-sheet-save')));
       await tester.pumpAndSettle();
       final raw = storage.writes.last['performances'] as Map;
       final sets = raw['timed'] as List;
@@ -139,16 +153,17 @@ void main() {
       if (scenario == 'new minutes' || scenario == 'saved minutes') {
         final writes = storage.writes.length;
         await tester.tap(
-          find.descendant(of: footer, matching: find.byType(ElevatedButton)),
+          find.descendant(of: footer, matching: find.byType(ExomPrimaryButton)),
         );
-        await tester.pumpAndSettle();
+        await _pumpSheet(tester);
         if (scenario == 'new minutes') {
           await tester.tap(find.text(l10n.cancel));
         } else {
-          Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+          // L3 unit 4: dismissing the sheet route (was the AlertDialog's).
+          Navigator.of(tester.element(find.byType(SetPerformanceSheet))).pop();
         }
         await tester.pumpAndSettle();
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byType(SetPerformanceSheet), findsNothing);
         expect(storage.writes.length, writes);
       }
       await tester.pumpWidget(const SizedBox.shrink());
@@ -179,6 +194,44 @@ void main() {
     final other = snapshotCircuitCompletion(restarted, 'exercise-b',
       sets: [{'set_number': 1, 'seconds': 30}]);
     expect(other['operation_id'], isNot(first['operation_id']));
+  });
+
+  test('circuit completion freezes the time of the last logged set (C-O1)', () async {
+    final saved = <String, Map<String, dynamic>>{};
+    final first = snapshotCircuitCompletion(saved, 'exercise-a',
+      sets: [{'set_number': 1, 'reps': 10}],
+      completedAt: '2026-11-27T13:56:51.120Z');
+    expect(first['completed_at'], '2026-11-27T13:56:51.120Z');
+    final storage = _CircuitStorage();
+    await persistCircuitState(storage, 'circuit', storage.sessionStamp,
+      {'completion_actions': saved});
+    final restored = jsonDecode(jsonEncode(storage.writes.single)) as Map;
+    final restarted = <String, Map<String, dynamic>>{
+      for (final entry in (restored['completion_actions'] as Map).entries)
+        entry.key as String: Map<String, dynamic>.from(entry.value as Map),
+    };
+    final retry = snapshotCircuitCompletion(restarted, 'exercise-a',
+      sets: [{'set_number': 1, 'reps': 10}],
+      completedAt: '2026-11-27T14:30:00.000Z');
+    expect(retry['completed_at'], '2026-11-27T13:56:51.120Z');
+
+    // A snapshot frozen by an earlier version has no time and keeps none.
+    final legacy = <String, Map<String, dynamic>>{
+      'exercise-b': {'operation_id': 'legacy-op', 'sets': null,
+        'weight_used': null, 'feedback_id': null},
+    };
+    final legacyRetry = snapshotCircuitCompletion(legacy, 'exercise-b',
+      sets: null, completedAt: '2026-11-27T14:30:00.000Z');
+    expect(legacyRetry.containsKey('completed_at'), isFalse);
+  });
+
+  test('circuit keeps the last logged set time of each exercise', () {
+    final times = <String, String>{};
+    recordCircuitSetTime(times, 'exercise-a',
+      DateTime.utc(2026, 11, 27, 13, 50, 0, 0, 999));
+    recordCircuitSetTime(times, 'exercise-a',
+      DateTime.utc(2026, 11, 27, 13, 56, 51, 120, 987));
+    expect(times, {'exercise-a': '2026-11-27T13:56:51.120Z'});
   });
 
   test('A circuit cannot persist into B after an account generation change', () async {
@@ -225,6 +278,12 @@ void main() {
       });
     },
   );
+}
+
+/// Opens the sheet without settling: the busy primary button spins.
+Future<void> _pumpSheet(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 class _CircuitStorage extends LocalStorage {

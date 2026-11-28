@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
+import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/trainings/presentation/pages/training_detail_page.dart';
 import 'package:dio/dio.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
@@ -16,11 +20,21 @@ import 'package:exom_app/injection_container.dart';
 import '../../../../core/services/offline_sync_service_test.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+// L6-UX1: «Subidas pendientes» only needs the notice stream and the queue.
+class _FeedbackQueue extends Fake implements FeedbackUploadQueueService {
+  final events = StreamController<FeedbackUploadNotice>.broadcast();
+  @override
+  Stream<FeedbackUploadNotice> get notices => events.stream;
+  @override
+  List<Map<String, dynamic>> get pendingItems => [];
+}
 
 void main() {
   for (final (error, label, retry) in [
@@ -45,6 +59,7 @@ void main() {
     final repository = _CompletionRepository();
     sl.registerSingleton<LocalStorage>(store);
     sl.registerSingleton<OfflineSyncService>(sync);
+    sl.registerSingleton<FeedbackUploadQueueService>(_FeedbackQueue());
     sl.registerFactory<TrainingBloc>(() => TrainingBloc(
       getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
       getTrainingsUseCase: GetTrainingsUseCase(repository),
@@ -67,12 +82,16 @@ void main() {
     expect(find.text(label), findsOneWidget);
     expect(find.text('Pendiente de sincronización'), findsNothing);
     final button = find.byKey(const Key('complete-training-button'));
-    expect(tester.widget<ElevatedButton>(button).onPressed, retry ? isNotNull : isNull);
-    if (retry) {
+    final isConflict = error == 'progress_conflict_review_required';
+    expect(tester.widget<ElevatedButton>(button).onPressed,
+        retry || isConflict ? isNotNull : isNull);
+    if (retry || isConflict) {
       await tester.ensureVisible(button);
       await tester.tap(button);
       await tester.pumpAndSettle();
     }
+    // A conflict is recovered from «Subidas pendientes», never retried here.
+    expect(find.byType(PendingUploadsPage), isConflict ? findsOneWidget : findsNothing);
     expect(store.actions.first['status'], retry ? 'queued' : 'failed');
     expect(store.actions.first['id'], 'exercise-op');
     expect(store.actions.first['expected_revision'], 0);
@@ -106,14 +125,12 @@ void main() {
         home: Builder(
           builder: (context) => FilledButton(
             onPressed: () async {
-              dialogResult = await showDialog<TrainingCompletionInput>(
-                context: context,
-                builder: (dialogContext) => CompleteTrainingConfirmationDialog(
-                  l10n: AppLocalizations.of(dialogContext),
-                  storage: storage,
-                  trainingId: 'training', date: '2026-09-05',
-                  executionId: 'execution', sessionStamp: storage.sessionStamp,
-                ),
+              // L5-E2b: the confirmation is the closing sheet.
+              dialogResult = await showCompleteTrainingSheet(
+                context,
+                storage: storage,
+                trainingId: 'training', date: '2026-09-05',
+                executionId: 'execution', sessionStamp: storage.sessionStamp,
               );
             },
             child: const Text('Abrir'),
@@ -133,15 +150,16 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    // L5-E2b (copy approved in L5-D43): the RPE label is now the question.
     for (final (locale, label, explanation) in [
-      (const Locale('es'), 'RPE (obligatorio, 1–10)', 'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'),
-      (const Locale('en'), 'RPE (required, 1–10)', 'RPE measures how hard the workout felt to you: 1 is very easy, 10 is your maximum effort.'),
+      (const Locale('es'), '¿Cuánto te ha costado? (RPE)', 'El RPE indica cuánto esfuerzo sentiste al entrenar: 1 es muy fácil y 10 es tu máximo esfuerzo.'),
+      (const Locale('en'), 'How hard was it? (RPE)', 'RPE measures how hard the workout felt to you: 1 is very easy, 10 is your maximum effort.'),
     ]) {
       await openDialog(tester, locale: locale);
       expect(find.text(label), findsOneWidget);
       expect(find.text(explanation), findsOneWidget);
       expect(tester.takeException(), isNull);
-      expect(tester.widget<FilledButton>(
+      expect(tester.widget<ExomPrimaryButton>(
         find.byKey(const Key('confirm-complete-training'))).onPressed, isNull);
       await tester.tap(find.byKey(const Key('cancel-complete-training')));
       await tester.pumpAndSettle();
@@ -171,11 +189,13 @@ void main() {
 
   testWidgets('confirm action is explicit', (tester) async {
     await openDialog(tester);
-    expect(find.text('Completar todo'), findsOneWidget);
+    // L5-E2b: the action reads «Terminar sesión» (painted upper case).
+    expect(find.text('TERMINAR SESIÓN'), findsNWidgets(2));
     expect(find.byKey(const Key('completion-rpe-selected')), findsNothing);
-    expect(tester.widget<FilledButton>(
+    expect(tester.widget<ExomPrimaryButton>(
       find.byKey(const Key('confirm-complete-training'))).onPressed, isNull);
-    await tester.tap(find.byKey(const Key('confirm-complete-training')));
+    await tester.tap(find.byKey(const Key('confirm-complete-training')),
+      warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
     expect(dialogResult, isNull);

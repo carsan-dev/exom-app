@@ -1,9 +1,17 @@
-﻿import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_brand_logo.dart';
+import 'package:exom_app/core/widgets/exom_index_number.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 
+import 'onboarding_step_layout.dart';
+
+/// Welcome of the onboarding (sketch `d-acceso.html` «Bienvenida»): the
+/// logotype, «Tu cambio. / Con mi método.», the method in three numbered
+/// steps and the four-step promise, with «Empezar» and «Hacerlo después».
 class OnboardingWelcomeStep extends StatelessWidget {
   const OnboardingWelcomeStep({
     super.key,
@@ -14,99 +22,118 @@ class OnboardingWelcomeStep extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onSkip;
 
-  String _logoAsset(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
-        ? 'assets/images/logo_dark.svg'
-        : 'assets/images/logo.svg';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final method = [
+      (l10n.onboardingMethodOneTitle, l10n.onboardingMethodOneBody),
+      (l10n.onboardingMethodTwoTitle, l10n.onboardingMethodTwoBody),
+      (l10n.onboardingMethodThreeTitle, l10n.onboardingMethodThreeBody),
+    ];
+    final rule = BorderSide(
+      color: palette.borderSoft,
+      width: ExomRule.hairline,
+    );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 40),
-          Center(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 132,
-                  height: 132,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: palette.primary.withValues(alpha: 0.22),
-                        blurRadius: 54,
-                        spreadRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-                SvgPicture.asset(_logoAsset(context), height: 42),
-              ],
-            ),
+    return OnboardingStepLayout(
+      footer: OnboardingStepActions(
+        primaryKey: const Key('onboarding-start'),
+        primaryLabel: l10n.onboardingStartButton,
+        onPrimary: onStart,
+        quietLabel: l10n.onboardingDoItLaterButton,
+        onQuiet: onSkip,
+      ),
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            kOnboardingSidePadding,
+            ExomSpacing.lg,
+            kOnboardingSidePadding,
+            0,
           ),
-          const SizedBox(height: 28),
-          GlassCard(
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.all(24),
-            borderRadius: 28,
-            elevated: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.onboardingWelcomeTitle,
-                  style: theme.textTheme.displayLarge?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.onboardingWelcomeDescription,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 16,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onStart,
-                    child: Text(l10n.onboardingStartButton),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: onSkip,
-                    child: Text(
-                      l10n.onboardingDoItLaterButton,
-                      style: TextStyle(color: palette.textMuted),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ExomBrandLogo(height: 40),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            kOnboardingSidePadding,
+            ExomSpacing.xxl,
+            kOnboardingSidePadding,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExomKicker(l10n.onboardingWelcomeKicker),
+              const SizedBox(height: ExomSpacing.sm),
+              ExomTwoLineHeadline(
+                first: l10n.onboardingWelcomeHeadlineFirst,
+                second: l10n.onboardingWelcomeHeadlineSecond,
+                size: ExomHeadlineSize.screen,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: ExomSpacing.xxl),
+        DecoratedBox(
+          decoration: BoxDecoration(border: Border(bottom: rule)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < method.length; i++)
+                DecoratedBox(
+                  decoration: BoxDecoration(border: Border(top: rule)),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      kOnboardingSidePadding,
+                      14,
+                      kOnboardingSidePadding,
+                      ExomSpacing.lg,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ExcludeSemantics(child: ExomIndexNumber(i + 1)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                method[i].$1,
+                                style: onboardingStrongStyle(context),
+                              ),
+                              const SizedBox(height: ExomSpacing.xs),
+                              Text(
+                                method[i].$2,
+                                style: onboardingSecondaryStyle(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-          const Spacer(),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            kOnboardingSidePadding,
+            ExomSpacing.lg,
+            kOnboardingSidePadding,
+            0,
+          ),
+          child: Text(
+            l10n.onboardingWelcomeSteps,
+            style: onboardingSecondaryStyle(context),
+          ),
+        ),
+      ],
     );
   }
 }
-

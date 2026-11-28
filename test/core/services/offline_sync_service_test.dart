@@ -258,6 +258,7 @@ void main() {
       isAuthenticated: () => false,
       authenticationChanges: const Stream<bool>.empty(),
       connectivityChanges: const Stream<bool>.empty(),
+      now: () => DateTime.utc(2026, 9, 5, 18, 30),
     );
     await offline.queueTrainingCompletion(
       '2026-09-05', trainingId: 'training-1', sessionId: 'session-1',
@@ -299,9 +300,11 @@ void main() {
     await restarted.syncPendingActions();
     expect(requests, [
       {'date': '2026-09-05', 'training_id': 'training-1',
-       'training_session_id': 'session-1', 'rpe': 8, 'session_note': 'First'},
+       'training_session_id': 'session-1', 'rpe': 8, 'session_note': 'First',
+       'completed_at': '2026-09-05T18:30:00.000Z'},
       {'date': '2026-09-05', 'training_id': 'training-1',
-       'training_session_id': 'session-2', 'rpe': 9, 'session_note': 'Second'},
+       'training_session_id': 'session-2', 'rpe': 9, 'session_note': 'Second',
+       'completed_at': '2026-09-05T18:30:00.000Z'},
     ]);
     expect(ids.first, firstId);
     await restarted.dispose();
@@ -332,6 +335,8 @@ void main() {
       'training_session_id': execution,
       'rpe': 8,
       'session_note': 'Original',
+      // Captured when the completion was queued (C-O1), sent unchanged.
+      'completed_at': '2026-09-05T18:30:00.000Z',
     };
     final storage = FakeSyncStorage();
     final accepted = <String, Map<String, dynamic>>{};
@@ -364,7 +369,8 @@ void main() {
     final first = OfflineSyncService(client, storage,
       isAuthenticated: () => online,
       authenticationChanges: const Stream<bool>.empty(),
-      connectivityChanges: const Stream<bool>.empty());
+      connectivityChanges: const Stream<bool>.empty(),
+      now: () => DateTime.utc(2026, 9, 5, 18, 30));
     final remote = TrainingRemoteDataSourceImpl(client, storage, first);
     await remote.completeTraining(date, trainingId: 'training-1',
       sessionId: execution, rpe: 8, notes: ' Original ');
@@ -552,7 +558,8 @@ void main() {
     final offline = OfflineSyncService(respondingClient((options, handler) {}), storage,
       isAuthenticated: () => false,
       authenticationChanges: const Stream<bool>.empty(),
-      connectivityChanges: const Stream<bool>.empty());
+      connectivityChanges: const Stream<bool>.empty(),
+      now: () => DateTime.utc(2026, 9, 5, 18, 30));
     await offline.queueTrainingCompletion('2026-09-05',
       trainingId: 'training-1', notes: ' Legacy day note ');
     expect(storage.actions.single['notes'], 'Legacy day note');
@@ -574,7 +581,7 @@ void main() {
     await replay.syncPendingActions();
     expect(requests, [{
       'date': '2026-09-05', 'training_id': 'training-1',
-      'notes': 'Legacy day note',
+      'notes': 'Legacy day note', 'completed_at': '2026-09-05T18:30:00.000Z',
     }]);
     expect(storage.actions, isEmpty);
     await replay.dispose();

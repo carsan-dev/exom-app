@@ -147,17 +147,44 @@ void main() {
     });
   }
 
-  testWidgets('conflict card identifies full session and offers scoped discard', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('es'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: PendingTrainingExecutions(
-        storage: PendingStorage(), onSelect: (_, _) {},
-      )),
-    ));
+  // D14-6 (L5-A3): the technical session ID left the row. It is shown only in
+  // the discard confirmation, where it identifies the exact local session. The
+  // previous version of this test asserted the ID on the card itself.
+  testWidgets('row hides the technical ID; only the discard dialog shows it', (tester) async {
+    final h = DiscardHarness();
+    await tester.pumpWidget(h.app());
     await tester.pumpAndSettle();
+    expect(find.textContaining('full-session-123456789'), findsNothing);
+    expect(find.textContaining('other-session'), findsNothing);
+    expect(find.textContaining('Fuerza · 5 de septiembre de 2026'), findsNWidgets(2));
+    expect(find.byKey(const Key('pending-discard-full-session-123456789')), findsOneWidget);
+    await openDialog(tester);
     expect(find.textContaining('full-session-123456789'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.textContaining('ID de sesión: full-session-123456789'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('finalize notice counts only sessions that can be finalized, not conflict',
+      (tester) async {
+    final h = DiscardHarness();
+    // Harness rows: one `conflict` (own status, discard only) and one
+    // `pending-sync`; add one session still to finalize.
+    h.storage.entries.add({'id': 'to-finalize', 'training_id': 'strength',
+      'training_name': 'Fuerza', 'assignment_date': '2026-09-06', 'status': 'pending'});
+    await tester.pumpWidget(h.app());
+    await tester.pumpAndSettle();
+    expect(find.text('Tienes un entrenamiento pendiente de finalizar'), findsOneWidget);
+    expect(find.textContaining('Tienes 2 entrenamientos'), findsNothing);
+    // A lone conflict (or pending-sync) session raises no finalize notice.
+    h.storage.entries.removeWhere((entry) => entry['id'] == 'to-finalize');
+    await tester.pumpWidget(h.app(brightness: Brightness.dark));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('pendiente de finalizar'), findsNothing);
     expect(find.byKey(const Key('pending-discard-full-session-123456789')), findsOneWidget);
   });
 }

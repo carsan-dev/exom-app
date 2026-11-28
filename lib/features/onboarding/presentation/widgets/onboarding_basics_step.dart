@@ -1,11 +1,16 @@
 import 'dart:io';
 
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_operation_bar.dart';
+import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
-import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/core/widgets/media_picker_error_dialog.dart';
+
+import 'onboarding_progress_indicator.dart';
+import 'onboarding_step_layout.dart';
 
 class OnboardingBasicsStep extends StatefulWidget {
   const OnboardingBasicsStep({
@@ -67,12 +72,12 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
+              leading: const Icon(ExomIcons.camera),
               title: Text(l10n.feedbackFromCamera),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(ExomIcons.gallery),
               title: Text(l10n.feedbackFromGallery),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
@@ -133,240 +138,200 @@ class _OnboardingBasicsStepState extends State<OnboardingBasicsStep> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
+    final fieldStyle = TextStyle(color: palette.textPrimary);
+    final birthDate = _birthDate;
 
-    final avatarFile = _localAvatarPath != null
-        ? File(_localAvatarPath!)
-        : null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            Expanded(
-              child: SingleChildScrollView(
-                child: GlassCard(
-                  margin: EdgeInsets.zero,
-                  padding: const EdgeInsets.all(24),
-                  borderRadius: 28,
-                  elevated: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.onboardingBasicsTitle,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+    return Form(
+      key: _formKey,
+      child: OnboardingStepLayout(
+        footer: OnboardingStepActions(
+          primaryKey: const Key('onboarding-basics-next'),
+          primaryLabel: l10n.onboardingNextButton,
+          onPrimary: _submit,
+          quietLabel: l10n.onboardingSkipButton,
+          onQuiet: widget.onSkip,
+        ),
+        children: [
+          OnboardingStepHeading(
+            step: 1,
+            total: 4,
+            first: l10n.onboardingBasicsHeadlineFirst,
+            second: l10n.onboardingBasicsHeadlineSecond,
+          ),
+          const SizedBox(height: ExomSpacing.xxl),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: kOnboardingSidePadding,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    _Avatar(
+                      localPath: _localAvatarPath,
+                      url: widget.initialAvatarUrl,
+                      uploading: widget.avatarUploading,
+                      onTap: _pickImage,
+                    ),
+                    const SizedBox(width: ExomSpacing.xl),
+                    Expanded(
+                      child: Text(
+                        l10n.onboardingAvatarLabel,
+                        style: onboardingStrongStyle(context),
                       ),
-                      const SizedBox(height: 24),
-
-                      Center(
-                        child: GestureDetector(
-                          onTap: widget.avatarUploading ? null : _pickImage,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: palette.primary.withValues(
-                                          alpha: 0.18,
-                                        ),
-                                        blurRadius: 30,
-                                        spreadRadius: 4,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              CircleAvatar(
-                                radius: 48,
-                                backgroundColor: palette.glassBackground,
-                                backgroundImage: avatarFile != null
-                                    ? FileImage(avatarFile)
-                                    : (widget.initialAvatarUrl != null
-                                              ? NetworkImage(
-                                                  widget.initialAvatarUrl!,
-                                                )
-                                              : null)
-                                          as ImageProvider?,
-                                child:
-                                    (avatarFile == null &&
-                                        widget.initialAvatarUrl == null)
-                                    ? Icon(
-                                        Icons.person,
-                                        color: palette.textDisabled,
-                                        size: 40,
-                                      )
-                                    : null,
-                              ),
-                              if (widget.avatarUploading)
-                                Positioned.fill(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: palette.primary,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: palette.primary.withValues(
-                                            alpha: 0.22,
-                                          ),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 6),
-                                          spreadRadius: -6,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Icons.camera_alt,
-                                      color: palette.onPrimary,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+                    ),
+                  ],
+                ),
+                if (widget.avatarUploading) ...[
+                  const SizedBox(height: ExomSpacing.md),
+                  const ExomOperationBar(),
+                ],
+                const SizedBox(height: ExomSpacing.xxl),
+                TextFormField(
+                  key: const Key('onboarding-first-name'),
+                  controller: _firstNameController,
+                  style: fieldStyle,
+                  decoration: InputDecoration(
+                    labelText: l10n.onboardingFirstNameLabel,
+                  ),
+                  errorBuilder: onboardingFieldError,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? l10n.onboardingFirstNameRequired
+                      : null,
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: ExomSpacing.lg),
+                TextFormField(
+                  key: const Key('onboarding-last-name'),
+                  controller: _lastNameController,
+                  style: fieldStyle,
+                  decoration: InputDecoration(
+                    labelText: l10n.onboardingLastNameLabel,
+                  ),
+                  errorBuilder: onboardingFieldError,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? l10n.onboardingLastNameRequired
+                      : null,
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: ExomSpacing.lg),
+                InkWell(
+                  key: const Key('onboarding-birth-date'),
+                  onTap: _pickDate,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: l10n.onboardingBirthDateLabel,
+                      suffixIcon: Icon(
+                        ExomIcons.calendar,
+                        color: palette.textSecondary,
                       ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          l10n.onboardingAvatarLabel,
-                          style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      TextFormField(
-                        controller: _firstNameController,
-                        decoration: InputDecoration(
-                          labelText: l10n.onboardingFirstNameLabel,
-                        ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? l10n.onboardingFirstNameRequired
-                            : null,
-                        textCapitalization: TextCapitalization.words,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _lastNameController,
-                        decoration: InputDecoration(
-                          labelText: l10n.onboardingLastNameLabel,
-                        ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? l10n.onboardingLastNameRequired
-                            : null,
-                        textCapitalization: TextCapitalization.words,
-                      ),
-                      const SizedBox(height: 16),
-
-                      GestureDetector(
-                        onTap: _pickDate,
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n.onboardingBirthDateLabel,
-                            suffixIcon: const Icon(
-                              Icons.calendar_today_outlined,
-                            ),
-                          ),
-                          child: Text(
-                            _birthDate != null
-                                ? '${_birthDate!.day.toString().padLeft(2, '0')}/'
-                                      '${_birthDate!.month.toString().padLeft(2, '0')}/'
-                                      '${_birthDate!.year}'
-                                : '',
-                            style: TextStyle(
-                              color: palette.textPrimary,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
+                    child: Text(
+                      birthDate != null
+                          ? '${birthDate.day.toString().padLeft(2, '0')}/'
+                                '${birthDate.month.toString().padLeft(2, '0')}/'
+                                '${birthDate.year}'
+                          : '',
+                      style: fieldStyle.copyWith(fontSize: 16),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _StepButtons(onNext: _submit, onSkip: widget.onSkip),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StepButtons extends StatelessWidget {
-  const _StepButtons({required this.onNext, required this.onSkip});
+/// Square avatar (sketch `.x-av`, 72) with the camera badge, as in Perfil:
+/// the picked file, else the saved photo, else the profile icon. While the
+/// photo uploads the badge goes away and taps are ignored.
+class _Avatar extends StatelessWidget {
+  const _Avatar({
+    required this.localPath,
+    required this.url,
+    required this.uploading,
+    required this.onTap,
+  });
 
-  final VoidCallback onNext;
-  final VoidCallback onSkip;
+  final String? localPath;
+  final String? url;
+  final bool uploading;
+  final VoidCallback onTap;
+
+  static const double _size = 72;
+  static const double _badge = 24;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final palette = context.exomPalette;
-
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: onNext,
-            child: Text(l10n.onboardingNextButton),
+    final path = localPath;
+    final remote = url;
+    final ImageProvider? image = path != null
+        ? FileImage(File(path))
+        : (remote != null ? NetworkImage(remote) : null);
+    return Semantics(
+      button: true,
+      enabled: !uploading,
+      label: AppLocalizations.of(context).profileChangePhotoA11y,
+      excludeSemantics: true,
+      onTap: uploading ? null : onTap,
+      child: GestureDetector(
+        key: const Key('onboarding-avatar'),
+        onTap: uploading ? null : onTap,
+        child: SizedBox(
+          width: _size,
+          height: _size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: palette.surfaceElevated,
+                    border: Border.all(
+                      color: palette.borderSoft,
+                      width: ExomRule.hairline,
+                    ),
+                    image: image == null
+                        ? null
+                        : DecorationImage(image: image, fit: BoxFit.cover),
+                  ),
+                  child: image == null
+                      ? Icon(
+                          ExomIcons.profile,
+                          size: 32,
+                          color: palette.textPrimary,
+                        )
+                      : null,
+                ),
+              ),
+              if (!uploading)
+                PositionedDirectional(
+                  end: 0,
+                  bottom: 0,
+                  child: SizedBox(
+                    width: _badge,
+                    height: _badge,
+                    child: ColoredBox(
+                      color: palette.textPrimary,
+                      child: Icon(
+                        ExomIcons.camera,
+                        size: 14,
+                        color: palette.background,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: onSkip,
-            child: Text(
-              l10n.onboardingSkipButton,
-              style: TextStyle(color: palette.textMuted),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

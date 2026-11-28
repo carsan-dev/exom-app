@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:exom_app/core/api/api_client.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -170,6 +171,7 @@ class _Repository extends Fake implements TrainingRepository {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) async {}
   @override
   Future<TrainingDayProgress> getCompletedExerciseIds({String? date}) async =>
@@ -254,6 +256,12 @@ Future<({_Storage storage, _Repository repository})> _mount(
   return (storage: storage, repository: repository);
 }
 
+/// The row check mark (24 dp). The base told it apart from the 18 dp check by
+/// using Icons.check_rounded; both are now ExomIcons.check, so the size does it.
+final Finder _rowCheck = find.byWidgetPredicate(
+  (Widget w) => w is Icon && w.icon == ExomIcons.check && w.size == 24,
+);
+
 void main() {
   tearDown(sl.reset);
 
@@ -305,11 +313,18 @@ void main() {
 
   testWidgets('progress update checks the visible row', (tester) async {
     await _mount(tester, withExecution: true);
-    expect(find.byIcon(Icons.check_rounded), findsNothing);
+    expect(_rowCheck, findsNothing);
     markCompleted(blocOf(tester), 1);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    // L5-E2a: the first done exercise adds the session progress block above
+    // the list, so bring the row back on stage before checking it.
+    await tester.scrollUntilVisible(
+      find.text('Single exercise 1'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(_rowCheck, findsOneWidget);
   });
 
   testWidgets('progress update keeps the scroll position', (tester) async {
@@ -329,10 +344,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(offset(), before);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(_rowCheck, findsOneWidget);
   });
 
   testWidgets('a new training revision regroups circuits', (tester) async {
+    // L5-E2a: the header (photo, date and figures) and the 72 dp rows are
+    // taller; a tall surface keeps the whole revised list on stage.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final fixture = await _mount(tester);
     fixture.repository.training = const TrainingEntity(
       id: 'training-1',

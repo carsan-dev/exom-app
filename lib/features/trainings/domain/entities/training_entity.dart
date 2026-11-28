@@ -1,4 +1,5 @@
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
+import 'package:exom_app/features/trainings/domain/planned_sets.dart';
 
 class ExerciseEntity {
   final String id;
@@ -55,6 +56,35 @@ class SetPerformance {
     if (seconds != null) 'seconds': seconds,
     if (weightKg != null) 'weight_kg': weightKg,
     if (rir != null) 'rir': rir,
+  };
+
+  bool get isRegistered => isRegisteredSetJson(toJson());
+}
+
+/// The single rule for a registered set: it has reps, seconds or weight.
+/// A set with only RIR (stored by earlier versions) or with nothing is not
+/// registered: the API rejects it (400) and the app treats it as not done
+/// while keeping the stored value (owner decision P3, repair on read).
+bool isRegisteredSetJson(Map<dynamic, dynamic> set) =>
+    set['reps'] != null || set['seconds'] != null || set['weight_kg'] != null;
+
+/// Set numbers within the first [completedSets] whose latest stored entry is
+/// not registered (see [isRegisteredSetJson]).
+Set<int> unregisteredSetNumbers(
+  int completedSets,
+  Iterable<Map<dynamic, dynamic>> sets,
+) {
+  final latest = <int, Map<dynamic, dynamic>>{};
+  for (final set in sets) {
+    final number = set['set_number'];
+    if (number is num) latest[number.toInt()] = set;
+  }
+  return {
+    for (final entry in latest.entries)
+      if (entry.key >= 1 &&
+          entry.key <= completedSets &&
+          !isRegisteredSetJson(entry.value))
+        entry.key,
   };
 }
 
@@ -210,30 +240,28 @@ class RemainingTrainingProgress {
 
 extension RemainingTrainingProgressCalculation on TrainingEntity {
   RemainingTrainingProgress remainingProgress(Set<String> completedIds) {
-    final completedExercises = exercises
-        .where(
-          (item) =>
-              completedIds.contains(item.id) ||
-              completedIds.contains(item.exercise.id),
-        )
-        .toList(growable: false);
-    final totalSets = exercises.fold<int>(0, (sum, item) => sum + item.sets);
-    final completedSets = completedExercises.fold<int>(
-      0,
-      (sum, item) => sum + item.sets,
+    bool isCompleted(TrainingExerciseEntity item) =>
+        completedIds.contains(item.id) ||
+        completedIds.contains(item.exercise.id);
+    final completedExercises = exercises.where(isCompleted).length;
+    // L4b-D5: the shared rule (circuit exercises weigh sets x rounds).
+    final sets = tallyPlannedSets(
+      exercises,
+      plannedSets: (item) => plannedSetsOf(
+        sets: item.sets,
+        inBlock: item.blockId != null,
+        blockRounds: item.blockRounds,
+      ),
+      isCompleted: isCompleted,
     );
-    final remainingSets = (totalSets - completedSets).clamp(0, totalSets);
-    final duration = estimatedDurationMin;
 
     return RemainingTrainingProgress(
-      remainingExercises: (exercises.length - completedExercises.length).clamp(
+      remainingExercises: (exercises.length - completedExercises).clamp(
         0,
         exercises.length,
       ),
-      remainingSets: remainingSets,
-      remainingDurationMin: duration == null || totalSets <= 0
-          ? null
-          : (duration * remainingSets / totalSets).round().clamp(0, duration),
+      remainingSets: sets.remaining,
+      remainingDurationMin: sets.remainingMinutes(estimatedDurationMin),
     );
   }
 }

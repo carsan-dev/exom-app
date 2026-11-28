@@ -5,6 +5,8 @@ import 'package:exom_app/features/feedback/services/feedback_upload_queue_servic
 import 'package:exom_app/features/feedback/presentation/pages/pending_uploads_page.dart';
 import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
+import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_sync_status.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/domain/repositories/training_repository.dart';
@@ -44,6 +46,10 @@ class _Storage extends LocalStorage {
     {'type': 'complete_training', 'training_id': 'training-1', 'date': _date,
       'training_session_id': _session, 'status': actionStatus},
   ]);
+  // COLA r3: a pending completion asks the queue why it waits, which reads
+  // the video queue (empty here: nothing waits for a video).
+  @override
+  List<Map<String, dynamic>> getFeedbackUploadQueue() => const [];
   @override
   List<Map<String, dynamic>> getPendingTrainingExecutions() => executions ?? [
     {'id': _session, 'training_id': 'training-1', 'assignment_date': _date, 'status': status},
@@ -85,6 +91,10 @@ class _Storage extends LocalStorage {
   ActiveWorkoutHiveModel? getActiveWorkout(String exerciseId) => null;
   @override
   ActiveWorkoutHiveModel? recoverableLegacyWorkout(String trainingId, String exerciseId, String date) => null;
+  // No active exercise saved by another training (L5-D64 asks in the detail).
+  @override
+  List<ActiveWorkoutHiveModel> getForeignActiveWorkouts(String trainingId) =>
+      const [];
   @override
   ValueNotifier<Box<ActiveWorkoutHiveModel>> watchActiveWorkouts() =>
       ValueNotifier<Box<ActiveWorkoutHiveModel>>(_EmptyBox());
@@ -338,8 +348,20 @@ void main() {
           'retry ack',
           'action retry ack',
         ].contains(scenario);
-        expect(homeVisits, shouldReturn ? 1 : 0);
+        // L5-E6a: a confirmed completion opens the milestone first; Inicio
+        // (with the refresh) comes from its «Volver a Inicio», once.
+        expect(homeVisits, 0);
+        expect(
+          find.byKey(const Key('training-milestone')),
+          shouldReturn ? findsOneWidget : findsNothing,
+        );
         if (shouldReturn) {
+          sync.notify();
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('training-milestone')), findsOneWidget);
+          await tester.tap(find.byKey(const Key('training-milestone-continue')));
+          await tester.pumpAndSettle();
+          expect(homeVisits, 1);
           expect(refresh, isNotNull);
           expect(find.byType(TrainingDetailPage), findsNothing);
           sync.notify();
@@ -439,10 +461,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Exercise'));
       await tester.pumpAndSettle();
+      // L5-D47: the start action is the pinned lime button, which paints its
+      // label in upper case.
       final openExercise = status == 'confirmed'
           ? find.text('Editar datos')
           : find.text(AppLocalizations.of(
-              tester.element(find.byType(TrainingDetailPage))).startExerciseButton);
+              tester.element(find.byType(TrainingDetailPage)))
+              .startExerciseButton.toUpperCase());
       await tester.scrollUntilVisible(openExercise, 200,
         scrollable: find.descendant(of: find.byType(DraggableScrollableSheet),
           matching: find.byType(Scrollable)).first);
@@ -502,6 +527,81 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await sl.reset();
   });
+  testWidgets('session picker labels executions by start order, never by raw id', (tester) async {
+    await sl.reset();
+    const firstId = '3f2b8c1e-5a7d-4e90-9b1c-aaaaaaaaaaaa';
+    const secondId = '9d4e7a20-1c3b-4f68-8a52-bbbbbbbbbbbb';
+    final storage = _FilteredStorage()
+      ..actionStatus = null
+      ..executions = [
+        {'id': firstId, 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+        {'id': secondId, 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+      ];
+    final repository = _Repository();
+    sl.registerSingleton<LocalStorage>(storage);
+    sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    ));
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('es'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('complete-training-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
+    expect(find.text('Sesión 1'), findsOneWidget);
+    expect(find.text('Sesión 2'), findsOneWidget);
+    expect(find.text(firstId), findsNothing);
+    expect(find.text(secondId), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await sl.reset();
+  });
+  for (final entry in {'es': '5 de septiembre de 2026', 'en': 'September 5, 2026'}.entries) {
+    testWidgets('TEXTOS-2 O6: session picker shows the date in the ${entry.key} locale, never ISO', (tester) async {
+      await sl.reset();
+      final storage = _FilteredStorage()
+        ..actionStatus = null
+        ..executions = [
+          {'id': 'exec-a', 'training_id': 'training-1', 'assignment_date': _date, 'status': 'pending'},
+        ];
+      final repository = _Repository();
+      sl.registerSingleton<LocalStorage>(storage);
+      sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+        getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+        getTrainingsUseCase: GetTrainingsUseCase(repository),
+        getTrainingUseCase: GetTrainingUseCase(repository),
+        markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+        unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+        completeTrainingUseCase: CompleteTrainingUseCase(repository),
+        getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+        getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+      ));
+      await tester.pumpWidget(MaterialApp(
+        locale: Locale(entry.key),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('complete-training-button')));
+      await tester.pumpAndSettle();
+      final picker = find.byType(AlertDialog);
+      expect(find.descendant(of: picker, matching: find.textContaining(entry.value)), findsOneWidget);
+      expect(find.descendant(of: picker, matching: find.textContaining(_date)), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
+  }
   testWidgets('cold detail displays sole confirmed execution without selecting it for writes', (tester) async {
     await sl.reset();
     final storage = _FilteredStorage()..status = 'confirmed'..actionStatus = null;
@@ -526,15 +626,149 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0);
-    await tester.tap(find.byKey(const Key('complete-training-button')));
-    await tester.pumpAndSettle();
-    expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
+    // L5-D49 (O3): the displayed execution is finished, so the footer says
+    // so and offers no completion; a new execution starts from the rows.
+    expect(find.byKey(const Key('complete-training-button')), findsNothing);
+    expect(find.text('Terminada'), findsOneWidget);
     expect(storage.creations, 0);
     await tester.pumpWidget(const SizedBox.shrink());
     await sl.reset();
+  });
+
+  group('L5-D49 (O3) reopened detail of a finished execution', () {
+    Future<(_FilteredStorage, _Repository, GoRouter)> pumpReopened(
+      WidgetTester tester, {
+      String status = 'confirmed',
+      ThemeData? theme,
+      double textScale = 1.0,
+    }) async {
+      await sl.reset();
+      final storage = _FilteredStorage()..status = status..actionStatus = null;
+      final repository = _Repository()..requireSets = true;
+      sl.registerSingleton<LocalStorage>(storage);
+      sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+        getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+        getTrainingsUseCase: GetTrainingsUseCase(repository),
+        getTrainingUseCase: GetTrainingUseCase(repository),
+        markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+        unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+        completeTrainingUseCase: CompleteTrainingUseCase(repository),
+        getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+        getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+      ));
+      final router = GoRouter(routes: [
+        GoRoute(path: '/', builder: (_, _) =>
+          const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date)),
+        GoRoute(path: '/trainings/:training/exercises/:exercise',
+          builder: (_, _) => const Scaffold(body: Text('active-exercise-route'))),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(
+        theme: theme,
+        locale: const Locale('es'),
+        localizationsDelegates: const [AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      return (storage, repository, router);
+    }
+
+    final completeButton = find.byKey(const Key('complete-training-button'));
+    final finished = find.descendant(
+      of: find.byType(ExomSyncStatus),
+      matching: find.text('Terminada'),
+    );
+
+    testWidgets('confirmed execution: footer says Terminada, no completion', (tester) async {
+      final (storage, repository, _) = await pumpReopened(tester);
+      expect(finished, findsOneWidget);
+      expect(tester.widget<ExomSyncStatus>(find.ancestor(of: finished,
+        matching: find.byType(ExomSyncStatus))).state, ExomSyncState.confirmada);
+      expect(completeButton, findsNothing);
+      expect(find.text('Completar todo'), findsNothing);
+      expect(repository.completions, 0);
+      expect(storage.creations, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
+
+    testWidgets('unfinished execution keeps «Completar todo» as today', (tester) async {
+      await pumpReopened(tester, status: 'pending');
+      expect(finished, findsNothing);
+      expect(find.descendant(of: completeButton,
+        matching: find.text('Completar todo')), findsOneWidget);
+      expect(tester.widget<ElevatedButton>(completeButton).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
+
+    testWidgets('a new execution started from the row gets a working footer', (tester) async {
+      final (storage, _, router) = await pumpReopened(tester);
+      expect(completeButton, findsNothing);
+      await tester.tap(find.text('Exercise'));
+      await tester.pumpAndSettle();
+      final openExercise = find.text('Editar datos');
+      await tester.scrollUntilVisible(openExercise, 200,
+        scrollable: find.descendant(of: find.byType(DraggableScrollableSheet),
+          matching: find.byType(Scrollable)).first);
+      await tester.tap(openExercise);
+      await tester.pumpAndSettle();
+      expect(find.text('Selecciona una sesión de entrenamiento'), findsOneWidget);
+      await tester.tap(find.text('Nueva sesión'));
+      await tester.pumpAndSettle();
+      expect(storage.creations, 1);
+      expect(find.text('active-exercise-route'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      if (find.byType(DraggableScrollableSheet).evaluate().isNotEmpty) {
+        Navigator.of(tester.element(find.byType(DraggableScrollableSheet))).pop();
+        await tester.pumpAndSettle();
+      }
+      expect(finished, findsNothing);
+      expect(find.descendant(of: completeButton,
+        matching: find.text('Completar todo')), findsOneWidget);
+      expect(tester.widget<ElevatedButton>(completeButton).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
+
+    for (final (name, theme) in [('light', AppTheme.light), ('dark', AppTheme.dark)]) {
+      testWidgets('Terminada uses the confirmed sync colour in $name', (tester) async {
+        await pumpReopened(tester, theme: theme);
+        expect(finished, findsOneWidget);
+        final palette = tester.element(finished).exomPalette;
+        expect(tester.widget<Text>(finished).style?.color, palette.textPrimary);
+        expect(completeButton, findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await sl.reset();
+      });
+    }
+
+    testWidgets('Terminada fits the footer at text scale 1.6', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpReopened(tester, theme: AppTheme.dark, textScale: 1.6);
+      expect(finished, findsOneWidget);
+      expect(completeButton, findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await sl.reset();
+    });
   });
 
   testWidgets('Today detail restores sole queued execution progress without an explicit id', (tester) async {
@@ -566,11 +800,11 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('1/1 ${AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel}'), findsOneWidget);
+    expect(find.text(AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0, reason: 'hydration must not finalize the execution');
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text(_session), findsOneWidget,
+    expect(find.text('Sesión 1'), findsOneWidget,
       reason: 'display-only hydration must not bypass explicit execution selection');
     expect(repository.completions, 0);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -601,8 +835,9 @@ void main() {
       home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(repository.completions, 0);
     expect(find.text('Pendiente de sincronización'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
@@ -690,8 +925,9 @@ void main() {
         home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date),
       ));
       await tester.pumpAndSettle();
-      final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-      expect(find.text('0/1 $label'), findsOneWidget);
+      // L5-E2a: the done count moved to the exercises header («0 de 1 hechos»).
+      final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+      expect(find.text(progress(0, 1), skipOffstage: false), findsOneWidget);
       expect(repository.completions, 0);
       await tester.pumpWidget(const SizedBox.shrink());
       await sl.reset();
@@ -699,7 +935,10 @@ void main() {
   }
 
   for (final legacy in [false, true]) {
-    testWidgets('another execution conflict does not block selected pending execution (legacy: $legacy)', (tester) async {
+    // Storage-only contract: without the queue service registered, the detail
+    // reads just the stored actions and executions. With it, a conflict
+    // without session does lead to «Subidas pendientes» (see the scenarios).
+    testWidgets('another execution conflict does not block selected pending execution (legacy: $legacy, no queue service)', (tester) async {
       await sl.reset();
       final storage = _Storage()
         ..actionStatus = null
@@ -749,6 +988,111 @@ void main() {
       await sl.reset();
     });
   }
+  // L6-UX1: a day blocked by a progress conflict (409 PROGRESS_VERSION_CONFLICT)
+  // is recovered from «Subidas pendientes»; the detail leads there, as for a
+  // failed video. Each scenario: (queue, fake blocker, real queue service, leads).
+  const conflict = 'progress_conflict_review_required';
+  Map<String, dynamic> action(String id, String type, {String? training,
+      String date = _date, String? session = _session, String? exercise,
+      String? error, String? code, String status = 'queued'}) => {
+    'id': id, 'type': type, 'date': date, 'format_version': 2,
+    'training_id': ?training, 'training_session_id': ?session,
+    'training_exercise_id': ?exercise, 'status': status,
+    'last_error': ?error, 'failure_code': ?code,
+  };
+  final scenarios = <String, (List<Map<String, dynamic>>, CompletionSyncBlockerKind?, bool, bool)>{
+    'completion conflict': ([action('a', 'complete_training', training: 'training-1',
+        error: conflict, status: 'failed')], null, false, true),
+    'exercise mark conflict': ([action('a', 'mark_exercise_completed',
+        training: 'training-1', exercise: 'te-1', error: conflict, status: 'failed')],
+        null, false, true),
+    'unmark conflict without training_id': ([action('a', 'unmark_exercise_completed',
+        exercise: 'te-1', error: conflict, status: 'failed')], null, false, true),
+    'blocker only': (<Map<String, dynamic>>[], CompletionSyncBlockerKind.conflict,
+        false, true),
+    'held behind another training conflict': ([
+        action('a', 'mark_exercise_completed', training: 'training-2',
+          session: 'other', exercise: 'te-9', error: conflict, status: 'failed'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, true),
+    'another training conflict, none of this training': ([
+        action('a', 'mark_exercise_completed', training: 'training-2',
+          session: 'other', exercise: 'te-9', error: conflict, status: 'failed'),
+      ], null, true, false),
+    'conflict of another date': ([
+        action('a', 'mark_exercise_completed', training: 'training-1',
+          date: '2026-09-06', exercise: 'te-1', error: conflict, status: 'failed'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, false),
+    // The replay does not hold another session's rejected history
+    // (_isIndependentOfRejectedHistory), so neither does the detail.
+    'ambiguous history of another session': ([
+        action('a', 'mark_exercise_completed', training: 'training-1',
+          session: 'other', exercise: 'te-1', error: conflict, status: 'failed',
+          code: 'PROGRESS_HISTORY_AMBIGUOUS'),
+        action('b', 'mark_exercise_completed', training: 'training-1', exercise: 'te-1'),
+      ], null, true, false),
+    'conflict without session': ([action('a', 'mark_exercise_completed',
+        training: 'training-1', session: null, exercise: 'te-1', error: conflict,
+        status: 'failed')], null, true, true),
+    'no conflict': ([action('a', 'mark_exercise_completed', training: 'training-1',
+        exercise: 'te-1')], null, true, false),
+  };
+  for (final entry in scenarios.entries) {
+    for (final locale in ['es', 'en']) {
+      testWidgets('progress conflict: ${entry.key} (leads: ${entry.value.$4}, $locale)', (tester) async {
+        final (queue, blocker, realService, leads) = entry.value;
+        await sl.reset();
+        final storage = _Storage()
+          ..actionStatus = null
+          ..status = 'pending'
+          ..conflictActions = queue;
+        final sync = realService ? _Sync(storage) : (_FeedbackSync(storage)..kind = blocker);
+        final repository = _Repository()..requireSets = true;
+        sl.registerSingleton<LocalStorage>(storage);
+        sl.registerSingleton<OfflineSyncService>(sync);
+        sl.registerSingleton<FeedbackUploadQueueService>(_FeedbackQueue());
+        sl.registerFactory<TrainingBloc>(() => TrainingBloc(
+          getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+          getTrainingsUseCase: GetTrainingsUseCase(repository),
+          getTrainingUseCase: GetTrainingUseCase(repository),
+          markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+          unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+          completeTrainingUseCase: CompleteTrainingUseCase(repository),
+          getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+          getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+        ));
+        await tester.pumpWidget(MaterialApp(
+          locale: Locale(locale),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const TrainingDetailPage(trainingId: 'training-1', selectedDate: _date,
+            selectedExecutionId: _session),
+        ));
+        await tester.pumpAndSettle();
+        final button = find.byKey(const Key('complete-training-button'));
+        final footerStatus = find.descendant(
+          of: find.ancestor(of: button, matching: find.byType(Column)).first,
+          matching: find.byWidgetPredicate((widget) => widget is ExomSyncStatus &&
+            widget.state == ExomSyncState.fallida && widget.label == null));
+        expect(footerStatus, leads ? findsOneWidget : findsNothing);
+        expect(tester.widget<ElevatedButton>(button).onPressed, isNotNull);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.byType(PendingUploadsPage), leads ? findsOneWidget : findsNothing);
+        expect(repository.completions, 0);
+        if (leads) {
+          Navigator.of(tester.element(find.byType(PendingUploadsPage))).pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(PendingUploadsPage), findsNothing);
+          expect(find.byType(TrainingDetailPage), findsOneWidget);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await sync.closeEvents();
+        await sl.reset();
+      });
+    }
+  }
   testWidgets('mounted detail retains completed exercise checks through pending sync and ACK', (tester) async {
     await sl.reset();
     final storage = _FilteredStorage()..status = 'pending'..actionStatus = null;
@@ -780,8 +1124,9 @@ void main() {
         selectedExecutionId: _session),
     ));
     await tester.pumpAndSettle();
-    final label = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).completedExercisesLabel;
-    expect(find.text('1/1 $label'), findsOneWidget);
+    // L5-E2a: the done count moved to the exercises header («1 de 1 hecho»).
+    final progress = AppLocalizations.of(tester.element(find.byType(TrainingDetailPage))).trainingDetailExercisesDone;
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsOneWidget);
@@ -793,7 +1138,7 @@ void main() {
     expect(storage.completionDrafts[_session]?['rpe'], 8);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     expect(find.text('Pendiente de sincronización'), findsOneWidget);
-    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
 
     storage.status = 'confirmed';
     storage.actionStatus = null;
@@ -806,9 +1151,11 @@ void main() {
     sync.notify();
     await tester.pumpAndSettle();
     expect(find.text('Pendiente de sincronización'), findsNothing);
-    expect(find.text('1/1 $label'), findsOneWidget);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
-    expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
+    // L5-D49 (O3): the confirmed session offers no completion at all.
+    expect(find.byKey(const Key('complete-training-button')), findsNothing);
+    expect(find.text('Terminada'), findsOneWidget);
     expect(repository.completions, 1);
 
     storage.conflictActions = [
@@ -817,8 +1164,9 @@ void main() {
     ];
     sync.notify();
     await tester.pumpAndSettle();
-    expect(find.text('1/1 $label'), findsOneWidget);
-    expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
+    expect(find.text(progress(1, 1), skipOffstage: false), findsOneWidget);
+    expect(find.byKey(const Key('complete-training-button')), findsNothing);
+    expect(find.text('Terminada'), findsOneWidget);
     expect(find.text('Pendiente de sincronización'), findsNothing,
       reason: 'another execution queued for the same training/date must not affect the selected ACK');
     expect(find.text('Conflict: review required'), findsNothing);
@@ -871,7 +1219,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Pendiente de sincronización'), findsNothing);
       if (outcome != 'failed') {
-        expect(tester.widget<ElevatedButton>(find.byKey(const Key('complete-training-button'))).onPressed, isNull);
+        // L5-D49 (O3): the confirmed session offers no completion at all.
+        expect(find.byKey(const Key('complete-training-button')), findsNothing);
+        expect(find.text('Terminada'), findsOneWidget);
         expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
         expect(repository.completions, 0);
       } else {

@@ -26,68 +26,49 @@ class RecapStepImprovement extends StatelessWidget {
         const <String>[];
     final l10n = AppLocalizations.of(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Column(
-        children: [
-          RecapSectionCard(
-            title: l10n.recapImprovementRatingsTitle,
-            subtitle: l10n.recapImprovementRatingsSubtitle,
-            icon: Icons.star_outline_rounded,
-            child: Column(
-              children: [
-                RecapStarRatingField(
-                  label: l10n.rateTheService,
-                  helperText: l10n.howYouRateTheSupportReceivedThisWeek,
-                  value: serviceRating.round().clamp(1, 5),
-                  onChanged: (value) =>
-                      onChanged('improvement_service_rating', value),
-                ),
-                const SizedBox(height: 20),
-                RecapStarRatingField(
-                  label: l10n.rateTheApp,
-                  helperText: l10n.yourOverallExperienceWithTheApp,
-                  value: appRating.round().clamp(1, 5),
-                  onChanged: (value) =>
-                      onChanged('improvement_app_rating', value),
-                ),
-              ],
-            ),
-          ),
-          RecapSectionCard(
-            title: l10n.recapWhatCanWeImprove,
-            subtitle: l10n.selectThePointsWhereYouWantMoreSupport,
-            icon: Icons.tune_rounded,
-            child: RecapMultiSelectField(
-              label: l10n.selectThePointsWhereYouWantMoreSupport,
-              helperText: l10n.selectThePointsWhereYouWantMoreSupport,
-              values: improvementAreas,
-              options: const [
-                'ENTRENAMIENTO',
-                'NUTRICION',
-                'ADHERENCIA',
-                'RECUPERACION',
-                'MOTIVACION',
-                'APP',
-              ],
-              onChanged: (value) => onChanged('improvement_areas', value),
-            ),
-          ),
-          RecapSectionCard(
-            title: l10n.recapTellUsMore,
-            subtitle: l10n.closeTheWeekWithWhatMattersForYourCoach,
-            icon: Icons.chat_bubble_outline_rounded,
-            child: RecapTextAreaField(
-              label: l10n.suggestionsOrImprovements,
-              hintText: l10n.egIWouldLikeMoreContextInTheSessions,
-              initialValue:
-                  formData['improvement_feedback_text'] as String? ?? '',
-              onChanged: (value) =>
-                  onChanged('improvement_feedback_text', value),
-            ),
-          ),
-        ],
-      ),
+    return RecapStepFrame(
+      step: 5,
+      first: l10n.recapStepImprovementFirst,
+      second: l10n.recapStepImprovementSecond,
+      coach: l10n.recapStepImprovementCoach,
+      questions: [
+        RecapStarRatingField(
+          number: 1,
+          label: l10n.rateTheService,
+          helperText: l10n.howYouRateTheSupportReceivedThisWeek,
+          value: serviceRating.round().clamp(1, 5),
+          onChanged: (value) => onChanged('improvement_service_rating', value),
+        ),
+        RecapStarRatingField(
+          number: 2,
+          label: l10n.rateTheApp,
+          helperText: l10n.yourOverallExperienceWithTheApp,
+          value: appRating.round().clamp(1, 5),
+          onChanged: (value) => onChanged('improvement_app_rating', value),
+        ),
+        RecapMultiSelectField(
+          number: 3,
+          label: l10n.recapWhatCanWeImprove,
+          helperText: l10n.selectThePointsWhereYouWantMoreSupport,
+          values: improvementAreas,
+          options: const [
+            'ENTRENAMIENTO',
+            'NUTRICION',
+            'ADHERENCIA',
+            'RECUPERACION',
+            'MOTIVACION',
+            'APP',
+          ],
+          onChanged: (value) => onChanged('improvement_areas', value),
+        ),
+        RecapTextAreaField(
+          number: 4,
+          label: l10n.suggestionsOrImprovements,
+          hintText: l10n.egIWouldLikeMoreContextInTheSessions,
+          initialValue: formData['improvement_feedback_text'] as String? ?? '',
+          onChanged: (value) => onChanged('improvement_feedback_text', value),
+        ),
+      ],
     );
   }
 }

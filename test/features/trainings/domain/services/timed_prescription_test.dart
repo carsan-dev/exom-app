@@ -372,4 +372,20 @@ void main() {
       }
     },
   );
+
+  test('L5-E3e: each phase reports its own length, trimmed at the end', () {
+    // 1440 s of «Corre 2 min / Camina 1 min»: whole phases.
+    expect(config.phase(1440, 0).durationMilliseconds, 120000);
+    expect(config.phase(1440, 125000).durationMilliseconds, 60000);
+    // 150 s: «Camina» is trimmed to the 30 s that remain of the total.
+    expect(config.phase(150, 130000).durationMilliseconds, 30000);
+    expect(config.phase(150, 130000).remainingMilliseconds, 20000);
+    // A trimmed «Corre»: 100 s total, only 100 s of its 120.
+    expect(config.phase(100, 10000).durationMilliseconds, 100000);
+    // No segments: the whole time is one phase.
+    const plain = TimedPrescription(unit: TimeDisplayUnit.seconds);
+    expect(plain.phase(45, 15000).durationMilliseconds, 45000);
+    // Finished: no phase left.
+    expect(config.phase(150, 150000).durationMilliseconds, 0);
+  });
 }

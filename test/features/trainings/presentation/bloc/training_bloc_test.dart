@@ -117,7 +117,7 @@ void main() {
     expect(find.textContaining('12 reps'), findsNothing);
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('execution-b'));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     expect(find.textContaining('12 reps'), findsWidgets);
     expect(find.textContaining('8 reps'), findsNothing);
@@ -161,7 +161,7 @@ void main() {
     ];
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('execution-b'));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('complete-training-confirmation')), findsNothing);
     storage.feedback = [
@@ -383,8 +383,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('Entrenamiento 1 · 2026-09-05'), findsNWidgets(2));
-    await tester.tap(find.text('execution-b'));
+    expect(find.text('Entrenamiento 1 · 5 de septiembre de 2026'), findsNWidgets(2));
+    await tester.tap(find.text('Sesión 2'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('completion-rpe-10')));
     await tester.pump();
@@ -428,9 +428,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('complete-training-button')));
     await tester.pumpAndSettle();
-    expect(find.text('draft-a'), findsOneWidget);
+    expect(find.text('Sesión 1'), findsOneWidget);
     storage.stamp = 'B:2:test';
-    await tester.tap(find.text('draft-a'));
+    await tester.tap(find.text('Sesión 1'));
     await tester.pumpAndSettle();
     expect(repository.calls, 0);
     expect(storage.completed, isNull);
@@ -562,6 +562,37 @@ void main() {
     expect(storage.drafts['execution-a']?['sets'], 12);
     await bloc.close();
     await sl.reset();
+  });
+
+  test('the completion carries the time of its last logged set (C-O1)', () async {
+    await sl.reset();
+    final storage = _PageStorage()..stamp = 'A:1:test';
+    sl.registerSingleton<LocalStorage>(storage);
+    final repository = _RecordingMarkRepository();
+    final bloc = TrainingBloc(
+      getTodayTrainingUseCase: GetTodayTrainingUseCase(repository),
+      getTrainingsUseCase: GetTrainingsUseCase(repository),
+      getTrainingUseCase: GetTrainingUseCase(repository),
+      markExerciseCompletedUseCase: MarkExerciseCompletedUseCase(repository),
+      unmarkExerciseCompletedUseCase: UnmarkExerciseCompletedUseCase(repository),
+      completeTrainingUseCase: CompleteTrainingUseCase(repository),
+      getCompletedExercisesUseCase: GetCompletedExercisesUseCase(repository),
+      getPreviousExercisePerformancesUseCase: GetPreviousExercisePerformancesUseCase(repository),
+    );
+    addTearDown(() async { await bloc.close(); await sl.reset(); });
+    final loaded = bloc.stream.firstWhere((state) => state is TrainingDetailLoaded);
+    bloc.add(const TrainingDetailLoadRequested('training-1', date: '2026-09-05'));
+    await loaded;
+    final completion = Completer<void>();
+    final lastSet = DateTime.utc(2026, 9, 5, 10, 15, 30, 250);
+    bloc.add(MarkExerciseCompleted(
+      trainingExerciseId: 'te-1', exerciseId: 'ex-1', completed: true,
+      sessionStamp: 'A:1:test', sets: const [SetPerformance(setNumber: 1, reps: 12)],
+      operationId: 'op-1', completedAt: lastSet, completion: completion,
+    ));
+    await completion.future;
+    expect(repository.completedAt, lastSet);
+    expect(repository.operationId, 'op-1');
   });
 
   test('unstamped completion rejects before repository write', () async {
@@ -787,6 +818,7 @@ class _FailingCompletionRepository implements TrainingRepository {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) async {}
 
   @override
@@ -815,11 +847,27 @@ class _DelayedMarkRepository extends _FailingCompletionRepository {
     String trainingExerciseId, String exerciseId, String date, {
     double? weightUsed, List<SetPerformance>? sets,
     String? lastSetFeedbackClientUploadId, String? trainingId,
-    String? sessionId, String? operationId,
+    String? sessionId, String? operationId, DateTime? completedAt,
   }) async {
     calls++;
     started.complete();
     await release.future;
+  }
+}
+
+class _RecordingMarkRepository extends _FailingCompletionRepository {
+  DateTime? completedAt;
+  String? operationId;
+
+  @override
+  Future<void> markExerciseCompleted(
+    String trainingExerciseId, String exerciseId, String date, {
+    double? weightUsed, List<SetPerformance>? sets,
+    String? lastSetFeedbackClientUploadId, String? trainingId,
+    String? sessionId, String? operationId, DateTime? completedAt,
+  }) async {
+    this.completedAt = completedAt;
+    this.operationId = operationId;
   }
 }
 

@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/widgets/exom_rich_row.dart';
 import 'package:exom_app/core/widgets/loading_widget.dart';
 import 'package:exom_app/features/home/domain/entities/home_summary_entity.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_clock.dart';
+import 'package:exom_app/features/home/presentation/widgets/home_headline.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_diet_card.dart';
 import 'package:exom_app/features/home/presentation/widgets/today_training_card.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 
 void main() {
   final selectedDate = DateTime(2026, 9, 5);
+
+  // L3: the start action only appears for today, so the cards run under a
+  // clock fixed to the selected date.
+  Widget onSelectedDay(Widget child) =>
+      HomeClock(now: () => DateTime(2026, 9, 5, 9), child: child);
 
   Widget homeCardHarness(Widget child) {
     return MediaQuery(
@@ -22,7 +30,10 @@ void main() {
         locale: const Locale('es'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Scaffold(body: child),
+        // L5-E1: on Inicio the cards live in a scrolling list; at 2x the
+        // session block (title, status and figure columns) is taller than
+        // the test surface, so it scrolls here too instead of overflowing.
+        home: Scaffold(body: SingleChildScrollView(child: child)),
       ),
     );
   }
@@ -66,7 +77,9 @@ void main() {
     return openedUri!;
   }
 
-  testWidgets('TodayTrainingCard shows the mockup CTA label', (tester) async {
+  // L3 contract: the start CTA moved from the card to the pinned
+  // HomeSessionAction («Empezar sesión», uppercased by ExomPrimaryButton).
+  testWidgets('HomeSessionAction shows the start label', (tester) async {
     const summary = HomeSummaryEntity(
       trainingId: 'training-1',
       trainingName: 'Full Body',
@@ -83,12 +96,14 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         home: Scaffold(
-          body: TodayTrainingCard(summary: summary, selectedDate: selectedDate),
+          body: onSelectedDay(
+            HomeSessionAction(summary: summary, selectedDate: selectedDate),
+          ),
         ),
       ),
     );
 
-    expect(find.text('Comenzar'), findsOneWidget);
+    expect(find.text('EMPEZAR SESIÓN'), findsOneWidget);
   });
 
   testWidgets('TodayTrainingCard hides when day only has a diet', (
@@ -105,8 +120,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Entrenamiento de hoy'), findsNothing);
-    expect(find.text('Sin nombre'), findsNothing);
+    // L3: the card has no heading of its own; the session title is HomeTitle.
+    expect(find.byType(HomeTitle), findsNothing);
+    expect(find.text('SIN NOMBRE'), findsNothing);
   });
 
   testWidgets('TodayTrainingCard keeps selected date when opening training', (
@@ -117,13 +133,36 @@ void main() {
       trainingName: 'Full Body',
       trainingTypes: ['FUERZA'],
     );
+    // L3: tapping the session block (its title) opens the training.
     final uri = await openCardRoute(
       tester,
       child: TodayTrainingCard(summary: summary, selectedDate: selectedDate),
-      tapText: 'Comenzar',
+      tapText: 'FULL BODY',
       destinationPath: '/trainings/:id',
     );
 
+    expect(uri.path, '/trainings/training-1');
+    expect(uri.queryParameters['date'], '2026-09-05');
+  });
+
+  testWidgets('HomeSessionAction keeps selected date when opening training', (
+    tester,
+  ) async {
+    const summary = HomeSummaryEntity(
+      trainingId: 'training-1',
+      trainingName: 'Full Body',
+      trainingTypes: ['FUERZA'],
+    );
+    final uri = await openCardRoute(
+      tester,
+      child: onSelectedDay(
+        HomeSessionAction(summary: summary, selectedDate: selectedDate),
+      ),
+      tapText: 'EMPEZAR SESIÓN',
+      destinationPath: '/trainings/:id',
+    );
+
+    expect(uri.path, '/trainings/training-1');
     expect(uri.queryParameters['date'], '2026-09-05');
   });
 
@@ -184,10 +223,12 @@ void main() {
       ),
     );
 
-    expect(find.text('Entrenamientos de hoy'), findsOneWidget);
-    expect(find.text('2 entrenamientos asignados'), findsOneWidget);
-    expect(find.text('Primero'), findsOneWidget);
+    // L3: the first unfinished training is the hero (title); the others are
+    // rows below it; the fact line counts the day's sessions.
+    expect(find.text('PRIMERO'), findsOneWidget);
     expect(find.text('Segundo'), findsOneWidget);
+    // L5-E1: the count is a kicker, painted in upper case.
+    expect(find.text('2 SESIONES'), findsOneWidget);
   });
 
   testWidgets('TodayTrainingCard handles long text with large fonts', (
@@ -235,7 +276,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Siguiente comida'), findsOneWidget);
+    // L3: the diet is one row; the next meal is a secondary line of it
+    // (L5-E1: the lines share the facts text of the rich row).
+    expect(find.textContaining('Siguiente: Almuerzo'), findsOneWidget);
+    expect(find.textContaining('1 de 4 comidas hechas'), findsOneWidget);
   });
 
   testWidgets('TodayDietCard hides when day only has training', (tester) async {
@@ -244,13 +288,29 @@ void main() {
       trainingName: 'Full Body',
     );
 
+    // Control: the same card with a diet paints its row.
+    await tester.pumpWidget(
+      homeCardHarness(
+        TodayDietCard(
+          summary: const HomeSummaryEntity(
+            dietId: 'diet-1',
+            dietName: 'Plan nutricional',
+          ),
+          selectedDate: selectedDate,
+        ),
+      ),
+    );
+    expect(find.byType(ExomRichRow), findsOneWidget);
+
     await tester.pumpWidget(
       homeCardHarness(
         TodayDietCard(summary: summary, selectedDate: selectedDate),
       ),
     );
 
-    expect(find.text('Dieta de hoy'), findsNothing);
+    // L3 review B-F9: assert the diet row itself is absent (the training
+    // name was never painted by this card, so finding it proved nothing).
+    expect(find.byType(ExomRichRow), findsNothing);
     expect(find.text('Plan nutricional'), findsNothing);
   });
 
@@ -286,7 +346,8 @@ void main() {
     final uri = await openCardRoute(
       tester,
       child: TodayDietCard(summary: summary, selectedDate: selectedDate),
-      tapText: 'Ver dieta completa',
+      // L3: the whole diet row is the tap target.
+      tapText: 'Plan diario',
       destinationPath: '/diets',
     );
 

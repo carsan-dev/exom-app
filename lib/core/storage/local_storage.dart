@@ -11,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/core/utils/operation_id.dart';
+import 'package:exom_app/core/onboarding/onboarding_resolver.dart';
 
 class LocalStorage implements ActiveWorkoutLocalStore {
   LocalStorage({
@@ -118,6 +119,8 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   static const _legacyOnboardingCompleteKey = 'onboarding_complete';
   static const _onboardingIdentityKey = 'onboarding_complete_identity';
   static const _tutorialCompleteKey = 'tutorial_complete';
+  static const _recapSundayPromptOffKey = 'recap_sunday_prompt_off';
+  static const _recapSundayPromptLastKey = 'recap_sunday_prompt_last';
 
   // A process owns the Hive store for its lifetime. A second process fails
   // before opening cached boxes; a crash releases the OS lock automatically.
@@ -435,6 +438,15 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   }
 
   Future<void> removeCachedData(String key) => _cache.delete(_key(key));
+
+  /// True when the current owner has an unfinished circuit persisted in the
+  /// cache (`active_circuit:*`, written by the active circuit page and removed
+  /// when it finishes). `clearCache` would destroy it; exercise drafts live in
+  /// their own box and are not touched by it.
+  bool get hasActiveCircuitState {
+    final prefix = _key('active_circuit:');
+    return _cache.keys.whereType<String>().any((key) => key.startsWith(prefix));
+  }
 
   Future<void> clearCache() async {
     final prefix = _key('');
@@ -759,6 +771,17 @@ class LocalStorage implements ActiveWorkoutLocalStore {
   Future<void> removeActiveWorkout(String exerciseId) =>
       _activeWorkouts.delete(_key(exerciseId));
 
+  /// FB1: drafts of this owner that hold the replaced last-set video [from]
+  /// point at its replacement [to] (what `AttachLastSetFeedback` stored).
+  Future<void> replaceDraftLastSetFeedback(String from, String to) async {
+    for (final draft in getActiveWorkouts()) {
+      if (draft.lastSetFeedbackClientUploadId != from) continue;
+      await saveActiveWorkout(
+        draft.copyWith(lastSetFeedbackClientUploadId: to),
+      );
+    }
+  }
+
   Future<void> clearForeignActiveWorkouts(String trainingId) async {
     final keys = getActiveWorkouts()
         .where((entry) => entry.trainingId != trainingId)
@@ -866,6 +889,103 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     await _settings.put('$_legacyOnboardingCompleteKey::$identity', true);
   }
 
+  // Onboarding server sync. The pending entry lives in `settings` (it must
+  // survive logout like the mark) and is scoped to the Firebase uid and the
+  // API environment, like the v2 queues.
+  static const _onboardingPendingPrefix = 'onboarding_sync_pending';
+  static const onboardingPendingFormatVersion = 1;
+
+  String _onboardingPendingKey(String ownerId) {
+    final scope = base64Url.encode(
+      utf8.encode(jsonEncode([_environment, ownerId])),
+    );
+    return '$_onboardingPendingPrefix::$scope';
+  }
+
+  Map<String, Object?> _onboardingPendingEntry(
+    String ownerId,
+    String? outcome,
+  ) => {
+    'format_version': onboardingPendingFormatVersion,
+    'owner_id': ownerId,
+    'environment': _environment,
+    'outcome': outcome,
+    'created_at': DateTime.now().toUtc().toIso8601String(),
+  };
+
+  /// Pending onboarding mark of [ownerId] in this environment, or `null` when
+  /// absent or not attributable to that owner (such an entry is kept as is
+  /// and never sent).
+  Map<String, Object?>? onboardingPendingFor(String ownerId) {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return null;
+    final raw = _settings.get(_onboardingPendingKey(owner));
+    if (raw is! Map) return null;
+    final entry = <String, Object?>{
+      for (final item in raw.entries) item.key.toString(): item.value,
+    };
+    final outcome = entry['outcome'];
+    if (entry['format_version'] != onboardingPendingFormatVersion ||
+        entry['owner_id'] != owner ||
+        entry['environment'] != _environment ||
+        (outcome != null &&
+            outcome != OnboardingOutcomes.completed &&
+            outcome != OnboardingOutcomes.skipped)) {
+      return null;
+    }
+    return entry;
+  }
+
+  /// Done locally: the Hive mark of the identity or a pending entry of the
+  /// owner (covers a crash between both writes, OP-D16).
+  bool isOnboardingLocallyDone({required String uid, String? email}) =>
+      isOnboardingCompleteFor(uid: uid, email: email) ||
+      onboardingPendingFor(uid) != null;
+
+  /// Writes the Hive mark and the pending entry in a single `putAll`.
+  Future<void> markOnboardingLocallyDone({
+    required String uid,
+    String? email,
+    String? outcome,
+  }) async {
+    final ownerId = uid.trim();
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (ownerId.isEmpty || identity == null) return;
+
+    // Pending first: Hive replays records in order, so a torn write keeps the outcome (OP-D16 covers pending without mark).
+    await _settings.putAll({
+      _onboardingPendingKey(ownerId): _onboardingPendingEntry(ownerId, outcome),
+      _legacyOnboardingCompleteKey: true,
+      _onboardingIdentityKey: identity,
+      '$_legacyOnboardingCompleteKey::$identity': true,
+    });
+  }
+
+  /// Mirrors a server `done` in the Hive mark; no write when already cached.
+  Future<void> cacheServerOnboardingDone({
+    required String uid,
+    String? email,
+  }) async {
+    if (isOnboardingCompleteFor(uid: uid, email: email)) return;
+    await setOnboardingCompleteFor(uid: uid, email: email);
+  }
+
+  /// Self-repair (R4): registers a pending entry without outcome unless the
+  /// owner already has one (attributable or not).
+  Future<void> registerOnboardingRepair(String ownerId) async {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return;
+    final key = _onboardingPendingKey(owner);
+    if (_settings.containsKey(key)) return;
+    await _settings.put(key, _onboardingPendingEntry(owner, null));
+  }
+
+  Future<void> clearOnboardingPending(String ownerId) async {
+    final owner = ownerId.trim();
+    if (owner.isEmpty) return;
+    await _settings.delete(_onboardingPendingKey(owner));
+  }
+
   // Tutorial guide
   bool isTutorialCompleteFor({required String uid, String? email}) {
     final identity = resolveOnboardingIdentity(uid: uid, email: email);
@@ -884,6 +1004,44 @@ class LocalStorage implements ActiveWorkoutLocalStore {
     final identity = resolveOnboardingIdentity(uid: uid, email: email);
     if (identity == null) return;
     await _settings.put('$_tutorialCompleteKey::$identity', true);
+  }
+
+  // Sunday recap reminder (in-app prompt), per identity like the tutorial.
+  bool isRecapSundayPromptOffFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return false;
+    return _settings.get(
+          '$_recapSundayPromptOffKey::$identity',
+          defaultValue: false,
+        ) ==
+        true;
+  }
+
+  Future<void> setRecapSundayPromptOffFor({
+    required String uid,
+    String? email,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return;
+    await _settings.put('$_recapSundayPromptOffKey::$identity', true);
+  }
+
+  /// Local day (`yyyy-MM-dd`) of the last Sunday the reminder was shown.
+  String? recapSundayPromptLastFor({required String uid, String? email}) {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return null;
+    final value = _settings.get('$_recapSundayPromptLastKey::$identity');
+    return value is String ? value : null;
+  }
+
+  Future<void> setRecapSundayPromptLastFor({
+    required String uid,
+    String? email,
+    required String day,
+  }) async {
+    final identity = resolveOnboardingIdentity(uid: uid, email: email);
+    if (identity == null) return;
+    await _settings.put('$_recapSundayPromptLastKey::$identity', day);
   }
 
   dynamic _normalize(dynamic value) {

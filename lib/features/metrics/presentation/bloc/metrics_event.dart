@@ -16,3 +16,9 @@ class MetricsSaveRequested extends MetricsEvent {
 
   const MetricsSaveRequested(this.data, {this.profileData});
 }
+
+/// Loads the data of the «Progreso» view: the weight history and the latest
+/// record of all time. Additive: it never emits the form states above.
+class MetricsHistoryRequested extends MetricsEvent {
+  const MetricsHistoryRequested();
+}

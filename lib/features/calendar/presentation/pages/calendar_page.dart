@@ -1,34 +1,64 @@
-import 'dart:ui';
-import 'dart:typed_data';
+import 'dart:async';
 
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:exom_app/core/api/api_error_helper.dart';
+import 'package:exom_app/core/formatters/figure_format.dart';
 import 'package:exom_app/l10n/app_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
-import 'package:exom_app/core/widgets/loading_widget.dart';
+import 'package:exom_app/core/theme/exom_motion.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_arrival.dart';
+import 'package:exom_app/core/widgets/exom_band.dart';
+import 'package:exom_app/core/widgets/exom_choice_chips.dart';
+import 'package:exom_app/core/widgets/exom_empty_state.dart';
+import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_month_grid.dart';
+import 'package:exom_app/core/widgets/exom_numeral.dart';
+import 'package:exom_app/core/widgets/exom_operation_bar.dart';
+import 'package:exom_app/core/widgets/exom_rich_row.dart';
+import 'package:exom_app/core/widgets/exom_segmented_control.dart';
+import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
+import 'package:exom_app/core/widgets/exom_step_transition.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
 import 'package:exom_app/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:exom_app/features/challenges/domain/entities/challenge_entity.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_weekly_diet_usecase.dart';
 import 'package:exom_app/features/diets/domain/usecases/get_monthly_diet_usecase.dart';
-import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/diet_period_entity.dart';
 import 'package:exom_app/features/diets/domain/entities/weekly_diet_export.dart';
 import 'package:exom_app/features/diets/domain/utils/diet_export_period_utils.dart';
 import 'package:exom_app/features/diets/services/weekly_diet_pdf_service.dart';
-import 'package:exom_app/features/diets/services/weekly_shopping_list_builder.dart';
-
-enum _PdfAction { print, share }
+import 'package:exom_app/features/home/domain/entities/home_week_marks.dart';
+import 'package:exom_app/features/diets/presentation/widgets/weekly_shopping_list_flow.dart';
 
 enum _DietExportPeriod { week, month }
+
+/// Outcome of the last diet export (D14-3), shown inline under the export
+/// button for the month in which it happened.
+class _ExportMessage {
+  const _ExportMessage({
+    required this.kind,
+    required this.title,
+    required this.year,
+    required this.month,
+  });
+
+  final ExomMessageKind kind;
+  final String title;
+  final int year;
+  final int month;
+}
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key, this.initialDate});
@@ -55,259 +85,58 @@ class CalendarPage extends StatelessWidget {
   }
 }
 
+// Keys of the L5-A4a screen, for tests.
+const Key _monthTitleKey = Key('calendar-month-title');
+const Key _previousMonthKey = Key('calendar-month-previous');
+const Key _nextMonthKey = Key('calendar-month-next');
+const Key _dayBlockKey = Key('calendar-day-block');
+const Key _trainingRowKey = Key('calendar-row-training');
+const Key _dietRowKey = Key('calendar-row-diet');
+const Key _restRowKey = Key('calendar-row-rest');
+const Key _emptyRowKey = Key('calendar-row-empty');
+const Key _challengesRowKey = Key('calendar-row-challenges');
+const Key _challengesShortcutKey = Key('calendar-challenges-shortcut');
+
+/// Fling speed (logical px/s) from which a horizontal swipe on the month
+/// changes month, as the previous paged calendar did.
+const double _swipeVelocity = 200;
+
+/// First load (sketch A1 «Calendario · carga»): flat blocks with the shape of
+/// the month title, the numeral and its headline, the segmented control and
+/// the day block with its top bar. Excluded from semantics by the skeletons.
 class _CalendarLoadingView extends StatelessWidget {
   const _CalendarLoadingView();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _CalendarMonthHeaderSkeleton(),
-        const _CalendarToggleSkeleton(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: const [
-              _CalendarGridSkeleton(),
-              _CalendarWeekProgressSkeleton(),
-              _CalendarSelectedDaySkeleton(),
-              _CalendarShortcutSkeleton(),
-            ],
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: const [
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: ExomSkeleton.headline(),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: ExomSkeleton.numeral(),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: ExomSkeleton.headline(),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ExomSkeleton.rule(),
+        ),
+        SizedBox(height: 16),
+        ExomFeatureBlock(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [ExomSkeleton.row(), ExomSkeleton.row()],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _CalendarMonthHeaderSkeleton extends StatelessWidget {
-  const _CalendarMonthHeaderSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        children: const [
-          ShimmerCard(
-            height: 44,
-            width: 44,
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-          ),
-          Expanded(
-            child: Center(
-              child: ShimmerCard(
-                height: 20,
-                width: 154,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
-            ),
-          ),
-          ShimmerCard(
-            height: 44,
-            width: 44,
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CalendarToggleSkeleton extends StatelessWidget {
-  const _CalendarToggleSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: GlassCard(
-        margin: EdgeInsets.zero,
-        padding: const EdgeInsets.all(4),
-        borderRadius: 26,
-        child: const Row(
-          children: [
-            Expanded(
-              child: ShimmerCard(
-                height: 34,
-                borderRadius: BorderRadius.all(Radius.circular(20)),
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ShimmerCard(
-                height: 34,
-                borderRadius: BorderRadius.all(Radius.circular(20)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarGridSkeleton extends StatelessWidget {
-  const _CalendarGridSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-      borderRadius: 24,
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-              ShimmerCard(
-                height: 12,
-                width: 18,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.86,
-            ),
-            itemCount: 35,
-            itemBuilder: (context, index) => const ShimmerCard(
-              height: 46,
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CalendarWeekProgressSkeleton extends StatelessWidget {
-  const _CalendarWeekProgressSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Row(
-        children: [
-          ShimmerCard(
-            height: 24,
-            width: 52,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-          SizedBox(width: 8),
-          ShimmerCard(
-            height: 14,
-            width: 154,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CalendarSelectedDaySkeleton extends StatelessWidget {
-  const _CalendarSelectedDaySkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      borderRadius: 18,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ShimmerCard(
-                height: 40,
-                width: 40,
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-              ),
-              SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShimmerCard(
-                      height: 16,
-                      width: 126,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    SizedBox(height: 8),
-                    ShimmerCard(
-                      height: 14,
-                      width: 82,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14),
-          ShimmerCard(
-            height: 40,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CalendarShortcutSkeleton extends StatelessWidget {
-  const _CalendarShortcutSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: ShimmerCard(
-        height: 48,
-        borderRadius: BorderRadius.all(Radius.circular(18)),
-      ),
     );
   }
 }
@@ -323,6 +152,150 @@ class _CalendarViewState extends State<_CalendarView> {
   bool _showTrainings = true;
   bool _isExportingDiet = false;
 
+  /// M3: only the first content replaces the skeleton with the arrival; later
+  /// loads (another month) show their content as is.
+  bool _contentArrived = false;
+
+  /// D14-3: the export's message (it was a `SnackBar`). Cleared by the next
+  /// export tap, a tab change and a month change (any other month, loading or
+  /// error state), so it never comes back for a later visit to its month.
+  _ExportMessage? _exportMessage;
+
+  // L5-A4c: month changes keep the shown month until the one asked for
+  // arrives. The bloc handles its events concurrently (no transformer), so
+  // responses can arrive after a later request or out of order. The page
+  // follows only its TARGET (the last month it asked for):
+  // * a CalendarLoaded of the target is adopted (also a day selection or a
+  //   refresh of that month);
+  // * a CalendarLoaded of another month is never adopted. While the target is
+  //   pending it is ignored (the page stays busy). If it arrives after the
+  //   target was adopted (late response of an abandoned month) the bloc has
+  //   settled on a month the page does not show, so the page asks for the
+  //   target again, once;
+  // * an error while the target is pending (or with nothing shown) is shown
+  //   as before; a late error after the target was adopted is treated like a
+  //   late month: the target is asked for again.
+  // No endless re-requests: a re-request is only sent when nothing is
+  // pending, and only in answer to a response of an abandoned request. The
+  // responses to target requests are adopted, never re-requested, and the
+  // abandoned requests in flight are finite, so the re-requests are too.
+
+  /// The month on screen (always the target once adopted).
+  CalendarLoaded? _shown;
+
+  /// The month (year, month) the page wants: the first month loaded, then the
+  /// last one it asked for. The title and the arrows work from it.
+  (int, int)? _target;
+
+  /// A request of [_target] has not been answered yet.
+  bool _pending = false;
+
+  /// The load error on screen.
+  CalendarError? _error;
+
+  /// The load has lasted more than [ExomMotion.busyIndicatorDelay].
+  bool _slow = false;
+  Timer? _slowTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // The bloc may already hold a state the listener will not report.
+    _absorb(context.read<CalendarBloc>().state, react: false);
+  }
+
+  @override
+  void dispose() {
+    _slowTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Updates what the page shows for a new [state] of the bloc (see the
+  /// rules above). With [react] it may ask for the target again.
+  void _absorb(CalendarState state, {required bool react}) {
+    switch (state) {
+      case CalendarLoading():
+        _error = null;
+      case CalendarLoaded():
+        final month = (state.year, state.month);
+        _target ??= month;
+        if (month == _target) {
+          _shown = state;
+          _pending = false;
+          _error = null;
+        } else if (!_pending && react) {
+          _askTarget();
+        }
+      case CalendarError():
+        if (_pending || _shown == null) {
+          _error = state;
+          _shown = null;
+          _pending = false;
+        } else if (react) {
+          _askTarget();
+        }
+      default:
+        break;
+    }
+  }
+
+  /// Asks the bloc for [_target] again, keeping the selected day.
+  void _askTarget() {
+    final target = _target;
+    if (target == null) return;
+    _pending = true;
+    final selected = _shown?.selectedDate;
+    context.read<CalendarBloc>().add(
+      CalendarMonthLoadRequested(
+        year: target.$1,
+        month: target.$2,
+        selectedDate:
+            selected != null &&
+                selected.year == target.$1 &&
+                selected.month == target.$2
+            ? selected
+            : null,
+      ),
+    );
+  }
+
+  bool _isBusy(CalendarState state) => _pending || state is CalendarLoading;
+
+  void _onStateChanged(BuildContext context, CalendarState state) {
+    _absorb(state, react: true);
+    // The slow-load indicator: armed once per busy period over a kept month.
+    if (_isBusy(state) && _shown != null) {
+      _slowTimer ??= Timer(ExomMotion.busyIndicatorDelay, () {
+        if (mounted) setState(() => _slow = true);
+      });
+    } else {
+      _slowTimer?.cancel();
+      _slowTimer = null;
+      _slow = false;
+    }
+  }
+
+  /// Asks the bloc for [year]-[month] (every month change of this page).
+  void _requestMonth(
+    BuildContext context,
+    int year,
+    int month, {
+    DateTime? selectedDate,
+  }) {
+    final bloc = context.read<CalendarBloc>();
+    setState(() {
+      _target = (year, month);
+      _pending = true;
+    });
+    bloc.add(
+      CalendarMonthLoadRequested(
+        year: year,
+        month: month,
+        selectedDate: selectedDate,
+      ),
+    );
+  }
+
   String _apiDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
   DateTime _normalizeDay(DateTime date) {
@@ -336,64 +309,114 @@ class _CalendarViewState extends State<_CalendarView> {
     return _normalizeDay(markerDate);
   }
 
-  DateTime _resolveFocusedDay(CalendarLoaded state) {
-    final selected = state.selectedDate;
-    if (selected.year == state.year && selected.month == state.month) {
-      return selected;
-    }
+  /// Today's local date: the grid's «today» and the line between pending and
+  /// not done.
+  DateTime _today() {
     final now = DateTime.now();
-    if (state.year == now.year && state.month == now.month) {
-      return DateTime(now.year, now.month, now.day);
-    }
-    return DateTime(state.year, state.month, 1);
+    return DateTime(now.year, now.month, now.day);
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CalendarBloc, CalendarState>(
+    return BlocConsumer<CalendarBloc, CalendarState>(
+      listener: _onStateChanged,
       builder: (context, state) {
-        if (state is CalendarLoading || state is CalendarInitial) {
-          return const _CalendarLoadingView();
-        }
-        if (state is CalendarError) {
-          return _buildErrorState(context, state);
-        }
-        if (state is CalendarLoaded) {
-          return _buildContent(context, state);
-        }
-        return const SizedBox.shrink();
+        if (state is! CalendarLoaded) _exportMessage = null;
+        final error = _error;
+        if (error != null) return _buildErrorState(context, error);
+        // First load: the skeleton. A later load keeps the last month.
+        final shown = _shown;
+        if (shown == null) return const _CalendarLoadingView();
+        final busy = _isBusy(state);
+        final animate = !_contentArrived;
+        _contentArrived = true;
+        return ExomArrival(
+          animate: animate,
+          child: _buildContent(context, shown, busy: busy, slow: busy && _slow),
+        );
       },
     );
   }
 
-  Widget _buildErrorState(BuildContext context, CalendarError state) {
-    void retry() {
-      final now = DateTime.now();
-      context.read<CalendarBloc>().add(
-        CalendarMonthLoadRequested(year: now.year, month: now.month),
-      );
-    }
-
-    final apiException = state.apiException;
-    if (apiException?.isNetworkError == true) {
-      return NoConnectionWidget(onRetry: retry);
-    }
-    if (apiException?.isServerError == true) {
-      return ServerErrorWidget(
-        errorCode: apiException!.statusCode.toString(),
-        onRetry: retry,
-      );
-    }
-    return ErrorWidget2(
-      message: apiException != null
-          ? localizedApiError(context, apiException)
-          : AppLocalizations.of(context).calendarLoadError,
-      onRetry: retry,
+  /// Entrenamiento / Dietas (ESPEC §3, `.segc`).
+  Widget _buildToggle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: ExomSegmentedControl<bool>(
+        options: const [true, false],
+        selected: _showTrainings,
+        labelOf: (training) => training ? l10n.training : l10n.diets,
+        onChanged: (training) => setState(() {
+          _showTrainings = training;
+          _exportMessage = null;
+        }),
+      ),
     );
   }
 
-  Widget _buildContent(BuildContext context, CalendarLoaded state) {
+  /// Load error (sketch A1 «sin conexión»): the month title (the month the
+  /// retry loads) and the segmented control stay; offline adds the two-line
+  /// headline; the cause and «Reintentar» are an inline message.
+  Widget _buildErrorState(BuildContext context, CalendarError state) {
     final l10n = AppLocalizations.of(context);
+    void retry() {
+      final now = DateTime.now();
+      _requestMonth(context, now.year, now.month);
+    }
+
+    final apiException = state.apiException;
+    final offline = apiException?.isNetworkError == true;
+    final String message;
+    if (offline) {
+      message = l10n.calendarOfflineMessage;
+    } else if (apiException != null) {
+      message = localizedApiError(context, apiException);
+    } else {
+      message = l10n.calendarLoadError;
+    }
+    final now = DateTime.now();
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        _MonthHeader(year: now.year, month: now.month),
+        _buildToggle(context),
+        if (offline)
+          ExomEmptyState(
+            first: l10n.calendarOfflineFirst,
+            second: l10n.calendarOfflineSecond,
+          )
+        else
+          const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ExomInlineMessage(
+            kind: ExomMessageKind.error,
+            title: message,
+            body: offline ? l10n.noConnectionMessage : null,
+            actionLabel: l10n.retryButton,
+            onAction: retry,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// [busy]: another month is loading; this one stays and ignores taps
+  /// except on the header and the segmented control. [slow]: that load is
+  /// slow, so the operation bar shows over the top edge.
+  Widget _buildContent(
+    BuildContext context,
+    CalendarLoaded state, {
+    bool busy = false,
+    bool slow = false,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final message = _exportMessage;
+    if (message != null &&
+        (message.year != state.year || message.month != state.month)) {
+      _exportMessage = null;
+    }
     final dayMap = <DateTime, CalendarDayEntity>{};
     for (final day in state.days) {
       final key = DateTime(day.date.year, day.date.month, day.date.day);
@@ -415,86 +438,117 @@ class _CalendarViewState extends State<_CalendarView> {
         state.days.any((d) => d.hasTraining || d.hasDiet || d.isRestDay) ||
         hasChallengeMarkers;
 
-    return Column(
-      children: [
-        // Month header
-        _MonthHeader(
-          year: state.year,
-          month: state.month,
-          onPrevious: () => _changeMonth(context, state, -1),
-          onNext: () => _changeMonth(context, state, 1),
-          onTitleTap: () => _showMonthYearPicker(context, state),
-        ),
-
-        // Toggle: Entrenos / Dietas
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: GlassDecoration.elevated(borderRadius: 26),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ToggleChip(
-                    label: l10n.training,
-                    icon: Icons.fitness_center,
-                    color: context.trainingAccent,
-                    isSelected: _showTrainings,
-                    onTap: () => setState(() => _showTrainings = true),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ToggleChip(
-                    label: l10n.diets,
-                    icon: Icons.restaurant_menu,
-                    color: context.dietAccent,
-                    isSelected: !_showTrainings,
-                    onTap: () => setState(() => _showTrainings = false),
-                  ),
-                ),
-              ],
+    final hero = _buildHero(context, state);
+    final (year, month) = _target ?? (state.year, state.month);
+    final monthStep = state.year * 12 + state.month;
+    Widget frozen(Widget child) => IgnorePointer(ignoring: busy, child: child);
+    final blocks = <Widget>[
+      _MonthHeader(
+        year: year,
+        month: month,
+        onPrevious: () => _changeMonth(context, year, month, -1),
+        onNext: () => _changeMonth(context, year, month, 1),
+        onTitleTap: () => _showMonthYearPicker(context, year, month),
+      ),
+      if (hero != null)
+        frozen(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            // L5-A4c: the figure moves with the month.
+            // L6-S25-D2: moved as an image, like the grid and the title.
+            child: ExomStepTransition(
+              step: monthStep,
+              snapshot: true,
+              child: hero,
             ),
           ),
         ),
-
-        // Calendar + details
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              _buildCalendar(context, state, dayMap, challengeMap),
-              if (!hasActivities)
-                EmptyWidget(
-                  message: l10n.noActivitiesThisMonth,
-                  subtitle: l10n.noActivitiesThisMonthSubtitle,
-                  icon: Icons.event_busy_outlined,
-                )
-              else ...[
-                _buildWeekProgress(context, state),
-                if (!_showTrainings) _buildWeeklyDietExport(context, state),
-                _buildSelectedDayCard(context, state, dayMap, challengeMap),
-              ],
-              _buildChallengesShortcut(context),
-            ],
+      _buildToggle(context),
+      frozen(
+        Padding(
+          padding: EdgeInsets.only(top: hasActivities ? 8 : 16),
+          child: _buildCalendar(context, state, dayMap, challengeMap),
+        ),
+      ),
+      if (!hasActivities)
+        ExomEmptyState(
+          first: l10n.calendarEmptyMonthFirst,
+          second: l10n.calendarEmptyMonthSecond,
+          lead: l10n.noActivitiesThisMonth,
+          body: l10n.noActivitiesThisMonthSubtitle,
+        )
+      else ...[
+        if (!_showTrainings) frozen(_buildWeeklyDietExport(context, state)),
+        frozen(
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _buildSelectedDayCard(context, state, dayMap, challengeMap),
           ),
         ),
+      ],
+      frozen(_buildChallengesShortcut(context)),
+    ];
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            for (final (index, block) in blocks.indexed)
+              ExomArrivalItem(index: index, child: block),
+          ],
+        ),
+        // L5-A4c: a slow month load shows the operation bar over the kept
+        // month, at the top edge, without moving it.
+        if (slow)
+          const Positioned(
+            top: 0,
+            left: 20,
+            right: 20,
+            child: ExomOperationBar(),
+          ),
       ],
     );
   }
 
+  /// Export (sketch A1 «dietas»): outlined, not filled; the theme's outlined
+  /// button is the sketch's `.btn-out`. Same action and busy state as before.
+  /// Its outcome (empty period, failure) is an inline message under it.
   Widget _buildWeeklyDietExport(BuildContext context, CalendarLoaded state) {
-    final l10n = AppLocalizations.of(context);
+    final message = _exportMessage;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: FilledButton.icon(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildExportButton(context, state),
+          if (message != null) ...[
+            const SizedBox(height: ExomSpacing.md),
+            ExomInlineMessage(kind: message.kind, title: message.title),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExportButton(BuildContext context, CalendarLoaded state) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
         onPressed: _isExportingDiet ? null : () => _exportDiet(context, state),
         icon: _isExportingDiet
-            ? const SizedBox.square(
+            ? SizedBox.square(
                 dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: palette.textPrimary,
+                ),
               )
-            : const Icon(Icons.picture_as_pdf_outlined),
+            : const Icon(ExomIcons.pdf),
         label: Text(
           _isExportingDiet ? l10n.weeklyDietPreparing : l10n.exportDietButton,
         ),
@@ -502,33 +556,43 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
+  /// Shows [title] inline under the export button, for the month of [state].
+  void _showExportMessage(
+    CalendarLoaded state,
+    ExomMessageKind kind,
+    String title,
+  ) {
+    if (!mounted) return;
+    setState(
+      () => _exportMessage = _ExportMessage(
+        kind: kind,
+        title: title,
+        year: state.year,
+        month: state.month,
+      ),
+    );
+  }
+
   Future<void> _exportDiet(BuildContext context, CalendarLoaded state) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final exportPeriod = await showModalBottomSheet<_DietExportPeriod>(
+    // A new tap on the export button clears the previous outcome.
+    if (_exportMessage != null) setState(() => _exportMessage = null);
+    // D14-2 (sketch A1 «Elige un periodo»): straight sheet, numbered index.
+    // The period is read as soon as it is picked, as with the previous
+    // Material sheet: the page stays, so there is no need to wait for the
+    // sheet's disposal before the read and the format sheet.
+    final exportPeriod = await showExomSheet<_DietExportPeriod>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              title: Text(
-                l10n.exportPeriodTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_view_week_outlined),
-              title: Text(l10n.exportThisWeek),
-              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.week),
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(l10n.exportFullMonth),
-              onTap: () => Navigator.pop(sheetContext, _DietExportPeriod.month),
-            ),
-          ],
-        ),
+      waitForDisposal: false,
+      builder: (_) => _ExportChoiceSheet<_DietExportPeriod>(
+        first: l10n.calendarExportPeriodFirst,
+        second: l10n.calendarExportPeriodSecond,
+        semanticsLabel: l10n.exportPeriodTitle,
+        choices: [
+          (l10n.exportThisWeek, _DietExportPeriod.week),
+          (l10n.exportFullMonth, _DietExportPeriod.month),
+        ],
       ),
     );
     if (exportPeriod == null || !context.mounted) return;
@@ -545,41 +609,48 @@ class _CalendarViewState extends State<_CalendarView> {
         period = await GetIt.I<GetWeeklyDietUseCase>()(_apiDate(monday));
       }
       if (!period.hasDiets) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.dietPeriodEmpty)));
+        _showExportMessage(state, ExomMessageKind.info, l10n.dietPeriodEmpty);
         return;
       }
       if (!context.mounted) return;
 
-      final format = await showModalBottomSheet<WeeklyDietExportFormat>(
+      // D14-2: the format is the same straight sheet as the period; the next
+      // step (selector or print / share) opens as soon as it is picked.
+      final format = await showExomSheet<WeeklyDietExportFormat>(
         context: context,
-        builder: (sheetContext) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                title: Text(
-                  l10n.weeklyExportFormatTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.calendar_view_week_outlined),
-                title: Text(l10n.exportMenu),
-                onTap: () =>
-                    Navigator.pop(sheetContext, WeeklyDietExportFormat.menu),
-              ),
-              ListTile(
-                leading: const Icon(Icons.shopping_cart_outlined),
-                title: Text(l10n.weeklyExportShoppingList),
-                onTap: () => Navigator.pop(
-                  sheetContext,
-                  WeeklyDietExportFormat.shoppingList,
-                ),
-              ),
-            ],
-          ),
+        waitForDisposal: false,
+        builder: (_) => _ExportChoiceSheet<WeeklyDietExportFormat>(
+          first: l10n.calendarExportFormatFirst,
+          second: l10n.calendarExportFormatSecond,
+          semanticsLabel: l10n.weeklyExportFormatTitle,
+          choices: [
+            (l10n.exportMenu, WeeklyDietExportFormat.menu),
+            (
+              l10n.weeklyExportShoppingList,
+              WeeklyDietExportFormat.shoppingList,
+            ),
+          ],
         ),
       );
       if (format == null || !context.mounted) return;
+
+      final mealTypes = {
+        'BREAKFAST': l10n.mealTypeBreakfast,
+        'LUNCH': l10n.mealTypeLunch,
+        'SNACK': l10n.mealTypeSnack,
+        'DINNER': l10n.mealTypeDinner,
+      };
+      if (format == WeeklyDietExportFormat.shoppingList) {
+        // L5-E8: the shopping list is a pair of screens that build the PDF
+        // themselves («Compartir lista»); the export ends when they close.
+        await openShoppingList(
+          context,
+          period: period,
+          calendarMonth: exportPeriod == _DietExportPeriod.month,
+          mealTypes: mealTypes,
+        );
+        return;
+      }
 
       final labels = WeeklyDietPdfLabels(
         title: exportPeriod == _DietExportPeriod.month
@@ -588,895 +659,380 @@ class _CalendarViewState extends State<_CalendarView> {
         noDiet: l10n.weeklyDietNoDiet,
         ingredients: l10n.weeklyDietIngredients,
         alternatives: l10n.weeklyDietAlternatives,
-        mealTypes: {
-          'BREAKFAST': l10n.mealTypeBreakfast,
-          'LUNCH': l10n.mealTypeLunch,
-          'SNACK': l10n.mealTypeSnack,
-          'DINNER': l10n.mealTypeDinner,
-        },
+        mealTypes: mealTypes,
       );
-      late final Uint8List bytes;
-      late final String filename;
-      if (format == WeeklyDietExportFormat.menu) {
-        bytes = await GetIt.I<WeeklyDietPdfService>().build(
-          week: period,
-          locale: locale,
-          labels: labels,
-        );
-        filename = dietExportFilename(
-          shoppingList: false,
-          start: period.start,
-          end: period.end,
-          calendarMonth: exportPeriod == _DietExportPeriod.month,
-        );
-      } else {
-        final selections =
-            await showModalBottomSheet<List<WeeklyMealSelection>>(
-              context: context,
-              isScrollControlled: true,
-              builder: (sheetContext) => _WeeklyVariantSelector(
-                week: period,
-                locale: locale,
-                title: l10n.weeklyVariantSelectorTitle,
-                mainLabel: l10n.weeklyVariantMain,
-                generateLabel: l10n.weeklyGenerateShoppingList,
-                mealTypes: labels.mealTypes,
-              ),
-            );
-        if (selections == null || !context.mounted) return;
-        final items = const WeeklyShoppingListBuilder().build(
-          week: period,
-          selections: selections,
-          locale: locale,
-        );
-        bytes = await GetIt.I<WeeklyDietPdfService>().buildShoppingList(
-          week: period,
-          items: items,
-          locale: locale,
-          labels: WeeklyShoppingListPdfLabels(
-            title: exportPeriod == _DietExportPeriod.month
-                ? l10n.monthlyShoppingListPdfTitle
-                : l10n.weeklyShoppingListPdfTitle,
-            empty: exportPeriod == _DietExportPeriod.month
-                ? l10n.monthlyShoppingListEmpty
-                : l10n.weeklyShoppingListEmpty,
-          ),
-        );
-        filename = dietExportFilename(
-          shoppingList: true,
-          start: period.start,
-          end: period.end,
-          calendarMonth: exportPeriod == _DietExportPeriod.month,
-        );
-      }
+      final bytes = await GetIt.I<WeeklyDietPdfService>().build(
+        week: period,
+        locale: locale,
+        labels: labels,
+      );
+      final filename = dietExportFilename(
+        shoppingList: false,
+        start: period.start,
+        end: period.end,
+        calendarMonth: exportPeriod == _DietExportPeriod.month,
+      );
       if (!context.mounted) return;
 
-      final action = await showModalBottomSheet<_PdfAction>(
-        context: context,
-        builder: (sheetContext) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.print_outlined),
-                title: Text(l10n.weeklyDietPrint),
-                onTap: () => Navigator.pop(sheetContext, _PdfAction.print),
-              ),
-              ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: Text(l10n.weeklyDietShare),
-                onTap: () => Navigator.pop(sheetContext, _PdfAction.share),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (action == _PdfAction.print) {
-        await Printing.layoutPdf(name: filename, onLayout: (_) async => bytes);
-      } else if (action == _PdfAction.share) {
-        await Printing.sharePdf(bytes: bytes, filename: filename);
-      }
+      await printOrSharePdf(context, bytes: bytes, filename: filename);
     } catch (_) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.weeklyDietExportError)),
-        );
-      }
+      _showExportMessage(
+        state,
+        ExomMessageKind.error,
+        l10n.weeklyDietExportError,
+      );
     } finally {
       if (mounted) setState(() => _isExportingDiet = false);
     }
   }
 
-  void _changeMonth(BuildContext context, CalendarLoaded state, int delta) {
-    var year = state.year;
-    var month = state.month + delta;
-    if (month > 12) {
-      month = 1;
-      year++;
-    } else if (month < 1) {
-      month = 12;
-      year--;
+  /// [delta] months from [year]-[month], the month of the title (the
+  /// requested one while it loads).
+  void _changeMonth(BuildContext context, int year, int month, int delta) {
+    var targetYear = year;
+    var targetMonth = month + delta;
+    if (targetMonth > 12) {
+      targetMonth = 1;
+      targetYear++;
+    } else if (targetMonth < 1) {
+      targetMonth = 12;
+      targetYear--;
     }
-    context.read<CalendarBloc>().add(
-      CalendarMonthLoadRequested(year: year, month: month),
-    );
+    _requestMonth(context, targetYear, targetMonth);
   }
 
   Future<void> _showMonthYearPicker(
     BuildContext context,
-    CalendarLoaded state,
+    int shownYear,
+    int shownMonth,
   ) async {
-    final bloc = context.read<CalendarBloc>();
-    int selectedYear = state.year;
-    int selectedMonth = state.month;
-
-    final result = await showDialog<List<int>>(
+    // D14-2: straight sheet; one tap on a month goes there (no «Ir al mes»).
+    final result = await showExomSheet<(int, int)>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.45),
-      builder: (dialogContext) => _MonthYearPickerDialog(
-        initialYear: selectedYear,
-        initialMonth: selectedMonth,
-      ),
+      builder: (_) =>
+          _MonthYearSheet(shownYear: shownYear, shownMonth: shownMonth),
     );
 
-    if (result != null) {
-      bloc.add(CalendarMonthLoadRequested(year: result[0], month: result[1]));
+    // The month already shown (or already asked for): the sheet just closes,
+    // without reloading or resetting the selected day.
+    if (result != null &&
+        context.mounted &&
+        result != (shownYear, shownMonth)) {
+      final (year, month) = result;
+      _requestMonth(context, year, month);
     }
   }
 
+  /// Protagonist (sketch A1 `.x-hero-96`): Entrenamiento counts the sessions
+  /// of the month that are done, like the week line and Inicio (per-day counts
+  /// and ALL/ANY from [HomeDaySessions.ofCalendarDay]); Dietas, the meals done this week (week
+  /// summary of the selected day). Nothing scheduled: a plain 0, in the text
+  /// colour (it is not an achievement). Dietas without a week summary (the
+  /// bloc swallows its failure): no figure at all, never an invented 0.
+  Widget? _buildHero(BuildContext context, CalendarLoaded state) {
+    final l10n = AppLocalizations.of(context);
+    final palette = context.exomPalette;
+    final int done;
+    final int total;
+    if (!_showTrainings && state.weekSummary == null) {
+      return null;
+    } else if (_showTrainings) {
+      final sessions = state.days
+          .where(
+            (d) => d.date.year == state.year && d.date.month == state.month,
+          )
+          .map(HomeDaySessions.ofCalendarDay);
+      total = sessions.fold(0, (sum, s) => sum + s.total);
+      done = sessions.fold(0, (sum, s) => sum + s.done);
+    } else {
+      total = state.weekSummary?.totalMeals ?? 0;
+      done = state.weekSummary?.mealsCompleted ?? 0;
+    }
+    final footStyle = TextStyle(
+      fontFamily: AppTheme.bodyFontFamily,
+      fontSize: 14,
+      height: 1.35,
+      color: palette.textSecondary,
+    );
+
+    if (total == 0) {
+      final noSessions = l10n.calendarHeroNoSessions;
+      return ExomNumeral(
+        value: formatFigure(context, 0),
+        isData: false,
+        side: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_showTrainings) ...[
+              Text(
+                noSessions.toUpperCase(),
+                semanticsLabel: noSessions,
+                style: ExomType.headline2Section.copyWith(
+                  color: palette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+            Text(
+              _showTrainings
+                  ? l10n.calendarHeroNoSessionsFoot('${state.year}')
+                  : l10n.calendarHeroDietFoot,
+              style: footStyle,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ExomNumeral(
+      value: formatFigure(context, done),
+      unit: '/${formatFigure(context, total)}',
+      side: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExomTwoLineHeadline(
+            first: _showTrainings
+                ? l10n.calendarHeroTrainingFirst
+                : l10n.calendarHeroDietFirst,
+            second: _showTrainings
+                ? l10n.calendarHeroTrainingSecond
+                : l10n.calendarHeroDietSecond,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _showTrainings
+                ? l10n.calendarHeroTrainingFoot
+                : l10n.calendarHeroDietFoot,
+            style: footStyle,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Month grid (ESPEC §3, `ExomMonthGrid`): Monday first, the marks of the
+  /// selected tab and the challenge flag. Done days are lime fills: the screen
+  /// has no lime button (DIRECCION §2). Margins of 2 dp (L5-D34). A
+  /// horizontal swipe still changes month, keeping the selected day, as the
+  /// previous paged calendar did.
   Widget _buildCalendar(
     BuildContext context,
     CalendarLoaded state,
     Map<DateTime, CalendarDayEntity> dayMap,
     Map<DateTime, List<ChallengeEntity>> challengeMap,
   ) {
-    final palette = context.exomPalette;
-    final locale = Localizations.localeOf(context).toString();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-      decoration: GlassDecoration.elevated(borderRadius: 24),
-      child: TableCalendar<CalendarDayEntity>(
-        firstDay: DateTime(2024),
-        lastDay: DateTime(2030),
-        focusedDay: _resolveFocusedDay(state),
-        selectedDayPredicate: (day) => isSameDay(day, state.selectedDate),
-        startingDayOfWeek: StartingDayOfWeek.monday,
-        locale: locale,
-        headerVisible: false,
-        daysOfWeekHeight: 32,
-        rowHeight: 48,
-        daysOfWeekStyle: DaysOfWeekStyle(
-          weekdayStyle: TextStyle(
-            color: palette.textDisabled,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-          weekendStyle: TextStyle(
-            color: palette.textDisabled,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          defaultTextStyle: TextStyle(color: palette.textPrimary, fontSize: 14),
-          weekendTextStyle: TextStyle(color: palette.textPrimary, fontSize: 14),
-          todayDecoration: BoxDecoration(
-            color: palette.primary.withValues(alpha: 0.18),
-            shape: BoxShape.circle,
-          ),
-          todayTextStyle: TextStyle(
-            color: palette.primary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: palette.primary,
-            shape: BoxShape.circle,
-          ),
-          selectedTextStyle: TextStyle(
-            color: palette.onPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-          cellMargin: const EdgeInsets.all(4),
-        ),
-        calendarBuilders: CalendarBuilders(
-          defaultBuilder: (context, date, _) {
-            final key = DateTime(date.year, date.month, date.day);
-            return _buildDayCell(
-              context,
-              date,
-              dayMap[key],
-              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
-              isSelected: false,
-              isToday: false,
-            );
-          },
-          todayBuilder: (context, date, _) {
-            final key = DateTime(date.year, date.month, date.day);
-            return _buildDayCell(
-              context,
-              date,
-              dayMap[key],
-              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
-              isSelected: false,
-              isToday: true,
-            );
-          },
-          selectedBuilder: (context, date, _) {
-            final key = DateTime(date.year, date.month, date.day);
-            return _buildDayCell(
-              context,
-              date,
-              dayMap[key],
-              hasChallengeMarker: challengeMap[key]?.isNotEmpty ?? false,
-              isSelected: true,
-              isToday: isSameDay(date, DateTime.now()),
-            );
-          },
-        ),
-        onDaySelected: (selectedDay, focusedDay) {
-          context.read<CalendarBloc>().add(CalendarDaySelected(selectedDay));
-        },
-        onPageChanged: (focusedDay) {
-          context.read<CalendarBloc>().add(
-            CalendarMonthLoadRequested(
-              year: focusedDay.year,
-              month: focusedDay.month,
-              selectedDate: state.selectedDate,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  bool _dayHasVisibleActivity(CalendarDayEntity? day) {
-    if (day == null) return false;
-    if (_showTrainings) {
-      return day.hasTraining || day.isRestDay;
-    }
-    return day.hasDiet;
-  }
-
-  Color _dayAccentColor(BuildContext context, CalendarDayEntity? day) {
-    final semantic = context.exomSemantic;
-    if (day == null) {
-      return _showTrainings ? context.trainingAccent : context.dietAccent;
-    }
-    if (_showTrainings) {
-      if (day.isRestDay) {
-        return context.exomPalette.textDisabled;
-      }
-      return day.trainingCompleted ? semantic.success : context.trainingAccent;
-    }
-    return day.dietCompleted ? semantic.success : context.dietAccent;
-  }
-
-  Widget _buildDayCell(
-    BuildContext context,
-    DateTime date,
-    CalendarDayEntity? day, {
-    required bool hasChallengeMarker,
-    required bool isSelected,
-    required bool isToday,
-  }) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final hasActivity = _dayHasVisibleActivity(day);
-    final accent = _dayAccentColor(context, day);
-    final borderColor = hasActivity || isSelected || isToday
-        ? accent.withValues(alpha: isSelected ? 0.40 : 0.24)
-        : palette.glassBorder.withValues(alpha: 0.10);
-    final fillColor = isSelected
-        ? accent.withValues(alpha: 0.18)
-        : isToday
-        ? palette.primary.withValues(alpha: 0.12)
-        : hasActivity
-        ? accent.withValues(alpha: 0.08)
-        : Colors.transparent;
-
-    return Center(
-      child: Container(
-        width: 40,
-        height: 46,
-        decoration: BoxDecoration(
-          color: fillColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: 0.6),
-          boxShadow: hasActivity || isSelected
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                    spreadRadius: -8,
-                  ),
-                ]
-              : null,
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Text(
-                '${date.day}',
-                style: TextStyle(
-                  color: isToday ? palette.primary : palette.textPrimary,
-                  fontSize: 14,
-                  fontWeight: hasActivity || isSelected || isToday
-                      ? FontWeight.w700
-                      : FontWeight.w500,
-                ),
-              ),
-            ),
-            if (hasActivity)
-              Positioned(
-                bottom: 6,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-            if (hasChallengeMarker)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    color: semantic.warning.withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 10,
-                    color: semantic.warning,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeekProgress(BuildContext context, CalendarLoaded state) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final summary = state.weekSummary;
-    if (summary == null) return const SizedBox.shrink();
+    final today = _today();
 
-    final int completed;
-    final int total;
-    final String label;
-    final Color color;
-
-    if (_showTrainings) {
-      completed = summary.trainingsCompleted;
-      total = summary.trainingsAssigned;
-      label = l10n.trainingsCompletedThisWeek;
-      color = context.trainingAccent;
-    } else {
-      completed = summary.mealsCompleted;
-      total = summary.totalMeals;
-      label = l10n.mealsCompletedThisWeek;
-      color = context.dietAccent;
+    void swipe(DragEndDetails details) {
+      final velocity = details.primaryVelocity ?? 0;
+      if (velocity.abs() < _swipeVelocity) return;
+      final target = DateTime(
+        state.year,
+        state.month + (velocity < 0 ? 1 : -1),
+      );
+      _requestMonth(
+        context,
+        target.year,
+        target.month,
+        selectedDate: state.selectedDate,
+      );
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: GlassDecoration.card(
-              borderRadius: 999,
-              borderColor: color.withValues(alpha: 0.18),
-            ),
-            child: Text(
-              '$completed/$total',
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(color: palette.textSecondary, fontSize: 13),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: GestureDetector(
+        onHorizontalDragEnd: swipe,
+        child: ExomMonthGrid(
+          month: DateTime(state.year, state.month),
+          selected: state.selectedDate,
+          today: today,
+          doneAsFill: true,
+          // L5-A4c: the day fill slides and the weeks move with the month.
+          slideSelection: true,
+          monthTransition: true,
+          markOf: (date) => _markOf(dayMap[date], date, today),
+          flagOf: (date) => challengeMap[date]?.isNotEmpty ?? false,
+          flagLabelOf: l10n.calendarDayWithChallenge,
+          // O4: in Dietas the marks are diets, not sessions.
+          markLabelOf: _showTrainings
+              ? null
+              : (label, mark) => switch (mark) {
+                  ExomDayMark.done => l10n.calendarDayDietDone(label),
+                  ExomDayMark.pending => l10n.calendarDayDietPending(label),
+                  ExomDayMark.missed => l10n.calendarDayDietMissed(label),
+                  ExomDayMark.none => label,
+                },
+          onSelect: (date) =>
+              context.read<CalendarBloc>().add(CalendarDaySelected(date)),
+        ),
       ),
     );
   }
 
+  /// Mark of [date] in the selected tab: done, pending from today on, not
+  /// done before today, or none when nothing is scheduled.
+  ExomDayMark _markOf(CalendarDayEntity? day, DateTime date, DateTime today) {
+    if (day == null) return ExomDayMark.none;
+    final scheduled = _showTrainings ? day.hasTraining : day.hasDiet;
+    if (!scheduled) return ExomDayMark.none;
+    final done = _showTrainings ? day.trainingCompleted : day.dietCompleted;
+    if (done) return ExomDayMark.done;
+    return date.isBefore(today) ? ExomDayMark.missed : ExomDayMark.pending;
+  }
+
+  /// Block of the selected day (sketch A1 `.x-feat`): its date, the week's
+  /// trainings (Entrenamiento) and one row per item. The whole row opens the
+  /// training or the diet of that day (it was «Ver detalle» / «Ver plan»).
   Widget _buildSelectedDayCard(
     BuildContext context,
     CalendarLoaded state,
     Map<DateTime, CalendarDayEntity> dayMap,
     Map<DateTime, List<ChallengeEntity>> challengeMap,
   ) {
-    if (state.selectedDate == DateTime(0)) return const SizedBox.shrink();
-
-    final key = DateTime(
-      state.selectedDate.year,
-      state.selectedDate.month,
-      state.selectedDate.day,
-    );
+    final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    final selected = state.selectedDate;
+    final key = DateTime(selected.year, selected.month, selected.day);
     final day = dayMap[key];
     final dayChallenges = challengeMap[key] ?? const <ChallengeEntity>[];
-    final isToday = isSameDay(state.selectedDate, DateTime.now());
-    final locale = Localizations.localeOf(context).toString();
-    final l10n = AppLocalizations.of(context);
-    final String dateLabel;
-    if (isToday) {
-      dateLabel = l10n.todayLabel;
-    } else {
-      final formattedDate = DateFormat.MMMMd(locale).format(state.selectedDate);
-      dateLabel = toBeginningOfSentenceCase(formattedDate) ?? formattedDate;
-    }
+    final formattedDate = DateFormat.MMMMEEEEd(locale).format(selected);
+    final dateLabel = toBeginningOfSentenceCase(formattedDate);
+    final summary = state.weekSummary;
 
-    if (day == null) {
-      if (dayChallenges.isNotEmpty) {
-        return _challengeOnlyDayCard(context, dayChallenges, dateLabel);
+    // A rest day can still carry a diet (`has_diet` is independent of
+    // `is_rest_day`): the rest row only speaks about training and the diet
+    // row follows as on any other day.
+    final rows = <Widget>[];
+    if (day != null) {
+      if (day.isRestDay) {
+        rows.add(
+          ExomRichRow(
+            key: _restRowKey,
+            leading: const ExomRowLeading.icon(ExomIcons.sleep),
+            title: l10n.restDayTitle,
+            facts: l10n.calendarRestDayFacts,
+          ),
+        );
+      } else if (_showTrainings && day.hasTraining) {
+        rows.add(
+          ExomRichRow(
+            key: _trainingRowKey,
+            leading: const ExomRowLeading.icon(ExomIcons.train),
+            title: l10n.training,
+            status: day.trainingCompleted
+                ? _DoneStatus(label: l10n.completed)
+                : _PendingStatus(label: l10n.pending),
+            onTap: () => context.go('/trainings?date=${_apiDate(day.date)}'),
+          ),
+        );
       }
-      return _emptyDayCard(context, dateLabel);
+      if (day.hasDiet) {
+        rows.add(
+          ExomRichRow(
+            key: _dietRowKey,
+            leading: const ExomRowLeading.icon(ExomIcons.meal),
+            title: l10n.nutritionPlanDefault,
+            status: day.dietCompleted
+                ? _DoneStatus(label: l10n.completedFeminine)
+                : _PendingStatus(label: l10n.pending),
+            onTap: () => context.go('/diets?date=${_apiDate(day.date)}'),
+          ),
+        );
+      }
+    }
+    if (dayChallenges.isNotEmpty) {
+      rows.add(_challengeRow(context, dayChallenges));
+    }
+    if (rows.isEmpty) {
+      rows.add(
+        ExomRichRow(
+          key: _emptyRowKey,
+          leading: const ExomRowLeading.icon(ExomIcons.eventBusy),
+          title: l10n.noActivityAssigned,
+        ),
+      );
     }
 
-    if (day.isRestDay) {
-      return _restDayCard(context, dateLabel);
-    }
-
-    if (_showTrainings) {
-      return _trainingDayCard(context, day, dateLabel);
-    } else {
-      return _dietDayCard(context, day, dateLabel);
-    }
-  }
-
-  Widget _challengeOnlyDayCard(
-    BuildContext context,
-    List<ChallengeEntity> challenges,
-    String dateLabel,
-  ) {
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final titles = challenges
-        .map((challenge) => challenge.title.trim())
-        .where((title) => title.isNotEmpty)
-        .toList(growable: false);
-    final preview = titles.take(2).join(' • ');
-    final extraCount = titles.length > 2 ? titles.length - 2 : 0;
-    final description = preview.isEmpty
-        ? l10n.challengesMenuItem
-        : extraCount > 0
-        ? '$preview +$extraCount'
-        : preview;
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      accentColor: semantic.warning,
+    return ExomFeatureBlock(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        key: _dayBlockKey,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: semantic.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: semantic.warning.withValues(alpha: 0.16),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                      spreadRadius: -8,
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.local_fire_department_rounded,
-                  color: semantic.warning,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${l10n.challenges} • $dateLabel',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: palette.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.go('/challenges'),
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: Text(l10n.challengesMenuItem),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: semantic.warning,
-                side: BorderSide(
-                  color: semantic.warning.withValues(alpha: 0.35),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyDayCard(BuildContext context, String dateLabel) {
-    final palette = context.exomPalette;
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: palette.glassBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: palette.glassBorder.withValues(alpha: 0.16),
-                width: 0.6,
-              ),
-            ),
-            child: Icon(
-              Icons.event_busy,
-              color: palette.textDisabled,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  l10n.noActivityAssigned,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                Semantics(header: true, child: ExomKicker(dateLabel)),
+                if (_showTrainings && summary != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.calendarWeekTrainings(
+                      formatFigure(context, summary.trainingsCompleted),
+                      summary.trainingsAssigned,
+                    ),
+                    style: TextStyle(
+                      fontFamily: AppTheme.bodyFontFamily,
+                      fontSize: 14,
+                      height: 1.35,
+                      color: palette.textSecondary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  dateLabel,
-                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
-                ),
+                ],
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          ExomFlatRowGroup(bottomRule: false, children: rows),
         ],
       ),
     );
   }
 
-  Widget _restDayCard(BuildContext context, String dateLabel) {
-    final palette = context.exomPalette;
-    final theme = Theme.of(context);
+  /// «Retos» row of a day with challenges (sketch A1: «1 reto activo hoy»):
+  /// how many challenges the day carries; nothing when there are none.
+  Widget _challengeRow(BuildContext context, List<ChallengeEntity> challenges) {
     final l10n = AppLocalizations.of(context);
+    final count = challenges.length;
 
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: palette.glassBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: palette.glassBorder.withValues(alpha: 0.16),
-                width: 0.6,
-              ),
+    return ExomRichRow(
+      key: _challengesRowKey,
+      leading: const ExomRowLeading.icon(ExomIcons.streak),
+      title: l10n.challenges,
+      facts: count == 0
+          ? null
+          : l10n.calendarActiveChallengesToday(
+              count,
+              formatFigure(context, count),
             ),
-            child: Icon(Icons.hotel, color: palette.textDisabled, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.restDayTitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: palette.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  dateLabel,
-                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      onTap: () => context.go('/challenges'),
     );
   }
 
-  Widget _trainingDayCard(
-    BuildContext context,
-    CalendarDayEntity day,
-    String dateLabel,
-  ) {
-    if (!day.hasTraining) return _emptyDayCard(context, dateLabel);
-
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context);
-
-    final statusColor = day.trainingCompleted
-        ? semantic.success
-        : context.trainingAccent;
-    final statusLabel = day.trainingCompleted ? l10n.completed : l10n.pending;
-    final statusIcon = day.trainingCompleted
-        ? Icons.check_circle
-        : Icons.schedule;
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      accentColor: statusColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor.withValues(alpha: 0.16),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                      spreadRadius: -8,
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.fitness_center, color: statusColor, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${l10n.training} • $dateLabel',
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(statusIcon, color: statusColor, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          statusLabel,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  context.go('/trainings?date=${_apiDate(day.date)}'),
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: Text(l10n.openDetail),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: statusColor,
-                side: BorderSide(color: statusColor.withValues(alpha: 0.35)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// Access to «Retos» kept below the day (not drawn by the sketch; it was
+  /// always on the screen).
   Widget _buildChallengesShortcut(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      decoration: GlassDecoration.card(borderRadius: 18),
-      child: OutlinedButton.icon(
-        onPressed: () => context.go('/challenges'),
-        icon: Icon(
-          Icons.emoji_events_outlined,
-          size: 18,
-          color: palette.primary,
-        ),
-        label: Text(l10n.challengesMenuItem),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: palette.primary,
-          side: BorderSide(color: palette.primary.withValues(alpha: 0.22)),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _dietDayCard(
-    BuildContext context,
-    CalendarDayEntity day,
-    String dateLabel,
-  ) {
-    if (!day.hasDiet) return _emptyDayCard(context, dateLabel);
-
-    final palette = context.exomPalette;
-    final semantic = context.exomSemantic;
-    final l10n = AppLocalizations.of(context);
-
-    final statusColor = day.dietCompleted
-        ? semantic.success
-        : context.dietAccent;
-    final statusLabel = day.dietCompleted
-        ? l10n.completedFeminine
-        : l10n.pending;
-    final statusIcon = day.dietCompleted ? Icons.check_circle : Icons.schedule;
-
-    return GlassCard(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(20),
-      accentColor: statusColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: ExomFlatRowGroup(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor.withValues(alpha: 0.16),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                      spreadRadius: -8,
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.restaurant_menu,
-                  color: statusColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${l10n.nutritionPlanDefault} • $dateLabel',
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(statusIcon, color: statusColor, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          statusLabel,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.go('/diets?date=${_apiDate(day.date)}'),
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: Text(l10n.openPlan),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: statusColor,
-                side: BorderSide(color: statusColor.withValues(alpha: 0.35)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
+          ExomFlatRow(
+            key: _challengesShortcutKey,
+            leading: Icon(
+              ExomIcons.trophy,
+              size: 24,
+              color: palette.textPrimary,
             ),
+            title: l10n.challengesMenuItem,
+            onTap: () => context.go('/challenges'),
           ),
         ],
       ),
@@ -1486,445 +1042,368 @@ class _CalendarViewState extends State<_CalendarView> {
 
 // ─── Month Header ──────────────────────────────────────────────────────────────
 
+/// Month header (sketch A1 `.x-mhead`): the month as a title-button in
+/// Barlow 44 (upper case painted only) that opens the month and year picker,
+/// and the previous / next arrows. The title shrinks to its width instead of
+/// overflowing or being cut (L4-I22). Without [onTitleTap] it is a plain
+/// header and without [onPrevious] / [onNext] there are no arrows (load
+/// error).
 class _MonthHeader extends StatelessWidget {
   final int year;
   final int month;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-  final VoidCallback onTitleTap;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final VoidCallback? onTitleTap;
 
   const _MonthHeader({
     required this.year,
     required this.month,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onTitleTap,
+    this.onPrevious,
+    this.onNext,
+    this.onTitleTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
+    final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final formattedTitle = DateFormat.yMMMM(
-      locale,
-    ).format(DateTime(year, month));
-    final title = toBeginningOfSentenceCase(formattedTitle);
+    final date = DateTime(year, month);
+    final name = DateFormat.MMMM(locale).format(date);
+    final fullTitle = toBeginningOfSentenceCase(
+      DateFormat.yMMMM(locale).format(date),
+    );
+    final tap = onTitleTap;
+    final previous = onPrevious;
+    final next = onNext;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        children: [
-          Container(
-            decoration: GlassDecoration.card(borderRadius: 14),
-            child: IconButton(
-              onPressed: onPrevious,
-              icon: Icon(Icons.chevron_left, color: palette.textSecondary),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: onTitleTap,
+    final title = Semantics(
+      key: _monthTitleKey,
+      container: true,
+      button: tap != null,
+      header: tap == null,
+      label: tap != null ? l10n.calendarMonthTitleLabel(fullTitle) : fullTitle,
+      onTap: tap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    title,
-                    style: TextStyle(
+                    name.toUpperCase(),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: ExomType.screenTitle.copyWith(
                       color: palette.textPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    color: palette.textSecondary,
-                    size: 20,
-                  ),
+                  if (tap != null) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      ExomIcons.expand,
+                      size: 24,
+                      color: palette.textSecondary,
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
-          Container(
-            decoration: GlassDecoration.card(borderRadius: 14),
-            child: IconButton(
-              onPressed: onNext,
-              icon: Icon(Icons.chevron_right, color: palette.textSecondary),
+        ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 8, 0),
+      child: Row(
+        children: [
+          // L5-A4c: the title moves to the requested month at once.
+          Expanded(
+            child: ExomStepTransition(
+              step: year * 12 + month,
+              snapshot: true,
+              child: title,
             ),
           ),
+          if (previous != null)
+            IconButton(
+              key: _previousMonthKey,
+              tooltip: l10n.trainingsHistoryPreviousMonth,
+              constraints: _arrowTarget,
+              onPressed: previous,
+              icon: Icon(ExomIcons.previous, color: palette.textPrimary),
+            ),
+          if (next != null)
+            IconButton(
+              key: _nextMonthKey,
+              tooltip: l10n.trainingsHistoryNextMonth,
+              constraints: _arrowTarget,
+              onPressed: next,
+              icon: Icon(ExomIcons.next, color: palette.textPrimary),
+            ),
         ],
       ),
     );
   }
 }
 
-// ─── Toggle Chip ───────────────────────────────────────────────────────────────
+/// Touch target of each month arrow (plan §2 and §11).
+const BoxConstraints _arrowTarget = BoxConstraints(minWidth: 48, minHeight: 48);
 
-class _ToggleChip extends StatelessWidget {
+/// «Hecha» of the client (D19): check and text in the data colour.
+class _DoneStatus extends StatelessWidget {
+  const _DoneStatus({required this.label});
+
   final String label;
-  final IconData icon;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
 
-  const _ToggleChip({
+  @override
+  Widget build(BuildContext context) {
+    return _Status(
+      label: label,
+      icon: ExomIcons.check,
+      colour: context.exomPalette.data,
+    );
+  }
+}
+
+/// «Pendiente» (sketch `.st-pend`): clock and text in the pending colour.
+class _PendingStatus extends StatelessWidget {
+  const _PendingStatus({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Status(
+      label: label,
+      icon: ExomIcons.time,
+      colour: context.exomSemantic.warning,
+    );
+  }
+}
+
+class _Status extends StatelessWidget {
+  const _Status({
     required this.label,
     required this.icon,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
+    required this.colour,
   });
+
+  final String label;
+  final IconData icon;
+  final Color colour;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: isSelected
-            ? GlassDecoration.accentCard(color, borderRadius: 20)
-            : const BoxDecoration(),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? color : palette.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? color : palette.textSecondary,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ],
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: ExcludeSemantics(child: Icon(icon, size: 18, color: colour)),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Month/Year Picker Dialog ──────────────────────────────────────────────────
-
-class _WeeklyVariantSelector extends StatefulWidget {
-  const _WeeklyVariantSelector({
-    required this.week,
-    required this.locale,
-    required this.title,
-    required this.mainLabel,
-    required this.generateLabel,
-    required this.mealTypes,
-  });
-
-  final DietPeriodEntity week;
-  final String locale;
-  final String title;
-  final String mainLabel;
-  final String generateLabel;
-  final Map<String, String> mealTypes;
-
-  @override
-  State<_WeeklyVariantSelector> createState() => _WeeklyVariantSelectorState();
-}
-
-class _WeeklyVariantSelectorState extends State<_WeeklyVariantSelector> {
-  late final Map<String, String> _selectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = {};
-    for (final day in widget.week.days) {
-      for (final meal in day.diet?.meals ?? const <MealEntity>[]) {
-        if (meal.variants.isNotEmpty) {
-          _selectedIds[WeeklyMealSelection.selectionKey(day.date, meal.id)] =
-              meal.id;
-        }
-      }
-    }
-  }
-
-  List<WeeklyMealSelection> _result() => [
-    for (final day in widget.week.days)
-      for (final meal in day.diet?.meals ?? const <MealEntity>[])
-        if (meal.variants.isNotEmpty)
-          WeeklyMealSelection(
-            date: day.date,
-            parentMealId: meal.id,
-            selectedMealId:
-                _selectedIds[WeeklyMealSelection.selectionKey(
-                  day.date,
-                  meal.id,
-                )] ??
-                meal.id,
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTheme.bodyFontFamily,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+              color: colour,
+            ),
           ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final dayFormat = DateFormat.EEEE(widget.locale);
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.85,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                children: [
-                  for (final day in widget.week.days)
-                    if ((day.diet?.meals ?? const <MealEntity>[]).any(
-                      (meal) => meal.variants.isNotEmpty,
-                    )) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12, bottom: 6),
-                        child: Text(
-                          toBeginningOfSentenceCase(dayFormat.format(day.date)),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      for (final meal
-                          in day.diet?.meals ?? const <MealEntity>[])
-                        if (meal.variants.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: DropdownButtonFormField<String>(
-                              initialValue:
-                                  _selectedIds[WeeklyMealSelection.selectionKey(
-                                    day.date,
-                                    meal.id,
-                                  )],
-                              decoration: InputDecoration(
-                                labelText:
-                                    widget.mealTypes[meal.type.toUpperCase()] ??
-                                    meal.type,
-                                border: const OutlineInputBorder(),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: meal.id,
-                                  child: Text(
-                                    '${widget.mainLabel}: ${meal.name}',
-                                  ),
-                                ),
-                                ...meal.variants.map(
-                                  (variant) => DropdownMenuItem(
-                                    value: variant.id,
-                                    child: Text(variant.name),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value == null) return;
-                                setState(() {
-                                  _selectedIds[WeeklyMealSelection.selectionKey(
-                                        day.date,
-                                        meal.id,
-                                      )] =
-                                      value;
-                                });
-                              },
-                            ),
-                          ),
-                    ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.pop(context, _result()),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(widget.generateLabel),
-                ),
-              ),
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
 }
 
-class _MonthYearPickerDialog extends StatefulWidget {
-  final int initialYear;
-  final int initialMonth;
+// ─── Sheets (L5-A4b, D14-2) ──────────────────────────────────────────────────
 
-  const _MonthYearPickerDialog({
-    required this.initialYear,
-    required this.initialMonth,
-  });
+/// Top bar of the calendar sheets (sketch `.sheet.a-bar`), in the data colour
+/// at the [ExomRule.bar] thickness of the redesign (the sketch draws 3 px).
+/// `showExomSheet` owns the drag handle, so the bar sits under it.
+class _SheetTopBar extends StatelessWidget {
+  const _SheetTopBar();
 
   @override
-  State<_MonthYearPickerDialog> createState() => _MonthYearPickerDialogState();
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(height: ExomRule.bar, color: context.exomPalette.data),
+    );
+  }
 }
 
-class _MonthYearPickerDialogState extends State<_MonthYearPickerDialog> {
-  late int _year;
-  late int _month;
+/// Export choice sheet (sketch A1 «Dietas · calendario / Elige un periodo»):
+/// the kicker, a two-line headline read as [semanticsLabel] and the numbered
+/// entries, each closing the sheet with its value. The period sheet is the
+/// one the sketch draws; the format sheet (menu or shopping list), not drawn,
+/// follows the same pattern.
+class _ExportChoiceSheet<T> extends StatelessWidget {
+  const _ExportChoiceSheet({
+    required this.first,
+    required this.second,
+    required this.semanticsLabel,
+    required this.choices,
+  });
+
+  final String first;
+  final String second;
+  final String semanticsLabel;
+
+  /// Entries in order: title and the value the sheet returns.
+  final List<(String, T)> choices;
 
   @override
-  void initState() {
-    super.initState();
-    _year = widget.initialYear;
-    _month = widget.initialMonth;
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _SheetTopBar(),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExomKicker(l10n.calendarExportPeriodKicker),
+              const SizedBox(height: ExomSpacing.sm),
+              ExomTwoLineHeadline(
+                first: first,
+                second: second,
+                semanticsLabel: semanticsLabel,
+              ),
+            ],
+          ),
+        ),
+        ExomIndexList(
+          items: [
+            for (final (title, value) in choices)
+              ExomIndexItem(
+                title: title,
+                onTap: () => Navigator.pop(context, value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+}
+
+/// Month and year (sketch A1 «Calendario · hoja de mes y año»): the kicker,
+/// the year in Barlow 28 between its arrows and the twelve months as 48 dp
+/// choices, the shown month filled. The arrows only change the year; one tap
+/// on a month closes the sheet with that year and month. Years are not
+/// bounded, as in the previous picker.
+class _MonthYearSheet extends StatefulWidget {
+  const _MonthYearSheet({required this.shownYear, required this.shownMonth});
+
+  /// Month the calendar shows now.
+  final int shownYear;
+  final int shownMonth;
+
+  @override
+  State<_MonthYearSheet> createState() => _MonthYearSheetState();
+}
+
+class _MonthYearSheetState extends State<_MonthYearSheet> {
+  late int _year = widget.shownYear;
+
+  /// Three-letter month label of the sketch («Ene… Sep… Dic», «Jan… Sep…
+  /// Dec»), without the dot: intl abbreviates September «sept» in Spanish,
+  /// which broke into «Sep / t» at 320 dp with large text (L5-A4 D2).
+  static String _monthAbbreviation(String locale, int month) {
+    final short = DateFormat.MMM(
+      locale,
+    ).format(DateTime(2000, month)).replaceAll('.', '');
+    final letters = short.characters;
+    return toBeginningOfSentenceCase(
+      letters.length > 3 ? letters.take(3).toString() : short,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
-            decoration: isDark
-                ? BoxDecoration(
-                    color: AppColors.headerGlass,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: palette.glassBorder.withValues(alpha: 0.18),
-                      width: 0.6,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x40000000),
-                        blurRadius: 32,
-                        offset: Offset(0, 10),
-                        spreadRadius: -8,
-                      ),
-                    ],
-                  )
-                : GlassDecoration.elevated(borderRadius: 24),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Year selector
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () => setState(() => _year--),
-                      icon: Icon(
-                        Icons.chevron_left,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      '$_year',
-                      style: TextStyle(
-                        color: palette.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _year++),
-                      icon: Icon(
-                        Icons.chevron_right,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Month grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.8,
+    final locale = Localizations.localeOf(context).toString();
+    final year = _year;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _SheetTopBar(),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ExomKicker(l10n.calendarMonthPickerKicker),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: l10n.calendarPreviousYear,
+                    constraints: _arrowTarget,
+                    onPressed: () => setState(() => _year--),
+                    icon: Icon(ExomIcons.previous, color: palette.textPrimary),
                   ),
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    final m = index + 1;
-                    final isSelected = m == _month;
-                    return GestureDetector(
-                      onTap: () => setState(() => _month = m),
-                      child: Container(
-                        decoration: isSelected
-                            ? GlassDecoration.accentCard(
-                                palette.primary,
-                                borderRadius: 12,
-                              )
-                            : GlassDecoration.card(borderRadius: 12),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _monthLabel(context, m),
-                          style: TextStyle(
-                            color: isSelected
-                                ? palette.primary
-                                : palette.textSecondary,
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
+                  Expanded(
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$year',
+                        textAlign: TextAlign.center,
+                        style: ExomType.headline2Section.copyWith(
+                          color: palette.textPrimary,
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Confirm button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context, [_year, _month]),
-                    child: Text(l10n.goToMonthButton),
+                    ),
                   ),
+                  IconButton(
+                    tooltip: l10n.calendarNextYear,
+                    constraints: _arrowTarget,
+                    onPressed: () => setState(() => _year++),
+                    icon: Icon(ExomIcons.next, color: palette.textPrimary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              ExomChoiceChips<int>(
+                options: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                selected: year == widget.shownYear ? widget.shownMonth : null,
+                columns: 4,
+                fitLabels: true,
+                labelOf: (month) => _monthAbbreviation(locale, month),
+                semanticLabelOf: (month) => toBeginningOfSentenceCase(
+                  DateFormat.yMMMM(locale).format(DateTime(year, month)),
                 ),
-              ],
-            ),
+                onSelected: (month) => Navigator.pop(context, (year, month)),
+              ),
+            ],
           ),
         ),
-      ),
+      ],
     );
-  }
-
-  String _monthLabel(BuildContext context, int month) {
-    final locale = Localizations.localeOf(context).toString();
-    final label = DateFormat.MMM(locale).format(DateTime(2000, month));
-    return toBeginningOfSentenceCase(label);
   }
 }

@@ -5,17 +5,49 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Spanish values that legitimately equal the English ones.
 const Map<String, String> identicalValueAllowlist = {
+  'coachNameMoi': 'Proper name of the coach voice "Moi" (owner, L5-C5b).',
+  'feedbackChosenFileA11y': 'solo placeholders, idéntico en es y en',
   'feedbackMenuItem': 'Product term "Feedback" kept in Spanish by the owner.',
   'feedback': 'Product term "Feedback" kept in Spanish by the owner.',
   'tutorialFeedbackTitle':
       'Product term "Feedback" kept in Spanish by the owner.',
   'mealTypeSnack': 'Product term "Snack" kept in Spanish by the owner.',
   'recapGeneral': 'Shared Spanish/English word "General".',
+  'recapStepGeneralFirst': 'Shared Spanish/English word "General".',
   'general': 'Shared Spanish/English word "General".',
+  'recapSentTitleFirst': 'Shared Spanish/English word "Recap".',
+  'trainingMilestoneName':
+      'Only the session name placeholder and a full stop (L5-E6a).',
+  'resetEmailSentFirst': 'Cognate "Email" is the same word in both languages.',
   'weightBadgeLabel': 'Abbreviation shared by both languages.',
   'ingredientUnitG': 'Unit symbol "g".',
+  'noticeTimeMinutes':
+      'Compact unit "{minutes} min" shared by both languages.',
+  'noticeTimeHours': 'Compact unit "{hours} h" shared by both languages.',
+  'noticeTimeDays': 'Compact unit "{days} d" shared by both languages.',
   'ingredientUnitMl': 'Unit symbol "ml".',
+  // L5-B4 (Perfil): unit of the sleep figure.
+  'profileHoursUnit': 'Unit symbol "h".',
   'errorTitle': 'Cognate "Error" is the same word in both languages.',
+  // L3 unit 3 (active exercise): unit symbols and the RIR acronym.
+  'activeExerciseUnitReps': 'Abbreviation "reps" shared by both languages.',
+  'activeExerciseUnitSeconds': 'Unit symbol "s".',
+  'activeExerciseUnitMinutes': 'Unit symbol "min".',
+  'activeExerciseRir': 'Acronym "RIR" with a number, same in both languages.',
+  // L5-F5 (start countdown): unit symbol beside the figure.
+  'executionPrepareUnitSeconds': 'Unit symbol "s".',
+  'activeExerciseRestExtend': 'Symbol "+{seconds} s", same in both languages.',
+  'setSheetRirLabel': 'Acronym "RIR", same in both languages.',
+  'setSheetRirChipA11y': 'Acronym "RIR" with a number, same in both languages.',
+  'setSheetWeightStep': 'Only the "±" sign and the formatted step.',
+  // L4 unit 4 (Progreso): only placeholders and a separator, no prose.
+  'progressMeasureSide': 'Placeholders "{measure} · {side}", no words.',
+  // L5-E5 (Circuito): the exercise name closed by a period, no words.
+  'circuitStepExercise': 'Placeholder "{name}." and a period, no words.',
+  // L5-F1 (Fotos de progreso): kicker of the image source sheet.
+  'progressPhotosSourceKicker': 'Placeholders "{view} · {date}", no words.',
+  // L5-E8 (Lista de la compra): question label of each meal with options.
+  'shoppingListQuestion': 'Placeholders "{day} · {meal}", no words.',
 };
 
 /// English words that must not appear in Spanish values. "Feedback", "Recap"

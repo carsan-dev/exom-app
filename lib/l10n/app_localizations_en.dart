@@ -90,7 +90,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTagline => 'Your personal coach, always with you';
 
   @override
+  String get loginHeadlineFirst => 'Your plan.';
+
+  @override
+  String get loginHeadlineSecond => 'Always with you.';
+
+  @override
+  String get loginSubtitle =>
+      'Your coach creates your account when you start. Sign in with the email you gave them.';
+
+  @override
   String get splashTagline => 'Train. Eat. Evolve.';
+
+  @override
+  String get splashWelcomeFirst => 'Let\'s go for';
+
+  @override
+  String get splashWelcomeSecond => 'your change.';
+
+  @override
+  String get splashSlowStart => 'Connecting…';
 
   @override
   String get emailFieldLabel => 'Email';
@@ -103,6 +122,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get passwordFieldLabel => 'Password';
+
+  @override
+  String get passwordShowTooltip => 'Show password';
+
+  @override
+  String get passwordHideTooltip => 'Hide password';
 
   @override
   String get passwordValidationEmpty => 'Enter your password';
@@ -128,18 +153,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forgotPasswordTitle => 'Recover your password';
 
   @override
+  String get forgotHeadlineFirst => 'Recover';
+
+  @override
+  String get forgotHeadlineSecond => 'your password.';
+
+  @override
   String get forgotPasswordSubtitle =>
       'Enter the email associated with your account and we\'ll send you a link to reset it.';
 
   @override
-  String get sendResetEmailButton => 'Send recovery link';
+  String get sendResetEmailButton => 'Send link';
 
   @override
-  String get resetEmailSentTitle => 'Email sent!';
+  String get resetEmailSentTitle => 'Email sent';
+
+  @override
+  String get resetEmailSentFirst => 'Email';
+
+  @override
+  String get resetEmailSentSecond => 'sent.';
+
+  @override
+  String get resetEmailSentLinkTitle => 'Link sent';
 
   @override
   String resetEmailSentSubtitle(Object email) {
-    return 'We\'ve sent a link to $email. Check your inbox and spam folder.';
+    return 'We\'ve sent a link to $email. Check your inbox and your junk mail folder.';
   }
 
   @override
@@ -159,7 +199,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String linkSocialDescription(Object email, Object provider) {
-    return 'An EXOM account already exists for $email. Enter your current password to also link $provider so you can sign in with both methods.';
+    return 'An EXOM account already exists for $email. Enter your current password to link this sign-in.';
   }
 
   @override
@@ -170,7 +210,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountLockedMessage =>
-      'Your account has been temporarily locked.\nContact your coach for more information.';
+      'Your account has been temporarily locked.';
+
+  @override
+  String get accountLockedHeadlineFirst => 'Account';
+
+  @override
+  String get accountLockedHeadlineSecond => 'locked.';
+
+  @override
+  String get accountLockedCoachAuthor => 'Your coach';
+
+  @override
+  String get accountLockedCoachMessage => 'Contact me for more information.';
 
   @override
   String get backToLoginButton => 'Back to login';
@@ -226,7 +278,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengesMenuItem => 'Challenges';
 
   @override
-  String get weeklyRecapMenuItem => 'Weekly Recap';
+  String get weeklyRecapMenuItem => 'Weekly recap';
 
   @override
   String get feedbackMenuItem => 'Feedback';
@@ -238,7 +290,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get helpMenuItem => 'Help';
 
   @override
-  String get logOutMenuItem => 'Log Out';
+  String get logOutMenuItem => 'Log out';
 
   @override
   String get restDayTitle => 'Rest day';
@@ -369,10 +421,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealsOfTheDayLabel => 'Meals of the day';
 
   @override
+  String dietMealsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count meals',
+      one: '$count meal',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get todaysPlanLabel => 'Today\'s plan';
 
   @override
   String get planForLabel => 'Plan for';
+
+  @override
+  String dietMealsProgress(int completed, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      completed,
+      locale: localeName,
+      other: 'completed',
+      one: 'completed',
+    );
+    return '$completed/$total $_temp0';
+  }
 
   @override
   String get completedFeminine => 'Completed';
@@ -409,6 +483,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get markMealCompletedButton => 'Mark as completed';
+
+  @override
+  String mealMarkCompleteLabel(String meal) {
+    return 'Mark $meal as completed';
+  }
+
+  @override
+  String mealMarkUncompleteLabel(String meal) {
+    return 'Unmark $meal as completed';
+  }
 
   @override
   String get markExerciseCompletedButton => 'Mark as completed';
@@ -508,7 +592,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String exerciseMetadata(int sets, String reps, int rest) {
-    return '$sets sets x $reps · Rest ${rest}s';
+    String _temp0 = intl.Intl.pluralLogic(
+      sets,
+      locale: localeName,
+      other: '$sets sets',
+      one: '1 set',
+    );
+    return '$_temp0 x $reps · Rest ${rest}s';
   }
 
   @override
@@ -545,7 +635,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengesTitle => 'My Challenges';
 
   @override
-  String get challengesSubtitle => 'Push your limits every day';
+  String get challengesStreakHeadlineFirst => 'Days';
+
+  @override
+  String get challengesStreakHeadlineSecond => 'in a row.';
+
+  @override
+  String challengesStreakEarlierDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count earlier days',
+      one: '+$count earlier day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get challengesWeekHeadlineFirst => 'Your week.';
+
+  @override
+  String get challengesWeekHeadlineSecond => 'It counts too.';
 
   @override
   String get challengesLoadError => 'Could not load challenges';
@@ -561,6 +671,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewAllButton => 'View all';
+
+  @override
+  String get achievementLocked => 'Locked';
 
   @override
   String get achievementBoardTitle => 'All achievements';
@@ -626,6 +739,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get frequentlyAskedQuestions => 'Frequently asked questions';
+
+  @override
+  String get helpHeadlineFirst => 'Your questions.';
+
+  @override
+  String get helpHeadlineSecond => 'With your coach.';
+
+  @override
+  String get helpCoachAuthor => 'Your coach';
+
+  @override
+  String get helpCoachText => 'If you can\'t find the answer, write to me.';
+
+  @override
+  String get helpOpensInBrowser => 'Opens in the browser';
+
+  @override
+  String get helpOpensInMail => 'Opens in your mail app';
 
   @override
   String get creditsDescription =>
@@ -814,6 +945,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricsPageTitle => 'Update metrics';
 
   @override
+  String get metricsFormSubtitle =>
+      'Weight, height, muscle mass, sleep and measurements';
+
+  @override
+  String metricsWeightDecrease(String step) {
+    return 'Subtract $step';
+  }
+
+  @override
+  String metricsWeightIncrease(String step) {
+    return 'Add $step';
+  }
+
+  @override
   String get recordDateTitle => 'Record date';
 
   @override
@@ -834,8 +979,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manualEntryToggle => 'Manual entry';
 
   @override
+  String get metricsWeightTypeHint => 'Tap the number to type it.';
+
+  @override
   String get weightUpdateNote =>
       'Weight is saved only if you change it in this update.';
+
+  @override
+  String get weightUpdateNoteToday =>
+      'Today your profile weight is saved even if you don\'t change it.';
 
   @override
   String get muscleMassSectionTitle => 'Muscle mass';
@@ -951,7 +1103,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapStartDescription =>
-      'Complete the four steps so your coach understands how your week went and can adjust your plan.';
+      'Complete the five steps so your coach understands how your week went and can adjust your plan.';
 
   @override
   String get recapStartButton => 'Start';
@@ -977,9 +1129,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapTellUsMore => 'Tell us more';
-
-  @override
-  String get recapSentSuccessfully => 'Recap sent successfully';
 
   @override
   String get newRecap => 'New recap';
@@ -1051,7 +1200,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get completeTheFourBlocksAndSendYourWeeklySummary =>
-      'Complete the four sections and send your weekly summary.';
+      'Complete the five steps and send your weekly summary.';
 
   @override
   String get sendRecap => 'Send recap';
@@ -1499,6 +1648,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateStoreNotOpenedError => 'Could not open the app store.';
 
   @override
+  String get updateStoreRetryHint => 'Tap «Update» to try again.';
+
+  @override
   String get privacyPolicyNotOpenedError =>
       'Could not open the privacy policy.';
 
@@ -1533,6 +1685,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cacheDeletedMessage => 'Offline cache cleared successfully';
+
+  @override
+  String get settingsSubtitle => 'Theme, language, alerts and account';
+
+  @override
+  String get settingsThemeLabel => 'Theme';
+
+  @override
+  String get settingsUnitsHint =>
+      'Metric uses kilograms and centimetres. Imperial uses pounds and inches.';
+
+  @override
+  String get clearCacheSheetBody =>
+      'The data saved on this phone to use EXOM offline will be deleted. It will download again when you\'re online.';
+
+  @override
+  String get settingsPushEnableFailed =>
+      'Push notifications couldn\'t be turned on. Still off.';
+
+  @override
+  String get settingsPushDisableFailed =>
+      'Push notifications couldn\'t be turned off. Still on.';
+
+  @override
+  String get settingsSwitchEnableFailed => 'Couldn\'t turn it on. Still off.';
+
+  @override
+  String get settingsSwitchDisableFailed => 'Couldn\'t turn it off. Still on.';
+
+  @override
+  String deleteAccountConfirmHelper(String word) {
+    return 'The button turns on when you type $word.';
+  }
+
+  @override
+  String get clearCacheActiveWorkTitle => 'Clear local cache?';
+
+  @override
+  String get clearCacheActiveWorkMessage =>
+      'You have an unfinished circuit on this device. Clearing the cache will discard its progress and you will not be able to resume it.';
+
+  @override
+  String get clearCacheConfirmButton => 'Clear cache';
+
+  @override
+  String get logoutUnfinishedWorkoutTitle => 'You have an unfinished workout';
+
+  @override
+  String get logoutUnfinishedWorkoutBody =>
+      'It stays on this device and you\'ll see it when you sign back in with this account.';
+
+  @override
+  String get logoutUnfinishedWorkoutConfirm => 'Sign out';
 
   @override
   String get retry => 'Retry';
@@ -1728,7 +1933,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String activeExerciseCloseMessage(int completed, int total) {
-    return 'You have completed $completed of $total sets. You can resume later.';
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total sets',
+      one: '1 set',
+    );
+    return 'You have completed $completed of $_temp0. You can resume later.';
   }
 
   @override
@@ -1821,6 +2032,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Record the required performance for every set before completing all.';
 
   @override
+  String get completeTrainingSheetTitle => 'Finish session';
+
+  @override
+  String get completeTrainingSheetAction => 'Finish session';
+
+  @override
+  String get completeTrainingRpeQuestion => 'How hard was it? (RPE)';
+
+  @override
   String get circuitExerciseRestTitle => 'Rest between exercises';
 
   @override
@@ -1864,6 +2084,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackSendFromExercise => 'Send feedback';
+
+  @override
+  String feedbackChosenFileA11y(String kind, String duration) {
+    return '$kind, $duration';
+  }
 
   @override
   String get circuitFeedbackAction => 'Send videos';
@@ -1986,6 +2211,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measureCalf => 'Calf';
 
   @override
+  String get metricsMeasureSheetKicker => '06 · Measurements';
+
+  @override
+  String metricsMeasureLast(String value, String date) {
+    return 'Last: $value · $date';
+  }
+
+  @override
+  String get metricsMeasureEdited => 'Edited';
+
+  @override
+  String get metricsMeasureTapZone => 'Tap an area to measure it';
+
+  @override
+  String get metricsMeasureDone => 'Done';
+
+  @override
+  String get metricsMeasureLeftInitial => 'L';
+
+  @override
+  String get metricsMeasureRightInitial => 'R';
+
+  @override
+  String metricsMeasureZoneLeft(String zone) {
+    return '$zone, left side';
+  }
+
+  @override
+  String metricsMeasureZoneRight(String zone) {
+    return '$zone, right side';
+  }
+
+  @override
   String get noTrainingsAssigned => 'No trainings assigned';
 
   @override
@@ -1997,6 +2255,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noActivitiesThisMonthSubtitle => 'No trainings or diets scheduled';
+
+  @override
+  String get noPastTrainingsThisMonth => 'No past workouts this month';
+
+  @override
+  String get noPastTrainingsThisMonthSubtitle =>
+      'Workouts from past days will show up here.';
 
   @override
   String get onboardingWelcomeTitle => 'Welcome to EXOM!';
@@ -2074,6 +2339,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get onboardingProfileIncomplete => 'Profile incomplete';
+
+  @override
+  String get onboardingProfileHalfDone => 'Profile half done';
+
+  @override
+  String get onboardingProfileAlmostComplete => 'Profile almost complete';
+
+  @override
+  String get onboardingProfileComplete => 'Profile complete';
+
+  @override
+  String onboardingProfileCompletionA11y(String label, int percent) {
+    return '$label, $percent%';
+  }
+
+  @override
   String get onboardingSkipButton => 'Skip';
 
   @override
@@ -2088,6 +2370,97 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingErrorMessage =>
       'Error saving profile. Please try again.';
+
+  @override
+  String get onboardingWelcomeKicker => 'Welcome to EXOM';
+
+  @override
+  String get onboardingWelcomeHeadlineFirst => 'Your change.';
+
+  @override
+  String get onboardingWelcomeHeadlineSecond => 'With my method.';
+
+  @override
+  String get onboardingMethodOneTitle => 'I start from your reality.';
+
+  @override
+  String get onboardingMethodOneBody =>
+      'First of all, your starting point: tell me about yourself and how you live.';
+
+  @override
+  String get onboardingMethodTwoTitle => 'You know what to do.';
+
+  @override
+  String get onboardingMethodTwoBody =>
+      'With your plan in the app, every day you know what\'s next: your training, your nutrition and your progress.';
+
+  @override
+  String get onboardingMethodThreeTitle => 'I adjust it with you.';
+
+  @override
+  String get onboardingMethodThreeBody =>
+      'I review how you\'re doing and adjust the plan with you, based on your progress.';
+
+  @override
+  String get onboardingWelcomeSteps =>
+      'Let\'s set up your profile in four steps. It takes a minute and you can change it whenever you like.';
+
+  @override
+  String get onboardingBasicsHeadlineFirst => 'Basic details.';
+
+  @override
+  String get onboardingBasicsHeadlineSecond => 'I start from your reality.';
+
+  @override
+  String get onboardingBodyHeadlineFirst => 'Your body.';
+
+  @override
+  String get onboardingBodyHeadlineSecond => 'Your starting point.';
+
+  @override
+  String get onboardingGoalsHeadlineFirst => 'Your goals.';
+
+  @override
+  String get onboardingGoalsHeadlineSecond => 'With me by your side.';
+
+  @override
+  String get onboardingSummaryHeadlineFirst => 'Summary.';
+
+  @override
+  String get onboardingSummaryHeadlineSecond => 'Let\'s go for your change.';
+
+  @override
+  String get onboardingTargetsLabel => 'Targets';
+
+  @override
+  String get onboardingNumeralHint =>
+      'Tap the figure to type it. Decimals use a point.';
+
+  @override
+  String onboardingStepDecrease(String step) {
+    return 'Subtract $step';
+  }
+
+  @override
+  String onboardingStepIncrease(String step) {
+    return 'Add $step';
+  }
+
+  @override
+  String get onboardingNumberInvalid => 'Enter a valid number.';
+
+  @override
+  String get onboardingNumberNotPositive => 'Enter a value greater than 0.';
+
+  @override
+  String get onboardingPreviousStep => 'Previous step';
+
+  @override
+  String get onboardingSaveErrorTitle => 'Error saving profile.';
+
+  @override
+  String get onboardingSaveErrorBody =>
+      'Try again; your details are still here.';
 
   @override
   String get continueDraftRecap => 'Continue draft';
@@ -2108,6 +2481,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialSkipButton => 'Skip';
+
+  @override
+  String get promptDontShowAgain => 'Don\'t show again';
+
+  @override
+  String get recapSundayPromptTitle => 'It\'s recap day';
+
+  @override
+  String get recapSundayPromptBody =>
+      'Tell me how your week went. It takes five steps.';
+
+  @override
+  String get recapSundayPromptFill => 'Fill in recap';
 
   @override
   String get tutorialHomeTitle => 'Home';
@@ -2172,6 +2558,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialDoneButton => 'Done';
 
   @override
+  String tutorialStepProgress(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
   String get deleteAccountOption => 'Delete account';
 
   @override
@@ -2209,6 +2600,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsTitle => 'Notifications';
+
+  @override
+  String notificationsBellLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Notifications, $count unread',
+      zero: 'Notifications',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notificationsEmpty => 'No notifications yet';
@@ -2312,6 +2714,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get weeklyShoppingListEmpty =>
       'There are no ingredients in this week\'s meals';
+
+  @override
+  String get shoppingListSetupFirst => 'Pick your';
+
+  @override
+  String get shoppingListSetupSecond => 'alternatives.';
+
+  @override
+  String shoppingListMealsWithOptions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'meals',
+      one: 'meal',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shoppingListMealsWithOptionsFoot => 'with alternatives';
+
+  @override
+  String get shoppingListSetupNote =>
+      'The list is built from the option chosen for each meal.';
+
+  @override
+  String shoppingListQuestion(String day, String meal) {
+    return '$day · $meal';
+  }
+
+  @override
+  String shoppingListWeekRange(String start, String end) {
+    return 'Week from $start to $end';
+  }
+
+  @override
+  String get shoppingListResultFirst => 'Your list.';
+
+  @override
+  String get shoppingListResultSecondWeek => 'This week.';
+
+  @override
+  String get shoppingListResultSecondMonth => 'This month.';
+
+  @override
+  String shoppingListResultSecondWeekOf(String start) {
+    return 'Week of $start.';
+  }
+
+  @override
+  String shoppingListProducts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'products',
+      one: 'product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shoppingListCheckedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count checked',
+      one: '$count checked',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shoppingListShare => 'Share list';
 
   @override
   String get ingredientToTaste => 'to taste';
@@ -2523,8 +2998,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trainingRetryCompletion => 'Retry completion';
 
   @override
-  String get trainingPendingFinalizeNotice =>
-      'You have a workout pending completion';
+  String trainingPendingFinalizeNotice(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You have $count workouts pending completion',
+      one: 'You have a workout pending completion',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get trainingPendingFinalize => 'Pending completion';
@@ -2536,6 +3018,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trainingFinalize => 'Finish';
 
   @override
+  String get trainingsContinueSessionButton => 'Continue session';
+
+  @override
+  String get trainingsRestDayFirst => 'Rest';
+
+  @override
+  String get trainingsRestDaySecond => 'day.';
+
+  @override
+  String get trainingsNoPlanFirst => 'No plan.';
+
+  @override
+  String get trainingsNoPlanSecond => 'Yet.';
+
+  @override
+  String get trainingsHistoryPreviousMonth => 'Previous month';
+
+  @override
+  String get trainingsHistoryNextMonth => 'Next month';
+
+  @override
+  String get trainingsTodayHeadlineFirst => 'Today you know';
+
+  @override
+  String get trainingsTodayHeadlineSecond => 'what to do.';
+
+  @override
+  String get trainingsFigureMinutesApprox => 'approx. min';
+
+  @override
+  String get trainingsHistoryDone => 'Done';
+
+  @override
   String get trainingDraftRecoveryFailed =>
       'Draft recovery failed. Saved data remains available.';
 
@@ -2544,8 +3059,86 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete each exercise and attach a video of its last set.';
 
   @override
+  String trainingLastSetVideoMissingFor(String exercises) {
+    return 'The last-set video is missing for: $exercises.';
+  }
+
+  @override
+  String get trainingLastSetVideoOpenExercise => 'Go to exercise';
+
+  @override
+  String trainingFeedbackFailedFor(String exercises) {
+    return 'The video could not be sent for: $exercises';
+  }
+
+  @override
+  String trainingFeedbackWaitingFor(String exercises) {
+    return 'Waiting for the video of: $exercises';
+  }
+
+  @override
+  String get lastSetVideoPending => 'Video waiting to be sent';
+
+  @override
+  String get lastSetVideoSending => 'Sending the video';
+
+  @override
+  String get lastSetVideoSent => 'Video sent';
+
+  @override
+  String get lastSetVideoMissing => 'The last-set video is missing';
+
+  @override
+  String lastSetVideoFailed(String reason) {
+    return 'The video could not be sent: $reason';
+  }
+
+  @override
+  String lastSetVideoMemberFailed(String exercise, String reason) {
+    return '$exercise: the video could not be sent ($reason)';
+  }
+
+  @override
+  String get lastSetVideoReasonFileMissing =>
+      'the file is no longer on this phone';
+
+  @override
+  String get lastSetVideoReasonTooLarge => 'the file is too large';
+
+  @override
+  String get lastSetVideoReasonUnsupported => 'the format is not supported';
+
+  @override
+  String get lastSetVideoReasonPreparation => 'the video could not be prepared';
+
+  @override
+  String get lastSetVideoReasonRejected => 'the server did not accept it';
+
+  @override
+  String get lastSetVideoRerecord => 'Record again';
+
+  @override
+  String lastSetVideoRerecordFor(String exercise) {
+    return 'Record the video of $exercise again';
+  }
+
+  @override
+  String get lastSetVideoRerecordFailed =>
+      'The new video could not be saved. The previous one is still on this phone.';
+
+  @override
+  String get pendingEvidenceExerciseUnnamed => 'Exercise from a workout';
+
+  @override
+  String get pendingEvidenceExerciseGeneric => 'Exercise';
+
+  @override
   String get pendingFeedbackError =>
       'The feedback could not be sent. Your evidence is kept; retry or review the upload.';
+
+  @override
+  String get pendingFeedbackQueuedRetry =>
+      'It will retry on its own. Your evidence is kept.';
 
   @override
   String pendingEvidenceExercise(String exercise) {
@@ -2581,6 +3174,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingUploadDeleteTitle => 'Delete this evidence?';
+
+  @override
+  String get pendingSyncDeleteTitle => 'Delete this unsynced change?';
 
   @override
   String get pendingUploadDeleteMessage =>
@@ -2637,6 +3233,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The circuit could not be saved. Your data is still here; try again.';
 
   @override
+  String get circuitLastRoundVideoSaveError =>
+      'Couldn\'t save the video. The round is saved; we\'ll ask for it when you finish.';
+
+  @override
   String get mediaPickerPermissionTitle => 'Permission required';
 
   @override
@@ -2662,6 +3262,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The next set is the final one. You will need to attach its video to complete the exercise.';
 
   @override
+  String get currentLastSetMessage =>
+      'This is your last set. Once you save it, you can record the video.';
+
+  @override
   String get understood => 'Got it';
 
   @override
@@ -2670,6 +3274,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lastSetVideoRequiredDescription =>
       'It is required to complete this exercise.';
+
+  @override
+  String get lastSetVideoRecoveryError =>
+      'We could not recover your last set\'s video. Record or choose it again.';
 
   @override
   String get videoReadyTitle => 'Video ready';
@@ -2732,6 +3340,110 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pendingSyncConflict =>
       'Some changes conflict. Your pending data is kept. Review the workout and explicitly discard old actions before recording your chosen change.';
+
+  @override
+  String get pendingSyncWaitsOwnVideo =>
+      'It will be sent once the last-set video is uploaded.';
+
+  @override
+  String get pendingSyncWaitsBehindVideo =>
+      'It will be sent after another exercise of this workout that is waiting for its video.';
+
+  @override
+  String get pendingSyncWaitsBehindDayVideo =>
+      'It will be sent after other activity from this day that is waiting for a video.';
+
+  @override
+  String pendingUploadsCountSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '1 pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pendingUploadsErrorCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count failed',
+      one: '1 failed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsNone => 'Nothing pending';
+
+  @override
+  String get pendingUploadsKicker => 'On this phone';
+
+  @override
+  String pendingUploadsHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pending uploads',
+      one: 'pending upload',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pendingUploadsSectionEvidence => 'Evidence';
+
+  @override
+  String get pendingUploadsSectionSent => 'Sent';
+
+  @override
+  String get pendingUploadsEmptyFirst => 'All clear.';
+
+  @override
+  String get pendingUploadsEmptySecond => 'No uploads.';
+
+  @override
+  String get pendingUploadsEmptyBody =>
+      'Every file stays on this phone until EXOM confirms it received it.';
+
+  @override
+  String get pendingMediaVideo => 'Feedback video';
+
+  @override
+  String get pendingMediaImage => 'Feedback image';
+
+  @override
+  String pendingUploadSendingBytes(int percent, String sent, String total) {
+    return 'Sending $percent% · $sent of $total MB';
+  }
+
+  @override
+  String pendingUploadSendingKilobytes(int percent, String sent, String total) {
+    return 'Sending $percent% · $sent of $total KB';
+  }
+
+  @override
+  String get pendingRetryFailed =>
+      'The upload could not be retried. Your evidence is kept.';
+
+  @override
+  String get pendingRetryRequested => 'Retry requested.';
+
+  @override
+  String get pendingRetryNotStarted =>
+      'The retry didn\'t complete. Your data is kept.';
+
+  @override
+  String get pendingDeleteIncomplete =>
+      'The deletion was not completed. Your data is kept.';
+
+  @override
+  String get pendingDeleteDone => 'Evidence deleted.';
+
+  @override
+  String get pendingSyncDeleteDone => 'Action deleted.';
 
   @override
   String get progressPhotosTitle => 'Progress photos';
@@ -2884,6 +3596,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progressPhotosDiscardConfirm => 'Discard';
 
   @override
+  String get progressPhotosHeadlineFirst => 'Look back.';
+
+  @override
+  String get progressPhotosHeadlineSecond => 'Keep going.';
+
+  @override
+  String progressPhotosLastSession(String date) {
+    return 'Last session: $date';
+  }
+
+  @override
+  String get progressPhotosEmptyFirst => 'No photos.';
+
+  @override
+  String get progressPhotosEmptySecond => 'Yet.';
+
+  @override
+  String progressPhotosRetryView(String view) {
+    return 'Retry $view photo';
+  }
+
+  @override
+  String progressPhotosDiscardView(String view) {
+    return 'Discard $view photo';
+  }
+
+  @override
+  String progressPhotosSourceKicker(String view, String date) {
+    return '$view · $date';
+  }
+
+  @override
   String get executionPrepareTitle => 'Get ready';
 
   @override
@@ -2897,6 +3641,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get executionPrepareCancel => 'Cancel';
+
+  @override
+  String get executionPrepareUnitSeconds => 's';
 
   @override
   String inputExample(String value) {
@@ -2923,6 +3670,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newTrainingExecution => 'New execution';
+
+  @override
+  String trainingExecutionLabel(int number) {
+    return 'Session $number';
+  }
 
   @override
   String get quarantinedWorkoutNotice =>
@@ -3002,6 +3754,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'The file did not reach the server. Upload it again.';
 
   @override
+  String get errorFileMissing =>
+      'The file is no longer on this phone. Record it again or choose another one.';
+
+  @override
+  String get errorLastSetVideoRequired => 'The last-set video is missing.';
+
+  @override
+  String get errorLastSetFeedbackPending =>
+      'The last-set video has not been confirmed yet.';
+
+  @override
+  String get errorLastSetFeedbackInvalid =>
+      'The last-set video does not match this session. Record it again.';
+
+  @override
   String get errorUploadSessionChanged =>
       'The account changed during the upload. Sign in with the original account to continue.';
 
@@ -3034,6 +3801,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'The summary could not be loaded. Please try again.';
 
   @override
+  String get metricsDayLoading => 'Loading the day…';
+
+  @override
+  String get metricsDayLoadError =>
+      'We could not load the metrics for this day';
+
+  @override
   String get metricsSaveError =>
       'The measurements could not be saved. Please try again.';
 
@@ -3048,6 +3822,88 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileOperationError =>
       'The profile operation could not be completed. Please try again.';
+
+  @override
+  String get profileHeadlineFirst => 'Look back.';
+
+  @override
+  String get profileHeadlineSecond => 'Keep going.';
+
+  @override
+  String profileStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileChangePhotoA11y => 'Change profile photo';
+
+  @override
+  String get profileAvatarSending => 'Sending profile photo';
+
+  @override
+  String profileWeightSince(String value) {
+    return 'from $value';
+  }
+
+  @override
+  String profileGoalShare(String percent) {
+    return '$percent of goal';
+  }
+
+  @override
+  String profileGoalValue(String value) {
+    return 'Goal: $value';
+  }
+
+  @override
+  String get profileIndexMetrics => 'Update weight and measurements';
+
+  @override
+  String get profileEmptyFirst => 'No data';
+
+  @override
+  String get profileEmptySecond => 'yet.';
+
+  @override
+  String profileMeasurementsUpdated(String date) {
+    return 'Measurements · last updated $date';
+  }
+
+  @override
+  String get profileGoalSheetFirst => 'Muscle mass';
+
+  @override
+  String get profileGoalSheetSecond => 'goal';
+
+  @override
+  String profileGoalLatest(String value) {
+    return 'Latest measurement: $value';
+  }
+
+  @override
+  String profileGoalDecrease(String step) {
+    return 'Subtract $step';
+  }
+
+  @override
+  String profileGoalIncrease(String step) {
+    return 'Add $step';
+  }
+
+  @override
+  String get profileGoalInvalid => 'Enter a goal greater than 0.';
+
+  @override
+  String get profileGoalEditA11y => 'Edit muscle mass goal';
+
+  @override
+  String get profileHoursUnit => 'h';
 
   @override
   String get recapSaveError =>
@@ -3088,19 +3944,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseAnOption => 'Choose an option';
 
   @override
-  String streakDaysLabel(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'day streak',
-      one: 'day streak',
-      zero: 'day streak',
-    );
-    return '$_temp0';
-  }
+  String get recapDetailTitle => 'Recap details';
 
   @override
-  String get recapDetailTitle => 'Recap details';
+  String get recapDetailHeadlineFirst => 'Look back.';
+
+  @override
+  String get recapDetailHeadlineSecond => 'Keep going.';
 
   @override
   String recapReviewedOn(String date) {
@@ -3207,28 +4057,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timerReset => 'Reset timer';
 
   @override
-  String get streakMsgStart => 'Start your streak today!';
-
-  @override
-  String get streakMsgFirstDay => 'First day done! Keep it up';
-
-  @override
-  String get streakMsgGoingWell => 'You are doing great! Do not stop';
-
-  @override
-  String get streakMsgWeek => 'A full week in a row! Incredible';
-
-  @override
-  String streakMsgMachine(int days) {
-    return 'You are a machine! Over $days days';
-  }
-
-  @override
-  String streakMsgLegend(int days) {
-    return 'Living legend! $days-day streak';
-  }
-
-  @override
   String get recapSignInRequired => 'Sign in to view the recap.';
 
   @override
@@ -3243,4 +4071,1369 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get activeExerciseOtherExecution =>
       'A saved workout belongs to another execution. Choose which one to keep before continuing.';
+
+  @override
+  String get navTabChallengesA11y => 'Challenges';
+
+  @override
+  String get navTabTrainingsA11y => 'Train';
+
+  @override
+  String get navTabHomeA11y => 'Home';
+
+  @override
+  String get navTabDietsA11y => 'Diets';
+
+  @override
+  String get navTabCalendarA11y => 'Calendar';
+
+  @override
+  String get navTabChallengesLabel => 'Challenges';
+
+  @override
+  String get navTabTrainingsLabel => 'Train';
+
+  @override
+  String get navTabHomeLabel => 'Home';
+
+  @override
+  String get navTabDietsLabel => 'Diets';
+
+  @override
+  String get navTabCalendarLabel => 'Calendar';
+
+  @override
+  String get shellMenuTooltip => 'Menu';
+
+  @override
+  String get syncStatusSavedOnDevice => 'Saved on this phone';
+
+  @override
+  String get syncStatusPending => 'Waiting to sync';
+
+  @override
+  String get syncStatusSending => 'Sending';
+
+  @override
+  String get syncStatusConfirmed => 'Confirmed';
+
+  @override
+  String get syncStatusFailed => 'Could not sync';
+
+  @override
+  String get buttonBusyA11y => 'In progress';
+
+  @override
+  String get sheetBarrierA11y => 'Close sheet';
+
+  @override
+  String get noticeUnreadA11y => 'Unread';
+
+  @override
+  String get homeStartSessionButton => 'Start session';
+
+  @override
+  String get homeContinueSessionButton => 'Continue session';
+
+  @override
+  String get homeSessionDone => 'Done';
+
+  @override
+  String get homeSessionUnfinished => 'Not finished';
+
+  @override
+  String get homeRestDayTitle => 'Rest';
+
+  @override
+  String get homeRestDayToday => 'No training assigned for today.';
+
+  @override
+  String get homeRestDayOther => 'No training assigned for this day.';
+
+  @override
+  String homeFactSessions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count exercises',
+      one: '1 exercise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactExercisesProgress(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total exercises',
+      one: '$done of 1 exercise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFactDuration(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String homeFactSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeProgramWeek(int week) {
+    return 'week $week';
+  }
+
+  @override
+  String homeProgramWeekDay(int week, int day) {
+    return 'week $week, day $day';
+  }
+
+  @override
+  String homeMealsDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total meals done',
+      one: '$done of 1 meal done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeRemainingKcal(String kcal) {
+    return '$kcal kcal left';
+  }
+
+  @override
+  String homeStreakRow(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+      zero: 'No active streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeWeekDayToday(String day) {
+    return '$day, today';
+  }
+
+  @override
+  String homeWeekDayDone(String day) {
+    return '$day, session done';
+  }
+
+  @override
+  String homeWeekDayPending(String day) {
+    return '$day, session pending';
+  }
+
+  @override
+  String homeWeekDayMissed(String day) {
+    return '$day, session not done';
+  }
+
+  @override
+  String get homeRestHeadlineFirst => 'Rest.';
+
+  @override
+  String get homeRestHeadlineSecond => 'It counts too.';
+
+  @override
+  String get homeNoPlanBody =>
+      'Once they do, you will see each day\'s session here.';
+
+  @override
+  String get homeOfflineSavedData => 'Offline · saved data';
+
+  @override
+  String get homeWeekTitle => 'Your week';
+
+  @override
+  String homeWeekSessionsDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total sessions done',
+      one: '$done of 1 session done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeWeekSessionsDoneFoot(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'sessions done',
+      one: 'session done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeStreakRowFoot => 'Challenges and achievements';
+
+  @override
+  String homeStreakDaysUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'exercises',
+      one: 'exercise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeFigureSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'sets',
+      one: 'set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeFigureMinutes => 'min approx.';
+
+  @override
+  String get homeFigureMinutesLeft => 'min left';
+
+  @override
+  String get homeLoadingLabel => 'Loading today\'s summary';
+
+  @override
+  String trainingDetailExercises(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count exercises',
+      one: '1 exercise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailDuration(int minutes) {
+    return 'about $minutes min';
+  }
+
+  @override
+  String trainingDetailPrescription(int sets, String prescription, int rest) {
+    return '$sets × $prescription · rest $rest s';
+  }
+
+  @override
+  String trainingDetailPrevious(String value) {
+    return 'Last time $value';
+  }
+
+  @override
+  String trainingDetailReps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reps',
+      one: '1 rep',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailSetsProgress(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total sets',
+      one: '$done of 1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailToday(String value) {
+    return 'Today $value';
+  }
+
+  @override
+  String trainingDetailNextAction(String name) {
+    return 'Next: $name';
+  }
+
+  @override
+  String get trainingDetailCompletionSavedPending =>
+      'Saved on this phone · waiting to sync';
+
+  @override
+  String get trainingDetailSessionFinished => 'Finished';
+
+  @override
+  String trainingDetailExercisesDone(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total done',
+      one: '$done of 1 done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trainingDetailProgressKicker => 'Session progress';
+
+  @override
+  String trainingDetailSetsDoneOf(int done, int total) {
+    return '$done of $total';
+  }
+
+  @override
+  String trainingDetailSetsDoneLabel(int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'sets done',
+      one: 'set done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trainingDetailProgressSemantics(
+    int done,
+    int total,
+    int setsDone,
+    int setsTotal,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total exercises done',
+      one: '1 exercise done',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      setsTotal,
+      locale: localeName,
+      other: '$setsTotal sets done',
+      one: '1 set done',
+    );
+    return '$done of $_temp0, $setsDone of $_temp1';
+  }
+
+  @override
+  String get activeExerciseCloseA11y => 'Close exercise';
+
+  @override
+  String activeExercisePosition(int current, int total) {
+    return 'Exercise $current of $total';
+  }
+
+  @override
+  String activeExerciseSetOf(int current, int total) {
+    return 'Set $current of $total';
+  }
+
+  @override
+  String get activeExerciseUnitReps => 'reps';
+
+  @override
+  String get activeExerciseUnitSeconds => 's';
+
+  @override
+  String get activeExerciseUnitMinutes => 'min';
+
+  @override
+  String activeExerciseRir(int rir) {
+    return 'RIR $rir';
+  }
+
+  @override
+  String activeExerciseTargetA11y(String target) {
+    return 'Target: $target';
+  }
+
+  @override
+  String activeExerciseYourWeight(String weight) {
+    return 'Your weight: $weight';
+  }
+
+  @override
+  String get activeExerciseNoPrevious => 'No previous data';
+
+  @override
+  String activeExerciseRestAfter(int seconds) {
+    return 'Rest afterwards: $seconds s';
+  }
+
+  @override
+  String get activeExerciseSetsA11y => 'Sets of this exercise';
+
+  @override
+  String get activeExerciseSetNow => 'Now';
+
+  @override
+  String get activeExerciseSetDone => 'Done';
+
+  @override
+  String activeExerciseSetChipDoneA11y(int setNumber, String value) {
+    return 'Set $setNumber: $value, saved on this phone';
+  }
+
+  @override
+  String activeExerciseSetChipNowA11y(int setNumber) {
+    return 'Set $setNumber, now';
+  }
+
+  @override
+  String activeExerciseSetChipNextA11y(int setNumber, String value) {
+    return 'Set $setNumber, $value';
+  }
+
+  @override
+  String activeExerciseSetSavedStatus(int setNumber, String status) {
+    return 'Set $setNumber · $status';
+  }
+
+  @override
+  String get activeExerciseTechniqueButton => 'View technique';
+
+  @override
+  String get activeExerciseTechniqueClose => 'Close';
+
+  @override
+  String get activeExerciseLogSetButton => 'Log set';
+
+  @override
+  String activeExerciseRestNext(int setNumber, String target) {
+    return 'Next: Set $setNumber · $target';
+  }
+
+  @override
+  String activeExerciseRestNextWithWeight(
+    int setNumber,
+    String target,
+    String weight,
+  ) {
+    return 'Next: Set $setNumber · $target · your weight $weight';
+  }
+
+  @override
+  String activeExerciseRestExtend(int seconds) {
+    return '+$seconds s';
+  }
+
+  @override
+  String get activeExerciseRestSkip => 'Skip rest';
+
+  @override
+  String activeExerciseRestRemainingA11y(String time) {
+    return 'Rest, $time left';
+  }
+
+  @override
+  String get activeExerciseRestTenSecondsA11y => '10 seconds of rest left';
+
+  @override
+  String get activeExerciseRestFinishedA11y => 'Rest finished';
+
+  @override
+  String activeExerciseSetOfLine(int total) {
+    return 'of $total.';
+  }
+
+  @override
+  String get activeExerciseTargetCaption => 'set target';
+
+  @override
+  String get activeExerciseYourWeightLabel => 'Your weight';
+
+  @override
+  String activeExerciseLastTimeA11y(String performance) {
+    return 'Last time: $performance';
+  }
+
+  @override
+  String get activeExerciseRestHeadline => 'Rest.';
+
+  @override
+  String activeExerciseRestThenSet(int setNumber) {
+    return 'Then, set $setNumber.';
+  }
+
+  @override
+  String activeExerciseRestThenExercise(String exercise) {
+    return 'Then, $exercise.';
+  }
+
+  @override
+  String get activeExerciseRestExerciseDone => 'Exercise completed.';
+
+  @override
+  String get activeExerciseNextLabel => 'Next';
+
+  @override
+  String get activeExerciseRestNextWeightLabel => 'your weight';
+
+  @override
+  String setSheetExerciseKicker(String exercise) {
+    return '$exercise · log';
+  }
+
+  @override
+  String get lastSetVideoRemindMe => 'Remind me';
+
+  @override
+  String lastSetVideoSheetKicker(String exercise, int setNumber) {
+    return '$exercise · set $setNumber';
+  }
+
+  @override
+  String lastSetVideoChosenSet(int setNumber, String performance) {
+    return 'Set $setNumber · $performance';
+  }
+
+  @override
+  String get changeVideoA11y => 'Change video';
+
+  @override
+  String videoReadyWithDurationA11y(String duration) {
+    return 'Video ready, duration $duration';
+  }
+
+  @override
+  String setSheetObjective(String objective) {
+    return 'Target $objective';
+  }
+
+  @override
+  String setSheetObjectiveWithPrevious(String objective, String previous) {
+    return 'Target $objective — Last time $previous';
+  }
+
+  @override
+  String setSheetSameAsPrevious(String value) {
+    return 'Same as last time · $value';
+  }
+
+  @override
+  String get setSheetRepsLabel => 'Reps';
+
+  @override
+  String get setSheetSecondsLabel => 'Seconds';
+
+  @override
+  String get setSheetWeightLabel => 'Weight';
+
+  @override
+  String get setSheetWeightKgA11y => 'Weight in kilograms';
+
+  @override
+  String get setSheetWeightLbA11y => 'Weight in pounds';
+
+  @override
+  String setSheetWeightHint(String step) {
+    return 'steps of $step · tap the number to type';
+  }
+
+  @override
+  String setSheetWeightStep(String step) {
+    return '± $step';
+  }
+
+  @override
+  String get setSheetRirLabel => 'RIR';
+
+  @override
+  String setSheetRirChipA11y(int value) {
+    return 'RIR $value';
+  }
+
+  @override
+  String get setSheetRirFivePlusA11y => 'RIR 5 or more';
+
+  @override
+  String get setSheetRepsDecrement => 'One rep less';
+
+  @override
+  String get setSheetRepsIncrement => 'One rep more';
+
+  @override
+  String setSheetSecondsDecrement(int step) {
+    return '$step seconds less';
+  }
+
+  @override
+  String setSheetSecondsIncrement(int step) {
+    return '$step seconds more';
+  }
+
+  @override
+  String get setSheetMinutesDecrement => 'One minute less';
+
+  @override
+  String get setSheetMinutesIncrement => 'One minute more';
+
+  @override
+  String setSheetWeightDecrement(String step) {
+    return 'Subtract $step';
+  }
+
+  @override
+  String setSheetWeightIncrement(String step) {
+    return 'Add $step';
+  }
+
+  @override
+  String get setSheetSave => 'Save set';
+
+  @override
+  String setInputNotANumber(String value, String example) {
+    return 'Can’t read “$value”. Enter a number, e.g. $example';
+  }
+
+  @override
+  String setInputWeightAmbiguous(String value, String example) {
+    return '“$value” is ambiguous. Use one decimal point, e.g. $example';
+  }
+
+  @override
+  String setInputTooManyDecimals(String example) {
+    return 'Two decimals at most, e.g. $example';
+  }
+
+  @override
+  String setInputNotInteger(String example) {
+    return 'Must be a whole number, e.g. $example';
+  }
+
+  @override
+  String setInputAboveMax(String max) {
+    return 'Maximum $max';
+  }
+
+  @override
+  String get circuitCloseA11y => 'Close circuit';
+
+  @override
+  String circuitRoundOf(int current, int total) {
+    return 'Round $current of $total';
+  }
+
+  @override
+  String exomStepOf(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String exomChartSummary(int count, String last) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count points, latest value $last',
+      one: '1 point, latest value $last',
+      zero: 'No data',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circuitThisRound => 'This round';
+
+  @override
+  String get circuitNotLogged => 'Not logged';
+
+  @override
+  String circuitRowDoneA11y(String name, String value) {
+    return '$name: $value, saved on this phone';
+  }
+
+  @override
+  String circuitRowNotLoggedA11y(String name) {
+    return '$name: not logged';
+  }
+
+  @override
+  String circuitRowNowA11y(String name) {
+    return '$name: now';
+  }
+
+  @override
+  String circuitRowNowWithTargetA11y(String name, String target) {
+    return '$name: now, $target';
+  }
+
+  @override
+  String circuitRowNextA11y(String name, String target) {
+    return '$name: later, $target';
+  }
+
+  @override
+  String circuitRowLaterA11y(String name) {
+    return '$name: later';
+  }
+
+  @override
+  String circuitRoundRestAfter(int seconds) {
+    return 'Round rest afterwards: $seconds s';
+  }
+
+  @override
+  String get circuitEndsAfter => 'Then: end of the circuit';
+
+  @override
+  String get circuitFinalRestTitle => 'Last rest';
+
+  @override
+  String circuitRoundDone(int round) {
+    return 'Round $round done';
+  }
+
+  @override
+  String circuitNextExercise(String name, String target) {
+    return 'Next: $name · $target';
+  }
+
+  @override
+  String circuitNextExerciseWithWeight(
+    String name,
+    String target,
+    String weight,
+  ) {
+    return 'Next: $name · $target · your weight $weight';
+  }
+
+  @override
+  String circuitNextRound(int round, String name) {
+    return 'Next: Round $round · $name';
+  }
+
+  @override
+  String get circuitAfterRestEnd => 'Then: end of the circuit';
+
+  @override
+  String get circuitFinishButton => 'Finish circuit';
+
+  @override
+  String get circuitReadyTitle => 'All rounds done';
+
+  @override
+  String circuitSheetTitle(String name, int round) {
+    return '$name · Round $round';
+  }
+
+  @override
+  String circuitSavedStatus(String name, int round, String status) {
+    return '$name, round $round · $status';
+  }
+
+  @override
+  String circuitStepExercise(String name) {
+    return '$name.';
+  }
+
+  @override
+  String circuitStepPosition(int current, int total) {
+    return 'Exercise $current of $total.';
+  }
+
+  @override
+  String get circuitTargetLabel => 'Target';
+
+  @override
+  String circuitTargetLabelWithRir(int rir) {
+    return 'Target · RIR $rir';
+  }
+
+  @override
+  String get exerciseLastTimeLabel => 'Last time';
+
+  @override
+  String circuitRoundLogged(int done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$done of $total logged',
+      one: '$done of 1 logged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get circuitRowLater => 'Later';
+
+  @override
+  String get progressTitle => 'Progress';
+
+  @override
+  String get progressSubtitle => 'Weight, measures and photos';
+
+  @override
+  String get progressHeadlineFirst => 'Look back.';
+
+  @override
+  String get progressHeadlineSecond => 'Keep going.';
+
+  @override
+  String get progressLatestMeasures => 'Latest measurements';
+
+  @override
+  String get progressAddMeasure => 'Add measurement';
+
+  @override
+  String progressOnDate(String date) {
+    return 'on $date';
+  }
+
+  @override
+  String progressDeltaLess(String amount, String period) {
+    return '$amount less in $period';
+  }
+
+  @override
+  String progressDeltaMore(String amount, String period) {
+    return '$amount more in $period';
+  }
+
+  @override
+  String progressDeltaSame(String period) {
+    return 'No change in $period';
+  }
+
+  @override
+  String progressPeriodWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count weeks',
+      one: '1 week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressPeriodDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String progressChartSemantics(
+    String from,
+    String to,
+    String start,
+    String end,
+  ) {
+    return 'Weight from $from to $to: $start to $end';
+  }
+
+  @override
+  String get progressChartEmpty => 'Log at least two weights to see the chart.';
+
+  @override
+  String get progressWeightEmpty => 'You have not logged your weight yet.';
+
+  @override
+  String get progressMeasuresEmpty => 'No measurements logged yet.';
+
+  @override
+  String progressMeasureSide(String measure, String side) {
+    return '$measure · $side';
+  }
+
+  @override
+  String get progressLoading => 'Loading your progress';
+
+  @override
+  String get progressHistoryError => 'We could not load your progress.';
+
+  @override
+  String get progressHistoryOffline =>
+      'No connection. Connect to see your progress.';
+
+  @override
+  String get progressCachedBanner => 'Offline · saved data';
+
+  @override
+  String get progressLatestUnavailableOffline =>
+      'Your latest record\'s measurements aren\'t available offline.';
+
+  @override
+  String get progressLatestUnavailableError =>
+      'Couldn\'t load your latest record\'s measurements.';
+
+  @override
+  String get noticesScreenTitle => 'Notifications';
+
+  @override
+  String get noticesEmptyFirst => 'All';
+
+  @override
+  String get noticesEmptySecond => 'caught up.';
+
+  @override
+  String get noticeTimeNow => 'now';
+
+  @override
+  String noticeTimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String noticeTimeHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String noticeTimeDays(int days) {
+    return '$days d';
+  }
+
+  @override
+  String get noticesUnreadHero => 'unread';
+
+  @override
+  String get noticesAllCaughtUp => 'All caught up';
+
+  @override
+  String get noticesGroupToday => 'Today';
+
+  @override
+  String get noticesGroupThisWeek => 'This week';
+
+  @override
+  String get noticesGroupEarlier => 'Earlier';
+
+  @override
+  String get videoPlayerPause => 'Pause';
+
+  @override
+  String get videoPlayerPlay => 'Play';
+
+  @override
+  String get videoPlayerProgress => 'Video progress';
+
+  @override
+  String get videoPlayerRewind5 => 'Rewind 5 s';
+
+  @override
+  String get videoPlayerForward5 => 'Forward 5 s';
+
+  @override
+  String calendarMonthTitleLabel(String month) {
+    return '$month, choose month and year';
+  }
+
+  @override
+  String get calendarHeroTrainingFirst => 'Your month,';
+
+  @override
+  String get calendarHeroTrainingSecond => 'organized.';
+
+  @override
+  String get calendarHeroTrainingFoot => 'sessions done';
+
+  @override
+  String get calendarHeroDietFirst => 'Your meals.';
+
+  @override
+  String get calendarHeroDietSecond => 'No improvising.';
+
+  @override
+  String get calendarHeroDietFoot => 'meals this week';
+
+  @override
+  String get calendarHeroNoSessions => 'sessions';
+
+  @override
+  String calendarHeroNoSessionsFoot(String year) {
+    return '$year · no sessions scheduled';
+  }
+
+  @override
+  String calendarWeekTrainings(String done, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total workouts',
+      one: '$total workout',
+    );
+    return '$done of $_temp0 this week';
+  }
+
+  @override
+  String get calendarEmptyMonthFirst => 'No activities';
+
+  @override
+  String get calendarEmptyMonthSecond => 'this month.';
+
+  @override
+  String get calendarOfflineFirst => 'Offline.';
+
+  @override
+  String get calendarOfflineSecond => 'Nothing is lost.';
+
+  @override
+  String get calendarOfflineMessage =>
+      'Offline. The calendar could not be loaded.';
+
+  @override
+  String get calendarRestDayFacts => 'No training assigned.';
+
+  @override
+  String calendarActiveChallengesToday(int count, String figure) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$figure active challenges today',
+      one: '$figure active challenge today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calendarDayWithChallenge(String day) {
+    return '$day, with a challenge';
+  }
+
+  @override
+  String calendarDayDietDone(String day) {
+    return '$day, diet completed';
+  }
+
+  @override
+  String calendarDayDietPending(String day) {
+    return '$day, diet pending';
+  }
+
+  @override
+  String calendarDayDietMissed(String day) {
+    return '$day, diet not completed';
+  }
+
+  @override
+  String get calendarMonthPickerKicker => 'Choose month and year';
+
+  @override
+  String get calendarPreviousYear => 'Previous year';
+
+  @override
+  String get calendarNextYear => 'Next year';
+
+  @override
+  String get calendarExportPeriodKicker => 'Diets · calendar';
+
+  @override
+  String get calendarExportPeriodFirst => 'Choose';
+
+  @override
+  String get calendarExportPeriodSecond => 'a period';
+
+  @override
+  String get calendarExportFormatFirst => 'What do you want';
+
+  @override
+  String get calendarExportFormatSecond => 'to export?';
+
+  @override
+  String get dietHeadlineFirst => 'Your meals.';
+
+  @override
+  String get dietHeadlineSecond => 'No improvising.';
+
+  @override
+  String get dietEmptyHeadlineFirst => 'No plan.';
+
+  @override
+  String get dietEmptyHeadlineSecond => 'For now.';
+
+  @override
+  String get dietLeftKicker => 'Left to eat';
+
+  @override
+  String dietOfTotalKcal(int total) {
+    return 'of $total kcal';
+  }
+
+  @override
+  String get mealOptionsLabel => 'Options';
+
+  @override
+  String get mealDoneStatus => 'Done';
+
+  @override
+  String get feedbackUploadPreparingBody =>
+      'It is saved on this phone before it is sent.';
+
+  @override
+  String get feedbackUploadProcessingTitle => 'Sent · processing in EXOM';
+
+  @override
+  String get feedbackUploadProcessingBody =>
+      'Not confirmed yet. You can close the app.';
+
+  @override
+  String get feedbackUploadConfirmedBody => 'Your coach can review it now.';
+
+  @override
+  String get feedbackUploadFailedTitle => 'Couldn\'t send it.';
+
+  @override
+  String get feedbackUploadKeptBody => 'Your evidence is kept on this phone.';
+
+  @override
+  String get feedbackUploadOfflineBody =>
+      'It will be sent when the connection is back.';
+
+  @override
+  String get feedbackEmptyFirst => 'No feedback.';
+
+  @override
+  String get feedbackEmptySecond => 'Yet.';
+
+  @override
+  String get feedbackQuestionType => 'Evidence type';
+
+  @override
+  String get feedbackQuestionFile => 'File';
+
+  @override
+  String get feedbackChooseFile => 'Choose file';
+
+  @override
+  String get feedbackRemoveFile => 'Remove';
+
+  @override
+  String get recapListHeadlineFirst => 'Your week.';
+
+  @override
+  String get recapListHeadlineSecond => 'It counts too.';
+
+  @override
+  String recapListWeekSubtitle(String start, String end) {
+    return 'Week of $start to $end';
+  }
+
+  @override
+  String recapListNewCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'new comments from your coach',
+      one: 'new comment from your coach',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recapListNotRated => 'Not rated';
+
+  @override
+  String get coachNameMoi => 'Moi';
+
+  @override
+  String get recapListEmptyHeadlineFirst => 'No recaps.';
+
+  @override
+  String get recapListEmptyHeadlineSecond => 'Yet.';
+
+  @override
+  String get recapListEmptyCoachText =>
+      'Tell me how your week went in five steps.';
+
+  @override
+  String get recapListErrorHeadlineFirst => 'Something went wrong';
+
+  @override
+  String get recapListErrorHeadlineSecond => 'with the recap.';
+
+  @override
+  String recapStepKicker(int step, int total) {
+    return 'Weekly recap · step $step of $total';
+  }
+
+  @override
+  String get recapStepTrainingFirst => 'Training.';
+
+  @override
+  String get recapStepTrainingSecond => 'How it went.';
+
+  @override
+  String get recapStepNutritionFirst => 'Nutrition.';
+
+  @override
+  String get recapStepNutritionSecond => 'Your week counts.';
+
+  @override
+  String get recapStepRecoveryFirst => 'Recovery.';
+
+  @override
+  String get recapStepRecoverySecond => 'How you are.';
+
+  @override
+  String get recapStepGeneralFirst => 'General.';
+
+  @override
+  String get recapStepGeneralSecond => 'How you feel.';
+
+  @override
+  String get recapStepImprovementFirst => 'Improve.';
+
+  @override
+  String get recapStepImprovementSecond => 'Your opinion counts.';
+
+  @override
+  String get recapStepTrainingCoach =>
+      'Tell me how your workouts went this week.';
+
+  @override
+  String get recapStepNutritionCoach => 'Tell me how you ate this week.';
+
+  @override
+  String get recapStepRecoveryCoach =>
+      'Tell me how you rested and whether you felt any discomfort.';
+
+  @override
+  String get recapStepGeneralCoach => 'Tell me how you felt overall this week.';
+
+  @override
+  String get recapStepImprovementCoach =>
+      'Tell me what you would improve about the service and the app.';
+
+  @override
+  String get recapStartHeadlineFirst => 'Your week.';
+
+  @override
+  String get recapStartHeadlineSecond => 'In five steps.';
+
+  @override
+  String get recapSaveDraft => 'Save draft';
+
+  @override
+  String get recapNextStep => 'Next';
+
+  @override
+  String recapZonesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count areas',
+      one: '$count area',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recapZonesMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get recapZonesNone => 'No areas selected';
+
+  @override
+  String recapZonesSemantics(int count, String zones) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count areas',
+      one: '$count area',
+    );
+    return '$_temp0: $zones';
+  }
+
+  @override
+  String get recapImprovement => 'Improve';
+
+  @override
+  String get recapSentTitleFirst => 'Recap';
+
+  @override
+  String get recapSentTitleSecond => 'sent.';
+
+  @override
+  String get recapSentCoach =>
+      'Thanks for telling me. I\'ll review it and leave my comment on your recap.';
+
+  @override
+  String get recapBackToRecaps => 'Back to recaps';
+
+  @override
+  String get recapSentClose => 'Close';
+
+  @override
+  String get trainingMilestoneTitle => 'Session done.';
+
+  @override
+  String trainingMilestoneName(String name) {
+    return '$name.';
+  }
+
+  @override
+  String get trainingMilestoneBackHome => 'Back to Home';
+
+  @override
+  String get exerciseSheetFeedbackHint => 'Optional · about this exercise';
+
+  @override
+  String exerciseSheetWatchVideo(String name) {
+    return 'Watch the video of $name';
+  }
+
+  @override
+  String exerciseSheetWeightUsed(String weight) {
+    return 'Weight used: $weight';
+  }
 }

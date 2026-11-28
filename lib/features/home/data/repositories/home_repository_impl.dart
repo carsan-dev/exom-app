@@ -30,6 +30,8 @@ class HomeRepositoryImpl implements HomeRepository {
               id: training.id,
               name: training.name,
               completed: training.completed,
+              unfinished: training.unfinished,
+              thumbnailUrl: training.thumbnailUrl,
             ),
           )
           .toList(growable: false),
@@ -50,6 +52,11 @@ class HomeRepositoryImpl implements HomeRepository {
       lastWeightKg: model.lastWeightKg,
       lastWeightDate: model.lastWeightDate,
       lastSleepHours: model.lastSleepHours,
+      programWeek: model.programWeek,
+      programDay: model.programDay,
+      totalSets: model.totalSets,
+      trainingThumbnailUrl: model.trainingThumbnailUrl,
+      staleReason: model.staleReason,
     );
   }
 }

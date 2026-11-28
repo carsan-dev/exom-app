@@ -1,10 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:exom_app/l10n/app_localizations.dart';
-
 import 'package:exom_app/core/theme/app_theme.dart';
-import 'package:exom_app/core/theme/glass_decorations.dart';
-import 'package:exom_app/core/widgets/glass_card.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
+import 'package:exom_app/core/theme/spacing.dart';
+import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_index_list.dart';
+import 'package:exom_app/core/widgets/exom_kicker.dart';
+import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
+import 'package:exom_app/core/widgets/exom_progress_rule.dart';
+import 'package:exom_app/core/widgets/exom_two_line_headline.dart';
+import 'package:exom_app/features/recap/presentation/widgets/recap_form_fields.dart';
+import 'package:exom_app/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 
+/// Step 0 of the form (sketch C4, «Paso 0, inicio»): the two-line headline, the
+/// empty rule of five segments, what the form is for and the five steps as a
+/// numbered index. The pinned action starts the form, or goes straight to the
+/// last step to review and send when the blocks already have their answers.
 class RecapStartView extends StatelessWidget {
   final Map<String, dynamic> formData;
   final String weekLabel;
@@ -38,185 +48,88 @@ class RecapStartView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
 
     final sections = [
-      (icon: Icons.fitness_center_rounded, label: l10n.recapTraining),
-      (icon: Icons.restaurant_rounded, label: l10n.recapNutrition),
-      (icon: Icons.bedtime_rounded, label: l10n.recapRecovery),
-      (icon: Icons.mood_rounded, label: l10n.recapGeneral),
+      l10n.recapTraining,
+      l10n.recapNutrition,
+      l10n.recapRecovery,
+      l10n.recapGeneral,
+      l10n.recapImprovement,
     ];
 
     final allComplete = List.generate(
       4,
       (i) => _isStepComplete(i),
     ).every((c) => c);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Week header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: GlassDecoration.accentCard(
-              palette.primary,
-              borderRadius: 14,
-            ),
-            child: Row(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: 15,
-                  color: palette.primary,
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: ExomKicker(l10n.recapStartTitle),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  weekLabel,
-                  style: TextStyle(
-                    color: palette.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(height: ExomSpacing.sm),
+                ExomTwoLineHeadline(
+                  first: l10n.recapStartHeadlineFirst,
+                  second: l10n.recapStartHeadlineSecond,
+                  size: ExomHeadlineSize.screen,
+                ),
+                const SizedBox(height: ExomSpacing.sm),
+                RecapWeekLabel(weekLabel),
+                const SizedBox(height: ExomSpacing.lg),
+                const ExcludeSemantics(
+                  child: ExomProgressRule(
+                    value: 0,
+                    thickness: ExomRule.bar,
+                    segments: kRecapSteps,
                   ),
+                ),
+                const SizedBox(height: ExomSpacing.lg),
+                Text(
+                  l10n.recapStartDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: ExomSpacing.xxl),
+                ExomIndexList(
+                  items: [
+                    for (final title in sections) ExomIndexItem(title: title),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.recapStartTitle,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            l10n.recapStartDescription,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Sections list
-          GlassCard(
-            margin: EdgeInsets.zero,
-            padding: EdgeInsets.zero,
-            borderRadius: 22,
-            child: Column(
-              children: List.generate(sections.length, (index) {
-                final section = sections[index];
-                final isComplete = _isStepComplete(index);
-                final isLast = index == sections.length - 1;
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: isComplete
-                                ? GlassDecoration.accentCard(
-                                    palette.primary,
-                                    borderRadius: 12,
-                                  )
-                                : GlassDecoration.card(borderRadius: 12),
-                            child: Icon(
-                              section.icon,
-                              size: 18,
-                              color: isComplete
-                                  ? palette.primary
-                                  : palette.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${index + 1}. ${section.label}',
-                                  style: TextStyle(
-                                    color: palette.textPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isComplete
-                                  ? palette.primary
-                                  : Colors.transparent,
-                              border: isComplete
-                                  ? null
-                                  : Border.all(
-                                      color: palette.glassBorder,
-                                      width: 1.2,
-                                    ),
-                            ),
-                            child: isComplete
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    size: 14,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!isLast)
-                      Divider(
-                        height: 1,
-                        indent: 18,
-                        endIndent: 18,
-                        color: palette.divider,
-                      ),
-                  ],
-                );
-              }),
-            ),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: allComplete ? onReviewAndSend : onStart,
-              icon: Icon(
-                allComplete ? Icons.send_rounded : Icons.play_arrow_rounded,
-              ),
-              label: Text(
-                allComplete
+        ),
+        ExomPinnedFooter(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExomPrimaryButton(
+                key: const ValueKey('recap-start'),
+                label: allComplete
                     ? l10n.recapReviewAndSendButton
                     : l10n.recapStartButton,
+                trailingIcon: allComplete ? ExomIcons.send : ExomIcons.forward,
+                onPressed: allComplete ? onReviewAndSend : onStart,
               ),
-            ),
+              ExomQuietButton(label: l10n.cancel, onPressed: onCancel),
+            ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

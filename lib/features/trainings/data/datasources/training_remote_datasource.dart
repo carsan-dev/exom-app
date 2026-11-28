@@ -22,6 +22,7 @@ abstract class TrainingRemoteDataSource {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   });
   Future<void> unmarkExerciseCompleted(String trainingExerciseId, String date, {String? sessionId});
   Future<void> completeTraining(
@@ -456,6 +457,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) async {
     return _localStorage.sessionTask(() async {
       await _offlineSyncService.queueExerciseCompletion(
@@ -469,6 +471,7 @@ class TrainingRemoteDataSourceImpl implements TrainingRemoteDataSource {
         trainingId: trainingId,
         sessionId: sessionId,
         operationId: operationId,
+        completedAt: completedAt,
       );
       await _offlineSyncService.syncForDate(date, sessionId: sessionId);
     });

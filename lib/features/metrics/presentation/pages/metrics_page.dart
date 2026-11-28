@@ -1477,6 +1477,12 @@ class _MetricsViewState extends State<_MetricsView> {
     );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
+        // The form is inert while it loads or saves: a field that still had
+        // the focus (and the keyboard) would keep taking text that the load
+        // then discards.
+        if (state is MetricsLoading || state is MetricsSaving) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
         if (state is MetricsLoadFailed && _answersSelection(state.date)) {
           setState(() {
             _lastLoaded = null;

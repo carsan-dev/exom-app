@@ -8,6 +8,7 @@ import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
+import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -180,7 +181,9 @@ void main() {
       await _mount(tester, loadGate: gate);
       final label = _l10n(tester).metricsDayLoading;
       expect(find.byKey(const Key('metrics-day-loading')), findsOneWidget);
-      final node = tester.getSemantics(find.byKey(const Key('metrics-day-loading')));
+      final node = tester.getSemantics(
+        find.byKey(const Key('metrics-day-loading')),
+      );
       expect(node.label, contains(label));
       expect(node.flagsCollection.isLiveRegion, isTrue);
       gate.complete(_metric);
@@ -198,6 +201,36 @@ void main() {
       await tester.enterText(_height(), '170');
       await tester.pump();
       expect(_text(tester, _height()), '170');
+    });
+
+    testWidgets('a weight field with the focus loses it when a load starts', (
+      tester,
+    ) async {
+      final repository = await _mount(tester);
+      await tester.tap(find.byKey(ExomNumeralStepper.valueKey));
+      await tester.pump();
+      final field = find.byKey(ExomNumeralStepper.fieldKey);
+      await tester.enterText(field, '70,5');
+      await tester.pump();
+      final editable = find.descendant(
+        of: field,
+        matching: find.byType(EditableText),
+      );
+      expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+      // What «Reintentar» does: a load while the keyboard is open.
+      repository.loadGate = Completer<BodyMetricEntity?>();
+      tester
+          .element(find.byType(ExomNumeralStepper))
+          .read<MetricsBloc>()
+          .add(const MetricsLoadRequested());
+      await tester.pump();
+      expect(find.byKey(const Key('metrics-day-loading')), findsOneWidget);
+      // The field closed (it left typing mode) or at least lost the focus.
+      expect(
+        editable.evaluate().isEmpty ||
+            !tester.widget<EditableText>(editable).focusNode.hasFocus,
+        isTrue,
+      );
     });
   });
 

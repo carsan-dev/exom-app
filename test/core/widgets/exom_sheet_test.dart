@@ -490,6 +490,43 @@ void main() {
       handle.dispose();
     });
 
+    // S11-09: a second tap of a double tap on the trigger lands on the scrim
+    // of the entering sheet; it must not close it. Once the entry has
+    // finished the scrim closes it again; back still closes it mid-entry.
+    for (final reduced in [false, true]) {
+      final suffix = reduced ? ' (reduced motion)' : '';
+      testWidgets('a scrim tap mid-entry keeps the sheet$suffix', (
+        tester,
+      ) async {
+        final events = <String>[];
+        await _pump(tester, events: events, disableAnimations: reduced);
+        await _open(tester);
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(_sheetRoute(tester).animation!.status, AnimationStatus.forward);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(_panel, findsOneWidget);
+        expect(events, isEmpty);
+
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(_panel, findsNothing);
+        expect(events, ['disposed', 'returned']);
+      });
+    }
+
+    testWidgets('system back mid-entry still closes', (tester) async {
+      final events = <String>[];
+      await _pump(tester, events: events);
+      await _open(tester);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(_sheetRoute(tester).animation!.status, AnimationStatus.forward);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(_panel, findsNothing);
+      expect(events, ['disposed', 'returned']);
+    });
+
     testWidgets('isDismissible: false ignores scrim, back and Escape', (
       tester,
     ) async {

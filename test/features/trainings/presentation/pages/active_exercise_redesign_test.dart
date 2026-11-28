@@ -1283,4 +1283,89 @@ void main() {
       expect(find.text('home'), findsOneWidget);
     });
   });
+
+  // S11-09 (matriz L6): a rapid double tap on «Registrar serie» (opens the
+  // set sheet) and on the sheet's «Registrar» logs a single set and never
+  // stacks a second sheet, whether both taps land in the same frame or
+  // ~50 ms apart. A deliberate tap after the 640 ms window still works.
+  group('S11-09 double tap', () {
+    const noRest = TrainingExerciseEntity(
+      id: 'te-1',
+      order: 1,
+      sets: 3,
+      repsOrDuration: '8',
+      measureType: ExerciseMeasureType.reps,
+      targetValue: 8,
+      targetRir: 2,
+      restSeconds: 0,
+      requestSetTracking: true,
+      exercise: ExerciseEntity(
+        id: 'ex-1',
+        name: 'Sentadilla búlgara',
+        muscleGroups: [],
+      ),
+    );
+    final logSet = find.byKey(const ValueKey('footer-executing'));
+    final save = find.byKey(const Key('set-sheet-save'));
+
+    Future<void> doubleTap(
+      WidgetTester tester,
+      Finder finder,
+      Duration? gap,
+    ) async {
+      await tester.tap(finder);
+      if (gap != null) await tester.pump(gap);
+      await tester.tap(finder, warnIfMissed: false);
+    }
+
+    for (final (label, gap) in [
+      ('same frame', null),
+      ('50 ms apart', const Duration(milliseconds: 50)),
+    ]) {
+      testWidgets('«Registrar serie», $label: one sheet', (tester) async {
+        final h = await _pumpPage(tester, exercise: noRest);
+        await doubleTap(tester, logSet, gap);
+        await _settleFrames(tester);
+        // ~50 ms later the second tap lands on the entering sheet's scrim,
+        // which ignores it until the entry ends: the sheet stays, once.
+        expect(find.byType(SetPerformanceSheet), findsOneWidget);
+        expect(find.byKey(const Key('exom-sheet-panel')), findsOneWidget);
+        expect(_state(tester).completedSets, 0);
+        expect(h.draft!.completedSets, 0);
+      });
+
+      testWidgets('«Registrar» in the sheet, $label: one set', (tester) async {
+        final h = await _pumpPage(tester, exercise: noRest);
+        await _openSheet(tester);
+        await doubleTap(tester, save, gap);
+        await _settleFrames(tester);
+        expect(find.byType(SetPerformanceSheet), findsNothing);
+        expect(_state(tester).completedSets, 1);
+        expect(h.draft!.completedSets, 1);
+        expect(h.draft!.completedSetData, hasLength(1));
+        expect(h.trainingBloc.events, isEmpty);
+      });
+    }
+
+    testWidgets('after the 640 ms window a deliberate tap logs the next set', (
+      tester,
+    ) async {
+      final h = await _pumpPage(tester, exercise: noRest);
+      await _openSheet(tester);
+      await doubleTap(tester, save, const Duration(milliseconds: 50));
+      await _settleFrames(tester);
+      expect(h.draft!.completedSets, 1);
+
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.tap(logSet);
+      await _settleFrames(tester);
+      expect(find.byType(SetPerformanceSheet), findsOneWidget);
+      await tester.tap(save);
+      await _settleFrames(tester);
+      expect(find.byType(SetPerformanceSheet), findsNothing);
+      expect(_state(tester).completedSets, 2);
+      expect(h.draft!.completedSets, 2);
+      expect(h.draft!.completedSetData, hasLength(2));
+    });
+  });
 }

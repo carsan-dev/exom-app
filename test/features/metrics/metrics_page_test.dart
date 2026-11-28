@@ -1473,6 +1473,7 @@ void main() {
     });
 
     testWidgets('without connection the error says so', (tester) async {
+      final handle = tester.ensureSemantics();
       await _mount(
         tester,
         loader: (_) async => throw DioException(
@@ -1481,6 +1482,14 @@ void main() {
         ),
       );
       expect(find.text(_l10n(tester).noConnectionMessage), findsOneWidget);
+      // The message joins title and body with its own «. »: the title must
+      // not end in a period or the announcement reads «..».
+      final announced = tester
+          .getSemantics(find.bySemanticsLabel(RegExp('No se pudieron cargar')))
+          .label;
+      expect(announced, contains(_l10n(tester).metricsDayLoadError));
+      expect(announced, isNot(contains('..')));
+      handle.dispose();
     });
 
     testWidgets('a session change: no retry and no save', (tester) async {

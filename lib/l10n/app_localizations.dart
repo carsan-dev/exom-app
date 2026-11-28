@@ -6497,7 +6497,7 @@ abstract class AppLocalizations {
   /// No description provided for @metricsDayLoadError.
   ///
   /// In es, this message translates to:
-  /// **'No se pudieron cargar las métricas de este día.'**
+  /// **'No se pudieron cargar las métricas de este día'**
   String get metricsDayLoadError;
 
   /// No description provided for @metricsSaveError.

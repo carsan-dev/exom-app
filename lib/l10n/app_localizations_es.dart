@@ -3848,7 +3848,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get metricsDayLoadError =>
-      'No se pudieron cargar las métricas de este día.';
+      'No se pudieron cargar las métricas de este día';
 
   @override
   String get metricsSaveError =>

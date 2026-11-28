@@ -583,6 +583,7 @@ class _ActiveExerciseViewState extends State<_ActiveExerciseView> {
         lastSetFeedbackClientUploadId: state.lastSetFeedbackClientUploadId,
         sessionId: state.sessionId,
         operationId: state.completionOperationId,
+        completedAt: state.lastSetLoggedAt,
         sessionStamp: _ownerSession,
         completion: completion,
       ),

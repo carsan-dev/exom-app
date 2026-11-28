@@ -44,6 +44,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) {
     return _remoteDataSource.markExerciseCompleted(
       trainingExerciseId,
@@ -55,6 +56,7 @@ class TrainingRepositoryImpl implements TrainingRepository {
       trainingId: trainingId,
       sessionId: sessionId,
       operationId: operationId,
+      completedAt: completedAt,
     );
   }
 

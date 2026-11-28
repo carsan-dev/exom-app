@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:exom_app/core/auth/firebase_auth_service.dart';
 import 'package:exom_app/core/services/execution_timer_coordinator.dart';
+import 'package:exom_app/core/services/offline_sync_service.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
@@ -114,8 +115,21 @@ Map<String, String> restoreCircuitFeedbackStatuses(
   return restored;
 }
 
+/// Records that [exerciseId] logged a set at [at] (C-O1), in the wire form
+/// of a completion time.
+@visibleForTesting
+void recordCircuitSetTime(
+  Map<String, String> times,
+  String exerciseId,
+  DateTime at,
+) {
+  times[exerciseId] = OfflineSyncService.completionTime(at);
+}
+
 /// Freeze an exercise's outgoing action once, before its first dispatch.
 /// A restored circuit retains this snapshot even if the editable sets change.
+/// [completedAt] (its last set, C-O1) is frozen with it; a snapshot frozen
+/// without it keeps none.
 @visibleForTesting
 Map<String, dynamic> snapshotCircuitCompletion(
   Map<String, Map<String, dynamic>> actions,
@@ -123,6 +137,7 @@ Map<String, dynamic> snapshotCircuitCompletion(
   required List<Map<String, dynamic>>? sets,
   double? weightUsed,
   String? feedbackId,
+  String? completedAt,
 }) {
   final existing = actions[exerciseId];
   if (existing != null && existing['operation_id'] is String &&
@@ -134,6 +149,7 @@ Map<String, dynamic> snapshotCircuitCompletion(
     'sets': sets?.map((set) => Map<String, dynamic>.from(set)).toList(),
     'weight_used': weightUsed,
     'feedback_id': feedbackId,
+    'completed_at': ?completedAt,
   };
   actions[exerciseId] = snapshot;
   return snapshot;
@@ -258,6 +274,11 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
   final Map<String, String> _lastSetFeedbackIds = {};
   final Map<String, String> _lastSetFeedbackStatuses = {};
   final Map<String, Map<String, dynamic>> _completionActions = {};
+  // When each exercise last logged a set (C-O1); dates its completion. Memory
+  // only: the circuit cache keeps the released key set (constraint 1), so a
+  // restart loses it and that completion is sent without a time, as before.
+  // Once frozen in a completion snapshot it survives restarts with it.
+  final Map<String, String> _lastSetAt = {};
   // «Recordármelo» as shown; read once from `last_set_video_reminder_enabled`.
   bool? _reminderEnabled;
   // E3c r2: true from the logged transition that will ask the last round's
@@ -654,6 +675,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
         ifAbsent: () => [performance],
       );
     }
+    recordCircuitSetTime(_lastSetAt, _currentExercise.id, DateTime.now());
 
     final completedTimerKey =
         '${_currentExercise.id}:interval:$_currentRound:${widget.args.assignmentDate}';
@@ -1296,6 +1318,7 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
           sets: sets?.map((set) => set.toJson()).toList(),
           weightUsed: sets == null || sets.isEmpty ? null : sets.last.weightKg,
           feedbackId: _lastSetFeedbackIds[trainingExercise.id],
+          completedAt: _lastSetAt[trainingExercise.id],
         );
         // The snapshot must survive a crash or lost response before dispatch.
         await _persistState();
@@ -1314,6 +1337,9 @@ class _ActiveCircuitViewState extends State<_ActiveCircuitView> {
               (set) => SetPerformance.fromJson(Map<String, dynamic>.from(set)),
             ).toList(),
             lastSetFeedbackClientUploadId: action['feedback_id'] as String?,
+            completedAt: DateTime.tryParse(
+              action['completed_at'] as String? ?? '',
+            ),
             completion: completion,
           ),
         );

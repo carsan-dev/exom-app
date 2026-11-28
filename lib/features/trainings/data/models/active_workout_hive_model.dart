@@ -25,6 +25,10 @@ class ActiveWorkoutHiveModel {
   final String? lastSetFeedbackClientUploadId;
   final String? completionOperationId;
 
+  /// When the last set of this execution was logged (C-O1). It dates the
+  /// completion; null in drafts written before it existed.
+  final DateTime? lastSetLoggedAt;
+
   const ActiveWorkoutHiveModel({
     this.timedElapsedMs = 0,
     this.timedStartedAt,
@@ -40,6 +44,7 @@ class ActiveWorkoutHiveModel {
     this.completedSetData = const [],
     this.lastSetFeedbackClientUploadId,
     this.completionOperationId,
+    this.lastSetLoggedAt,
   });
 
   ActiveWorkoutHiveModel copyWith({
@@ -76,6 +81,7 @@ class ActiveWorkoutHiveModel {
           ? this.lastSetFeedbackClientUploadId
           : lastSetFeedbackClientUploadId as String?,
       completionOperationId: completionOperationId ?? this.completionOperationId,
+      lastSetLoggedAt: lastSetLoggedAt,
     );
   }
 }
@@ -110,13 +116,14 @@ class ActiveWorkoutHiveModelAdapter
           .toList(),
       lastSetFeedbackClientUploadId: fields[7] as String?,
       completionOperationId: fields[13] as String?,
+      lastSetLoggedAt: fields[14] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ActiveWorkoutHiveModel obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.trainingId)
       ..writeByte(1)
@@ -144,7 +151,9 @@ class ActiveWorkoutHiveModelAdapter
       ..writeByte(12)
       ..write(obj.sessionId)
       ..writeByte(13)
-      ..write(obj.completionOperationId);
+      ..write(obj.completionOperationId)
+      ..writeByte(14)
+      ..write(obj.lastSetLoggedAt);
   }
 }
 

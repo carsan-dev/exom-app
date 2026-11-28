@@ -569,7 +569,8 @@ void main() {
         ));
       }
     });
-    final service = OfflineSyncService(client, storage, isAuthenticated: () => true);
+    final service = OfflineSyncService(client, storage, isAuthenticated: () => true,
+      now: () => DateTime.utc(2026, 9, 6, 18, 30));
     await service.queueExerciseCompletion('te-a', date, completed: true,
       exerciseId: 'e-a', sessionId: 'session-a', operationId: 'A');
     await service.queueTrainingCompletion(date, trainingId: 'training-b',
@@ -578,6 +579,7 @@ void main() {
     final expectedBody = <String, dynamic>{
       'date': date, 'training_id': 'training-b',
       'training_session_id': 'session-b', 'rpe': 8, 'session_note': 'Original',
+      'completed_at': '2026-09-06T18:30:00.000Z',
     };
 
     expect(await service.syncForDate(date, sessionId: 'session-b'),

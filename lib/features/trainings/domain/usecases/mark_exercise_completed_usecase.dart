@@ -16,6 +16,7 @@ class MarkExerciseCompletedUseCase {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) => _repository.markExerciseCompleted(
     trainingExerciseId,
     exerciseId,
@@ -26,5 +27,6 @@ class MarkExerciseCompletedUseCase {
     trainingId: trainingId,
     sessionId: sessionId,
     operationId: operationId,
+    completedAt: completedAt,
   );
 }

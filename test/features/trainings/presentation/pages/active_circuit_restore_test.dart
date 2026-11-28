@@ -196,6 +196,44 @@ void main() {
     expect(other['operation_id'], isNot(first['operation_id']));
   });
 
+  test('circuit completion freezes the time of the last logged set (C-O1)', () async {
+    final saved = <String, Map<String, dynamic>>{};
+    final first = snapshotCircuitCompletion(saved, 'exercise-a',
+      sets: [{'set_number': 1, 'reps': 10}],
+      completedAt: '2026-11-27T13:56:51.120Z');
+    expect(first['completed_at'], '2026-11-27T13:56:51.120Z');
+    final storage = _CircuitStorage();
+    await persistCircuitState(storage, 'circuit', storage.sessionStamp,
+      {'completion_actions': saved});
+    final restored = jsonDecode(jsonEncode(storage.writes.single)) as Map;
+    final restarted = <String, Map<String, dynamic>>{
+      for (final entry in (restored['completion_actions'] as Map).entries)
+        entry.key as String: Map<String, dynamic>.from(entry.value as Map),
+    };
+    final retry = snapshotCircuitCompletion(restarted, 'exercise-a',
+      sets: [{'set_number': 1, 'reps': 10}],
+      completedAt: '2026-11-27T14:30:00.000Z');
+    expect(retry['completed_at'], '2026-11-27T13:56:51.120Z');
+
+    // A snapshot frozen by an earlier version has no time and keeps none.
+    final legacy = <String, Map<String, dynamic>>{
+      'exercise-b': {'operation_id': 'legacy-op', 'sets': null,
+        'weight_used': null, 'feedback_id': null},
+    };
+    final legacyRetry = snapshotCircuitCompletion(legacy, 'exercise-b',
+      sets: null, completedAt: '2026-11-27T14:30:00.000Z');
+    expect(legacyRetry.containsKey('completed_at'), isFalse);
+  });
+
+  test('circuit keeps the last logged set time of each exercise', () {
+    final times = <String, String>{};
+    recordCircuitSetTime(times, 'exercise-a',
+      DateTime.utc(2026, 11, 27, 13, 50, 0, 0, 999));
+    recordCircuitSetTime(times, 'exercise-a',
+      DateTime.utc(2026, 11, 27, 13, 56, 51, 120, 987));
+    expect(times, {'exercise-a': '2026-11-27T13:56:51.120Z'});
+  });
+
   test('A circuit cannot persist into B after an account generation change', () async {
     final storage = _CircuitStorage();
     final owner = storage.sessionStamp;

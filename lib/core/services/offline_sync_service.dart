@@ -101,6 +101,7 @@ class OfflineSyncService {
   final bool Function() _isAuthenticated;
   final Stream<bool> Function() _authenticationChanges;
   final Stream<bool> _connectivityChanges;
+  final DateTime Function() _now;
   static final AsyncMutex _queueMutex = AsyncMutex();
   static final AsyncMutex _syncMutex = AsyncMutex();
   final StreamController<void> _changes = StreamController<void>.broadcast();
@@ -118,7 +119,9 @@ class OfflineSyncService {
     bool Function()? isAuthenticated,
     Stream<bool>? authenticationChanges,
     Stream<bool>? connectivityChanges,
-  }) : _isAuthenticated =
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now,
+       _isAuthenticated =
            isAuthenticated ?? (() => FirebaseAuth.instance.currentUser != null),
        _authenticationChanges = authenticationChanges != null
            ? (() => authenticationChanges)
@@ -167,6 +170,21 @@ class OfflineSyncService {
     await _changes.close();
   }
 
+  /// Wire form of a completion time (C-O1): UTC, millisecond precision, the
+  /// same text `Date.toISOString()` produces. Drafts keep milliseconds only,
+  /// so a restored draft yields exactly the value first queued.
+  static String completionTime(DateTime value) =>
+      DateTime.fromMillisecondsSinceEpoch(
+        value.millisecondsSinceEpoch,
+        isUtc: true,
+      ).toIso8601String();
+
+  /// [completedAt] is when the exercise's last set was logged (C-O1). It is
+  /// stored in the queued action and sent unchanged on every retry. Without
+  /// it, a completion with a fresh identity is dated now (it is being created
+  /// now); one replaying a frozen [operationId] stays without the field, as
+  /// earlier versions sent it, so an operation the API may already have
+  /// accepted keeps its body.
   Future<void> queueExerciseCompletion(
     String trainingExerciseId,
     String date, {
@@ -178,7 +196,11 @@ class OfflineSyncService {
     String? trainingId,
     String? sessionId,
     String? operationId,
+    DateTime? completedAt,
   }) => _localStorage.sessionTask(() async {
+    final completionAt = !completed
+        ? null
+        : completedAt ?? (operationId == null ? _now() : null);
     await _enqueueAction({
       'training_session_id': ?sessionId,
       'type': completed ? _markExerciseCompleted : _unmarkExerciseCompleted,
@@ -189,6 +211,7 @@ class OfflineSyncService {
       'sets': ?sets?.map((set) => set.toJson()).toList(),
       'last_set_feedback_client_upload_id': ?lastSetFeedbackClientUploadId,
       'training_id': ?trainingId,
+      if (completionAt != null) 'completed_at': completionTime(completionAt),
     }, operationId: operationId,
        isDuplicate: operationId == null ? null : (entry) => entry['id'] == operationId,
        onRetryFailedDuplicate: operationId == null ? null : (_) {});
@@ -250,6 +273,9 @@ class OfflineSyncService {
         'training_id': trainingId,
         'training_session_id': ?sessionId,
         'rpe': ?rpe,
+        // C-O1: the training is completed now; the API dates with it the
+        // exercises this completion records without their own entry.
+        'completed_at': completionTime(_now()),
         if (dependencies.isNotEmpty) 'depends_on_feedback_ids': dependencies,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       },
@@ -568,7 +594,7 @@ class OfflineSyncService {
         'id': operationId ?? newOperationId(),
         'status': 'queued',
         'attempts': 0,
-        'queued_at': DateTime.now().toUtc().toIso8601String(),
+        'queued_at': _now().toUtc().toIso8601String(),
         // A restored action keeps its identity and revision, but it is
         // appended: it links to the current end of its day, never to where
         // it stood before (COLA: only a claim writes a forward link).
@@ -577,6 +603,11 @@ class OfflineSyncService {
             ..remove('predecessor_id')),
         if (restoredAction != null) 'status': 'queued',
       };
+      // Its body is the restored one: a completion time it was queued
+      // without is never added (C-O1).
+      if (restoredAction != null && !restoredAction.containsKey('completed_at')) {
+        queued.remove('completed_at');
+      }
       // An operation id queued again (restored completion, draft operation
       // id) may still be named by entries now ahead of it.
       _releaseLinksTo(queue, queued['id'] as String);
@@ -948,6 +979,9 @@ class OfflineSyncService {
               'weight_used': action['weight_used'],
             'sets': ?sets,
             'last_set_feedback_client_upload_id': ?feedbackId,
+            // Only an action queued with it (C-O1): never derived here.
+            if (action['completed_at'] is String)
+              'completed_at': action['completed_at'],
           },
         );
         return _cacheProgressResponse(
@@ -998,6 +1032,8 @@ class OfflineSyncService {
                 'session_note': action['notes']
               else
                 'notes': action['notes'],
+            if (action['completed_at'] is String)
+              'completed_at': action['completed_at'],
           },
         );
         return _cacheProgressResponse(

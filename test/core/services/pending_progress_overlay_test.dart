@@ -317,4 +317,64 @@ void main() {
     expect(merged['meals_completed'], isEmpty);
     expect(merged['trainings_completed'], isEmpty);
   });
+
+  group('completed_at of a pending completion', () {
+    Map<String, dynamic> viewOf(Map<String, dynamic> action) {
+      final merged = overlayPendingProgressActions(
+        progress: {'exercises_completed': <Map<String, dynamic>>[]},
+        actions: [
+          {
+            'type': 'mark_exercise_completed',
+            'date': date,
+            'training_exercise_id': 'te',
+            'exercise_id': 'e',
+            ...action,
+          },
+        ],
+        date: date,
+      );
+      return (merged['exercises_completed'] as List).single
+          as Map<String, dynamic>;
+    }
+
+    test('uses the action completed_at, not the time it was queued', () {
+      final entry = viewOf({
+        'queued_at': '2026-09-03T12:30:00.000Z',
+        'completed_at': '2026-09-03T12:00:00.000Z',
+      });
+      expect(entry['completed_at'], '2026-09-03T12:00:00.000Z');
+    });
+
+    test('a legacy action without completed_at keeps using queued_at', () {
+      final entry = viewOf({'queued_at': '2026-09-03T12:30:00.000Z'});
+      expect(entry['completed_at'], '2026-09-03T12:30:00.000Z');
+    });
+
+    test('an existing completed_at still wins', () {
+      final merged = overlayPendingProgressActions(
+        progress: {
+          'exercises_completed': [
+            {
+              'training_exercise_id': 'te',
+              'exercise_id': 'e',
+              'completed_at': 'existing',
+            },
+          ],
+        },
+        actions: const [
+          {
+            'type': 'mark_exercise_completed',
+            'date': date,
+            'training_exercise_id': 'te',
+            'exercise_id': 'e',
+            'queued_at': 'q',
+            'completed_at': 'c',
+          },
+        ],
+        date: date,
+      );
+      expect((merged['exercises_completed'] as List).single['completed_at'],
+          'existing');
+    });
+  });
 }

@@ -33,6 +33,10 @@ class MarkExerciseCompleted extends TrainingEvent {
   final String? lastSetFeedbackClientUploadId;
   final String? sessionId;
   final String? operationId;
+
+  /// When the exercise's last set was logged (C-O1); null when no set was
+  /// logged in this execution.
+  final DateTime? completedAt;
   final String? sessionStamp;
   final Completer<void>? completion;
   const MarkExerciseCompleted({
@@ -44,6 +48,7 @@ class MarkExerciseCompleted extends TrainingEvent {
     this.lastSetFeedbackClientUploadId,
     this.sessionId,
     this.operationId,
+    this.completedAt,
     this.sessionStamp,
     this.completion,
   });

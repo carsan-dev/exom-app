@@ -800,7 +800,8 @@ class _MetricsViewState extends State<_MetricsView> {
   /// What a save would send, without side effects: the payload (always with
   /// the date), the profile update and, when a typed value does not parse,
   /// the message to show instead. The save button and [_save] both read it, so
-  /// the button is enabled exactly when the save sends more than the date.
+  /// the button is enabled exactly when the save sends a value besides the
+  /// date. A cleared value the loaded metric had is sent as null.
   _SavePlan _planSave() {
     final unitSystem = context.read<AppPreferencesCubit>().state.unitSystem;
     final currentMetric = _currentMetricSnapshot();
@@ -862,7 +863,11 @@ class _MetricsViewState extends State<_MetricsView> {
 
     if (_muscleMassTouched) {
       final rawMuscleMass = _muscleMassController.text.trim();
-      if (rawMuscleMass.isNotEmpty) {
+      if (rawMuscleMass.isEmpty) {
+        // A cleared value the loaded metric had is sent as null so the API
+        // clears it; omitting the key would keep the old value (L6-UX5).
+        if (currentMuscleMassKg != null) data['muscle_mass_kg'] = null;
+      } else {
         final muscleMass = _parseDouble(rawMuscleMass);
         if (muscleMass == null) {
           return (
@@ -907,6 +912,8 @@ class _MetricsViewState extends State<_MetricsView> {
 
       final rawValue = entry.value.text.trim();
       if (rawValue.isEmpty) {
+        // As the muscle mass: a cleared saved measure is sent as null.
+        if (existingMeasures[entry.key] != null) data[entry.key] = null;
         continue;
       }
 
@@ -940,6 +947,13 @@ class _MetricsViewState extends State<_MetricsView> {
   bool _sendsWeightForEmptyDay(_SavePlan plan) =>
       _dayLoaded && _lastLoaded == null && plan.data.containsKey('weight_kg');
 
+  /// Whether the payload carries a value besides the date. Cleared values
+  /// travel as null and do not count: a save that would only clear the day
+  /// is not offered (owner decision L6-UX5).
+  bool _sendsAnyValue(_SavePlan plan) => plan.data.entries.any(
+    (entry) => entry.key != 'date' && entry.value != null,
+  );
+
   /// The save is offered once the day is loaded and it would send more than
   /// the date (or a typed value needs its message), and the form either
   /// changed from what was loaded or is an empty day whose payload carries
@@ -948,7 +962,7 @@ class _MetricsViewState extends State<_MetricsView> {
     if (!_dayLoaded) return false;
     final plan = _planSave();
     if (plan.error != null) return true;
-    if (plan.data.keys.every((key) => key == 'date')) return false;
+    if (!_sendsAnyValue(plan)) return false;
     return _hasChanges || _sendsWeightForEmptyDay(plan);
   }
 
@@ -958,7 +972,7 @@ class _MetricsViewState extends State<_MetricsView> {
       _showValidationMessage(message);
       return;
     }
-    if (plan.data.keys.every((key) => key == 'date')) {
+    if (!_sendsAnyValue(plan)) {
       _showValidationMessage(AppLocalizations.of(context).noChangesMessage);
       return;
     }

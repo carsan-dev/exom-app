@@ -43,11 +43,17 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
       await _localStorage.cacheData('home_latest_metric', inner);
 
       final history =
-          _localStorage.getCachedList('metrics_weight_history') ?? [];
-      final updatedHistory = [
-        inner,
-        ...history.whereType<Map<String, dynamic>>(),
-      ].toList();
+          (_localStorage.getCachedList('metrics_weight_history') ?? [])
+              .whereType<Map<String, dynamic>>()
+              .toList();
+      // One entry per date: a save of a date already cached replaces it.
+      final savedDay = _dayOf(inner['date']);
+      final sameDay = savedDay == null
+          ? -1
+          : history.indexWhere((entry) => _dayOf(entry['date']) == savedDay);
+      final updatedHistory = sameDay == -1
+          ? [inner, ...history]
+          : (history..[sameDay] = inner);
       await _localStorage.cacheData('metrics_weight_history', updatedHistory);
 
       return BodyMetricModel.fromJson(inner);
@@ -160,6 +166,11 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
       }
     });
   }
+
+  /// The `yyyy-MM-dd` day of a cached `date` («2026-11-18» or an ISO
+  /// timestamp), or null when it is not a date string.
+  static String? _dayOf(Object? date) =>
+      date is String && date.length >= 10 ? date.substring(0, 10) : null;
 
   /// The `data` field of the API envelope `{success, data, ...}`. A 200 of any
   /// other shape (e.g. a captive portal's HTML page) is an unexpected answer,

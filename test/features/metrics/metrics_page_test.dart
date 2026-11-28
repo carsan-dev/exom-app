@@ -760,6 +760,131 @@ void main() {
     });
   });
 
+  // L6-UX5: clearing a value the saved metric had used to omit its key, so the
+  // server kept the old value while the app reported it saved. Owner
+  // decision: a cleared value that was saved is sent as an explicit null; a
+  // save that would leave the day without any value is not offered.
+  group('L6-UX5 clearing a saved value', () {
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    bool saveEnabled(WidgetTester tester) {
+      final button = tester.widget<ExomPrimaryButton>(
+        find.byType(ExomPrimaryButton),
+      );
+      return button.onPressed != null;
+    }
+
+    testWidgets('clearing the muscle mass sends it as null and keeps the '
+        'untouched values', (tester) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        size: const Size(390, 6000),
+      );
+      await tester.enterText(_fieldWithText('32,5'), '');
+      await tester.pump();
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      expect(h.repository.saved, hasLength(1));
+      final sent = h.repository.saved.single;
+      expect(sent.containsKey('muscle_mass_kg'), isTrue);
+      expect(sent, {
+        'date': today,
+        'height_cm': 180.0,
+        'weight_kg': 68.4,
+        'sleep_hours': 7.5,
+        'muscle_mass_kg': null,
+        'chest_cm': 100.0,
+        'arm_left_cm': 35.0,
+        'arm_right_cm': 36.0,
+        'waist_cm': 74.0,
+      });
+      // Measures without a saved value are still left out.
+      expect(sent.containsKey('neck_cm'), isFalse);
+    });
+
+    testWidgets('a muscle mass that was empty and is left empty is not sent', (
+      tester,
+    ) async {
+      final noMuscleMass = BodyMetricEntity(
+        id: 'metric-3',
+        date: DateTime(2026, 11, 18),
+        weightKg: 68.4,
+        waistCm: 74,
+      );
+      final h = await _mount(
+        tester,
+        latest: noMuscleMass,
+        size: const Size(390, 6000),
+      );
+      final muscleField = find.byType(TextFormField).at(1);
+      await tester.enterText(muscleField, '30');
+      await tester.pump();
+      await tester.enterText(muscleField, '');
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: _weightStepper(),
+          matching: find.byIcon(ExomIcons.add),
+        ),
+      );
+      await tester.pump();
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      expect(h.repository.saved.single.containsKey('muscle_mass_kg'), isFalse);
+      expect(h.repository.saved.single['waist_cm'], 74.0);
+    });
+
+    testWidgets('clearing the only value of the day disables the save and '
+        'sends nothing', (tester) async {
+      final onlyMuscleMass = BodyMetricEntity(
+        id: 'metric-4',
+        date: DateTime(2026, 11, 18),
+        muscleMassKg: 32.5,
+      );
+      final h = await _mount(
+        tester,
+        latest: onlyMuscleMass,
+        size: const Size(390, 6000),
+      );
+      expect(saveEnabled(tester), isFalse);
+      await tester.enterText(_fieldWithText('32,5'), '');
+      await tester.pump();
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+      expect(h.profile.updates, isEmpty);
+    });
+
+    testWidgets('clearing one of two values sends null for it and keeps the '
+        'other', (tester) async {
+      final twoValues = BodyMetricEntity(
+        id: 'metric-5',
+        date: DateTime(2026, 11, 18),
+        muscleMassKg: 32.5,
+        waistCm: 74,
+      );
+      final h = await _mount(
+        tester,
+        latest: twoValues,
+        size: const Size(390, 6000),
+      );
+      await tester.enterText(_fieldWithText('32,5'), '');
+      await tester.pump();
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      expect(h.repository.saved, [
+        {'date': today, 'muscle_mass_kg': null, 'waist_cm': 74.0},
+      ]);
+    });
+  });
+
   // L4-I9: the error snack bar painted textPrimary on the error colour
   // (2.3:1 in dark); its text and action now use colorScheme.onError.
   group('L4-I9 save error snack bar', () {

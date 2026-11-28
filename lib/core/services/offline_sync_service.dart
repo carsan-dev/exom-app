@@ -1437,6 +1437,40 @@ class OfflineSyncService {
         : ProgressFeedbackWait.behindDayVideo;
   }
 
+  /// L6-UX1, read-only: whether queued progress of this training and day is in
+  /// conflict itself or held behind a conflict of the day chain (the day is
+  /// replayed as one chain, so another training's conflict holds it too).
+  /// Reads the same marker as «Subidas pendientes» and the same head-of-day
+  /// rule ([_orderedPredecessors]) as the replay; changes nothing. A mark
+  /// without `training_id` belongs to the training through
+  /// [trainingExerciseIds], as the exercise rows associate it.
+  bool progressHeldByConflict(
+    String trainingId,
+    String date,
+    String? sessionId,
+    Set<String> trainingExerciseIds,
+  ) {
+    bool conflicted(Map<String, dynamic> entry) =>
+        entry['last_error'] == 'progress_conflict_review_required';
+    final queue = pendingActions.where(_localStorage.ownsEntry).toList();
+    // Nothing in conflict: nothing is held (skips the predecessor scans).
+    if (!queue.any(conflicted)) return false;
+    return queue.any((action) {
+      if (action['date'] != date) return false;
+      final training = action['training_id'];
+      final ofTraining = training == trainingId ||
+          (training == null &&
+              trainingExerciseIds.contains(action['training_exercise_id']));
+      final actionSession = action['training_session_id'];
+      if (!ofTraining ||
+          (sessionId != null && actionSession != null && actionSession != sessionId)) {
+        return false;
+      }
+      return conflicted(action) ||
+          _orderedPredecessors(queue, action).any(conflicted);
+    });
+  }
+
   /// Read-only diagnosis uses precisely the replay head-of-day rule
   /// ([_blockingPredecessors]). Feedback completion proves only its
   /// dependency, never a training acknowledgement.

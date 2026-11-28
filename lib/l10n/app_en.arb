@@ -1282,7 +1282,7 @@
   "authInvalidCredential": "The social credential has expired. Repeat the linking process.",
   "homeLoadError": "The summary could not be loaded. Please try again.",
   "metricsDayLoading": "Loading the day…",
-  "metricsDayLoadError": "We could not load the metrics for this day.",
+  "metricsDayLoadError": "We could not load the metrics for this day",
   "metricsSaveError": "The measurements could not be saved. Please try again.",
   "feedbackOperationError": "The operation could not be completed. Please try again.",
   "notificationsLoadError": "Notifications could not be loaded. Please try again.",

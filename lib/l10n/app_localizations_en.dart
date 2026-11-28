@@ -3805,7 +3805,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get metricsDayLoadError =>
-      'We could not load the metrics for this day.';
+      'We could not load the metrics for this day';
 
   @override
   String get metricsSaveError =>

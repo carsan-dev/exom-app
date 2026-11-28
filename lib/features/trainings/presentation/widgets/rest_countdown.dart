@@ -9,6 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:intl/intl.dart';
 
+/// Clock read by [RestCountdown] when it gets no `now`. Tests replace it to
+/// freeze the figure of a rest; production keeps [DateTime.now].
+@visibleForTesting
+DateTime Function() restCountdownClock = DateTime.now;
+
 /// «m:ss» of a remaining duration in whole seconds.
 String formatRestClock(int seconds) {
   final safe = math.max(0, seconds);
@@ -116,7 +121,7 @@ class _RestCountdownState extends State<RestCountdown>
   bool _announcedTen = false;
   bool _announcedEnd = false;
 
-  DateTime get _now => widget.now?.call() ?? DateTime.now();
+  DateTime get _now => (widget.now ?? restCountdownClock)();
 
   int get _remainingMs =>
       math.max(0, widget.restEndsAt.difference(_now).inMilliseconds);

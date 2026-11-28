@@ -16,7 +16,9 @@ Widget _wrap(Widget child) {
 
 void main() {
   testWidgets('renders title, countdown and skip button', (tester) async {
-    final restEndsAt = DateTime.now().add(const Duration(seconds: 30));
+    // Fixed clock: the figure cannot drift with the speed of the machine.
+    final seedNow = DateTime.now();
+    final restEndsAt = seedNow.add(const Duration(seconds: 30));
     var skipped = false;
 
     await tester.pumpWidget(
@@ -24,6 +26,7 @@ void main() {
         RestTimerInline(
           totalSeconds: 30,
           restEndsAt: restEndsAt,
+          now: () => seedNow,
           subtitle: 'Serie 2 / 3',
           onSkip: () => skipped = true,
           onFinished: () {},
@@ -42,7 +45,7 @@ void main() {
         .toList();
     expect(countdown, isNotEmpty);
     final remaining = int.parse(countdown.first);
-    expect(remaining, inInclusiveRange(28, 30));
+    expect(remaining, 30);
 
     await tester.tap(find.text('Saltar'));
     await tester.pump();

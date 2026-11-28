@@ -344,6 +344,9 @@ class _ExomMonthGridState extends State<ExomMonthGrid> {
             if (_w.monthTransition)
               ExomStepTransition(
                 step: month.year * 12 + month.month,
+                // L6-S25-D2: the weeks move as an image, not a new
+                // offscreen layer per frame.
+                snapshot: true,
                 child: body,
               )
             else

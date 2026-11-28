@@ -1000,6 +1000,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'El peso solo se guarda si lo modificas en esta actualización.';
 
   @override
+  String get weightUpdateNoteToday =>
+      'Hoy se guardará el peso de tu perfil aunque no lo cambies.';
+
+  @override
   String get muscleMassSectionTitle => 'Masa muscular';
 
   @override

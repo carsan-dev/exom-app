@@ -374,6 +374,7 @@
   "manualEntryToggle": "Entrada manual",
   "metricsWeightTypeHint": "Toca la cifra para escribirla.",
   "weightUpdateNote": "El peso solo se guarda si lo modificas en esta actualización.",
+  "weightUpdateNoteToday": "Hoy se guardará el peso de tu perfil aunque no lo cambies.",
   "muscleMassSectionTitle": "Masa muscular",
   "muscleMassDescription": "Registra tu estimación actual para comparar tu evolución con el objetivo del perfil.",
   "seenCalculatorTitle": "Calculadora SEEN",

@@ -1838,6 +1838,12 @@ abstract class AppLocalizations {
   /// **'El peso solo se guarda si lo modificas en esta actualización.'**
   String get weightUpdateNote;
 
+  /// No description provided for @weightUpdateNoteToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy se guardará el peso de tu perfil aunque no lo cambies.'**
+  String get weightUpdateNoteToday;
+
   /// No description provided for @muscleMassSectionTitle.
   ///
   /// In es, this message translates to:

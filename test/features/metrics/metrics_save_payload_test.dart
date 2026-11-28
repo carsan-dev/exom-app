@@ -11,6 +11,7 @@ import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/data/datasources/metrics_remote_datasource.dart';
 import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 /// Answers every POST /metrics with [saved] and records the request bodies;
 /// [offline] makes every request fail as without connection.
@@ -269,6 +270,94 @@ void main() {
       env.adapter.offline = true;
       final model = await env.datasource.getLatestMetric(date: '2026-11-20');
       expect(model?.waistCm, 82.0);
+    });
+  });
+
+  // M-5: the preloaded weight of an empty day comes from `profile_me`, which
+  // a save did not refresh, so the next empty day preloaded (and, today,
+  // saved) the weight from before. A saved weight that becomes the latest
+  // one now updates `current_weight` in that cache.
+  group('the profile_me weight after a save', () {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    const profile = <String, dynamic>{
+      'user_id': 'u-1',
+      'height': 180,
+      'current_weight': 75.0,
+    };
+
+    _Storage withProfile(_Storage storage, {List<dynamic>? history}) {
+      storage.cache['profile_me'] = Map<String, dynamic>.from(profile);
+      if (history != null) storage.cache['metrics_weight_history'] = history;
+      return storage;
+    }
+
+    test('a weight saved today becomes the preloaded weight', () async {
+      final env = _env({'id': 'm-20', 'date': today, 'weight_kg': 80.0});
+      withProfile(env.storage);
+      await env.datasource.saveMetric({'date': today, 'weight_kg': 80.0});
+      expect(env.storage.cache['profile_me'], {
+        ...profile,
+        'current_weight': 80.0,
+      });
+    });
+
+    test('a past day after the last cached weight also does', () async {
+      final env = _env({'id': 'm-21', 'date': '2026-11-22', 'weight_kg': 79.0});
+      withProfile(
+        env.storage,
+        history: <dynamic>[
+          <String, dynamic>{'date': '2026-11-20', 'weight_kg': 78.0},
+          <String, dynamic>{'date': '2026-11-25', 'waist_cm': 80.0},
+        ],
+      );
+      await env.datasource.saveMetric({
+        'date': '2026-11-22',
+        'weight_kg': 79.0,
+      });
+      expect((env.storage.cache['profile_me'] as Map)['current_weight'], 79.0);
+    });
+
+    test('a past day before the last cached weight does not', () async {
+      final env = _env({'id': 'm-22', 'date': '2026-11-10', 'weight_kg': 70.0});
+      withProfile(
+        env.storage,
+        history: <dynamic>[
+          <String, dynamic>{'date': '2026-11-20', 'weight_kg': 78.0},
+        ],
+      );
+      await env.datasource.saveMetric({
+        'date': '2026-11-10',
+        'weight_kg': 70.0,
+      });
+      expect(env.storage.cache['profile_me'], profile);
+    });
+
+    test('a past day without any cached weight does not', () async {
+      final env = _env({'id': 'm-23', 'date': '2026-11-10', 'weight_kg': 70.0});
+      withProfile(env.storage);
+      await env.datasource.saveMetric({
+        'date': '2026-11-10',
+        'weight_kg': 70.0,
+      });
+      expect(env.storage.cache['profile_me'], profile);
+    });
+
+    test('a save without a weight does not', () async {
+      final env = _env({
+        'id': 'm-24',
+        'date': today,
+        'weight_kg': 70.0,
+        'waist_cm': 81.0,
+      });
+      withProfile(env.storage);
+      await env.datasource.saveMetric({'date': today, 'waist_cm': 81.0});
+      expect(env.storage.cache['profile_me'], profile);
+    });
+
+    test('without a cached profile nothing is created', () async {
+      final env = _env({'id': 'm-25', 'date': today, 'weight_kg': 80.0});
+      await env.datasource.saveMetric({'date': today, 'weight_kg': 80.0});
+      expect(env.storage.cache.containsKey('profile_me'), isFalse);
     });
   });
 

@@ -934,7 +934,7 @@ class _MetricsViewState extends State<_MetricsView> {
       if (storedKg == null || (_weightKg - storedKg).abs() > 1e-6) {
         data['weight_kg'] = _weightKg;
       }
-    } else if (currentMetric == null && profileWeightKg != null) {
+    } else if (_profileWeightStandsIn) {
       data['weight_kg'] = profileWeightKg;
     }
 
@@ -1002,10 +1002,19 @@ class _MetricsViewState extends State<_MetricsView> {
     return (data: data, profileData: profileData, error: null);
   }
 
-  /// The profile weight stands in for the weight of a day without a metric
-  /// (owner decision L6-UX4: it counts as data and can be saved untouched).
+  /// Today without a record and with a profile weight: the preloaded profile
+  /// weight counts as data and is saved untouched (owner decision L6-UX4).
+  /// On a past day without a record it is only shown: an untouched one is
+  /// not sent, or the day would get a weight nobody logged for it (M-17).
+  bool get _profileWeightStandsIn =>
+      _dayLoaded &&
+      _lastLoaded == null &&
+      _selectedMetricDate == _today() &&
+      _cachedProfileNumber('current_weight') != null;
+
   /// A day without a metric that sends a weight: the profile weight stands in
-  /// for it (owner decision L6-UX4) or the client set one. It counts as data.
+  /// for it ([_profileWeightStandsIn]) or the client set one. It counts as
+  /// data.
   bool _sendsWeightForEmptyDay(_SavePlan plan) =>
       _dayLoaded && _lastLoaded == null && plan.data.containsKey('weight_kg');
 
@@ -1632,7 +1641,12 @@ class _MetricsViewState extends State<_MetricsView> {
                               ),
                             ),
                             Text(l10n.metricsWeightTypeHint, style: secondary),
-                            Text(l10n.weightUpdateNote, style: secondary),
+                            Text(
+                              _profileWeightStandsIn
+                                  ? l10n.weightUpdateNoteToday
+                                  : l10n.weightUpdateNote,
+                              style: secondary,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),

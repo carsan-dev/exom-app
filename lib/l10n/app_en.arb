@@ -352,6 +352,7 @@
   "manualEntryToggle": "Manual entry",
   "metricsWeightTypeHint": "Tap the number to type it.",
   "weightUpdateNote": "Weight is saved only if you change it in this update.",
+  "weightUpdateNoteToday": "Today your profile weight is saved even if you don't change it.",
   "muscleMassSectionTitle": "Muscle mass",
   "muscleMassDescription": "Log your current estimate to compare your progress with your profile goal.",
   "seenCalculatorTitle": "SEEN calculator",

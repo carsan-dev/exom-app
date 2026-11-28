@@ -4,6 +4,7 @@ import 'package:exom_app/core/api/network_utils.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/data/models/body_metric_model.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
+import 'package:intl/intl.dart';
 
 abstract class MetricsRemoteDataSource {
   Future<BodyMetricModel> saveMetric(Map<String, dynamic> data);
@@ -20,7 +21,15 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
   final ApiClient _apiClient;
   final LocalStorage _localStorage;
 
-  const MetricsRemoteDataSourceImpl(this._apiClient, this._localStorage);
+  /// Source of «today» for [saveMetric] (the local day, as the form sends
+  /// it).
+  final DateTime Function() _clock;
+
+  const MetricsRemoteDataSourceImpl(
+    this._apiClient,
+    this._localStorage, {
+    DateTime Function() clock = DateTime.now,
+  }) : _clock = clock;
 
   @override
   Future<BodyMetricModel> saveMetric(Map<String, dynamic> data) async {
@@ -53,6 +62,8 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
           (_localStorage.getCachedList('metrics_weight_history') ?? [])
               .whereType<Map<String, dynamic>>()
               .toList();
+      // Read before the saved entry joins the history (M-5).
+      final lastWeightDay = _lastWeightDay(history);
       // One entry per date: a save of a date already cached replaces it.
       final savedDay = _dayOf(inner['date']);
       final sameDay = savedDay == null
@@ -62,6 +73,12 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
           ? [inner, ...history]
           : (history..[sameDay] = inner);
       await _localStorage.cacheData('metrics_weight_history', updatedHistory);
+      await _refreshProfileWeight(
+        data,
+        inner,
+        savedDay: savedDate,
+        lastWeightDay: lastWeightDay,
+      );
 
       return BodyMetricModel.fromJson(inner);
     });
@@ -172,6 +189,44 @@ class MetricsRemoteDataSourceImpl implements MetricsRemoteDataSource {
         rethrow;
       }
     });
+  }
+
+  /// Keeps `current_weight` of the cached `profile_me` (the weight the form
+  /// preloads on a day without a record) in step with a saved weight that
+  /// becomes the latest one (M-5): the API then sets `current_weight` to it,
+  /// but `profile_me` is only rewritten by `GET`/`PUT /profile/me`. The saved
+  /// weight is the latest when its day is not before the last weight of the
+  /// cached history (before this save) or, without one, when it is today.
+  /// Without a cached profile nothing is created.
+  Future<void> _refreshProfileWeight(
+    Map<String, dynamic> data,
+    Map<String, dynamic> saved, {
+    required String? savedDay,
+    required String? lastWeightDay,
+  }) async {
+    final weight = saved['weight_kg'];
+    if (data['weight_kg'] == null || weight is! num || savedDay == null) {
+      return;
+    }
+    final profile = _localStorage.getCachedMap('profile_me');
+    if (profile == null) return;
+    final floor = lastWeightDay ?? DateFormat('yyyy-MM-dd').format(_clock());
+    if (savedDay.compareTo(floor) < 0) return;
+    await _localStorage.cacheData('profile_me', {
+      ...profile,
+      'current_weight': weight,
+    });
+  }
+
+  /// The latest day of [history] with a weight, or null without one.
+  static String? _lastWeightDay(List<Map<String, dynamic>> history) {
+    String? last;
+    for (final entry in history) {
+      final day = _dayOf(entry['date']);
+      if (entry['weight_kg'] == null || day == null) continue;
+      if (last == null || day.compareTo(last) > 0) last = day;
+    }
+    return last;
   }
 
   /// The `yyyy-MM-dd` day of a cached `date` («2026-11-18» or an ISO

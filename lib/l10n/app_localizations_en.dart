@@ -986,6 +986,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Weight is saved only if you change it in this update.';
 
   @override
+  String get weightUpdateNoteToday =>
+      'Today your profile weight is saved even if you don\'t change it.';
+
+  @override
   String get muscleMassSectionTitle => 'Muscle mass';
 
   @override

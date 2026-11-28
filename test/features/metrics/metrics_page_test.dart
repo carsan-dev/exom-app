@@ -669,6 +669,9 @@ void main() {
       expect(saveEnabled(tester), isTrue);
     });
 
+    // M-17: on a past empty day the profile weight used to be sent untouched
+    // and invented a weight for that day; now only today's empty day sends
+    // it (UX4).
     testWidgets('a date change does not carry the previous date metric', (
       tester,
     ) async {
@@ -679,10 +682,11 @@ void main() {
       );
       h.repository.latest = null;
       await _pickOtherDay(tester);
-      expect(saveEnabled(tester), isTrue);
+      expect(_weightFigure('72,5'), findsWidgets);
+      expect(_weightFigure('68,4'), findsNothing);
+      expect(saveEnabled(tester), isFalse);
       await tapSave(tester);
-      expect(h.repository.saved.single.keys.toSet(), {'date', 'weight_kg'});
-      expect(h.repository.saved.single['weight_kg'], 72.5);
+      expect(h.repository.saved, isEmpty);
     });
 
     testWidgets('a change enables the save and sends it as before', (
@@ -910,6 +914,129 @@ void main() {
       expect(h.repository.saved, [
         {'date': '2026-11-20', 'calf_right_cm': 37.0},
       ]);
+    });
+  });
+
+  // M-5, M-17 and M-18: the profile weight preloaded on a day without a record
+  // was saved untouched on any day (a past day got an invented weight) and the
+  // note said the weight is only saved when changed.
+  group('B the preloaded profile weight', () {
+    bool saveEnabled(WidgetTester tester) =>
+        tester
+            .widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton))
+            .onPressed !=
+        null;
+
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    Future<void> tapWeightStep(WidgetTester tester, IconData icon) async {
+      await tester.tap(
+        find.descendant(of: _weightStepper(), matching: find.byIcon(icon)),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('past empty day untouched: the weight shows but the save is '
+        'disabled and sends no weight', (tester) async {
+      final h = await _mount(
+        tester,
+        loader: (date) async => null,
+        profileCache: {'current_weight': 72.5},
+      );
+      await _pickOtherDay(tester);
+      expect(_weightFigure('72,5'), findsWidgets);
+      expect(saveEnabled(tester), isFalse);
+      await tapSave(tester);
+      expect(h.repository.saved, isEmpty);
+    });
+
+    testWidgets('past empty day with another change: no weight travels', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        loader: (date) async => null,
+        profileCache: {'current_weight': 72.5},
+      );
+      await _pickOtherDay(tester);
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '81');
+      await tapMeasureDone(tester);
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-01', 'waist_cm': 81.0},
+      ]);
+    });
+
+    testWidgets('past empty day: a touched weight is sent', (tester) async {
+      final h = await _mount(
+        tester,
+        loader: (date) async => null,
+        profileCache: {'current_weight': 72.5},
+      );
+      await _pickOtherDay(tester);
+      await tapWeightStep(tester, ExomIcons.add);
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-01', 'weight_kg': 73.0},
+      ]);
+    });
+
+    testWidgets('today empty day untouched: the profile weight is sent (UX4)', (
+      tester,
+    ) async {
+      final h = await _mount(tester, profileCache: {'current_weight': 72.5});
+      expect(saveEnabled(tester), isTrue);
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': _todayApi, 'weight_kg': 72.5},
+      ]);
+    });
+
+    for (final locale in const [Locale('es'), Locale('en')]) {
+      testWidgets('${locale.languageCode}: the note says the truth on each '
+          'kind of day', (tester) async {
+        final h = await _mount(
+          tester,
+          locale: locale,
+          profileCache: {'current_weight': 72.5},
+        );
+        final l10n = _l10n(tester);
+        // Today without a record: the profile weight is saved untouched.
+        expect(find.text(l10n.weightUpdateNoteToday), findsOneWidget);
+        expect(find.text(l10n.weightUpdateNote), findsNothing);
+        // A past day without a record: only a changed weight is saved.
+        await _pickOtherDay(tester);
+        expect(find.text(l10n.weightUpdateNote), findsOneWidget);
+        expect(find.text(l10n.weightUpdateNoteToday), findsNothing);
+        expect(h.repository.saved, isEmpty);
+      });
+    }
+
+    testWidgets('a day with a record keeps the note of a changed weight', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        latest: _metric,
+        profileCache: {'current_weight': 72.5},
+      );
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.weightUpdateNote), findsOneWidget);
+      expect(find.text(l10n.weightUpdateNoteToday), findsNothing);
+    });
+
+    testWidgets('today empty without a profile weight keeps the note of a '
+        'changed weight', (tester) async {
+      await _mount(tester, profileCache: {'height': 178});
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.weightUpdateNote), findsOneWidget);
+      expect(find.text(l10n.weightUpdateNoteToday), findsNothing);
     });
   });
 

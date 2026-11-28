@@ -121,8 +121,16 @@ Future<TrainingCompletionInput?> showCompleteTrainingSheet(
   try {
     return await showExomSheet<TrainingCompletionInput>(
       context: context,
-      builder: (_) => _CompletionSheetBody(form: form,
-        trainingName: trainingName, pendingExercises: pendingExercises),
+      // While «Terminar sesión» or «Cancelar» writes the draft, back and the
+      // scrim wait for it (L6 S11-10a): closing halfway would drop the
+      // confirmation; the write itself then pops the sheet.
+      builder: (_) => ListenableBuilder(
+        listenable: form,
+        builder: (_, body) => PopScope<TrainingCompletionInput>(
+          canPop: !form.isSaving, child: body!),
+        child: _CompletionSheetBody(form: form,
+          trainingName: trainingName, pendingExercises: pendingExercises),
+      ),
       actions: [
         _CompletionConfirmAction(form: form),
         _CompletionCancelAction(form: form),

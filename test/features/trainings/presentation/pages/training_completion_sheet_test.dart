@@ -621,6 +621,51 @@ void main() {
       expect(harness.repository.completions, isEmpty);
     });
 
+    // L6 S11-10a: back while «Terminar sesión» is writing the draft must not
+    // close the sheet halfway through (dropping the confirmation) nor send
+    // the completion twice.
+    testWidgets('system back while confirming keeps the sheet and sends once',
+        (tester) async {
+      final harness = await _mount(tester);
+      await _open(tester);
+      await _tapIn(tester, _rpe(7));
+      await tester.pumpAndSettle();
+      final gate = harness.storage.saveGate = Completer<void>();
+      await _tapIn(tester, _confirm);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_sheet, findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(_sheet, findsNothing);
+      expect(find.byType(TrainingDetailPage), findsOneWidget);
+      expect(harness.repository.completions, [
+        (sessionId: _execution, rpe: 7, notes: null),
+      ]);
+    });
+
+    testWidgets('system back while cancel is writing keeps the sheet until '
+        'the draft is saved', (tester) async {
+      final harness = await _mount(tester);
+      await _open(tester);
+      await _tapIn(tester, _rpe(4));
+      await tester.pumpAndSettle();
+      final gate = harness.storage.saveGate = Completer<void>();
+      await _tapIn(tester, _cancel);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_sheet, findsOneWidget);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(_sheet, findsNothing);
+      expect(harness.repository.completions, isEmpty);
+      expect(harness.storage.completionDrafts[_execution]?['rpe'], 4);
+    });
+
     testWidgets('dragging the sheet down', (tester) async {
       final harness = await _mount(tester);
       await _open(tester);

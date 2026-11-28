@@ -666,6 +666,32 @@ void main() {
       expect(harness.storage.completionDrafts[_execution]?['rpe'], 4);
     });
 
+    testWidgets('dragging the sheet down while confirming keeps it and sends '
+        'once', (tester) async {
+      final harness = await _mount(tester);
+      await _open(tester);
+      await _tapIn(tester, _rpe(6));
+      await tester.pumpAndSettle();
+      final gate = harness.storage.saveGate = Completer<void>();
+      await _tapIn(tester, _confirm);
+      await tester.fling(
+        find.byKey(const Key('exom-sheet-handle')),
+        const Offset(0, 500),
+        2000,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_sheet, findsOneWidget);
+      expect(harness.repository.completions, isEmpty);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(_sheet, findsNothing);
+      expect(find.byType(TrainingDetailPage), findsOneWidget);
+      expect(harness.repository.completions, [
+        (sessionId: _execution, rpe: 6, notes: null),
+      ]);
+    });
+
     testWidgets('dragging the sheet down', (tester) async {
       final harness = await _mount(tester);
       await _open(tester);

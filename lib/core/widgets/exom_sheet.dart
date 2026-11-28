@@ -197,6 +197,11 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
   RoutePopDisposition get popDisposition =>
       isDismissible ? super.popDisposition : RoutePopDisposition.doNotPop;
 
+  /// Whether the PopScopes in the content let the sheet close, whatever
+  /// [isDismissible] says (the drag is governed by [enableDrag], not by it).
+  bool get _popScopesAllowPop =>
+      super.popDisposition != RoutePopDisposition.doNotPop;
+
   final Completer<void> _disposed = Completer<void>();
   bool _frameMounted = false;
 
@@ -425,7 +430,12 @@ class _ExomSheetFrameState extends State<_ExomSheetFrame> {
         velocity > ExomSheetRoute.flingVelocity ||
         (velocity >= -ExomSheetRoute.flingVelocity &&
             dragged > ExomSheetRoute.closeThreshold);
-    if (close) {
+    if (close && !_route._popScopesAllowPop) {
+      // A PopScope in the content vetoes closing (L6 S11-10a): tell it, as
+      // system back does, and return to the open position.
+      _route.onPopInvokedWithResult(false, null);
+      _springBack();
+    } else if (close) {
       Navigator.of(context).pop();
     } else {
       _springBack();

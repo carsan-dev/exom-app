@@ -70,6 +70,7 @@ Future<GoRouter> _pump(
   bool tall = false,
   double extra = 0,
   int opens = 1,
+  bool? popScopeCanPop,
 }) async {
   await loadRedesignFonts();
   tester.view.physicalSize = Size(width, _screenHeight);
@@ -91,8 +92,18 @@ Future<GoRouter> _pump(
                   showExomSheet<String>(
                     context: context,
                     isDismissible: isDismissible,
-                    builder: (_) =>
-                        _Probe(events: events, tall: tall, extra: extra),
+                    builder: (_) {
+                      final probe =
+                          _Probe(events: events, tall: tall, extra: extra);
+                      return popScopeCanPop == null
+                          ? probe
+                          : PopScope<String>(
+                              canPop: popScopeCanPop,
+                              onPopInvokedWithResult: (didPop, _) =>
+                                  events.add('popInvoked:$didPop'),
+                              child: probe,
+                            );
+                    },
                   ).then((result) {
                     events.add('returned');
                     results?.add(result);
@@ -374,6 +385,95 @@ void main() {
       }
     });
   }
+
+  // L6 S11-10a: a drag past the close threshold goes through the sheet's
+  // PopScope like system back does; with canPop false the sheet stays and
+  // returns to its open position.
+  for (final reduced in const [false, true]) {
+    final suffix = reduced ? ' (reduced motion)' : '';
+    testWidgets('PopScope(canPop: false): a 31 % drag springs back$suffix', (
+      tester,
+    ) async {
+      final events = <String>[];
+      await _pump(
+        tester,
+        events: events,
+        popScopeCanPop: false,
+        disableAnimations: reduced,
+      );
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final height = tester.getSize(_panel).height;
+      final top = tester.getTopLeft(_panel).dy;
+      await tester.timedDrag(
+        _handle,
+        Offset(0, height * 0.31),
+        const Duration(seconds: 2),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(_panel, findsOneWidget);
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(events, ['popInvoked:false']);
+    });
+
+    testWidgets('PopScope(canPop: false): a quick fling springs back$suffix', (
+      tester,
+    ) async {
+      final events = <String>[];
+      await _pump(
+        tester,
+        events: events,
+        popScopeCanPop: false,
+        disableAnimations: reduced,
+      );
+      await _open(tester);
+      await tester.pumpAndSettle();
+      final top = tester.getTopLeft(_panel).dy;
+      await tester.fling(_handle, const Offset(0, 120), 1500);
+      await tester.pumpAndSettle();
+      expect(_panel, findsOneWidget);
+      expect(tester.getTopLeft(_panel).dy, closeTo(top, 0.5));
+      expect(events, ['popInvoked:false']);
+    });
+  }
+
+  testWidgets('PopScope(canPop: true): a 31 % drag closes as before', (
+    tester,
+  ) async {
+    final events = <String>[];
+    await _pump(tester, events: events, popScopeCanPop: true);
+    await _open(tester);
+    await tester.pumpAndSettle();
+    final height = tester.getSize(_panel).height;
+    await tester.timedDrag(
+      _handle,
+      Offset(0, height * 0.31),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(_panel, findsNothing);
+    expect(events, ['popInvoked:true', 'disposed', 'returned']);
+  });
+
+  testWidgets('isDismissible: false still closes with a 31 % drag', (
+    tester,
+  ) async {
+    final events = <String>[];
+    await _pump(tester, events: events, isDismissible: false);
+    await _open(tester);
+    await tester.pumpAndSettle();
+    final height = tester.getSize(_panel).height;
+    await tester.timedDrag(
+      _handle,
+      Offset(0, height * 0.31),
+      const Duration(seconds: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(_panel, findsNothing);
+    expect(events, ['disposed', 'returned']);
+  });
 
   for (final reduced in const [false, true]) {
     testWidgets('a dialog over the sheet mid-drag: the release springs back'

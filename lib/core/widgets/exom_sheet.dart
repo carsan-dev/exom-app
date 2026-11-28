@@ -43,6 +43,10 @@ const double kExomSheetGrabHeight = 48;
 /// * **Dismissal** ([isDismissible]): scrim tap, system/predictive back,
 ///   Escape and the iOS accessibility escape close the sheet. With
 ///   `isDismissible: false` none of them does (the content must pop it).
+///   While the sheet is still entering, a scrim tap is ignored (S11-09: the
+///   second tap of a double tap on the trigger lands there); once the entry
+///   has finished it closes the sheet as usual. Back, Escape, the drag and the
+///   accessibility escape still close it during the entry.
 /// * **Layout**: `panel` surface, square corners ([kExomSheetRadius], 0), 1 px `rule` outline, no
 ///   shadow, a 40x4 handle; content in a scroll view capped at 90 % of the
 ///   space left between the top inset (status bar) and the keyboard, above
@@ -196,6 +200,15 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
   final Completer<void> _disposed = Completer<void>();
   bool _frameMounted = false;
 
+  /// Latched once the entry animation has completed: until then a scrim tap
+  /// does not close the sheet (S11-09). A later drag or settle does not
+  /// reset it.
+  bool _entered = false;
+
+  void _trackEntry(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _entered = true;
+  }
+
   /// Completes once the route is removed and the sheet subtree disposed.
   Future<void> get disposed => _disposed.future;
 
@@ -241,6 +254,7 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
     super.install();
     _curve = motion.sheetSlides ? motion.sheetEnterCurve : Curves.linear;
     _scrim = AnimationController(vsync: navigator!, duration: motion.scrim);
+    animation!.addStatusListener(_trackEntry);
   }
 
   @override
@@ -264,6 +278,7 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
 
   @override
   void dispose() {
+    animation?.removeStatusListener(_trackEntry);
     _scrim?.dispose();
     _scrim = null;
     if (!_frameMounted) _completeDisposed();
@@ -272,13 +287,20 @@ class ExomSheetRoute<T> extends PopupRoute<T> {
 
   @override
   Widget buildModalBarrier() {
-    return AnimatedModalBarrier(
-      color: _scrim!.drive(
-        ColorTween(begin: scrimColor.withValues(alpha: 0), end: scrimColor),
+    return Builder(
+      builder: (context) => AnimatedModalBarrier(
+        color: _scrim!.drive(
+          ColorTween(begin: scrimColor.withValues(alpha: 0), end: scrimColor),
+        ),
+        dismissible: barrierDismissible,
+        semanticsLabel: barrierLabel,
+        barrierSemanticsDismissible: semanticsDismissible,
+        // Same as the barrier's default (maybePop) once the sheet has
+        // entered; ignored while it is still entering (S11-09).
+        onDismiss: () {
+          if (_entered) Navigator.maybePop(context);
+        },
       ),
-      dismissible: barrierDismissible,
-      semanticsLabel: barrierLabel,
-      barrierSemanticsDismissible: semanticsDismissible,
     );
   }
 

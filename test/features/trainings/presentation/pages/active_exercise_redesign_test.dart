@@ -1326,20 +1326,10 @@ void main() {
         final h = await _pumpPage(tester, exercise: noRest);
         await doubleTap(tester, logSet, gap);
         await _settleFrames(tester);
-        // Never a second sheet nor a set. In the same frame the sheet stays
-        // open; ~50 ms later the second tap lands on the entering sheet's
-        // scrim, which closes it (barrier dismissal, see the L6 report).
-        expect(
-          find.byType(SetPerformanceSheet).evaluate().length,
-          lessThanOrEqualTo(1),
-        );
-        expect(
-          find.byKey(const Key('exom-sheet-panel')).evaluate().length,
-          lessThanOrEqualTo(1),
-        );
-        if (gap == null) {
-          expect(find.byType(SetPerformanceSheet), findsOneWidget);
-        }
+        // ~50 ms later the second tap lands on the entering sheet's scrim,
+        // which ignores it until the entry ends: the sheet stays, once.
+        expect(find.byType(SetPerformanceSheet), findsOneWidget);
+        expect(find.byKey(const Key('exom-sheet-panel')), findsOneWidget);
         expect(_state(tester).completedSets, 0);
         expect(h.draft!.completedSets, 0);
       });

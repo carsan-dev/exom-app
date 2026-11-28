@@ -819,9 +819,8 @@ void main() {
         await tester.pumpAndSettle();
         await doubleTap(tester, _completeButton, gap);
         await tester.pumpAndSettle();
-        expect(_sheet.evaluate().length, lessThanOrEqualTo(1));
-        expect(panel.evaluate().length, lessThanOrEqualTo(1));
-        if (gap == null) expect(_sheet, findsOneWidget);
+        expect(_sheet, findsOneWidget);
+        expect(panel, findsOneWidget);
         expect(harness.repository.completions, isEmpty);
       });
 

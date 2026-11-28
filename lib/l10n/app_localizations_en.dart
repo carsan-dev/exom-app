@@ -3172,6 +3172,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingUploadDeleteTitle => 'Delete this evidence?';
 
   @override
+  String get pendingSyncDeleteTitle => 'Delete this unsynced change?';
+
+  @override
   String get pendingUploadDeleteMessage =>
       'The progress action that depends on it will also be deleted.';
 

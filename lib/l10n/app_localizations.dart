@@ -5462,6 +5462,12 @@ abstract class AppLocalizations {
   /// **'¿Eliminar esta evidencia?'**
   String get pendingUploadDeleteTitle;
 
+  /// No description provided for @pendingSyncDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar este cambio sin sincronizar?'**
+  String get pendingSyncDeleteTitle;
+
   /// No description provided for @pendingUploadDeleteMessage.
   ///
   /// In es, this message translates to:

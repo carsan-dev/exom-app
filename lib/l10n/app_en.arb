@@ -1087,6 +1087,7 @@
   "@pendingUploadAttempts": {"placeholders": {"count": {"type": "int"}}},
   "pendingUploadDelete": "Delete",
   "pendingUploadDeleteTitle": "Delete this evidence?",
+  "pendingSyncDeleteTitle": "Delete this unsynced change?",
   "pendingUploadDeleteMessage": "The progress action that depends on it will also be deleted.",
   "pendingUploadRetry": "Retry",
   "pendingUploadQueuedStatus": "Queued",

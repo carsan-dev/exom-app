@@ -3209,6 +3209,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pendingUploadDeleteTitle => '¿Eliminar esta evidencia?';
 
   @override
+  String get pendingSyncDeleteTitle => '¿Eliminar este cambio sin sincronizar?';
+
+  @override
   String get pendingUploadDeleteMessage =>
       'También se eliminará la acción de progreso que depende de ella.';
 

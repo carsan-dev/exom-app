@@ -1124,6 +1124,7 @@
   "@pendingUploadAttempts": {"placeholders": {"count": {"type": "int"}}},
   "pendingUploadDelete": "Eliminar",
   "pendingUploadDeleteTitle": "¿Eliminar esta evidencia?",
+  "pendingSyncDeleteTitle": "¿Eliminar este cambio sin sincronizar?",
   "pendingUploadDeleteMessage": "También se eliminará la acción de progreso que depende de ella.",
   "pendingUploadRetry": "Reintentar",
   "pendingUploadQueuedStatus": "En cola",

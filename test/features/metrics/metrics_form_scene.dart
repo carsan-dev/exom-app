@@ -123,8 +123,13 @@ Future<void> pumpMetricsFormScene(
       ),
     ),
   );
+  // «Today» is the day of the scene record, so the initial «latest» load
+  // answers the record of the selected day (L6-UX7 b).
+  final today = (latest ?? sceneMetric).date;
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      builder: (_) => MetricsFormPage(clock: () => today),
+    ),
   );
   await tester.pumpAndSettle();
 }

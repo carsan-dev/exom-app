@@ -184,7 +184,8 @@ Future<void> _pumpMetricsForm(
           ),
           child: app!,
         ),
-        home: const MetricsFormPage(),
+        // «Today» is the day of the loaded record (L6-UX7 b).
+        home: MetricsFormPage(clock: () => _metric.date),
       ),
     ),
   );

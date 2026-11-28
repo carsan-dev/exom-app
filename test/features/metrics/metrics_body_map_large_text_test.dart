@@ -138,7 +138,11 @@ Future<_Harness> _mount(
   );
   // The page is pushed (as the router does) so that a successful save can pop.
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      // «Today» is the day of the loaded record, so the initial «latest» load
+      // answers the record of the selected day (L6-UX7 b).
+      builder: (_) => MetricsFormPage(clock: () => (latest ?? _metric).date),
+    ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));

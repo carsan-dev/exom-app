@@ -44,6 +44,11 @@ final _metric = BodyMetricEntity(
   armRightCm: 36,
 );
 
+/// «Today» of the harness: the day of [_metric], so the initial «latest» load
+/// answers the record of the selected day unless a test says otherwise.
+final _today = DateTime(2026, 11, 18);
+const _todayApi = '2026-11-18';
+
 class _Repository extends Fake implements MetricsRepository {
   _Repository(this.latest, {this.gate, this.saveError, this.loader});
 
@@ -127,6 +132,7 @@ Future<_Harness> _mount(
   Object? saveError,
   UnitSystem unitSystem = UnitSystem.metric,
   Future<BodyMetricEntity?> Function(String? date)? loader,
+  DateTime? today,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -175,8 +181,11 @@ Future<_Harness> _mount(
     ),
   );
   // The page is pushed (as the router does) so that a successful save can pop.
+  final clockToday = today ?? _today;
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      builder: (_) => MetricsFormPage(clock: () => clockToday),
+    ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
@@ -286,7 +295,7 @@ Future<void> _pickOtherDay(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   final dialog = find.byType(DatePickerDialog);
-  if (DateTime.now().day == 1) {
+  if (_today.day == 1) {
     await tester.tap(
       find.byTooltip(
         MaterialLocalizations.of(tester.element(dialog)).previousMonthTooltip,
@@ -444,9 +453,8 @@ void main() {
   });
 
   group('existing actions', () {
-    testWidgets('a change sends the loaded values, the change and the date', (
-      tester,
-    ) async {
+    // M-1: the loaded values used to travel with the change.
+    testWidgets('a change sends only the change and the date', (tester) async {
       final h = await _mount(tester, latest: _metric);
       final l10n = _l10n(tester);
       await openMeasureSheet(tester, BodyZone.waist);
@@ -455,19 +463,8 @@ void main() {
       await tester.tap(_saveButton(l10n));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       expect(h.repository.saved, hasLength(1));
-      expect(h.repository.saved.single, {
-        'date': today,
-        'height_cm': 180.0,
-        'weight_kg': 68.4,
-        'sleep_hours': 7.5,
-        'muscle_mass_kg': 32.5,
-        'chest_cm': 100.0,
-        'arm_left_cm': 35.0,
-        'arm_right_cm': 36.0,
-        'waist_cm': 73.5,
-      });
+      expect(h.repository.saved.single, {'date': _todayApi, 'waist_cm': 73.5});
       expect(h.profile.updates, [
         {'height': 180.0},
       ]);
@@ -635,8 +632,8 @@ void main() {
       expect(h.repository.saved.single['weight_kg'], 72.5);
     });
 
-    testWidgets('after a save error the retry sends the loaded weight and '
-        'values, not the profile weight', (tester) async {
+    testWidgets('after a save error the retry sends the same change, neither '
+        'the loaded values nor the profile weight', (tester) async {
       final h = await _mount(
         tester,
         latest: _metric,
@@ -654,9 +651,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tapSave(tester);
       expect(h.repository.saved, hasLength(2));
-      expect(h.repository.saved.last['weight_kg'], 68.4);
-      expect(h.repository.saved.last['sleep_hours'], 7.5);
-      expect(h.repository.saved.last['waist_cm'], 73.5);
+      expect(h.repository.saved.last, {'date': _todayApi, 'waist_cm': 73.5});
     });
 
     testWidgets('while a date loads the save is disabled', (tester) async {
@@ -768,6 +763,157 @@ void main() {
     });
   });
 
+  // M-1: the save resent every loaded value, so a value changed meanwhile by
+  // the admin or another device was reverted (lost update). L6-UX7 (b): the
+  // initial «latest» load (the newest record, of another day) was copied to
+  // today and saved with it.
+  group('M-1 the save sends only what changed', () {
+    bool saveEnabled(WidgetTester tester) =>
+        tester
+            .widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton))
+            .onPressed !=
+        null;
+
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    final day20 = BodyMetricEntity(
+      id: 'metric-20',
+      date: DateTime(2026, 11, 20),
+      weightKg: 81,
+      heightCm: 178,
+      muscleMassKg: 33.5,
+      sleepHours: 6.5,
+      waistCm: 80,
+      calfLeftCm: 36,
+    );
+
+    testWidgets('lost update: day with waist 80, only the weight changes, '
+        'no waist_cm travels', (tester) async {
+      final h = await _mount(
+        tester,
+        latest: day20,
+        today: DateTime(2026, 11, 20),
+      );
+      await tester.tap(
+        find.descendant(
+          of: _weightStepper(),
+          matching: find.byIcon(ExomIcons.add),
+        ),
+      );
+      await tester.pump();
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-20', 'weight_kg': 81.5},
+      ]);
+    });
+
+    testWidgets('typing the value the day already has sends nothing for it', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: _metric,
+        size: const Size(390, 6000),
+      );
+      await tester.enterText(_fieldWithText('7,5'), '7.5');
+      await tester.pump();
+      await tester.enterText(_fieldWithText('32,5'), '33');
+      await tester.pump();
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': _todayApi, 'muscle_mass_kg': 33.0},
+      ]);
+    });
+
+    testWidgets('the «latest» record of another day is not today: its values '
+        'are not sent untouched', (tester) async {
+      final h = await _mount(
+        tester,
+        latest: day20,
+        today: DateTime(2026, 11, 28),
+        size: const Size(390, 6000),
+      );
+      // Today is a day without a record: no field holds the values of day 20.
+      expect(_fieldWithText('33,5'), findsNothing);
+      expect(_fieldWithText('6,5'), findsNothing);
+      expect(
+        measureValueText(tester, BodyZone.waist),
+        _l10n(tester).optionalRatingNoData,
+      );
+      // Nothing to send without a profile weight: the save stays disabled.
+      expect(saveEnabled(tester), isFalse);
+
+      await tester.enterText(find.byType(TextFormField).at(2), '7');
+      await tester.pump();
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-28', 'sleep_hours': 7.0},
+      ]);
+      expect(h.profile.updates, isEmpty);
+    });
+
+    testWidgets('the «latest» record of another day shows as «Última» with '
+        'its date', (tester) async {
+      await _mount(
+        tester,
+        latest: day20,
+        today: DateTime(2026, 11, 28),
+        size: const Size(390, 6000),
+      );
+      final l10n = _l10n(tester);
+      String hintOf(int index) => tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byType(TextFormField).at(index),
+              matching: find.byType(TextField),
+            ),
+          )
+          .decoration!
+          .hintText!;
+      expect(hintOf(0), l10n.metricsMeasureLast('178,0 cm', '20 nov'));
+      expect(hintOf(1), l10n.metricsMeasureLast('33,5 kg', '20 nov'));
+      expect(hintOf(2), l10n.metricsMeasureLast('6,5 h', '20 nov'));
+      await openMeasureSheet(tester, BodyZone.waist);
+      expect(
+        plainText(tester, measureLast()),
+        l10n.metricsMeasureLast('80,0 cm', '20 nov'),
+      );
+    });
+
+    testWidgets('a record of the selected day is still its baseline', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        latest: day20,
+        today: DateTime(2026, 11, 20),
+        size: const Size(390, 6000),
+      );
+      expect(_fieldWithText('33,5'), findsOneWidget);
+      expect(_fieldWithText('6,5'), findsOneWidget);
+      expect(measureValueText(tester, BodyZone.waist), '80,0 cm');
+    });
+
+    testWidgets('a measure changed in the sheet travels alone', (tester) async {
+      final h = await _mount(
+        tester,
+        latest: day20,
+        today: DateTime(2026, 11, 20),
+      );
+      await openMeasureSheet(tester, BodyZone.calf);
+      await typeMeasure(tester, 'calf_right_cm', '37');
+      await tapMeasureDone(tester);
+      await tapSave(tester);
+      expect(h.repository.saved, [
+        {'date': '2026-11-20', 'calf_right_cm': 37.0},
+      ]);
+    });
+  });
+
   // L6-UX5: clearing a value the saved metric had used to omit its key, so the
   // server kept the old value while the app reported it saved. Owner
   // decision: a cleared value that was saved is sent as an explicit null; a
@@ -786,8 +932,8 @@ void main() {
       return button.onPressed != null;
     }
 
-    testWidgets('clearing the muscle mass sends it as null and keeps the '
-        'untouched values', (tester) async {
+    testWidgets('clearing the muscle mass sends it as null and leaves the '
+        'untouched values out', (tester) async {
       final h = await _mount(
         tester,
         latest: _metric,
@@ -797,23 +943,11 @@ void main() {
       await tester.pump();
       expect(saveEnabled(tester), isTrue);
       await tapSave(tester);
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       expect(h.repository.saved, hasLength(1));
       final sent = h.repository.saved.single;
       expect(sent.containsKey('muscle_mass_kg'), isTrue);
-      expect(sent, {
-        'date': today,
-        'height_cm': 180.0,
-        'weight_kg': 68.4,
-        'sleep_hours': 7.5,
-        'muscle_mass_kg': null,
-        'chest_cm': 100.0,
-        'arm_left_cm': 35.0,
-        'arm_right_cm': 36.0,
-        'waist_cm': 74.0,
-      });
-      // Measures without a saved value are still left out.
-      expect(sent.containsKey('neck_cm'), isFalse);
+      // M-1: the untouched values stay on the server (absent keys).
+      expect(sent, {'date': _todayApi, 'muscle_mass_kg': null});
     });
 
     testWidgets('a muscle mass that was empty and is left empty is not sent', (
@@ -844,8 +978,7 @@ void main() {
       await tester.pump();
       await tapSave(tester);
       expect(h.repository.saved, hasLength(1));
-      expect(h.repository.saved.single.containsKey('muscle_mass_kg'), isFalse);
-      expect(h.repository.saved.single['waist_cm'], 74.0);
+      expect(h.repository.saved.single, {'date': _todayApi, 'weight_kg': 68.9});
     });
 
     testWidgets('clearing the only value of the day disables the save and '
@@ -869,8 +1002,8 @@ void main() {
       expect(h.profile.updates, isEmpty);
     });
 
-    testWidgets('clearing one of two values sends null for it and keeps the '
-        'other', (tester) async {
+    testWidgets('clearing one of two values sends null for it and leaves the '
+        'other out', (tester) async {
       final twoValues = BodyMetricEntity(
         id: 'metric-5',
         date: DateTime(2026, 11, 18),
@@ -886,9 +1019,8 @@ void main() {
       await tester.pump();
       expect(saveEnabled(tester), isTrue);
       await tapSave(tester);
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       expect(h.repository.saved, [
-        {'date': today, 'muscle_mass_kg': null, 'waist_cm': 74.0},
+        {'date': _todayApi, 'muscle_mass_kg': null},
       ]);
     });
   });
@@ -908,7 +1040,7 @@ void main() {
 
     /// The day [_pickOtherDay] picks, as the API date.
     String pickedDay() {
-      final now = DateTime.now();
+      final now = _today;
       final day = now.day == 1
           ? DateTime(now.year, now.month - 1)
           : DateTime(now.year, now.month);
@@ -956,15 +1088,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(h.repository.saved, hasLength(1));
-      final sent = h.repository.saved.single;
-      expect(sent['date'], pickedDay());
-      expect(sent['weight_kg'], 80.0);
-      expect(sent['muscle_mass_kg'], 41.0);
-      expect(sent['sleep_hours'], 6.0);
-      expect(sent['waist_cm'], 90.0);
-      // Nothing of the other day travels with it.
-      expect(sent.containsKey('chest_cm'), isFalse);
-      expect(sent.containsKey('arm_left_cm'), isFalse);
+      // Nothing of the other day travels with it, and of day B only the
+      // change (M-1).
+      expect(h.repository.saved.single, {
+        'date': pickedDay(),
+        'muscle_mass_kg': 41.0,
+      });
     });
 
     testWidgets('a late load error of the previous date neither empties the '

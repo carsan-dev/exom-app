@@ -127,7 +127,12 @@ Future<_Repository> _mount(
     ),
   );
   navigatorKey.currentState!.push(
-    MaterialPageRoute<void>(builder: (_) => const MetricsFormPage()),
+    MaterialPageRoute<void>(
+      // «Today» is the day of the loaded record, so the initial «latest» load
+      // answers the record of the selected day (L6-UX7 b).
+      builder: (_) =>
+          MetricsFormPage(clock: () => (latest ?? _metricWithWeight(70)).date),
+    ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
@@ -195,7 +200,7 @@ Future<void> _pickOtherDay(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   final dialog = find.byType(DatePickerDialog);
-  if (DateTime.now().day == 1) {
+  if (_metricWithWeight(70).date.day == 1) {
     final previous = MaterialLocalizations.of(
       tester.element(dialog),
     ).previousMonthTooltip;
@@ -431,8 +436,10 @@ void main() {
           (170.0, 160.0),
         ]) {
           final below = loadedKg < limitKg;
+          // M-1: an untouched weight is not resent (it used to travel as is);
+          // the stored value stays, never clamped to the range.
           testWidgets('a loaded ${loadedKg.round()} kg is shown and, '
-              'untouched, sent as is with another change', (tester) async {
+              'untouched, not sent with another change', (tester) async {
             final repository = await _mount(
               tester,
               locale: locale,
@@ -445,7 +452,10 @@ void main() {
             );
             await _changeSleep(tester);
             await _save(tester);
-            expect(repository.saved.single['weight_kg'], loadedKg);
+            expect(repository.saved.single, {
+              'date': '2026-11-18',
+              'sleep_hours': 9.0,
+            });
           });
 
           testWidgets('from a loaded ${loadedKg.round()} kg the button away '
@@ -470,9 +480,8 @@ void main() {
         }
 
         testWidgets('invalid typed text, then another date with a metric: the '
-            'field shows the loaded weight and the save sends it', (
-          tester,
-        ) async {
+            'field shows the loaded weight and the save is not blocked by '
+            'it', (tester) async {
           final repository = await _mount(
             tester,
             locale: locale,
@@ -495,7 +504,10 @@ void main() {
           );
           await _changeSleep(tester);
           await _save(tester);
-          expect(repository.saved.single['weight_kg'], 81.0);
+          // M-1: the loaded weight is not resent untouched.
+          expect(repository.saved, hasLength(1));
+          expect(repository.saved.single.containsKey('weight_kg'), isFalse);
+          expect(repository.saved.single['sleep_hours'], 9.0);
         });
       });
     }

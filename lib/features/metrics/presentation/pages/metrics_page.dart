@@ -1124,9 +1124,8 @@ class _MetricsViewState extends State<_MetricsView> {
           ? _lengthField(initialHeightCm, unitSystem)
           : '',
     );
-    final calfController = TextEditingController(
-      text: _preferredSeenCalfText(),
-    );
+    final initialCalfText = _preferredSeenCalfText();
+    final calfController = TextEditingController(text: initialCalfText);
     var selectedSex = parseSeenBiologicalSex(profile?['sex'] as String?);
     String? errorText;
 
@@ -1304,19 +1303,23 @@ class _MetricsViewState extends State<_MetricsView> {
                       return;
                     }
 
-                    _controllerForField('calf_left_cm').text = _lengthField(
-                      calfCm,
-                      unitSystem,
-                    );
-                    _controllerForField('calf_right_cm').text = _lengthField(
-                      calfCm,
-                      unitSystem,
-                    );
+                    // The calf of the estimate never overwrites a measured
+                    // side (M-4). A new calf typed here only fills the side
+                    // without a value when the other one has it.
+                    final emptyCalves = [
+                      for (final key in const ['calf_left_cm', 'calf_right_cm'])
+                        if (_controllerForField(key).text.trim().isEmpty) key,
+                    ];
+                    if (emptyCalves.length == 1 &&
+                        !_sameDraft(calfController.text, initialCalfText)) {
+                      _controllerForField(emptyCalves.single).text = _draftText(
+                        calfValue,
+                      );
+                      _markMeasureTouched(emptyCalves.single);
+                    }
                     _heightController.text = _lengthField(heightCm, unitSystem);
                     _heightTouched = true;
                     _muscleMassTouched = true;
-                    _markMeasureTouched('calf_left_cm');
-                    _markMeasureTouched('calf_right_cm');
                     Navigator.of(dialogContext).pop(result);
                   },
                   child: Text(

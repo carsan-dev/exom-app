@@ -1570,6 +1570,112 @@ void main() {
       expect(_weightFigure('80,5'), findsWidgets);
     });
 
+    // M-4: «Calcular y usar» wrote the larger calf on both sides and the
+    // smaller real measure was lost.
+    Future<void> calculateAndUse(
+      WidgetTester tester, {
+      String? typedCalf,
+    }) async {
+      final l10n = _l10n(tester);
+      await _scrollTo(tester, find.text(l10n.calculateEstimateButton));
+      await tester.tap(find.text(l10n.calculateEstimateButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      if (typedCalf != null) {
+        final calf = find.widgetWithText(TextField, l10n.calfLabel);
+        await tester.enterText(calf, typedCalf);
+        await tester.pump();
+        // Leave the field: a focused dialog field rebuilds after the page
+        // disposed its controller (see the SEEN notice test below).
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+      }
+      await tester.tap(find.text(l10n.calculateAndUseButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      ScaffoldMessenger.of(
+        tester.element(find.byType(MetricsFormPage)),
+      ).clearSnackBars();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.tap(_saveButton(_l10n(tester)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('SEEN keeps both real calves (I 36,0 · D 37,0)', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: BodyMetricEntity(
+          id: 'metric-calves',
+          date: DateTime(2026, 11, 18),
+          heightCm: 180,
+          calfLeftCm: 36,
+          calfRightCm: 37,
+        ),
+        profileCache: profile,
+        size: const Size(390, 1600),
+      );
+      await calculateAndUse(tester);
+      expect(measureValueText(tester, BodyZone.calf), 'I 36,0 · D 37,0 cm');
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      final sent = h.repository.saved.single;
+      expect(sent.containsKey('calf_left_cm'), isFalse);
+      expect(sent.containsKey('calf_right_cm'), isFalse);
+      expect(sent.containsKey('muscle_mass_kg'), isTrue);
+    });
+
+    testWidgets('SEEN with a new calf typed fills only the empty side', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: BodyMetricEntity(
+          id: 'metric-one-calf',
+          date: DateTime(2026, 11, 18),
+          heightCm: 180,
+          calfLeftCm: 36,
+        ),
+        profileCache: profile,
+        size: const Size(390, 1600),
+      );
+      await calculateAndUse(tester, typedCalf: '38');
+      expect(measureValueText(tester, BodyZone.calf), 'I 36,0 · D 38,0 cm');
+      await tapSave(tester);
+      final sent = h.repository.saved.single;
+      expect(sent.containsKey('calf_left_cm'), isFalse);
+      expect(sent['calf_right_cm'], 38.0);
+    });
+
+    testWidgets('SEEN with a new calf typed over two real calves keeps them', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: BodyMetricEntity(
+          id: 'metric-calves',
+          date: DateTime(2026, 11, 18),
+          heightCm: 180,
+          calfLeftCm: 36,
+          calfRightCm: 37,
+        ),
+        profileCache: profile,
+        size: const Size(390, 1600),
+      );
+      await calculateAndUse(tester, typedCalf: '39');
+      expect(measureValueText(tester, BodyZone.calf), 'I 36,0 · D 37,0 cm');
+      await tapSave(tester);
+      final sent = h.repository.saved.single;
+      expect(sent.containsKey('calf_left_cm'), isFalse);
+      expect(sent.containsKey('calf_right_cm'), isFalse);
+    });
+
     for (final (locale, estimatePattern, asmiPattern) in [
       ('es', RegExp(r'\d+,\d kg '), RegExp(r'ASMI \d+,\d{2} kg/m²')),
       ('en', RegExp(r'\d+\.\d kg '), RegExp(r'ASMI \d+\.\d{2} kg/m²')),

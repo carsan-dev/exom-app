@@ -4,6 +4,8 @@
 // of another day. Only the newest load may emit, whether it succeeds or fails.
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/features/metrics/domain/entities/body_metric_entity.dart';
 import 'package:exom_app/features/metrics/domain/repositories/metrics_repository.dart';
 import 'package:exom_app/features/metrics/domain/usecases/save_metric_usecase.dart';
@@ -178,8 +180,10 @@ void main() {
     },
   );
 
+  // L6-UX7 (a): a failed load used to degrade to Loaded(null), which the form
+  // read as a day without metrics (profile weight preloaded, save offered).
   test(
-    'the newest load still degrades to Loaded(null) when it fails',
+    'the newest load failing emits MetricsLoadFailed, never Loaded(null)',
     () async {
       bloc.add(const MetricsLoadRequested(date: '2026-11-10'));
       bloc.add(const MetricsLoadRequested(date: '2026-11-20'));
@@ -190,7 +194,68 @@ void main() {
       repository.loads[1].reply.completeError(Exception('day B failed'));
       await _settle();
 
-      expect(_loaded(states), [isNull]);
+      expect(_loaded(states), isEmpty);
+      expect(
+        bloc.state,
+        isA<MetricsLoadFailed>()
+            .having((s) => s.date, 'date', '2026-11-20')
+            .having((s) => s.offline, 'offline', isFalse)
+            .having((s) => s.sessionChanged, 'sessionChanged', isFalse),
+      );
+    },
+  );
+
+  test('a failed load without connection is marked offline', () async {
+    bloc.add(const MetricsLoadRequested());
+    await _settle();
+    repository.loads[0].reply.completeError(
+      DioException(
+        requestOptions: RequestOptions(path: '/metrics/latest'),
+        type: DioExceptionType.connectionError,
+      ),
+    );
+    await _settle();
+
+    expect(
+      bloc.state,
+      isA<MetricsLoadFailed>()
+          .having((s) => s.date, 'date', isNull)
+          .having((s) => s.offline, 'offline', isTrue),
+    );
+  });
+
+  test(
+    'a session change during the load is a failure, not an empty day',
+    () async {
+      bloc.add(const MetricsLoadRequested(date: '2026-11-20'));
+      await _settle();
+      repository.loads[0].reply.completeError(const LocalSessionChanged());
+      await _settle();
+
+      expect(_loaded(states), isEmpty);
+      expect(
+        bloc.state,
+        isA<MetricsLoadFailed>().having(
+          (s) => s.sessionChanged,
+          'sessionChanged',
+          isTrue,
+        ),
+      );
+    },
+  );
+
+  test(
+    'a stale load failure after the newer load answered is ignored',
+    () async {
+      bloc.add(const MetricsLoadRequested(date: '2026-11-10'));
+      bloc.add(const MetricsLoadRequested(date: '2026-11-20'));
+      await _settle();
+      repository.loads[1].reply.complete(_dayB);
+      await _settle();
+      repository.loads[0].reply.completeError(Exception('timeout of day A'));
+      await _settle();
+
+      expect(states.whereType<MetricsLoadFailed>(), isEmpty);
     },
   );
 
@@ -206,8 +271,7 @@ void main() {
     await _settle();
     repository.loads[1].reply.completeError(Exception('day B failed'));
     await _settle();
-    final failed = bloc.state as MetricsLoaded;
-    expect(failed.current, isNull);
+    final failed = bloc.state as MetricsLoadFailed;
     expect(failed.date, '2026-11-20');
     expect(failed.request, greaterThan(initial.request));
   });

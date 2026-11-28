@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
@@ -1012,6 +1013,122 @@ void main() {
       expect(muscleField.controller!.text, isEmpty);
       expect(_fieldWithText('0'), findsNothing);
       expect(_fieldWithText('0,0'), findsNothing);
+    });
+  });
+
+  // L6-UX7 (a): a failed load (no connection and no cache, 5xx, timeout, a
+  // session change) used to arrive as a day without metrics: the profile
+  // weight was preloaded and «Guardar» saved it over a day never read.
+  group('L6-UX7 a failed load is not an empty day', () {
+    bool saveEnabled(WidgetTester tester) =>
+        tester
+            .widget<ExomPrimaryButton>(find.byType(ExomPrimaryButton))
+            .onPressed !=
+        null;
+
+    Finder loadError() => find.byKey(const Key('metrics-load-error'));
+
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('the initial load fails: error with «Reintentar», no save, '
+        'and the retry loads it again', (tester) async {
+      final requested = <String?>[];
+      var fail = true;
+      final h = await _mount(
+        tester,
+        profileCache: {'current_weight': 72.5},
+        loader: (date) async {
+          requested.add(date);
+          if (fail) throw Exception('500');
+          return null;
+        },
+      );
+      final l10n = _l10n(tester);
+      expect(loadError(), findsOneWidget);
+      expect(find.text(l10n.metricsDayLoadError), findsOneWidget);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(_saveButton(l10n));
+      await settle(tester);
+      expect(h.repository.saved, isEmpty);
+
+      fail = false;
+      await tester.tap(find.text(l10n.retryButton));
+      await settle(tester);
+      expect(requested, [null, null]);
+      expect(loadError(), findsNothing);
+      // Now it is a real day without metrics: the profile weight counts.
+      expect(saveEnabled(tester), isTrue);
+    });
+
+    testWidgets('a failed dated load retries that same date', (tester) async {
+      final requested = <String?>[];
+      await _mount(
+        tester,
+        size: const Size(390, 6000),
+        loader: (date) async {
+          requested.add(date);
+          if (date != null) throw Exception('timeout');
+          return null;
+        },
+      );
+      await _pickOtherDay(tester);
+      expect(loadError(), findsOneWidget);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(find.text(_l10n(tester).retryButton));
+      await settle(tester);
+      expect(requested, hasLength(3));
+      expect(requested[2], requested[1]);
+      expect(requested[1], isNotNull);
+    });
+
+    testWidgets('without connection the error says so', (tester) async {
+      await _mount(
+        tester,
+        loader: (_) async => throw DioException(
+          requestOptions: RequestOptions(path: '/metrics/latest'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+      expect(find.text(_l10n(tester).noConnectionMessage), findsOneWidget);
+    });
+
+    testWidgets('a session change: no retry and no save', (tester) async {
+      final requested = <String?>[];
+      final h = await _mount(
+        tester,
+        profileCache: {'current_weight': 72.5},
+        loader: (date) async {
+          requested.add(date);
+          throw const LocalSessionChanged();
+        },
+      );
+      final l10n = _l10n(tester);
+      expect(loadError(), findsOneWidget);
+      expect(find.text(l10n.retryButton), findsNothing);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(_saveButton(l10n));
+      await settle(tester);
+      expect(h.repository.saved, isEmpty);
+      expect(requested, [null]);
+    });
+
+    testWidgets('a typed change does not enable the save over a failed load', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        loader: (_) async => throw Exception('500'),
+      );
+      await openMeasureSheet(tester, BodyZone.waist);
+      await typeMeasure(tester, 'waist_cm', '81');
+      await tapMeasureDone(tester);
+      expect(saveEnabled(tester), isFalse);
+      await tester.tap(_saveButton(_l10n(tester)));
+      await settle(tester);
+      expect(h.repository.saved, isEmpty);
     });
   });
 

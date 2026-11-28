@@ -23,6 +23,7 @@ import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/core/theme/spacing.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/core/widgets/exom_flat_row.dart';
+import 'package:exom_app/core/widgets/exom_inline_message.dart';
 import 'package:exom_app/core/widgets/exom_kicker.dart';
 import 'package:exom_app/core/widgets/exom_numbered_section_header.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
@@ -116,6 +117,11 @@ class _MetricsViewState extends State<_MetricsView> {
   /// arrived: the save is not offered while a date is loading.
   BodyMetricEntity? _lastLoaded;
   bool _dayLoaded = false;
+
+  /// The load of the selected date failed (L6-UX7): the form shows the error
+  /// with «Reintentar» and the save stays disabled until a load arrives. A
+  /// failed load is never read as a day without metrics.
+  MetricsLoadFailed? _loadFailure;
 
   bool _bodyMapMode = false;
   BodyZone? _selectedMeasure;
@@ -269,8 +275,18 @@ class _MetricsViewState extends State<_MetricsView> {
       _selectedMeasure = null;
       _lastLoaded = null;
       _dayLoaded = false;
+      _loadFailure = null;
     });
     _loadMetricForSelectedDate();
+  }
+
+  /// Launches again the load that failed, for the same date (or the initial
+  /// «latest» load).
+  void _retryLoad() {
+    final failure = _loadFailure;
+    if (failure == null) return;
+    setState(() => _loadFailure = null);
+    context.read<MetricsBloc>().add(MetricsLoadRequested(date: failure.date));
   }
 
   void _loadMetricForSelectedDate() {
@@ -1351,10 +1367,18 @@ class _MetricsViewState extends State<_MetricsView> {
     );
     return BlocListener<MetricsBloc, MetricsState>(
       listener: (context, state) {
+        if (state is MetricsLoadFailed) {
+          setState(() {
+            _lastLoaded = null;
+            _dayLoaded = false;
+            _loadFailure = state;
+          });
+        }
         if (state is MetricsLoaded) {
           final currentMetric = state.current;
           _lastLoaded = currentMetric;
           _dayLoaded = true;
+          _loadFailure = null;
           if (currentMetric != null) {
             _populateFromMetric(currentMetric);
           } else {
@@ -1469,6 +1493,23 @@ class _MetricsViewState extends State<_MetricsView> {
                               onTap: _pickMetricDate,
                             ),
                             Text(l10n.recordDateDescription, style: secondary),
+                            if (_loadFailure case final failure?)
+                              ExomInlineMessage(
+                                key: const Key('metrics-load-error'),
+                                kind: ExomMessageKind.error,
+                                title: l10n.metricsDayLoadError,
+                                body: failure.offline
+                                    ? l10n.noConnectionMessage
+                                    : null,
+                                // After a session change the form belongs to
+                                // the previous session: it is not reloaded.
+                                actionLabel: failure.sessionChanged
+                                    ? null
+                                    : l10n.retryButton,
+                                onAction: failure.sessionChanged
+                                    ? null
+                                    : _retryLoad,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 24),

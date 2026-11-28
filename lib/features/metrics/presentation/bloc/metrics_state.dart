@@ -13,7 +13,8 @@ class MetricsLoading extends MetricsState {
 }
 
 /// Answer to a [MetricsLoadRequested]: [current] is the metric of the
-/// requested day, or null for a day without metrics (or a failed load).
+/// requested day, or null for a day without metrics. A failed load is
+/// [MetricsLoadFailed], never a null [current] (L6-UX7).
 ///
 /// Only the newest load emits it; [date] and [request] tag which load it
 /// answers.
@@ -28,6 +29,36 @@ class MetricsLoaded extends MetricsState {
   final int request;
 
   const MetricsLoaded(this.current, {this.date, this.request = 0});
+}
+
+/// Answer to a [MetricsLoadRequested] whose load failed: no connection and no
+/// cached copy, a server error, a timeout, an unexpected answer or a session
+/// change. It is not a day without metrics, so the form must not be saved
+/// over it (L6-UX7).
+///
+/// Only the newest load emits it; [date] and [request] tag which load it
+/// answers, as in [MetricsLoaded].
+class MetricsLoadFailed extends MetricsState {
+  /// The `yyyy-MM-dd` date that was requested, or null for the initial
+  /// «latest» load.
+  final String? date;
+
+  /// Sequence number of the load within its bloc (0 when not set).
+  final int request;
+
+  /// The load failed for lack of connection.
+  final bool offline;
+
+  /// The session changed (logout or user switch) while the load was in
+  /// flight: the form belongs to the previous session and is not reloaded.
+  final bool sessionChanged;
+
+  const MetricsLoadFailed({
+    this.date,
+    this.request = 0,
+    this.offline = false,
+    this.sessionChanged = false,
+  });
 }
 
 class MetricsSaving extends MetricsState {

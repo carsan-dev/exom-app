@@ -147,12 +147,24 @@ class MetricsBloc extends Bloc<MetricsEvent, MetricsState> {
   ) async {
     final request = ++_loadEpoch;
     emit(const MetricsLoading());
-    BodyMetricEntity? metric;
+    final BodyMetricEntity? metric;
     try {
+      // The datasource answers null only when the day has no record (200
+      // with `data: null`, or 404); every other failure throws.
       metric = await _metricsRepository.getLatestMetric(date: event.date);
-    } catch (_) {
-      // A failed load still reads as a day without metrics.
-      metric = null;
+    } catch (error) {
+      if (request != _loadEpoch) return;
+      // Not a day without metrics: the form must not be saved over a load
+      // that never arrived (L6-UX7).
+      emit(
+        MetricsLoadFailed(
+          date: event.date,
+          request: request,
+          offline: isOfflineError(error),
+          sessionChanged: _isSessionChange(error),
+        ),
+      );
+      return;
     }
     if (request != _loadEpoch) return;
     emit(MetricsLoaded(metric, date: event.date, request: request));

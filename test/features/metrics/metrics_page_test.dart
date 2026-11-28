@@ -1787,12 +1787,22 @@ void main() {
     Future<void> calculateAndUse(
       WidgetTester tester, {
       String? typedCalf,
+      String? typedHeight,
     }) async {
       final l10n = _l10n(tester);
       await _scrollTo(tester, find.text(l10n.calculateEstimateButton));
       await tester.tap(find.text(l10n.calculateEstimateButton));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      if (typedHeight != null) {
+        await tester.enterText(
+          find.widgetWithText(TextField, l10n.heightSectionTitle),
+          typedHeight,
+        );
+        await tester.pump();
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+      }
       if (typedCalf != null) {
         final calf = find.widgetWithText(TextField, l10n.calfLabel);
         await tester.enterText(calf, typedCalf);
@@ -1841,6 +1851,52 @@ void main() {
       expect(sent.containsKey('calf_left_cm'), isFalse);
       expect(sent.containsKey('calf_right_cm'), isFalse);
       expect(sent.containsKey('muscle_mass_kg'), isTrue);
+    });
+
+    // The dialog height is the one of the field; accepting it unchanged must
+    // not send a height the user did not edit (M-1, M-3).
+    testWidgets('SEEN accepted without changing the prefilled height does not send it', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: BodyMetricEntity(
+          id: 'metric-past',
+          date: DateTime(2026, 11, 18),
+          calfLeftCm: 36,
+          calfRightCm: 37,
+        ),
+        profileCache: profile,
+        size: const Size(390, 1600),
+      );
+      await calculateAndUse(tester);
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      final sent = h.repository.saved.single;
+      expect(sent.containsKey('height_cm'), isFalse);
+      expect(sent.containsKey('muscle_mass_kg'), isTrue);
+      expect(h.profile.updates, isEmpty);
+    });
+
+    testWidgets('SEEN with the height changed in the dialog sends it', (
+      tester,
+    ) async {
+      final h = await _mount(
+        tester,
+        latest: BodyMetricEntity(
+          id: 'metric-past',
+          date: DateTime(2026, 11, 18),
+          heightCm: 178,
+          calfLeftCm: 36,
+          calfRightCm: 37,
+        ),
+        profileCache: profile,
+        size: const Size(390, 1600),
+      );
+      await calculateAndUse(tester, typedHeight: '182');
+      await tapSave(tester);
+      expect(h.repository.saved, hasLength(1));
+      expect(h.repository.saved.single['height_cm'], 182.0);
     });
 
     testWidgets('SEEN with a new calf typed fills only the empty side', (

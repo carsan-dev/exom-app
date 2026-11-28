@@ -1146,6 +1146,7 @@ class _MetricsViewState extends State<_MetricsView> {
           ? _lengthField(initialHeightCm, unitSystem)
           : '',
     );
+    final initialHeightText = heightController.text;
     final initialCalfText = _preferredSeenCalfText();
     final calfController = TextEditingController(text: initialCalfText);
     var selectedSex = parseSeenBiologicalSex(profile?['sex'] as String?);
@@ -1339,8 +1340,21 @@ class _MetricsViewState extends State<_MetricsView> {
                       );
                       _markMeasureTouched(emptyCalves.single);
                     }
-                    _heightController.text = _lengthField(heightCm, unitSystem);
-                    _heightTouched = true;
+                    // The height is written (and counts as edited) only when
+                    // the user changed the one the dialog opened with (the
+                    // field's, or the profile's when the field is empty),
+                    // compared in the displayed unit so a conversion is not
+                    // a change.
+                    if (!_sameDraft(
+                      heightController.text,
+                      initialHeightText,
+                    )) {
+                      _heightController.text = _lengthField(
+                        heightCm,
+                        unitSystem,
+                      );
+                      _heightTouched = true;
+                    }
                     _muscleMassTouched = true;
                     Navigator.of(dialogContext).pop(result);
                   },

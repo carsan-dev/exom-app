@@ -7,8 +7,10 @@
 // * a content change mid-move, or content with layers of its own, falls back
 //   to the live opacity layer, so the image never hides a change;
 // * taps and positions follow the offset as before;
-// * all of it at the device pixel ratio of real phones (2.625, 3.0; the S25
-//   is about 2.8), not only at 1.0, where logical and physical pixels match;
+// * all of it at the device pixel ratio of real phones (2.625, 2.8125 like
+//   the S25, 3.0), not only at 1.0, where logical and physical pixels match;
+// * the image is rasterized for the view's ratio, even when a MediaQuery
+//   below reports another one;
 // * interrupted moves (fast taps, going back mid-move) and unmounting
 //   mid-move leave no image alive.
 import 'dart:typed_data';
@@ -24,8 +26,8 @@ import 'exom_component_harness.dart';
 
 const _captureKey = Key('snapshot-capture');
 
-/// Device pixel ratios checked: 1.0 and two real phones' (the S25 is ~2.8).
-const List<double> _ratios = [1.0, 2.625, 3.0];
+/// Device pixel ratios checked: 1.0 and real phones' (2.8125 is the S25's).
+const List<double> _ratios = [1.0, 2.625, 2.8125, 3.0];
 
 /// Overlapping fill, outline and text: group opacity and per-element alpha
 /// give different pixels here, so the comparison is meaningful.
@@ -76,9 +78,14 @@ class _Host extends StatefulWidget {
     this.onTap,
     this.content,
     this.padding = 40,
+    this.mediaRatio,
   });
 
   final bool snapshot;
+
+  /// Device pixel ratio a MediaQuery above the step reports instead of the
+  /// view's.
+  final double? mediaRatio;
 
   /// Distance of the step from the captured area's corner: a fraction of a
   /// physical pixel puts the step's origin between pixels.
@@ -117,7 +124,7 @@ class _HostState extends State<_Host> {
     if (inner != null) content = inner(content);
     // The captured area has a margin around the step: ink painted outside
     // the step's box is compared too.
-    return Align(
+    final host = Align(
       alignment: Alignment.topLeft,
       child: RepaintBoundary(
         key: _captureKey,
@@ -134,6 +141,12 @@ class _HostState extends State<_Host> {
           ),
         ),
       ),
+    );
+    final mediaRatio = widget.mediaRatio;
+    if (mediaRatio == null) return host;
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(devicePixelRatio: mediaRatio),
+      child: host,
     );
   }
 }
@@ -159,8 +172,12 @@ List<OpacityLayer> _partialOpacityLayers(WidgetTester tester) {
 
 /// Pixels of the captured area at the physical resolution of the view (the
 /// `captureImage` of flutter_test takes them at ratio 1).
-Future<Uint8List> _pixels(WidgetTester tester) async {
-  final bytes = await tester.runAsync(() async {
+Future<Uint8List> _pixels(WidgetTester tester) async =>
+    (await _capture(tester)).$1;
+
+/// RGBA pixels of the captured area and its width in pixels.
+Future<(Uint8List, int)> _capture(WidgetTester tester) async {
+  final captured = await tester.runAsync(() async {
     final boundary = tester.renderObject(find.byKey(_captureKey));
     final layer = boundary.debugLayer! as OffsetLayer;
     final image = await layer.toImage(
@@ -168,10 +185,29 @@ Future<Uint8List> _pixels(WidgetTester tester) async {
       pixelRatio: tester.view.devicePixelRatio,
     );
     final data = await image.toByteData();
+    final width = image.width;
     image.dispose();
-    return data!.buffer.asUint8List();
+    return (data!.buffer.asUint8List(), width);
   });
-  return bytes!;
+  return captured!;
+}
+
+/// Alpha-weighted centroid of the pixels, in physical pixels, and the total
+/// alpha.
+(Offset, double) _inkCentroid((Uint8List, int) capture) {
+  final (pixels, width) = capture;
+  var x = 0.0;
+  var y = 0.0;
+  var total = 0.0;
+  for (var i = 0; i < pixels.length; i += 4) {
+    final alpha = pixels[i + 3].toDouble();
+    if (alpha == 0) continue;
+    final pixel = i ~/ 4;
+    x += alpha * (pixel % width);
+    y += alpha * (pixel ~/ width);
+    total += alpha;
+  }
+  return (Offset(x / total, y / total), total);
 }
 
 /// Compositing an image with an alpha and compositing a layer with it round
@@ -200,6 +236,7 @@ Future<GlobalKey<_HostState>> _mount(
   double textScale = 1.0,
   double ratio = 1.0,
   double padding = 40,
+  double? mediaRatio,
 }) async {
   final key = GlobalKey<_HostState>();
   await pumpComponent(
@@ -211,6 +248,7 @@ Future<GlobalKey<_HostState>> _mount(
       content: content,
       onTap: onTap,
       padding: padding,
+      mediaRatio: mediaRatio,
     ),
     disableAnimations: reduced,
     textScale: textScale,
@@ -234,6 +272,7 @@ Future<Uint8List> _midMove(
   double textScale = 1.0,
   double ratio = 1.0,
   double padding = 40,
+  double? mediaRatio,
 }) async {
   final key = await _mount(
     tester,
@@ -244,6 +283,7 @@ Future<Uint8List> _midMove(
     textScale: textScale,
     ratio: ratio,
     padding: padding,
+    mediaRatio: mediaRatio,
   );
   key.currentState!.go(1);
   await tester.pump();
@@ -335,32 +375,92 @@ void main() {
         expect(_maxDifference(live, image), lessThanOrEqualTo(_rounding));
       });
 
-      testWidgets('mid-move with offset at dpr $ratio: same overall ink as '
-          'the opacity layer', (tester) async {
-        // Mid-move the offset is fractional: the live step is rasterized
-        // between pixels and the image moves in whole physical pixels, so
-        // edges differ by antialiasing. The overall ink (alpha and content)
-        // must be the same.
-        final live = await _midMove(
-          tester,
-          snapshot: false,
-          reduced: false,
-          after: const Duration(milliseconds: 120),
-          ratio: ratio,
-        );
-        final image = await _midMove(
-          tester,
-          snapshot: true,
-          reduced: false,
-          after: const Duration(milliseconds: 120),
-          ratio: ratio,
-        );
-        expect(_partialOpacityLayers(tester), isEmpty);
-        int sum(Uint8List p) => p.fold(0, (s, v) => s + v);
-        final difference = (sum(live) - sum(image)).abs() / sum(live);
-        expect(difference, lessThan(0.005));
-      });
+      for (final incoming in [true, false]) {
+        final side = incoming ? 'incoming' : 'leaving';
+        testWidgets('mid-move with offset at dpr $ratio ($side): the ink is '
+            'where the opacity layer puts it', (tester) async {
+          // Only step 1 has ink, a box whose edges and origin fall between
+          // physical pixels. Mid-move the live step is rasterized at a
+          // fractional offset and the image moves by whole physical pixels,
+          // so the ink's centroid may differ by up to half a physical pixel,
+          // never more; the amount of ink (the alpha) is the same.
+          Widget box(int step) => step == 1
+              ? const Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 101.37,
+                    height: 50,
+                    child: ColoredBox(color: Color(0xFFFFFFFF)),
+                  ),
+                )
+              : const SizedBox(width: 240, height: 60);
+          Future<List<(Offset, double)>> frames({
+            required bool snapshot,
+          }) async {
+            final key = await _mount(
+              tester,
+              snapshot: snapshot,
+              content: box,
+              ratio: ratio,
+              padding: 40.3,
+            );
+            if (!incoming) {
+              key.currentState!.go(1);
+              await tester.pumpAndSettle();
+            }
+            key.currentState!.go(incoming ? 1 : 2);
+            await tester.pump();
+            final ink = <(Offset, double)>[];
+            for (var i = 0; i < 10; i++) {
+              await tester.pump(const Duration(milliseconds: 20));
+              if (snapshot) {
+                expect(_partialOpacityLayers(tester), isEmpty, reason: '$i');
+              }
+              ink.add(_inkCentroid(await _capture(tester)));
+            }
+            return ink;
+          }
+
+          final live = await frames(snapshot: false);
+          final image = await frames(snapshot: true);
+          for (var i = 0; i < live.length; i++) {
+            final (liveAt, liveInk) = live[i];
+            final (imageAt, imageInk) = image[i];
+            expect(
+              (liveAt.dx - imageAt.dx).abs(),
+              lessThanOrEqualTo(0.55),
+              reason: 'x, frame $i',
+            );
+            expect(
+              (liveAt.dy - imageAt.dy).abs(),
+              lessThanOrEqualTo(0.05),
+              reason: 'y, frame $i',
+            );
+            expect(
+              (liveInk - imageInk).abs() / liveInk,
+              lessThan(0.005),
+              reason: 'alpha, frame $i',
+            );
+          }
+        });
+      }
     }
+
+    testWidgets('a MediaQuery with another ratio than the view: the image is '
+        'rasterized for the view', (tester) async {
+      Future<Uint8List> at({required bool snapshot}) => _midMove(
+        tester,
+        snapshot: snapshot,
+        reduced: true,
+        after: const Duration(milliseconds: 50),
+        ratio: 3,
+        mediaRatio: 2,
+      );
+      final live = await at(snapshot: false);
+      final image = await at(snapshot: true);
+      expect(_partialOpacityLayers(tester), isEmpty);
+      expect(_maxDifference(live, image), lessThanOrEqualTo(_rounding));
+    });
 
     for (final scale in const [1.0, 1.6]) {
       testWidgets('display numeral at ${scale}x: same pixels', (tester) async {

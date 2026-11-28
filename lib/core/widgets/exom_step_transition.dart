@@ -174,6 +174,11 @@ class _StepEntryState extends State<_StepEntry> {
   Widget build(BuildContext context) {
     final curved = _curved;
     final offset = _offset;
+    // The view's own ratio: the image is rasterized for its physical pixels,
+    // whatever a MediaQuery above reports. `View.of` does not rebuild when the
+    // view's metrics change; the MediaQuery dependency still does.
+    MediaQuery.maybeDevicePixelRatioOf(context);
+    final ratio = View.of(context).devicePixelRatio;
     // The leaving step is only painted: it takes no taps and a screen reader
     // does not read it (L5-A4c), so the content is never announced twice.
     return IgnorePointer(
@@ -186,7 +191,7 @@ class _StepEntryState extends State<_StepEntry> {
               ? _SnapshotStep(
                   progress: curved,
                   offset: offset,
-                  devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+                  devicePixelRatio: ratio,
                   child: widget.child,
                 )
               : FadeTransition(

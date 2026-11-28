@@ -5,7 +5,7 @@
 // (`ExomStepTransition.snapshot`): during the whole change the page has no
 // partially transparent OpacityLayer, while the month still moves (the
 // position checks live in calendar_month_transition_test.dart). Checked at
-// the device pixel ratio of real phones (2.625, 3.0; the S25 is about 2.8),
+// the device pixel ratio of real phones (2.625, 2.8125 like the S25, 3.0),
 // not only at 1.0, with marks in both the leaving and the incoming month.
 import 'package:exom_app/core/widgets/exom_month_grid.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -52,7 +52,7 @@ List<CalendarDayEntity> _markedDays(int month) => [
 void main() {
   setUpAll(() => initializeDateFormatting('es'));
 
-  for (final ratio in const [1.0, 2.625, 3.0]) {
+  for (final ratio in const [1.0, 2.625, 2.8125, 3.0]) {
     for (final advance in [true, false]) {
       _monthChange(advance: advance, ratio: ratio);
     }

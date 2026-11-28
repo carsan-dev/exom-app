@@ -238,7 +238,6 @@ class _RestCountdownState extends State<RestCountdown>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.exomPalette;
     final l10n = AppLocalizations.of(context);
     final remaining = _remainingSeconds;
     final clock = formatRestClock(remaining);
@@ -251,32 +250,9 @@ class _RestCountdownState extends State<RestCountdown>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: RestFigurePulse(
-                seconds: remaining,
-                child: Padding(
-                  // Room for the ink of round digits below the tight line box
-                  // (same allowance as ExomNumeral).
-                  padding: EdgeInsets.only(
-                    bottom: ExomType.hero140.fontSize! * 0.025,
-                  ),
-                  child: Text(
-                    clock,
-                    key: const Key('rest-countdown-clock'),
-                    maxLines: 1,
-                    softWrap: false,
-                    style: ExomType.hero140.copyWith(
-                      color: palette.data,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          CountdownFigure(
+            seconds: remaining,
+            figureKey: const Key('rest-countdown-clock'),
           ),
           const SizedBox(height: RestStepRule.gapAbove),
           // L5-D48: one step a second, in the rebuild of the figures.
@@ -325,6 +301,63 @@ class _RestCountdownScopeState extends State<RestCountdownScope> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Big «m:ss» figure of a countdown: the clock of a rest ([RestCountdown]) and
+/// of the current phase of a timed set ([ExecutionTimer]). [ExomType.hero140]
+/// in the data colour with tabular figures, shrunk to the width by a
+/// [FittedBox] (large text never overflows), beating over the last seconds
+/// through [RestFigurePulse] while [pulse] is on. Semantics are left to the
+/// caller, which knows what already announces the time.
+class CountdownFigure extends StatelessWidget {
+  const CountdownFigure({
+    super.key,
+    required this.seconds,
+    this.pulse = true,
+    this.figureKey,
+  });
+
+  /// Whole seconds left, shown with [formatRestClock].
+  final int seconds;
+
+  /// Off (e.g. a paused timer): the figure stays still, without a beat.
+  final bool pulse;
+
+  /// Key of the [Text] with the figures, for tests and debugging.
+  final Key? figureKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.exomPalette;
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: RestFigurePulse(
+          seconds: seconds,
+          enabled: pulse,
+          child: Padding(
+            // Room for the ink of round digits below the tight line box
+            // (same allowance as ExomNumeral).
+            padding: EdgeInsets.only(
+              bottom: ExomType.hero140.fontSize! * 0.025,
+            ),
+            child: Text(
+              formatRestClock(seconds),
+              key: figureKey,
+              maxLines: 1,
+              softWrap: false,
+              style: ExomType.hero140.copyWith(
+                color: palette.data,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Beat of the figures over the last [RestStepMotion.beatLastSeconds]
 /// seconds (L5-D48): each time [seconds] drops to 5..1 the child scales
 /// 1 → 1.06 → 1 in 150 ms from its bottom start corner. Paint only: the layout
@@ -336,11 +369,15 @@ class RestFigurePulse extends StatefulWidget {
   const RestFigurePulse({
     super.key,
     required this.seconds,
+    this.enabled = true,
     required this.child,
   });
 
   /// Whole seconds the figures show.
   final int seconds;
+
+  /// Off: no beat, as with reduced motion (a paused timer stays still).
+  final bool enabled;
   final Widget child;
 
   @override
@@ -384,6 +421,10 @@ class _RestFigurePulseState extends State<RestFigurePulse>
   void didUpdateWidget(RestFigurePulse oldWidget) {
     super.didUpdateWidget(oldWidget);
     final seconds = widget.seconds;
+    if (!widget.enabled) {
+      _controller.value = 0;
+      return;
+    }
     if (!_still &&
         seconds < oldWidget.seconds &&
         seconds >= 1 &&

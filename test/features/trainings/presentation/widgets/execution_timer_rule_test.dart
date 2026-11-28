@@ -9,6 +9,7 @@
 // its scale shows that phase's length; the trimmed last phase shows the
 // length it really has.
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_type.dart';
 import 'package:exom_app/features/trainings/domain/entities/timed_prescription.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
 import 'package:exom_app/features/trainings/presentation/bloc/active_exercise_bloc.dart';
@@ -114,6 +115,23 @@ List<String> _labels(WidgetTester tester) => [
       in find.descendant(of: _rule, matching: find.byType(Text)).evaluate())
     (element.widget as Text).data!,
 ];
+
+final Finder _figureFinder = find.byKey(const Key('execution-timer-clock'));
+
+/// Figures of the big countdown of the timer.
+String _figure(WidgetTester tester) =>
+    tester.widget<Text>(_figureFinder).data!;
+
+/// Current scale of the beat of the timer's figure.
+double _beat(WidgetTester tester) => tester
+    .widget<ScaleTransition>(
+      find.descendant(
+        of: find.byType(ExecutionTimer),
+        matching: find.byKey(const Key('rest-figure-pulse')),
+      ),
+    )
+    .scale
+    .value;
 
 Finder _inTimer(String text) =>
     find.descendant(of: find.byType(ExecutionTimer), matching: find.text(text));
@@ -249,15 +267,10 @@ void main() {
       timerState(totalSeconds: 60, startedAt: startedAt),
       now: now,
     );
-    expect(find.textContaining('Tramo: 0:50'), findsOneWidget);
+    expect(_figure(tester), '0:50');
     for (var k = 49; k >= 1; k--) {
       await _reach(tester, deadline, Duration(milliseconds: k * 1000 - 1));
-      final figure = formatRestClock(k);
-      expect(
-        find.text('Tramo: $figure · Total restante: $figure'),
-        findsOneWidget,
-        reason: '$k',
-      );
+      expect(_figure(tester), formatRestClock(k), reason: '$k');
       expect(tester.widget<RestStepRule>(_rule).remainingSeconds, k);
       expect(_painted(tester), closeTo((k + 1) / 60, 1e-9), reason: '$k');
       await tester.pump();
@@ -481,8 +494,9 @@ void main() {
     expect(_rule, findsOneWidget);
     expect(ruleValue(tester), 1.0);
     expect(_inTimer('45 s'), findsOneWidget);
-    final clockLine = tester.getRect(find.textContaining('Tramo: 0:45'));
-    expect(tester.getRect(_rule).top, greaterThan(clockLine.bottom));
+    expect(_figure(tester), '0:45');
+    final figure = tester.getRect(_figureFinder);
+    expect(tester.getRect(_rule).top, greaterThan(figure.bottom));
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -499,7 +513,168 @@ void main() {
     expect(_rule, findsOneWidget);
     expect(ruleValue(tester), 1.0);
     expect(_inTimer('45 s'), findsOneWidget);
+    expect(_figure(tester), '0:45');
     await tester.pumpWidget(const SizedBox());
+  });
+
+  group('big figure', () {
+    testWidgets('shows the seconds left of the current phase in the rest '
+        'countdown style, between the title and the rule', (tester) async {
+      await pumpTimer(
+        tester,
+        timerState(
+          totalSeconds: 1440,
+          prescription: _intervals,
+          startedAt: _t0,
+        ),
+        now: () => _t0.add(const Duration(seconds: 75)),
+      );
+      expect(_figure(tester), '0:45');
+      final text = tester.widget<Text>(_figureFinder);
+      expect(text.style!.fontSize, ExomType.hero140.fontSize);
+      expect(
+        text.style!.color,
+        tester.element(_figureFinder).exomPalette.data,
+      );
+      expect(
+        text.style!.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
+      final title = tester.getRect(_inTimer('Ahora: Corre'));
+      final figure = tester.getRect(_figureFinder);
+      expect(figure.top, greaterThan(title.bottom));
+      expect(tester.getRect(_rule).top, greaterThan(figure.bottom));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('single phase: the segment line is gone, the figure carries '
+        'its label', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpTimer(
+        tester,
+        timerState(totalSeconds: 60, startedAt: _t0),
+        now: () => _t0.add(const Duration(seconds: 15)),
+      );
+      expect(find.textContaining('Tramo:'), findsNothing);
+      expect(_figure(tester), '0:45');
+      expect(
+        find.bySemanticsLabel('Tramo: 0:45 · Total restante: 0:45'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('0:45'), findsNothing);
+      handle.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('several phases: the segment line stays and the figure is '
+        'hidden from screen readers', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpTimer(
+        tester,
+        timerState(
+          totalSeconds: 1440,
+          prescription: _intervals,
+          startedAt: _t0,
+        ),
+        now: () => _t0.add(const Duration(seconds: 60)),
+      );
+      expect(_inTimer('Tramo: 1:00 · Total restante: 23:00'), findsOneWidget);
+      expect(_figure(tester), '1:00');
+      expect(
+        find.bySemanticsLabel(RegExp('Tramo: 1:00')),
+        findsOneWidget,
+        reason: 'announced once, by the line',
+      );
+      expect(find.bySemanticsLabel('1:00'), findsNothing);
+      handle.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('beats over the last seconds while running', (tester) async {
+      DateTime now() => tester.binding.clock.now();
+      final startedAt = now().subtract(const Duration(milliseconds: 54500));
+      final deadline = startedAt.add(const Duration(seconds: 60));
+      await pumpTimer(
+        tester,
+        timerState(totalSeconds: 60, startedAt: startedAt),
+        now: now,
+      );
+      expect(_figure(tester), '0:06');
+      await _reach(tester, deadline, const Duration(milliseconds: 4999));
+      expect(_figure(tester), '0:05');
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(_beat(tester), greaterThan(1.0));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('paused: the figure stays still and never beats', (
+      tester,
+    ) async {
+      var now = _t0;
+      await pumpTimer(
+        tester,
+        timerState(totalSeconds: 60, elapsedMs: 57000),
+        now: () => now,
+      );
+      expect(_figure(tester), '0:03');
+      for (var i = 0; i < 10; i++) {
+        now = now.add(const Duration(milliseconds: 200));
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(_figure(tester), '0:03');
+        expect(_beat(tester), 1.0);
+      }
+      final pulse = tester.widget<RestFigurePulse>(
+        find.descendant(
+          of: find.byType(ExecutionTimer),
+          matching: find.byType(RestFigurePulse),
+        ),
+      );
+      expect(pulse.enabled, isFalse);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('textScaler 2.0 at 320 dp: no overflow', (tester) async {
+      await pumpTimer(
+        tester,
+        timerState(
+          totalSeconds: 1440,
+          prescription: _intervals,
+          startedAt: _t0,
+        ),
+        now: () => _t0.add(const Duration(seconds: 60)),
+        width: 320,
+        textScale: 2.0,
+      );
+      expectNoOverflow(tester);
+      expect(_figure(tester), '1:00');
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the rest countdown keeps its figure', (tester) async {
+      final end = tester.binding.clock.now().add(const Duration(seconds: 42));
+      await pumpComponent(
+        tester,
+        RestCountdown(
+          restEndsAt: end,
+          totalSeconds: 60,
+          now: () => tester.binding.clock.now(),
+        ),
+      );
+      final clock = find.byKey(const Key('rest-countdown-clock'));
+      expect(tester.widget<Text>(clock).data, '0:42');
+      expect(
+        find.descendant(
+          of: find.byType(RestCountdown),
+          matching: find.byType(CountdownFigure),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<Text>(clock).style!.fontSize,
+        ExomType.hero140.fontSize,
+      );
+      await tester.pumpWidget(const SizedBox());
+    });
   });
 
   // Round r2 of CRONO: the scale depends only on the total and the width, so

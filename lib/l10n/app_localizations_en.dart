@@ -3801,6 +3801,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'The summary could not be loaded. Please try again.';
 
   @override
+  String get metricsDayLoading => 'Loading the day…';
+
+  @override
   String get metricsDayLoadError =>
       'We could not load the metrics for this day.';
 

@@ -30,6 +30,7 @@ import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_pinned_footer.dart';
 import 'package:exom_app/core/widgets/exom_segmented_control.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
+import 'package:exom_app/core/widgets/exom_skeleton.dart';
 import 'package:exom_app/core/widgets/exom_text_link.dart';
 import 'package:exom_app/core/widgets/exom_app_bar.dart';
 import 'package:exom_app/injection_container.dart';
@@ -1549,6 +1550,11 @@ class _MetricsViewState extends State<_MetricsView> {
           body: BlocBuilder<MetricsBloc, MetricsState>(
             builder: (context, state) {
               final isSaving = state is MetricsSaving;
+              final isLoading = state is MetricsLoading;
+              // L6-UX8: while the day loads or saves the inputs are inert, so
+              // nothing typed is lost to the repopulation that follows. The
+              // date picker stays live while loading (to change the day).
+              final inputsLocked = isLoading || isSaving;
               final bottomInset = MediaQuery.of(context).padding.bottom;
               final l10n = AppLocalizations.of(context);
               final secondary = TextStyle(
@@ -1594,9 +1600,17 @@ class _MetricsViewState extends State<_MetricsView> {
                           children: [
                             _DateField(
                               label: _selectedDateLabel(context),
-                              onTap: _pickMetricDate,
+                              onTap: isSaving ? null : _pickMetricDate,
                             ),
                             Text(l10n.recordDateDescription, style: secondary),
+                            if (isLoading)
+                              Semantics(
+                                liveRegion: true,
+                                label: l10n.metricsDayLoading,
+                                child: const ExomSkeleton.rule(
+                                  key: Key('metrics-day-loading'),
+                                ),
+                              ),
                             if (_loadFailure case final failure?)
                               ExomInlineMessage(
                                 key: const Key('metrics-load-error'),
@@ -1622,6 +1636,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.weightSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             KeyedSubtree(
                               key: ValueKey(_weightFieldGeneration),
@@ -1667,6 +1682,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.heightSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _heightController,
@@ -1675,6 +1691,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
                                 hintText:
                                     _heightReference(l10n, unitSystem) ??
@@ -1693,6 +1710,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.muscleMassSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _muscleMassController,
@@ -1701,6 +1719,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
                                 hintText:
                                     _muscleMassReference(l10n, unitSystem) ??
@@ -1749,6 +1768,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.sleepHoursSectionTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             TextFormField(
                               controller: _sleepController,
@@ -1757,6 +1777,7 @@ class _MetricsViewState extends State<_MetricsView> {
                                     decimal: true,
                                   ),
                               style: fieldStyle,
+                              readOnly: inputsLocked,
                               decoration: InputDecoration(
                                 hintText:
                                     _sleepReference(l10n) ??
@@ -1789,6 +1810,7 @@ class _MetricsViewState extends State<_MetricsView> {
                           title: l10n.bodyMeasurementsTitle,
                         ),
                         _FormSection(
+                          inert: inputsLocked,
                           children: [
                             ExomSegmentedControl<bool>(
                               options: const [true, false],
@@ -1804,10 +1826,16 @@ class _MetricsViewState extends State<_MetricsView> {
                           ],
                         ),
                         if (_bodyMapMode)
-                          _buildMeasureBody(l10n, unitSystem)
+                          IgnorePointer(
+                            ignoring: inputsLocked,
+                            child: _buildMeasureBody(l10n, unitSystem),
+                          )
                         else ...[
                           const SizedBox(height: ExomSpacing.md),
-                          _buildMeasureList(l10n, unitSystem),
+                          IgnorePointer(
+                            ignoring: inputsLocked,
+                            child: _buildMeasureList(l10n, unitSystem),
+                          ),
                         ],
                       ],
                     ),
@@ -1818,7 +1846,7 @@ class _MetricsViewState extends State<_MetricsView> {
                       label: l10n.saveMetricsButton,
                       trailingIcon: ExomIcons.check,
                       busy: isSaving,
-                      onPressed: _canSave ? _save : null,
+                      onPressed: _canSave && !inputsLocked ? _save : null,
                     ),
                   ),
                 ],
@@ -1882,9 +1910,13 @@ class _SeenSourceLink extends StatelessWidget {
 /// sketch «Formulario de métricas»): 20 dp sides, 8 dp from the header and
 /// between its children.
 class _FormSection extends StatelessWidget {
-  const _FormSection({required this.children});
+  const _FormSection({required this.children, this.inert = false});
 
   final List<Widget> children;
+
+  /// Ignores pointer input in the whole section (the form is loading or
+  /// saving).
+  final bool inert;
 
   @override
   Widget build(BuildContext context) {
@@ -1895,14 +1927,17 @@ class _FormSection extends StatelessWidget {
         ExomSpacing.xl,
         0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(height: ExomSpacing.sm),
-            children[i],
+      child: IgnorePointer(
+        ignoring: inert,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: ExomSpacing.sm),
+              children[i],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1915,7 +1950,9 @@ class _DateField extends StatelessWidget {
   const _DateField({required this.label, required this.onTap});
 
   final String label;
-  final VoidCallback onTap;
+
+  /// Null while the form is saving: the field then does nothing.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

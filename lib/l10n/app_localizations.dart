@@ -6488,6 +6488,12 @@ abstract class AppLocalizations {
   /// **'No se pudo cargar el resumen. Vuelve a intentarlo.'**
   String get homeLoadError;
 
+  /// No description provided for @metricsDayLoading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el día…'**
+  String get metricsDayLoading;
+
   /// No description provided for @metricsDayLoadError.
   ///
   /// In es, this message translates to:

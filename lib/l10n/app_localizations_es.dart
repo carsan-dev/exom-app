@@ -3844,6 +3844,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo cargar el resumen. Vuelve a intentarlo.';
 
   @override
+  String get metricsDayLoading => 'Cargando el día…';
+
+  @override
   String get metricsDayLoadError =>
       'No se pudieron cargar las métricas de este día.';
 

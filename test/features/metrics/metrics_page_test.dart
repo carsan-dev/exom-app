@@ -1743,12 +1743,18 @@ void main() {
     testWidgets('a dependency change after typing does not overwrite it', (
       tester,
     ) async {
+      final gate = Completer<void>();
       final h = await _mount(
         tester,
         profileCache: profile,
-        latestGate: Completer<void>(),
+        latestGate: gate,
         size: const Size(390, 6000),
       );
+      // L6-UX8: the inputs are inert while the day loads, so typing starts
+      // once the (empty) day has loaded.
+      gate.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       final height = tester
           .widget<TextFormField>(_fieldWithText('180,0'))
           .controller!;

@@ -278,6 +278,13 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
     final phase = config.phase(total, state.elapsedAt(_now));
     final done = phase.totalRemainingMilliseconds == 0;
     final running = state.timedStartedAt != null && !done;
+    final singlePhase = config.segments.isEmpty;
+    final figure = CountdownFigure(
+      key: const Key('execution-timer-figure'),
+      seconds: (phase.remainingMilliseconds / 1000).ceil(),
+      pulse: running,
+      figureKey: const Key('execution-timer-clock'),
+    );
     final palette = context.exomPalette;
     final body = TextStyle(
       fontFamily: AppTheme.bodyFontFamily,
@@ -301,19 +308,44 @@ class _ExecutionTimerState extends State<ExecutionTimer> {
             done ? l10n.timerFinished : l10n.timerNowAction(phase.action),
             style: body.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 4),
-          Text(
-            done
-                ? l10n.timerLogSetWhenDone
-                : l10n.timerSegmentRemaining(
-                    clock(phase.remainingMilliseconds),
-                    clock(phase.totalRemainingMilliseconds),
-                  ),
-            style: body,
-          ),
+          // One phase (no segments): the figure below already says what the
+          // segment line said, so it only stays to carry the total of
+          // several phases, or the hint once finished.
+          if (done || !singlePhase) ...[
+            const SizedBox(height: 4),
+            Text(
+              done
+                  ? l10n.timerLogSetWhenDone
+                  : l10n.timerSegmentRemaining(
+                      clock(phase.remainingMilliseconds),
+                      clock(phase.totalRemainingMilliseconds),
+                    ),
+              style: body,
+            ),
+          ],
+          // The big figure of the rest countdown, on the seconds left of the
+          // current phase, with the same spacing as the rest (headline, 16,
+          // figure, rule). It beats over the last seconds only while running;
+          // paused, it stays still. Not a live region: with one phase it
+          // carries the label the segment line had, otherwise the line above
+          // speaks and the figure is hidden from screen readers.
+          const SizedBox(height: 16),
+          if (singlePhase && !done)
+            Semantics(
+              container: true,
+              label: l10n.timerSegmentRemaining(
+                clock(phase.remainingMilliseconds),
+                clock(phase.totalRemainingMilliseconds),
+              ),
+              excludeSemantics: true,
+              child: figure,
+            )
+          else
+            ExcludeSemantics(child: figure),
           // Same rule, scale and spacing as the rest countdown (L5-E3a,
           // L5-D48), on the deadline-derived phase, so a paused timer leaves
-          // it still. Decorative: the clock line above carries the semantics.
+          // it still. Decorative: the figure or the line above carries the
+          // semantics.
           const SizedBox(height: RestStepRule.gapAbove),
           // The key marks the rule and its scale for tests and debugging;
           // round r2 moved it here from the bare rule (no reader in lib/ or

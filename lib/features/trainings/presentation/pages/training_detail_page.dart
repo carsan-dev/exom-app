@@ -2815,25 +2815,30 @@ class _CircuitCard extends StatelessWidget {
           padding: const EdgeInsetsDirectional.fromSTEB(62, 0, 12, 8),
           child: Row(
             children: [
-              Flexible(
-                child: TextButton.icon(
-                  key: const ValueKey('circuit-feedback-button'),
-                  onPressed: onFeedback,
-                  style: TextButton.styleFrom(
-                    foregroundColor: palette.textPrimary,
-                    minimumSize: const Size(kExomMinTapTarget, kExomMinTapTarget),
-                    textStyle: const TextStyle(
-                      fontFamily: AppTheme.bodyFontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+              // The button takes the width the mark leaves (a Flexible next
+              // to a Spacer split it in halves and wrapped the label).
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('circuit-feedback-button'),
+                    onPressed: onFeedback,
+                    style: TextButton.styleFrom(
+                      foregroundColor: palette.textPrimary,
+                      minimumSize:
+                          const Size(kExomMinTapTarget, kExomMinTapTarget),
+                      textStyle: const TextStyle(
+                        fontFamily: AppTheme.bodyFontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                    icon: const Icon(ExomIcons.videoLibrary, size: 20),
+                    label: Text(l10n.circuitFeedbackAction),
                   ),
-                  icon: const Icon(ExomIcons.videoLibrary, size: 20),
-                  label: Text(l10n.circuitFeedbackAction),
                 ),
               ),
               if (onMarkPending != null) ...[
-                const Spacer(),
                 IconButton(
                   onPressed: onMarkPending,
                   color: palette.textPrimary,

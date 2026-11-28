@@ -32,6 +32,17 @@ import 'package:flutter/services.dart';
 /// [compactButtonSize] inside the same [buttonSize] tap area (4 dp of
 /// invisible margin per side) and sit [compactGap] from the value, so the
 /// visible gap stays 6 dp; the typed field is a little shorter.
+///
+/// [typedSample] (A-D1): the widest text the typed field is expected to hold.
+/// When it, at the system text scale and with the [unit], does not fit
+/// between the ± buttons, the field takes the full width and the ± sit under
+/// it, so a large system font never clips the typed digits. The choice only
+/// depends on the sample, the scale and the width, never on what is typed.
+/// The field sits under a `GlobalKey` owned by the control, so when the width
+/// or the scale changes and the layout switches between the row and the
+/// stacked form, the same `TextField` element moves with its state (focus,
+/// text and selection) instead of being rebuilt; a switch in the very frame
+/// where the keyboard moves may still re-reveal the caret.
 class ExomStepper<T> extends StatelessWidget {
   const ExomStepper({
     super.key,
@@ -61,6 +72,7 @@ class ExomStepper<T> extends StatelessWidget {
     this.valueStyle,
     this.onValueTap,
     this.compact = false,
+    this.typedSample,
   });
 
   final T value;
@@ -119,6 +131,10 @@ class ExomStepper<T> extends StatelessWidget {
   /// action of the control's semantics node.
   final VoidCallback? onValueTap;
 
+  /// Widest text of the typed field, to stack the ± under it when the field
+  /// would not fit between them (large system text).
+  final String? typedSample;
+
   /// Draws the ± at [compactButtonSize] within the [buttonSize] tap area.
   final bool compact;
 
@@ -131,11 +147,22 @@ class ExomStepper<T> extends StatelessWidget {
   /// Gap between each ± tap area and the value when [compact].
   static const double compactGap = 2;
 
+  /// Style of the unit shown after a typed value, shared by the field and
+  /// by the measure of [typedSample] (colour is added by the field).
+  static const TextStyle _unitSuffixStyle = TextStyle(
+    fontFamily: AppTheme.bodyFontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+  );
+
   /// Gap between each ± and the value otherwise.
   static const double gap = 8;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      _CentreKeyHost(builder: (centreKey) => _buildWith(context, centreKey));
+
+  Widget _buildWith(BuildContext context, GlobalKey centreKey) {
     final palette = context.exomPalette;
     final valueStyle =
         this.valueStyle ??
@@ -149,81 +176,83 @@ class ExomStepper<T> extends StatelessWidget {
 
     final error = errorText;
     final errorOutside = errorBelowRow && error != null;
-    final Widget centre;
-    if (textController != null) {
-      centre = TextField(
-        key: textFieldKey,
-        controller: textController,
-        focusNode: focusNode,
-        autofocus: autofocus,
-        textInputAction: textInputAction,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        onChanged: onTextChanged,
-        onSubmitted: onTextSubmitted,
-        textAlign: TextAlign.center,
-        style: valueStyle,
-        decoration: InputDecoration(
-          filled: false,
-          isDense: true,
-          labelText: null,
-          errorText: errorOutside ? null : error,
-          // Keeps the field's error styling; the message is painted below.
-          error: errorOutside ? const SizedBox.shrink() : null,
-          errorMaxLines: 3,
-          suffixText: unit,
-          suffixStyle: TextStyle(
-            fontFamily: AppTheme.bodyFontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: palette.textSecondary,
+    // Stacked, the unit leaves the field (it would take part of the width the
+    // digits need) and sits between the ± instead.
+    Widget centreFor(bool stacked) {
+      final Widget centre;
+      if (textController != null) {
+        centre = TextField(
+          key: textFieldKey,
+          controller: textController,
+          focusNode: focusNode,
+          autofocus: autofocus,
+          textInputAction: textInputAction,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          onChanged: onTextChanged,
+          onSubmitted: onTextSubmitted,
+          textAlign: TextAlign.center,
+          style: valueStyle,
+          decoration: InputDecoration(
+            filled: false,
+            isDense: true,
+            labelText: null,
+            errorText: errorOutside ? null : error,
+            // Keeps the field's error styling; the message is painted below.
+            error: errorOutside ? const SizedBox.shrink() : null,
+            errorMaxLines: 3,
+            suffixText: stacked ? null : unit,
+            suffixStyle: _unitSuffixStyle.copyWith(
+              color: palette.textSecondary,
+            ),
+            contentPadding: EdgeInsets.symmetric(vertical: compact ? 4 : 6),
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: palette.textPrimary, width: 2),
+            ),
+            // With the message below the row, the field keeps the underline
+            // shape in the error colour (not the theme's outlined error box).
+            errorBorder: errorOutside
+                ? UnderlineInputBorder(
+                    borderSide: BorderSide(color: palette.error, width: 1.5),
+                  )
+                : null,
+            focusedErrorBorder: errorOutside
+                ? UnderlineInputBorder(
+                    borderSide: BorderSide(color: palette.error, width: 2),
+                  )
+                : null,
           ),
-          contentPadding: EdgeInsets.symmetric(vertical: compact ? 4 : 6),
-          border: UnderlineInputBorder(
-            borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
-          ),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: palette.textSecondary, width: 1.5),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: palette.textPrimary, width: 2),
-          ),
-          // With the message below the row, the field keeps the underline
-          // shape in the error colour (not the theme's outlined error box).
-          errorBorder: errorOutside
-              ? UnderlineInputBorder(
-                  borderSide: BorderSide(color: palette.error, width: 1.5),
-                )
-              : null,
-          focusedErrorBorder: errorOutside
-              ? UnderlineInputBorder(
-                  borderSide: BorderSide(color: palette.error, width: 2),
-                )
-              : null,
-        ),
-      );
-    } else if (valueBuilder != null) {
-      centre = valueBuilder!(context, value);
-    } else {
-      centre = DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: palette.textSecondary, width: 1.5),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              formatValue(value),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: valueStyle,
+        );
+      } else if (valueBuilder != null) {
+        centre = valueBuilder!(context, value);
+      } else {
+        centre = DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: palette.textSecondary, width: 1.5),
             ),
           ),
-        ),
-      );
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                formatValue(value),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: valueStyle,
+              ),
+            ),
+          ),
+        );
+      }
+      return KeyedSubtree(key: centreKey, child: centre);
     }
 
     final increased = increasedValue;
@@ -235,54 +264,121 @@ class ExomStepper<T> extends StatelessWidget {
         formatted.isNotEmpty &&
         (onIncrement == null || increased != null) &&
         (onDecrement == null || decreased != null);
-    final control = Semantics(
-      container: true,
-      label: exposeValue || formatted.isEmpty ? label : '$label, $formatted',
-      value: exposeValue ? formatted : null,
-      increasedValue: exposeValue && onIncrement != null && increased != null
-          ? formatValue(increased)
-          : null,
-      decreasedValue: exposeValue && onDecrement != null && decreased != null
-          ? formatValue(decreased)
-          : null,
-      validationResult: errorOutside
-          ? SemanticsValidationResult.invalid
-          : SemanticsValidationResult.none,
-      onIncrease: onIncrement,
-      onDecrease: onDecrement,
-      onTap: onValueTap,
-      child: Row(
-        children: [
-          _StepButton(
-            icon: ExomIcons.remove,
-            semanticLabel: decrementLabel,
-            onPressed: onDecrement,
-            compact: compact,
-          ),
-          SizedBox(width: compact ? compactGap : gap),
-          Expanded(
-            child: textController != null
-                ? centre
-                : ExcludeSemantics(
-                    child: onValueTap == null
-                        ? centre
-                        : GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onValueTap,
-                            child: centre,
+    Widget buildControl(bool stacked) {
+      final keyedCentre = centreFor(stacked);
+      return Semantics(
+        container: true,
+        label: exposeValue || formatted.isEmpty ? label : '$label, $formatted',
+        value: exposeValue ? formatted : null,
+        increasedValue: exposeValue && onIncrement != null && increased != null
+            ? formatValue(increased)
+            : null,
+        decreasedValue: exposeValue && onDecrement != null && decreased != null
+            ? formatValue(decreased)
+            : null,
+        validationResult: errorOutside
+            ? SemanticsValidationResult.invalid
+            : SemanticsValidationResult.none,
+        onIncrease: onIncrement,
+        onDecrease: onDecrement,
+        onTap: onValueTap,
+        child: stacked
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  keyedCentre,
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _StepButton(
+                        icon: ExomIcons.remove,
+                        semanticLabel: decrementLabel,
+                        onPressed: onDecrement,
+                        compact: compact,
+                      ),
+                      if (unit case final unitText?)
+                        ExcludeSemantics(
+                          child: Text(
+                            unitText,
+                            style: _unitSuffixStyle.copyWith(
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                        ),
+                      _StepButton(
+                        icon: ExomIcons.add,
+                        semanticLabel: incrementLabel,
+                        onPressed: onIncrement,
+                        compact: compact,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  _StepButton(
+                    icon: ExomIcons.remove,
+                    semanticLabel: decrementLabel,
+                    onPressed: onDecrement,
+                    compact: compact,
+                  ),
+                  SizedBox(width: compact ? compactGap : gap),
+                  Expanded(
+                    child: textController != null
+                        ? keyedCentre
+                        : ExcludeSemantics(
+                            child: onValueTap == null
+                                ? keyedCentre
+                                : GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: onValueTap,
+                                    child: keyedCentre,
+                                  ),
                           ),
                   ),
-          ),
-          SizedBox(width: compact ? compactGap : gap),
-          _StepButton(
-            icon: ExomIcons.add,
-            semanticLabel: incrementLabel,
-            onPressed: onIncrement,
-            compact: compact,
-          ),
-        ],
-      ),
-    );
+                  SizedBox(width: compact ? compactGap : gap),
+                  _StepButton(
+                    icon: ExomIcons.add,
+                    semanticLabel: incrementLabel,
+                    onPressed: onIncrement,
+                    compact: compact,
+                  ),
+                ],
+              ),
+      );
+    }
+
+    final sample = typedSample;
+    final Widget control = textController != null && sample != null
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              final scaler = MediaQuery.textScalerOf(context);
+              final painter = TextPainter(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: sample, style: valueStyle),
+                    if (unit != null)
+                      TextSpan(text: unit, style: _unitSuffixStyle),
+                  ],
+                ),
+                textDirection: Directionality.of(context),
+                textScaler: scaler,
+                maxLines: 1,
+              )..layout();
+              // The field has no horizontal contentPadding (only vertical),
+              // so the 4 dp are the caret (2 dp) and its rounding.
+              final needed = painter.width + 4;
+              painter.dispose();
+              final gaps = compact ? compactGap : gap;
+              final room = constraints.maxWidth - 2 * (buttonSize + gaps);
+              return buildControl(needed > room);
+            },
+          )
+        : buildControl(false);
+
     // With the message below the row and a text field, the control always
     // sits in this Column, error or not: switching between the bare control
     // and a Column when the error appears would remount the TextField, and the
@@ -495,4 +591,21 @@ class _StepButtonState extends State<_StepButton> {
       ),
     );
   }
+}
+
+/// Owns the [GlobalKey] of the control's field (see [ExomStepper.typedSample]).
+class _CentreKeyHost extends StatefulWidget {
+  const _CentreKeyHost({required this.builder});
+
+  final Widget Function(GlobalKey centreKey) builder;
+
+  @override
+  State<_CentreKeyHost> createState() => _CentreKeyHostState();
+}
+
+class _CentreKeyHostState extends State<_CentreKeyHost> {
+  final GlobalKey _centreKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) => widget.builder(_centreKey);
 }

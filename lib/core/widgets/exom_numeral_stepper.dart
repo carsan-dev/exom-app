@@ -237,6 +237,9 @@ class _ExomNumeralStepperState extends State<ExomNumeralStepper> {
       increasedValue: canIncrement ? _stepped(1) : null,
       unit: unit,
       textController: _editing ? _controller : null,
+      // Widest typed value: three digits and two decimals, as the measure
+      // sheet and `_format` allow («100,25»), in the widest digits.
+      typedSample: '888,88',
       textFieldKey: ExomNumeralStepper.fieldKey,
       focusNode: _focus,
       autofocus: true,

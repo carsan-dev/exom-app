@@ -5,12 +5,14 @@
 // Presentation only: the bloc and the use cases are the real ones; the
 // repository is a recording fake. Uses the real DM Sans face.
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:exom_app/core/models/body_zone.dart';
 import 'package:exom_app/core/preferences/app_preferences.dart';
 import 'package:exom_app/core/preferences/app_preferences_cubit.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/core/theme/exom_icons.dart';
 import 'package:exom_app/core/widgets/exom_numeral.dart';
 import 'package:exom_app/core/widgets/exom_numeral_stepper.dart';
 import 'package:exom_app/core/widgets/exom_sheet.dart';
@@ -208,6 +210,17 @@ void main() {
       }
     }
     await loader.load();
+    // The display face of the numerals: without it the metrics are the
+    // fallback font's and the widths below mean nothing.
+    final display = FontLoader(AppTheme.displayFontFamily)
+      ..addFont(
+        Future.value(
+          ByteData.sublistView(
+            File('assets/fonts/barlow-condensed-800.ttf').readAsBytesSync(),
+          ),
+        ),
+      );
+    await display.load();
   });
   tearDown(sl.reset);
 
@@ -769,6 +782,269 @@ void main() {
       );
       final pair = tester.getRect(measureValue(BodyZone.upperArm));
       expect(pair.top, lessThan(label.bottom));
+    });
+  });
+
+  group('large text (A-D1) 384dp x2.0: the sheet shows whole values', () {
+    // 1080 x 2340 at 450 dpi: 384 dp wide. «299,5» is the longest 3-digit
+    // value the sheet accepts (the cap is 300 cm).
+    const typedValues = {
+      'arm_left_cm': ['33,5', '34,0', '56,4', '299,5'],
+      'arm_right_cm': ['56,7', '34,0', '299,5'],
+      'thigh_left_cm': ['56,4', '56,7', '299,5'],
+      'thigh_right_cm': ['33,5', '56,7', '299,5'],
+    };
+
+    /// Natural width of the text of [paragraph] at the system scale.
+    double naturalWidth(RenderParagraph paragraph, double scale) {
+      final painter = TextPainter(
+        text: paragraph.text,
+        textDirection: ui.TextDirection.ltr,
+        textScaler: TextScaler.linear(scale),
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    for (final locale in const ['es', 'en']) {
+      for (final entry in typedValues.entries) {
+        for (final typed in entry.value) {
+          testWidgets('$locale ${entry.key} «$typed»: numeral and field', (
+            tester,
+          ) async {
+            await _mount(
+              tester,
+              latest: _metric,
+              locale: Locale(locale),
+              size: const Size(384, 2340),
+              textScale: 2.0,
+            );
+            final zone = entry.key.startsWith('arm')
+                ? BodyZone.upperArm
+                : BodyZone.thigh;
+            await openMeasureSheet(tester, zone);
+            final shown = locale == 'en' ? typed.replaceAll(',', '.') : typed;
+            await typeMeasure(tester, entry.key, shown);
+            expect(tester.takeException(), isNull);
+
+            void expectWhole(Finder text, Rect box) {
+              final paragraph = tester.renderObject<RenderParagraph>(text);
+              final natural = naturalWidth(paragraph, 2.0);
+              expect(
+                paragraph.size.width,
+                greaterThanOrEqualTo(natural - 0.5),
+                reason: 'text narrower than its content',
+              );
+              final rect = tester.getRect(text);
+              expect(rect.left, greaterThanOrEqualTo(box.left - 0.5));
+              expect(rect.right, lessThanOrEqualTo(box.right + 0.5));
+            }
+
+            // Typing: the field shows the whole value.
+            final field = find.descendant(
+              of: measureStepper(entry.key),
+              matching: find.byKey(ExomNumeralStepper.fieldKey),
+            );
+            final editable = tester
+                .state<EditableTextState>(
+                  find.descendant(
+                    of: field,
+                    matching: find.byType(EditableText),
+                  ),
+                )
+                .renderEditable;
+            final painter = TextPainter(
+              text: TextSpan(
+                text: shown,
+                style: tester
+                    .widget<EditableText>(
+                      find.descendant(
+                        of: field,
+                        matching: find.byType(EditableText),
+                      ),
+                    )
+                    .style,
+              ),
+              textDirection: ui.TextDirection.ltr,
+              textScaler: TextScaler.linear(2.0),
+            )..layout();
+            final needed = painter.width;
+            painter.dispose();
+            expect(
+              editable.size.width,
+              greaterThanOrEqualTo(needed),
+              reason: 'field narrower than «$shown»',
+            );
+
+            // Settled: the numeral shows the whole value.
+            await tester.testTextInput.receiveAction(TextInputAction.done);
+            await tester.pump();
+            final box = tester.getRect(
+              find.descendant(
+                of: measureStepper(entry.key),
+                matching: find.byKey(ExomNumeralStepper.valueKey),
+              ),
+            );
+            final numeralText = find.descendant(
+              of: find.descendant(
+                of: measureStepper(entry.key),
+                matching: find.byKey(ExomNumeralStepper.valueKey),
+              ),
+              matching: find.byType(RichText),
+            );
+            for (final element in numeralText.evaluate()) {
+              expectWhole(find.byWidget(element.widget), box);
+            }
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
+  });
+
+  group('A-D1 stacked typed field', () {
+    EditableTextState editableOf(WidgetTester tester, String fieldKey) =>
+        tester.state<EditableTextState>(
+          find.descendant(
+            of: measureStepper(fieldKey),
+            matching: find.byType(EditableText),
+          ),
+        );
+
+    // The widest typed value, «299,25» (3 digits, 2 decimals), whole at every
+    // scale of the range on a 384 dp screen.
+    for (final locale in const ['es', 'en']) {
+      for (final scale in const [1.0, 1.3, 1.6, 2.0]) {
+        testWidgets('$locale 384dp x$scale: «299,25» is whole', (tester) async {
+          await _mount(
+            tester,
+            latest: _metric,
+            locale: Locale(locale),
+            size: const Size(384, 2340),
+            textScale: scale,
+          );
+          await openMeasureSheet(tester, BodyZone.upperArm);
+          final shown = locale == 'en' ? '299.25' : '299,25';
+          await typeMeasure(tester, 'arm_left_cm', shown);
+          expect(tester.takeException(), isNull);
+          final state = editableOf(tester, 'arm_left_cm');
+          final painter = TextPainter(
+            text: TextSpan(text: shown, style: state.widget.style),
+            textDirection: ui.TextDirection.ltr,
+            textScaler: TextScaler.linear(scale),
+          )..layout();
+          final needed = painter.width;
+          painter.dispose();
+          expect(
+            state.renderEditable.size.width,
+            greaterThanOrEqualTo(needed),
+            reason: 'field narrower than «$shown»',
+          );
+        });
+      }
+    }
+
+    testWidgets('a width change keeps focus, text and selection', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        latest: _metric,
+        size: const Size(600, 900),
+        textScale: 1.6,
+      );
+      await openMeasureSheet(tester, BodyZone.upperArm);
+      await typeMeasure(tester, 'arm_left_cm', '33,');
+      final before = editableOf(tester, 'arm_left_cm');
+      before.widget.controller.selection = const TextSelection(
+        baseOffset: 1,
+        extentOffset: 2,
+      );
+      await tester.pump();
+      final rowHeight = tester.getSize(measureStepper('arm_left_cm')).height;
+      expect(before.widget.focusNode.hasFocus, isTrue);
+
+      // Narrower: the row becomes the stacked form.
+      tester.view.physicalSize = const Size(384, 900);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        tester.getSize(measureStepper('arm_left_cm')).height,
+        greaterThan(rowHeight),
+        reason: 'the stacked form is taller',
+      );
+      final after = editableOf(tester, 'arm_left_cm');
+      expect(identical(after, before), isTrue, reason: 'not remounted');
+      expect(after.widget.focusNode.hasFocus, isTrue);
+      expect(after.widget.controller.text, '33,');
+      expect(
+        after.widget.controller.selection,
+        const TextSelection(baseOffset: 1, extentOffset: 2),
+      );
+
+      // And back to the row.
+      tester.view.physicalSize = const Size(600, 900);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final back = editableOf(tester, 'arm_left_cm');
+      expect(identical(back, before), isTrue, reason: 'not remounted back');
+      expect(back.widget.focusNode.hasFocus, isTrue);
+      expect(back.widget.controller.text, '33,');
+    });
+
+    testWidgets('the error shows whole under the ± when stacked', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        latest: _metric,
+        size: const Size(384, 832),
+        textScale: 2.0,
+      );
+      final l10n = _l10n(tester);
+      await openMeasureSheet(tester, BodyZone.upperArm);
+      await typeMeasure(tester, 'arm_left_cm', ',');
+      await tapMeasureDone(tester);
+      expect(measureSheet(), findsOneWidget);
+      // The user taps the field again: it and its whole error are revealed.
+      await tester.tap(
+        find.descendant(
+          of: measureStepper('arm_left_cm'),
+          matching: find.byKey(ExomNumeralStepper.fieldKey),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final message = find.text(
+        l10n.measurementReviewTemplate(
+          BodyZone.upperArm.label(l10n).toLowerCase(),
+        ),
+      );
+      expect(message, findsOneWidget);
+      final text = tester.getRect(message);
+      final plus = tester.getRect(
+        find.descendant(
+          of: measureStepper('arm_left_cm'),
+          matching: find.byIcon(ExomIcons.add),
+        ),
+      );
+      expect(text.top, greaterThanOrEqualTo(plus.bottom - 0.5));
+      // Inside the scrolling area, above the pinned «Hecho».
+      final scroll = tester.getRect(
+        find
+            .descendant(
+              of: measureSheet(),
+              matching: find.byType(SingleChildScrollView),
+            )
+            .first,
+      );
+      expect(text.top, greaterThanOrEqualTo(scroll.top));
+      expect(text.bottom, lessThanOrEqualTo(scroll.bottom + 0.5));
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: message, matching: find.byType(RichText)).first,
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
     });
   });
 

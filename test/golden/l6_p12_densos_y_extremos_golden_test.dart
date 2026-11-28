@@ -13,6 +13,7 @@ library;
 import 'package:exom_app/features/diets/domain/entities/diet_entity.dart';
 import 'package:exom_app/features/trainings/data/models/active_workout_hive_model.dart';
 import 'package:exom_app/features/trainings/domain/entities/training_entity.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -109,6 +110,11 @@ void main() {
     testWidgets('golden descanso_vacio_${b}_1_0x', (tester) async {
       await initializeDateFormatting('es');
       final only = _exercise(1, 'Sentadilla búlgara');
+      // The figure reads the seed instant, not the wall clock, so a slow
+      // machine between seed and build cannot turn 1:30 into 1:29.
+      final seedNow = DateTime.now();
+      restCountdownClock = () => seedNow;
+      addTearDown(() => restCountdownClock = DateTime.now);
       await pumpActiveExercise(
         tester,
         initialWeightKg: 60,
@@ -117,7 +123,7 @@ void main() {
           exerciseId: activeExerciseDraftKey,
           currentSet: 2,
           completedSets: 1,
-          restEndsAt: DateTime.now().add(const Duration(seconds: 90)),
+          restEndsAt: seedNow.add(const Duration(seconds: 90)),
           lastWeightKg: 60,
           completedSetData: const [
             {'set_number': 1, 'reps': 8, 'weight_kg': 60.0, 'rir': 2},

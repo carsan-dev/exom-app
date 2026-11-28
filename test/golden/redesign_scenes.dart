@@ -11,9 +11,9 @@
 //  - Inicio and Inicio descanso: since L3 (decision D10) HomePage takes an
 //    injectable clock; the scenes fix it to Wednesday 18 Nov 2026 and load the
 //    HomeBloc for that date, so they are stable goldens.
-//  - Descanso: the rest footer counts down from DateTime.now(). The saved rest
-//    ends exactly 90 s after "now", and the scene is captured without advancing
-//    real time, so the visible value is 90 for any machine speed below 1 s.
+//  - Descanso: the rest countdown reads restCountdownClock, which the scene
+//    freezes at the seed instant. The saved rest ends exactly 90 s after it, so
+//    the visible value is 90 whatever the machine speed.
 //  - Descanso circuito (L3 unit 4): same rule with a round rest that ends 60 s
 //    after "now" («1:00»).
 //  - The rest bar (L5-D48) steps with the figures of the countdown, from the
@@ -28,6 +28,7 @@ import 'package:exom_app/core/services/execution_timer_coordinator.dart';
 import 'package:exom_app/core/services/rest_timer_coordinator.dart';
 import 'package:exom_app/core/storage/local_storage.dart';
 import 'package:exom_app/core/theme/app_theme.dart';
+import 'package:exom_app/features/trainings/presentation/widgets/rest_countdown.dart';
 import 'package:exom_app/core/widgets/exom_buttons.dart';
 import 'package:exom_app/features/feedback/services/feedback_upload_queue_service.dart';
 import 'package:exom_app/features/calendar/domain/entities/calendar_day_entity.dart';
@@ -732,11 +733,12 @@ Future<SceneHandle> pumpRedesignScene(
   await initializeDateFormatting('es');
   await sl.reset();
 
-  // Limit: the countdown shows 90 only if under 1 s of real time passes between
-  // this seed and the build. Fake-async pumps do not advance DateTime.now, and
-  // L0 allows no hook in lib/ to inject a clock into the page; the rest bar
-  // reads the same clock as the figures (L5-D48).
+  // The countdown (figures and bar, L5-D48) reads the seed instant through
+  // restCountdownClock, so the rest shows its full length however long the
+  // machine takes between this seed and the build.
   final restSeedNow = DateTime.now();
+  restCountdownClock = () => restSeedNow;
+  addTearDown(() => restCountdownClock = DateTime.now);
   final restSeed =
       scene == RedesignScene.descanso || scene == RedesignScene.descansoMas30
       ? ActiveWorkoutHiveModel(
